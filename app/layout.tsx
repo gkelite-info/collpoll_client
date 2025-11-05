@@ -37,7 +37,7 @@ export default function RootLayout({
             <Header />
           </div>
 
-          <div className="h-[87%] overflow-auto bg-[#F4F4F4]">
+          <div className="h-[87%] overflow-auto bg-[#F4F4F4] px-2">
             {children}
           </div>
         </div>

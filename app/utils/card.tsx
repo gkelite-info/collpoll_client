@@ -12,7 +12,7 @@ type CardProps = {
 }
 
 export default function CardComponent({
-  style = "bg-white",
+  style = "bg-white h-32 w-44",
   icon,
   value,
   label,
@@ -23,10 +23,10 @@ export default function CardComponent({
   return (
     <>
       <div
-        className={`h-32 w-44 rounded-lg p-3 ${style} flex flex-col justify-between shadow-sm`}
+        className={`rounded-lg p-3 ${style} flex flex-col justify-between shadow-sm`}
       >
         <div
-          className="w-9 h-8 rounded-sm flex items-center justify-center mb-4"
+          className="w-9 h-8 rounded-sm flex items-center justify-center mb-2"
           style={{ backgroundColor: iconBgColor, color: iconColor }}
         >
           {icon}
