@@ -1,11 +1,17 @@
 "use client"
-import Calendar from "@/app/utils/calendar"
+import CalendarHeader from "@/app/utils/calendar"
 import CardComponent from "@/app/utils/card"
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import AttendanceInsight from "@/app/utils/insightChart"
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard"
 import Table from "@/app/utils/table"
-import { Chalkboard, FilePdf, User, UsersThree } from "@phosphor-icons/react"
+import {
+  CalendarCheck,
+  Chalkboard,
+  FilePdf,
+  User,
+  UsersThree,
+} from "@phosphor-icons/react"
 
 interface TableRow {
   Subject: string
@@ -164,7 +170,7 @@ export default function Attendance() {
           <CourseScheduleCard />
         </div>
         <div className="mt-2">
-          <Calendar />
+          <CalendarHeader />
         </div>
         <div className="mt-5">
           <AttendanceInsight weeklyData={[80, 70, 90, 50, 30, 85, 62]} />
