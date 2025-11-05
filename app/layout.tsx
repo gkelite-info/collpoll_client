@@ -33,11 +33,11 @@ export default function RootLayout({
         </div>
 
         <div className="flex flex-col w-[83%] h-full">
-          <div className="h-[13%] flex justify-end bg-gray-200">
+          <div className="h-[13%] flex justify-end bg-[#F4F4F4]">
             <Header />
           </div>
 
-          <div className="h-[87%] overflow-auto bg-[#AEAEAE]">
+          <div className="h-[87%] overflow-auto bg-[#F4F4F4]">
             {children}
           </div>
         </div>
