@@ -1,8 +1,17 @@
 "use client"
+import CalendarHeader from "@/app/utils/calendar"
 import CardComponent from "@/app/utils/card"
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
+import AttendanceInsight from "@/app/utils/insightChart"
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard"
 import Table from "@/app/utils/table"
-import { CalendarCheck, FilePdf, User, UsersThree } from "@phosphor-icons/react"
+import {
+  CalendarCheck,
+  Chalkboard,
+  FilePdf,
+  User,
+  UsersThree,
+} from "@phosphor-icons/react"
 
 interface TableRow {
   Subject: string
@@ -100,31 +109,31 @@ const data: TableRow[] = [
 const cards: CardItem[] = [
   {
     id: 1,
-    icon: <UsersThree size={32} weight="fill" />,
+    icon: <UsersThree size={32} />,
     value: "8/10",
     label: "Total Classes",
-    style: "bg-[#FFEDDA]",
+    style: "bg-[#FFEDDA] w-44",
     iconBgColor: "#FFBB70",
     iconColor: "#EFEFEF",
   },
   {
     id: 2,
-    icon: <User size={32} weight="fill" />,
-    value: "View PDF",
+    icon: <Chalkboard size={32} weight="fill" />,
+    value: "220/250",
     label: "Class Notes",
-    style: "bg-[#CEE6FF]",
-    iconBgColor: "#60AEFF",
+    style: "bg-[#CEE6FF] w-44",
+    iconBgColor: "#7764FF",
     iconColor: "#EFEFEF",
-    underlineValue: true,
+    //underlineValue: true,
   },
 ]
 
 export default function Attendance() {
   return (
-    <div className="bg-[#EFEFEF] flex justify-center w-full h-fit p-3">
-      <div className="flex flex-col w-[70%] gap-2">
+    <div className="bg-[#EFEFEF] flex w-full h-fit p-3">
+      <div className="flex flex-col w-[68%] gap-2">
         <div className="mb-5">
-          <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+          <h1 className="text-[#282828] font-bold text-2xl mb-2">Attendance</h1>
           <p className="text-[#282828]">
             Track, Manage, and Maintain Your Attendance Effortlessly
           </p>
@@ -156,7 +165,17 @@ export default function Attendance() {
         </div>
       </div>
 
-      <div className="w-[30%]"></div>
+      <div className="w-[32%] flex flex-col gap-2 p-3">
+        <div className="mb-5">
+          <CourseScheduleCard />
+        </div>
+        <div className="mt-2">
+          <CalendarHeader />
+        </div>
+        <div className="mt-5">
+          <AttendanceInsight weeklyData={[80, 70, 90, 50, 30, 85, 62]} />
+        </div>
+      </div>
     </div>
   )
 }
