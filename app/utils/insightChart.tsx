@@ -27,7 +27,7 @@ export default function AttendanceInsight({
         Attendance Insight
       </h2>
 
-      <div className="w-full h-91">
+      <div className="w-full h-90">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}

@@ -30,6 +30,7 @@ interface CardItem {
   iconBgColor?: string
   iconColor?: string
   underlineValue?: boolean
+  totalPercentage? : string | number
 }
 
 const columns = [
@@ -118,19 +119,20 @@ const cards: CardItem[] = [
   },
   {
     id: 2,
-    icon: <Chalkboard size={32} weight="fill" />,
+    icon: <Chalkboard size={32}  />,
     value: "220/250",
-    label: "Class Notes",
+    label: "Semester wise Classes",
     style: "bg-[#CEE6FF] w-44",
     iconBgColor: "#7764FF",
     iconColor: "#EFEFEF",
     //underlineValue: true,
+    totalPercentage: "85%"
   },
 ]
 
 export default function Attendance() {
   return (
-    <div className="bg-[#EFEFEF] flex w-full h-fit p-3">
+    <div className="flex w-full h-fit p-3">
       <div className="flex flex-col w-[68%] gap-2">
         <div className="mb-5">
           <h1 className="text-[#282828] font-bold text-2xl mb-2">Attendance</h1>
@@ -150,6 +152,7 @@ export default function Attendance() {
               iconBgColor={card.iconBgColor}
               iconColor={card.iconColor}
               underlineValue={card.underlineValue}
+              totalPercentage={card.totalPercentage}
             />
           ))}
           <SemesterAttendanceCard
