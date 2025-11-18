@@ -1,6 +1,8 @@
 'use client'
 
 import { CheckCircle } from "@phosphor-icons/react"
+import { useState } from "react";
+import TaskModal from "../components/modals/taskModal";
 
 type Task = {
     title: string;
@@ -14,6 +16,8 @@ type TaskPanelProps = {
 
 export default function TaskPanel({ tasks }: TaskPanelProps) {
 
+    const [openModal, setOpenModal] = useState(false);
+
     return (
         <>
             <div className="bg-white mt-5 rounded-md shadow-md flex flex-col p-4 h-[345px]">
@@ -24,7 +28,9 @@ export default function TaskPanel({ tasks }: TaskPanelProps) {
                         </div>
                         <p style={{ fontSize: 14, color: "#43C17A" }}>My Tasks / <span style={{ color: "black" }}>Faculty Tasks</span></p>
                     </div>
-                    <div className="rounded-full h-[80%] w-[25%] flex items-center justify-center gap-2 bg-[#43C17A] cursor-pointer">
+                    <div className="rounded-full h-[80%] w-[25%] flex items-center justify-center gap-2 bg-[#43C17A] cursor-pointer"
+                        onClick={() => setOpenModal(true)}
+                    >
                         <p style={{ fontSize: 12, color: "#FFFFFF", }}>+</p>
                         <p style={{ fontSize: 12, color: "#FFFFFF" }}>Add task</p>
                     </div>
@@ -42,6 +48,10 @@ export default function TaskPanel({ tasks }: TaskPanelProps) {
                     </div>
                 ))}
             </div>
+            <TaskModal
+                open={openModal}
+                onClose={() => setOpenModal(false)}
+            />
         </>
     )
 }
