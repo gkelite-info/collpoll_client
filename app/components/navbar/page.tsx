@@ -14,14 +14,17 @@ import {
   Student,
 } from "@phosphor-icons/react"
 import { ReactNode } from "react"
+import { useRouter } from "next/navigation"
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode
   label: string
+  path: string;
 }
 
 export default function Navbar() {
-  const [active, setActive] = useState("Home")
+  const router = useRouter();
+  const [active, setActive] = useState("Home");
 
   const items: NavItem[] = [
     {
@@ -29,54 +32,63 @@ export default function Navbar() {
         <House size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Home",
+      path: ""
     },
     {
       icon: (isActive) => (
         <Calendar size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Calendar",
+      path: "attendance"
     },
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Attendance",
+      path: ""
     },
     {
       icon: (isActive) => (
         <Note size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Assignments",
+      path: ""
     },
     {
       icon: (isActive) => (
         <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Academics",
+      path: ""
     },
     {
       icon: (isActive) => (
         <Student size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Student Progress",
+      path: ""
     },
     {
       icon: (isActive) => (
         <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Projects",
+      path: ""
     },
     {
       icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
+      path: ""
     },
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
+      path: ""
     },
     {
       icon: (isActive) => (
@@ -86,12 +98,14 @@ export default function Navbar() {
         />
       ),
       label: "Payments",
+      path: ""
     },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Settings",
+      path: ""
     },
   ]
 
@@ -109,10 +123,9 @@ export default function Navbar() {
               key={index}
               onClick={() => setActive(item.label)}
               className={`flex items-center gap-3 w-[90%] mx-auto px-4 py-2 rounded-full cursor-pointer transition-all duration-300
-                ${
-                  isActive
-                    ? "bg-white text-[#43C17A]"
-                    : "text-white hover:bg-[#50D689]/30"
+                ${isActive
+                  ? "bg-white text-[#43C17A]"
+                  : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -120,9 +133,8 @@ export default function Navbar() {
                 {item.icon(isActive)}
               </div>
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>

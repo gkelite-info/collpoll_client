@@ -34,11 +34,11 @@ export default function CourseScheduleCard() {
     return (
         <>
             <div className="flex justify-between">
-                <div className="bg-[#43C17A] w-[49%] shadow-md rounded-lg p-3 flex items-center justify-center">
+                <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
                     <p className="text-[#EFEFEF] text-sm">B.Tech CSE – Year 2</p>
                 </div>
 
-                <div className="bg-white shadow-md w-[49%] rounded-lg flex items-center">
+                <div className="bg-white shadow-md w-[49%] h-[54px] rounded-lg flex items-center">
                     <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
                         <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
                         <p className="text-xs text-[#FFFFFF]">{month}</p>
