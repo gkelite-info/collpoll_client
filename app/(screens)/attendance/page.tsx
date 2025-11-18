@@ -1,10 +1,12 @@
 "use client"
+import CalendarRibbonComponent from "@/app/utils/calendar"
 import CalendarHeader from "@/app/utils/calendar"
 import CardComponent from "@/app/utils/card"
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import AttendanceInsight from "@/app/utils/insightChart"
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard"
 import Table from "@/app/utils/table"
+import WorkWeekCalendar from "@/app/utils/weekCalendar"
 import {
   CalendarCheck,
   Chalkboard,
@@ -12,6 +14,7 @@ import {
   User,
   UsersThree,
 } from "@phosphor-icons/react"
+import { Calendar } from "lucide-react"
 
 interface TableRow {
   Subject: string
@@ -30,7 +33,7 @@ interface CardItem {
   iconBgColor?: string
   iconColor?: string
   underlineValue?: boolean
-  totalPercentage? : string | number
+  totalPercentage?: string | number
 }
 
 const columns = [
@@ -119,13 +122,12 @@ const cards: CardItem[] = [
   },
   {
     id: 2,
-    icon: <Chalkboard size={32}  />,
+    icon: <Chalkboard size={32} />,
     value: "220/250",
     label: "Semester wise Classes",
     style: "bg-[#CEE6FF] w-44",
     iconBgColor: "#7764FF",
     iconColor: "#EFEFEF",
-    //underlineValue: true,
     totalPercentage: "85%"
   },
 ]
@@ -168,13 +170,11 @@ export default function Attendance() {
         </div>
       </div>
 
-      <div className="w-[32%] flex flex-col gap-2 p-3">
-        <div className="mb-5">
+      <div className="w-[32%] flex flex-col gap-1.5 p-3">
+        <div className="">
           <CourseScheduleCard />
         </div>
-        <div className="mt-2">
-          <CalendarHeader />
-        </div>
+        <WorkWeekCalendar />
         <div className="mt-5">
           <AttendanceInsight weeklyData={[80, 70, 90, 50, 30, 85, 62]} />
         </div>
