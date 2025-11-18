@@ -18,7 +18,6 @@ export default function CalendarRibbonComponent() {
   const monthName = currentMonth.toLocaleString("default", { month: "long" });
   const year = currentMonth.getFullYear();
 
-  // Generate date objects for this month
   const dates = Array.from({ length: totalDays }, (_, i) => {
     const d = new Date(
       currentMonth.getFullYear(),
@@ -57,7 +56,6 @@ export default function CalendarRibbonComponent() {
   return (
     <div className="flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-lg p-1 px-4 w-full max-w-md">
-        {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-lg font-semibold text-gray-800">
             {monthName} {year}
@@ -80,11 +78,8 @@ export default function CalendarRibbonComponent() {
           </div>
         </div>
 
-        {/* Dates Row - Horizontally Scrollable with Day Labels */}
         <div className="relative">
-          {/* Gradient fade on left */}
           <div className="pointer-events-none absolute top-0 left-0 h-full w-5 bg-gradient-to-r from-white to-transparent z-10" />
-          {/* Gradient fade on right */}
           <div className="pointer-events-none absolute top-0 right-0 h-full w-5 bg-gradient-to-l from-white to-transparent z-10" />
           <hr className="text-[#E4E5E7] mb-2" />
           <div
@@ -105,15 +100,13 @@ export default function CalendarRibbonComponent() {
                     <div
                       className="w-12 rounded-lg  flex flex-col items-center justify-start py-2 px-1 mt-[-6px]"
                       style={{
-                        // top small band #3DAD6E, main body #7ADAA4 across most height, tiny bottom #FEFEFE
                         background:
                           "linear-gradient(to bottom, #3DAD6E 0%, #3DAD6E 17%, #7ADAA4 10%, #7ADAA4 30%, #FEFEFE 92%, #FEFEFE 100%)",
-                        // ensure the gradient fills the element box
                         backgroundRepeat: "no-repeat",
                         backgroundSize: "100% 100%",
                       }}
                     >
-                      
+
                       <div className="text-[10px] font-semibold tracking-wide text-white mt-1">
                         {d.weekday}
                       </div>
@@ -126,13 +119,12 @@ export default function CalendarRibbonComponent() {
                       </div>
                     </div>
                   ) : (
-                    // unchanged: simple date cell branch remains the same
                     <div className="w-14 flex flex-col items-center justify-center py-1 px-2">
-                      
+
                       <div className="text-[10px] font-medium text-gray-500 mb-2">
                         {d.weekday}
                       </div>
-                      
+
                       <div className="w-9 h-9 flex items-center justify-center">
                         <span className="text-sm font-medium text-gray-700">{d.date}</span>
                       </div>

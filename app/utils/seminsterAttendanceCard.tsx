@@ -37,7 +37,6 @@ export default function SemesterAttendanceCard({
 
   return (
     <div className="h-32 flex-1 min-w-[16rem] rounded-lg p-3 bg-[#E9FFF0] flex flex-col shadow-sm">
-      {/* Header */}
       <div className="flex justify-between mb-2 items-center">
         <div className="flex items-center gap-2">
           <div className="bg-[#43C17A] w-9 h-8 rounded-sm flex items-center justify-center">
@@ -48,7 +47,6 @@ export default function SemesterAttendanceCard({
         <p className="text-[#43C17A] text-2xl font-bold">{overallPercent}%</p>
       </div>
 
-      {/* Bars */}
       <div className="flex items-end justify-between mt-5 gap-2">
         {bars.map((bar, index) => (
           <div key={index} className="flex-1">

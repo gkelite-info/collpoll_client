@@ -1,5 +1,6 @@
-"use client"
-import { useState } from "react"
+"use client";
+
+import { useState, ReactNode, useEffect } from "react";
 import {
   BuildingOffice,
   Calendar,
@@ -12,19 +13,19 @@ import {
   House,
   Note,
   Student,
-} from "@phosphor-icons/react"
-import { ReactNode } from "react"
-import { useRouter } from "next/navigation"
+} from "@phosphor-icons/react";
+import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
-  icon: (isActive: boolean) => ReactNode
-  label: string
+  icon: (isActive: boolean) => ReactNode;
+  label: string;
   path: string;
-}
+};
 
 export default function Navbar() {
   const router = useRouter();
-  const [active, setActive] = useState("Home");
+  const pathname = usePathname();
+  const [active, setActive] = useState("");
 
   const items: NavItem[] = [
     {
@@ -32,82 +33,84 @@ export default function Navbar() {
         <House size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Home",
-      path: ""
+      path: "/",
     },
     {
       icon: (isActive) => (
         <Calendar size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Calendar",
-      path: "attendance"
+      path: "/calendar",
     },
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Attendance",
-      path: ""
+      path: "/attendance",
     },
     {
       icon: (isActive) => (
         <Note size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Assignments",
-      path: ""
+      path: "/assignments",
     },
     {
       icon: (isActive) => (
         <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Academics",
-      path: ""
+      path: "/academics",
     },
     {
       icon: (isActive) => (
         <Student size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Student Progress",
-      path: ""
+      path: "/student-progress",
     },
     {
       icon: (isActive) => (
         <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Projects",
-      path: ""
+      path: "/projects",
     },
     {
       icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
-      path: ""
+      path: "/placements",
     },
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
-      path: ""
+      path: "/drive",
     },
     {
       icon: (isActive) => (
-        <CurrencyCircleDollar
-          size={18}
-          weight={isActive ? "fill" : "regular"}
-        />
+        <CurrencyCircleDollar size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Payments",
-      path: ""
+      path: "/payments",
     },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Settings",
-      path: ""
+      path: "/settings",
     },
-  ]
+  ];
+
+  useEffect(() => {
+    const current = items.find((item) => item.path === pathname);
+    if (current) setActive(current.label);
+  }, [pathname]);
 
   return (
     <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl rounded-br-3xl shadow-md">
@@ -117,31 +120,34 @@ export default function Navbar() {
 
       <div className="flex flex-col items-start w-full h-[90%] gap-3 pt-4">
         {items.map((item, index) => {
-          const isActive = active === item.label
+          const isActive = active === item.label;
+
           return (
             <div
               key={index}
-              onClick={() => setActive(item.label)}
+              onClick={() => {
+                setActive(item.label);
+                if (item.path) router.push(item.path);
+              }}
               className={`flex items-center gap-3 w-[90%] mx-auto px-4 py-2 rounded-full cursor-pointer transition-all duration-300
-                ${isActive
-                  ? "bg-white text-[#43C17A]"
-                  : "text-white hover:bg-[#50D689]/30"
+                ${
+                  isActive
+                    ? "bg-white text-[#43C17A]"
+                    : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
               <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
                 {item.icon(isActive)}
               </div>
-              <p
-                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
-                  }`}
-              >
+
+              <p className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"}`}>
                 {item.label}
               </p>
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }
