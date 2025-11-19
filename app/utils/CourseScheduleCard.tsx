@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from "react";
 
+type Props = {
+    style?: string
+}
 
-
-export default function CourseScheduleCard() {
+export default function CourseScheduleCard({ style = "" }: { style?: string }) {
 
     const [time, setTime] = useState("");
     const [day, setDay] = useState("");
@@ -33,7 +35,7 @@ export default function CourseScheduleCard() {
 
     return (
         <>
-            <div className="flex justify-between">
+            <div className={`flex justify-between ${style}`}>
                 <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
                     <p className="text-[#EFEFEF] text-sm">B.Tech CSE – Year 2</p>
                 </div>
