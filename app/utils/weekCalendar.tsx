@@ -11,7 +11,8 @@ const months = [
 
 type Gradient = { from: string; to: string };
 
-export default function WorkWeekCalendar() {
+
+export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string }) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -67,7 +68,7 @@ export default function WorkWeekCalendar() {
   const years = Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i);
 
   return (
-    <div ref={containerRef} className="max-w-sm p-4 bg-white rounded-lg shadow-md mt-5 text-black relative h-[170px] flex flex-col justify-center gap-5">
+    <div ref={containerRef} className={`max-w-sm p-4 bg-white rounded-lg shadow-md text-black relative h-[170px] flex flex-col justify-center gap-5 ${style}`}>
       <div className="flex justify-between items-center mb-2 relative bg-yellow-00">
         <div className="flex w-[85%]">
           <div className="relative">
