@@ -4,8 +4,8 @@ import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TableComponent from "@/app/utils/table/page";
 import WorkWeekCalendar from "@/app/utils/weekCalendar";
-import { Chalkboard, FilePdf, Percent, UsersThree } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
+import { useState } from "react";
 
 interface CardItem {
     id: number;
@@ -53,7 +53,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function SubjectAttendanceDetails() {
-    const router = useRouter();
+    const [activeView, setActiveView] = useState<"table" | "present" | "absent">("table");
 
     const cards: CardItem[] = [
         { id: 1, icon: <Chalkboard size={30} weight="fill" />, value: "32", label: "Total Classes", style: "bg-[#E2DAFF] w-[182px]", iconBgColor: "#714EF2", iconColor: "#EFEFEF" },
@@ -121,6 +121,108 @@ export default function SubjectAttendanceDetails() {
 
     ];
 
+    const present = [
+        { title: "Date", key: "date" },
+        { title: "Time", key: "time" },
+        { title: "Status", key: "status" },
+        { title: "Reason", key: "reason" },
+        { title: "Notes", key: "notes" },
+    ];
+
+    const presentTableData = [
+        {
+            date: "22/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Present" />,
+            reason: "-",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+        {
+            date: "20/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Present" />,
+            reason: "-",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+        {
+            date: "18/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Present" />,
+            reason: "-",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+        {
+            date: "17/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Present" />,
+            reason: "-",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+        {
+            date: "16/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Present" />,
+            reason: "-",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+
+    ];
+
+    const absent = [
+        { title: "Date", key: "date" },
+        { title: "Time", key: "time" },
+        { title: "Status", key: "status" },
+        { title: "Reason", key: "reason" },
+        { title: "Notes", key: "notes" },
+    ];
+
+    const absentTableData = [
+        {
+            date: "22/10/2025",
+            time: "01:00 PM - 04:00 PM",
+            status: <StatusBadge status="Absent" />,
+            reason: "Sick Leave",
+            notes: (
+                <div className="w-full flex justify-center">
+                    <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+                        <FilePdf size={20} color="#7557E3" />
+                    </div>
+                </div>
+            ),
+        },
+    ];
+
+
     return (
         <div className="flex flex-col pb-3">
             <div className="flex justify-between items-center">
@@ -135,20 +237,29 @@ export default function SubjectAttendanceDetails() {
             </div>
 
             <div className="w-full h-[170px] mt-4 flex items-start gap-3">
-                {cards.map((card, index) => (
-                    <CardComponent
-                        key={index}
-                        style={card.style}
-                        icon={card.icon}
-                        value={card.value}
-                        label={card.label}
-                        iconBgColor={card.iconBgColor}
-                        iconColor={card.iconColor}
-                        underlineValue={card.underlineValue}
-                        totalPercentage={card.totalPercentage}
-                    />
-                ))}
-
+                {cards.map((card, index) => {
+                    return (
+                        <div
+                            key={index}
+                            onClick={() => {
+                                if (index === 0) setActiveView("table");
+                                if (index === 1) setActiveView("present");
+                                if (index === 2) setActiveView("absent");
+                            }}
+                        >
+                            <CardComponent
+                                style={card.style}
+                                icon={card.icon}
+                                value={card.value}
+                                label={card.label}
+                                iconBgColor={card.iconBgColor}
+                                iconColor={card.iconColor}
+                                underlineValue={card.underlineValue}
+                                totalPercentage={card.totalPercentage}
+                            />
+                        </div>
+                    );
+                })}
                 <WorkWeekCalendar style="w-[345px] mt-0" />
             </div>
 
@@ -179,11 +290,19 @@ export default function SubjectAttendanceDetails() {
                     ))}
                 </div>
 
-                <div className="bg-red-00 mt-2 w-[85%]">
-                    <TableComponent
-                        columns={columns}
-                        tableData={tableData}
-                    />
+                <div className="mt-4 w-[85%]">
+                    {activeView === "table" && (
+                        <TableComponent columns={columns} tableData={tableData} />
+                    )}
+
+                    {activeView === "present" && (
+                        <TableComponent columns={present} tableData={presentTableData} />
+                    )}
+
+                    {activeView === "absent" && (
+                        <TableComponent columns={absent} tableData={absentTableData} />
+                    )}
+
                 </div>
             </div>
         </div>
