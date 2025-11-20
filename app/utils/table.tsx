@@ -15,9 +15,8 @@ export default function Table({ columns, data }: TableProps) {
             {columns.map((col, index) => (
               <th
                 key={index}
-                className={`px-4 py-3 text-sm font-normal text-[#282828] ${
-                  col === "Subject" ? "text-left" : "text-center"
-                }`}
+                className={`px-4 py-3 text-sm font-normal text-[#282828] ${col === "Subject" ? "text-left" : "text-center"
+                  }`}
               >
                 {col}
               </th>
@@ -29,9 +28,8 @@ export default function Table({ columns, data }: TableProps) {
           {data.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              className={`hover:bg-gray-50 bg-[#FFFFFF] ${
-                rowIndex !== data.length - 1 ? "border-b border-gray-200" : ""
-              }`}
+              className={`hover:bg-gray-50 bg-[#FFFFFF] ${rowIndex !== data.length - 1 ? "border-b border-gray-200" : ""
+                }`}
             >
               {columns.map((col, colIndex) => {
                 const value = row[col]
@@ -103,9 +101,8 @@ export default function Table({ columns, data }: TableProps) {
                 return (
                   <td
                     key={colIndex}
-                    className={`px-4 py-1 ${
-                      col === "Subject" ? "text-left" : "text-center"
-                    }`}
+                    className={`px-4 py-1 ${col === "Subject" ? "text-left" : "text-center"
+                      }`}
                   >
                     {cellContent}
                   </td>
