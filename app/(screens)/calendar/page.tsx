@@ -9,7 +9,7 @@ export default function CalendarPage() {
             <div className="bg-red-00 p-2 flex flex-col lg:pb-5">
                 <div className="flex justify-between items-center bg-indigo-00">
                     <div className="flex flex-col w-[50%] h-[100%] bg-green-00">
-                        <h1 className="text-[#282828] font-bold text-2xl mb-2">Calendar</h1>
+                        <h1 className="text-[#282828] font-bold text-2xl mb-1">Calendar</h1>
                         <p className="text-[#282828] text-sm">Stay Organized and Keep Track of Your Weekly Schedule with Ease</p>
                     </div>
                     <div className="flex justify-end w-[32%] bg-yellow-00">
