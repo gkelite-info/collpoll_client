@@ -11,7 +11,7 @@ function getWeekDays() {
   monday.setDate(today.getDate() + diffToMonday);
 
   const days = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
 
