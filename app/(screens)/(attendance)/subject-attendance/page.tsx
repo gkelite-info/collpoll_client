@@ -186,7 +186,7 @@ export default function SubjectAttendance() {
             <div className="flex flex-col pb-3">
                 <div className="flex justify-between items-center">
                     <div className="flex flex-col w-[50%]">
-                        <h1 className="text-[#282828] font-bold text-2xl mb-2">Attendance</h1>
+                        <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
                         <p className="text-[#282828]">Track, Manage, and Maintain Your Attendance Effortlessly</p>
                     </div>
 

@@ -74,7 +74,7 @@ export default function Attendance() {
         {!showSubjectAttendanceTable && !showSubjectAttendanceDetails && (
           <>
             <div className="mb-5">
-              <h1 className="text-[#282828] font-bold text-2xl mb-2">Attendance</h1>
+              <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
               <p className="text-[#282828]">Track, Manage, and Maintain Your Attendance Effortlessly</p>
             </div>
 
