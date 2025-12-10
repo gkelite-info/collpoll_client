@@ -113,12 +113,12 @@ export default function Navbar() {
   }, [pathname]);
 
   return (
-    <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl rounded-br-3xl shadow-md">
+    <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl shadow-md">
       <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
         Logo
       </div>
 
-      <div className="flex flex-col items-start w-full h-[90%] gap-3 pt-4">
+      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4">
         {items.map((item, index) => {
           const isActive = active === item.label; 
 
