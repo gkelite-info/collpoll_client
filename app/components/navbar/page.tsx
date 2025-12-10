@@ -120,7 +120,7 @@ export default function Navbar() {
 
       <div className="flex flex-col items-start w-full h-[90%] gap-3 pt-4">
         {items.map((item, index) => {
-          const isActive = active === item.label;
+          const isActive = active === item.label; 
 
           return (
             <div
