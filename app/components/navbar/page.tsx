@@ -129,9 +129,11 @@ export default function Navbar() {
                 setActive(item.label);
                 if (item.path) router.push(item.path);
               }}
-              className={`flex items-center gap-3 w-[90%] mx-auto px-4 py-2 rounded-full cursor-pointer transition-all duration-300
+              className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
+                before:transition-all before:duration-300
+                after:transition-all after:duration-300
                 ${isActive
-                  ? "bg-white text-[#43C17A]"
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
                   : "text-white hover:bg-[#50D689]/30"
                 }
               `}
