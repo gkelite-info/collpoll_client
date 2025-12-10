@@ -69,6 +69,37 @@ body {
   font-size: 0.600rem;
 }
 
+.activeNav {
+  position: relative;
+  transition: all 0s ease;
+}
+
+.activeNav::before{
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  background: transparent;
+  right: 0;
+  top: -20px;
+  box-shadow: 5px 5px 0px 5px #F4F4F4;
+  border-bottom-right-radius: 25px;
+  transition: all 0s ease;
+}
+
+.activeNav::after{
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  background: transparent;
+  right: 0;
+  bottom: -20px;
+  box-shadow: 5px -5px 0px 5px #F4F4F4;
+  border-top-right-radius: 25px;
+  transition: all 0s ease;
+}
+
 /* Debugging helper (optional)
 * {
   border: 1px solid red;
