@@ -34,6 +34,13 @@ export const foldersMock = [
     sizeLabel: "137 MB",
     color: "#EF5DA8",
   },
+  {
+    id: 6,
+    name: "Homework",
+    filesCount: 23,
+    sizeLabel: "137 MB",
+    color: "#0BA968",
+  },
 ];
 
 export const recentFilesMock = [
