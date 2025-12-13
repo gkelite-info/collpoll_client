@@ -157,8 +157,8 @@ const Page = () => {
           </div>
         </section>
 
-        <section className="min-h-screen bg-gray-100 flex flex-col gap-6 ">
-          <article className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+        <section className="min-h-screen bg-gray-100 grid-rows-[300px_300px] flex flex-col gap-6 ">
+          <article className="grid grid-cols-1 lg:grid-cols-10 gap-6 ">
             <section className="bg-white rounded-2xl shadow-sm lg:col-span-6">
               <ProfileCard
                 name="Ananya Sharma"
@@ -172,7 +172,7 @@ const Page = () => {
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm p-4 lg:col-span-4 ">
-              <AttendanceSummaryCard presentPercentage={80} />
+              <AttendanceSummaryCard percentage={85} />
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-6">

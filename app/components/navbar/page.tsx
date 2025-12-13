@@ -93,7 +93,10 @@ export default function Navbar() {
     },
     {
       icon: (isActive) => (
-        <CurrencyCircleDollar size={18} weight={isActive ? "fill" : "regular"} />
+        <CurrencyCircleDollar
+          size={18}
+          weight={isActive ? "fill" : "regular"}
+        />
       ),
       label: "Payments",
       path: "/payments",
@@ -120,7 +123,7 @@ export default function Navbar() {
 
       <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4">
         {items.map((item, index) => {
-          const isActive = active === item.label; 
+          const isActive = active === item.label;
 
           return (
             <div
@@ -132,9 +135,10 @@ export default function Navbar() {
               className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${isActive
-                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                  : "text-white hover:bg-[#50D689]/30"
+                ${
+                  isActive
+                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                    : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -142,7 +146,11 @@ export default function Navbar() {
                 {item.icon(isActive)}
               </div>
 
-              <p className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"}`}>
+              <p
+                className={`text-sm font-medium ${
+                  isActive ? "text-[#43C17A]" : "text-white"
+                }`}
+              >
                 {item.label}
               </p>
             </div>

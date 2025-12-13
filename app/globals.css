@@ -1,6 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
-
 
 :root {
   --background: #ffffff;
@@ -10,7 +9,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Jost', sans-serif;
+  --font-sans: "Jost", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,7 +22,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Jost', sans-serif;
+  font-family: "Jost", sans-serif;
 }
 
 /* Hide scrollbars */
@@ -66,7 +65,7 @@ body {
 }
 
 .react-calendar {
-  font-size: 0.600rem;
+  font-size: 0.6rem;
 }
 
 .activeNav {
@@ -74,28 +73,28 @@ body {
   transition: all 0s ease;
 }
 
-.activeNav::before{
-  content: '';
+.activeNav::before {
+  content: "";
   position: absolute;
   height: 20px;
   width: 20px;
   background: transparent;
   right: 0;
   top: -20px;
-  box-shadow: 5px 5px 0px 5px #F4F4F4;
+  box-shadow: 5px 5px 0px 5px #f4f4f4;
   border-bottom-right-radius: 25px;
   transition: all 0s ease;
 }
 
-.activeNav::after{
-  content: '';
+.activeNav::after {
+  content: "";
   position: absolute;
   height: 20px;
   width: 20px;
   background: transparent;
   right: 0;
   bottom: -20px;
-  box-shadow: 5px -5px 0px 5px #F4F4F4;
+  box-shadow: 5px -5px 0px 5px #f4f4f4;
   border-top-right-radius: 25px;
   transition: all 0s ease;
 }
