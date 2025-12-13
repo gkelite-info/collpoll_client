@@ -1,16 +1,19 @@
-import Internships from "./internships";
+import Internships from "./Interships/internships";
 import KeySkills from "./KeySkills/keySkills";
 import Languages from "./languages";
+import PersonalDetails from "./personalDetails";
 import ProfileSteps from "./profileSteps";
 
 export default function Profile() {
     return (
-        <div className="flex flex-col flex-1 h-[85vh]">
+        <div className="flex flex-col flex-1 h-[85vh] p-2">
             <div><ProfileSteps /></div>
+            <p className="mt-3 mb-1 text-[#282828] font-normal"><span className="text-[#43C17A] font-medium">Profile /</span> Resume</p>
             <div className="flex-1">
                 {/* <KeySkills/> */}
                 {/* <Languages /> */}
-                <Internships/>
+                {/* <Internships/> */}
+                <PersonalDetails/>
             </div>
         </div>
     )
