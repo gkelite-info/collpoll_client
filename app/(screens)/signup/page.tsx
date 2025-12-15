@@ -456,13 +456,7 @@ export default function Signup() {
           </div>
 
           {/* Buttons and Footer */}
-          <div className="w-full flex flex-col items-center mt-5">
-
-            <div className="flex items-center gap-5">
-              <button className="w-[150px] h-[42px] bg-[#C4C4C4] text-[#414141] text-[14px] rounded">
-                Cancel
-              </button>
-
+          <div className="w-full flex flex-col items-center mt-5">          
               <button
                 onClick={handleSignup}
                 className="w-[150px] h-[42px] bg-[#16284F] text-white text-[14px] rounded"
@@ -482,8 +476,6 @@ export default function Signup() {
               </span>
             </p>
           </div>
-
-        </div>
       </div>
     </div>
   );
