@@ -9,9 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
+    "@iconify/react": "^6.0.2",
     "@phosphor-icons/react": "^2.1.10",
-    "framer-motion": "^12.23.26",
+    "@supabase/supabase-js": "^2.87.1",
+    "@hookform/resolvers": "^5.2.2",
     "lucide-react": "^0.552.0",
     "next": "16.0.1",
     "react": "19.2.0",
@@ -27,6 +28,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.9.7",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
