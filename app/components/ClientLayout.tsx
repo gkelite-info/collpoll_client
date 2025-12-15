@@ -12,7 +12,7 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
 
-  const hideLayoutRoutes = ["/login", "/signup", "/verify-email"];
+  const hideLayoutRoutes = ["/login", "/signup", "/verify-email" , "/forgot-password" , "/reset-password"];
 
   const shouldHideLayout = hideLayoutRoutes.some((route) =>
     pathname.startsWith(route)
