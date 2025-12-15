@@ -2,88 +2,70 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
-import Link from "next/link";
 import { Icon } from "@iconify/react";
+import { updatePassword } from "@/lib/helpers/updatePassword";
 
-
-
-import { debugTokens, checkAccessTokenValidity, testRefreshToken, testProtectedQuery }
-  from "@/lib/helpers/authTokens";
-
-
-
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-
-  type Slide = {
-    heading: string;
-    para: string;
-    image: string;
-  };
-
-  const slides: Slide[] = [
-    {
-      heading: "Welcome to GK Elite",
-      para: "Your trusted partner in digital solutions.",
-      image: "/Group 2774.png",
-    },
-    {
-      heading: "Secure & Modern",
-      para: "Cutting-edge tools for your workflow.",
-      image: "/Group 2774 (1).png",
-    },
-    {
-      heading: "Grow Faster",
-      para: "Boost your productivity with us.",
-      image: "/Group 2774 (2).png",
-    },
-    {
-      heading: "Future Ready",
-      para: "Designed for performance and reliability.",
-      image: "/Group 2774 (3).png",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, []);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
 
+   type Slide = {
+      heading: string;
+      para: string;
+      image: string;
+    };
+  
+    const slides: Slide[] = [
+      {
+        heading: "Welcome to GK Elite",
+        para: "Your trusted partner in digital solutions.",
+        image: "/Group 2774.png",
+      },
+      {
+        heading: "Secure & Modern",
+        para: "Cutting-edge tools for your workflow.",
+        image: "/Group 2774 (1).png",
+      },
+      {
+        heading: "Grow Faster",
+        para: "Boost your productivity with us.",
+        image: "/Group 2774 (2).png",
+      },
+      {
+        heading: "Future Ready",
+        para: "Designed for performance and reliability.",
+        image: "/Group 2774 (3).png",
+      },
+    ];
+  
+    const [current, setCurrent] = useState(0);
+  
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setCurrent((prev) => (prev + 1) % slides.length);
+      }, 2500);
+      return () => clearInterval(interval);
+    }, []);
 
+  // 🔐 Password validation
   const validate = () => {
-    // Email empty
-    if (!email.trim()) {
-      toast.error("Email is required!");
+    if (!password.trim() || !confirmPassword.trim()) {
+      toast.error("All fields are required");
       return false;
     }
 
-    // Email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast.error("Please enter a valid email address");
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
       return false;
     }
 
-    // Password empty
-    if (!password.trim()) {
-      toast.error("Password is required!");
-      return false;
-    }
-
-    // Password rules:
-    // 1 uppercase, 1 lowercase, 1 number, 1 special char, min 6 chars
     const passwordRegex =
       /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
@@ -94,33 +76,28 @@ export default function LoginPage() {
       return false;
     }
 
-    return true; // ✅ All validations passed
+    return true;
   };
 
-  const handleLogin = async () => {
-    if (!validate()) return; // 🚫 API WILL NOT HIT
+  const handleUpdatePassword = async () => {
+    if (!validate()) return;
 
     setLoading(true);
 
-    try {
-      const res = await loginUser(email, password);
+    const res = await updatePassword(password);
 
-      if (res.success) {
-        toast.success("Login successful!");
-        router.push("/");
-      } else {
-        toast.error(res.error || "Login failed");
-      }
-    } catch {
-      toast.error("Something went wrong");
-    } finally {
-      setLoading(false);
+    setLoading(false);
+
+    if (!res.success) {
+      toast.error(res.error || "Failed to update password");
+      return;
     }
+
+    toast.success("Password updated successfully");
+    router.push("/login");
   };
 
-
-
-  const radius = 240;
+    const radius = 240;
 
   return (
     <div className="w-full h-full flex">
@@ -227,45 +204,29 @@ export default function LoginPage() {
         </div>
       </div>
 
-
-      {/* RIGHT SECTION (SCALED UP – NO FUNCTIONAL/UI CHANGE) */}
+      {/* RIGHT SECTION */}
       <div className="w-[55%] h-screen flex justify-center items-center bg-[#F5F6F8]">
         <div className="w-[560px] bg-white rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-8">
           <h1 className="text-[20px] font-semibold text-[#16284F] text-center">
-            Login to Your Account
+            New Password
           </h1>
 
-          <p className="text-[13px] text-[#414141] text-center mt-1 mb-3">
-            Please enter your credentials to proceed.
+          <p className="text-[13px] text-[#6B6B6B] text-center mt-1">
+            Please write your new password
           </p>
 
-          {/* Email */}
-          <div className="mt-6">
-            <label className="block text-[13px] text-[#414141] mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              placeholder="Enter your registered email"
-              className="w-full mt-1 h-11 px-4 rounded-md border border-[#DCDCDC]
-                   text-[14px] text-black focus:outline-none  placeholder:text-gray-400"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
           {/* Password */}
-          <div className="mt-4">
-            <label className="block text-[13px] text-[#414141] mb-1">
+          <div className="mt-6">
+            <label className="text-[13px] text-[#16284F] font-medium">
               Password
             </label>
 
             <div className="relative mt-1">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                className="w-full h-11 px-4 pr-12 rounded-md border border-[#DCDCDC]
-                     text-[14px] focus:outline-none text-black placeholder:text-gray-400"
+                placeholder="Enter new password"
+                className="w-full h-[44px] px-4 pr-12 rounded-md border border-[#E6E6E6]
+                 text-[14px] focus:outline-none text-black"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -276,45 +237,62 @@ export default function LoginPage() {
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
                 <Icon
-                  icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
+                  icon={
+                    showPassword
+                      ? "mdi:eye-off-outline"
+                      : "mdi:eye-outline"
+                  }
                   width={20}
                 />
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => router.push("/forgot-password")}
-              className="text-[13px] text-[#16284F] mt-2 w-full text-right hover:underline"
-            >
-              Forgot Password?
-            </button>
-
           </div>
 
-          {/* Buttons */}
+          {/* Confirm Password */}
+          <div className="mt-4">
+            <label className="text-[14px] text-[#16284F] font-medium">
+              Confirm Password
+            </label>
+
+            <div className="relative mt-1">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm new password"
+                className="w-full h-[44px] px-4 pr-12 rounded border border-[#E6E6E6]
+                 text-[14px] focus:outline-none text-black"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword(!showConfirmPassword)
+                }
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                <Icon
+                  icon={
+                    showConfirmPassword
+                      ? "mdi:eye-off-outline"
+                      : "mdi:eye-outline"
+                  }
+                  width={20}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Button */}
           <div className="w-full flex justify-center mt-8">
             <button
-              onClick={handleLogin}
+              onClick={handleUpdatePassword}
               disabled={loading}
               className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[14px]"
             >
-              {loading ? "Loading..." : "Login"}
+              {loading ? "Updating..." : "Confirm Password"}
             </button>
           </div>
-
-          {/* Register */}
-          <p className="text-center mt-4 text-[14px] text-[#444]">
-            Don’t have an account?{" "}
-            <Link
-              href="/signup"
-              className="text-[#0A8E2E] cursor-pointer"
-            >
-              Register Now
-            </Link>
-
-          </p>
-
         </div>
       </div>
     </div>
