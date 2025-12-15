@@ -75,7 +75,7 @@ export default function Signup() {
     /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
   const sanitizeEmail = (value: string) =>
-  value.toLowerCase().replace(/[^a-z0-9@.]/g, "");
+    value.toLowerCase().replace(/[^a-z0-9@.]/g, "");
 
   const sanitizeDigits = (value: string) =>
     value.replace(/\D/g, "").slice(0, 10);
@@ -453,12 +453,13 @@ export default function Signup() {
           <div className="w-full flex flex-col items-center mt-5">
             <button
               onClick={handleSignup}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white text-[14px] rounded"
+              className="w-[200px] h-[50px] bg-[#16284F] text-white text-[15px] font-semibold rounded"
               disabled={loading}
             >
               {loading ? "Loading..." : "Register"}
             </button>
           </div>
+
 
           <p className="text-[14px] text-[#414141] mt-4 text-center">
             Already have an account?{" "}

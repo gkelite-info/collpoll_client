@@ -236,7 +236,8 @@ export default function ForgotPassword() {
                             className={`
     w-[200px] h-[50px]
     bg-[#16284F]
-    text-white text-[14px]
+    text-white text-[15px]
+    font-medium
     rounded
     ${loading ? "opacity-60 cursor-not-allowed" : ""}
   `}

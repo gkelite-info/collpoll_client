@@ -297,7 +297,7 @@ export default function LoginPage() {
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[14px]"
+              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
             >
               {loading ? "Loading..." : "Login"}
             </button>

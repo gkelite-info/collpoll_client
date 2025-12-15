@@ -288,7 +288,7 @@ export default function ResetPasswordPage() {
             <button
               onClick={handleUpdatePassword}
               disabled={loading}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[14px]"
+              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
             >
               {loading ? "Updating..." : "Confirm Password"}
             </button>
