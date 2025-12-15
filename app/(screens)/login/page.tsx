@@ -288,12 +288,8 @@ export default function LoginPage() {
           </div>
 
           {/* Buttons */}
-          <div className="w-full flex justify-between mt-8">
-
-            <button className="w-[48%] h-11 bg-[#C7C7C7] text-[#16284F] rounded-md text-[14px]">
-              Cancel
-            </button>
-
+          {/* Buttons */}
+          <div className="w-full flex justify-center mt-8">
             <button
               onClick={handleLogin}
               disabled={loading}
@@ -301,8 +297,8 @@ export default function LoginPage() {
             >
               {loading ? "Loading..." : "Login"}
             </button>
-
           </div>
+
 
 
           {/* Register */}
