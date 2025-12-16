@@ -1,0 +1,54 @@
+interface TextAreaProps
+    extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+    label: string;
+}
+export function Input({ label, placeholder }: { label: string; placeholder: string }) {
+    return (
+        <div className="flex flex-col">
+            <label className="text-sm font-medium text-[#282828] mb-1">
+                {label}
+            </label>
+            <input
+                placeholder={placeholder}
+                className="h-10 px-3 border border-[#CCCCCC] text-[#525252] rounded-md text-sm focus:outline-none"
+            />
+        </div>
+    );
+}
+
+export function Select({ label, options }: { label: string; options: string[] }) {
+    return (
+        <div className="flex flex-col">
+            <label className="text-sm font-medium text-[#282828] mb-1">
+                {label}
+            </label>
+            <select className="h-10 px-3 border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none">
+                <option value="">Select</option>
+                {options.map((opt) => (
+                    <option key={opt}>{opt}</option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+export function TextArea({ label, ...props }: TextAreaProps) {
+    return (
+        <div className="flex flex-col md:col-span-2">
+            <label className="text-sm font-medium text-[#282828] mb-1">
+                {label}
+            </label>
+            <div className="relative">
+                <textarea
+                    {...props}
+                    maxLength={500}
+                    rows={4}
+                    className="px-3 py-2 w-full border border-[#CCCCCC] rounded-md text-sm resize-none focus:outline-none"
+                />
+                <span className="absolute bottom-3 right-3 text-xs text-[#6B7280]">
+                    {(props.value?.toString().length ?? 0)}/{props.maxLength ?? 500}
+                </span>
+            </div>
+        </div>
+    );
+}
