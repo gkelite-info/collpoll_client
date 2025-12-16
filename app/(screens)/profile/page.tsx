@@ -1,8 +1,12 @@
+import Accomplishments from "./Accomplishments/Accomplishments";
+import EducationSection from "./Education/Education";
 import Internships from "./Interships/internships";
 import KeySkills from "./KeySkills/keySkills";
 import Languages from "./languages";
 import PersonalDetails from "./personalDetails";
 import ProfileSteps from "./profileSteps";
+import ProfileSummary from "./ProfileSummary";
+import ProjectsForm from "./Projects/ProjectsForm";
 
 export default function Profile() {
     return (
@@ -13,7 +17,11 @@ export default function Profile() {
                 {/* <KeySkills/> */}
                 {/* <Languages /> */}
                 {/* <Internships/> */}
-                <PersonalDetails/>
+                {/* <PersonalDetails/> */}
+                {/* <EducationSection/> */}
+                {/* <ProjectsForm/> */}
+                {/* <ProfileSummary/> */}
+                <Accomplishments/>
             </div>
         </div>
     )
