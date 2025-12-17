@@ -1,28 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import {
-  TextT,
-  ShieldCheck,
-  Key,
-  Envelope,
   BellSimple,
-  Globe,
-  UserCircle,
-  LockKey,
   CaretRight,
+  Envelope,
+  Globe,
+  Key,
+  LockKey,
+  ShieldCheck,
+  TextT,
+  UserCircle,
 } from "@phosphor-icons/react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 
-import ResetPassword from "./components/resetPassword";
 import DoneStep from "./components/doneStep";
+import ResetPassword from "./components/resetPassword";
 import CurrentPassword from "./components/verifyPassword";
 
 import LinkedAccounts, {
-  mockAccountData,
   LinkedAccount,
+  mockAccountData,
 } from "./components/linkedAccounts";
 
 import TwoStepVerification, {

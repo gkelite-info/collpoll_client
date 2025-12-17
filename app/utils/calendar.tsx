@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -57,7 +57,7 @@ export default function CalendarRibbonComponent() {
     <div className="flex items-center justify-center">
       <div className="bg-white rounded-2xl shadow-lg p-1 px-4 w-full max-w-md">
         <div className="flex items-center justify-between mb-1">
-          <h3 className="text-lg font-semibold text-gray-800">
+          <h3 className="text-sm font-semibold text-gray-800">
             {monthName} {year}
           </h3>
           <div className="flex items-center gap-1">
@@ -95,7 +95,6 @@ export default function CalendarRibbonComponent() {
                   ref={isRibbon ? activeItemRef : null}
                   className="flex-none"
                 >
-
                   {isRibbon ? (
                     <div
                       className="w-12 rounded-lg  flex flex-col items-center justify-start py-2 px-1 mt-[-6px]"
@@ -106,7 +105,6 @@ export default function CalendarRibbonComponent() {
                         backgroundSize: "100% 100%",
                       }}
                     >
-
                       <div className="text-[10px] font-semibold tracking-wide text-white mt-1">
                         {d.weekday}
                       </div>
@@ -115,23 +113,24 @@ export default function CalendarRibbonComponent() {
                         className="w-8 h-8 rounded-full flex items-center justify-center shadow-sm mt-2"
                         style={{ background: "#43C17A" }}
                       >
-                        <span className="text-sm font-semibold text-white">{d.date}</span>
+                        <span className="text-sm font-semibold text-white">
+                          {d.date}
+                        </span>
                       </div>
                     </div>
                   ) : (
                     <div className="w-14 flex flex-col items-center justify-center py-1 px-2">
-
                       <div className="text-[10px] font-medium text-gray-500 mb-2">
                         {d.weekday}
                       </div>
 
                       <div className="w-9 h-9 flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-700">{d.date}</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          {d.date}
+                        </span>
                       </div>
                     </div>
                   )}
-
-
                 </div>
               );
             })}
