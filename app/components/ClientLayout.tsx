@@ -1,9 +1,13 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Navbar from "./navbar/page";
 import Header from "./header/page";
 import { Toaster } from "react-hot-toast";
+
+import StudentNavbar from "./navbar/studentNavbar";
+import AdminNavbar from "./navbar/adminNavbar";
+import ParentNavbar from "./navbar/parentNavbar";
+import FacultyNavbar from "./navbar/facultyNavbar";
 
 export default function ClientLayout({
   children,
@@ -12,15 +16,28 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
 
-  const hideLayoutRoutes = ["/login", "/signup", "/verify-email" , "/forgot-password" , "/reset-password"];
+  const hideLayoutRoutes = [
+    "/login",
+    "/signup",
+    "/verify-email",
+    "/forgot-password",
+    "/reset-password",
+  ];
 
   const shouldHideLayout = hideLayoutRoutes.some((route) =>
     pathname.startsWith(route)
   );
 
+  // 🔥 Decide navbar by route
+  const renderNavbar = () => {
+    if (pathname.startsWith("/admin")) return <AdminNavbar />;
+    if (pathname.startsWith("/parent")) return <ParentNavbar />;
+    if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
+    return <StudentNavbar />; // "/" and all student routes
+  };
+
   return (
     <>
-      {/* ✅ Toast is ALWAYS mounted */}
       <Toaster position="top-right" reverseOrder={false} />
 
       {shouldHideLayout ? (
@@ -28,7 +45,7 @@ export default function ClientLayout({
       ) : (
         <div className="flex h-screen w-screen overflow-hidden justify-between">
           <div className="w-[17%] h-full bg-[#43C17A]">
-            <Navbar />
+            {renderNavbar()}
           </div>
 
           <div className="flex flex-col w-[83%] h-full">

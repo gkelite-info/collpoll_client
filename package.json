@@ -9,10 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@iconify/react": "^6.0.2",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.87.1",
-    "@hookform/resolvers": "^5.2.2",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.552.0",
