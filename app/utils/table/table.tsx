@@ -10,7 +10,7 @@ type Column = {
 
 type TableComponentProps = {
   columns: Column[];
-  tableData: Record<string, any>[];
+  tableData: Record<string, any>[]; 
 };
 
 export default function TableComponent({ columns, tableData }: TableComponentProps) {
