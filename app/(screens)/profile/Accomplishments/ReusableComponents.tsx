@@ -2,13 +2,28 @@ interface TextAreaProps
     extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
     label: string;
 }
-export function Input({ label, placeholder }: { label: string; placeholder: string }) {
+export function Input({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+}: {
+    label: string;
+    name: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+}) {
     return (
         <div className="flex flex-col">
             <label className="text-sm font-medium text-[#282828] mb-1">
                 {label}
             </label>
             <input
+                name={name}
+                value={value}
+                onChange={onChange}
                 placeholder={placeholder}
                 className="h-10 px-3 border border-[#CCCCCC] text-[#525252] rounded-md text-sm focus:outline-none"
             />
@@ -16,13 +31,30 @@ export function Input({ label, placeholder }: { label: string; placeholder: stri
     );
 }
 
-export function Select({ label, options }: { label: string; options: string[] }) {
+export function Select({
+    label,
+    name,
+    value,
+    options,
+    onChange,
+}: {
+    label: string;
+    name: string;
+    value: string;
+    options: string[];
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+}) {
     return (
         <div className="flex flex-col">
             <label className="text-sm font-medium text-[#282828] mb-1">
                 {label}
             </label>
-            <select className="h-10 px-3 border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none">
+            <select
+                name={name}
+                value={value}
+                onChange={onChange}
+                className="h-10 px-3 border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none"
+            >
                 <option value="">Select</option>
                 {options.map((opt) => (
                     <option key={opt}>{opt}</option>
