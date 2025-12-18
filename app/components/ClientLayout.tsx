@@ -28,12 +28,11 @@ export default function ClientLayout({
     pathname.startsWith(route)
   );
 
-  // 🔥 Decide navbar by route
   const renderNavbar = () => {
     if (pathname.startsWith("/admin")) return <AdminNavbar />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
-    return <StudentNavbar />; // "/" and all student routes
+    return <StudentNavbar />;
   };
 
   return (

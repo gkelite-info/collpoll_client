@@ -17,7 +17,7 @@ export default function StudentLayout({
           <Header />
         </div>
 
-        <div className="h-[87%] bg-[#F4F4F4] overflow-auto px-2">
+        <div className="h-[87%] bg-[#F4F4F4] overflow-auto">
           {children}
         </div>
       </div>
