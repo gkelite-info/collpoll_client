@@ -1,28 +1,10 @@
-'use client'
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/weekCalendar";
 
-export default function StuDashRight() {
 
-    const myTasks = [
-        {
-            title: "Complete Python Lab",
-            description: "Finish all 10 lab programs and upload to portal.",
-            time: "12:40 PM",
-        },
-        {
-            title: "Group Discussion Prep",
-            description: "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-            time: "02:40 PM",
-        },
-        {
-            title: "Resume Update",
-            description: "Add latest internship experience to resume builder section.",
-            time: "03:40 PM",
-        },
-    ]
+
+export default function ParentRight() {
 
     const card = [
         {
@@ -74,16 +56,13 @@ export default function StuDashRight() {
 
     return (
         <>
-            <div className="w-[32%] p-2 flex flex-col">
+            <div className="bg-indigo-00 w-[32%] px-1 flex flex-col">
                 <CourseScheduleCard />
                 <WorkWeekCalendar />
-                <TaskPanel
-                    tasks={myTasks}
-                />
                 <AnnouncementsCard
                     announceCard={card}
                 />
             </div>
         </>
-    );
+    )
 }

@@ -32,7 +32,7 @@ export default function AdminNavbar() {
             icon: (isActive) => (
                 <House size={18} weight={isActive ? "fill" : "regular"} />
             ),
-            label: "AdminHome",
+            label: "Home",
             path: "/",
         },
         {
@@ -91,16 +91,16 @@ export default function AdminNavbar() {
             label: "Drive",
             path: "/drive",
         },
-        {
-            icon: (isActive) => (
-                <CurrencyCircleDollar
-                    size={18}
-                    weight={isActive ? "fill" : "regular"}
-                />
-            ),
-            label: "Payments",
-            path: "/payments",
-        },
+        // {
+        //     icon: (isActive) => (
+        //         <CurrencyCircleDollar
+        //             size={18}
+        //             weight={isActive ? "fill" : "regular"}
+        //         />
+        //     ),
+        //     label: "Payments",
+        //     path: "/payments",
+        // },
         {
             icon: (isActive) => (
                 <Gear size={18} weight={isActive ? "fill" : "regular"} />
