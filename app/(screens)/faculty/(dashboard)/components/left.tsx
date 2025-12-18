@@ -10,9 +10,7 @@ import {
 
 import { useState } from "react";
 
-import ScheduledLessonsStrip, {
-  ScheduledLesson,
-} from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses, { UpcomingLesson } from "../../utils/upcomingClasses";
 import {
