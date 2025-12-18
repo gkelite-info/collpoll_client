@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export function FacultyInfoCard() {
+export function UserInfoCard() {
   const [today, setToday] = useState("");
 
   useEffect(() => {

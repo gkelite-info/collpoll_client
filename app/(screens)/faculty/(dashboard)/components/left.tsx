@@ -7,7 +7,7 @@ import {
   ClockAfternoon,
   UsersThree,
 } from "@phosphor-icons/react";
-import { FacultyInfoCard } from "../../utils/facultyInfoCard";
+import { UserInfoCard } from "../../utils/userInfoCard";
 
 import { useState } from "react";
 
@@ -50,10 +50,9 @@ const cardData = [
 ];
 
 interface FacultyDashLeftProps {
-  onShowStudentTable: () => void; // New prop
+  onShowStudentTable: () => void;
 }
 
-// Update the component signature
 export default function FacultyDashLeft({
   onShowStudentTable,
 }: FacultyDashLeftProps) {
@@ -88,7 +87,7 @@ export default function FacultyDashLeft({
   return (
     <>
       <div className="w-[68%] p-2">
-        <FacultyInfoCard />
+        <UserInfoCard />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent

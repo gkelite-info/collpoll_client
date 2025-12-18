@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import { IconProps } from "@phosphor-icons/react";
 
@@ -28,18 +27,17 @@ export default function CardComponent({
 
   return (
     <div
-      className={`rounded-xl shadow-sm p-3 flex flex-col justify-between text-gray-900 h-full ${bgColor}`}
+      className={`rounded-md shadow-sm p-3 flex flex-col gap-6 text-gray-900 h-full ${bgColor}`}
     >
       <div
-        className={`w-8 h-8 shrink-0 rounded-lg flex items-center justify-center mb-3 ${iconBgColor}`}
+        className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center  ${iconBgColor}`}
       >
         {styledIcon}
       </div>
 
       <div>
-        <div className="text-xl font-bold leading-none">{value}</div>
-
-        <div className="text-[10px] font-semibold text-gray-700 mt-1 leading-tight">
+        <div className="text-xl font-semibold leading-none mb-2">{value}</div>
+        <div className="text-[14px] font-medium text-gray-700 mt-1 leading-tight">
           {label}
         </div>
       </div>
