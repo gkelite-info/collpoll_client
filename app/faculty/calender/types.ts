@@ -1,5 +1,3 @@
-import { Icon } from "@phosphor-icons/react";
-
 export type EventType = "event" | "class" | "exam" | "holiday";
 
 export interface CalendarEvent {
@@ -8,13 +6,11 @@ export interface CalendarEvent {
   type: EventType;
   startTime: string;
   endTime: string;
-  day: string; // 'MON', 'TUE', etc.
+  day: string;
 }
 
-// src/components/calendar/types.ts
 export interface WeekDay {
-  day: string; // "MON"
-  date: number; // 24
-  fullDate: string; // "2023-10-24" (New field for matching)
+  day: string;
+  date: number;
+  fullDate: string;
 }
-// ... rest of your types

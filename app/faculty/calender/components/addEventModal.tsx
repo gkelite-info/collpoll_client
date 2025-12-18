@@ -1,6 +1,6 @@
 "use client";
 
-import { X, CalendarBlank } from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 
 interface AddEventModalProps {
@@ -27,7 +27,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const modalContentRef = useRef<HTMLDivElement>(null); // Ref for the modal's content box
+  const modalContentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +61,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     onClose();
   }, [title, selectedType, date, startTime, endTime, onSave, onClose]);
 
-  // --- NEW: Handle Click Outside and Enter Key Press ---
   useEffect(() => {
     if (!isOpen) return;
 
@@ -126,9 +125,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           </button>
         </div>
 
-        {/* Form Content */}
         <div className="p-5 space-y-5">
-          {/* Event Title */}
           <div className="space-y-1">
             <label
               htmlFor="event-title"
@@ -146,7 +143,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             />
           </div>
 
-          {/* Type Selector */}
           <div className="space-y-1">
             <label className="block text-gray-700 font-medium text-sm">
               Type
@@ -168,9 +164,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
 
-          {/* 🗓️ TIME & DATE ROW FIX */}
           <div>
-            {/* 📅 Date Selection Group (w-1/2) */}
             <div className="w-1/2 space-y-1">
               <label
                 htmlFor="event-date"
@@ -203,13 +197,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
             </div>
 
-            {/* ⏱️ Time Selection Group (w-1/2) */}
             <div className="w-1/2 space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">
                 Time
               </label>
               <div className="flex gap-2">
-                {/* From Input Group */}
                 <div className="flex-1">
                   <span className="block text-gray-500 text-xs mb-1">From</span>
                   <input
@@ -221,7 +213,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   />
                 </div>
 
-                {/* To Input Group */}
                 <div className="flex-1">
                   <span className="block text-gray-500 text-xs mb-1">To</span>
                   <input
@@ -235,8 +226,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
             </div>
           </div>
-
-          {/* Save Button */}
           <div className="pt-2">
             <button
               onClick={handleSave}
