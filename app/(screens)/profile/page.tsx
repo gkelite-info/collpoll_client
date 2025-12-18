@@ -1,4 +1,5 @@
 import Accomplishments from "./Accomplishments/Accomplishments";
+import CompetetiveExams from "./CompetetiveExams";
 import EducationSection from "./Education/Education";
 import Internships from "./Interships/internships";
 import KeySkills from "./KeySkills/keySkills";
@@ -22,6 +23,7 @@ export default function Profile() {
                 {/* <ProjectsForm/> */}
                 {/* <ProfileSummary/> */}
                 <Accomplishments/>
+                {/* <CompetetiveExams/> */}
             </div>
         </div>
     )
