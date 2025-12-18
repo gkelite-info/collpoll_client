@@ -6,7 +6,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
 import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
 import WorkWeekCalendar from "@/app/utils/weekCalendar";
-import TableComponent from "@/app/utils/table/page";
+import TableComponent from "@/app/utils/table/table";
 
 interface CardItem {
     id: number;
