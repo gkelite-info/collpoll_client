@@ -4,8 +4,6 @@ import AttendanceClient from "./attendanceClient";
 
 
 export default function Attendance() {
-
-
   return (
     <Suspense fallback={<div className="p-4">Loading attendance...</div>}>
       <AttendanceClient />
