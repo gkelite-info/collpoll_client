@@ -1,18 +1,16 @@
-// src/components/calendar/CalendarGrid.tsx
-
 import React from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { CalendarEvent, WeekDay } from "../types";
 import { getEventStyle } from "../utils";
 import EventCard from "./eventCard";
-import { TIME_SLOTS } from "../calenderData"; // Assuming this is defined
+import { TIME_SLOTS } from "../calenderData";
 
 interface CalendarGridProps {
   events: CalendarEvent[];
   weekDays: WeekDay[];
   onPrevWeek: () => void;
   onNextWeek: () => void;
-  activeTab: string; // <-- NEW: Prop from the toolbar
+  activeTab: string;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -22,21 +20,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onNextWeek,
   activeTab,
 }) => {
-  // Helper function to check if an event matches the active tab filter
   const matchesFilter = (event: CalendarEvent): boolean => {
-    // If "All" is selected, always show the event.
     if (activeTab === "All") {
       return true;
     }
-    // Check if the event's type (lowercase) matches the active tab (lowercase)
+
     return event.type.toLowerCase() === activeTab.toLowerCase();
   };
 
   return (
     <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative h-[800px]">
-      {/* Header Row (Days) - REDUCED HEIGHT AND INLINE LAYOUT */}
       <div className="flex border-b border-gray-400">
-        {/* Navigation Arrows */}
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
             onClick={onPrevWeek}
@@ -52,7 +46,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           </button>
         </div>
 
-        {/* Dynamic Day Columns (FIXED LAYOUT) */}
         <div className="flex-1 grid grid-cols-5">
           {weekDays.map((day) => (
             <div
@@ -72,12 +65,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      {/* Grid Body */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
         <div className="flex min-h-[720px]">
-          {/* Time Sidebar */}
           <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">
-            {/* @ts-ignore */}
             {TIME_SLOTS &&
               TIME_SLOTS.map((time) => (
                 <div
@@ -89,11 +79,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               ))}
           </div>
 
-          {/* Day Columns */}
           <div className="flex-1 grid grid-cols-5 relative">
-            {/* Background Grid Lines */}
             <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
-              {/* @ts-ignore */}
               {TIME_SLOTS &&
                 TIME_SLOTS.map((_, i) => (
                   <div
@@ -108,10 +95,9 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 key={dayObj.fullDate}
                 className="relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10"
               >
-                {/* 1. Filter by Date (Events within this day) */}
                 {events
                   .filter((e) => e.startTime.startsWith(dayObj.fullDate))
-                  // 2. Filter by Type (Active Toolbar Tab)
+
                   .filter(matchesFilter)
 
                   .map((event) => {

@@ -17,7 +17,6 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
   setActiveTab,
 }) => {
   const tabs = [
-    // 💡 Using "All" and lowercase strings for easy comparison with event.type
     { name: "All Scheduled", filterValue: "All", icon: CalendarBlank },
     { name: "Events", filterValue: "event", icon: Confetti },
     { name: "Classes", filterValue: "class", icon: ChalkboardTeacher },
@@ -31,7 +30,6 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
         {tabs.map((tab) => (
           <button
             key={tab.name}
-            // Set state using the filter value
             onClick={() => setActiveTab(tab.filterValue)}
             className={`flex items-center gap-2 pb-1 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.filterValue

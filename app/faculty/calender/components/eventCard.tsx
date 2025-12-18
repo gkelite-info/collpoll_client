@@ -1,10 +1,5 @@
-// src/components/calendar/eventCard.tsx
-
 import { Chalkboard, Island, Laptop, Users } from "@phosphor-icons/react";
-import React from "react"; // Added React import for safety
 import { CalendarEvent, EventType } from "../types";
-
-// NOTE: Ensure EventType is defined in your types file with values like 'event', 'class', 'exam', 'holiday'
 
 const EVENT_STYLES: Record<
   EventType,
@@ -39,7 +34,6 @@ const EVENT_STYLES: Record<
 };
 
 const EventCard = ({ event }: { event: CalendarEvent }) => {
-  // Use .toLowerCase() to ensure the key matches the record keys ('event', 'class', etc.)
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.event;
   const Icon = style.Icon;
@@ -61,11 +55,11 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
           backgroundColor: style.solidBg,
           color: style.text,
           borderColor: style.text,
-        }} // 💡 FIX: Used style prop for colors
+        }}
       >
         <div
           className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0`}
-          style={{ backgroundColor: style.text }} // 💡 FIX: Used style prop for background color
+          style={{ backgroundColor: style.text }}
         >
           <Icon size={14} weight="fill" color="#ffffff" />
         </div>
@@ -75,11 +69,11 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
 
       <div
         className={`flex-1 p-2 h-full`}
-        style={{ backgroundColor: style.lightBg }} // 💡 FIX: Used style prop for light background
+        style={{ backgroundColor: style.lightBg }}
       >
         <p
           className={`text-sm font-semibold leading-snug`}
-          style={{ color: style.text }} // 💡 FIX: Used style prop for text color
+          style={{ color: style.text }}
         >
           {event.title}
         </p>
