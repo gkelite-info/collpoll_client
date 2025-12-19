@@ -3,12 +3,13 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import EmploymentForm from "./EmploymentForm";
+import { useRouter } from "next/navigation";
 
 
 export default function Employment() {
   const [formCount, setFormCount] = useState(1);
   const [submittedForms, setSubmittedForms] = useState<boolean[]>([false]);
-
+  const router = useRouter()
   const handleAdd = () => {
     const lastIndex = formCount - 1;
 
@@ -41,7 +42,9 @@ export default function Employment() {
           >
             Add +
           </button>
-          <button className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium">
+          <button
+            onClick={() => router.push('/profile?academic-achievements')}
+            className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium">
             Next
           </button>
         </div>

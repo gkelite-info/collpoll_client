@@ -3,6 +3,7 @@
 import { useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import ProjectItem, { ProjectData } from "./ProjectItem";
+import { useRouter } from "next/navigation";
 
 const emptyProject = (): ProjectData => ({
   projectName: "",
@@ -19,6 +20,8 @@ export default function ProjectsForm() {
   const [projects, setProjects] = useState<ProjectData[]>([
     emptyProject(),
   ]);
+
+  const router = useRouter(); 
 
   const updateProject = (index: number, data: ProjectData) => {
     const copy = [...projects];
@@ -56,6 +59,7 @@ export default function ProjectsForm() {
 
           <button
             type="button"
+            onClick={()=>router.push('/profile?profile-summary')}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
           >
             Next

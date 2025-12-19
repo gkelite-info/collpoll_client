@@ -1,12 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 const EXAMS = ["GMAT", "TOEL", "GRE", "SAT", "IELTS"];
 
 export default function CompetetiveExams() {
   const [selectedExams, setSelectedExams] = useState<string[]>([]);
   const [scores, setScores] = useState<Record<string, string>>({});
+  const router = useRouter()
 
   const toggleExam = (exam: string) => {
     setSelectedExams((prev) => {
@@ -39,7 +42,7 @@ export default function CompetetiveExams() {
       exam,
       score: scores[exam],
     }));
-
+    toast.success("Competitive Exams Submitted Successfully");
     console.log("Submitted Data:", payload);
   };
 
@@ -50,7 +53,9 @@ export default function CompetetiveExams() {
           Competitive Exams
         </h2>
 
-        <button className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-4 py-1.5 rounded-md">
+        <button
+        onClick={()=>router.push('/profile?employment')}
+         className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-4 py-1.5 rounded-md">
           Next
         </button>
       </div>

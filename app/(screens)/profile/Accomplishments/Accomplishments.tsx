@@ -5,10 +5,12 @@ import CertificationsForm from "./CertificationsForm";
 import AwardsForm from "./AwardsForm";
 import ClubsForm from "./ClubsForm";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 type TabType = "certifications" | "awards" | "clubs";
 
 export default function Accomplishments() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>("certifications");
     const [submittedForms, setSubmittedForms] = useState<Record<TabType, boolean[]>>({
         certifications: [false],
@@ -65,6 +67,7 @@ export default function Accomplishments() {
                     </button>
                     <button
                         type="button"
+                        onClick={()=>router.push('/profile?competitive-exams')}
                         className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
                     >
                         Next

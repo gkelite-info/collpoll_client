@@ -2,23 +2,26 @@
 
 import { useRef, useEffect, useState } from "react";
 import { CheckCircle } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type StepItem = {
     id: number;
     title: string;
+    query: string;
 };
 
 const STEP_DATA: StepItem[] = [
-    { id: 1, title: "Personal Details" },
-    { id: 2, title: "Education" },
-    { id: 3, title: "Key Skills", },
-    { id: 4, title: "Languages", },
-    { id: 5, title: "Internships", },
-    { id: 6, title: "Projects", },
-    { id: 7, title: "Profile Summary", },
-    { id: 8, title: "Accomplishments", },
-    { id: 9, title: "Additional Info", },
-    { id: 10, title: "Finish", }
+    { id: 1, title: "Personal Details", query: "personal-details" },
+    { id: 2, title: "Education", query: "education" },
+    { id: 3, title: "Key Skills", query: "key-skills" },
+    { id: 4, title: "Languages", query: "languages" },
+    { id: 5, title: "Internships", query: "internships" },
+    { id: 6, title: "Projects", query: "projects" },
+    { id: 7, title: "Profile Summary", query: "profile-summary" },
+    { id: 8, title: "Accomplishments", query: "accomplishments" },
+    { id: 9, title: "Competitive Exams", query: "competitive-exams" },
+    { id: 10, title: "Employment", query: "employment" },
+    { id: 11, title: "Academic Achievements", query: "academic-achievements" },
 ];
 
 export default function ProfileSteps() {
@@ -26,6 +29,8 @@ export default function ProfileSteps() {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const stepRefs = useRef<HTMLDivElement[]>([]);
     stepRefs.current = stepRefs.current.slice(0, STEP_DATA.length);
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     useEffect(() => {
         const activeIndex = STEP_DATA.findIndex((s) => s.id === currentStep);
@@ -38,6 +43,19 @@ export default function ProfileSteps() {
         const offset = nRect.left - cRect.left - cRect.width / 2 + nRect.width / 2;
         containerNode.scrollBy({ left: offset, behavior: "smooth" });
     }, [currentStep]);
+
+    useEffect(() => {
+        const query = searchParams.toString().replace("=", "");
+        const matchedStep = STEP_DATA.find((s) => s.query === query);
+
+        if (matchedStep) {
+            setCurrentStep(matchedStep.id);
+        } else {
+            router.replace("/profile?personal-details", { scroll: false });
+            setCurrentStep(1);
+        }
+    }, [searchParams, router]);
+
     const addRef = (el: HTMLDivElement | null, index: number) => {
         if (!el) return;
         stepRefs.current[index] = el;
@@ -59,7 +77,12 @@ export default function ProfileSteps() {
                             <div
                                 key={step.id}
                                 ref={(el) => addRef(el, index)}
-                                onClick={() => setCurrentStep(step.id)}
+                                onClick={() => {
+                                    setCurrentStep(step.id);
+                                    router.push(`/profile?${step.query}`, {
+                                        scroll: false,
+                                    });
+                                }}
                                 className="flex items-center justify-center cursor-pointer relative select-none"
                             >
                                 <div

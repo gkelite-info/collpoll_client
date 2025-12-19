@@ -4,18 +4,19 @@ import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import InternshipForm from "./internshipForm";
+import { useRouter } from "next/navigation";
 
 export default function Internships() {
   const [forms, setForms] = useState([{ id: 1, submitted: false }]);
+  const router = useRouter()
 
   const handleAdd = () => {
     const last = forms[forms.length - 1];
 
     if (!last.submitted) {
-      // toast.error(
-      //   "Please submit the current internship before adding a new one."
-      // );
-      alert("Please submit the current internship before adding a new one.")
+      toast.error(
+        "Please submit the current internship before adding a new one."
+      );
       return;
     }
 
@@ -37,14 +38,15 @@ export default function Internships() {
             <button
               onClick={handleAdd}
               type="button"
-              className="inline-flex cursor-pointer items-center gap-2 bg-[#43C17A] hover:bg-emerald-600 text-white text-sm font-medium px-3 py-1.5 rounded"
+              className="inline-flex cursor-pointer items-center gap-2 bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded"
             >
               Add <Plus size={14} />
             </button>
 
             <button
               type="button"
-              className="inline-flex items-center cursor-pointer bg-[#43C17A] hover:bg-emerald-600 text-white text-sm font-medium px-3 py-1.5 rounded"
+              onClick={()=>router.push('/profile?projects')}
+              className="inline-flex items-center cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded"
             >
               Next
             </button>
