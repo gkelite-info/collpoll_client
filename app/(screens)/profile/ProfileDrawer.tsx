@@ -1,0 +1,136 @@
+"use client";
+import { CaretRight, CaretDown, SignOut, ArrowLeft, PencilSimple, EnvelopeSimple, Phone, Headset, Key, Palette, ClipboardText } from "@phosphor-icons/react";
+import { useState } from "react";
+
+type Props = {
+    open: boolean;
+    onClose: () => void;
+};
+
+interface ProfileOptions {
+    id: string;
+    name: string;
+    icon: React.ReactNode
+}
+
+const profileOptions: ProfileOptions[] = [
+    { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+    { id: "support", name: "Digi Campus Support", icon: <Headset size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+    { id: "change-password", name: "Change Password", icon: <Key size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+    { id: "colour-themes", name: "Colour Themes", icon: <Palette size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+]
+
+export default function ProfileDrawer({ open, onClose }: Props) {
+    const [showThemes, setShowThemes] = useState<boolean>(false);
+
+    if (!open) return null;
+
+    return (
+        <>
+            <div
+                className="fixed inset-0 bg-black/20 z-120"
+                onClick={onClose}
+            />
+
+            <div className="fixed top-0 right-0 h-full w-[33%] bg-white z-150 shadow-xl flex flex-col">
+                <div className="flex justify-between items-center gap-3 px-4 py-4">
+                    <button onClick={onClose} className="cursor-pointer">
+                        <ArrowLeft size={22} />
+                    </button>
+                    <button className="cursor-pointer">
+                        <PencilSimple size={22} />
+                    </button>
+                </div>
+                <h2 className="text-base font-medium pl-4">Profile</h2>
+                <div className="m-4 p-4 rounded-xl bg-[#43C17A26] flex gap-3 items-center">
+                    <img
+                        src="https://randomuser.me/api/portraits/women/44.jpg"
+                        alt="profile"
+                        className="w-14 h-14 rounded-full object-cover"
+                    />
+
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                            <p className="font-semibold text-md">Shravani Reddy</p>
+                            <div className="flex gap-2 items-center">
+                                <span className="text-xs ">ID - 12345678</span>
+                                <CaretRight size={20} className="text-[#000000] cursor-pointer" />
+                            </div>
+                        </div>
+                        <p className="text-xs text-[#282828] font-medium">B.Tech CSE - Year 2</p>
+                        <div className="flex gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 mt-2">
+                                <EnvelopeSimple size={22} className="bg-[#43C17A] rounded-full p-1 text-white" />
+                                <span className="text-xs">shravaniredyy@gmail.com</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                                <Phone size={22} className="bg-[#43C17A] rounded-full p-1 text-white" />
+                                <span className="text-xs">9012345678</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="px-2 flex-1">
+                    {profileOptions.map((item) =>
+                        item.id === "colour-themes" ? (
+                            <div key={item.id}>
+                                <div
+                                    className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => setShowThemes(!showThemes)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        {item.icon}
+                                        <span className="text-sm text-[#282828] font-medium">
+                                            {item.name}
+                                        </span>
+                                    </div>
+
+                                    {showThemes ? (
+                                        <CaretDown size={18} className="text-gray-400" />
+                                    ) : (
+                                        <CaretRight size={18} className="text-gray-400" />
+                                    )}
+                                </div>
+                                {showThemes && (
+                                    <div className="px-6 pb-3 mt-2 ml-8">
+                                        <div className="flex gap-2 bg-[#43C17A36] w-fit px-3 py-2 rounded-md justify-center items-center">
+                                            {["#6C63FF", "#FFA726", "#29B6F6", "#43C17A"].map((c) => (
+                                                <div
+                                                    key={c}
+                                                    className="w-8 h-8 rounded-md cursor-pointer"
+                                                    style={{ backgroundColor: c }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div
+                                key={item.id}
+                                className="flex items-center justify-between px-4 py-3 rounded-lg hover:bg-gray-100 cursor-pointer"
+                            >
+                                <div className="flex items-center gap-2">
+                                    {item.icon}
+                                    <span className="text-sm text-[#282828] font-medium">
+                                        {item.name}
+                                    </span>
+                                </div>
+                                <CaretRight size={18} className="text-gray-400" />
+                            </div>
+                        )
+                    )}
+
+
+                    <div className="px-4.5 py-4">
+                        <button className="flex items-center gap-2 text-[#EB0000] font-medium cursor-pointer text-sm">
+                            <SignOut size={30} className="rounded-full bg-[#EB00001A] text-[#EB0000] p-1.5"/>
+                            Log Out
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}

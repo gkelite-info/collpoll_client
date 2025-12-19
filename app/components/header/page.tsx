@@ -1,4 +1,5 @@
 "use client";
+import ProfileDrawer from "@/app/(screens)/profile/ProfileDrawer";
 import {
   BellSimple,
   CaretDown,
@@ -12,6 +13,7 @@ import { useState } from "react";
 
 export default function Header() {
   const [searchValue, setSearchValue] = useState("");
+  const [openProfile, setOpenProfile] = useState(false);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,7 +57,10 @@ export default function Header() {
             <Megaphone size={20} color="#282828" className="cursor-pointer" />
           </div>
 
-          <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full" onClick={()=>router.push('/profile')}>
+          <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
+            //  onClick={()=>router.push('/profile')}
+            onClick={() => setOpenProfile(true)}
+          >
             <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
               <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
                 V
@@ -72,8 +77,8 @@ export default function Header() {
                 />
               </div>
               <div className="flex items-center justify-between text-[#E5E5E5] w-full">
-                <p style={{ fontSize: 12, color:"#E5E5E5" }}>B.Tech CSE</p>
-                <p style={{ fontSize: 12, color:"#E5E5E5" }}>
+                <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
+                <p style={{ fontSize: 12, color: "#E5E5E5" }}>
                   ID -{" "}
                   <span style={{ fontSize: 12, color: "#E5E5E5" }}>
                     2112121
@@ -84,6 +89,11 @@ export default function Header() {
           </div>
         </div>
       </div>
+      <ProfileDrawer
+        open={openProfile}
+        onClose={() => setOpenProfile(false)}
+      />
+
     </>
   );
 }
