@@ -1,34 +1,11 @@
-import AcademicAchievements from "./AcademicAchievements";
-import Accomplishments from "./Accomplishments/Accomplishments";
-import CompetetiveExams from "./CompetetiveExams";
-import EducationSection from "./Education/Education";
-import Employment from "./Employment/Employment";
-import Internships from "./Interships/internships";
-import KeySkills from "./KeySkills/keySkills";
-import Languages from "./languages";
-import PersonalDetails from "./personalDetails";
-import ProfileSteps from "./profileSteps";
-import ProfileSummary from "./ProfileSummary";
-import ProjectsForm from "./Projects/ProjectsForm";
+"use client";
+import { Suspense } from "react";
+import ProfileClient from "./Profile";
 
-export default function Profile() {
-    return (
-        <div className="flex flex-col flex-1 h-[85vh] p-2">
-            <div><ProfileSteps /></div>
-            <p className="mt-3 mb-1 text-[#282828] font-normal"><span className="text-[#43C17A] font-medium">Profile /</span> Resume</p>
-            <div className="flex-1">
-                {/* <KeySkills/> */}
-                {/* <Languages /> */}
-                {/* <Internships/> */}
-                {/* <PersonalDetails/> */}
-                {/* <EducationSection/> */}
-                {/* <ProjectsForm/> */}
-                {/* <ProfileSummary/> */}
-                {/* <Accomplishments/> */}
-                {/* <CompetetiveExams/> */}
-                {/* <Employment/> */}
-                <AcademicAchievements/>
-            </div>
-        </div>
+export default function Profile(){
+    return(
+        <Suspense fallback={<div className="p-4">Loading...</div>}>
+            <ProfileClient/>
+        </Suspense>
     )
 }

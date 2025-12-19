@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CaretDown, X } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 
 const ALL_LANGUAGES = [
     "English",
@@ -22,6 +23,8 @@ export default function Languages() {
     const [selected, setSelected] = useState<string[]>(["Telugu", "Hindi", "English", "Kannada"]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const router = useRouter();
 
     useEffect(() => {
         function onDocClick(e: MouseEvent) {
@@ -54,7 +57,14 @@ export default function Languages() {
     return (
         <div className="mt-3 h-full">
             <div className="bg-white rounded-lg shadow-sm p-6 h-[95%]">
-                <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
+                <div className="flex justify-between">
+                    <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
+                    <button
+                        onClick={() => router.push('/profile?internships')}
+                        className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
+                        Next
+                    </button>
+                </div>
 
                 <div className="mt-6 max-w-xl flex flex-col mx-auto">
                     <div ref={containerRef} className="relative">

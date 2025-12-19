@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { CaretDown } from "@phosphor-icons/react";
 import EducationForm from "./EducationForm";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export type EducationType =
     | "primary"
@@ -20,6 +22,7 @@ const EDUCATION_ORDER: EducationType[] = [
 export default function EducationSection() {
     const [addedForms, setAddedForms] = useState<EducationType[]>(["primary"]);
     const [open, setOpen] = useState(false);
+    const router = useRouter()
 
     const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,6 +49,7 @@ export default function EducationSection() {
     };
 
     const handleSubmitAll = () => {
+        toast.success("Education form submitted Successfully");
         console.log("All education forms submitted");
     };
 
@@ -83,7 +87,9 @@ export default function EducationSection() {
                         </div>
                     )}
 
-                    <button className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
+                    <button
+                        onClick={() => router.push('/profile?key-skills')}
+                        className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
                         Next
                     </button>
                 </div>

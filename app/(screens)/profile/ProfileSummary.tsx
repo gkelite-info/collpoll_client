@@ -1,8 +1,16 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function ProfileSummary() {
     const [description, setDescription] = useState<string>("");
+    const router = useRouter();
+    const handleSubmit = () => {
+        // Handle the submission logic here
+        toast.success("Profile Summary Submitted Successfully");
+        console.log("Profile Summary Submitted:", description);
+    }
     return (
         <div className="min-h-screen bg-gray-100 flex justify-center rounded-xl mt-2 mb-5">
             <div className="w-full max-w-5xl bg-white rounded-xl shadow-sm p-6">
@@ -10,7 +18,9 @@ export default function ProfileSummary() {
                     <h2 className="text-xl font-medium text-[#282828]">
                         Profile Summary
                     </h2>
-                    <button className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium">
+                    <button
+                        onClick={() => router.push('/profile?accomplishments')}
+                        className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium">
                         Next
                     </button>
                 </div>
@@ -36,6 +46,13 @@ export default function ProfileSummary() {
                         <span className="absolute bottom-3 right-4 text-xs text-gray-400">
                             {description.length}/500
                         </span>
+                    </div>
+                    <div className="flex justify-end mt-3">
+                        <button
+                            onClick={handleSubmit}
+                            className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
+                            Submit
+                        </button>
                     </div>
                 </div>
             </div>

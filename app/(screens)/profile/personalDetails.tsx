@@ -1,9 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function PersonalDetails() {
     const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
+    const router = useRouter();
+
+    const handleSubmit = () => {
+        toast.success("Personal Details Submitted");
+        console.log("Form submitted");
+    }
 
     return (
         <div className="w-full bg-[#f6f7f9] mt-2 mb-4">
@@ -12,7 +20,9 @@ export default function PersonalDetails() {
                     <h2 className="text-lg font-semibold text-[#000000]">
                         Personal Details
                     </h2>
-                    <button className="bg-[#43C17A] text-white px-4 py-1.5 rounded-md text-sm font-medium">
+                    <button
+                    onClick={()=>router.push('/profile?education')}
+                     className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium">
                         Next
                     </button>
                 </div>
@@ -103,14 +113,14 @@ export default function PersonalDetails() {
                         >
                             <p
                                 className={`font-medium ${workStatus === "experienced"
-                                        ? "text-[#43C17A]"
-                                        : "text-[#282828]"
+                                    ? "text-[#43C17A]"
+                                    : "text-[#282828]"
                                     }`}
                             >
                                 I’m experienced
                             </p>
                             <p
-                                className="text-sm mt-1 text-[#525252]"  
+                                className="text-sm mt-1 text-[#525252]"
                             >
                                 i have work experience (excluding internships)
                             </p>
@@ -126,8 +136,8 @@ export default function PersonalDetails() {
                         >
                             <p
                                 className={`font-medium ${workStatus === "fresher"
-                                        ? "text-[#43C17A]"
-                                        : "text-[#282828]"
+                                    ? "text-[#43C17A]"
+                                    : "text-[#282828]"
                                     }`}
                             >
                                 I’m a fresher
@@ -141,7 +151,14 @@ export default function PersonalDetails() {
 
                     </div>
                 </div>
-
+                <div className="mt-6 flex justify-end">
+                    <button
+                        className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium"
+                        onClick={handleSubmit}
+                    >
+                        Submit
+                    </button>
+                </div>
             </div>
         </div>
     );

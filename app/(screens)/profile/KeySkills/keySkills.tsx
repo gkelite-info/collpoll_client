@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Plus, PencilSimple, X } from "@phosphor-icons/react";
 import AddSkillModal from "@/app/(screens)/profile/KeySkills/addSkillModel";
 import Pill from "./Pill";
+import { useRouter } from "next/navigation";
 
 const initialTechnical = [
   "React.js",
@@ -48,6 +49,8 @@ export default function KeySkillsWithModal() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
+  const router = useRouter();
+
   const removeFrom = (listName: "technical" | "soft" | "tools", value: string) => {
     if (listName === "technical") setTechnical((s) => s.filter((x) => x !== value));
     if (listName === "soft") setSoft((s) => s.filter((x) => x !== value));
@@ -68,14 +71,19 @@ export default function KeySkillsWithModal() {
             <h3 className="text-2xl font-semibold text-[#282828]">Skills</h3>
           </div>
 
-          <div>
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="inline-flex items-center gap-2 bg-[#43C17A] hover:bg-emerald-600 text-white text-sm font-medium px-3 py-1.5 rounded"
+              className="inline-flex items-center gap-2 bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-3 py-1.5 rounded"
             >
-              <Plus size={16} weight="bold" />
-              <span>Add</span>
+              {/* <Plus size={16} weight="bold" /> */}
+              <span>Add +</span>
+            </button>
+            <button
+              onClick={() => router.push('/profile?languages')}
+              className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
+              Next
             </button>
           </div>
         </div>
@@ -90,9 +98,8 @@ export default function KeySkillsWithModal() {
               <button
                 aria-label="Toggle edit technical"
                 onClick={() => setEditTechnical((v) => !v)}
-                className={`absolute right-3 top-3 inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                  editTechnical ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
-                }`}
+                className={`absolute right-3 cursor-pointer top-3 inline-flex items-center justify-center w-8 h-8 rounded-full ${editTechnical ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
+                  }`}
                 title={editTechnical ? "Done editing" : "Edit"}
               >
                 <PencilSimple size={16} weight="bold" />
@@ -125,9 +132,8 @@ export default function KeySkillsWithModal() {
               <button
                 aria-label="Toggle edit soft"
                 onClick={() => setEditSoft((v) => !v)}
-                className={`absolute right-3 top-3 inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                  editSoft ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
-                }`}
+                className={`absolute right-3 cursor-pointer top-3 inline-flex items-center justify-center w-8 h-8 rounded-full ${editSoft ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
+                  }`}
                 title={editSoft ? "Done editing" : "Edit"}
               >
                 <PencilSimple size={16} weight="bold" />
@@ -156,9 +162,8 @@ export default function KeySkillsWithModal() {
               <button
                 aria-label="Toggle edit tools"
                 onClick={() => setEditTools((v) => !v)}
-                className={`absolute right-3 top-3 inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                  editTools ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
-                }`}
+                className={`absolute right-3 top-3 cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-full ${editTools ? "bg-emerald-600 text-white" : "bg-[#43C17A30] text-[#43C17A]"
+                  }`}
                 title={editTools ? "Done editing" : "Edit"}
               >
                 <PencilSimple size={16} weight="bold" />
