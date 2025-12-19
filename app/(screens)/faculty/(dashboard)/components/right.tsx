@@ -2,7 +2,7 @@
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
-import WorkWeekCalendar from "@/app/utils/weekCalendar";
+import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 
 export default function FacultyDashRight() {
   const myTasks = [

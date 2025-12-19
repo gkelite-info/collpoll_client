@@ -12,12 +12,11 @@ type UserInfoCardProps = {
   studentsTaskPercentage?: number;
   childPerformance?: string;
   image?: string;
-}
+};
 
 type UserInfoProps = {
   cardProps: UserInfoCardProps[];
-}
-
+};
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
@@ -35,10 +34,14 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   return (
     <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
       {cardProps.map((item, index) => (
-        <div className="relative z-10 flex h-full items-center justify-between px-8" key={index}>
+        <div
+          className="relative z-10 flex h-full items-center justify-between px-8"
+          key={index}
+        >
           <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
-              {item.show && "ID:"} {item.studentId}{item.show && ","} {item.studentBranch}
+              {item.show && "ID:"} {item.studentId}
+              {item.show && ","} {item.studentBranch}
             </p>
 
             <p className="text-lg text-[#282828] leading-tight mt-3">
@@ -53,13 +56,20 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                 {item.facultySubject}
               </span>
               <p className="text-[#454545] italic text-sm font-medium">
-                {item.show && "Father of"} <span className="text-[#089144] font-semibold">{item.studentName}</span>
+                {item.show && "Father of"}{" "}
+                <span className="text-[#089144] font-semibold">
+                  {item.studentName}
+                </span>
               </p>
             </div>
 
             <p className="text-md text-[#454545] mt-0 font-medium">
               {!item.show && "Your Students Completed "}
-              <span className="text-[#089144] font-bold">{item.studentsTaskPercentage}{!item.show && "%"}</span> {!item.show && "of the the tasks."}
+              <span className="text-[#089144] font-bold">
+                {item.studentsTaskPercentage}
+                {!item.show && "%"}
+              </span>{" "}
+              {!item.show && "of the the tasks."}
             </p>
             <p className="text-sm text-[#454545] mt-0">
               {item.childPerformance}
@@ -70,15 +80,16 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
         </div>
       ))}
 
-
-
       <div className="absolute top-4 right-4 z-20">
         <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
           {today ? today : "Loading..."}
         </div>
       </div>
       {cardProps.map((item, index) => (
-        <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center" key={index}>
+        <div
+          className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"
+          key={index}
+        >
           <img
             src={item.image}
             alt="Professor"

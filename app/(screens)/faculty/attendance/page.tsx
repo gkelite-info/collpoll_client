@@ -1,10 +1,10 @@
 "use client";
 
-import CalendarRibbonComponent from "@/app/utils/calendar";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { ChartLineDown, UserCircle, UsersThree } from "@phosphor-icons/react";
-import StuAttendanceTable from "./components/stuAttendanceTable";
 import CardComponent, { CardProps } from "./components/stuAttendanceCard";
+import StuAttendanceTable from "./components/stuAttendanceTable";
 
 const cardData: CardProps[] = [
   {
@@ -43,8 +43,8 @@ const cardData: CardProps[] = [
 
 export default function Page() {
   return (
-    <main className="px-6 py-4 bg-[#F8F9FA] min-h-screen">
-      <section className="mb-6 flex items-center justify-between">
+    <main className="px-4 py-4 min-h-screen">
+      <section className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -52,19 +52,17 @@ export default function Page() {
             Faculty.
           </p>
         </div>
-        <CourseScheduleCard style="w-auto" />
+        <CourseScheduleCard style="w-[320px]" />
       </section>
 
-      <section className="mb-8 flex flex-row gap-4 items-stretch">
-        <div className="flex flex-row gap-4 flex-[3]">
-          {cardData.map((item, index) => (
-            <div key={index} className="flex-1">
-              <CardComponent {...item} />
-            </div>
-          ))}
-        </div>
-        <div className="flex-[1.2] min-w-[320px]">
-          <CalendarRibbonComponent />
+      <section className="flex flex-row items-stretch gap-4 w-full mb-3">
+        {cardData.map((item, index) => (
+          <div key={index} className="flex-1">
+            <CardComponent {...item} />
+          </div>
+        ))}
+        <div className="flex-[1.6]">
+          <WorkWeekCalendar style="h-full" />
         </div>
       </section>
 

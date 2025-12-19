@@ -10,7 +10,9 @@ import {
 
 import { useState } from "react";
 
-import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, {
+  ScheduledLesson,
+} from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses, { UpcomingLesson } from "../../utils/upcomingClasses";
 import {
@@ -47,13 +49,15 @@ const cardData = [
   },
 ];
 
-const card = [{
-  show: false,
-  user: "Ms. Swathi",
-  studentsTaskPercentage: 85,
-  facultySubject: "(Data Structures and Algorithms)",
-  image: "../../../female-professor.png"
-}]
+const card = [
+  {
+    show: false,
+    user: "Ms. Swathi",
+    studentsTaskPercentage: 85,
+    facultySubject: "(Data Structures and Algorithms)",
+    image: "../../../female-professor.png",
+  },
+];
 
 interface FacultyDashLeftProps {
   onShowStudentTable: () => void;
@@ -93,9 +97,7 @@ export default function FacultyDashLeft({
   return (
     <>
       <div className="w-[68%] p-2">
-        <UserInfoCard
-          cardProps={card}
-        />
+        <UserInfoCard cardProps={card} />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent

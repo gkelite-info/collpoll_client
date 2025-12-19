@@ -5,18 +5,29 @@ import { FaAngleRight, FaAngleLeft } from "react-icons/fa6";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 type Gradient = { from: string; to: string };
 
-
-export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string }) {
+export default function WeekCalendar({ style = "mt-5" }: { style?: string }) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<number | null>(today.getDate());
+  const [selectedDate, setSelectedDate] = useState<number | null>(
+    today.getDate()
+  );
 
   const [monthOpen, setMonthOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
@@ -29,7 +40,10 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setMonthOpen(false);
         setYearOpen(false);
       }
@@ -42,7 +56,7 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
     const dayOfWeek = today.getDay();
     let mondayDate = today.getDate();
     if (dayOfWeek === 0) mondayDate -= 6;
-    else if (dayOfWeek >= 1) mondayDate -= (dayOfWeek - 1);
+    else if (dayOfWeek >= 1) mondayDate -= dayOfWeek - 1;
     setWeekStart(mondayDate > 0 ? mondayDate : 1);
   }, []);
 
@@ -61,19 +75,30 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
     setWeekStart(newStart);
   };
   const nextWeek = () => {
-    const newStart = allWorkDays[Math.min(allWorkDays.length - 6, weekIndex + 6)] || allWorkDays[allWorkDays.length - 6];
+    const newStart =
+      allWorkDays[Math.min(allWorkDays.length - 6, weekIndex + 6)] ||
+      allWorkDays[allWorkDays.length - 6];
     setWeekStart(newStart);
   };
 
-  const years = Array.from({ length: 11 }, (_, i) => today.getFullYear() - 5 + i);
+  const years = Array.from(
+    { length: 11 },
+    (_, i) => today.getFullYear() - 5 + i
+  );
 
   return (
-    <div ref={containerRef} className={`max-w-sm p-4 bg-white rounded-lg shadow-md text-black relative h-[170px] flex flex-col justify-center gap-5 ${style}`}>
+    <div
+      ref={containerRef}
+      className={`max-w-sm p-4 bg-white rounded-lg shadow-md text-black relative h-[170px] flex flex-col justify-center gap-5 ${style}`}
+    >
       <div className="flex justify-between items-center mb-2 relative bg-yellow-00">
         <div className="flex w-[85%]">
           <div className="relative">
             <button
-              onClick={() => { setMonthOpen(!monthOpen); setYearOpen(false); }}
+              onClick={() => {
+                setMonthOpen(!monthOpen);
+                setYearOpen(false);
+              }}
               className="px-3 py-1 rounded hover:bg-gray-100"
             >
               {months[currentMonth]}
@@ -83,7 +108,11 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
                 {months.map((month, index) => (
                   <div
                     key={month}
-                    onClick={() => { setCurrentMonth(index); setMonthOpen(false); setWeekStart(1); }}
+                    onClick={() => {
+                      setCurrentMonth(index);
+                      setMonthOpen(false);
+                      setWeekStart(1);
+                    }}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
                     {month}
@@ -95,7 +124,10 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
 
           <div className="relative">
             <button
-              onClick={() => { setYearOpen(!yearOpen); setMonthOpen(false); }}
+              onClick={() => {
+                setYearOpen(!yearOpen);
+                setMonthOpen(false);
+              }}
               className="px-3 py-1 rounded hover:bg-gray-100"
             >
               {currentYear}
@@ -105,7 +137,11 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
                 {years.map((year) => (
                   <div
                     key={year}
-                    onClick={() => { setCurrentYear(year); setYearOpen(false); setWeekStart(1); }}
+                    onClick={() => {
+                      setCurrentYear(year);
+                      setYearOpen(false);
+                      setWeekStart(1);
+                    }}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
                     {year}
@@ -117,8 +153,16 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
         </div>
 
         <div className="flex w-[15%] justify-between">
-          <FaAngleLeft size={12} className="cursor-pointer" onClick={prevWeek} />
-          <FaAngleRight size={12} className="cursor-pointer" onClick={nextWeek} />
+          <FaAngleLeft
+            size={12}
+            className="cursor-pointer"
+            onClick={prevWeek}
+          />
+          <FaAngleRight
+            size={12}
+            className="cursor-pointer"
+            onClick={nextWeek}
+          />
         </div>
       </div>
 
@@ -131,14 +175,16 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
           return (
             <div
               key={day}
-              onClick={() => (!isSaturday && numericDate ? setSelectedDate(numericDate) : null)}
+              onClick={() =>
+                !isSaturday && numericDate ? setSelectedDate(numericDate) : null
+              }
               className="flex flex-col items-center justify-center gap-2 h-16 rounded cursor-pointer"
               style={
                 isActive
                   ? {
-                    background: `linear-gradient(to bottom, ${activeGradient.from}, ${activeGradient.to})`,
-                    color: "white",
-                  }
+                      background: `linear-gradient(to bottom, ${activeGradient.from}, ${activeGradient.to})`,
+                      color: "white",
+                    }
                   : {}
               }
             >
@@ -149,7 +195,9 @@ export default function WorkWeekCalendar({ style = "mt-5" }: { style?: string })
                   className="flex items-center justify-center w-6 h-6 rounded-full"
                   style={{ backgroundColor: "#43C17A" }}
                 >
-                  <span className="text-sm font-semibold text-white">{numericDate}</span>
+                  <span className="text-sm font-semibold text-white">
+                    {numericDate}
+                  </span>
                 </div>
               ) : (
                 <span className="text-sm">{numericDate}</span>

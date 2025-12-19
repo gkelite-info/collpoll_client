@@ -1,7 +1,6 @@
-'use client'
+"use client";
 import { Suspense } from "react";
 import AttendanceClient from "./attendanceClient";
-
 
 export default function Attendance() {
   return (

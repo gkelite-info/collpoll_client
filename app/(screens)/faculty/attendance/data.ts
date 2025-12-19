@@ -487,7 +487,6 @@ export interface SubjectAttendanceRecord {
   time: string;
   status: AttendanceStatus;
   reason?: string;
-  notes?: string;
 }
 
 export interface SubjectAttendance {
@@ -528,186 +527,37 @@ export interface Student {
 
 export const students: Student[] = [
   {
-    id: "2345002",
-    roll: "2345002",
-    name: "Estelle Bald",
-    department: "ECE",
-    year: "3rd Year",
-    section: "B",
-    semester: "V",
-    photo: "https://i.pravatar.cc/100?img=2",
-    email: "estelle@gmail.com",
-    phone: "+91 9123456789",
-    address: "18 Baker Street",
-    attendanceDays: 22,
-    absentDays: 6,
-    leaveDays: 2,
-    attendance: "Absent",
-    percentage: 68,
-    reason: "Medical",
-    parents: [
-      {
-        name: "Lauren Bald",
-        role: "Father",
-        photo: "https://i.pravatar.cc/80?img=22",
-      },
-      {
-        name: "Maria Bald",
-        role: "Mother",
-        photo: "https://i.pravatar.cc/80?img=23",
-      },
-    ],
-    subjects: [
-      {
-        subjectId: "EC301",
-        subjectName: "Digital Electronics",
-        facultyName: "Dr. Aris",
-        summary: {
-          totalClasses: 25,
-          attended: 18,
-          absent: 5,
-          leave: 2,
-          percentage: 72,
-        },
-        records: [
-          {
-            date: "22/10/2025",
-            time: "9:00 AM - 11:00 AM",
-            status: "Absent",
-            reason: "Fever",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "2345003",
-    roll: "2345003",
-    name: "Rohan Verma",
-    department: "ME",
-    year: "1st Year",
-    section: "C",
-    semester: "I",
-    photo: "https://i.pravatar.cc/100?img=3",
-    email: "rohanv@gmail.com",
-    phone: "+91 9988776655",
-    address: "Green Park, Delhi",
-    attendanceDays: 18,
-    absentDays: 7,
-    leaveDays: 3,
-    attendance: "Absent",
-    percentage: 72,
-    parents: [
-      {
-        name: "Suresh Verma",
-        role: "Father",
-        photo: "https://i.pravatar.cc/80?img=33",
-      },
-      {
-        name: "Kavita Verma",
-        role: "Mother",
-        photo: "https://i.pravatar.cc/80?img=34",
-      },
-    ],
-    subjects: [
-      {
-        subjectId: "ME101",
-        subjectName: "Thermodynamics",
-        facultyName: "Prof. Khanna",
-        summary: {
-          totalClasses: 20,
-          attended: 15,
-          absent: 3,
-          leave: 2,
-          percentage: 75,
-        },
-        records: [
-          {
-            date: "23/10/2025",
-            time: "10:00 AM - 12:00 PM",
-            status: "Leave",
-            notes: "Family Event",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "2345004",
-    roll: "2345004",
-    name: "Meera Iyer",
-    department: "EEE",
-    year: "4th Year",
-    section: "A",
-    semester: "VII",
-    photo: "https://i.pravatar.cc/100?img=4",
-    email: "meera.iyer@gmail.com",
-    phone: "+91 9090909090",
-    address: "Anna Nagar, Chennai",
-    attendanceDays: 27,
-    absentDays: 2,
-    leaveDays: 1,
-    attendance: "Present",
-    percentage: 93,
-    parents: [
-      {
-        name: "Ramakrishnan Iyer",
-        role: "Father",
-        photo: "https://i.pravatar.cc/80?img=44",
-      },
-      {
-        name: "Lakshmi Iyer",
-        role: "Mother",
-        photo: "https://i.pravatar.cc/80?img=45",
-      },
-    ],
-    subjects: [
-      {
-        subjectId: "EE401",
-        subjectName: "Power Systems",
-        facultyName: "Dr. Subramaniam",
-        summary: {
-          totalClasses: 30,
-          attended: 28,
-          absent: 1,
-          leave: 1,
-          percentage: 93,
-        },
-        records: [
-          { date: "24/10/2025", time: "11:00 AM - 1:00 PM", status: "Present" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "2345005",
-    roll: "2345005",
-    name: "Arjun Singh",
+    id: "2345001",
+    roll: "2345001",
+    name: "Ananya Sharma",
     department: "CSE",
     year: "2nd Year",
-    section: "B",
+    section: "A",
     semester: "III",
-    photo: "https://i.pravatar.cc/100?img=5",
-    email: "arjun.s@gmail.com",
-    phone: "+91 9112233445",
-    address: "Sector 22, Noida",
-    attendanceDays: 20,
-    absentDays: 8,
-    leaveDays: 2,
-    attendance: "Absent",
-    percentage: 71,
+    photo: "https://i.pravatar.cc/100?img=1",
+    email: "ananya@gmail.com",
+    phone: "+91 9876543210",
+    address: "245 Delo Street",
+
+    attendanceDays: 25,
+    absentDays: 5,
+    leaveDays: 1,
+    attendance: "Present",
+    percentage: 95,
+
     parents: [
       {
-        name: "Mahesh Singh",
+        name: "Rajesh Sharma",
         role: "Father",
-        photo: "https://i.pravatar.cc/80?img=55",
+        photo: "https://i.pravatar.cc/80?img=12",
       },
       {
-        name: "Pooja Singh",
+        name: "Sunita Sharma",
         role: "Mother",
-        photo: "https://i.pravatar.cc/80?img=56",
+        photo: "https://i.pravatar.cc/80?img=32",
       },
     ],
+
     subjects: [
       {
         subjectId: "DS101",
@@ -715,60 +565,54 @@ export const students: Student[] = [
         facultyName: "Prof. Meena Sharma",
         summary: {
           totalClasses: 32,
-          attended: 22,
-          absent: 8,
-          leave: 2,
-          percentage: 68,
+          attended: 28,
+          absent: 1,
+          leave: 3,
+          percentage: 87,
         },
         records: [
-          { date: "22/10/2025", time: "1:00 PM - 4:00 PM", status: "Absent" },
+          {
+            date: "22/10/2025",
+            time: "1:00 PM - 4:00 PM",
+            status: "Present",
+          },
+          {
+            date: "23/10/2025",
+            time: "1:00 PM - 4:00 PM",
+            status: "Present",
+          },
+          {
+            date: "29/10/2025",
+            time: "1:00 PM - 4:00 PM",
+            status: "Absent",
+            reason: "Sick",
+          },
+          {
+            date: "30/10/2025",
+            time: "1:00 PM - 4:00 PM",
+            status: "Leave",
+            reason: "Internship meeting",
+          },
         ],
       },
-    ],
-  },
-  {
-    id: "2345006",
-    roll: "2345006",
-    name: "Sara Wilson",
-    department: "IT",
-    year: "3rd Year",
-    section: "A",
-    semester: "V",
-    photo: "https://i.pravatar.cc/100?img=6",
-    email: "sara.w@gmail.com",
-    phone: "+91 9001122334",
-    address: "MG Road, Bengaluru",
-    attendanceDays: 26,
-    absentDays: 3,
-    leaveDays: 1,
-    attendance: "Present",
-    percentage: 90,
-    parents: [
+
       {
-        name: "John Wilson",
-        role: "Father",
-        photo: "https://i.pravatar.cc/80?img=66",
-      },
-      {
-        name: "Maria Wilson",
-        role: "Mother",
-        photo: "https://i.pravatar.cc/80?img=67",
-      },
-    ],
-    subjects: [
-      {
-        subjectId: "IT301",
-        subjectName: "Cloud Computing",
-        facultyName: "Dr. Smith",
+        subjectId: "OOP201",
+        subjectName: "OOPs using C++",
+        facultyName: "Prof. Raj Malhotra",
         summary: {
-          totalClasses: 28,
+          totalClasses: 30,
           attended: 25,
-          absent: 2,
-          leave: 1,
-          percentage: 89,
+          absent: 3,
+          leave: 2,
+          percentage: 83,
         },
         records: [
-          { date: "25/10/2025", time: "2:00 PM - 4:00 PM", status: "Present" },
+          {
+            date: "20/10/2025",
+            time: "10:00 AM - 12:00 PM",
+            status: "Present",
+          },
         ],
       },
     ],
