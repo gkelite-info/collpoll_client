@@ -7,13 +7,10 @@ import {
   ClockAfternoon,
   UsersThree,
 } from "@phosphor-icons/react";
-import { FacultyInfoCard } from "../../utils/facultyInfoCard";
 
 import { useState } from "react";
 
-import ScheduledLessonsStrip, {
-  ScheduledLesson,
-} from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses, { UpcomingLesson } from "../../utils/upcomingClasses";
 import {
@@ -21,6 +18,7 @@ import {
   INITIAL_SCHEDULED_LESSONS,
   STUDENT_DATA,
 } from "./data";
+import { UserInfoCard } from "../../utils/userInfoCard";
 
 const cardData = [
   {
@@ -49,11 +47,18 @@ const cardData = [
   },
 ];
 
+const card = [{
+  show: false,
+  user: "Ms. Swathi",
+  studentsTaskPercentage: 85,
+  facultySubject: "(Data Structures and Algorithms)",
+  image: "../../../female-professor.png"
+}]
+
 interface FacultyDashLeftProps {
-  onShowStudentTable: () => void; // New prop
+  onShowStudentTable: () => void;
 }
 
-// Update the component signature
 export default function FacultyDashLeft({
   onShowStudentTable,
 }: FacultyDashLeftProps) {
@@ -88,7 +93,9 @@ export default function FacultyDashLeft({
   return (
     <>
       <div className="w-[68%] p-2">
-        <FacultyInfoCard />
+        <UserInfoCard
+          cardProps={card}
+        />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent

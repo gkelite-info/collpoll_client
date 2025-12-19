@@ -2,7 +2,7 @@
 
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import TableComponent from "@/app/utils/table/page";
+import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/weekCalendar";
 import { Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
 import { useState } from "react";

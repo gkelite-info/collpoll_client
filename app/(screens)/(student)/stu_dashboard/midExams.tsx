@@ -1,6 +1,6 @@
 'use client';
 
-import TableComponent from "@/app/utils/table/page";
+import TableComponent from "@/app/utils/table/table";
 import { ArrowBendUpLeft } from "@phosphor-icons/react";
 
 type MidExamsProps = {

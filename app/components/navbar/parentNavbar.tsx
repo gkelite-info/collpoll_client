@@ -32,15 +32,8 @@ export default function ParentNavbar() {
             icon: (isActive) => (
                 <House size={18} weight={isActive ? "fill" : "regular"} />
             ),
-            label: "ParentHome",
-            path: "/",
-        },
-        {
-            icon: (isActive) => (
-                <Calendar size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Calendar",
-            path: "/calendar",
+            label: "Home",
+            path: "/parent",
         },
         {
             icon: (isActive) => (
@@ -51,56 +44,21 @@ export default function ParentNavbar() {
         },
         {
             icon: (isActive) => (
-                <Note size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Assignments",
-            path: "/assignments",
-        },
-        {
-            icon: (isActive) => (
-                <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Academics",
-            path: "/academics",
-        },
-        {
-            icon: (isActive) => (
                 <Student size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Student Progress",
             path: "/student-progress",
         },
-        {
-            icon: (isActive) => (
-                <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Projects",
-            path: "/projects",
-        },
-        {
-            icon: (isActive) => (
-                <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Placements",
-            path: "/placements",
-        },
-        {
-            icon: (isActive) => (
-                <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Drive",
-            path: "/drive",
-        },
-        {
-            icon: (isActive) => (
-                <CurrencyCircleDollar
-                    size={18}
-                    weight={isActive ? "fill" : "regular"}
-                />
-            ),
-            label: "Payments",
-            path: "/payments",
-        },
+        // {
+        //     icon: (isActive) => (
+        //         <CurrencyCircleDollar
+        //             size={18}
+        //             weight={isActive ? "fill" : "regular"}
+        //         />
+        //     ),
+        //     label: "Payments",
+        //     path: "/payments",
+        // },
         {
             icon: (isActive) => (
                 <Gear size={18} weight={isActive ? "fill" : "regular"} />

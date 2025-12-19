@@ -1,11 +1,11 @@
 "use client";
 
-import { AttendanceRecord } from "../data";
+import { SubjectAttendanceRecord } from "../data";
 
 export default function SubjectAttendanceTable({
   records,
 }: {
-  records: AttendanceRecord[];
+  records: SubjectAttendanceRecord[];
 }) {
   return (
     <div className="mt-4 overflow-hidden rounded-xl bg-white">
