@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Input, Select, TextArea } from "./ReusableComponents";
+import { Input, Select, TextArea } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 
-export default function AwardsForm({
-    index,
-    onSubmit,
-}: {
-    index: number;
-    onSubmit: () => void;
-}) {
+interface AwardProps {
+    index : number
+    onSubmit : ()=>void
+}
+
+export default function AwardsForm({index, onSubmit}: AwardProps) {
     const [form, setForm] = useState({
         awardName: "",
         issuedBy: "",

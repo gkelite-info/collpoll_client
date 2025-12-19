@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Input, TextArea } from "./ReusableComponents";
+import { Input, TextArea } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 
-export default function ClubsForm({
-    index,
-    onSubmit,
-}: {
-    index: number;
-    onSubmit: () => void;
-}) {
+interface ClubProps {
+    index: number
+    onSubmit: () => void
+}
+
+export default function ClubsForm({ index, onSubmit }: ClubProps) {
     const [form, setForm] = useState({
         clubName: "",
         role: "",

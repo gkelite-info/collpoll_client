@@ -5,31 +5,58 @@ import { useState } from "react";
 const EXAMS = ["GMAT", "TOEL", "GRE", "SAT", "IELTS"];
 
 export default function CompetetiveExams() {
-  const [selectedExams, setSelectedExams] = useState<string[]>(["GMAT"]);
-  const [score, setScore] = useState("");
+  const [selectedExams, setSelectedExams] = useState<string[]>([]);
+  const [scores, setScores] = useState<Record<string, string>>({});
 
   const toggleExam = (exam: string) => {
-    setSelectedExams((prev) =>
-      prev.includes(exam)
-        ? prev.filter((e) => e !== exam)
-        : [...prev, exam]
-    );
+    setSelectedExams((prev) => {
+      if (prev.includes(exam)) {
+        const updated = prev.filter((e) => e !== exam);
+
+        setScores((s) => {
+          const copy = { ...s };
+          delete copy[exam];
+          return copy;
+        });
+
+        return updated;
+      } else {
+        setScores((s) => ({ ...s, [exam]: "" }));
+        return [...prev, exam];
+      }
+    });
+  };
+
+  const handleScoreChange = (exam: string, value: string) => {
+    setScores((prev) => ({
+      ...prev,
+      [exam]: value,
+    }));
+  };
+
+  const handleSubmit = () => {
+    const payload = selectedExams.map((exam) => ({
+      exam,
+      score: scores[exam],
+    }));
+
+    console.log("Submitted Data:", payload);
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full min-h-[80vh]">
+    <div className="bg-white rounded-xl p-6 w-full min-h-[80vh] mb-5 mt-2">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-semibold text-[#1F2937]">
+        <h2 className="text-lg font-medium text-[#282828]">
           Competitive Exams
         </h2>
 
-        <button className="bg-[#22C55E] cursor-pointer text-white text-sm font-medium px-4 py-1.5 rounded-md">
+        <button className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-4 py-1.5 rounded-md">
           Next
         </button>
       </div>
 
       <div className="max-w-md mx-auto">
-        <p className="text-sm font-medium text-[#374151] mb-3 text-center">
+        <p className="text-sm font-medium text-[#282828] mb-3">
           Select Exam
         </p>
 
@@ -38,55 +65,71 @@ export default function CompetetiveExams() {
             const checked = selectedExams.includes(exam);
 
             return (
-              <div
-                key={exam}
-                onClick={() => toggleExam(exam)}
-                className={`flex items-center gap-3 border rounded-md px-3 h-11 cursor-pointer border-[#cccccc]`}
-              >
+              <div key={exam}>
                 <div
-                  className={`w-5 h-5 rounded-sm border flex items-center justify-center
-                    ${
-                      checked
-                        ? "bg-[#22C55E] border-[#22C55E]"
-                        : "border-[#9CA3AF]"
-                    }`}
+                  onClick={() => toggleExam(exam)}
+                  className="flex items-center gap-3 border rounded-md px-3 h-11 cursor-pointer border-[#cccccc]"
                 >
-                  {checked && (
-                    <svg
-                      width="12"
-                      height="10"
-                      viewBox="0 0 12 10"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M1 5L4.5 8.5L11 1"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
+                  <div
+                    className={`w-5 h-5 rounded-sm border flex items-center justify-center
+                      ${checked
+                        ? "bg-[#22C55E] border-[#22C55E]"
+                        : "border-[#CCCCCC]"
+                      }`}
+                  >
+                    {checked && (
+                      <svg
+                        width="12"
+                        height="10"
+                        viewBox="0 0 12 10"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M1 5L4.5 8.5L11 1"
+                          stroke="white"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </div>
+
+                  <span className="text-sm text-[#525252]">{exam}</span>
                 </div>
 
-                <span className="text-sm text-[#1F2937]">
-                  {exam}
-                </span>
+                {checked && (
+                  <div className="mt-0 w-1/2 mb-8 flex flex-col ">
+                    <label className="block text-sm font-medium text-[#282828] mb-1">
+                      Score
+                    </label>
+                    <input
+                      value={scores[exam] || ""}
+                      type="number"
+                      onChange={(e) =>
+                        handleScoreChange(exam, e.target.value)
+                      }
+                      placeholder="Eg : 8.5"
+                      className="w-full text-[#525252] h-11 px-3 border border-[#CCCCCC] rounded-md text-sm focus:outline-none
+                       [appearance:textfield] 
+                       [&::-webkit-outer-spin-button]:appearance-none 
+                       [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-        <div className="mt-6">
-          <label className="block text-sm font-medium text-[#374151] mb-2">
-            Score
-          </label>
-          <input
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
-            placeholder="Eg : 8.5"
-            className="w-full h-11 px-3 border border-[#D1D5DB] rounded-md text-sm focus:outline-none"
-          />
+
+        <div className="mt-8">
+          <button
+            onClick={handleSubmit}
+            className="w-full bg-[#43C17A] text-white text-sm font-medium h-11 rounded-md cursor-pointer"
+          >
+            Submit
+          </button>
         </div>
       </div>
     </div>

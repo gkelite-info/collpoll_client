@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { Input } from "./ReusableComponents";
+import { Input } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 
-export default function CertificationsForm({
-  index,
-  onSubmit,
-}: {
-  index: number;
-  onSubmit: () => void;
-}) {
+interface CertificationsProps {
+  index: number
+  onSubmit: () => void
+}
+
+export default function CertificationsForm({ index, onSubmit }: CertificationsProps) {
   const [form, setForm] = useState({
     name: "",
     id: "",

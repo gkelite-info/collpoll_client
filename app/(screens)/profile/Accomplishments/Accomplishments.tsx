@@ -22,26 +22,9 @@ export default function Accomplishments() {
         clubs: 1,
     });
 
-    // const handleAdd = () => {
-    //     if (!submitted[activeTab]) {
-    //         toast.error("Please submit the current form before adding a new one.");
-    //         return;
-    //     }
-
-    //     setFormCount((prev) => ({
-    //         ...prev,
-    //         [activeTab]: prev[activeTab] + 1,
-    //     }));
-
-    //     setSubmitted((prev) => ({
-    //         ...prev,
-    //         [activeTab]: false,
-    //     }));
-    // };
     const handleAdd = () => {
         const lastIndex = formCount[activeTab] - 1;
 
-        // 🔹 CHECK LATEST FORM ONLY
         if (!submittedForms[activeTab][lastIndex]) {
             toast.error("Please submit the latest form before adding a new one.");
             return;
@@ -52,7 +35,6 @@ export default function Accomplishments() {
             [activeTab]: prev[activeTab] + 1,
         }));
 
-        // 🔹 ADD submission tracker for new form
         setSubmittedForms((prev) => ({
             ...prev,
             [activeTab]: [...prev[activeTab], false],
