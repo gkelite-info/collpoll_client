@@ -2,7 +2,23 @@
 
 import { useEffect, useState } from "react";
 
-export function UserInfoCard() {
+type UserInfoCardProps = {
+  show?: boolean;
+  studentId?: number;
+  studentBranch?: string;
+  user: string;
+  studentName?: string;
+  facultySubject?: string;
+  studentsTaskPercentage?: number;
+  childPerformance?: string;
+  image?: string;
+};
+
+type UserInfoProps = {
+  cardProps: UserInfoCardProps[];
+};
+
+export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
 
   useEffect(() => {
@@ -17,44 +33,70 @@ export function UserInfoCard() {
 
   return (
     <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
-      <div className="relative z-10 flex h-full items-center justify-between px-8">
-        <div className="flex flex-col gap-1 max-w-[65%]">
-          <p className="text-[26px] text-[#282828] leading-tight">
-            Welcome Back ,
-          </p>
+      {cardProps.map((item, index) => (
+        <div
+          className="relative z-10 flex h-full items-center justify-between px-8"
+          key={index}
+        >
+          <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
+            <p className="text-xs text-[#282828] leading-tight">
+              {item.show && "ID:"} {item.studentId}
+              {item.show && ","} {item.studentBranch}
+            </p>
 
-          <div className="flex items-baseline flex-wrap gap-2">
-            <h1 className="text-[28px] font-bold text-[#089144] leading-tight">
-              Prof. R. Harsha Sharma
-            </h1>
-            <span className="text-[#454545] italic text-sm font-medium">
-              (Data Structures and Algorithms)
-            </span>
+            <p className="text-lg text-[#282828] leading-tight mt-3">
+              Welcome Back,
+            </p>
+
+            <div className="bg-red-00 flex items-baseline flex-wrap gap-2">
+              <h1 className="text-lg font-semibold text-[#089144] leading-tight">
+                {!item.show && "Prof."} {item.user}
+              </h1>
+              <span className="text-[#454545] text-sm font-medium">
+                {item.facultySubject}
+              </span>
+              <p className="text-[#454545] italic text-sm font-medium">
+                {item.show && "Father of"}{" "}
+                <span className="text-[#089144] font-semibold">
+                  {item.studentName}
+                </span>
+              </p>
+            </div>
+
+            <p className="text-md text-[#454545] mt-0 font-medium">
+              {!item.show && "Your Students Completed "}
+              <span className="text-[#089144] font-bold">
+                {item.studentsTaskPercentage}
+                {!item.show && "%"}
+              </span>{" "}
+              {!item.show && "of the the tasks."}
+            </p>
+            <p className="text-sm text-[#454545] mt-0">
+              {item.childPerformance}
+            </p>
           </div>
 
-          <p className="text-[17px] text-[#454545] mt-2 font-medium">
-            Your Students Completed{" "}
-            <span className="text-[#089144] font-bold">80%</span> of the the
-            tasks.
-          </p>
+          <div className="w-[35%] h-full"></div>
         </div>
-
-        <div className="w-[35%] h-full"></div>
-      </div>
+      ))}
 
       <div className="absolute top-4 right-4 z-20">
         <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
           {today ? today : "Loading..."}
         </div>
       </div>
-
-      <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
-        <img
-          src="../../../female-professor.png"
-          alt="Professor"
-          className="lg:relative left-89 lg:top-[-174] z-50 h-[185px]"
-        />
-      </div>
+      {cardProps.map((item, index) => (
+        <div
+          className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"
+          key={index}
+        >
+          <img
+            src={item.image}
+            alt="Professor"
+            className="lg:relative left-89 lg:top-[-174] z-50 h-[185px]"
+          />
+        </div>
+      ))}
 
       <svg
         className="absolute right-0 bottom-0 z-0 h-full w-auto"

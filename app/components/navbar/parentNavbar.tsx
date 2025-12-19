@@ -32,15 +32,8 @@ export default function ParentNavbar() {
             icon: (isActive) => (
                 <House size={18} weight={isActive ? "fill" : "regular"} />
             ),
-            label: "ParentHome",
-            path: "/",
-        },
-        {
-            icon: (isActive) => (
-                <Calendar size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Calendar",
-            path: "/calendar",
+            label: "Home",
+            path: "/parent",
         },
         {
             icon: (isActive) => (
@@ -51,56 +44,21 @@ export default function ParentNavbar() {
         },
         {
             icon: (isActive) => (
-                <Note size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Assignments",
-            path: "/assignments",
-        },
-        {
-            icon: (isActive) => (
-                <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Academics",
-            path: "/academics",
-        },
-        {
-            icon: (isActive) => (
                 <Student size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Student Progress",
             path: "/student-progress",
         },
-        {
-            icon: (isActive) => (
-                <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Projects",
-            path: "/projects",
-        },
-        {
-            icon: (isActive) => (
-                <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Placements",
-            path: "/placements",
-        },
-        {
-            icon: (isActive) => (
-                <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Drive",
-            path: "/drive",
-        },
-        {
-            icon: (isActive) => (
-                <CurrencyCircleDollar
-                    size={18}
-                    weight={isActive ? "fill" : "regular"}
-                />
-            ),
-            label: "Payments",
-            path: "/payments",
-        },
+        // {
+        //     icon: (isActive) => (
+        //         <CurrencyCircleDollar
+        //             size={18}
+        //             weight={isActive ? "fill" : "regular"}
+        //         />
+        //     ),
+        //     label: "Payments",
+        //     path: "/payments",
+        // },
         {
             icon: (isActive) => (
                 <Gear size={18} weight={isActive ? "fill" : "regular"} />
@@ -116,12 +74,12 @@ export default function ParentNavbar() {
     }, [pathname]);
 
     return (
-        <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl shadow-md">
+        <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
             <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
                 Logo
             </div>
 
-            <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4">
+            <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
                 {items.map((item, index) => {
                     const isActive = active === item.label;
 
@@ -132,7 +90,7 @@ export default function ParentNavbar() {
                                 setActive(item.label);
                                 if (item.path) router.push(item.path);
                             }}
-                            className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
+                            className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
                 ${isActive

@@ -44,7 +44,6 @@ export const AssignmentsLeft = () => {
   return (
     <main className="w-[68%] p-2">
       <div className="flex flex-col lg:flex-row gap-4 items-stretch w-full p-4 bg-gray-50">
-        //////
         <div className="bg-white rounded-2xl p-5 shadow-sm flex-[1.2] min-w-[320px] flex flex-col justify-between">
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-gray-800">January 2022</h3>

@@ -7,7 +7,6 @@ import {
   ClockAfternoon,
   UsersThree,
 } from "@phosphor-icons/react";
-import { UserInfoCard } from "../../utils/userInfoCard";
 
 import { useState } from "react";
 
@@ -21,6 +20,7 @@ import {
   INITIAL_SCHEDULED_LESSONS,
   STUDENT_DATA,
 } from "./data";
+import { UserInfoCard } from "../../utils/userInfoCard";
 
 const cardData = [
   {
@@ -46,6 +46,16 @@ const cardData = [
     icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
     value: "05/09",
     label: "Total Hours",
+  },
+];
+
+const card = [
+  {
+    show: false,
+    user: "Ms. Swathi",
+    studentsTaskPercentage: 85,
+    facultySubject: "(Data Structures and Algorithms)",
+    image: "../../../female-professor.png",
   },
 ];
 
@@ -87,7 +97,7 @@ export default function FacultyDashLeft({
   return (
     <>
       <div className="w-[68%] p-2">
-        <UserInfoCard />
+        <UserInfoCard cardProps={card} />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent
