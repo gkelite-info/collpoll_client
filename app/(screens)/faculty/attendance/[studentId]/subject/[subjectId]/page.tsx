@@ -77,7 +77,7 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Subject :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium shadow-sm">
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
               {subject.subjectName}
             </span>
           </div>
@@ -86,7 +86,7 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Faculty :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium shadow-sm">
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
               {subject.facultyName}
             </span>
           </div>
@@ -95,7 +95,7 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Sort :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium shadow-sm">
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
               Classes Held: {subject.summary.totalClasses} | Attended:{" "}
               {subject.summary.attended} | Missed: {subject.summary.absent} |
               Total: {subject.summary.percentage}%

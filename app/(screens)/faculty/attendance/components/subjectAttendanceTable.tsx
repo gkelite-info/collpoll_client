@@ -2,11 +2,18 @@
 
 import { SubjectAttendanceRecord } from "../data";
 import { FilePdf } from "@phosphor-icons/react";
+
 export default function SubjectAttendanceTable({
   records,
 }: {
   records: SubjectAttendanceRecord[];
 }) {
+  const statusStyles: Record<string, string> = {
+    Present: "bg-green-100 text-green-800",
+    Absent: "bg-red-100 text-red-800",
+    Leave: "bg-blue-100 text-blue-800",
+  };
+
   return (
     <div className="rounded-xl bg-white shadow-sm border border-gray-100">
       <table className="w-full text-sm">
@@ -27,10 +34,17 @@ export default function SubjectAttendanceTable({
             >
               <td className="px-4 py-3">{r.date}</td>
               <td className="px-4 py-3">{r.time || "-"}</td>
-              <td className="px-4 py-3">{r.status}</td>
+              <td className="px-4 py-3">
+                <span
+                  className={`px-3 py-1 rounded-full font-medium ${
+                    statusStyles[r.status] || "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {r.status}
+                </span>
+              </td>
               <td className="px-4 py-3">{r.reason || "-"}</td>
 
-              {/* Added PDF Icon Cell */}
               <td className="px-4 py-3">
                 <div className="flex justify-center">
                   <button className="p-1.5 bg-[#F5F3FF] rounded-lg hover:bg-[#EDE9FE] transition-colors">

@@ -1,90 +1,106 @@
 "use client";
 
-import {
-  Users,
-  User,
-  CalendarBlank,
-  CaretLeft,
-  CaretRight,
-} from "@phosphor-icons/react";
-import { motion } from "framer-motion";
+import { useState } from "react";
 
-const stats = [
-  {
-    label: "Total Students",
-    value: 60,
-    color: "bg-[#FFF1E2]",
-    iconColor: "bg-[#FFB36D]",
-    icon: <Users size={20} weight="fill" />,
-  },
-  {
-    label: "Total Students Present",
-    value: 50,
-    color: "bg-[#E7F9ED]",
-    iconColor: "bg-[#52C47D]",
-    icon: <User size={20} weight="fill" />,
-  },
-  {
-    label: "Total Students Absent",
-    value: 10,
-    color: "bg-[#FFE9E9]",
-    iconColor: "bg-[#FF3B30]",
-    icon: <User size={20} weight="fill" />,
-  },
-  {
-    label: "Total Students on Leave",
-    value: 10,
-    color: "bg-[#E1F0FF]",
-    iconColor: "bg-[#55A6FF]",
-    icon: <User size={20} weight="fill" />,
-  },
-];
+import AssignmentForm from "./assignmentForm";
+import AssignmentCard from "./assignmentCard";
+import { Assignment, initialAssignments } from "../data";
 
-export const AssignmentsLeft = () => {
+export default function AssignmentsLeft() {
+  const [assignments, setAssignments] =
+    useState<Assignment[]>(initialAssignments);
+
+  const [view, setView] = useState<"list" | "add" | "edit">("list");
+  const [editing, setEditing] = useState<Assignment | null>(null);
+  const [activeView, setActiveView] = useState<"active" | "previous">("active");
+
+  if (view === "add" || view === "edit") {
+    return (
+      <AssignmentForm
+        initialData={editing}
+        onCancel={() => {
+          setEditing(null);
+          setView("list");
+        }}
+        onSave={(assignment) => {
+          if (editing) {
+            setAssignments((prev) =>
+              prev.map((a) => (a.id === assignment.id ? assignment : a))
+            );
+          } else {
+            setAssignments((prev) => [...prev, assignment]);
+          }
+          setEditing(null);
+          setView("list");
+        }}
+      />
+    );
+  }
+
   return (
-    <main className="w-[68%] p-2">
-      <div className="flex flex-col lg:flex-row gap-4 items-stretch w-full p-4 bg-gray-50">
-        <div className="bg-white rounded-2xl p-5 shadow-sm flex-[1.2] min-w-[320px] flex flex-col justify-between">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-800">January 2022</h3>
-            <div className="flex gap-2 text-gray-400">
-              <CaretLeft
-                size={18}
-                className="cursor-pointer hover:text-gray-600"
-              />
-              <CaretRight
-                size={18}
-                className="cursor-pointer hover:text-gray-600"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-gray-400 uppercase">
-            <span>Mon</span>
-            <span>Tue</span>
-            <span>Wed</span>
-            <span>Thu</span>
-            <span>Fri</span>
-            <span>Sat</span>
-            <span>Sun</span>
-          </div>
-          <div className="grid grid-cols-7 gap-2 mt-2">
-            <div className="flex flex-col items-center">
-              <div className="w-8 h-10 bg-gradient-to-b from-[#52C47D] to-white/10 rounded-t-lg mb-1" />
-              <span className="bg-[#52C47D] text-white w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold shadow-md">
-                1
-              </span>
-            </div>
-            {[2, 3, 4, "", 6, 7].map((d, i) => (
-              <div
-                key={i}
-                className="flex flex-col items-center justify-end pb-1 text-gray-600 font-medium"
+    <div className="w-[68%] p-2 flex flex-col">
+      <div className="mb-4">
+        <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
+        <p className="text-[#282828]">
+          Create, manage, and evaluate assignments for your students
+          efficiently.
+        </p>
+      </div>
+
+      <div className="w-full flex flex-col">
+        <div className="flex flex-col justify-between items-start">
+          <div className="flex justify-between mb-2 w-full">
+            <div className="flex gap-4 pb-1">
+              <h5
+                className={`
+                                text-sm cursor-pointer pb-1
+                                ${
+                                  activeView === "active"
+                                    ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
+                                    : "text-[#282828]"
+                                }
+                            `}
+                onClick={() => setActiveView("active")}
               >
-                {d}
-              </div>
-            ))}
+                Active Assignments
+              </h5>
+
+              <h5
+                className={`
+                                text-sm cursor-pointer pb-1
+                                ${
+                                  activeView === "previous"
+                                    ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
+                                    : "text-[#282828]"
+                                }
+                            `}
+                onClick={() => setActiveView("previous")}
+              >
+                Evaluated Assignments
+              </h5>
+            </div>
+
+            <button
+              className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1 rounded-sm"
+              onClick={() => setView("add")}
+            >
+              Add Assignment
+            </button>
           </div>
+
+          <AssignmentCard
+            cardProp={assignments}
+            activeView={activeView}
+            onEdit={(a) => {
+              setEditing(a);
+              setView("edit");
+            }}
+            onDelete={(id) =>
+              setAssignments((prev) => prev.filter((a) => a.id !== id))
+            }
+          />
         </div>
       </div>
-    </main>
+    </div>
   );
-};
+}
