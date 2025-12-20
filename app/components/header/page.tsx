@@ -1,5 +1,6 @@
 "use client";
 import ProfileDrawer from "@/app/(screens)/profile/ProfileDrawer";
+import ProfileWrapper from "@/app/(screens)/profile/ProfileWrapper";
 import {
   BellSimple,
   CaretDown,
@@ -9,7 +10,7 @@ import {
   Newspaper,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const [searchValue, setSearchValue] = useState("");
@@ -24,9 +25,16 @@ export default function Header() {
     setSearchValue(value);
   };
 
+  useEffect(() => {
+    const handler = () => setOpenProfile(true);
+    document.addEventListener("open-profile", handler);
+    return () => document.removeEventListener("open-profile", handler);
+  }, []);
+
+
   return (
     <>
-      <div className="h-[100%] w-[100%] flex justify-between gap-1 p-2">
+      <div className="h-full w-full flex justify-between gap-1 p-2">
         <div className="w-[59%] flex justify-end items-center">
           <div className="relative lg:w-[80%] lg:h-[60%]">
             <input
@@ -89,9 +97,9 @@ export default function Header() {
           </div>
         </div>
       </div>
-      <ProfileDrawer
-        open={openProfile}
-        onClose={() => setOpenProfile(false)}
+      <ProfileWrapper
+        openProfile={openProfile}
+        onCloseProfile={() => setOpenProfile(false)}
       />
 
     </>
