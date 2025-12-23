@@ -280,10 +280,10 @@ function UnitCard({ unit }: UnitCardProps) {
   if (selectedUnitLessons) {
     return (
       <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6">
-        <LessonCard
+        {/* <LessonCard
           lesson={selectedUnitLessons}
           onBack={() => setSelectedUnitLessons(null)}
-        />
+        /> */}
       </div>
     );
   }
