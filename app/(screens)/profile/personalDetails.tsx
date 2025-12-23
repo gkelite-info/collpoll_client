@@ -3,15 +3,109 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { upsertUser } from "@/lib/helpers/upsertUser";
 
 export default function PersonalDetails() {
-    const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
     const router = useRouter();
 
-    const handleSubmit = () => {
-        toast.success("Personal Details Submitted");
-        console.log("Form submitted");
-    }
+    const [fullName, setFullName] = useState("");
+    const [mobile, setMobile] = useState("");
+    const [email, setEmail] = useState("");
+    const [linkedIn, setLinkedIn] = useState("");
+    const [collegeId, setCollegeId] = useState<number | null>(null);
+    const [currentCity, setCurrentCity] = useState("");
+    const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">(
+        "fresher"
+    );
+
+    // -----------------------------
+    // VALIDATION HELPERS
+    // -----------------------------
+    const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+    const cityRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+    const mobileRegex = /^[0-9]{10}$/;
+    const emailAllowed = /^[a-z0-9@.]+$/;
+
+    const sanitizeName = (value: string) => {
+        let clean = value.replace(/[^A-Za-z ]/g, "");
+        clean = clean.replace(/\s+/g, " ");
+        clean = clean.trimStart();
+        clean = clean.replace(/\b\w/g, (c) => c.toUpperCase());
+        return clean;
+    };
+
+    const sanitizeCity = sanitizeName;
+
+    const sanitizeEmail = (value: string) => {
+        value = value.toLowerCase().replace(/[^a-z0-9@.]/g, "");
+
+        const parts = value.split("@");
+        if (parts.length > 2) {
+            return parts[0] + "@" + parts.slice(1).join("").replace(/@/g, "");
+        }
+
+        return value;
+    };
+
+    const sanitizeMobile = (value: string) =>
+        value.replace(/\D/g, "").slice(0, 10);
+
+    const sanitizeLinkedIn = (value: string) =>
+        value.replace(/[^a-zA-Z0-9:/._-]/g, "");
+
+    // -----------------------------
+    // HANDLE SUBMIT
+    // -----------------------------
+    const handleSubmit = async () => {
+        // VALIDATIONS
+
+        if (!fullName) return toast.error("Full Name is required!");
+        if (!nameRegex.test(fullName))
+            return toast.error("Full Name must contain letters only & proper format!");
+
+        if (!mobile) return toast.error("Mobile number is required!");
+        if (!mobileRegex.test(mobile))
+            return toast.error("Mobile number must be exactly 10 digits!");
+
+        if (!email) return toast.error("Email is required!");
+
+        if (!emailAllowed.test(email))
+            return toast.error("Email allows only lowercase letters, numbers, '@' and '.'");
+
+        if ((email.match(/@/g) || []).length !== 1)
+            return toast.error("Email must contain exactly one '@'!");
+
+
+        if (!linkedIn) return toast.error("LinkedIn URL is required!");
+        if (!linkedIn.startsWith("https://"))
+            return toast.error("LinkedIn must start with https://");
+
+        if (!currentCity) return toast.error("City name is required!");
+        if (!cityRegex.test(currentCity))
+            return toast.error("City must contain only letters!");
+
+        if (!collegeId) return toast.error("College ID is required!");
+
+        // FINAL PAYLOAD
+        const payload = {
+            fullName,
+            mobile,
+            email,
+            linkedIn,
+            collegeId,
+            currentCity,
+            workStatus,
+        };
+
+        // SEND TO BACKEND
+        const res = await upsertUser(payload);
+
+        if (res.success) {
+            toast.success("Personal Details Saved Successfully");
+        } else {
+            toast.error(res.error);
+        }
+    };
 
     return (
         <div className="w-full bg-[#f6f7f9] mt-2 mb-4">
@@ -21,8 +115,8 @@ export default function PersonalDetails() {
                         Personal Details
                     </h2>
                     <button
-                    onClick={()=>router.push('/profile?education')}
-                     className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium">
+                        onClick={() => router.push('/profile?education')}
+                        className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium">
                         Next
                     </button>
                 </div>
@@ -30,45 +124,54 @@ export default function PersonalDetails() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
-                            Full Name
+                            Full Name<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             placeholder="Enter Full Name"
+                            value={fullName}
+                            onChange={(e) => setFullName(sanitizeName(e.target.value))}
                             className="w-full border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 outline-none"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
-                            Mobile Number
+                            Mobile Number<span className="text-red-500">*</span>
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             placeholder="Enter Mobile Number"
-                            className="w-full border rounded-md px-3 py-2 outline-none border-[#CCCCCC] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={mobile}
+                            onChange={(e) => setMobile(sanitizeMobile(e.target.value))}
+                            className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
+
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
-                            Mail ID
+                            Email ID<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="email"
                             placeholder="Enter Mail ID"
-                            className="w-full border rounded-md px-3 py-2 outline-none border-[#CCCCCC]"
+                            value={email}
+                            onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
+                            className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
-                            LinkedIn ID
+                            LinkedIn ID<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             placeholder="Enter LinkedIn ID"
-                            className="w-full border rounded-md px-3 py-2 outline-none border-[#CCCCCC]"
+                            value={linkedIn}
+                            onChange={(e) => setLinkedIn(sanitizeLinkedIn(e.target.value))}
+                            className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
                     </div>
 
@@ -78,21 +181,34 @@ export default function PersonalDetails() {
                         </label>
                         <input
                             type="text"
-                            defaultValue=""
                             placeholder="Enter Current City"
-                            className="w-full border rounded-md px-3 py-2 outline-none border-[#CCCCCC]"
+                            value={currentCity}
+                            onChange={(e) => setCurrentCity(sanitizeCity(e.target.value))}
+                            className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
-                            College ID
+                            College ID<span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             placeholder="Enter College ID"
-                            className="w-full border rounded-md px-3 py-2 outline-none border-[#CCCCCC]"
+                            value={collegeId !== null ? collegeId : ""}
+                            onChange={(e) => {
+                                let clean = e.target.value.replace(/\D/g, ""); // keep digits only
+
+                                if (clean === "0") clean = ""; // prevent 0
+                                if (clean.startsWith("0")) clean = clean.replace(/^0+/, ""); // remove leading zeros
+
+                                setCollegeId(clean === "" ? null : Number(clean));
+                            }}
+                            className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
+
+
+
                     </div>
                 </div>
 
