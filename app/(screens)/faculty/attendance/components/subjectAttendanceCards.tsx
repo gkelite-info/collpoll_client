@@ -54,12 +54,10 @@ export default function SubjectAttendanceCards({
         <motion.button
           key={c.key}
           onClick={() => onChange(c.key)}
-          // Hover and Tap Effects
           whileHover={{ y: -4, scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className={`relative rounded-xl p-5 text-left transition-shadow flex flex-col items-start ${c.bgColor} shadow-sm`}
         >
-          {/* Active Selection Ring (Animated) */}
           {active === c.key && (
             <motion.div
               layoutId="active-pill"
