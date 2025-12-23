@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { CaretDown } from "@phosphor-icons/react";
 
@@ -164,9 +162,9 @@ export default function AssignmentTable() {
         </select>
       </div>
 
-      <div className="rounded-2xl bg-white">
+      <div>
         <table className="w-full text-sm ">
-          <thead className="bg-[#ECECEC]  text-[#282828]">
+          <thead className="bg-[#ECECEC] text-[#282828]">
             <tr>
               <th className="px-4 py-3 text-left">S.No</th>
               <th className="px-4 py-3 text-left">Photo</th>
