@@ -13,7 +13,7 @@ import {
 import type { Formatter } from "recharts/types/component/DefaultTooltipContent";
 
 const performanceFormatter: Formatter<number, string> = (value, name) => [
-  `${value ?? 0}%`,
+  `${value ?? 0}%`, 
   name,
 ];
 
