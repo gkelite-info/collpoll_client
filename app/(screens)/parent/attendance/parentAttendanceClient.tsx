@@ -9,8 +9,8 @@ import Table from "@/app/utils/table";
 import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
 
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import SubjectAttendance from "../../(attendance)/subject-attendance/page";
-import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
+import ParentSubjectAttendance from "./subject-attendance/page";
+import ParentSubjectAttendanceDetails from "./subject-attendance-details/page";
 
 interface TableRow {
     Subject: string;
@@ -56,7 +56,7 @@ const data: TableRow[] = [
         Notes: <FilePdf size={32} />,
     },
     {
-        Subject: "Data Structures",
+        Subject: "Analog and Digital Electronics",
         "Today's Status": "Present",
         "Class Attendance": "08/10",
         "Percentage %": "80%",
@@ -121,12 +121,10 @@ const cards: CardItem[] = [
     },
 ];
 
-export default function AttendanceClient() {
+export default function ParentAttendanceClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
-
     const tab = searchParams.get("tab");
-
     const showSubjectAttendanceTable = tab === "subject-attendance";
     const showSubjectAttendanceDetails = tab === "subject-attendance-details";
 
@@ -135,7 +133,7 @@ export default function AttendanceClient() {
 
     const handleCardClick = (cardId: number) => {
         if (cardId === 2) {
-            router.push(`/attendance?tab=subject-attendance`);
+            router.push(`/parent/attendance?tab=subject-attendance`);
         }
     };
 
@@ -188,8 +186,8 @@ export default function AttendanceClient() {
                         </>
                     )}
 
-                    {showSubjectAttendanceTable && <SubjectAttendance />}
-                    {showSubjectAttendanceDetails && <SubjectAttendanceDetails />}
+                    {showSubjectAttendanceTable && <ParentSubjectAttendance />}
+                    {showSubjectAttendanceDetails && <ParentSubjectAttendanceDetails />}
                 </div>
 
                 {!hideRightSection && (

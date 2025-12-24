@@ -2,13 +2,13 @@
 
 import AcademicPerformance from "@/app/utils/AcademicPerformance";
 import CardComponent from "@/app/utils/card";
-import SubjectProgressCard from "@/app/utils/subProgressCard";
 import { BookOpen, Chalkboard, ClockAfternoon, UsersThree } from "@phosphor-icons/react";
 import { FaChevronRight } from "react-icons/fa6";
 import { useState } from "react";
 import MidExams from "./midExams";
 import UserInfoCard from "@/app/utils/userInfoCardComp";
 import LectureCard from "@/app/utils/lectureCard";
+import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 
 export default function StuDashLeft() {
 
@@ -43,7 +43,7 @@ export default function StuDashLeft() {
             label: "$5600",
             to: "/payments"
         }
-    ]
+    ];
 
     const lectures = [
         {
@@ -72,6 +72,45 @@ export default function StuDashLeft() {
         },
     ];
 
+    const subjects = [
+        {
+            title: "Data Structures and Algorithms",
+            professor: "Prof. Ramesh Kumar",
+            image: "dsa.jpg",
+            percentage: 85,
+            radialStart: "#10FD77",
+            radialEnd: "#1C6B3F",
+            remainingColor: "#A1FFCA",
+        },
+        {
+            title: "Object-Oriented Programming",
+            professor: "Prof. Anita Sharma",
+            image: "oops.jpg",
+            percentage: 85,
+            radialStart: "#EFEDFF",
+            radialEnd: "#705CFF",
+            remainingColor: "#E8E4FF",
+        },
+        {
+            title: "Computer Organization and Architecture",
+            professor: "Prof. Suresh Reddy",
+            image: "coa.jpg",
+            percentage: 85,
+            radialStart: "#FFFFFF",
+            radialEnd: "#FFBE48",
+            remainingColor: "#F7EBD5",
+        },
+        {
+            title: "Discrete Mathematics",
+            professor: "Prof. Rajesh Gupta",
+            image: "dm.jpg",
+            percentage: 85,
+            radialStart: "#FEFFFF",
+            radialEnd: "#008993",
+            remainingColor: "#C4FBFF",
+        },
+    ];
+
     return (
         <>
             <div className="w-[68%] p-2">
@@ -95,13 +134,9 @@ export default function StuDashLeft() {
                             <AcademicPerformance />
                         </div>
                         <div className="mt-5 flex items-center justify-between rounded-lg">
-                            <div className="bg-white h-64 rounded-lg w-[49%] p-4 shadow-md flex flex-col gap-2">
-                                <div className="flex justify-between items-center">
-                                    <h6 className="text-[#282828] font-semibold">Subjects Progress</h6>
-                                    <FaChevronRight className="cursor-pointer text-black" />
-                                </div>
-                                <SubjectProgressCard />
-                            </div>
+                            <SubjectProgressCards
+                                props={subjects}
+                            />
                             <div className="bg-red-400 h-64 rounded-lg w-[49%] shadow-md">
                                 <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2">
                                     <div className="flex justify-between items-center">

@@ -12,6 +12,7 @@ type UserInfoCardProps = {
   studentsTaskPercentage?: number;
   childPerformance?: string;
   image?: string;
+  top?: string;
 };
 
 type UserInfoProps = {
@@ -93,7 +94,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           <img
             src={item.image}
             alt="Professor"
-            className="lg:relative left-89 lg:top-[-174] z-50 h-[185px]"
+            className={`lg:relative left-89 ${item.top} z-50 h-[185px]`}
           />
         </div>
       ))}

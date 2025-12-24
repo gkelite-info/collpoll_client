@@ -22,7 +22,7 @@ export default function AcademicPerformance() {
     ];
 
     return (
-        <div className="bg-white rounded-lg shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
             <h2 className="text-xl font-semibold mb-6 ml-3 text-[#282828]">
                 Academic Performance
             </h2>
