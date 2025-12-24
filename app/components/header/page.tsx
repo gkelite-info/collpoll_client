@@ -18,44 +18,44 @@ import DailyNewsModal from "../modals/DailyNewsModal";
 
 
 export default function Header() {
-    const router = useRouter();
-    const [openProfile, setOpenProfile] = useState(false);
-    const [searchValue, setSearchValue] = useState("");
-    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-    const [isNewsOpen, setIsNewsOpen] = useState(false);
-    const [isEmailOpen, setIsEmailOpen] = useState(false);
-    const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
-    const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
-    const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
+  const router = useRouter();
+  const [openProfile, setOpenProfile] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [isEmailOpen, setIsEmailOpen] = useState(false);
+  const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
+  const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
+  const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-    function openPDFModal() {
-      setIsNewsOpen(false);          // close small modal
-      setDailyMode("pdf");           // set PDF mode
-      setTimeout(() => {
-        setIsDailyModalOpen(true);   // open big modal
-      }, 150);                       // wait for exit animation
+  function openPDFModal() {
+    setIsNewsOpen(false);
+    setDailyMode("pdf");
+    setTimeout(() => {
+      setIsDailyModalOpen(true);
+    }, 150);
+  }
+
+
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    if (value.length > 0) {
+      value = value.charAt(0).toUpperCase() + value.slice(1);
     }
+    setSearchValue(value);
+  };
+
+  useEffect(() => {
+    const handler = () => setOpenProfile(true);
+    document.addEventListener("open-profile", handler);
+    return () => document.removeEventListener("open-profile", handler);
+  }, []);
 
 
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      let value = e.target.value;
-      if (value.length > 0) {
-        value = value.charAt(0).toUpperCase() + value.slice(1);
-      }
-      setSearchValue(value);
-    };
-
-    useEffect(() => {
-      const handler = () => setOpenProfile(true);
-      document.addEventListener("open-profile", handler);
-      return () => document.removeEventListener("open-profile", handler);
-    }, []);
-
-
-    return (
-      <>
-    <div className="h-full w-full flex justify-between gap-1 p-2">
+  return (
+    <>
+      <div className="h-full w-full flex justify-between gap-1 p-2">
         <div className="w-[59%] flex justify-end items-center">
           <div className="relative lg:w-[80%] lg:h-[60%]">
             <input
@@ -74,9 +74,7 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Right Section */}
         <div className="w-[40%] flex justify-between">
-          {/* Icons */}
           <div className="w-[40%] h-[100%] flex items-center justify-center gap-3">
             <button
               onClick={() => setIsNewsOpen(true)}
@@ -93,13 +91,11 @@ export default function Header() {
             </button>
 
 
-            {/* 🔔 Bell with modal trigger */}
             <button
               onClick={() => setIsNotificationsOpen(true)}
               className="relative"
             >
               <BellSimple size={21} color="#282828" className="cursor-pointer" />
-              {/* unread dot */}
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
             </button>
 
@@ -112,18 +108,18 @@ export default function Header() {
 
           </div>
 
-    <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
-      //  onClick={()=>router.push('/profile')}
-      onClick={() => setOpenProfile(true)}
-    >
-      <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
-        <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
-          V
-        </div>
-      </div>
-      <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
-        <div className="flex items-center justify-between w-full bg-gray-00">
-          <p className="text-sm text-[#ffffff]">Firstname</p>
+          <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
+            //  onClick={()=>router.push('/profile')}
+            onClick={() => setOpenProfile(true)}
+          >
+            <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
+              <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
+                V
+              </div>
+            </div>
+            <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
+              <div className="flex items-center justify-between w-full bg-gray-00">
+                <p className="text-sm text-[#ffffff]">Firstname</p>
                 <CaretDown
                   size={20}
                   weight="bold"
@@ -131,31 +127,29 @@ export default function Header() {
                   className="cursor-pointer"
                 />
               </div>
-    <div className="flex items-center justify-between text-[#E5E5E5] w-full text-xs">
-      <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
-      <p style={{ fontSize: 12, color: "#E5E5E5" }}>
-        ID -{" "}
-        <span style={{ fontSize: 12, color: "#E5E5E5" }}>
-          2112121
-        </span>
-          </p>
-        </div>
-    </div>
+              <div className="flex items-center justify-between text-[#E5E5E5] w-full text-xs">
+                <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
+                <p style={{ fontSize: 12, color: "#E5E5E5" }}>
+                  ID -{" "}
+                  <span style={{ fontSize: 12, color: "#E5E5E5" }}>
+                    2112121
+                  </span>
+                </p>
+              </div>
+            </div>
           </div >
         </div >
       </div >
 
-      {/* 🔔 Notifications Modal */}
       <NotificationsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
       />
 
-      {/* ⭐ UPDATED NEWS MODAL WITH onOpenPDF */}
       <NewsModal
         isOpen={isNewsOpen}
         onClose={() => setIsNewsOpen(false)}
-        onOpenPDF={openPDFModal}     // ⭐ HERE!
+        onOpenPDF={openPDFModal}
       />
 
       <EmailModal
@@ -181,7 +175,6 @@ export default function Header() {
         onClose={() => setIsAnnouncementOpen(false)}
       />
 
-      {/* ⭐ DAILY NEWS / PDF MODAL */}
       <DailyNewsModal
         isOpen={isDailyModalOpen}
         mode={dailyMode}
@@ -189,4 +182,4 @@ export default function Header() {
       />
     </>
   );
-  }
+}
