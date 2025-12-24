@@ -86,7 +86,6 @@ export default function ForgotPassword() {
 
     return (
         <div className="w-full h-full flex">
-            {/* LEFT SECTION - Figma accurate design */}
             <div className="w-[45%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col justify-between items-center p-8 overflow-hidden">
                 <div>
                     <h2
@@ -99,8 +98,6 @@ export default function ForgotPassword() {
                         {slides[current].para}
                     </p>
                 </div>
-
-                {/* FIGMA EXACT CIRCLE */}
 
                 {slides.map((slide, idx) => {
                     let position = "hidden";
@@ -139,7 +136,6 @@ export default function ForgotPassword() {
                             }}
 
                         >
-                            {/* ROTATING CIRCLE BEHIND SLIDE */}
                             <div
                                 className={`
     absolute w-[250px] h-[250px] rounded-full bg-[#43C17A] opacity-80
@@ -157,13 +153,10 @@ export default function ForgotPassword() {
                             ></div>
 
 
-                            {/* GREEN CIRCLE */}
                             {/* <div className="absolute bottom-[-40%] w-[346px] h-[346px] bg-[#43C17A] rounded-full opacity-35"></div> */}
 
-                            {/* TOP HIGHLIGHT */}
                             {/* <div className="absolute top-[15%] w-[75%] h-[95px]  rounded-3xl"></div> */}
 
-                            {/* CARD */}
                             <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden">
                                 <img
                                     src={slide.image}
@@ -173,8 +166,6 @@ export default function ForgotPassword() {
                         </div>
                     );
                 })}
-
-                {/* Indicators */}
 
                 <div className="flex gap-4 mt-8 relative z-20">
                     {slides.map((_, i) => (
@@ -190,7 +181,6 @@ export default function ForgotPassword() {
             </div>
 
 
-            {/* RIGHT SECTION */}
             <div className="w-[55%] h-screen bg-[#EEEEEE] flex items-center justify-center">
                 <div className="w-[600px] bg-white rounded-lg shadow px-6 py-8">
 
@@ -202,7 +192,6 @@ export default function ForgotPassword() {
                         Don’t worry! Enter your registered email address to reset your password.
                     </p>
 
-                    {/* Email */}
                     <div className="mb-6">
                         <label
                             htmlFor="email"
@@ -227,8 +216,6 @@ export default function ForgotPassword() {
     "
                         />
                     </div>
-
-                    {/* Confirm Button */}
                     <div className="flex justify-center">
                         <button
                             onClick={handleSubmit}
@@ -246,11 +233,9 @@ export default function ForgotPassword() {
                         </button>
 
                     </div>
-
-                    {/* Back to Login */}
                     <p
                         onClick={() => router.push("/login")}
-                        className="text-[13px] text-[#0A8E2E] text-center mt-5 cursor-pointer"
+                        className="text-[13px] text-[#0A8E2E] text-center mt-5 cursor-pointer underline"
                     >
                         Back to Login
                     </p>

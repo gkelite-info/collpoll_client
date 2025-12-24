@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function loginUser(email: string, password: string) {
   try {
-    // Login using Supabase Auth
     const { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({
         email,
@@ -22,7 +21,6 @@ export async function loginUser(email: string, password: string) {
 
     const auth_id = user?.id;
 
-    // Fetch user profile from your custom table
     const { data: profile, error } = await supabase
       .from("users")
       .select("*")
@@ -32,7 +30,6 @@ export async function loginUser(email: string, password: string) {
     if (error || !profile)
       return { success: false, error: "User profile not found" };
 
-    // Return profile + tokens
     return {
       success: true,
       user: profile,

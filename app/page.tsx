@@ -1,10 +1,7 @@
-import StuDashboard from "./(screens)/(student)/stu_dashboard/page";
-
+import { redirect } from "next/navigation";
 
 export default function Page() {
   return (
-    <>
-      <StuDashboard />
-    </>
+    redirect("/login")
   )
 }
