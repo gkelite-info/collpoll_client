@@ -101,6 +101,8 @@ export default function PersonalDetails() {
         const res = await upsertUser(payload);
 
         if (res.success) {
+            const user = res.data;
+            localStorage.setItem("userId", user.userId.toString());
             toast.success("Personal Details Saved Successfully");
         } else {
             toast.error(res.error);

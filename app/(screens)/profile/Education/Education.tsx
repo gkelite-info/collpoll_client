@@ -6,6 +6,7 @@ import EducationForm from "./EducationForm";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
+
 export type EducationType =
     | "primary"
     | "secondary"
@@ -25,6 +26,8 @@ export default function EducationSection() {
     const router = useRouter()
 
     const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+    const primarySaveRef = useRef<any>(null);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -48,15 +51,25 @@ export default function EducationSection() {
         setOpen(false);
     };
 
-    const handleSubmitAll = () => {
-        toast.success("Education form submitted Successfully");
-        console.log("All education forms submitted");
+
+    const removeSection = (type: EducationType) => {
+        setAddedForms(prev => prev.filter(item => item !== type));
     };
+
+
+    const handleSubmitAll = async () => {
+        if (primarySaveRef.current) {
+            await primarySaveRef.current();
+        }
+
+        toast.success("Education form submitted Successfully");
+    };
+
 
     return (
         <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow space-y-6">
             <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Education</h2>
+                <h2 className="text-lg font-semibold text-[#282828]">Education</h2>
 
                 <div className="flex gap-3 relative" ref={dropdownRef}>
                     <button
@@ -68,7 +81,7 @@ export default function EducationSection() {
                     </button>
 
                     {open && (
-                        <div className="absolute right-20 top-9 w-60 bg-white border border-[#CCCCCC] rounded-md shadow z-10 overflow-hidden">
+                        <div className="absolute right-20 top-9 w-60 bg-white border border-[#CCCCCC] rounded-md shadow z-10 overflow-hidden text-[#282828]">
                             <DropdownItem
                                 label="Secondary Education"
                                 disabled={addedForms.includes("secondary")}
@@ -99,7 +112,12 @@ export default function EducationSection() {
                 {EDUCATION_ORDER.map(
                     (type) =>
                         addedForms.includes(type) && (
-                            <EducationForm key={type} type={type} />
+                            <EducationForm
+                                key={type}
+                                type={type}
+                                onSaveRef={primarySaveRef}
+                                onRemove={() => removeSection(type)}
+                            />
                         )
                 )}
                 <div className="flex justify-end mt-6">
@@ -137,3 +155,4 @@ function DropdownItem({
         </button>
     );
 }
+
