@@ -61,7 +61,7 @@ export default function PerformanceTrendChart() {
               interval={0}
             />
 
-            <Tooltip
+            {/* <Tooltip
               cursor={{ fill: "transparent" }}
               contentStyle={{
                 borderRadius: "8px",
@@ -71,7 +71,23 @@ export default function PerformanceTrendChart() {
                 fontSize: "12px",
               }}
               formatter={(value?: number) => [`${value ?? 0}%`, "Performance"]}
+            /> */}
+
+            <Tooltip
+              cursor={{ fill: "transparent" }}
+              contentStyle={{
+                borderRadius: "8px",
+                border: "none",
+                color: "black",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                fontSize: "12px",
+              }}
+              formatter={(value, name) => [
+                `${value ?? 0}%`,
+                name,
+              ]}
             />
+
 
             <Bar
               dataKey="value"
