@@ -30,9 +30,9 @@ export default function ClientLayout({
 
   const renderNavbar = () => {
     if (pathname.startsWith("/admin")) return <AdminNavbar />;
-    if (pathname.startsWith("/parent")) return <ParentNavbar />;
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
-    return <StudentNavbar />;
+    if (pathname.startsWith("/parent")) return <ParentNavbar />;
+    if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
   };
 
   return (

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export const upsertUser = async (payload: any) => {
   try {
     const {
+      auth_id,
       fullName,
       mobile,
       email,
@@ -11,16 +12,13 @@ export const upsertUser = async (payload: any) => {
       role,
     } = payload;
 
-    // Inject timestamps
     const now = new Date().toISOString();
 
-    // ----------------------------
-    // 🔥 UPSERT into users table
-    // ----------------------------
     const { data, error } = await supabase
       .from("users")
-      .upsert(
-        {        // if row exists → update, else create
+      .insert(
+        {
+          auth_id,
           fullName,
           mobile,
           email,
@@ -28,11 +26,8 @@ export const upsertUser = async (payload: any) => {
           collegeId,
           role: role ?? null,
           updatedAt: now,
-          createdAt: now,   
+          createdAt: now,
         },
-        {
-          onConflict: "userId", 
-        }
       )
       .select()
       .single();  
@@ -41,7 +36,7 @@ export const upsertUser = async (payload: any) => {
     if (error) throw error;
     return {
       success: true,
-      message: "Personal details saved successfully",
+      message: "User created successfully",
       data,
     };
   } catch (err: any) {

@@ -6,12 +6,7 @@ import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
-
-
-
-import { debugTokens, checkAccessTokenValidity, testRefreshToken, testProtectedQuery }
-  from "@/lib/helpers/authTokens";
-
+import { debugTokens, checkAccessTokenValidity, testRefreshToken, testProtectedQuery } from "@/lib/helpers/authTokens";
 
 
 export default function LoginPage() {
@@ -21,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [current, setCurrent] = useState(0);
 
   type Slide = {
     heading: string;
@@ -51,7 +47,6 @@ export default function LoginPage() {
     },
   ];
 
-  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,31 +56,24 @@ export default function LoginPage() {
   }, []);
 
 
-
   const validate = () => {
-    // Email empty
     if (!email.trim()) {
       toast.error("Email is required!");
       return false;
     }
 
-    // Email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast.error("Please enter a valid email address");
       return false;
     }
 
-    // Password empty
     if (!password.trim()) {
       toast.error("Password is required!");
       return false;
     }
 
-    // Password rules:
-    // 1 uppercase, 1 lowercase, 1 number, 1 special char, min 6 chars
-    const passwordRegex =
-      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
     if (!passwordRegex.test(password)) {
       toast.error(
@@ -93,24 +81,34 @@ export default function LoginPage() {
       );
       return false;
     }
-
-    return true; // ✅ All validations passed
+    return true;
   };
 
   const handleLogin = async () => {
-    if (!validate()) return; // 🚫 API WILL NOT HIT
-
-    setLoading(true);
+    if (!validate()) return;
 
     try {
+      setLoading(true);
       const res = await loginUser(email, password);
 
-      if (res.success) {
-        toast.success("Login successful!");
-        router.push("/");
-      } else {
+      if (!res.success || !res.user) {
         toast.error(res.error || "Login failed");
+        return;
       }
+
+      toast.success("Login successful!");
+
+      const role = res.user.role?.toLowerCase();
+
+      const roleRouteMap: Record<string, string> = {
+        admin: "/admin",
+        parent: "/parent",
+        faculty: "/faculty",
+        student: "/stu_dashboard",
+      };
+
+      const redirectPath = roleRouteMap[role] || "/login";
+      router.replace(redirectPath);
     } catch {
       toast.error("Something went wrong");
     } finally {
@@ -119,12 +117,10 @@ export default function LoginPage() {
   };
 
 
-
   const radius = 240;
 
   return (
     <div className="w-full h-full flex">
-      {/* LEFT SECTION - Figma accurate design */}
       <div className="w-[45%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col justify-between items-center p-8 overflow-hidden">
         <div>
           <h2
@@ -137,8 +133,6 @@ export default function LoginPage() {
             {slides[current].para}
           </p>
         </div>
-
-        {/* FIGMA EXACT CIRCLE */}
 
         {slides.map((slide, idx) => {
           let position = "hidden";
@@ -175,9 +169,7 @@ export default function LoginPage() {
           translateY(-${radius}px)
         `,
               }}
-
             >
-              {/* ROTATING CIRCLE BEHIND SLIDE */}
               <div
                 className={`
     absolute w-[250px] h-[250px] rounded-full bg-[#43C17A] opacity-80
@@ -195,13 +187,10 @@ export default function LoginPage() {
               ></div>
 
 
-              {/* GREEN CIRCLE */}
               {/* <div className="absolute bottom-[-40%] w-[346px] h-[346px] bg-[#43C17A] rounded-full opacity-35"></div> */}
 
-              {/* TOP HIGHLIGHT */}
               {/* <div className="absolute top-[15%] w-[75%] h-[95px]  rounded-3xl"></div> */}
 
-              {/* CARD */}
               <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden">
                 <img
                   src={slide.image}
@@ -211,8 +200,6 @@ export default function LoginPage() {
             </div>
           );
         })}
-
-        {/* Indicators */}
 
         <div className="flex gap-4 mt-8 relative z-20">
           {slides.map((_, i) => (
@@ -227,8 +214,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-
-      {/* RIGHT SECTION (SCALED UP – NO FUNCTIONAL/UI CHANGE) */}
       <div className="w-[55%] h-screen flex justify-center items-center bg-[#F5F6F8]">
         <div className="w-[560px] bg-white rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-8">
           <h1 className="text-[20px] font-semibold text-[#16284F] text-center">
@@ -239,7 +224,6 @@ export default function LoginPage() {
             Please enter your credentials to proceed.
           </p>
 
-          {/* Email */}
           <div className="mt-6">
             <label className="block text-[13px] text-[#414141] mb-1">
               Email
@@ -254,7 +238,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password */}
           <div className="mt-4">
             <label className="block text-[13px] text-[#414141] mb-1">
               Password
@@ -264,6 +247,11 @@ export default function LoginPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleLogin();
+                  }
+                }}
                 className="w-full h-11 px-4 pr-12 rounded-md border border-[#DCDCDC]
                      text-[14px] focus:outline-none text-black placeholder:text-gray-400"
                 value={password}
@@ -285,14 +273,13 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => router.push("/forgot-password")}
-              className="text-[13px] text-[#16284F] mt-2 w-full text-right hover:underline"
+              className="text-[13px] text-[#16284F] mt-2 w-full text-right cursor-pointer underline"
             >
               Forgot Password?
             </button>
 
           </div>
 
-          {/* Buttons */}
           <div className="w-full flex justify-center mt-8">
             <button
               onClick={handleLogin}
@@ -303,8 +290,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Register */}
-          <p className="text-center mt-4 text-[14px] text-[#444]">
+          {/* <p className="text-center mt-4 text-[14px] text-[#444]">
             Don’t have an account?{" "}
             <Link
               href="/signup"
@@ -312,8 +298,7 @@ export default function LoginPage() {
             >
               Register Now
             </Link>
-
-          </p>
+          </p> */}
 
         </div>
       </div>

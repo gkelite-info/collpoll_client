@@ -5,18 +5,27 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
 import { upsertUser } from "@/lib/helpers/upsertUser";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Signup() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    role: "",
+  const [formData, setFormData] = useState<{
+    fullName: string;
+    email: string;
+    mobile: string;
+    role: string;
+    collegeId: number | "";
+    password: string;
+    confirmPassword: string;
+  }>({
+    fullName: "",
     email: "",
+    mobile: "",
+    role: "",
+    collegeId: "",
     password: "",
     confirmPassword: "",
-    mobile: "",
   });
 
 
@@ -65,7 +74,7 @@ export default function Signup() {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, 2500);
     return () => clearInterval(interval);
-  }, []);
+  }, [slides.length]);
 
 
   const nameRegex = /^([A-Z][a-z]+)(\s[A-Z][a-z]+)*$/;
@@ -81,15 +90,17 @@ export default function Signup() {
     value.replace(/\D/g, "").slice(0, 10);
 
 
-  const handleChange = (e: any) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { id, value } = e.target;
 
-    if (["firstName", "lastName"].includes(id)) {
+    if (id === "fullname") {
       let clean = value.replace(/[^A-Za-z ]/g, "");
       clean = clean.replace(/\s+/g, " ");
-      clean = clean.replace(/\b\w/g, (t: string) => t.toUpperCase());
+      clean = clean.replace(/\b\w/g, (t) => t.toUpperCase());
       clean = clean.trimStart();
-      setFormData((prev) => ({ ...prev, [id]: clean }));
+      setFormData((prev) => ({ ...prev, fullname: clean }));
       return;
     }
 
@@ -98,10 +109,17 @@ export default function Signup() {
       return;
     }
 
-    if (
-      ["mobile", "fatherMobile", "motherMobile", "guardianMobile"].includes(id)
-    ) {
-      setFormData((prev) => ({ ...prev, [id]: sanitizeDigits(value) }));
+    if (id === "mobile") {
+      setFormData((prev) => ({ ...prev, mobile: sanitizeDigits(value) }));
+      return;
+    }
+
+    if (id === "collegeId") {
+      const numericValue = value.replace(/\D/g, "");
+      setFormData((prev) => ({
+        ...prev,
+        collegeId: numericValue === "" ? "" : Number(numericValue),
+      }));
       return;
     }
 
@@ -109,7 +127,10 @@ export default function Signup() {
   };
 
 
-  const handlePasswordChange = (e: any) => {
+
+  const handlePasswordChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = e.target.value;
     setFormData((prev) => ({ ...prev, password: value }));
 
@@ -127,13 +148,8 @@ export default function Signup() {
   const handleSignup = async () => {
 
     try {
-      if (!formData.firstName)
-        return toast.error("First Name is required!");
-
-      if (!formData.lastName)
-        return toast.error("Last Name is required!");
-
-      if (!formData.role) return toast.error("Role is required!");
+      if (!formData.fullName)
+        return toast.error("Fullname is required!");
 
       if (!formData.email) return toast.error("Email is required!");
 
@@ -141,16 +157,21 @@ export default function Signup() {
 
       if ((formData.mobile.length < 10)) return toast.error("Mobile number should be 10!");
 
+      if (!formData.role) return toast.error("Role is required!");
+
+      if (formData.collegeId === "")
+        return toast.error("College ID is required!");
+
+      if (!Number.isInteger(formData.collegeId))
+        return toast.error("College ID must be a valid number!");
+
       if (!formData.password) return toast.error("Password is required!");
 
       if (!formData.confirmPassword)
         return toast.error("Confirm Password is required!");
 
-      if (!nameRegex.test(formData.firstName))
+      if (!nameRegex.test(formData.fullName))
         return toast.error("Full Name must be title case alphabets only!");
-
-      if (!nameRegex.test(formData.lastName))
-        return toast.error("Last Name must be title case alphabets only!");
 
       if (!emailRegex.test(formData.email))
         return toast.error(
@@ -164,8 +185,12 @@ export default function Signup() {
         return toast.error(
           "Password must include uppercase, lowercase, number and special character"
         );
+      if (formData.password !== formData.confirmPassword) {
+        return toast.error("Passwords do not match!");
+      }
+
     } catch (error) {
-      toast.error("Failed to save")
+      toast.error("Failed to save");
     }
 
     setLoading(true);
@@ -173,18 +198,37 @@ export default function Signup() {
     const { confirmPassword, ...payload } = formData;
 
     try {
-      const res = await upsertUser({
-        ...payload,
-        is_deleted: false,
-        deletedAt: null,
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: "https://collpoll-client.vercel.app/login",
+        },
       });
 
-      if (!res.success) return toast.error(res.error.message);
+      if (error) throw error;
 
-      toast.success("User created successfully!");
+      const authUser = data.user;
+
+      if (!authUser) {
+        throw new Error("Auth user not created");
+      }
+
+      const res = await upsertUser({
+        auth_id: authUser.id,
+        fullName: formData.fullName,
+        email: formData.email,
+        mobile: formData.mobile,
+        collegeId: formData.collegeId,
+        role: formData.role,
+      });
+
+      if (!res.success) throw new Error(res.error);
+
+      toast.success("Please verify your email!");
       router.push("/login");
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message || "Failed to save");
     } finally {
       setLoading(false);
     }
@@ -194,7 +238,6 @@ export default function Signup() {
 
   return (
     <div className="w-full h-full flex">
-      {/* LEFT SECTION - Figma accurate design */}
       <div className="w-[45%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col justify-between items-center p-8 overflow-hidden">
         <div>
           <h2
@@ -286,70 +329,27 @@ export default function Signup() {
       </div>
 
       <div className="w-[750px] h-screen bg-[#EEEEEE] px-6 py-4 overflow-y-auto relative z-20 flex items-center justify-center">
-
         <div className="w-[550px] h-[550px] text-lg justify-between items-center px-4 py-2">
-
-          {/* Title */}
           <h1 className="text-[20px] font-semibold text-[#16284F] text-center py-2">
             User Registration
           </h1>
-
           <p className="text-[13px] text-[#414141] text-center mt-1 mb-3">
             Fill in your details to complete registration.
           </p>
-
-          {/* Form */}
           <div className="grid grid-cols-2 gap-x-3 gap-y-3">
-
-            {/* FirstName */}
             <div className="col-span-2">
               <label className="block text-[13px] text-[#414141] mb-1">
-                First Name <span className="text-red-500 text-lg">*</span>
+                Fullname <span className="text-red-500 text-lg">*</span>
               </label>
               <input
                 type="text"
-                id="firstName"
-                value={formData.firstName}
+                id="fullName"
+                value={formData.fullName}
                 onChange={handleChange}
-                placeholder="Enter Your FirstName"
-                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-black"
+                placeholder="Enter Fullname"
+                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-black focus:outline-none"
               />
             </div>
-
-            {/* LastName */}
-            <div>
-              <label className="block text-[13px] text-[#414141] mb-1">
-                Last Name <span className="text-red-500 text-lg">*</span>
-              </label>
-              <input
-                id="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                placeholder="Enter Your Last Name"
-                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000]"
-              />
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-[13px] text-[#414141] mb-1">
-                Role <span className="text-red-500 text-lg">*</span>
-              </label>
-              <select
-                id="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000]"
-              >
-                <option value="">Select Role</option>
-                <option value="Parent">Parent</option>
-                <option value="Student">Student</option>
-                <option value="Faculty">Faculty</option>
-              </select>
-
-            </div>
-
-            {/* Email */}
             <div>
               <label className="block text-[13px] text-[#414141] mb-1">
                 Email <span className="text-red-500 text-lg">*</span>
@@ -359,12 +359,10 @@ export default function Signup() {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter Your Email"
-                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000]"
+                placeholder="Enter Email"
+                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
               />
             </div>
-
-            {/* Mobile */}
             <div>
               <label className="block text-[13px] text-[#414141] mb-1">
                 Mobile <span className="text-red-500 text-lg">*</span>
@@ -375,12 +373,43 @@ export default function Signup() {
                 inputMode="numeric"
                 value={formData.mobile}
                 onChange={handleChange}
-                placeholder="Enter Your Mobile Number"
-                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000]"
+                placeholder="Enter Mobile Number"
+                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] text-[#414141] mb-1">
+                Role <span className="text-red-500 text-lg">*</span>
+              </label>
+              <select
+                id="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
+              >
+                <option value="">Select Role</option>
+                <option value="Admin">Admin</option>
+                <option value="Parent">Parent</option>
+                <option value="Student">Student</option>
+                <option value="Faculty">Faculty</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[13px] text-[#414141] mb-1">
+                CollegeId <span className="text-red-500 text-lg">*</span>
+              </label>
+              <input
+                id="collegeId"
+                type="text"
+                inputMode="numeric"
+                value={formData.collegeId === "" ? "" : String(formData.collegeId)}
+                onChange={handleChange}
+                placeholder="Enter Your collegeId"
+                className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
               />
             </div>
 
-            {/* Password */}
+
             <div className="w-full">
               <label className="block text-[13px] text-[#414141] mb-1">
                 Password <span className="text-red-500 text-lg">*</span>
@@ -394,7 +423,7 @@ export default function Signup() {
                   placeholder="Enter Password"
                   className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 pr-12
              text-[14px] text-[#000]
-             placeholder:text-gray-400"
+             placeholder:text-gray-400 focus:outline-none"
                 />
 
                 <button
@@ -409,9 +438,6 @@ export default function Signup() {
                 </button>
               </div>
             </div>
-
-
-            {/* Confirm Password */}
             <div className="w-full">
               <label className="block text-[13px] text-[#414141] mb-1">
                 Confirm Password <span className="text-red-500 text-lg">*</span>
@@ -421,13 +447,18 @@ export default function Signup() {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   value={formData.confirmPassword || ""}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSignup();
+                    }
+                  }}
                   onChange={(e) =>
                     setFormData({ ...formData, confirmPassword: e.target.value })
                   }
                   placeholder="Confirm Password"
                   className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 pr-12
                  text-[14px] text-[#000]
-                 placeholder:text-gray-400"
+                 placeholder:text-gray-400 focus:outline-none"
                 />
 
                 <button
@@ -448,8 +479,6 @@ export default function Signup() {
             </div>
 
           </div>
-
-          {/* Buttons and Footer */}
           <div className="w-full flex flex-col items-center mt-5">
             <button
               onClick={handleSignup}
@@ -459,13 +488,11 @@ export default function Signup() {
               {loading ? "Loading..." : "Register"}
             </button>
           </div>
-
-
           <p className="text-[14px] text-[#414141] mt-4 text-center">
             Already have an account?{" "}
             <span
               onClick={() => router.push("/login")}
-              className="text-[#0A8E2E] cursor-pointer"
+              className="text-[#0A8E2E] cursor-pointer underline"
             >
               Login
             </span>
