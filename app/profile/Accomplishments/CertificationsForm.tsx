@@ -1,5 +1,5 @@
+import { Input } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
-import { Input } from "../../../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 
 interface CertificationsProps {

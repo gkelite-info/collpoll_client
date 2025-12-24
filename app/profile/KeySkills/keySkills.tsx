@@ -3,9 +3,9 @@
 import { useState } from "react";
 
 import { Plus, PencilSimple, X } from "@phosphor-icons/react";
-import AddSkillModal from "@/app/(screens)/(student)/stu_dashboard/profile/KeySkills/addSkillModel";
 import Pill from "./Pill";
 import { useRouter } from "next/navigation";
+import AddSkillModal from "./addSkillModel";
 
 const initialTechnical = [
   "React.js",
