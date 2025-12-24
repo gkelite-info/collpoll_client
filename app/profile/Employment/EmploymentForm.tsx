@@ -1,6 +1,6 @@
+import { Input, Select, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Input, Select, TextArea } from "../../../../../utils/ReusableComponents";
 
 export default function EmploymentForm({
     index,

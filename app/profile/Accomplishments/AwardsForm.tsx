@@ -1,5 +1,5 @@
+import { Input, Select, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
-import { Input, Select, TextArea } from "../../../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 
 interface AwardProps {
