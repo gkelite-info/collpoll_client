@@ -34,10 +34,11 @@ export const upsertUser = async (payload: any) => {
           onConflict: "userId", 
         }
       )
-      .select();
+      .select()
+      .single();  
+
 
     if (error) throw error;
-
     return {
       success: true,
       message: "Personal details saved successfully",
