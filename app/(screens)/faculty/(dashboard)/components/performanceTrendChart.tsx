@@ -10,6 +10,12 @@ import {
   Cell,
   LabelList,
 } from "recharts";
+import type { Formatter } from "recharts/types/component/DefaultTooltipContent";
+
+const performanceFormatter: Formatter<number, string> = (value, name) => [
+  `${value ?? 0}%`,
+  name,
+];
 
 export default function PerformanceTrendChart() {
   const data = [
@@ -61,15 +67,28 @@ export default function PerformanceTrendChart() {
               interval={0}
             />
 
+            {/* <Tooltip
+              cursor={{ fill: "transparent" }}
+              contentStyle={{
+                borderRadius: "8px",
+                border: "none",
+                color: 'black',
+                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                fontSize: "12px",
+              }}
+              formatter={(value?: number) => [`${value ?? 0}%`, "Performance"]}
+            /> */}
+
             <Tooltip
               cursor={{ fill: "transparent" }}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",
+                color: "black",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 fontSize: "12px",
               }}
-              formatter={(value: number) => [`${value}%`, "Performance"]}
+              formatter={performanceFormatter}
             />
 
             <Bar

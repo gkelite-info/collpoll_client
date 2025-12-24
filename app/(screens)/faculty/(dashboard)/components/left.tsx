@@ -52,10 +52,11 @@ const cardData = [
 const card = [
   {
     show: false,
-    user: "Ms. Swathi",
+    user: "Ms.Swathi",
     studentsTaskPercentage: 85,
     facultySubject: "(Data Structures and Algorithms)",
     image: "../../../female-professor.png",
+    top: "lg:top-[-173px]"
   },
 ];
 
@@ -97,7 +98,10 @@ export default function FacultyDashLeft({
   return (
     <>
       <div className="w-[68%] p-2">
-        <UserInfoCard cardProps={card} />
+        <UserInfoCard
+          cardProps={card}
+          
+        />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent

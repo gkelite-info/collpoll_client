@@ -40,14 +40,14 @@ export default function ParentNavbar() {
                 <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Attendance",
-            path: "/attendance",
+            path: "/parent/attendance",
         },
         {
             icon: (isActive) => (
                 <Student size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Student Progress",
-            path: "/student-progress",
+            path: "/parent/student-progress",
         },
         // {
         //     icon: (isActive) => (

@@ -1,6 +1,6 @@
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import AssignmentsRight from "../../assignments/right";
-import AssignmentsLeft from "./components/left";
+import AssignmentsLeft from "../../(student)/assignments/left";
+import AssignmentsRight from "../../(student)/assignments/right";
+
 
 export default function Page() {
   return (
