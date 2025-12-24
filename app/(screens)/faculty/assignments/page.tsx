@@ -1,14 +1,6 @@
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-import AssignmentsRight from "../../assignments/right";
-import AssignmentsLeft from "./components/left";
-=======
-=======
->>>>>>> Stashed changes
+import AssignmentsLeft from "../../(student)/assignments/left";
 import AssignmentsRight from "../../(student)/assignments/right";
-import { AssignmentsLeft } from "./components/left";
->>>>>>> Stashed changes
+
 
 export default function Page() {
   return (
