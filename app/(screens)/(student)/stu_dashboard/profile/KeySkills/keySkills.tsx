@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Plus, PencilSimple, X } from "@phosphor-icons/react";
-import AddSkillModal from "@/app/(screens)/profile/KeySkills/addSkillModel";
+import AddSkillModal from "@/app/(screens)/(student)/stu_dashboard/profile/KeySkills/addSkillModel";
 import Pill from "./Pill";
 import { useRouter } from "next/navigation";
 
