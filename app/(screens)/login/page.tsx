@@ -96,8 +96,6 @@ export default function LoginPage() {
         return;
       }
 
-      toast.success("Login successful!");
-
       const role = res.user.role?.toLowerCase();
 
       const roleRouteMap: Record<string, string> = {
@@ -109,6 +107,7 @@ export default function LoginPage() {
 
       const redirectPath = roleRouteMap[role] || "/login";
       router.replace(redirectPath);
+      toast.success("Login successful!");
     } catch {
       toast.error("Something went wrong");
     } finally {

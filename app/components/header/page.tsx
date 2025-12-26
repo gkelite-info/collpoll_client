@@ -14,6 +14,7 @@ import NewsModal from "../modals/NewsModal";
 import EmailModal from "../modals/EmailModal";
 import AnnouncementModal from "../modals/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
+import ProfileWrapper from "@/app/profile/ProfileWrapper";
 
 
 
@@ -110,7 +111,11 @@ export default function Header() {
 
           <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
             //  onClick={()=>router.push('/profile')}
-            onClick={() => setOpenProfile(true)}
+            onClick={() => {
+              console.log("Vamshi");
+
+              setOpenProfile(true)
+            }}
           >
             <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
               <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
@@ -179,6 +184,10 @@ export default function Header() {
         isOpen={isDailyModalOpen}
         mode={dailyMode}
         onClose={() => setIsDailyModalOpen(false)}
+      />
+      <ProfileWrapper
+        openProfile={openProfile}
+        onCloseProfile={() => setOpenProfile(false)}
       />
     </>
   );
