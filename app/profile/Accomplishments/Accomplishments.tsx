@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 type TabType = "certifications" | "awards" | "clubs";
 
+
 export default function Accomplishments() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<TabType>("certifications");
@@ -67,7 +68,7 @@ export default function Accomplishments() {
                     </button>
                     <button
                         type="button"
-                        onClick={()=>router.push('/profile?competitive-exams')}
+                        onClick={() => router.push('/profile?competitive-exams')}
                         className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
                     >
                         Next
@@ -99,16 +100,20 @@ export default function Accomplishments() {
                 Array.from({ length: formCount.certifications }).map((_, i) => (
                     <CertificationsForm
                         key={i}
-                        onSubmit={() => markSubmitted("certifications", i)}
                         index={i}
+                        studentId={1}
+                        onRemove={() => { }}
                     />
-                ))}
+                ))
+            }
+
 
             {activeTab === "awards" &&
                 Array.from({ length: formCount.awards }).map((_, i) => (
                     <AwardsForm
                         key={i}
                         index={i}
+                        studentId={1}
                         onSubmit={() => markSubmitted("awards", i)}
                     />
                 ))}
@@ -118,6 +123,7 @@ export default function Accomplishments() {
                     <ClubsForm
                         key={i}
                         index={i}
+                        studentId={1}
                         onSubmit={() => markSubmitted("clubs", i)}
                     />
                 ))}
