@@ -179,7 +179,6 @@ export default function Header() {
         isOpen={isAnnouncementOpen}
         onClose={() => setIsAnnouncementOpen(false)}
       />
-
       <DailyNewsModal
         isOpen={isDailyModalOpen}
         mode={dailyMode}
