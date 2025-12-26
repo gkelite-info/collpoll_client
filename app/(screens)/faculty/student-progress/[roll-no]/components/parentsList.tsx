@@ -24,7 +24,7 @@ export default function ParentsList({ parents, onChatOpen }: ParentsListProps) {
         {parents.map((parent) => (
           <div
             key={parent.name}
-            className="flex items-center justify-between rounded-[20px] bg-[#E8F6E2] p-3 pl-4"
+            className="flex items-center justify-between rounded-full bg-[#E8F6E2] p-3"
           >
             <div className="flex items-center gap-4">
               <img
@@ -45,7 +45,7 @@ export default function ParentsList({ parents, onChatOpen }: ParentsListProps) {
 
             <button
               onClick={() => onChatOpen(parent)}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#A1D683] text-white transition-transform hover:scale-105 active:scale-95 mr-2 shadow-sm"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#A1D683] text-white transition-transform hover:scale-105 active:scale-95 shadow-sm"
             >
               <ChatCircleDots size={34} weight="fill" />
             </button>

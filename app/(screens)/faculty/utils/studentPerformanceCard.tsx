@@ -1,5 +1,7 @@
 import { CaretRight } from "@phosphor-icons/react";
+import Router from "next/router";
 import React from "react";
+import { useRouter } from "next/navigation";
 
 export interface StudentPerformance {
   id: string;
@@ -10,8 +12,6 @@ export interface StudentPerformance {
 
 interface StudentPerformanceCardProps {
   students: StudentPerformance[];
-  className?: string;
-  onViewAll: () => void;
 }
 
 const StudentRow: React.FC<{ student: StudentPerformance }> = ({ student }) => {
@@ -47,8 +47,9 @@ const StudentRow: React.FC<{ student: StudentPerformance }> = ({ student }) => {
 
 export default function studentPerformanceCard({
   students,
-  onViewAll,
 }: StudentPerformanceCardProps) {
+  const router = useRouter();
+
   return (
     <>
       <div
@@ -59,7 +60,7 @@ export default function studentPerformanceCard({
             My Students Performance
           </h2>
           <button
-            onClick={onViewAll}
+            onClick={() => router.push("/faculty/student-progress")}
             className="text-gray-500 cursor-pointer hover:text-gray-700 transition-colors"
           >
             <CaretRight weight="bold" size={20} />

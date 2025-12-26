@@ -44,7 +44,6 @@ const mockAssignments: Assignment[] = [
 
 export default function AssignmentsTable() {
   return (
-    // ADDED h-full. Removed 'border border-gray-100'. Changed rounded-2xl to rounded-[20px].
     <div className="bg-white p-6 rounded-[20px] shadow-sm w-full h-full font-sans">
       <h2 className="text-[#333333] text-xl font-bold mb-6">Assignments</h2>
       <table className="w-full text-left border-collapse">
