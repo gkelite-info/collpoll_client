@@ -8,12 +8,20 @@ export function Input({
     value,
     onChange,
     placeholder,
+    type = "text",
+    min,
+    max,
+    disabled = false,
 }: {
     label: string;
     name: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder?: string;
+    type?: string;
+    min?: string;
+    max?: string;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex flex-col">
@@ -21,10 +29,14 @@ export function Input({
                 {label}
             </label>
             <input
+                type={type}
                 name={name}
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
+                min={min}
+                max={max}
+                disabled={disabled}
                 className="h-10 px-3 border border-[#CCCCCC] text-[#525252] rounded-md text-sm focus:outline-none"
             />
         </div>
@@ -37,12 +49,14 @@ export function Select({
     value,
     options,
     onChange,
+    disabled = false,
 }: {
     label: string;
     name: string;
     value: string;
     options: string[];
     onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex flex-col">
@@ -53,6 +67,7 @@ export function Select({
                 name={name}
                 value={value}
                 onChange={onChange}
+                disabled={disabled}
                 className="h-10 px-3 cursor-pointer border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none"
             >
                 <option value="">Select</option>
