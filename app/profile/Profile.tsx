@@ -5,13 +5,14 @@ import Accomplishments from "./Accomplishments/Accomplishments";
 import CompetetiveExams from "./CompetetiveExams";
 import EducationSection from "./Education/Education";
 import Employment from "./Employment/Employment";
-import Internships from "./Internships/internships";
+
 import KeySkills from "./KeySkills/keySkills";
 import Languages from "./languages";
 import PersonalDetails from "./personalDetails";
 import ProfileSteps from "./profileSteps";
 import ProfileSummary from "./ProfileSummary";
 import ProjectsForm from "./Projects/ProjectsForm";
+import Internships from "./Interships/internships";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
