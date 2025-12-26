@@ -16,14 +16,9 @@ export const upsertUser = async (payload: any) => {
 
     const { data, error } = await supabase
       .from("users")
-<<<<<<< Updated upstream
       .insert(
         {
           auth_id,
-=======
-      .upsert(
-        {       
->>>>>>> Stashed changes
           fullName,
           mobile,
           email,

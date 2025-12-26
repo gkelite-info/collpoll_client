@@ -1,14 +1,9 @@
-<<<<<<< Updated upstream:app/profile/Accomplishments/CertificationsForm.tsx
-import { Input } from "@/app/utils/ReusableComponents";
-import { useState } from "react";
-=======
 import { useState, useEffect } from "react";
-import { Input } from "../../../utils/ReusableComponents";
->>>>>>> Stashed changes:app/(screens)/profile/Accomplishments/CertificationsForm.tsx
 import toast from "react-hot-toast";
 import { upsertCertification } from "@/lib/helpers/upsertCertification";
 import { X, UploadSimple } from "@phosphor-icons/react";
 import { useRef } from "react";
+import { Input } from "@/app/utils/ReusableComponents";
 
 interface CertificationsProps {
   index: number;
@@ -231,8 +226,6 @@ export default function CertificationsForm({
      startDate: form.startDate,  
   endDate: form.endDate,       
     };
-
-    console.log(" Sending certification payload:", payload);
 
     const response = await upsertCertification(payload);
 

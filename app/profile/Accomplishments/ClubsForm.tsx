@@ -1,9 +1,5 @@
 import { Input, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
-<<<<<<< Updated upstream:app/profile/Accomplishments/ClubsForm.tsx
-=======
-import { Input, Select, TextArea } from "../../../utils/ReusableComponents";
->>>>>>> Stashed changes:app/(screens)/profile/Accomplishments/ClubsForm.tsx
 import toast from "react-hot-toast";
 import { upsertClubCommittee } from "@/lib/helpers/upsertClubCommittee";
 
@@ -32,7 +28,7 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         }
 
         if (name === "fromDate" || name === "toDate") {
-            let cleaned = value.replace(/[^0-9]/g, ""); 
+            let cleaned = value.replace(/[^0-9]/g, "");
 
             if (cleaned.length >= 5) {
                 cleaned = cleaned.replace(
@@ -70,28 +66,28 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         if (!onlyLetters.test(form.clubName))
             return "Club/Committee Name should only contain letters and spaces";
 
-      
+
         if (!form.role.trim())
             return "Role/Position Held is required";
 
         if (!onlyLetters.test(form.role))
             return "Role/Position Held should only contain letters and spaces";
 
-       
+
         if (!form.fromDate.trim())
             return "From Date is required";
 
         if (!dateRegex.test(form.fromDate))
             return "From Date must be in DD/MM/YYYY format";
 
-      
+
         if (!form.toDate.trim())
             return "To Date is required";
 
         if (!dateRegex.test(form.toDate))
             return "To Date must be in DD/MM/YYYY format";
 
-      
+
         const convert = (d: string) => {
             const [dd, mm, yyyy] = d.split("/").map(Number);
             return new Date(yyyy, mm - 1, dd);
@@ -121,7 +117,7 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         return null;
     };
 
-  
+
     const saveCommittee = async () => {
         const error = validateCommittee();
         if (error) return toast.error(error);
