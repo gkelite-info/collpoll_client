@@ -28,7 +28,6 @@ export default function EducationForm({
 
   return (
     <>
-      {/* TITLE + MINUS BUTTON */}
       <div className="flex justify-between items-center w-[85%] mb-3">
         <h3 className="text-[#43C17A] font-medium">{TITLES[type]}</h3>
         <button
@@ -45,7 +44,7 @@ export default function EducationForm({
         </button>
       </div>
 
-      {/* YOUR EXACT EXISTING CODE – NOT CHANGED */}
+    
       {type === "primary" && (
         <PrimaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
       )}
@@ -64,7 +63,7 @@ export default function EducationForm({
 
 
 
-// FIXED CONTROLLED INPUT — no collision
+
 function ControlledInput({
   label,
   value,
@@ -98,10 +97,10 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   });
 
   function formatTitleCase(value: string): string {
-    let clean = value.replace(/[^A-Za-z ]/g, ""); // remove invalid chars
+    let clean = value.replace(/[^A-Za-z ]/g, ""); 
     clean = clean
       .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase()); // Title Case
+      .replace(/\b\w/g, (char) => char.toUpperCase()); 
     return clean;
   }
 
@@ -109,12 +108,12 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-    // Apply Title Case + Remove invalid chars
+  
     if (["schoolName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-    // Year should allow only 4 digits
+  
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
@@ -124,8 +123,8 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
 
 
 
-  const onlyLetters = /^[A-Za-z ]+$/;    // letters + spaces
-  const yearRegex = /^[0-9]{4}$/;        // EXACT 4 digits
+  const onlyLetters = /^[A-Za-z ]+$/;   
+  const yearRegex = /^[0-9]{4}$/;        
 
   const validate = () => {
     if (!form.schoolName.trim())
@@ -172,11 +171,11 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
       updatedAt: now,
     };
 
-    console.log("📤 Sending Payload:", payload);
+    console.log(" Sending Payload:", payload);
 
     const response = await upsertPrimaryEducation(payload);
 
-    console.log("📥 Supabase Response:", response);
+    console.log(" Supabase Response:", response);
 
     if (response.success) {
       toast.success(response.message ?? "Primary education saved!");
@@ -236,35 +235,35 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
   });
 
   function formatTitleCase(value: string): string {
-    let clean = value.replace(/[^A-Za-z ]/g, ""); // remove invalid chars
+    let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase()); // Title Case
+      .replace(/\b\w/g, (char) => char.toUpperCase()); 
     return clean;
   }
 
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-    // Apply Title Case + Remove invalid chars
+  
     if (["institutionName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-    // Year should allow only 4 digits
+    
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
 
     if (field === "percentage") {
-      cleanValue = value.replace(/[^0-9.%]/g, ""); // allow numbers, dot, %
+      cleanValue = value.replace(/[^0-9.%]/g, ""); 
     }
 
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-  const onlyLetters = /^[A-Za-z ]+$/;    // letters + spaces
-  const yearRegex = /^[0-9]{4}$/;        // EXACT 4 digits
+  const onlyLetters = /^[A-Za-z ]+$/;   
+  const yearRegex = /^[0-9]{4}$/;        
   const percentageRegex = /^(100(\.0+)?|[0-9]{1,2}(\.[0-9]+)?)%?$/;
 
 
@@ -404,37 +403,30 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-    // Specialization → uppercase allowed + & + spaces
+    
     if (field === "specialization") {
       cleanValue = value.replace(/[^A-Za-z& ]/g, "");
-      // do NOT auto-titlecase, allow full CAPS
     }
 
-    // Course Name → letters + & + spaces (TitleCase)
     if (field === "courseName") {
       cleanValue = value.replace(/[^A-Za-z& ]/g, "");
       cleanValue = formatTitleCase(cleanValue);
     }
 
-    // College Name → only letters + spaces (TitleCase)
     if (field === "collegeName") {
       cleanValue = value.replace(/[^A-Za-z ]/g, "");
       cleanValue = formatTitleCase(cleanValue);
     }
 
-    // CGPA → numbers + dot
-    // CGPA → numbers + one decimal digit only
+
     if (field === "CGPA") {
-      // Allow only digits and dot
       cleanValue = value.replace(/[^0-9.]/g, "");
 
-      // Allow only **one dot**
       const parts = cleanValue.split(".");
       if (parts.length > 2) {
         parts.splice(2);
       }
 
-      // After dot → allow max 1 digit
       if (parts[1]) {
         parts[1] = parts[1].slice(0, 1);
       }
@@ -443,68 +435,55 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
     }
 
 
-    // Start/End Year
+
     if (field === "startYear" || field === "endYear") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
 
-    // Course Type → letters + dot "."
     if (field === "courseType") {
       cleanValue = value.replace(/[^A-Za-z. ]/g, "");
-      // KEEP user casing — no auto TitleCase
     }
 
     setForm((p) => ({ ...p, [field]: cleanValue }));
   };
 
 
-  // -------------------------
-  // REGEX VALIDATIONS
-  // -------------------------
   const onlyLetters = /^[A-Za-z ]+$/;
-  const lettersAndAmp = /^[A-Za-z& ]+$/;  // courseName
-  const specializationRegex = /^[A-Za-z& ]+$/;  // allow CAPS as user types
-  const courseTypeRegex = /^[A-Za-z. ]+$/; // allow dot for B.Tech etc.
+  const lettersAndAmp = /^[A-Za-z& ]+$/;  
+  const specializationRegex = /^[A-Za-z& ]+$/;  
+  const courseTypeRegex = /^[A-Za-z. ]+$/;
   const cgpaRegex = /^(10|[0-9](\.[0-9])?)$/;
   const yearRegex = /^[0-9]{4}$/;
 
   const validate = () => {
 
-    // Course Name
     if (!form.courseName.trim()) return "Course Name is required";
     if (!lettersAndAmp.test(form.courseName))
       return "Course Name must contain only letters or &";
 
-    // Specialization (uppercase allowed)
     if (!form.specialization.trim()) return "Specialization is required";
     if (!specializationRegex.test(form.specialization))
       return "Specialization must contain only letters or &";
 
-    // College Name
     if (!form.collegeName.trim()) return "College Name is required";
     if (!onlyLetters.test(form.collegeName))
       return "College Name must contain only letters";
 
-    // CGPA
     if (!form.CGPA.trim()) return "CGPA is required";
     if (!cgpaRegex.test(form.CGPA))
       return "CGPA must be 1–10 like 8, 9.2, 7.85";
 
-    // Start Year
     if (!form.startYear.trim()) return "Start Year is required";
     if (!yearRegex.test(form.startYear))
       return "Start Year must be exactly 4 digits";
 
-    // End Year
     if (!form.endYear.trim()) return "End Year is required";
     if (!yearRegex.test(form.endYear))
       return "End Year must be exactly 4 digits";
 
-    // Year relationship
     if (Number(form.endYear) < Number(form.startYear))
       return "End Year should be greater than or equal to Start Year";
 
-    // Course Type (letters + dot)
     if (!form.courseType.trim()) return "Course Type is required";
     if (!courseTypeRegex.test(form.courseType))
       return "Course Type must contain only letters or dot (.)";
@@ -513,9 +492,6 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
   };
 
 
-  // -------------------------
-  // SAVE FUNCTION
-  // -------------------------
   const saveUndergraduate = async () => {
     const error = validate();
     if (error) {
@@ -535,11 +511,11 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
       updatedAt: now,
     };
 
-    console.log("📤 Undergraduate Payload:", payload);
+    console.log(" Undergraduate Payload:", payload);
 
     const response = await upsertUndergraduateEducation(payload);
 
-    console.log("📥 Undergraduate Response:", response);
+    console.log(" Undergraduate Response:", response);
 
     if (response.success) {
       toast.success("Undergraduate education saved successfully!");
@@ -548,7 +524,6 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
     }
   };
 
-  // expose to parent
   useEffect(() => {
     onSaveRef.current = saveUndergraduate;
   }, [form]);
@@ -580,7 +555,7 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
         onChange={(e) => handleChange("CGPA", e.target.value)}
       />
 
-      {/* ✅ Course Duration (Start Year + End Year) */}
+    
       <div className="flex gap-5 w-[85%]">
         <ControlledInput
           label="Start Year"
@@ -615,30 +590,23 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     endYear: "",
   });
 
-  // ------------------------------------
-  // FORMATTER (Title Case)
-  // ------------------------------------
   function formatTitleCase(value: string) {
-    let clean = value.replace(/[^A-Za-z ]/g, ""); // only letters + space
+    let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
       .replace(/\b\w/g, (char) => char.toUpperCase());
     return clean;
   }
 
-  // ------------------------------------
-  // HANDLE INPUT CHANGE
-  // ------------------------------------
+  
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-    // University, Research, Supervisor → letters + spaces ONLY
     if (["universityName", "researchArea", "supervisorName"].includes(field)) {
       cleanValue = value.replace(/[^A-Za-z ]/g, "");
       cleanValue = formatTitleCase(cleanValue);
     }
 
-    // Start Year & End Year → only digits, max 4
     if (field === "startYear" || field === "endYear") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
@@ -646,53 +614,48 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-  // ------------------------------------
-  // VALIDATION REGEX
-  // ------------------------------------
+  
   const onlyLetters = /^[A-Za-z ]+$/;
   const yearRegex = /^[0-9]{4}$/;
 
   const validate = () => {
-    // University
+  
     if (!form.universityName.trim())
       return "University Name is required";
     if (!onlyLetters.test(form.universityName))
       return "University Name must contain only letters";
 
-    // Research Area
+
     if (!form.researchArea.trim())
       return "Research Area is required";
     if (!onlyLetters.test(form.researchArea))
       return "Research Area must contain only letters";
 
-    // Supervisor Name
+  
     if (!form.supervisorName.trim())
       return "Supervisor Name is required";
     if (!onlyLetters.test(form.supervisorName))
       return "Supervisor Name must contain only letters";
 
-    // Start Year
+  
     if (!form.startYear.trim())
       return "Start Year is required";
     if (!yearRegex.test(form.startYear))
       return "Start Year must be exactly 4 digits";
 
-    // End Year
+    
     if (!form.endYear.trim())
       return "End Year is required";
     if (!yearRegex.test(form.endYear))
       return "End Year must be exactly 4 digits";
 
-    // Relationship check
     if (Number(form.endYear) < Number(form.startYear))
       return "End Year cannot be earlier than Start Year";
 
     return null;
   };
 
-  // ------------------------------------
-  // SAVE FUNCTION
-  // ------------------------------------
+  
   const savePhd = async () => {
     const error = validate();
     if (error) {
@@ -711,11 +674,11 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
       updatedAt: now,
     };
 
-    console.log("📤 PhD Payload:", payload);
+    console.log(" PhD Payload:", payload);
 
     const response = await upsertPhdEducation(payload);
 
-    console.log("📥 Supabase Response:", response);
+    console.log(" Supabase Response:", response);
 
     if (response.success) {
       toast.success("PhD education saved successfully!");
@@ -729,9 +692,7 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     onSaveRef.current = savePhd;
   }, [form]);
 
-  // ------------------------------------
-  // RENDER FIELDS
-  // ------------------------------------
+ 
   return (
     <div className="space-y-4">
       <ControlledInput

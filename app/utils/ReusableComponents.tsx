@@ -90,7 +90,7 @@ export function TextArea({ label, ...props }: TextAreaProps) {
                     {...props}
                     maxLength={500}
                     rows={4}
-                    className="px-3 py-2 w-full border border-[#CCCCCC] rounded-md text-sm resize-none focus:outline-none"
+                    className="px-3 py-2 w-full text-[#282828] border border-[#CCCCCC] rounded-md text-sm resize-none focus:outline-none"
                 />
                 <span className="absolute bottom-3 right-3 text-xs text-[#6B7280]">
                     {(props.value?.toString().length ?? 0)}/{props.maxLength ?? 500}

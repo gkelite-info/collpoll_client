@@ -18,7 +18,7 @@ export const upsertPhdEducation = async (payload: any) => {
       .from("phd_education")
       .upsert(
         {
-          phdeducationId: phdEducationId ?? undefined, // exact column name in DB
+          phdeducationId: phdEducationId ?? undefined,
           studentId,
           universityName,
           researchArea,
