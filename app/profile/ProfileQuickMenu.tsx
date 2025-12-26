@@ -26,7 +26,7 @@ export default function ProfileQuickMenu({
       <div className="fixed top-21 right-4 z-210 bg-white rounded-md shadow-lg w-64">
         <div className="flex justify-start p-2">
           <button onClick={onClose} className="cursor-pointer">
-            <X size={18} />
+            <X size={18} className="text-black"/>
           </button>
         </div>
 

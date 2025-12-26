@@ -33,6 +33,7 @@ export default function ClientLayout({
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;
     if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
+    return <StudentNavbar />
   };
 
   return (

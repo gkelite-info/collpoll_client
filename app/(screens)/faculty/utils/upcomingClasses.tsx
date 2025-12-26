@@ -45,7 +45,6 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
   return (
     <div className="fixed text-black inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-2">
       <div className="bg-white rounded-md shadow-lg w-full max-w-[520px] max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b">
           <h2 className="text-sm font-semibold text-gray-800">Add Lesson</h2>
           <button
@@ -56,7 +55,6 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
           </button>
         </div>
 
-        {/* Body */}
         <form
           onSubmit={handleSubmit}
           className="px-4 py-3 space-y-3 overflow-y-auto text-sm"
@@ -140,7 +138,6 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2 pt-2">
             <button
               type="submit"

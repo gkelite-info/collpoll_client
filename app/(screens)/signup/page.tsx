@@ -205,7 +205,6 @@ export default function Signup() {
           emailRedirectTo: "https://collpoll-client.vercel.app/login",
         },
       });
-
       if (error) throw error;
 
       const authUser = data.user;
@@ -225,8 +224,17 @@ export default function Signup() {
 
       if (!res.success) throw new Error(res.error);
 
+      setFormData({
+        fullName: "",
+        email: "",
+        mobile: "",
+        collegeId: "",
+        role: "",
+        password: "",
+        confirmPassword: ""
+      })
       toast.success("Please verify your email!");
-      // router.push("/login");
+      router.push("/login");
     } catch (err: any) {
       toast.error(err.message || "Failed to save");
     } finally {
