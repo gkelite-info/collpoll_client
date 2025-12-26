@@ -2,6 +2,8 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
 import toast from "react-hot-toast";
 import Field from "./Field";
+import { insertProjectDetails } from "@/lib/helpers/profile/projectAPI";
+import { supabase } from "@/lib/supabaseClient";
 
 export interface ProjectData {
   projectName: string;
@@ -40,6 +42,10 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // const user = supabase.auth.getUser();
+  // const studentId = user?.id;
+  const studentId = 1;
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!containerRef.current?.contains(e.target as Node)) {
@@ -56,7 +62,7 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
       !data.tools.includes(tool)
   );
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (
       !data.projectName.trim() ||
       !data.domain.trim() ||
@@ -66,37 +72,58 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
       return;
     }
 
-    onUpdate({ ...data, isSubmitted: true });
-    toast.success(`Project ${index + 1} submitted`);
+    try {
+      await insertProjectDetails({
+        studentId: studentId,
+        projectName: data.projectName,
+        domain: data.domain,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        toolsAndTechnologies: data.tools,
+        projectUrl: data.projectLink,
+        description: data.description,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      onUpdate({ ...data, isSubmitted: true });
+      toast.success(`Project ${index + 1} submitted successfully`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to submit project");
+    }
   };
 
   return (
     <div className="mb-12">
-      <h3 className="font-medium text-[#282828] mb-4">
-        Project {index + 1}
-      </h3>
+      <h3 className="font-medium text-[#282828] mb-4">Project {index + 1}</h3>
 
       <div className="grid grid-cols-2 gap-4">
         <Field
           label="Project Name"
+          type="text"
           value={data.projectName}
           placeholder="Enter Project Name"
           onChange={(v) => onUpdate({ ...data, projectName: v })}
         />
         <Field
           label="Domain"
+          type="text"
           value={data.domain}
           placeholder="Enter Domain"
           onChange={(v) => onUpdate({ ...data, domain: v })}
         />
         <Field
           label="Start Date"
+          type="date"
           value={data.startDate}
           placeholder="DD/MM/YYYY"
           onChange={(v) => onUpdate({ ...data, startDate: v })}
         />
         <Field
           label="End Date"
+          type="date"
           value={data.endDate}
           placeholder="DD/MM/YYYY"
           onChange={(v) => onUpdate({ ...data, endDate: v })}
@@ -105,13 +132,17 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         <div className="flex flex-col relative" ref={containerRef}>
-          <label className="form-label font-medium text-[#282828]">Tools & Technologies Used</label>
+          <label className="form-label font-medium text-[#282828]">
+            Tools & Technologies Used
+          </label>
 
           <div
             className="flex items-center gap-2 border border-[#CCCCCC] rounded-md px-2 py-1 min-h-[40px] overflow-x-auto cursor-text"
             onClick={() => setOpen(true)}
           >
-            <span className="text-gray-400"><MagnifyingGlass size={20}/></span>
+            <span className="text-gray-400">
+              <MagnifyingGlass size={20} />
+            </span>
 
             <div className="flex gap-2 flex-nowrap">
               {data.tools.map((tool) => (
@@ -177,6 +208,7 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
 
         <Field
           label="Project Link / GitHub"
+          type="text"
           value={data.projectLink}
           placeholder="Enter Project Link"
           onChange={(v) => onUpdate({ ...data, projectLink: v })}
@@ -184,15 +216,15 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
       </div>
 
       <div className="mt-4 flex flex-col">
-        <label className="form-label font-medium text-[#282828]">Short Description</label>
+        <label className="form-label font-medium text-[#282828]">
+          Short Description
+        </label>
         <textarea
           rows={4}
           maxLength={500}
           className="border border-[#CCCCCC] rounded-md px-3 py-1 focus:outline-none resize-none"
           value={data.description}
-          onChange={(e) =>
-            onUpdate({ ...data, description: e.target.value })
-          }
+          onChange={(e) => onUpdate({ ...data, description: e.target.value })}
         />
         <div className="text-right text-xs text-gray-400">
           {data.description.length}/500
@@ -201,15 +233,15 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
 
       <div className="flex justify-end mt-4">
         <button
-          //disabled={data.isSubmitted}
+          disabled={data.isSubmitted}
           onClick={handleSubmit}
-          className={`px-6 py-1.5 cursor-pointer rounded-md text-sm font-medium text-white bg-[#43C17A]`}
+          className={`px-6 py-1.5 cursor-pointer rounded-md text-sm font-medium text-white bg-[#43C17A] ${
+            data.isSubmitted ? "opacity-50 cursor-not-allowed" : ""
+          }`}
         >
-          {/* {data.isSubmitted ? "Submitted" : "Submit Project"} */}
-          Submit Project
+          {data.isSubmitted ? "Submitted" : "Submit Project"}
         </button>
       </div>
     </div>
   );
 }
-

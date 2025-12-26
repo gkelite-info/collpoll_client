@@ -60,13 +60,7 @@ const card = [
   },
 ];
 
-interface FacultyDashLeftProps {
-  onShowStudentTable: () => void;
-}
-
-export default function FacultyDashLeft({
-  onShowStudentTable,
-}: FacultyDashLeftProps) {
+export default function FacultyDashLeft() {
   const [upcomingClasses, setUpcomingClasses] =
     useState<UpcomingLesson[]>(INITIAL_LESSONS);
 
@@ -117,10 +111,7 @@ export default function FacultyDashLeft({
           <div className=" bg-gray-100">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 mb-4">
               <div>
-                <StudentPerformanceCard
-                  students={STUDENT_DATA}
-                  onViewAll={onShowStudentTable}
-                />
+                <StudentPerformanceCard students={STUDENT_DATA} />
               </div>
               <div className="overflow-y-auto shadow-md rounded-2xl bg-white">
                 <UpcomingClasses

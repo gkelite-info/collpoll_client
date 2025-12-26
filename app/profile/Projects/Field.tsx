@@ -1,11 +1,13 @@
 export default function Field({
   label,
   value,
+  type,
   placeholder,
   onChange,
 }: {
   label: string;
   value: string;
+  type: string;
   placeholder?: string;
   onChange: (v: string) => void;
 }) {
@@ -15,6 +17,7 @@ export default function Field({
       <input
         className="border border-[#CCCCCC] text-[#525252] rounded-md px-3 h-10 py-1 focus:outline-none"
         value={value}
+        type={type}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
       />

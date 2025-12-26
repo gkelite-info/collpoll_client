@@ -1,0 +1,97 @@
+"use client";
+
+import { useState } from "react";
+import { Plus } from "@phosphor-icons/react";
+import toast from "react-hot-toast";
+import InternshipForm, { InternshipFormData } from "./internshipForm";
+import InternshipCard from "./internshipCard";
+import { useRouter } from "next/navigation";
+
+interface InternshipState {
+  id: number;
+  submitted: boolean;
+  data?: InternshipFormData;
+}
+
+export default function Internships() {
+  const [forms, setForms] = useState<InternshipState[]>([
+    { id: 1, submitted: false },
+  ]);
+
+  const router = useRouter();
+  const studentId = 1;
+
+  const handleAdd = () => {
+    const last = forms[forms.length - 1];
+
+    if (!last.submitted) {
+      toast.error(
+        "Please submit the current internship before adding a new one."
+      );
+      return;
+    }
+
+    setForms((prev) => [...prev, { id: Date.now(), submitted: false }]);
+  };
+
+  return (
+    <div className="mt-3">
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-start justify-between">
+          <h2 className="text-2xl font-medium text-[#282828]">Internships</h2>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleAdd}
+              type="button"
+              className="inline-flex cursor-pointer items-center gap-2 bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors"
+            >
+              Add <Plus size={14} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/profile?projects")}
+              className="inline-flex items-center cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          {forms.map((f, index) => (
+            <div
+              key={f.id}
+              className="animate-in fade-in slide-in-from-bottom-4 duration-500"
+            >
+              {f.submitted && f.data ? (
+                <div className="mt-6">
+                  <InternshipCard data={f.data} />
+                </div>
+              ) : (
+                <>
+                  <h3 className="mt-6 text-lg font-semibold text-[#282828] -mb-1">
+                    Internship {index + 1}
+                  </h3>
+                  <InternshipForm
+                    studentId={studentId}
+                    onSubmitted={(data: InternshipFormData) =>
+                      setForms((prev) =>
+                        prev.map((x) =>
+                          x.id === f.id
+                            ? { ...x, submitted: true, data: data }
+                            : x
+                        )
+                      )
+                    }
+                  />
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
