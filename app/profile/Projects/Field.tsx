@@ -4,12 +4,14 @@ export default function Field({
   type,
   placeholder,
   onChange,
+  ...rest
 }: {
   label: string;
   value: string;
   type: string;
   placeholder?: string;
   onChange: (v: string) => void;
+  [key: string]: any;
 }) {
   return (
     <div className="flex flex-col ">
@@ -20,6 +22,7 @@ export default function Field({
         type={type}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
+        {...rest}
       />
     </div>
   );

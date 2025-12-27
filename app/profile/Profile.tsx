@@ -12,7 +12,7 @@ import PersonalDetails from "./personalDetails";
 import ProfileSteps from "./profileSteps";
 import ProfileSummary from "./ProfileSummary";
 import ProjectsForm from "./Projects/ProjectsForm";
-import Internships from "./Interships/internships";
+import Internships from "./Internships/internships";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();

@@ -45,7 +45,7 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
   // const user = supabase.auth.getUser();
   // const studentId = user?.id;
   const studentId = 1;
-
+  const today = new Date().toISOString().split("T")[0];
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (!containerRef.current?.contains(e.target as Node)) {
@@ -66,9 +66,19 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
     if (
       !data.projectName.trim() ||
       !data.domain.trim() ||
-      !data.description.trim()
+      !data.description.trim() ||
+      !data.startDate ||
+      !data.endDate
     ) {
-      toast.error("Please fill all required fields");
+      toast.error("Please fill all required fields including dates");
+      return;
+    }
+
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+
+    if (end < start) {
+      toast.error("End date cannot be earlier than the start date");
       return;
     }
 
@@ -115,10 +125,26 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
           onChange={(v) => onUpdate({ ...data, domain: v })}
         />
         <Field
+          label="Project Name"
+          type="text"
+          value={data.projectName}
+          placeholder="Enter Project Name"
+          onChange={(v) => onUpdate({ ...data, projectName: v })}
+        />
+        <Field
+          label="Domain"
+          type="text"
+          value={data.domain}
+          placeholder="Enter Domain"
+          onChange={(v) => onUpdate({ ...data, domain: v })}
+        />
+
+        <Field
           label="Start Date"
           type="date"
           value={data.startDate}
           placeholder="DD/MM/YYYY"
+          max={data.endDate || today}
           onChange={(v) => onUpdate({ ...data, startDate: v })}
         />
         <Field
@@ -126,6 +152,8 @@ export default function ProjectItem({ index, data, onUpdate }: Props) {
           type="date"
           value={data.endDate}
           placeholder="DD/MM/YYYY"
+          min={data.startDate}
+          max={today}
           onChange={(v) => onUpdate({ ...data, endDate: v })}
         />
       </div>

@@ -1,12 +1,14 @@
 import { supabase } from "@/lib/supabaseClient";
-import { Internship, InternshipInsert, InternshipUpdate } from "./types";
+// Adjust the import path for your types if necessary
+import {
+  InternshipInsert,
+  InternshipUpdate,
+} from "@/lib/helpers/profile/types";
 
 const TABLE = "internship_details";
 
 /* ---------------- CREATE ---------------- */
-export async function createInternship(
-  payload: InternshipInsert
-): Promise<Internship> {
+export async function createInternship(payload: InternshipInsert) {
   const { data, error } = await supabase
     .from(TABLE)
     .insert(payload)
@@ -18,26 +20,25 @@ export async function createInternship(
 }
 
 /* ---------------- READ ---------------- */
-export async function getInternshipsByStudent(
-  studentId: number
-): Promise<Internship[]> {
+export async function getInternshipsByStudent(studentId: number) {
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
-    .eq("student_id", studentId)
-    .eq("is_deleted", false);
+    // CHANGED: student_id -> studentId (to match DB)
+    .eq("studentId", studentId)
+    // CHANGED: is_deleted -> isDeleted (to match DB)
+    .eq("isDeleted", false);
 
   if (error) throw error;
   return data ?? [];
 }
 
-export async function getInternshipById(
-  internshipId: number
-): Promise<Internship | null> {
+export async function getInternshipById(internshipId: number) {
   const { data, error } = await supabase
     .from(TABLE)
     .select("*")
-    .eq("internship_id", internshipId)
+    // CHANGED: internship_id -> internshipId
+    .eq("internshipId", internshipId)
     .single();
 
   if (error && error.code !== "PGRST116") throw error;
@@ -48,11 +49,12 @@ export async function getInternshipById(
 export async function updateInternship(
   internshipId: number,
   payload: InternshipUpdate
-): Promise<Internship> {
+) {
   const { data, error } = await supabase
     .from(TABLE)
     .update(payload)
-    .eq("internship_id", internshipId)
+    // CHANGED: internship_id -> internshipId
+    .eq("internshipId", internshipId)
     .select()
     .single();
 
@@ -65,10 +67,12 @@ export async function deleteInternship(internshipId: number): Promise<void> {
   const { error } = await supabase
     .from(TABLE)
     .update({
-      is_deleted: true,
-      deleted_at: new Date().toISOString(),
+      // CHANGED: Match the model's boolean and date fields
+      isDeleted: true,
+      deletedAt: new Date().toISOString(),
     })
-    .eq("internship_id", internshipId);
+    // CHANGED: internship_id -> internshipId
+    .eq("internshipId", internshipId);
 
   if (error) throw error;
 }

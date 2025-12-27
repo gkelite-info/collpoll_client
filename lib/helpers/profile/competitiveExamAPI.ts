@@ -1,7 +1,19 @@
 import { supabase } from "@/lib/supabaseClient";
-import { CompetitiveExamEntry } from "./types";
 
-export async function upsertCompetitiveExams(exams: CompetitiveExamEntry[]) {
+export async function softDeleteExam(studentId: number, examName: string) {
+  const { error } = await supabase
+    .from("competitive_exams")
+    .update({ isDeleted: true })
+    .eq("studentId", studentId)
+    .eq("examName", examName);
+
+  if (error) {
+    console.error("Soft delete failed:", error);
+    throw error;
+  }
+}
+
+export async function upsertCompetitiveExams(exams: any[]) {
   const { data, error } = await supabase
     .from("competitive_exams")
     .upsert(
@@ -9,7 +21,9 @@ export async function upsertCompetitiveExams(exams: CompetitiveExamEntry[]) {
         studentId: e.studentId,
         examName: e.examName,
         score: e.score,
-        isDeleted: false,
+        isDeleted: e.isDeleted ?? false,
+        createdAt: e.createdAt,
+        updatedAt: e.updatedAt,
       })),
       {
         onConflict: "studentId,examName",
