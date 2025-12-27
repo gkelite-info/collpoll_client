@@ -51,16 +51,6 @@ export interface ProfileSummaryInput {
   deletedAt?: string | null;
 }
 
-// export interface CompetitiveExamEntry {
-//   studentId: number;
-//   exam: string;
-//   score: string;
-//   isDeleted: boolean;
-//   createdAt?: string;
-//   updatedAt?: string;
-//   deletedAt?: string | null;
-// }
-
 export interface CompetitiveExamEntry {
   studentId: number;
   examName: string;

@@ -416,7 +416,7 @@ export default function InternshipForm({
 
   return (
     <form
-      className="mt-6 bg-white rounded-lg mb-10"
+      className="mt-6 bg-white rounded-lg mb-10 text-black"
       onSubmit={handleSubmit(onSubmit)}
       noValidate
     >

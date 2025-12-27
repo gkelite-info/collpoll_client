@@ -17,11 +17,9 @@ const emptyProject = (): ProjectData => ({
 });
 
 export default function ProjectsForm() {
-  const [projects, setProjects] = useState<ProjectData[]>([
-    emptyProject(),
-  ]);
+  const [projects, setProjects] = useState<ProjectData[]>([emptyProject()]);
 
-  const router = useRouter(); 
+  const router = useRouter();
 
   const updateProject = (index: number, data: ProjectData) => {
     const copy = [...projects];
@@ -41,12 +39,10 @@ export default function ProjectsForm() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow">
+    <div className="w-full mx-auto bg-white p-6 rounded-xl shadow">
       <Toaster position="top-right" />
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-[#282828]">
-          Projects
-        </h2>
+        <h2 className="text-xl font-semibold text-[#282828]">Projects</h2>
 
         <div className="flex gap-2">
           <button
@@ -59,7 +55,7 @@ export default function ProjectsForm() {
 
           <button
             type="button"
-            onClick={()=>router.push('/profile?profile-summary')}
+            onClick={() => router.push("/profile?profile-summary")}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
           >
             Next
