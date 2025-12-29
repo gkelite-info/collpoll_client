@@ -3,9 +3,12 @@ import { useState, useEffect } from "react";
 
 type Props = {
     style?: string
+    isVisibile?: boolean
+    department?: string
+    year?: string
 }
 
-export default function CourseScheduleCard({ style = "" }: { style?: string }) {
+export default function CourseScheduleCard({ style = "", isVisibile = true, department = "CSE", year = "2", }: Props) {
 
     const [time, setTime] = useState("");
     const [day, setDay] = useState("");
@@ -35,10 +38,12 @@ export default function CourseScheduleCard({ style = "" }: { style?: string }) {
 
     return (
         <>
-            <div className={`flex justify-between ${style}`}>
-                <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
-                    <p className="text-[#EFEFEF] text-sm">B.Tech CSE – Year 2</p>
-                </div>
+            <div className={`flex ${isVisibile ? "justify-between" : "justify-end"} ${style}`}>
+                {isVisibile &&
+                    <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
+                        <p className="text-[#EFEFEF] text-sm">B.Tech {department} – Year {year}</p>
+                    </div>
+                }
 
                 <div className="bg-white shadow-md w-[49%] h-[54px] rounded-lg flex items-center">
                     <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">

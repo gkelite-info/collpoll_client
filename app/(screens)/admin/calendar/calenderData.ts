@@ -1,0 +1,107 @@
+import { CalendarEvent } from "./types";
+
+export const TIME_SLOTS = [
+  "08:00 AM",
+  "09:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "01:00 PM",
+  "02:00 PM",
+  "03:00 PM",
+  "04:00 PM",
+  "05:00 PM",
+  "06:00 PM",
+  "07:00 PM",
+  "08:00 PM",
+  "09:00 PM",
+  "10:00 PM",
+  "11:00 PM",
+  "12:00 AM",
+  "01:00 AM",
+  "02:00 AM",
+  "03:00 AM",
+  "04:00 AM",
+  "05:00 AM",
+  "06:00 AM",
+  "07:00 AM",
+];
+
+export const CALENDAR_EVENTS: CalendarEvent[] = [
+  {
+    id: "1",
+    title: "Class 10 Teach Design Principles",
+    type: "event",
+    day: "MON",
+    startTime: "2023-10-24T08:00:00",
+    endTime: "2023-10-24T09:00:00",
+  },
+  {
+    id: "2",
+    title: "Class 10 Teach Design Principles",
+    type: "exam",
+    day: "MON",
+    startTime: "2023-10-24T10:00:00",
+    endTime: "2023-10-24T11:00:00",
+  },
+  // Tuesday
+  {
+    id: "3",
+    title: "Class 10 Teach Design Principles",
+    type: "class",
+    day: "TUE",
+    startTime: "2023-10-25T08:00:00",
+    endTime: "2023-10-25T09:00:00",
+  },
+  {
+    id: "4",
+    title: "Class 10 Teach Design Principles",
+    type: "event",
+    day: "TUE",
+    startTime: "2023-10-25T11:00:00",
+    endTime: "2023-10-25T12:00:00",
+  },
+  // Wednesday
+  {
+    id: "5",
+    title: "Class 10 Teach Design Principles",
+    type: "exam",
+    day: "WED",
+    startTime: "2023-10-26T10:00:00",
+    endTime: "2023-10-26T11:00:00",
+  },
+  {
+    id: "6",
+    title: "Class 10 Teach Design Principles",
+    type: "exam",
+    day: "WED",
+    startTime: "2023-10-26T12:00:00",
+    endTime: "2023-10-26T13:00:00",
+  },
+  // Thursday
+  {
+    id: "7",
+    title: "Class 10 Teach Design Principles",
+    type: "exam",
+    day: "THU",
+    startTime: "2023-10-27T08:00:00",
+    endTime: "2023-10-27T09:00:00",
+  },
+  // Friday
+  {
+    id: "8",
+    title: "Class 10 Teach Design Principles",
+    type: "class",
+    day: "FRI",
+    startTime: "2023-10-28T08:00:00",
+    endTime: "2023-10-28T09:00:00",
+  },
+  {
+    id: "9",
+    title: "Class 10 Teach Design Principles",
+    type: "event",
+    day: "FRI",
+    startTime: "2023-10-28T11:00:00",
+    endTime: "2023-10-28T12:00:00",
+  },
+];
