@@ -46,3 +46,50 @@ export const combineDateAndTime = (
   const d = new Date(dateStr + "T" + timeStr);
   return d.toISOString();
 };
+
+export const getOverlappingEvents = (
+  events: CalendarEvent[]
+) => {
+  return events.map((event, index) => {
+    let overlapCount = 1;
+    let position = 0;
+
+    for (let i = 0; i < events.length; i++) {
+      if (i === index) continue;
+
+      const aStart = new Date(event.startTime).getTime();
+      const aEnd = new Date(event.endTime).getTime();
+      const bStart = new Date(events[i].startTime).getTime();
+      const bEnd = new Date(events[i].endTime).getTime();
+
+      if (aStart < bEnd && aEnd > bStart) {
+        overlapCount++;
+        if (i < index) position++;
+      }
+    }
+
+    return {
+      ...event,
+      overlapIndex: position,
+      overlapTotal: overlapCount,
+    };
+  });
+};
+
+export const hasTimeConflict = (
+  events: CalendarEvent[],
+  newStart: string,
+  newEnd: string
+) => {
+  const newStartTime = new Date(newStart).getTime();
+  const newEndTime = new Date(newEnd).getTime();
+
+  return events.some((event) => {
+    const existingStart = new Date(event.startTime).getTime();
+    const existingEnd = new Date(event.endTime).getTime();
+
+    return newStartTime < existingEnd && newEndTime > existingStart;
+  });
+};
+
+

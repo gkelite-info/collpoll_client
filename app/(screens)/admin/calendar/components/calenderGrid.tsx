@@ -1,7 +1,7 @@
 import React from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { CalendarEvent, WeekDay } from "../types";
-import { getEventStyle } from "../utils";
+import { getEventStyle, getOverlappingEvents } from "../utils";
 import EventCard from "./eventCard";
 import { TIME_SLOTS } from "../calenderData";
 
@@ -28,8 +28,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return event.type.toLowerCase() === activeTab.toLowerCase();
   };
 
+  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+
+
   return (
-    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative h-[800px]">
+    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[400px]">
       <div className="flex border-b border-gray-400">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
@@ -95,23 +98,52 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 key={dayObj.fullDate}
                 className="relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10"
               >
-                {events
-                  .filter((e) => e.startTime.startsWith(dayObj.fullDate))
+                {getOverlappingEvents(
+                  events
+                    .filter((e) => e.startTime.startsWith(dayObj.fullDate))
+                    .filter(matchesFilter)
+                ).map((event) => {
+                  const position = getEventStyle(event);
 
-                  .filter(matchesFilter)
+                  const isHovered = hoveredId === event.id;
+                  //const isOtherHovered = hoveredId && hoveredId !== event.id;
 
-                  .map((event) => {
-                    const position = getEventStyle(event);
-                    return (
-                      <div
-                        key={event.id}
-                        style={{ top: position.top, height: position.height }}
-                        className="absolute w-full px-1"
-                      >
-                        <EventCard event={event} />
-                      </div>
-                    );
-                  })}
+                  const baseWidth = 100 / event.overlapTotal;
+                  let width = baseWidth;
+                  let left = baseWidth * event.overlapIndex;
+                  let zIndex = 10;
+
+                  if (hoveredId) {
+                    if (isHovered) {
+                      width = 100;
+                      left = 0;
+                      zIndex = 50;
+                    } else {
+                      width = baseWidth;
+                      left = baseWidth * event.overlapIndex;
+                      zIndex = 1;
+                    }
+                  }
+
+
+                  return (
+                    <div
+                      key={event.id}
+                      onMouseEnter={() => setHoveredId(event.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      style={{
+                        top: position.top,
+                        height: position.height,
+                        width: `${width}%`,
+                        left: `${left}%`,
+                        zIndex,
+                      }}
+                      className={`absolute px-1 transition-all duration-200 ease-out ${hoveredId && hoveredId !== event.id ? "opacity-0 pointer-events-none scale-95" : "opacity-100"}`}
+                    >
+                      <EventCard event={event} />
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
