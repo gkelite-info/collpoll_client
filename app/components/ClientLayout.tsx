@@ -38,7 +38,7 @@ export default function ClientLayout({
 
   return (
     <>
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster position="top-right" reverseOrder={false} containerStyle={{ zIndex: 10000, }} />
 
       {shouldHideLayout ? (
         <>{children}</>

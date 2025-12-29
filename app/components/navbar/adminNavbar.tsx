@@ -40,7 +40,7 @@ export default function AdminNavbar() {
                 <Calendar size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Calendar",
-            path: "/calendar",
+            path: "/admin/calendar",
         },
         {
             icon: (isActive) => (
