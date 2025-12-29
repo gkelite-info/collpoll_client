@@ -8,6 +8,7 @@ interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (eventData: any) => void;
+  initialData?: any | null;
 }
 
 const getTodayDateString = () => {
@@ -19,26 +20,79 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  initialData = null,
 }) => {
   const [title, setTitle] = useState("");
   const [selectedType, setSelectedType] = useState("Class");
   const [date, setDate] = useState(getTodayDateString());
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
+  // const [startTime, setStartTime] = useState("09:00");
+  // const [endTime, setEndTime] = useState("10:00");
+  const [startHour, setStartHour] = useState("09");
+  const [startMinute, setStartMinute] = useState("00");
+  const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
+  const [endHour, setEndHour] = useState("10");
+  const [endMinute, setEndMinute] = useState("00");
+  const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
+
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     setTitle("");
+  //     setSelectedType("Class");
+  //     setDate(getTodayDateString());
+  //     // setStartTime("09:00");
+  //     // setEndTime("10:00");
+  //   }
+  // }, [isOpen]);
+
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    if (initialData) {
+      setTitle(initialData.title);
+      setSelectedType(initialData.type);
+      setDate(initialData.date);
+
+      const [sh, sm] = initialData.startTime.split(":");
+      const [eh, em] = initialData.endTime.split(":");
+
+      setStartHour(sh);
+      setStartMinute(sm);
+      setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
+
+      setEndHour(eh);
+      setEndMinute(em);
+      setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
+    } else {
+      // ✅ fresh open
       setTitle("");
-      setSelectedType("Class");
+      setSelectedType("class");
       setDate(getTodayDateString());
-      setStartTime("09:00");
-      setEndTime("10:00");
+      setStartHour("09");
+      setStartMinute("00");
+      setStartPeriod("AM");
+      setEndHour("10");
+      setEndMinute("00");
+      setEndPeriod("AM");
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
+
+  const to24Hour = (
+    hour: string,
+    minute: string,
+    period: "AM" | "PM"
+  ) => {
+    let h = parseInt(hour, 10);
+    if (period === "PM" && h !== 12) h += 12;
+    if (period === "AM" && h === 12) h = 0;
+
+    return `${String(h).padStart(2, "0")}:${minute}`;
+  };
+
 
   const handleSave = useCallback(() => {
     if (!title || !date) {
@@ -46,8 +100,21 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (startTime && endTime && startTime >= endTime) {
-      alert("End time must be after start time.");
+    // if (startTime && endTime && startTime >= endTime) {
+    //   alert("End time must be after start time.");
+    //   return;
+    // }
+
+    const startTime = to24Hour(startHour, startMinute, startPeriod);
+    const endTime = to24Hour(endHour, endMinute, endPeriod);
+
+    if (startTime >= endTime) {
+      toast.error("End time must be after start time");
+      return;
+    }
+
+    if (startTime < "08:00" || endTime > "22:00") {
+      toast.error("Events must be between 08:00 AM and 10:00 PM");
       return;
     }
 
@@ -60,7 +127,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
     onSave(newEvent);
     onClose();
-  }, [title, selectedType, date, startTime, endTime, onSave, onClose]);
+  }, [title, selectedType, date, selectedType,
+    startHour,
+    startPeriod,
+    endHour,
+    startMinute,
+    endMinute,
+    endPeriod, onSave, onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -92,7 +165,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   if (!isOpen) return null;
 
-  const eventTypes = ["Class", "Event", "Exam", "Holiday"];
+  const eventTypes = ["class", "event", "exam", "holiday"];
+
+  const formatLabel = (value: string) =>
+    value.charAt(0).toUpperCase() + value.slice(1);
+
 
   const dateInputType = date || isDateInputFocused ? "date" : "text";
 
@@ -153,13 +230,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
-                    selectedType === type
-                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
                 >
-                  {type}
+                  {formatLabel(type)}
                 </button>
               ))}
             </div>
@@ -198,7 +274,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
             </div>
 
-            <div className="w-1/2 space-y-1 mt-3">
+            {/* <div className="w-1/2 space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">
                 Time
               </label>
@@ -223,6 +299,86 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     aria-label="End time"
                     className="w-full border cursor-pointer border-gray-300 rounded-lg px-2 py-2.5 outline-none focus:border-emerald-500 text-center transition-all text-gray-700"
                   />
+                </div>
+              </div>
+            </div> */}
+
+            <div className="w-1/2 space-y-1 mt-3">
+              <label className="block text-gray-700 font-medium text-sm">
+                Time
+              </label>
+
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <span className="block text-gray-500 text-xs mb-1">From</span>
+                  <div className="flex gap-1">
+                    <select
+                      value={startHour}
+                      onChange={(e) => setStartHour(e.target.value)}
+                      className="border rounded-lg px-2 py-2 w-14"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const h = String(i + 1).padStart(2, "0");
+                        return <option key={h}>{h}</option>;
+                      })}
+                    </select>
+
+                    <select
+                      value={startMinute}
+                      onChange={(e) => setStartMinute(e.target.value)}
+                      className="border rounded-lg px-2 py-2 w-16"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const m = String(i * 5).padStart(2, "0");
+                        return <option key={m}>{m}</option>;
+                      })}
+                    </select>
+
+                    <select
+                      value={startPeriod}
+                      onChange={(e) => setStartPeriod(e.target.value as "AM" | "PM")}
+                      className="border rounded-lg px-2 py-2 w-16"
+                    >
+                      <option>AM</option>
+                      <option>PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <span className="block text-gray-500 text-xs mb-1">To</span>
+                  <div className="flex gap-1">
+                    <select
+                      value={endHour}
+                      onChange={(e) => setEndHour(e.target.value)}
+                      className="border rounded-lg px-2 py-2 w-14"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const h = String(i + 1).padStart(2, "0");
+                        return <option key={h}>{h}</option>;
+                      })}
+                    </select>
+
+                    <select
+                      value={endMinute}
+                      onChange={(e) => setEndMinute(e.target.value)}
+                      className="border rounded-lg px-2 py-2 w-16"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => {
+                        const m = String(i * 5).padStart(2, "0");
+                        return <option key={m}>{m}</option>;
+                      })}
+                    </select>
+
+                    <select
+                      value={endPeriod}
+                      onChange={(e) => setEndPeriod(e.target.value as "AM" | "PM")}
+                      className="border rounded-lg px-2 py-2 w-16"
+                    >
+                      <option>AM</option>
+                      <option>PM</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

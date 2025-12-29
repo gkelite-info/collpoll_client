@@ -47,7 +47,7 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
 
   return (
     <div
-      className={`absolute inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col`}
+      className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col"
     >
       <div
         className={`flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed`}
