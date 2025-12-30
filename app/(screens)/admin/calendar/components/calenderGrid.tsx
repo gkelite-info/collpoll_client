@@ -1,4 +1,4 @@
-import React from "react";
+import { useState } from "react";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { CalendarEvent, WeekDay } from "../types";
 import { getEventStyle, getOverlappingEvents } from "../utils";
@@ -11,6 +11,7 @@ interface CalendarGridProps {
   onPrevWeek: () => void;
   onNextWeek: () => void;
   activeTab: string;
+  onDeleteRequest: (event: CalendarEvent) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -19,6 +20,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onPrevWeek,
   onNextWeek,
   activeTab,
+  onDeleteRequest,
 }) => {
   const matchesFilter = (event: CalendarEvent): boolean => {
     if (activeTab === "All") {
@@ -28,11 +30,25 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
     return event.type.toLowerCase() === activeTab.toLowerCase();
   };
 
-  const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+  const [hoveredEvent, setHoveredEvent] = useState<CalendarEvent | null>(null);
 
+
+  const isTimeOverlapping = (
+    aStart: string,
+    aEnd: string,
+    bStart: string,
+    bEnd: string
+  ) => {
+    const aS = new Date(aStart).getTime();
+    const aE = new Date(aEnd).getTime();
+    const bS = new Date(bStart).getTime();
+    const bE = new Date(bEnd).getTime();
+
+    return aS < bE && aE > bS;
+  };
 
   return (
-    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[400px]">
+    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[400px] 2xl:h-[700px]">
       <div className="flex border-b border-gray-400">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 bg-white z-10">
           <button
@@ -105,15 +121,23 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 ).map((event) => {
                   const position = getEventStyle(event);
 
-                  const isHovered = hoveredId === event.id;
-                  //const isOtherHovered = hoveredId && hoveredId !== event.id;
+                  const isHovered = hoveredEvent?.id === event.id;
 
+                  const isSameTimeSlot =
+                    hoveredEvent &&
+                    hoveredEvent.startTime.startsWith(dayObj.fullDate) &&
+                    isTimeOverlapping(
+                      hoveredEvent.startTime,
+                      hoveredEvent.endTime,
+                      event.startTime,
+                      event.endTime
+                    );
                   const baseWidth = 100 / event.overlapTotal;
                   let width = baseWidth;
                   let left = baseWidth * event.overlapIndex;
                   let zIndex = 10;
 
-                  if (hoveredId) {
+                  if (hoveredEvent && isSameTimeSlot) {
                     if (isHovered) {
                       width = 100;
                       left = 0;
@@ -124,13 +148,16 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       zIndex = 1;
                     }
                   }
-
-
+                  const shouldHide =
+                    hoveredEvent &&
+                    isSameTimeSlot &&
+                    !isHovered;
                   return (
                     <div
                       key={event.id}
-                      onMouseEnter={() => setHoveredId(event.id)}
-                      onMouseLeave={() => setHoveredId(null)}
+                      onMouseEnter={() => setHoveredEvent(event)}
+                      onMouseLeave={() => setHoveredEvent(null)}
+
                       style={{
                         top: position.top,
                         height: position.height,
@@ -138,9 +165,12 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         left: `${left}%`,
                         zIndex,
                       }}
-                      className={`absolute px-1 transition-all duration-200 ease-out ${hoveredId && hoveredId !== event.id ? "opacity-0 pointer-events-none scale-95" : "opacity-100"}`}
+                      className={`absolute px-1 transition-all duration-200 ease-out ${shouldHide
+                        ? "opacity-0 pointer-events-none scale-95"
+                        : "opacity-100"
+                        }`}
                     >
-                      <EventCard event={event} />
+                      <EventCard event={event} onDelete={() => onDeleteRequest(event)} />
                     </div>
                   );
                 })}

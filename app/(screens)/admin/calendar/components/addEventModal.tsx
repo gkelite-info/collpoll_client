@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
+  value: any | null; 
   onSave: (eventData: any) => void;
   initialData?: any | null;
 }
@@ -25,50 +26,41 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [title, setTitle] = useState("");
   const [selectedType, setSelectedType] = useState("Class");
   const [date, setDate] = useState(getTodayDateString());
-  // const [startTime, setStartTime] = useState("09:00");
-  // const [endTime, setEndTime] = useState("10:00");
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
   const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
   const [endHour, setEndHour] = useState("10");
   const [endMinute, setEndMinute] = useState("00");
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
+  const closedByUserRef = useRef(false);
 
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
-  // useEffect(() => {
-  //   if (isOpen) {
-  //     setTitle("");
-  //     setSelectedType("Class");
-  //     setDate(getTodayDateString());
-  //     // setStartTime("09:00");
-  //     // setEndTime("10:00");
-  //   }
-  // }, [isOpen]);
+  useEffect(() => {
+    if (!isOpen || !initialData) return;
+
+    setTitle(initialData.title);
+    setSelectedType(initialData.type);
+    setDate(initialData.date);
+
+    const [sh, sm] = initialData.startTime.split(":");
+    const [eh, em] = initialData.endTime.split(":");
+
+    setStartHour(sh);
+    setStartMinute(sm);
+    setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
+
+    setEndHour(eh);
+    setEndMinute(em);
+    setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
+  }, [isOpen, initialData]);
+
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    if (initialData) {
-      setTitle(initialData.title);
-      setSelectedType(initialData.type);
-      setDate(initialData.date);
-
-      const [sh, sm] = initialData.startTime.split(":");
-      const [eh, em] = initialData.endTime.split(":");
-
-      setStartHour(sh);
-      setStartMinute(sm);
-      setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
-
-      setEndHour(eh);
-      setEndMinute(em);
-      setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
-    } else {
-      // ✅ fresh open
+    if (!isOpen) {
       setTitle("");
       setSelectedType("class");
       setDate(getTodayDateString());
@@ -79,7 +71,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       setEndMinute("00");
       setEndPeriod("AM");
     }
-  }, [isOpen, initialData]);
+  }, [isOpen]);
+
 
   const to24Hour = (
     hour: string,
@@ -99,11 +92,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       toast.error("Please fill in the required fields (Title and Date).");
       return;
     }
-
-    // if (startTime && endTime && startTime >= endTime) {
-    //   alert("End time must be after start time.");
-    //   return;
-    // }
 
     const startTime = to24Hour(startHour, startMinute, startPeriod);
     const endTime = to24Hour(endHour, endMinute, endPeriod);
@@ -163,6 +151,38 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
   }, [isOpen, onClose, handleSave]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+
+      if (
+        modalContentRef.current &&
+        target &&
+        !modalContentRef.current.contains(target)
+      ) {
+        handleClose();
+      }
+    };
+
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyPress);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyPress);
+    };
+  }, [isOpen, handleSave]);
+
+
   if (!isOpen) return null;
 
   const eventTypes = ["class", "event", "exam", "holiday"];
@@ -184,6 +204,25 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    closedByUserRef.current = true;
+    onClose();
+  };
+
+  const handleClickOutside = (e: MouseEvent) => {
+    const target = e.target as Node | null;
+
+    if (
+      modalContentRef.current &&
+      target &&
+      !modalContentRef.current.contains(target)
+    ) {
+      handleClose();
+    }
+  };
+
+
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
@@ -195,7 +234,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             New Calendar Event
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close modal"
             className="text-gray-500 cursor-pointer hover:text-gray-800 transition-colors p-1"
           >
@@ -273,35 +312,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 ></button>
               </div>
             </div>
-
-            {/* <div className="w-1/2 space-y-1 mt-3">
-              <label className="block text-gray-700 font-medium text-sm">
-                Time
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <span className="block text-gray-500 text-xs mb-1">From</span>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    aria-label="Start time"
-                    className="w-full border cursor-pointer border-gray-300 rounded-lg px-2 py-2.5 outline-none focus:border-emerald-500 text-center transition-all text-gray-700"
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <span className="block text-gray-500 text-xs mb-1">To</span>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    aria-label="End time"
-                    className="w-full border cursor-pointer border-gray-300 rounded-lg px-2 py-2.5 outline-none focus:border-emerald-500 text-center transition-all text-gray-700"
-                  />
-                </div>
-              </div>
-            </div> */}
 
             <div className="w-1/2 space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">

@@ -11,6 +11,7 @@ import { CalendarEvent } from "../types"
 import { combineDateAndTime, getWeekDays, hasTimeConflict } from "../utils"
 import ConfirmConflictModal from "./ConfirmConflictModal";
 import { CaretLeft } from "@phosphor-icons/react"
+import ConfirmDeleteModal from "./ConfirmDeleteModal"
 
 interface Props {
     faculty: {
@@ -29,24 +30,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
     const [currentDate, setCurrentDate] = useState(new Date())
     const [pendingEvent, setPendingEvent] = useState<CalendarEvent | null>(null);
     const [showConflictModal, setShowConflictModal] = useState(false);
-    const [draftEvent, setDraftEvent] = useState<any | null>(null);
+    const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+    const [eventForm, setEventForm] = useState<any | null>(null);
 
     const weekDays = getWeekDays(currentDate)
-
-    // const handleSaveEvent = (data: any) => {
-    //     const newEvent: CalendarEvent = {
-    //         id: crypto.randomUUID(),
-    //         title: data.title,
-    //         type: data.type,
-    //         day: new Date(data.date)
-    //             .toLocaleDateString("en-US", { weekday: "short" })
-    //             .toUpperCase(),
-    //         startTime: combineDateAndTime(data.date, data.startTime),
-    //         endTime: combineDateAndTime(data.date, data.endTime),
-    //     }
-
-    //     setEvents((prev) => [...prev, newEvent])
-    // }
 
     const handleSaveEvent = (data: any) => {
         const start = combineDateAndTime(data.date, data.startTime);
@@ -66,8 +53,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         const sameDayEvents = events.filter((e) =>
             e.startTime.startsWith(data.date)
         );
-
-        setDraftEvent(data);
+        setEventForm(data);
 
         if (hasTimeConflict(sameDayEvents, start, end)) {
             setPendingEvent(newEvent);
@@ -76,8 +62,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
             return;
         }
 
-        setEvents((prev) => [...prev, newEvent]);
-        setDraftEvent(null);
+        setEvents((prev) => [...prev, newEvent])
+        setEventForm(null);
         setIsModalOpen(false);
     };
 
@@ -98,17 +84,29 @@ export default function CalendarView({ faculty, onBack }: Props) {
         if (pendingEvent) {
             setEvents((prev) => [...prev, pendingEvent]);
         }
-        setPendingEvent(null);
-        setDraftEvent(null);
+
+        setPendingEvent(null)
         setShowConflictModal(false);
     };
 
-    const cancelAddEvent = () => {
+
+
+
+    const handleDeleteEvent = (eventId: string) => {
+        setEvents((prev) => prev.filter((e) => e.id !== eventId));
+    };
+
+
+    const handleConflictCancel = () => {
         setPendingEvent(null);
         setShowConflictModal(false);
         setIsModalOpen(true);
     };
 
+    const closeAddEventModal = () => {
+        setIsModalOpen(false)
+        setEventForm(null);
+    };
 
 
     return (
@@ -128,7 +126,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
             <div className="flex justify-between mb-2">
                 <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-                <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
+                <CalendarHeader onAddClick={() => {
+                    setEventForm(null);
+                    setIsModalOpen(true);
+                }}
+                />
             </div>
 
             <CalendarGrid
@@ -137,20 +139,33 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 activeTab={activeTab}
                 onPrevWeek={handlePrevWeek}
                 onNextWeek={handleNextWeek}
+                onDeleteRequest={setEventToDelete}
             />
 
             <AddEventModal
                 isOpen={isModalOpen}
-                initialData={draftEvent}
-                onClose={() => setIsModalOpen(false)}
+                value={eventForm}
+                onClose={closeAddEventModal}
                 onSave={handleSaveEvent}
             />
 
             <ConfirmConflictModal
                 open={showConflictModal}
                 onConfirm={confirmAddEvent}
-                onCancel={cancelAddEvent}
+                onCancel={handleConflictCancel}
             />
+
+            <ConfirmDeleteModal
+                open={!!eventToDelete}
+                onCancel={() => setEventToDelete(null)}
+                onConfirm={() => {
+                    if (eventToDelete) {
+                        handleDeleteEvent(eventToDelete.id);
+                    }
+                    setEventToDelete(null);
+                }}
+            />
+
         </main>
     )
 }
