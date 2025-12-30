@@ -96,7 +96,7 @@ export default function AdminDashRight() {
             <p className="text-lg">Add User</p>
           </span>
 
-          <CourseScheduleCard isVisibile={false} />
+          <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
         <WorkWeekCalendar />
         <AnnouncementsCard announceCard={card} />
