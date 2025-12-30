@@ -1,4 +1,4 @@
-import { ChalkboardTeacher, Confetti, Exam, Island, } from "@phosphor-icons/react";
+import { ChalkboardTeacher, Confetti, Exam, Island, Trash } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
 
 const EVENT_STYLES: Record<
@@ -33,7 +33,7 @@ const EVENT_STYLES: Record<
   },
 };
 
-const EventCard = ({ event }: { event: CalendarEvent }) => {
+const EventCard = ({ event, onDelete }: { event: CalendarEvent, onDelete: () => void; }) => {
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.event;
   const Icon = style.Icon;
@@ -47,8 +47,17 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
 
   return (
     <div
-      className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col"
+      className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="absolute cursor-pointer top-1 right-1 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
+      >
+        <Trash size={14} className="text-red-600" />
+      </button>
       <div
         className={`flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed`}
         style={{
