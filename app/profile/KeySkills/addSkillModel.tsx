@@ -60,7 +60,7 @@ export default function AddSkillModal({ isOpen, onClose, onAdd, defaultSection =
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 text-black">
               <label className="block text-sm text-gray-600">Select section</label>
               <select
                 value={section}

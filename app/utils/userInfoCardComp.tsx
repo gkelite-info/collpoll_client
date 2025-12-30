@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from "react";
+import { useStudent } from "./context/UserContext";
 
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
+    const { userId } = useStudent();
 
     useEffect(() => {
         const currentDate = new Date();
@@ -21,7 +23,7 @@ export default function UserInfoCard() {
                 <div className="flex flex-col justify-between w-[60%] p-3 gap-1 bg-yellow-00 rounded-l-lg h-[100%]">
                     <div className="flex items-center gap-3">
                         <p className="text-[#714EF2] text-sm font-medium">B.Tech CSE - Year 2</p>
-                        <p className="text-[#43C17A] text-sm font-medium">ID - <span className="text-[#282828] text-sm">2111221</span></p>
+                        <p className="text-[#43C17A] text-sm font-medium">ID - <span className="text-[#282828] text-sm">{userId}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
                         <p className="text-sm text-[#282828]">Welcome Back, <span className="text-[#089144] text-sm font-medium">Firstname</span></p>
