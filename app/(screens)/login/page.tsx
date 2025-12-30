@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [current, setCurrent] = useState(0);
 
+
   type Slide = {
     heading: string;
     para: string;
@@ -108,7 +109,7 @@ export default function LoginPage() {
       const redirectPath = roleRouteMap[role] || "/login";
       router.replace(redirectPath);
       toast.success("Login successful!");
-    } catch {
+    } catch (error) {
       toast.error("Something went wrong");
     } finally {
       setLoading(false);

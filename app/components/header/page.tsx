@@ -15,6 +15,7 @@ import EmailModal from "../modals/EmailModal";
 import AnnouncementModal from "../modals/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
+import { useStudent } from "@/app/utils/context/UserContext";
 
 
 
@@ -28,6 +29,8 @@ export default function Header() {
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
+
+  const { userId } = useStudent();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -111,11 +114,7 @@ export default function Header() {
 
           <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
             //  onClick={()=>router.push('/profile')}
-            onClick={() => {
-              console.log("Vamshi");
-
-              setOpenProfile(true)
-            }}
+            onClick={() => setOpenProfile(true)}
           >
             <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
               <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
@@ -137,7 +136,7 @@ export default function Header() {
                 <p style={{ fontSize: 12, color: "#E5E5E5" }}>
                   ID -{" "}
                   <span style={{ fontSize: 12, color: "#E5E5E5" }}>
-                    2112121
+                    {userId}
                   </span>
                 </p>
               </div>

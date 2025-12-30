@@ -2,6 +2,7 @@
 import { CaretRight, CaretDown, SignOut, ArrowLeft, PencilSimple, EnvelopeSimple, Phone, Headset, Key, Palette, ClipboardText } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useStudent } from "../utils/context/UserContext";
 
 type Props = {
     open: boolean;
@@ -22,6 +23,7 @@ interface ProfileOptions {
 export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu, }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const router = useRouter()
+    const { userId } = useStudent();
 
     const profileOptions: ProfileOptions[] = [
         { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: onOpenTerms, },
@@ -65,7 +67,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         <div className="flex items-center justify-between">
                             <p className="font-semibold text-md text-[#282828]">Shravani Reddy</p>
                             <div className="flex gap-2 items-center">
-                                <span className="text-xs text-[#282828]">ID - 12345678</span>
+                                <span className="text-xs text-[#282828]">ID - {userId}</span>
                                 <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                     e.stopPropagation();
                                     onOpenQuickMenu();
