@@ -1,77 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
 
-<<<<<<< Updated upstream
 type Props = {
-    style?: string
-    isVisibile?: boolean
-    department?: string
-    year?: string
-}
-
-export default function CourseScheduleCard({ style = "", isVisibile = true, department = "CSE", year = "2", }: Props) {
-
-    const [time, setTime] = useState("");
-    const [day, setDay] = useState("");
-    const [month, setMonth] = useState("");
-
-    useEffect(() => {
-        const updateTime = () => {
-            const now = new Date();
-            let hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, "0");
-            const ampm = hours >= 12 ? "PM" : "AM";
-            hours = hours % 12 || 12;
-            const formattedTime = `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
-            setTime(formattedTime);
-
-            const formattedDay = String(now.getDate()).padStart(2, "0");
-            const formattedMonth = now.toLocaleString("en-US", { month: "short" });
-            setDay(formattedDay);
-            setMonth(formattedMonth);
-        };
-
-        updateTime();
-        const timer = setInterval(updateTime, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
-
-    return (
-        <>
-            <div className={`flex ${isVisibile ? "justify-between" : "justify-end"} ${style}`}>
-                {isVisibile &&
-                    <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
-                        <p className="text-[#EFEFEF] text-sm">B.Tech {department} – Year {year}</p>
-                    </div>
-                }
-
-                <div className="bg-white shadow-md w-[49%] h-[54px] rounded-lg flex items-center">
-                    <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
-                        <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
-                        <p className="text-xs text-[#FFFFFF]">{month}</p>
-                    </div>
-
-                    <div className="w-[70%] rounded-r-lg flex items-center justify-center">
-                        <p className="text-[#16284F] text-md font-semibold">{time}</p>
-                    </div>
-                </div>
-            </div>
-        </>
-    )
-}
-=======
-type CourseScheduleCardProps = {
   style?: string;
-  isVisible?: boolean;
-  fullWidth?: boolean; // New optional prop
+  isVisibile?: boolean;
+  department?: string;
+  year?: string;
 };
 
 export default function CourseScheduleCard({
   style = "",
-  isVisible = true,
-  fullWidth = false, // Default to false so existing cards don't break
-}: CourseScheduleCardProps) {
+  isVisibile = true,
+  department = "CSE",
+  year = "2",
+}: Props) {
   const [time, setTime] = useState("");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
@@ -97,40 +39,36 @@ export default function CourseScheduleCard({
 
     updateTime();
     const timer = setInterval(updateTime, 1000);
+
     return () => clearInterval(timer);
   }, []);
 
   return (
-    <div
-      className={`flex w-full ${
-        fullWidth
-          ? "justify-stretch"
-          : isVisible
-          ? "justify-between"
-          : "justify-end"
-      } ${style}`}
-    >
-      {isVisible && (
-        <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 items-center justify-center">
-          <p className="text-[#EFEFEF] text-sm">B.Tech CSE – Year 2</p>
-        </div>
-      )}
-
+    <>
       <div
-        className={`bg-white shadow-md h-[54px] rounded-lg flex items-center ${
-          fullWidth || !isVisible ? "w-full" : "w-[49%]"
-        }`}
+        className={`flex ${
+          isVisibile ? "justify-between" : "justify-end"
+        } ${style}`}
       >
-        <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
-          <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
-          <p className="text-xs text-[#FFFFFF]">{month}</p>
-        </div>
+        {isVisibile && (
+          <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
+            <p className="text-[#EFEFEF] text-sm">
+              B.Tech {department} – Year {year}
+            </p>
+          </div>
+        )}
 
-        <div className="w-[70%] rounded-r-lg flex items-center justify-center">
-          <p className="text-[#16284F] text-md font-semibold">{time}</p>
+        <div className="bg-white shadow-md w-[49%] h-[54px] rounded-lg flex items-center">
+          <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
+            <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
+            <p className="text-xs text-[#FFFFFF]">{month}</p>
+          </div>
+
+          <div className="w-[70%] rounded-r-lg flex items-center justify-center">
+            <p className="text-[#16284F] text-md font-semibold">{time}</p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
->>>>>>> Stashed changes
