@@ -3,7 +3,7 @@
 import {
   InternshipInsert,
   InternshipUpdate,
-} from "@/lib/helpers/profile/types"; // Update path if needed
+} from "@/lib/helpers/profile/types";
 import { revalidatePath } from "next/cache";
 import {
   createInternship,

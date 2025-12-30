@@ -6,25 +6,66 @@ import {
   Globe,
   Link as LinkIcon,
   MapPin,
+  PencilSimple,
+  Trash,
 } from "@phosphor-icons/react";
 import React from "react";
+import { InternshipFormData } from "./internshipForm";
 
-interface InternshipData {
-  organization: string;
-  role: string;
-  startDate: string;
-  endDate: string;
-  projectName: string;
-  projectUrl?: string;
-  location: string;
-  domain: string;
-  description: string;
+interface InternshipCardProps {
+  data: InternshipFormData;
+  onEdit: () => void;
+  onDelete: () => void;
+  isDeleting?: boolean;
 }
 
-const InternshipCard: React.FC<{ data: InternshipData }> = ({ data }) => {
+const formatDate = (dateString: string) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+
+  if (isNaN(date.getTime())) return dateString;
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const InternshipCard: React.FC<InternshipCardProps> = ({
+  data,
+  onEdit,
+  onDelete,
+  isDeleting,
+}) => {
   return (
-    <div className="w-full bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+    <div className="w-full bg-white border  border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-300 relative group">
+      <div className="absolute top-5 right-2 flex gap-2 justify-between items-center">
+        <button
+          onClick={onEdit}
+          disabled={isDeleting}
+          className="p-1.5 text-gray-400 hover:text-[#43C17A] hover:bg-emerald-50 rounded transition-colors"
+          type="button"
+          title="Edit"
+        >
+          <PencilSimple size={18} />
+        </button>
+        <button
+          onClick={onDelete}
+          disabled={isDeleting}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+          type="button"
+          title="Delete"
+        >
+          {isDeleting ? (
+            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Trash size={18} />
+          )}
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pr-16">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-50 rounded-lg">
             <Buildings
@@ -49,7 +90,8 @@ const InternshipCard: React.FC<{ data: InternshipData }> = ({ data }) => {
         <div className="flex items-center gap-2 text-xs font-medium text-gray-500 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100 self-start sm:self-center">
           <CalendarBlank size={14} />
           <span>
-            {data.startDate} — {data.endDate || "Present"}
+            {formatDate(data.startDate)} —{" "}
+            {data.endDate ? formatDate(data.endDate) : "Present"}
           </span>
         </div>
       </div>
@@ -71,6 +113,7 @@ const InternshipCard: React.FC<{ data: InternshipData }> = ({ data }) => {
               href={data.projectUrl}
               target="_blank"
               className="text-emerald-600 hover:underline"
+              rel="noreferrer"
             >
               (Link)
             </a>
@@ -79,7 +122,7 @@ const InternshipCard: React.FC<{ data: InternshipData }> = ({ data }) => {
       </div>
 
       <div className="flex gap-2">
-        <Article size={16} className="text-gray-300 mt-0.5 flex-shrink-0" />
+        <Article size={16} className="text-gray-300 mt-0.5 shrink-0" />
         <p className="text-sm text-gray-600 leading-snug line-clamp-2 hover:line-clamp-none transition-all cursor-default">
           {data.description}
         </p>
