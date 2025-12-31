@@ -77,13 +77,7 @@ const UptimeChart: React.FC<UptimeChartProps> = ({
                 border: "none",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
-              formatter={(value: number | string) => {
-                const numericValue =
-                  typeof value === "number"
-                    ? value
-                    : parseFloat(value as string);
-                return [`${numericValue}%`, "Uptime"];
-              }}
+              formatter={(value: any) => [`${value}%`, "Uptime"]}
             />
 
             <Area
