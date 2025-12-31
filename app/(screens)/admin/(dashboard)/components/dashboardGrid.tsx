@@ -9,7 +9,7 @@ import {
   Calendar,
   Circle,
 } from "@phosphor-icons/react";
-import { dashboardData } from "./data";
+import { dashboardData } from "../data";
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,

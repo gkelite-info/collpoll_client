@@ -10,14 +10,18 @@ import {
 import { useState } from "react";
 
 import { AdminInfoCard } from "../../utils/adminInfoCard";
+import { dashboardData } from "../data";
 import { DashboardGrid } from "./dashboardGrid";
-import { dashboardData } from "./data";
-
+import SystemHealth from "./systemHealth";
 import TotalUsersView from "./totalUsers";
 
 type ViewState = "MAIN" | "TOTAL_USERS" | "PENDING_APPROVALS" | "SYSTEM_HEALTH";
 
-export default function AdminDashLeft() {
+export default function AdminDashLeft({
+  onPendingFull,
+}: {
+  onPendingFull: () => void;
+}) {
   const [view, setView] = useState<ViewState>("MAIN");
 
   const cardData = [
@@ -44,7 +48,7 @@ export default function AdminDashLeft() {
     },
     {
       id: "AUTOMATIONS",
-      style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
+      style: "bg-[#CEE6FF] h-[126.35px] w-[182px] ",
       icon: <ArrowsClockwise size={32} weight="fill" color="#60AEFF" />,
       value: "12",
       label: "Automations",
@@ -89,7 +93,11 @@ export default function AdminDashLeft() {
   }
 
   if (view === "SYSTEM_HEALTH") {
-    return <div className="w-[68%] p-2">{EmptyPage("System Health")}</div>;
+    return (
+      <div className="w-[68%] p-2">
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+      </div>
+    );
   }
 
   return (
@@ -108,9 +116,11 @@ export default function AdminDashLeft() {
               iconBgColor="#FFFFFF"
               onClick={() => {
                 if (item.id === "TOTAL_USERS") setView("TOTAL_USERS");
-                if (item.id === "PENDING_APPROVALS")
-                  setView("PENDING_APPROVALS");
                 if (item.id === "SYSTEM_HEALTH") setView("SYSTEM_HEALTH");
+
+                if (item.id === "PENDING_APPROVALS") {
+                  onPendingFull();
+                }
               }}
             />
           ))}

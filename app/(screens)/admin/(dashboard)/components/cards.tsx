@@ -40,7 +40,7 @@ export default function CardComponent({
   return (
     <div
       onClick={handleClick}
-      className={`rounded-lg p-3 h-32 ${style} flex flex-col justify-between shadow-sm 
+      className={`rounded-lg p-3 h-32 ${style} flex flex-col justify-around shadow-sm 
         ${to ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
       <div className="flex items-center justify-between gap-3 mb-2">
@@ -62,8 +62,10 @@ export default function CardComponent({
           </div>
         )}
       </div>
-      <p className="text-[#282828] text-lg font-semibold">{value}</p>
-      <span className="text-[#282828]">{label}</span>
+      <div>
+        <p className="text-[#282828] text-lg font-semibold">{value}</p>
+        <span className="text-[#282828]">{label}</span>
+      </div>
     </div>
   );
 }
