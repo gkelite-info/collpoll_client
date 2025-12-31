@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { CaretLeft, MagnifyingGlass, UserCircle } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./totalUsersCard";
+import FacultyDetail from "./facultyDetail";
 
 interface FacultyViewProps {
   department: string;
@@ -11,48 +12,106 @@ interface FacultyViewProps {
 const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
   const [activeTab, setActiveTab] = useState<"Faculty" | "Students">("Faculty");
 
+  const [selectedFaculty, setSelectedFaculty] = useState<any | null>(null);
+
   const facultyList = [
     {
-      name: "Mr. Arun Kumar",
+      name: "Arun Kumar",
       subject: "Data Structures",
       role: "Professor",
-      contact: "arun@college.edu",
+      id: "21CSE006",
+      department: "CSE",
+      phone: "+91 9012345678",
+      email: "arunkumar@gmail.com",
+      address: "245 Delo Street",
+      experience: "8 Years",
+      qualification: "M.Tech, PhD",
+      avatar:
+        "https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
     },
     {
-      name: "Ms. Sneha Rao",
+      name: "Sneha Rao",
       subject: "DBMS",
       role: "Asst. Professor",
-      contact: "sneha@college.edu",
+      id: "21CSE007",
+      department: "CSE",
+      phone: "+91 9012345679",
+      email: "sneha@college.edu",
+      address: "246 Delo Street",
+      experience: "5 Years",
+      qualification: "M.Tech",
+      avatar:
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
     },
     {
-      name: "Mr. Rajesh",
+      name: "Rajesh",
       subject: "OS",
       role: "Lecturer",
-      contact: "rajesh@college.edu",
+      id: "21CSE008",
+      department: "IT",
+      phone: "+91 9012345680",
+      email: "rajesh@college.edu",
+      address: "247 Delo Street",
+      experience: "3 Years",
+      qualification: "B.Tech",
+      avatar:
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
     },
     {
-      name: "Ms. Kavya Sharma",
+      name: "Kavya Sharma",
       subject: "Computer Networks",
       role: "Professor",
-      contact: "kavya@college.edu",
+      id: "21CSE009",
+      department: "CSE",
+      phone: "+91 9012345681",
+      email: "kavya@college.edu",
+      address: "248 Delo Street",
+      experience: "10 Years",
+      qualification: "M.Tech, PhD",
+      avatar:
+        "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=761&q=80",
     },
     {
-      name: "Mr. Rohit Mehta",
+      name: "Rohit Mehta",
       subject: "Design & Analysis",
       role: "Asst. Professor",
-      contact: "rohit@college.edu",
+      id: "21CSE010",
+      department: "CSE",
+      phone: "+91 9012345682",
+      email: "rohit@college.edu",
+      address: "249 Delo Street",
+      experience: "6 Years",
+      qualification: "M.Tech",
+      avatar:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
     },
     {
-      name: "Ms. Divya Nair",
+      name: "Divya Nair",
       subject: "SE",
       role: "Lecturer",
-      contact: "divya@college.edu",
+      id: "21CSE011",
+      department: "IT",
+      phone: "+91 9012345683",
+      email: "divya@college.edu",
+      address: "250 Delo Street",
+      experience: "2 Years",
+      qualification: "B.Tech",
+      avatar:
+        "https://images.unsplash.com/photo-1554151228-14d9def656e4?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=686&q=80",
     },
     {
-      name: "Mr. Nitin Varma",
+      name: "Nitin Varma",
       subject: "Artificial Intelligence",
       role: "Professor",
-      contact: "nitin@college.edu",
+      id: "21CSE012",
+      department: "AI/ML",
+      phone: "+91 9012345684",
+      email: "nitin@college.edu",
+      address: "251 Delo Street",
+      experience: "12 Years",
+      qualification: "PhD",
+      avatar:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
     },
   ];
 
@@ -62,42 +121,49 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
       name: "Rohan Patel",
       attendance: "92%",
       performance: "Excellent",
+      avatar: "https://i.pravatar.cc/150?u=rohan",
     },
     {
       rollNo: "21CSE002",
       name: "Aarav Mehta",
       attendance: "67%",
       performance: "Good",
+      avatar: "https://i.pravatar.cc/150?u=aarav",
     },
     {
       rollNo: "21CSE003",
       name: "Karthik Reddy",
       attendance: "55%",
       performance: "Average",
+      avatar: "https://i.pravatar.cc/150?u=karthik",
     },
     {
       rollNo: "21CSE004",
       name: "Sneha Reddy",
       attendance: "76%",
       performance: "Excellent",
+      avatar: "https://i.pravatar.cc/150?u=snehas",
     },
     {
       rollNo: "21CSE005",
       name: "Ananya Sharma",
       attendance: "87%",
       performance: "Good",
+      avatar: "https://i.pravatar.cc/150?u=ananya",
     },
     {
       rollNo: "21CSE006",
       name: "Neha Sinha",
       attendance: "45%",
       performance: "Average",
+      avatar: "https://i.pravatar.cc/150?u=neha",
     },
     {
       rollNo: "21CSE007",
       name: "Arjun Rao",
       attendance: "50%",
       performance: "Excellent",
+      avatar: "https://i.pravatar.cc/150?u=arjun",
     },
   ];
 
@@ -128,6 +194,15 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
     },
   ];
 
+  if (selectedFaculty) {
+    return (
+      <FacultyDetail
+        faculty={selectedFaculty}
+        onBack={() => setSelectedFaculty(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col w-full">
       <div className="mb-3">
@@ -140,7 +215,9 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
           />
 
           {activeTab === "Faculty" ? (
-            <h1 className="text-2xl font-bold text-[#282828]">CSE Faculty</h1>
+            <h1 className="text-2xl font-bold text-[#282828]">
+              {department} Faculty
+            </h1>
           ) : (
             <h1 className="text-xl font-semibold text-[#1A202C]">
               Year 2 – CSE Students
@@ -173,18 +250,20 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
         ))}
       </article>
 
-      <div className="flex items-center gap-6 mb-3 border-b border-gray-100 px-2">
+      <div className="flex items-center gap-14 mb-3 border-b border-gray-100 px-2">
         {["Faculty", "Students"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
-            className={`pb-2 text-xs font-bold transition-all relative ${
-              activeTab === tab ? "text-[#3EAD6F]" : "text-gray-400"
+            className={`pb-1 transition-all relative cursor-pointer ${
+              activeTab === tab ? "text-[#43C17A]" : "text-[#525252]"
             }`}
           >
-            {tab}
-            {activeTab === tab && (
-              <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#3EAD6F] rounded-t-full" />
+            <span className="w-full ml-8">{tab}</span>
+            {activeTab === tab ? (
+              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px]  bg-[#43C17A] rounded-full" />
+            ) : (
+              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px]  bg-[#525252] rounded-full" />
             )}
           </button>
         ))}
@@ -240,13 +319,16 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
               ? facultyList.map((prof, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-2 px-4 text-center">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 inline-block overflow-hidden border border-gray-100">
-                        <UserCircle
-                          size={34}
-                          weight="fill"
-                          className="text-gray-300 -ml-[3px] -mt-[3px]"
+                      <button
+                        onClick={() => setSelectedFaculty(prof)}
+                        className="w-8 h-8 cursor-pointer rounded-full bg-gray-100 inline-flex items-center justify-center overflow-hidden border border-gray-100 hover:ring-2 hover:ring-[#3EAD6F] transition"
+                      >
+                        <img
+                          src={prof.avatar}
+                          alt={prof.name}
+                          className="w-full h-full object-cover"
                         />
-                      </div>
+                      </button>
                     </td>
                     <td className="py-2 px-2 text-center font-medium text-[#2D3748] text-[14px]">
                       {prof.name}
@@ -258,7 +340,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
                       {prof.role}
                     </td>
                     <td className="py-2 px-6 text-right text-[#4A5568] text-[13px]">
-                      {prof.contact}
+                      {prof.email}
                     </td>
                   </tr>
                 ))
@@ -266,10 +348,10 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-2 px-4 text-center">
                       <div className="w-8 h-8 rounded-full bg-gray-100 inline-block overflow-hidden border border-gray-100">
-                        <UserCircle
-                          size={34}
-                          weight="fill"
-                          className="text-gray-300 -ml-[3px] -mt-[3px]"
+                        <img
+                          src={stud.avatar}
+                          alt={stud.name}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                     </td>

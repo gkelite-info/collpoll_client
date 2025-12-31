@@ -2,159 +2,161 @@
 
 import { useState, ReactNode, useEffect } from "react";
 import {
-    BuildingOffice,
-    Calendar,
-    CheckCircle,
-    ClipboardText,
-    CurrencyCircleDollar,
-    FolderOpen,
-    Gear,
-    GraduationCap,
-    House,
-    Note,
-    Student,
+  BuildingOffice,
+  Calendar,
+  CheckCircle,
+  ClipboardText,
+  CurrencyCircleDollar,
+  FolderOpen,
+  Gear,
+  GraduationCap,
+  House,
+  Note,
+  Student,
 } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
-    icon: (isActive: boolean) => ReactNode;
-    label: string;
-    path: string;
+  icon: (isActive: boolean) => ReactNode;
+  label: string;
+  path: string;
 };
 
 export default function AdminNavbar() {
-    const router = useRouter();
-    const pathname = usePathname();
-    const [active, setActive] = useState("");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [active, setActive] = useState("");
 
-    const items: NavItem[] = [
-        {
-            icon: (isActive) => (
-                <House size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Home",
-            path: "/",
-        },
-        {
-            icon: (isActive) => (
-                <Calendar size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Calendar",
-            path: "/admin/calendar",
-        },
-        {
-            icon: (isActive) => (
-                <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Attendance",
-            path: "/attendance",
-        },
-        {
-            icon: (isActive) => (
-                <Note size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Assignments",
-            path: "/assignments",
-        },
-        {
-            icon: (isActive) => (
-                <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Academics",
-            path: "/academics",
-        },
-        {
-            icon: (isActive) => (
-                <Student size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Student Progress",
-            path: "/student-progress",
-        },
-        {
-            icon: (isActive) => (
-                <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Projects",
-            path: "/projects",
-        },
-        {
-            icon: (isActive) => (
-                <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Placements",
-            path: "/placements",
-        },
-        {
-            icon: (isActive) => (
-                <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Drive",
-            path: "/drive",
-        },
-        // {
-        //     icon: (isActive) => (
-        //         <CurrencyCircleDollar
-        //             size={18}
-        //             weight={isActive ? "fill" : "regular"}
-        //         />
-        //     ),
-        //     label: "Payments",
-        //     path: "/payments",
-        // },
-        {
-            icon: (isActive) => (
-                <Gear size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Settings",
-            path: "/settings",
-        },
-    ];
+  const items: NavItem[] = [
+    {
+      icon: (isActive) => (
+        <House size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Home",
+      path: "/admin",
+    },
+    {
+      icon: (isActive) => (
+        <Calendar size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Calendar",
+      path: "/admin/calendar",
+    },
+    {
+      icon: (isActive) => (
+        <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Attendance",
+      path: "/attendance",
+    },
+    {
+      icon: (isActive) => (
+        <Note size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Assignments",
+      path: "/assignments",
+    },
+    {
+      icon: (isActive) => (
+        <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Academics",
+      path: "/academics",
+    },
+    {
+      icon: (isActive) => (
+        <Student size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Student Progress",
+      path: "/student-progress",
+    },
+    {
+      icon: (isActive) => (
+        <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Projects",
+      path: "/projects",
+    },
+    {
+      icon: (isActive) => (
+        <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Placements",
+      path: "/placements",
+    },
+    {
+      icon: (isActive) => (
+        <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Drive",
+      path: "/drive",
+    },
+    // {
+    //     icon: (isActive) => (
+    //         <CurrencyCircleDollar
+    //             size={18}
+    //             weight={isActive ? "fill" : "regular"}
+    //         />
+    //     ),
+    //     label: "Payments",
+    //     path: "/payments",
+    // },
+    {
+      icon: (isActive) => (
+        <Gear size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Settings",
+      path: "/settings",
+    },
+  ];
 
-    useEffect(() => {
-        const current = items.find((item) => item.path === pathname);
-        if (current) setActive(current.label);
-    }, [pathname]);
+  useEffect(() => {
+    const current = items.find((item) => item.path === pathname);
+    if (current) setActive(current.label);
+  }, [pathname]);
 
-    return (
-        <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl shadow-md">
-            <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
-                Logo
-            </div>
+  return (
+    <div className="bg-[#43C17A] flex flex-col items-center h-full w-[220px] rounded-tr-3xl shadow-md">
+      <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
+        Logo
+      </div>
 
-            <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4">
-                {items.map((item, index) => {
-                    const isActive = active === item.label;
+      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4">
+        {items.map((item, index) => {
+          const isActive = active === item.label;
 
-                    return (
-                        <div
-                            key={index}
-                            onClick={() => {
-                                setActive(item.label);
-                                if (item.path) router.push(item.path);
-                            }}
-                            className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
+          return (
+            <div
+              key={index}
+              onClick={() => {
+                setActive(item.label);
+                if (item.path) router.push(item.path);
+              }}
+              className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${isActive
-                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                                    : "text-white hover:bg-[#50D689]/30"
-                                }
+                ${
+                  isActive
+                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                    : "text-white hover:bg-[#50D689]/30"
+                }
               `}
-                        >
-                            <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
-                                {item.icon(isActive)}
-                            </div>
+            >
+              <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
+                {item.icon(isActive)}
+              </div>
 
-                            <p
-                                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
-                                    }`}
-                            >
-                                {item.label}
-                            </p>
-                        </div>
-                    );
-                })}
+              <p
+                className={`text-sm font-medium ${
+                  isActive ? "text-[#43C17A]" : "text-white"
+                }`}
+              >
+                {item.label}
+              </p>
             </div>
-        </div>
-    );
+          );
+        })}
+      </div>
+    </div>
+  );
 }
