@@ -52,7 +52,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 .from("users")
                 .select("userId, fullName, mobile, email")
                 .eq("auth_id", auth.user.id)
-                .single();
+                .maybeSingle();
+
 
             if (error || !data) {
                 console.error("User not found", error);

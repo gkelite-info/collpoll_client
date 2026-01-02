@@ -10,63 +10,55 @@ import {
 
 import { useState } from "react";
 
-import ScheduledLessonsStrip, {
-  ScheduledLesson,
-} from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses, { UpcomingLesson } from "../../utils/upcomingClasses";
-import {
-  INITIAL_LESSONS,
-  INITIAL_SCHEDULED_LESSONS,
-  STUDENT_DATA,
-} from "./data";
+import { INITIAL_LESSONS, INITIAL_SCHEDULED_LESSONS, STUDENT_DATA, } from "./data";
 import { UserInfoCard } from "../../utils/userInfoCard";
-
-const cardData = [
-  {
-    style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
-    icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
-    value: "02/08",
-    label: "Total Classes",
-  },
-  {
-    style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
-    icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
-    value: "30/35",
-    label: "Total Students",
-  },
-  {
-    style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
-    icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-    value: "12/15",
-    label: "Total Lessons",
-  },
-  {
-    style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
-    icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
-    value: "05/09",
-    label: "Total Hours",
-  },
-];
-
-const card = [
-  {
-    show: false,
-    user: "Ms.Swathi",
-    studentsTaskPercentage: 85,
-    facultySubject: "(Data Structures and Algorithms)",
-    image: "../../../female-professor.png",
-    top: "lg:top-[-173px]"
-  },
-];
+import { useUser } from "@/app/utils/context/UserContext";
 
 export default function FacultyDashLeft() {
-  const [upcomingClasses, setUpcomingClasses] =
-    useState<UpcomingLesson[]>(INITIAL_LESSONS);
+  const { fullName } = useUser();
+  const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>(INITIAL_LESSONS);
+  const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(INITIAL_SCHEDULED_LESSONS);
 
-  const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(
-    INITIAL_SCHEDULED_LESSONS
-  );
+  const cardData = [
+    {
+      style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
+      icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
+      value: "02/08",
+      label: "Total Classes",
+    },
+    {
+      style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
+      icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
+      value: "30/35",
+      label: "Total Students",
+    },
+    {
+      style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
+      icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
+      value: "12/15",
+      label: "Total Lessons",
+    },
+    {
+      style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
+      icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
+      value: "05/09",
+      label: "Total Hours",
+    },
+  ];
+
+  const card = [
+    {
+      show: false,
+      user: fullName ?? "User",
+      studentsTaskPercentage: 85,
+      facultySubject: "(Data Structures and Algorithms)",
+      image: "../../../female-professor.png",
+      top: "lg:top-[-173px]"
+    },
+  ];
 
   const handleAddUpcomingClass = (
     newLessonData: Omit<UpcomingLesson, "id">
@@ -94,7 +86,7 @@ export default function FacultyDashLeft() {
       <div className="w-[68%] p-2">
         <UserInfoCard
           cardProps={card}
-          
+
         />
         <div className="mt-5 rounded-lg flex gap-3 text-xs">
           {cardData.map((item, index) => (

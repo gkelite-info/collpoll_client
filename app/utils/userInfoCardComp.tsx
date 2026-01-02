@@ -6,8 +6,7 @@ import { useUser } from "./context/UserContext";
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
-    const { userId } = useUser();
-    const { fullName } = useUser();
+    const { userId, fullName } = useUser();
 
     useEffect(() => {
         const currentDate = new Date();

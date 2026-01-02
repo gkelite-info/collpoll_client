@@ -7,15 +7,17 @@ import AcademicPerformanceSmall from "./components/academicPerformanceSmall";
 import FeeDueCard from "./cards/feeDueCard";
 import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import FacultyChat from "./cards/facultyChat";
+import { useUser } from "@/app/utils/context/UserContext";
 
 
 export default function ParentLeft() {
+    const { fullName } = useUser();
 
     const card = [{
         show: true,
         studentId: 12,
         studentBranch: "CSE - 2nd Year",
-        user: "Mr. Janardhan",
+        user: fullName ?? "User",
         studentName: "Deekshitha",
         childPerformance: "Your child’s academic performance and attendance summary are available below.",
         image: "../../../male-parent.png",
