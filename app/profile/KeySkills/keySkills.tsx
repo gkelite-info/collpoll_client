@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import AddSkillModal from "./addSkillModel";
 import { addUserSkill, getUserSkills, removeUserSkill } from "@/lib/helpers/profile/skillsAPI";
 import toast from "react-hot-toast";
-import { useStudent } from "@/app/utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type Skill = { skillId: number; name: string };
 
@@ -24,7 +24,7 @@ export default function KeySkillsWithModal() {
   const [editTools, setEditTools] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const router = useRouter();
-  const { userId, studentId } = useStudent();
+  const { userId, studentId } = useUser();
 
   // const removeFrom = (listName: "technical" | "soft" | "tools", value: string) => {
   //   if (listName === "technical") setTechnical((s) => s.filter((x) => x !== value));
