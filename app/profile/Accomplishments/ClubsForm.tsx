@@ -18,6 +18,25 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         description: "",
     });
 
+    const [loading, setLoading] = useState(false);
+
+
+    // Convert YYYY-MM-DD → DD-MM-YYYY
+    const toDDMMYYYY = (iso: string) => {
+        if (!iso) return "";
+        const [year, month, day] = iso.split("-");
+        return `${day}-${month}-${year}`;
+    };
+
+    // Convert DD-MM-YYYY → YYYY-MM-DD
+    const toISO = (ddmmyyyy: string) => {
+        if (!ddmmyyyy) return "";
+        const [day, month, year] = ddmmyyyy.split("-");
+        return `${year}-${month}-${day}`;
+    };
+
+    const todayISO = new Date().toISOString().split("T")[0];
+
     const handleChange = (e: any) => {
         const { name, value } = e.target;
 
@@ -28,19 +47,8 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         }
 
         if (name === "fromDate" || name === "toDate") {
-            let cleaned = value.replace(/[^0-9]/g, "");
-
-            if (cleaned.length >= 5) {
-                cleaned = cleaned.replace(
-                    /(\d{2})(\d{2})(\d{0,4})/,
-                    "$1/$2/$3"
-                );
-            } else if (cleaned.length >= 3) {
-                cleaned = cleaned.replace(/(\d{2})(\d{1,2})/, "$1/$2");
-            }
-
-            cleaned = cleaned.slice(0, 10);
-            setForm({ ...form, [name]: cleaned });
+            const ddmmyyyy = toDDMMYYYY(value);
+            setForm({ ...form, [name]: ddmmyyyy });
             return;
         }
 
@@ -74,18 +82,11 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
             return "Role/Position Held should only contain letters and spaces";
 
 
-        if (!form.fromDate.trim())
-            return "From Date is required";
+        if (!form.fromDate.trim()) return "From Date is required";
+        if (!dateRegex.test(form.fromDate)) return "From Date must be DD-MM-YYYY";
 
-        if (!dateRegex.test(form.fromDate))
-            return "From Date must be in DD/MM/YYYY format";
-
-
-        if (!form.toDate.trim())
-            return "To Date is required";
-
-        if (!dateRegex.test(form.toDate))
-            return "To Date must be in DD/MM/YYYY format";
+        if (!form.toDate.trim()) return "To Date is required";
+        if (!dateRegex.test(form.toDate)) return "To Date must be DD-MM-YYYY";
 
 
         const convert = (d: string) => {
@@ -122,27 +123,34 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         const error = validateCommittee();
         if (error) return toast.error(error);
 
-        const payload = {
-            clubcommiteeId: undefined,
-            studentId,
-            clubName: form.clubName,
-            role: form.role,
-            fromDate: form.fromDate,
-            toDate: form.toDate,
-            description: form.description,
-        };
+        setLoading(true); // 🔒 Disable button & prevent double click
 
-        console.log(" CLUB PAYLOAD:", payload);
+        try {
+            const payload = {
+                clubcommiteeId: undefined,
+                studentId,
+                clubName: form.clubName,
+                role: form.role,
+                fromDate: form.fromDate,
+                toDate: form.toDate,
+                description: form.description,
+            };
 
-        const response = await upsertClubCommittee(payload);
+            const response = await upsertClubCommittee(payload);
 
-        if (response.success) {
-            toast.success(`Club/Committee ${index + 1} saved successfully`);
-            onSubmit();
-        } else {
-            toast.error(response.error || "Something went wrong!");
+            if (response.success) {
+                toast.success(`Club/Committee ${index + 1} saved successfully`);
+                onSubmit(); // inform parent
+            } else {
+                toast.error(response.error || "Something went wrong!");
+            }
+        } catch (err) {
+            toast.error("Something went wrong!");
+        } finally {
+            setLoading(false); // 🔓 Re-enable button
         }
     };
+
 
 
     const handleSubmit = () => {
@@ -167,17 +175,20 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
                         <Input
                             label="From"
                             name="fromDate"
-                            value={form.fromDate}
+                            type="date"
+                            value={form.fromDate ? toISO(form.fromDate) : ""}
                             onChange={handleChange}
-                            placeholder="01/10/2024"
+                            max={todayISO}
                         />
 
                         <Input
                             label="To"
                             name="toDate"
-                            value={form.toDate}
+                            type="date"
+                            value={form.toDate ? toISO(form.toDate) : ""}
                             onChange={handleChange}
-                            placeholder="01/11/2024"
+                            min={form.fromDate ? toISO(form.fromDate) : undefined}
+                            max={todayISO}
                         />
 
                     </div>
@@ -194,10 +205,14 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
                     <button
                         type="button"
                         onClick={handleSubmit}
-                        className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
+                        disabled={loading}
+                        className={`px-6 py-2 rounded-md text-sm font-medium text-white
+        ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
+    `}
                     >
-                        Submit
+                        {loading ? "Saving..." : "Submit"}
                     </button>
+
                 </div>
             </div>
         </div>

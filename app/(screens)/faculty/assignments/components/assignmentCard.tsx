@@ -6,12 +6,42 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import ConfirmDeleteModal from "./confirmDeleteModal";
 import { Assignment } from "../data";
+//import { Assignment } from "./assignmentForm"; 
+import { deleteFacultyAssignment } from "@/lib/helpers/faculty/deleteFacultyAssignment";
+import toast from "react-hot-toast";
+
+
+
+function formatDate(dateValue: number | string) {
+  if (!dateValue) return "";
+
+  const str = dateValue.toString();
+
+  // Case 1: INT or numeric string YYYYMMDD (20250102)
+  if (/^\d{8}$/.test(str)) {
+    const year = str.substring(0, 4);
+    const month = str.substring(4, 6).replace(/^0/, "");
+    const day = str.substring(6, 8).replace(/^0/, "");
+    return `${day}/${month}/${year}`;
+  }
+
+  // Case 2: HTML date format YYYY-MM-DD (2025-01-02)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const [year, month, day] = str.split("-");
+    return `${Number(day)}/${Number(month)}/${year}`;
+  }
+
+  return "";
+}
+
+
+
 
 type AssignmentCardProps = {
   cardProp: Assignment[];
   activeView: "active" | "previous";
   onEdit: (assignment: Assignment) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
 };
 
 export default function AssignmentCard({
@@ -21,7 +51,8 @@ export default function AssignmentCard({
   onDelete,
 }: AssignmentCardProps) {
   const router = useRouter();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
 
   return (
     <div className="flex flex-col">
@@ -47,7 +78,7 @@ export default function AssignmentCard({
                     <CalendarDots className="text-md text-[#57C788]" />
                   </div>
                   <p className="text-[#474747] text-sm">
-                    {item.fromDate} - {item.toDate}
+                    {formatDate(item.fromDate)} - {formatDate(item.toDate)}
                   </p>
                 </div>
               </div>
@@ -65,18 +96,18 @@ export default function AssignmentCard({
                     {activeView === "active" && (
                       <div
                         className="rounded-full bg-[#F6E3E3] p-1.5 flex items-center justify-center cursor-pointer"
-                        onClick={() => setDeleteId(item.id)}
+                        onClick={() => {
+                          setDeleteId(item.assignmentId ?? null);   // <-- FIX HERE
+                          console.log("vamshi", item.assignmentId);
+                        }}
                       >
                         <Trash className="text-md text-[#C14343]" />
                       </div>
                     )}
                   </div>
-
                   <h4
                     className="text-[#43C17A] text-sm cursor-pointer underline"
-                    onClick={() =>
-                      router.push(`/faculty/assignments/${item.id}`)
-                    }
+                    onClick={() => router.push(`/faculty/assignments/${item.assignmentId}`)}
                   >
                     View Submissions
                   </h4>
@@ -106,10 +137,11 @@ export default function AssignmentCard({
               Total Marks
             </div>
           </div>
+
         </div>
       ))}
 
-      {deleteId && (
+      {deleteId !== null && (
         <ConfirmDeleteModal
           onCancel={() => setDeleteId(null)}
           onConfirm={() => {

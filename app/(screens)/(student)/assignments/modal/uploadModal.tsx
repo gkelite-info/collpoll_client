@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { CardProp } from "../components/card";
 import { CloudArrowUp, Trash } from "@phosphor-icons/react";
+import { supabase } from "@/lib/supabaseClient";
 
 type UploadModalProps = {
     isOpen: boolean;
@@ -36,19 +37,40 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index }: 
         e.target.value = "";
     };
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         if (selectedFiles.length === 0) {
             alert("Please select at least one file!");
             return;
         }
 
-        if (index !== undefined) {
-            selectedFiles.forEach(file => onUpload(file.name, index));
+        if (!card) return;
+
+        const file = selectedFiles[0];
+        const filePath = `assignments/${card.assignmentId}/${file.name}`;
+
+        // 1️⃣ Upload to Supabase Storage
+        const { data: uploadData, error } = await supabase.storage
+            .from("student_submissions")
+            .upload(filePath, file, { upsert: true });
+
+        if (error) {
+            console.error("UPLOAD ERROR:", error);
+            alert("Upload failed!");
+            return;
         }
+
+        // 2️⃣ Get public URL
+        const { data: urlData } = supabase.storage
+            .from("student_submissions")
+            .getPublicUrl(filePath);
+
+        // 3️⃣ Pass to parent UI
+        onUpload(urlData.publicUrl, index!);
 
         setSelectedFiles([]);
         onClose();
     };
+
 
     const removeFile = (idx: number) => {
         setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
@@ -84,7 +106,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index }: 
                         </div>
                         <div className="lg:w-auto h-auto flex flex-col justify-start">
                             <p className="text-sm text-[#282828]">{card?.title}</p>
-                            <p className="text-sm text-[#282828]">{card?.assignmentTitle}</p>
+                            <p className="text-sm text-[#282828]">{card?.description}</p>
                             <p className="text-sm text-[#282828]">{card?.professor}</p>
                         </div>
                     </div>

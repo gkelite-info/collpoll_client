@@ -2,8 +2,12 @@ import { supabase } from "@/lib/supabaseClient";
 
 export const upsertUser = async (payload: any) => {
   try {
+    const { data: authData } = await supabase.auth.getUser();
+    const auth_id = authData?.user?.id;
+
+    if (!auth_id) throw new Error("User not authenticated");
+
     const {
-      auth_id,
       fullName,
       mobile,
       email,
@@ -16,7 +20,7 @@ export const upsertUser = async (payload: any) => {
 
     const { data, error } = await supabase
       .from("users")
-      .insert(
+      .upsert(
         {
           auth_id,
           fullName,
@@ -28,19 +32,42 @@ export const upsertUser = async (payload: any) => {
           updatedAt: now,
           createdAt: now,
         },
+        { onConflict: "auth_id" }   // 👈 IMPORTANT
       )
       .select()
-      .single();  
-
+      .single();
 
     if (error) throw error;
+
     return {
       success: true,
-      message: "User created successfully",
+      message: "User saved successfully",
       data,
     };
   } catch (err: any) {
     console.error("UPSERT PERSONAL DETAILS ERROR:", err.message);
+    return { success: false, error: err.message };
+  }
+};
+
+
+
+export const fetchUserDetails = async (auth_id: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("fullName, mobile, email, linkedIn, collegeId, role")
+      .eq("auth_id", auth_id)
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      user: data ?? null,
+    };
+  } catch (err: any) {
+    console.error("FETCH USER DETAILS ERROR:", err.message);
     return {
       success: false,
       error: err.message,

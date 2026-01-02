@@ -150,11 +150,19 @@ export default function EmploymentForm({
                 </h3>
 
                 {data?.employmentId && (
-                    <Trash
-                        size={20}
-                        className="text-red-500 cursor-pointer"
+                    <button
                         onClick={() => setOpenDelete(true)}
-                    />
+                        className="
+                w-5 h-5
+                flex items-center justify-center
+                rounded-full
+                bg-red-500
+                hover:bg-red-600
+                cursor-pointer
+            "
+                    >
+                        <span className="block w-3 h-[3px] bg-white rounded-full"></span>
+                    </button>
                 )}
             </div>
 
@@ -176,7 +184,7 @@ export default function EmploymentForm({
                 />
 
                 <div className="md:col-span-2">
-                    <p className="text-sm font-medium mb-2">Total Work Experience</p>
+                    <p className="text-sm font-medium mb-2 text-[#282828]">Total Work Experience</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <Select
                             label=""
@@ -198,7 +206,7 @@ export default function EmploymentForm({
                 </div>
 
                 <div className="md:col-span-2">
-                    <p className="text-sm font-medium mb-2">Working Since</p>
+                    <p className="text-sm font-medium mb-2 text-[#282828]">Working Since</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         <Input
                             label="From"

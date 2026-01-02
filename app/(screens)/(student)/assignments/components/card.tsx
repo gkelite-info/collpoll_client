@@ -140,8 +140,28 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                             {activeView === "active" && (
                                 <div className="flex items-center gap-2">
                                     {uploadedFiles[index] ? (
-                                        <div className="flex items-center bg-[#E2F3E9] rounded-full px-2 py-1 gap-2 max-w-[180px]">
-                                            <p className="text-[#43C17A] text-xs truncate">{uploadedFiles[index]}</p>
+                                        <div className="flex items-center bg-[#E2F3E9] rounded-full px-2 py-1 gap-2 max-w-[210px]">
+
+                                            {/* ✅ CLICK TO DOWNLOAD */}
+                                            <a
+                                                href={uploadedFiles[index]}
+                                                target="_blank"
+                                                className="text-[#43C17A] text-xs underline truncate"
+                                                title="Download file"
+                                            >
+                                                {uploadedFiles[index].split("/").pop()}   {/* show only filename */}
+                                            </a>
+
+                                            {/* 🔁 EDIT (RE-UPLOAD) */}
+                                            <button
+                                                className="text-blue-500 text-xs font-bold px-1 cursor-pointer"
+                                                title="Re-upload file"
+                                                onClick={() => openUploadModal(index)}
+                                            >
+                                                ↻
+                                            </button>
+
+                                            {/* ❌ DELETE */}
                                             <button
                                                 className="text-red-500 font-bold text-xs px-1 cursor-pointer"
                                                 onClick={() =>
@@ -164,6 +184,7 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                                             <FaPlus size={8} className="text-[#43C17A]" />
                                         </div>
                                     )}
+
                                 </div>
                             )}
                         </div>

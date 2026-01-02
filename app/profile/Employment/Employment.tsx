@@ -40,7 +40,7 @@ export default function Employment() {
     setEmployments((prev) => [...prev, {}]);
   };
 
-  if (loading) return <p className="h-full w-full flex self-center justify-center items-center">Loading...</p>;
+  if (loading) return <p className="h-full w-full text-[#282828] flex self-center justify-center items-center">Loading...</p>;
 
   return (
     <div className="bg-white rounded-xl p-6 w-full min-h-screen mt-2 mb-5">

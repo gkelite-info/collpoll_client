@@ -1,99 +1,91 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import AssignmentCard from "./components/card";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function AssignmentsLeft() {
 
     const [activeView, setActiveView] = useState<"active" | "previous">("active");
 
-    const activeAssignments = [
-        {
-            image: "/ds.jpg",
-            title: "Data Structures",
-            description: "Array Operations & Complexity",
-            fromDate: "03/01/2025",
-            toDate: "03/01/2025",
-            professor: "Prof. Sharma",
-            videoLink: "https://youtube.com",
-            assignmentTitle: "E-Commerce Website Prototype"
-        },
-        {
-            image: "/os.jpg",
-            title: "Operating Systems",
-            description: "Process Scheduling & Deadlocks",
-            fromDate: "03/01/2025",
-            toDate: "03/01/2025",
-            professor: "Prof. Rohit",
-            videoLink: "https://youtube.com",
-        },
-        {
-            image: "/wt.jpg",
-            title: "Web Technologies Lab",
-            description: "Responsive Design Using HTML, CSS, JS",
-            fromDate: "05/01/2025",
-            toDate: "05/01/2025",
-            professor: "Prof. Mehta",
-            videoLink: "https://youtube.com",
-        },
-        {
-            image: "/dbms.jpg",
-            title: "DBMS",
-            description: "Normalization & SQL Queries",
-            fromDate: "07/01/2025",
-            toDate: "07/01/2025",
-            professor: "Prof. Rao",
-            videoLink: "https://youtube.com",
-        },
+    const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
+    const [previousAssignments, setPreviousAssignments] = useState<any[]>([]);
 
-    ];
+    useEffect(() => {
+        fetchAssignments();
+    }, []);
 
-    const previousAssignments = [
-        {
-            image: "/wt.jpg",
-            title: "Web Technologies Lab",
-            description: "Responsive Design Using HTML, CSS, JS",
-            fromDate: "05/01/2025",
-            toDate: "05/01/2025",
-            professor: "Prof. Mehta",
-            videoLink: "https://youtube.com",
-            marksScored: 88,
-            marksTotal: 100
-        },
-        {
+    async function fetchAssignments() {
+        // 1. Fetch ALL assignments of ALL faculty
+        const { data, error } = await supabase
+            .from("faculty_assignments")
+            .select("*")
+            .order("submissionDeadlineInt", { ascending: true });
+
+        if (error) {
+            console.error("FETCH ERROR:", error);
+            return;
+        }
+
+        // 🔹 Extract unique faculty IDs
+        const facultyIds = [...new Set(data.map(a => a.facultyId))];
+
+        // 🔹 Fetch faculty names from users table
+        const { data: facultyUsers, error: facultyErr } = await supabase
+            .from("users")
+            .select("userId, fullName")
+            .in("userId", facultyIds);
+
+        if (facultyErr) {
+            console.error("FACULTY FETCH ERROR:", facultyErr);
+        }
+
+        // 🔹 Create a lookup map: { 32: "Vamshi Vadla" }
+        const facultyMap = Object.fromEntries(
+            (facultyUsers || []).map(f => [f.userId, f.fullName])
+        );
+
+        // 2. Convert today into YYYYMMDD int format
+        const todayInt = Number(formatDateToInt(new Date()));
+
+        // 3. Transform rows for UI
+        const formatted = data.map((a) => ({
+            assignmentId: a.assignmentId,
+            facultyId: a.facultyId,
+            status: a.status,
             image: "/ds.jpg",
-            title: "Data Structures",
-            description: "Array Operations & Complexity",
-            fromDate: "03/01/2025",
-            toDate: "03/01/2025",
-            professor: "Prof. Sharma",
-            videoLink: "https://youtube.com",
-            marksScored: 90,
-            marksTotal: 100
-        },
-        {
-            image: "/os.jpg",
-            title: "Operating Systems",
-            description: "Process Scheduling & Deadlocks",
-            fromDate: "03/01/2025",
-            toDate: "03/01/2025",
-            professor: "Prof. Rohit",
-            videoLink: "https://youtube.com",
-            marksScored: 50,
-            marksTotal: 100
-        },
-        {
-            image: "/dbms.jpg",
-            title: "DBMS",
-            description: "Normalization & SQL Queries",
-            fromDate: "07/01/2025",
-            toDate: "07/01/2025",
-            professor: "Prof. Rao",
-            videoLink: "https://youtube.com",
-            marksScored: 82,
-            marksTotal: 100
-        },
-    ];
+            title: a.assignmentTitle,
+            description: a.topicName,
+            fromDate: convertIntToShow(a.dateAssignedInt),
+            toDate: convertIntToShow(a.submissionDeadlineInt),
+
+            // ⭐ REPLACED → professor: "Faculty"
+            professor: facultyMap[a.facultyId] || "Faculty",
+
+            marksScored: null,
+            marksTotal: a.totalMarks,
+            toDateInt: a.submissionDeadlineInt,
+        }));
+
+        setActiveAssignments(formatted); // show all
+        setPreviousAssignments([]);      // no previous
+    }
+
+    function convertIntToShow(intVal: number) {
+        if (!intVal) return "";
+        const s = intVal.toString();  // 20250301
+
+        const year = s.slice(0, 4);
+        const month = s.slice(4, 6);
+        const day = s.slice(6, 8);
+
+        return `${day}/${month}/${year}`; // DD/MM/YYYY
+    }
+
+
+    function formatDateToInt(date: Date) {
+        return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+    }
 
     return (
         <>

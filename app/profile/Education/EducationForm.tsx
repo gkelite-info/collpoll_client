@@ -9,6 +9,7 @@ import { upsertUndergraduateEducation } from "@/lib/helpers/upsertUndergraduateE
 import { upsertPhdEducation } from "@/lib/helpers/upsertPhdEducation";
 
 export default function EducationForm({
+
   type,
   onSaveRef,
   onRemove
@@ -44,7 +45,7 @@ export default function EducationForm({
         </button>
       </div>
 
-    
+
       {type === "primary" && (
         <PrimaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
       )}
@@ -60,9 +61,6 @@ export default function EducationForm({
     </>
   );
 }
-
-
-
 
 function ControlledInput({
   label,
@@ -96,11 +94,13 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
     location: "",
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   function formatTitleCase(value: string): string {
-    let clean = value.replace(/[^A-Za-z ]/g, ""); 
+    let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase()); 
+      .replace(/\b\w/g, (char) => char.toUpperCase());
     return clean;
   }
 
@@ -108,12 +108,12 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-  
+
     if (["schoolName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-  
+
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
@@ -123,8 +123,8 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
 
 
 
-  const onlyLetters = /^[A-Za-z ]+$/;   
-  const yearRegex = /^[0-9]{4}$/;        
+  const onlyLetters = /^[A-Za-z ]+$/;
+  const yearRegex = /^[0-9]{4}$/;
 
   const validate = () => {
     if (!form.schoolName.trim())
@@ -154,12 +154,15 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   };
 
   const savePrimary = async () => {
+    if (isSaving) return; // prevent double click
 
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
+
+    setIsSaving(true);
 
     const now = new Date().toISOString();
 
@@ -171,18 +174,21 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
       updatedAt: now,
     };
 
-    console.log(" Sending Payload:", payload);
+    try {
+      const response = await upsertPrimaryEducation(payload);
 
-    const response = await upsertPrimaryEducation(payload);
-
-    console.log(" Supabase Response:", response);
-
-    if (response.success) {
-      toast.success(response.message ?? "Primary education saved!");
-    } else {
-      toast.error(response.error ?? "Something went wrong!");
+      if (response.success) {
+        toast.success("Primary education saved!");
+      } else {
+        toast.error(response.error || "Something went wrong!");
+      }
+    } catch (err) {
+      toast.error("Failed to save. Try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
+
 
   useEffect(() => {
     onSaveRef.current = savePrimary;
@@ -220,6 +226,8 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
         onChange={(e) => handleChange("location", e.target.value)}
       />
     </div>
+
+
   );
 }
 
@@ -234,36 +242,38 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
     location: "",
   });
 
+  const [isSaving, setIsSaving] = useState(false);
+
   function formatTitleCase(value: string): string {
     let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase()); 
+      .replace(/\b\w/g, (char) => char.toUpperCase());
     return clean;
   }
 
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-  
+
     if (["institutionName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-    
+
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
 
     if (field === "percentage") {
-      cleanValue = value.replace(/[^0-9.%]/g, ""); 
+      cleanValue = value.replace(/[^0-9.%]/g, "");
     }
 
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-  const onlyLetters = /^[A-Za-z ]+$/;   
-  const yearRegex = /^[0-9]{4}$/;        
+  const onlyLetters = /^[A-Za-z ]+$/;
+  const yearRegex = /^[0-9]{4}$/;
   const percentageRegex = /^(100(\.0+)?|[0-9]{1,2}(\.[0-9]+)?)%?$/;
 
 
@@ -300,14 +310,17 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
   };
 
   const saveSecondary = async () => {
+    if (isSaving) return; // prevent double click
+
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
 
-    const now = new Date().toISOString();
+    setIsSaving(true);
 
+    const now = new Date().toISOString();
     const numericPercentage = parseFloat(form.percentage.replace("%", ""));
 
     const payload = {
@@ -319,17 +332,22 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
       updatedAt: now,
     };
 
+    try {
+      console.log("📤 Sending Secondary Payload:", payload);
 
-    console.log("📤 Sending Payload:", payload);
+      const response = await upsertSecondaryEducation(payload);
 
-    const response = await upsertSecondaryEducation(payload);
+      console.log("📥 Secondary Response:", response);
 
-    console.log("📥 Supabase Response:", response);
-
-    if (response.success) {
-      toast.success(response.message ?? "Secondary education saved!");
-    } else {
-      toast.error(response.error ?? "Something went wrong!");
+      if (response.success) {
+        toast.success("Secondary education saved!");
+      } else {
+        toast.error(response.error || "Something went wrong!");
+      }
+    } catch (err) {
+      toast.error("Failed to save. Try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -400,10 +418,12 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
     return clean;
   }
 
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-    
+
     if (field === "specialization") {
       cleanValue = value.replace(/[^A-Za-z& ]/g, "");
     }
@@ -449,8 +469,8 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
 
 
   const onlyLetters = /^[A-Za-z ]+$/;
-  const lettersAndAmp = /^[A-Za-z& ]+$/;  
-  const specializationRegex = /^[A-Za-z& ]+$/;  
+  const lettersAndAmp = /^[A-Za-z& ]+$/;
+  const specializationRegex = /^[A-Za-z& ]+$/;
   const courseTypeRegex = /^[A-Za-z. ]+$/;
   const cgpaRegex = /^(10|[0-9](\.[0-9])?)$/;
   const yearRegex = /^[0-9]{4}$/;
@@ -493,11 +513,15 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
 
 
   const saveUndergraduate = async () => {
+    if (isSaving) return; // prevent multiple clicks
+
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
+
+    setIsSaving(true);
 
     const now = new Date().toISOString();
 
@@ -511,16 +535,22 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
       updatedAt: now,
     };
 
-    console.log(" Undergraduate Payload:", payload);
+    try {
+      console.log("📤 Undergraduate Payload:", payload);
 
-    const response = await upsertUndergraduateEducation(payload);
+      const response = await upsertUndergraduateEducation(payload);
 
-    console.log(" Undergraduate Response:", response);
+      console.log("📥 Undergraduate Response:", response);
 
-    if (response.success) {
-      toast.success("Undergraduate education saved successfully!");
-    } else {
-      toast.error(response.error ?? "Something went wrong!");
+      if (response.success) {
+        toast.success("Undergraduate education saved successfully!");
+      } else {
+        toast.error(response.error || "Something went wrong!");
+      }
+    } catch (err) {
+      toast.error("Failed to save. Try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -555,7 +585,7 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
         onChange={(e) => handleChange("CGPA", e.target.value)}
       />
 
-    
+
       <div className="flex gap-5 w-[85%]">
         <ControlledInput
           label="Start Year"
@@ -598,7 +628,8 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     return clean;
   }
 
-  
+  const [isSaving, setIsSaving] = useState(false);
+
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
@@ -614,12 +645,12 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-  
+
   const onlyLetters = /^[A-Za-z ]+$/;
   const yearRegex = /^[0-9]{4}$/;
 
   const validate = () => {
-  
+
     if (!form.universityName.trim())
       return "University Name is required";
     if (!onlyLetters.test(form.universityName))
@@ -631,19 +662,19 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     if (!onlyLetters.test(form.researchArea))
       return "Research Area must contain only letters";
 
-  
+
     if (!form.supervisorName.trim())
       return "Supervisor Name is required";
     if (!onlyLetters.test(form.supervisorName))
       return "Supervisor Name must contain only letters";
 
-  
+
     if (!form.startYear.trim())
       return "Start Year is required";
     if (!yearRegex.test(form.startYear))
       return "Start Year must be exactly 4 digits";
 
-    
+
     if (!form.endYear.trim())
       return "End Year is required";
     if (!yearRegex.test(form.endYear))
@@ -655,13 +686,17 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     return null;
   };
 
-  
+
   const savePhd = async () => {
+    if (isSaving) return; // prevent double click
+
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
+
+    setIsSaving(true);
 
     const now = new Date().toISOString();
 
@@ -674,16 +709,22 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
       updatedAt: now,
     };
 
-    console.log(" PhD Payload:", payload);
+    try {
+      console.log("📤 PhD Payload:", payload);
 
-    const response = await upsertPhdEducation(payload);
+      const response = await upsertPhdEducation(payload);
 
-    console.log(" Supabase Response:", response);
+      console.log("📥 PhD Response:", response);
 
-    if (response.success) {
-      toast.success("PhD education saved successfully!");
-    } else {
-      toast.error(response.error ?? "Something went wrong!");
+      if (response.success) {
+        toast.success("PhD education saved successfully!");
+      } else {
+        toast.error(response.error || "Something went wrong!");
+      }
+    } catch (err) {
+      toast.error("Failed to save. Try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -692,7 +733,7 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     onSaveRef.current = savePhd;
   }, [form]);
 
- 
+
   return (
     <div className="space-y-4">
       <ControlledInput
