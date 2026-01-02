@@ -15,7 +15,7 @@ import EmailModal from "../modals/EmailModal";
 import AnnouncementModal from "../modals/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
-import { useStudent } from "@/app/utils/context/UserContext";
+import { useUser } from "@/app/utils/context/UserContext";
 
 
 
@@ -30,7 +30,7 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { userId } = useStudent();
+  const { userId, fullName } = useUser();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -123,7 +123,7 @@ export default function Header() {
             </div>
             <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
               <div className="flex items-center justify-between w-full bg-gray-00">
-                <p className="text-sm text-[#ffffff]">Firstname</p>
+                <p className="text-sm text-[#ffffff]">{fullName}</p>
                 <CaretDown
                   size={20}
                   weight="bold"

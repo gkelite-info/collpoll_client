@@ -1,5 +1,5 @@
+import { clearTokens } from "@/app/utils/context/tokenStorage";
 import { supabase } from "@/lib/supabaseClient";
-import { clearTokens } from "./tokenStorage";
 
 export async function logoutUser() {
   try {

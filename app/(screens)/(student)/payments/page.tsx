@@ -147,7 +147,6 @@ const mockTransactions: Transaction[] = [
   },
 ];
 
-// --- MAIN PAGE COMPONENT ---
 const Page = () => {
   const [activeTab, setActiveTab] = useState<
     "academic" | "additional" | "history"
@@ -161,7 +160,7 @@ const Page = () => {
 
   return (
     <section className="min-h-screen p-4 lg:p-6 bg-[#F5F5F7]">
-      <div className="mx-auto max-w-6xl">
+      <div className="bg-red-400 mx-auto max-w-6xl">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="max-w-3xl">
             <h1 className="text-[#282828] font-bold text-[28px] mb-1">

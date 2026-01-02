@@ -5,7 +5,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Trash } from "@phosphor-icons/react";
 import { addEmployment, updateEmployment, deleteEmployment } from "@/lib/helpers/profile/employment";
-import ConfirmDeleteModal from "@/lib/helpers/ConfirmDeleteModal";
+import ConfirmDeleteModal from "@/app/components/modals/ConfirmDeleteModal";
 
 export default function EmploymentForm({
     index,

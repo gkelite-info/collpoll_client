@@ -1,3 +1,4 @@
+import { setTokens } from "@/app/utils/context/tokenStorage";
 import { supabase } from "@/lib/supabaseClient";
 
 export async function loginUser(email: string, password: string) {
@@ -19,6 +20,12 @@ export async function loginUser(email: string, password: string) {
       return { success: false, error: "Login failed: No session returned" };
     }
 
+    setTokens({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+      expires_in: session.expires_in,
+    });
+
     const auth_id = user?.id;
 
     const { data: profile, error } = await supabase
@@ -33,11 +40,6 @@ export async function loginUser(email: string, password: string) {
     return {
       success: true,
       user: profile,
-      tokens: {
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-        expires_in: session.expires_in,
-      },
     };
 
   } catch (err: any) {
