@@ -159,7 +159,7 @@ export default function AttendanceClient() {
 
                             <div className="flex gap-4 flex-wrap">
                                 {cards.map((card, index) => (
-                                    <div key={card.id} onClick={() => handleCardClick(card.id)}>
+                                    <div key={card.id}>
                                         <CardComponent
                                             key={index}
                                             style={card.style}
@@ -170,6 +170,7 @@ export default function AttendanceClient() {
                                             iconColor={card.iconColor}
                                             underlineValue={card.underlineValue}
                                             totalPercentage={card.totalPercentage}
+                                            onClick={() => handleCardClick(card.id)}
                                         />
                                     </div>
                                 ))}

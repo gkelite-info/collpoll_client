@@ -4,7 +4,8 @@ import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
+import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface CardItem {
@@ -56,6 +57,8 @@ export default function SubjectAttendanceDetails() {
   const [activeView, setActiveView] = useState<"table" | "present" | "absent">(
     "table"
   );
+
+  const router = useRouter()
 
   const cards: CardItem[] = [
     {
@@ -254,11 +257,20 @@ export default function SubjectAttendanceDetails() {
     },
   ];
 
+  const handleBack = () => {
+    router.push("/attendance?tab=subject-attendance")
+  }
+
   return (
     <div className="flex flex-col pb-3">
       <div className="flex justify-between items-center">
         <div className="flex flex-col w-[50%]">
-          <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
+          <div className="flex gap-0 items-center">
+            <button onClick={handleBack} className="cursor-pointer">
+              <CaretLeft size={23} className="cursor-pointer -ml-1.5" />
+            </button>
+            <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
+          </div>
           <p className="text-[#282828]">
             Track, Manage, and Maintain Your Attendance Effortlessly
           </p>
