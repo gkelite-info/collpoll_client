@@ -4,6 +4,7 @@ import ProfileDrawer from "./ProfileDrawer";
 import TermsModal from "./TermsAndConditions";
 import ProfileQuickMenu from "./ProfileQuickMenu";
 import { useRouter } from "next/navigation";
+import { useUser } from "../utils/context/UserContext";
 
 export default function ProfileWrapper({
     openProfile,
@@ -14,7 +15,7 @@ export default function ProfileWrapper({
 }) {
     const [isTermsOpen, setIsTermsOpen] = useState(false);
     const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
-    const router = useRouter()
+    const router = useRouter();
 
     const closeAllAndNavigate = (url: string) => {
         setIsTermsOpen(false);

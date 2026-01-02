@@ -2,7 +2,10 @@
 import { CaretRight, CaretDown, SignOut, ArrowLeft, PencilSimple, EnvelopeSimple, Phone, Headset, Key, Palette, ClipboardText } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useStudent } from "../utils/context/UserContext";
+import { useUser } from "../utils/context/UserContext";
+import ConfirmLogoutModal from "../components/modals/logoutModal";
+import { logoutUser } from "@/lib/helpers/logoutUser";
+import toast from "react-hot-toast";
 
 type Props = {
     open: boolean;
@@ -22,8 +25,9 @@ interface ProfileOptions {
 
 export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu, }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { userId } = useStudent();
+    const { userId, fullName, mobile, email } = useUser();
 
     const profileOptions: ProfileOptions[] = [
         { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: onOpenTerms, },
@@ -39,6 +43,18 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
 
     if (!open) return null;
 
+    const handleLogout = async () => {
+        const res = await logoutUser();
+
+        if (res.success) {
+            setShowLogoutModal(false);
+            onClose();
+            router.replace("/login");
+        } else {
+            toast.error("Logout failed. Please try again.")
+        }
+    }
+
     return (
         <>
             <div
@@ -51,9 +67,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                     <button onClick={onClose} className="cursor-pointer text-[#282828]">
                         <ArrowLeft size={22} />
                     </button>
-                    <button className="cursor-pointer text-[#282828]">
+                    {/* <button className="cursor-pointer text-[#282828]">
                         <PencilSimple size={22} />
-                    </button>
+                    </button> */}
                 </div>
                 <h2 className="text-base font-medium pl-4 text-[#282828]">Profile</h2>
                 <div className="m-4 p-4 rounded-xl bg-[#43C17A26] flex gap-3 items-center">
@@ -65,7 +81,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
 
                     <div className="flex-1">
                         <div className="flex items-center justify-between">
-                            <p className="font-semibold text-md text-[#282828]">Shravani Reddy</p>
+                            <p className="font-semibold text-md text-[#282828]">{fullName}</p>
                             <div className="flex gap-2 items-center">
                                 <span className="text-xs text-[#282828]">ID - {userId}</span>
                                 <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
@@ -78,11 +94,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         <div className="flex gap-3 flex-wrap">
                             <div className="flex items-center gap-2 mt-2">
                                 <EnvelopeSimple size={22} className="bg-[#43C17A] rounded-full p-1 text-white" />
-                                <span className="text-xs text-[#282828]">shravaniredyy@gmail.com</span>
+                                <span className="text-xs text-[#282828]">{email}</span>
                             </div>
                             <div className="flex items-center gap-2 mt-2">
                                 <Phone size={22} className="bg-[#43C17A] rounded-full p-1 text-white" />
-                                <span className="text-xs text-[#282828]">9012345678</span>
+                                <span className="text-xs text-[#282828]">{mobile}</span>
                             </div>
                         </div>
                     </div>
@@ -140,14 +156,25 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         )
                     )}
 
-
                     <div className="px-4.5 py-4">
-                        <button className="flex items-center gap-2 text-[#EB0000] font-medium cursor-pointer text-sm">
+                        <button
+                            onClick={() => setShowLogoutModal(true)}
+                            className="flex items-center gap-2 text-[#EB0000] font-medium cursor-pointer text-sm"
+                        >
                             <SignOut size={30} className="rounded-full bg-[#EB00001A] text-[#EB0000] p-1.5" />
                             Log Out
                         </button>
                     </div>
                 </div>
+                {showLogoutModal && (
+                    <ConfirmLogoutModal
+                        onCancel={() => setShowLogoutModal(false)}
+                        onConfirm={() => {
+                            handleLogout();
+                        }}
+                    />
+                )}
+
             </div>
         </>
     );
