@@ -49,6 +49,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
         if (res.success) {
             setShowLogoutModal(false);
             onClose();
+            toast.success("Loggedout successfully");
             router.replace("/login");
         } else {
             toast.error("Logout failed. Please try again.")
