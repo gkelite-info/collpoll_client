@@ -5,18 +5,8 @@ import { FaAngleRight, FaAngleLeft } from "react-icons/fa6";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
 ];
 
 type Gradient = { from: string; to: string };
@@ -27,19 +17,16 @@ export default function WorkWeekCalendar({
   style?: string;
 }) {
   const today = new Date();
+
+  const [selectedDate, setSelectedDate] = useState<Date>(today);
+
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [selectedDate, setSelectedDate] = useState<number | null>(
-    today.getDate()
-  );
 
   const [monthOpen, setMonthOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
 
-  const [weekStart, setWeekStart] = useState<number>(1);
-
   const activeGradient: Gradient = { from: "#7ADAA4", to: "#FEFEFE" };
-
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,33 +43,37 @@ export default function WorkWeekCalendar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const dayOfWeek = today.getDay();
-    let mondayDate = today.getDate();
-    if (dayOfWeek === 0) mondayDate -= 6;
-    else if (dayOfWeek >= 1) mondayDate -= dayOfWeek - 1;
-    setWeekStart(mondayDate > 0 ? mondayDate : 1);
-  }, []);
+  const getMonday = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d;
+  };
 
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const allWorkDays: number[] = [];
-  for (let i = 1; i <= daysInMonth; i++) {
-    const day = new Date(currentYear, currentMonth, i).getDay();
-    if (day >= 1 && day <= 6) allWorkDays.push(i);
+  const weekStartDate = getMonday(selectedDate);
+  const weekDays: Date[] = [];
+
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(weekStartDate);
+    d.setDate(weekStartDate.getDate() + i);
+    weekDays.push(d);
   }
 
-  const weekIndex = allWorkDays.indexOf(weekStart);
-  const weekDays = allWorkDays.slice(weekIndex, weekIndex + 6);
-
   const prevWeek = () => {
-    const newStart = allWorkDays[Math.max(0, weekIndex - 6)] || allWorkDays[0];
-    setWeekStart(newStart);
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() - 7);
+    setSelectedDate(d);
+    setCurrentMonth(d.getMonth());
+    setCurrentYear(d.getFullYear());
   };
+
   const nextWeek = () => {
-    const newStart =
-      allWorkDays[Math.min(allWorkDays.length - 6, weekIndex + 6)] ||
-      allWorkDays[allWorkDays.length - 6];
-    setWeekStart(newStart);
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + 7);
+    setSelectedDate(d);
+    setCurrentMonth(d.getMonth());
+    setCurrentYear(d.getFullYear());
   };
 
   const years = Array.from(
@@ -95,7 +86,7 @@ export default function WorkWeekCalendar({
       ref={containerRef}
       className={`max-w-sm p-4 bg-white rounded-lg shadow-md text-black relative h-[170px] flex flex-col justify-center gap-5 ${style}`}
     >
-      <div className="flex justify-between items-center mb-2 relative bg-yellow-00">
+      <div className="flex justify-between items-center mb-2 relative">
         <div className="flex w-[85%]">
           <div className="relative">
             <button
@@ -113,9 +104,11 @@ export default function WorkWeekCalendar({
                   <div
                     key={month}
                     onClick={() => {
+                      const d = new Date(selectedDate);
+                      d.setMonth(index);
+                      setSelectedDate(d);
                       setCurrentMonth(index);
                       setMonthOpen(false);
-                      setWeekStart(1);
                     }}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
@@ -142,9 +135,11 @@ export default function WorkWeekCalendar({
                   <div
                     key={year}
                     onClick={() => {
+                      const d = new Date(selectedDate);
+                      d.setFullYear(year);
+                      setSelectedDate(d);
                       setCurrentYear(year);
                       setYearOpen(false);
-                      setWeekStart(1);
                     }}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
@@ -157,31 +152,22 @@ export default function WorkWeekCalendar({
         </div>
 
         <div className="flex w-[15%] justify-between">
-          <FaAngleLeft
-            size={12}
-            className="cursor-pointer"
-            onClick={prevWeek}
-          />
-          <FaAngleRight
-            size={12}
-            className="cursor-pointer"
-            onClick={nextWeek}
-          />
+          <FaAngleLeft size={12} className="cursor-pointer" onClick={prevWeek} />
+          <FaAngleRight size={12} className="cursor-pointer" onClick={nextWeek} />
         </div>
       </div>
 
-      <div className="grid grid-cols-6 text-center text-xs font-medium gap-1 bg-pink-00">
+      <div className="grid grid-cols-6 text-center text-xs font-medium gap-1">
         {weekdays.map((day, idx) => {
-          const numericDate = weekDays[idx];
-          const isActive = numericDate === selectedDate;
+          const dateObj = weekDays[idx];
+          const isActive =
+            dateObj.toDateString() === selectedDate.toDateString();
           const isSaturday = day === "Sat";
 
           return (
             <div
               key={day}
-              onClick={() =>
-                !isSaturday && numericDate ? setSelectedDate(numericDate) : null
-              }
+              onClick={() => !isSaturday && setSelectedDate(dateObj)}
               className="flex flex-col items-center justify-center gap-2 h-16 rounded cursor-pointer"
               style={
                 isActive
@@ -200,11 +186,11 @@ export default function WorkWeekCalendar({
                   style={{ backgroundColor: "#43C17A" }}
                 >
                   <span className="text-sm font-semibold text-white">
-                    {numericDate}
+                    {dateObj.getDate()}
                   </span>
                 </div>
               ) : (
-                <span className="text-sm">{numericDate}</span>
+                <span className="text-sm">{dateObj.getDate()}</span>
               )}
             </div>
           );

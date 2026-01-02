@@ -42,7 +42,7 @@ export default function CardComponent({
     <div
       onClick={handleClick}
       className={`rounded-lg p-3 h-32 ${style} flex flex-col justify-between shadow-sm 
-        ${to ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
+        ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
       <div className="flex items-center justify-between gap-3 mb-2">
         <div

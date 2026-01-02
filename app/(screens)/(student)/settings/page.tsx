@@ -6,7 +6,9 @@ export default function StudentSettings() {
 
   return (
     <Suspense fallback={<div className="p-4">Loading settings...</div>}>
-      <SettingsClient />
+      <div className="w-[82vw]">
+        <SettingsClient />
+      </div>
     </Suspense>
   );
 }

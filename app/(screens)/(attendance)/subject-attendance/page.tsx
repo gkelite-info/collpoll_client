@@ -209,6 +209,12 @@ export default function SubjectAttendance() {
     },
   ];
 
+  const handleCardClick = (cardId: number) => {
+    if (cardId === 1) {
+      router.push("/attendance");
+    }
+  };
+
   return (
     <>
       <div className="flex flex-col pb-3">
@@ -239,6 +245,7 @@ export default function SubjectAttendance() {
               iconColor={card.iconColor}
               underlineValue={card.underlineValue}
               totalPercentage={card.totalPercentage}
+              onClick={() => handleCardClick(card.id)}
             />
           ))}
 
