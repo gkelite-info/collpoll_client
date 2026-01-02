@@ -9,6 +9,7 @@ import ViewDetailModal from "../modal/viewDetail";
 import UploadModal from "../modal/uploadModal";
 
 export type CardProp = {
+     assignmentId: number | string;
     image: string;
     title: string;
     description: string;
