@@ -21,12 +21,8 @@ export const upsertUser = async (payload: any) => {
     const { data, error } = await supabase
       .from("users")
       .upsert(
-<<<<<<< Updated upstream
         {
           auth_id,
-=======
-        {       
->>>>>>> Stashed changes
           fullName,
           mobile,
           email,
@@ -36,7 +32,7 @@ export const upsertUser = async (payload: any) => {
           updatedAt: now,
           createdAt: now,
         },
-        { onConflict: "auth_id" }   // 👈 IMPORTANT
+        { onConflict: "auth_id" }
       )
       .select()
       .single();

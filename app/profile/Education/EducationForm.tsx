@@ -45,33 +45,30 @@ export default function EducationForm({
         </button>
       </div>
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-    
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
-      {type === "primary" && (
-        <PrimaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
-      )}
-      {type === "secondary" && (
-        <SecondaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
-      )}
-      {type === "undergraduate" && (
-        <UndergraduateFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
-      )}
-      {type === "phd" && (
-        <PhdFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
-      )}
+      {
+        type === "primary" && (
+          <PrimaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
+        )
+      }
+      {
+        type === "secondary" && (
+          <SecondaryFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
+        )
+      }
+      {
+        type === "undergraduate" && (
+          <UndergraduateFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
+        )
+      }
+      {
+        type === "phd" && (
+          <PhdFields studentId={defaultStudentId} onSaveRef={onSaveRef} />
+        )
+      }
     </>
   );
 }
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-=======
-
-
-
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 function ControlledInput({
   label,
   value,
@@ -107,17 +104,10 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   const [isSaving, setIsSaving] = useState(false);
 
   function formatTitleCase(value: string): string {
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
     let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
       .replace(/\b\w/g, (char) => char.toUpperCase());
-=======
-    let clean = value.replace(/[^A-Za-z ]/g, ""); 
-    clean = clean
-      .toLowerCase()
-      .replace(/\b\w/g, (char) => char.toUpperCase()); 
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     return clean;
   }
 
@@ -125,20 +115,10 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (["schoolName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
@@ -148,13 +128,8 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
 
 
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
   const onlyLetters = /^[A-Za-z ]+$/;
   const yearRegex = /^[0-9]{4}$/;
-=======
-  const onlyLetters = /^[A-Za-z ]+$/;   
-  const yearRegex = /^[0-9]{4}$/;        
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 
   const validate = () => {
     if (!form.schoolName.trim())
@@ -204,7 +179,6 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
       updatedAt: now,
     };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
     try {
       const response = await upsertPrimaryEducation(payload);
 
@@ -217,18 +191,6 @@ function PrimaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRef:
       toast.error("Failed to save. Try again.");
     } finally {
       setIsSaving(false);
-=======
-    console.log(" Sending Payload:", payload);
-
-    const response = await upsertPrimaryEducation(payload);
-
-    console.log(" Supabase Response:", response);
-
-    if (response.success) {
-      toast.success(response.message ?? "Primary education saved!");
-    } else {
-      toast.error(response.error ?? "Something went wrong!");
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     }
   };
 
@@ -291,53 +253,30 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
     let clean = value.replace(/[^A-Za-z ]/g, "");
     clean = clean
       .toLowerCase()
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
       .replace(/\b\w/g, (char) => char.toUpperCase());
-=======
-      .replace(/\b\w/g, (char) => char.toUpperCase()); 
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     return clean;
   }
 
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (["institutionName", "board", "mediumOfStudy", "location"].includes(field)) {
       cleanValue = formatTitleCase(value);
     }
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-    
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (field === "yearOfPassing") {
       cleanValue = value.replace(/\D/g, "").slice(0, 4);
     }
 
     if (field === "percentage") {
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
       cleanValue = value.replace(/[^0-9.%]/g, "");
-=======
-      cleanValue = value.replace(/[^0-9.%]/g, ""); 
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     }
 
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
   const onlyLetters = /^[A-Za-z ]+$/;
   const yearRegex = /^[0-9]{4}$/;
-=======
-  const onlyLetters = /^[A-Za-z ]+$/;   
-  const yearRegex = /^[0-9]{4}$/;        
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   const percentageRegex = /^(100(\.0+)?|[0-9]{1,2}(\.[0-9]+)?)%?$/;
 
 
@@ -487,11 +426,6 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-    
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (field === "specialization") {
       cleanValue = value.replace(/[^A-Za-z& ]/g, "");
     }
@@ -537,13 +471,8 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
 
 
   const onlyLetters = /^[A-Za-z ]+$/;
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
   const lettersAndAmp = /^[A-Za-z& ]+$/;
   const specializationRegex = /^[A-Za-z& ]+$/;
-=======
-  const lettersAndAmp = /^[A-Za-z& ]+$/;  
-  const specializationRegex = /^[A-Za-z& ]+$/;  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   const courseTypeRegex = /^[A-Za-z. ]+$/;
   const cgpaRegex = /^(10|[0-9](\.[0-9])?)$/;
   const yearRegex = /^[0-9]{4}$/;
@@ -608,20 +537,12 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
       updatedAt: now,
     };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
     try {
       console.log("📤 Undergraduate Payload:", payload);
-=======
-    console.log(" Undergraduate Payload:", payload);
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 
       const response = await upsertUndergraduateEducation(payload);
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
       console.log("📥 Undergraduate Response:", response);
-=======
-    console.log(" Undergraduate Response:", response);
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 
       if (response.success) {
         toast.success("Undergraduate education saved successfully!");
@@ -666,11 +587,6 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
         onChange={(e) => handleChange("CGPA", e.target.value)}
       />
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-    
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
       <div className="flex gap-5 w-[85%]">
         <ControlledInput
           label="Start Year"
@@ -690,7 +606,7 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
         value={form.courseType}
         onChange={(e) => handleChange("courseType", e.target.value)}
       />
-    </div>
+    </div >
   );
 }
 
@@ -713,12 +629,8 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     return clean;
   }
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
   const [isSaving, setIsSaving] = useState(false);
 
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   const handleChange = (field: string, value: string) => {
     let cleanValue = value;
 
@@ -734,20 +646,10 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     setForm((prev) => ({ ...prev, [field]: cleanValue }));
   };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   const onlyLetters = /^[A-Za-z ]+$/;
   const yearRegex = /^[0-9]{4}$/;
 
   const validate = () => {
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (!form.universityName.trim())
       return "University Name is required";
     if (!onlyLetters.test(form.universityName))
@@ -759,31 +661,16 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     if (!onlyLetters.test(form.researchArea))
       return "Research Area must contain only letters";
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (!form.supervisorName.trim())
       return "Supervisor Name is required";
     if (!onlyLetters.test(form.supervisorName))
       return "Supervisor Name must contain only letters";
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (!form.startYear.trim())
       return "Start Year is required";
     if (!yearRegex.test(form.startYear))
       return "Start Year must be exactly 4 digits";
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-    
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
     if (!form.endYear.trim())
       return "End Year is required";
     if (!yearRegex.test(form.endYear))
@@ -795,11 +682,6 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     return null;
   };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
-  
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   const savePhd = async () => {
     if (isSaving) return; // prevent double click
 
@@ -822,20 +704,12 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
       updatedAt: now,
     };
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
     try {
       console.log("📤 PhD Payload:", payload);
-=======
-    console.log(" PhD Payload:", payload);
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 
       const response = await upsertPhdEducation(payload);
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
       console.log("📥 PhD Response:", response);
-=======
-    console.log(" Supabase Response:", response);
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
 
       if (response.success) {
         toast.success("PhD education saved successfully!");
@@ -854,11 +728,6 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     onSaveRef.current = savePhd;
   }, [form]);
 
-<<<<<<< Updated upstream:app/profile/Education/EducationForm.tsx
-
-=======
- 
->>>>>>> Stashed changes:app/(screens)/profile/Education/EducationForm.tsx
   return (
     <div className="space-y-4">
       <ControlledInput
