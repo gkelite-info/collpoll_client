@@ -1,5 +1,5 @@
-import AssignmentsLeft from "../../(student)/assignments/left";
-import AssignmentsRight from "../../(student)/assignments/right";
+import AssignmentsLeft from "./components/left";
+import AssignmentsRight from "./components/right";
 
 
 export default function Page() {

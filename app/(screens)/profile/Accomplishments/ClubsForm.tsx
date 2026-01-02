@@ -1,5 +1,5 @@
-import { Input, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
+import { Input, Select, TextArea } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 import { upsertClubCommittee } from "@/lib/helpers/upsertClubCommittee";
 
@@ -18,25 +18,6 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         description: "",
     });
 
-    const [loading, setLoading] = useState(false);
-
-
-    // Convert YYYY-MM-DD → DD-MM-YYYY
-    const toDDMMYYYY = (iso: string) => {
-        if (!iso) return "";
-        const [year, month, day] = iso.split("-");
-        return `${day}-${month}-${year}`;
-    };
-
-    // Convert DD-MM-YYYY → YYYY-MM-DD
-    const toISO = (ddmmyyyy: string) => {
-        if (!ddmmyyyy) return "";
-        const [day, month, year] = ddmmyyyy.split("-");
-        return `${year}-${month}-${day}`;
-    };
-
-    const todayISO = new Date().toISOString().split("T")[0];
-
     const handleChange = (e: any) => {
         const { name, value } = e.target;
 
@@ -47,8 +28,19 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         }
 
         if (name === "fromDate" || name === "toDate") {
-            const ddmmyyyy = toDDMMYYYY(value);
-            setForm({ ...form, [name]: ddmmyyyy });
+            let cleaned = value.replace(/[^0-9]/g, ""); 
+
+            if (cleaned.length >= 5) {
+                cleaned = cleaned.replace(
+                    /(\d{2})(\d{2})(\d{0,4})/,
+                    "$1/$2/$3"
+                );
+            } else if (cleaned.length >= 3) {
+                cleaned = cleaned.replace(/(\d{2})(\d{1,2})/, "$1/$2");
+            }
+
+            cleaned = cleaned.slice(0, 10);
+            setForm({ ...form, [name]: cleaned });
             return;
         }
 
@@ -74,21 +66,28 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         if (!onlyLetters.test(form.clubName))
             return "Club/Committee Name should only contain letters and spaces";
 
-
+      
         if (!form.role.trim())
             return "Role/Position Held is required";
 
         if (!onlyLetters.test(form.role))
             return "Role/Position Held should only contain letters and spaces";
 
+       
+        if (!form.fromDate.trim())
+            return "From Date is required";
 
-        if (!form.fromDate.trim()) return "From Date is required";
-        if (!dateRegex.test(form.fromDate)) return "From Date must be DD-MM-YYYY";
+        if (!dateRegex.test(form.fromDate))
+            return "From Date must be in DD/MM/YYYY format";
 
-        if (!form.toDate.trim()) return "To Date is required";
-        if (!dateRegex.test(form.toDate)) return "To Date must be DD-MM-YYYY";
+      
+        if (!form.toDate.trim())
+            return "To Date is required";
 
+        if (!dateRegex.test(form.toDate))
+            return "To Date must be in DD/MM/YYYY format";
 
+      
         const convert = (d: string) => {
             const [dd, mm, yyyy] = d.split("/").map(Number);
             return new Date(yyyy, mm - 1, dd);
@@ -118,39 +117,32 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
         return null;
     };
 
-
+  
     const saveCommittee = async () => {
         const error = validateCommittee();
         if (error) return toast.error(error);
 
-        setLoading(true); // 🔒 Disable button & prevent double click
+        const payload = {
+            clubcommiteeId: undefined,
+            studentId,
+            clubName: form.clubName,
+            role: form.role,
+            fromDate: form.fromDate,
+            toDate: form.toDate,
+            description: form.description,
+        };
 
-        try {
-            const payload = {
-                clubcommiteeId: undefined,
-                studentId,
-                clubName: form.clubName,
-                role: form.role,
-                fromDate: form.fromDate,
-                toDate: form.toDate,
-                description: form.description,
-            };
+        console.log(" CLUB PAYLOAD:", payload);
 
-            const response = await upsertClubCommittee(payload);
+        const response = await upsertClubCommittee(payload);
 
-            if (response.success) {
-                toast.success(`Club/Committee ${index + 1} saved successfully`);
-                onSubmit(); // inform parent
-            } else {
-                toast.error(response.error || "Something went wrong!");
-            }
-        } catch (err) {
-            toast.error("Something went wrong!");
-        } finally {
-            setLoading(false); // 🔓 Re-enable button
+        if (response.success) {
+            toast.success(`Club/Committee ${index + 1} saved successfully`);
+            onSubmit();
+        } else {
+            toast.error(response.error || "Something went wrong!");
         }
     };
-
 
 
     const handleSubmit = () => {
@@ -175,20 +167,17 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
                         <Input
                             label="From"
                             name="fromDate"
-                            type="date"
-                            value={form.fromDate ? toISO(form.fromDate) : ""}
+                            value={form.fromDate}
                             onChange={handleChange}
-                            max={todayISO}
+                            placeholder="01/10/2024"
                         />
 
                         <Input
                             label="To"
                             name="toDate"
-                            type="date"
-                            value={form.toDate ? toISO(form.toDate) : ""}
+                            value={form.toDate}
                             onChange={handleChange}
-                            min={form.fromDate ? toISO(form.fromDate) : undefined}
-                            max={todayISO}
+                            placeholder="01/11/2024"
                         />
 
                     </div>
@@ -205,14 +194,10 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
                     <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={loading}
-                        className={`px-6 py-2 rounded-md text-sm font-medium text-white
-        ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
-    `}
+                        className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
                     >
-                        {loading ? "Saving..." : "Submit"}
+                        Submit
                     </button>
-
                 </div>
             </div>
         </div>

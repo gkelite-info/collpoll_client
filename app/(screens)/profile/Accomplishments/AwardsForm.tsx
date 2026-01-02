@@ -1,5 +1,5 @@
-import { Input, Select, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
+import { Input, Select, TextArea } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 import { upsertAward } from "@/lib/helpers/upsertAward";
 
@@ -18,11 +18,7 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         description: "",
     });
 
-    const [loading, setLoading] = useState(false);
-
     const handleChange = (e: any) => {
-
-
         const { name, value } = e.target;
 
         if (name === "awardName" || name === "issuedBy") {
@@ -32,12 +28,19 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         }
 
         if (name === "dateReceived") {
-            const iso = value; // YYYY-MM-DD from <input type="date">
-            const converted = toDDMMYYYY(iso);
-            setForm({ ...form, dateReceived: converted });
+            let cleaned = value.replace(/[^0-9]/g, ""); // only numbers
+
+            // Auto insert slashes DD/MM/YYYY
+            if (cleaned.length >= 5) {
+                cleaned = cleaned.replace(/(\d{2})(\d{2})(\d{0,4})/, "$1/$2/$3");
+            } else if (cleaned.length >= 3) {
+                cleaned = cleaned.replace(/(\d{2})(\d{1,2})/, "$1/$2");
+            }
+
+            cleaned = cleaned.slice(0, 10); // limit DD/MM/YYYY
+            setForm({ ...form, dateReceived: cleaned });
             return;
         }
-
 
         if (name === "category") {
             const allowed = ["Hackathon", "Academic", "Sports", "Other"];
@@ -56,19 +59,6 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         setForm({ ...form, [name]: value });
     };
 
-    // Convert YYYY-MM-DD → DD-MM-YYYY
-    const toDDMMYYYY = (iso: string) => {
-        if (!iso) return "";
-        const [year, month, day] = iso.split("-");
-        return `${day}-${month}-${year}`;
-    };
-
-    // Convert DD-MM-YYYY → YYYY-MM-DD
-    const toISO = (ddmmyyyy: string) => {
-        if (!ddmmyyyy) return "";
-        const [day, month, year] = ddmmyyyy.split("-");
-        return `${year}-${month}-${day}`;
-    };
 
     const validateAwards = () => {
         const onlyLettersRegex = /^[A-Za-z ]+$/;
@@ -86,7 +76,7 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         if (!onlyLettersRegex.test(form.issuedBy))
             return "Issued By should contain only letters and spaces";
 
-        const dateRegex = /^([0-2][0-9]|3[0-1])-(0[1-9]|1[0-2])-[0-9]{4}$/;
+        const dateRegex =   /^([0-2][0-9]|3[0-1])\/(0[1-9]|1[0-2])\/[0-9]{4}$/;
         if (!form.dateReceived.trim())
             return "Date Received is required";
 
@@ -110,39 +100,31 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         return null;
     };
 
-    // ⭐ Updated saveAward with loading features
     const saveAward = async () => {
         const error = validateAwards();
         if (error) return toast.error(error);
 
-        setLoading(true);
+        const payload = {
+            awardId: undefined,
+            studentId,
+            awardName: form.awardName,
+            issuedBy: form.issuedBy,
+            dateReceived: form.dateReceived, 
+            category: form.category,
+            description: form.description,
+        };
 
-        try {
-            const payload = {
-                awardId: undefined,
-                studentId,
-                awardName: form.awardName,
-                issuedBy: form.issuedBy,
-                dateReceived: form.dateReceived,
-                category: form.category,
-                description: form.description,
-            };
+        console.log(" Award Payload:", payload);
 
-            const response = await upsertAward(payload);
+        const response = await upsertAward(payload);
 
-            if (response.success) {
-                toast.success(`Award ${index + 1} submitted successfully`);
-                onSubmit();
-            } else {
-                toast.error(response.error || "Something went wrong!");
-            }
-        } catch (err) {
-            toast.error("Something went wrong!");
-        } finally {
-            setLoading(false);
+        if (response.success) {
+            toast.success(`Award ${index + 1} submitted successfully`);
+            onSubmit();
+        } else {
+            toast.error(response.error || "Something went wrong!");
         }
     };
-
 
     const handleSubmit = () => {
         const error = validateAwards();
@@ -157,7 +139,7 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 text-[#282828] gap-8">
 
-
+             
                 <Input
                     label="Award Name"
                     name="awardName"
@@ -166,7 +148,7 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
                     placeholder="Best Coder Award"
                 />
 
-
+              
                 <Input
                     label="Issued By"
                     name="issuedBy"
@@ -175,18 +157,16 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
                     placeholder="Google Developer Student Club"
                 />
 
-
+              
                 <Input
                     label="Date Received"
                     name="dateReceived"
-                    type="date"
-                    value={form.dateReceived ? toISO(form.dateReceived) : ""}
+                    value={form.dateReceived}
                     onChange={handleChange}
-                    max={new Date().toISOString().split("T")[0]}  // cannot pick future dates
+                    placeholder="DD/MM/YYYY"
                 />
 
-
-
+             
                 <Select
                     label="Category (Optional)"
                     name="category"
@@ -195,7 +175,7 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
                     onChange={handleChange}
                 />
 
-
+             
                 <TextArea
                     label="Description"
                     name="description"
@@ -203,20 +183,15 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
                     onChange={handleChange}
                     placeholder="Describe your achievement..."
                 />
-
-                <div className="md:col-span-2 flex justify-end">
-                   // ⭐ Updated Submit Button
+                
+       <div className="md:col-span-2 flex justify-end">
                     <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={loading}
-                        className={`px-6 py-2 rounded-md text-sm font-medium text-white
-        ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
-    `}
+                        className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
                     >
-                        {loading ? "Saving..." : "Submit"}
+                        Submit
                     </button>
-
                 </div>
 
             </div>

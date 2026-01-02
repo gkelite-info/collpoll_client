@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
+import { Input } from "../../../utils/ReusableComponents";
 import toast from "react-hot-toast";
 import { upsertCertification } from "@/lib/helpers/upsertCertification";
 import { X, UploadSimple } from "@phosphor-icons/react";
 import { useRef } from "react";
-import { Input } from "@/app/utils/ReusableComponents";
 
 interface CertificationsProps {
   index: number;
@@ -13,7 +13,7 @@ interface CertificationsProps {
 
 function CertificateUpload({ form, setForm }: any) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
- 
+
   const handleFileSelect = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -95,7 +95,7 @@ function CertificateUpload({ form, setForm }: any) {
       </button>
     </div>
   );
-
+  
 }
 
 export default function CertificationsForm({
@@ -111,24 +111,6 @@ export default function CertificationsForm({
     startDate: "",
     endDate: "",
   });
-
-   const [loading, setLoading] = useState(false);
-
-  const toDDMMYYYY = (iso: string) => {
-    if (!iso) return "";
-    const [year, month, day] = iso.split("-");
-    return `${day}-${month}-${year}`;
-  };
-
-  const toISO = (ddmmyyyy: string) => {
-    if (!ddmmyyyy) return "";
-    const [day, month, year] = ddmmyyyy.split("-");
-    return `${year}-${month}-${day}`;
-  };
-
-
-  const today = new Date().toISOString().split("T")[0];
-
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
@@ -150,17 +132,22 @@ export default function CertificationsForm({
       setForm({ ...form, link: cleaned });
       return;
     }
+
     if (name === "startDate" || name === "endDate") {
-      // Convert YYYY-MM-DD → DD-MM-YYYY
-      const converted = toDDMMYYYY(value);
-      setForm({ ...form, [name]: converted });
+      let cleaned = value.replace(/-/g, "/").replace(/[^0-9/]/g, "");
+
+      if (cleaned.length === 8 && !cleaned.includes("/")) {
+        cleaned = cleaned.replace(/(\d{2})(\d{2})(\d{4})/, "$1/$2/$3");
+      }
+
+      setForm({ ...form, [name]: cleaned });
       return;
     }
 
     setForm({ ...form, [name]: value });
-
   };
 
+  
   const validateCertification = () => {
     if (!form.name.trim()) return "Certification Name is required";
 
@@ -183,19 +170,39 @@ export default function CertificationsForm({
     if (!urlRegex.test(form.link))
       return "Certificate Link must start with http or https";
 
-    // ✅ DATE VALIDATION (CALENDAR FORMAT YYYY-MM-DD)
-    if (!form.startDate) return "Start date is required";
-    if (!form.endDate) return "End date is required";
+    if (form.file.trim()) {
+      const allowed = /\.(png|jpg|jpeg|pdf)$/i;
+      if (!allowed.test(form.file))
+        return "Only JPG, PNG or PDF files allowed";
+    }
 
-    if (form.startDate > today) return "Start date cannot be in future";
-    if (form.endDate > today) return "End date cannot be in future";
+    const dateRegex = /^([0-2][0-9]|3[0-1])[\/-](0[1-9]|1[0-2])[\/-][0-9]{4}$/;
 
-    if (form.endDate < form.startDate)
-      return "End date cannot be before start date";
+    if (!form.startDate.trim()) return "Start Date is required";
+    if (!dateRegex.test(form.startDate))
+      return "Start Date must be in DD/MM/YYYY format";
+
+    if (!form.endDate.trim()) return "End Date is required";
+    if (!dateRegex.test(form.endDate))
+      return "End Date must be in DD/MM/YYYY format";
+
+    const toDate = (d: string) => {
+      const [day, month, year] = d.split("/").map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    const start = toDate(form.startDate);
+    const end = toDate(form.endDate);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start > today) return "Start Date cannot be in future";
+    if (end > today) return "End Date cannot be in future";
+    if (end < start) return "End Date cannot be before Start Date";
 
     return null;
   };
-
 
   const convertToIntDate = (dateStr: string) => {
     const cleaned = dateStr.replace(/-/g, "/");
@@ -203,37 +210,33 @@ export default function CertificationsForm({
     return Number(`${y}${m}${d}`);
   };
 
+  
   const saveCertification = async () => {
     const error = validateCertification();
     if (error) return toast.error(error);
 
-    setLoading(true); // 🔒 Disable button & prevent double click
+    const payload = {
+      studentId,
+      certificationName: form.name,
+      certification_completionId: form.id,
+      certificateLink: form.link,
+      uploadCertificate: form.file,
 
-    try {
-      const payload = {
-        studentId,
-        certificationName: form.name,
-        certification_completionId: form.id,
-        certificateLink: form.link,
-        uploadCertificate: form.file,
-        startDate: form.startDate,
-        endDate: form.endDate,
-      };
+   
+     startDate: form.startDate,  
+  endDate: form.endDate,       
+    };
 
-      const response = await upsertCertification(payload);
+    console.log(" Sending certification payload:", payload);
 
-      if (response.success) {
-        toast.success(`Certification ${index + 1} saved successfully`);
-      } else {
-        toast.error(response.error ?? "Something went wrong!");
-      }
-    } catch (err) {
-      toast.error("Something went wrong!");
-    } finally {
-      setLoading(false); // 🔓 Re-enable button
+    const response = await upsertCertification(payload);
+
+    if (response.success) {
+      toast.success(`Certification ${index + 1} saved successfully`);
+    } else {
+      toast.error(response.error ?? "Something went wrong!");
     }
   };
-
 
   const handleSubmit = () => {
     const error = validateCertification();
@@ -286,35 +289,27 @@ export default function CertificationsForm({
         <Input
           label="Start Date"
           name="startDate"
-          type="date"
-          value={form.startDate ? toISO(form.startDate) : ""}
+          value={form.startDate}
           onChange={handleChange}
-          max={form.endDate ? toISO(form.endDate) : today}
+          placeholder="DD/MM/YYYY"
         />
 
         <Input
           label="End Date"
           name="endDate"
-          type="date"
-          value={form.endDate ? toISO(form.endDate) : ""}
+          value={form.endDate}
           onChange={handleChange}
-          min={form.startDate ? toISO(form.startDate) : undefined}
-          max={today}
+          placeholder="DD/MM/YYYY"
         />
-
 
         <div className="md:col-span-2 flex justify-end">
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading}
-            className={`px-6 py-2 rounded-md text-sm font-medium text-white
-    ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
-  `}
+            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
           >
-            {loading ? "Saving..." : "Submit"}
+            Submit
           </button>
-
         </div>
       </div>
     </div>

@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { CaretDown, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import { fetchLanguages, upsertLanguages } from "@/lib/helpers/profile/upsertLanguages";
+
 
 const ALL_LANGUAGES = [
     "English",
@@ -17,10 +20,17 @@ const ALL_LANGUAGES = [
     "Gujarati",
 ];
 
+
+
+
 export default function Languages() {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const studentId = 1;
+
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState("");
-    const [selected, setSelected] = useState<string[]>(["Telugu", "Hindi", "English", "Kannada"]);
+    const [selected, setSelected] = useState<string[]>([]);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -38,14 +48,27 @@ export default function Languages() {
         return () => document.removeEventListener("mousedown", onDocClick);
     }, []);
 
+    useEffect(() => {
+        async function loadLang() {
+            const res = await fetchLanguages(studentId);
+            if (res.success) {
+                setSelected(res.languages); // <-- show saved languages in UI
+            }
+        }
+        loadLang();
+    }, []);
+
+
     const filtered = ALL_LANGUAGES.filter(
-        (l) => l.toLowerCase().includes(query.toLowerCase()) && !selected.includes(l)
+        (l) => l.toLowerCase().includes(query.trim().toLowerCase()) && !selected.includes(l)
     );
+
 
     const toggleSelect = (lang: string) => {
         if (selected.includes(lang)) return;
         setSelected((s) => [...s, lang]);
         setQuery("");
+        if (inputRef.current) inputRef.current.value = "";
         setOpen(false);
         inputRef.current?.focus();
     };
@@ -53,6 +76,57 @@ export default function Languages() {
     const remove = (lang: string) => {
         setSelected((s) => s.filter((x) => x !== lang));
     };
+    // ---------------------------
+    // VALIDATION
+    // ---------------------------
+    const validate = () => {
+        if (selected.length === 0) return "Select at least one language";
+        return null;
+    };
+
+    // ---------------------------
+    // SAVE LANGUAGES
+    // ---------------------------
+    const saveLanguages = async () => {
+        if (isSubmitting) return; // prevent double clicks
+
+        const error = validate();
+        if (error) {
+            toast.error(error);
+            return;
+        }
+
+        setIsSubmitting(true); // disable button + show loading
+
+        const now = new Date().toISOString();
+
+        const payload = {
+            studentId,
+            languageName: selected,
+            createdAt: now,
+            updatedAt: now,
+        };
+
+        try {
+            console.log("📤 Language Payload:", payload);
+
+            const response = await upsertLanguages(payload);
+
+            console.log("📥 Language Response:", response);
+
+            if (response.success) {
+                toast.success("Languages saved successfully!");
+            } else {
+                toast.error(response.error ?? "Something went wrong!");
+            }
+        } catch (err) {
+            toast.error("Something went wrong!");
+        } finally {
+            setIsSubmitting(false);   // enable button again
+        }
+    };
+
+
 
     return (
         <div className="mt-3 h-full">
@@ -60,7 +134,7 @@ export default function Languages() {
                 <div className="flex justify-between">
                     <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
                     <button
-                        onClick={() => router.push('/profile?internships')}
+                        onClick={() => router.push("/profile?internships")}
                         className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
                         Next
                     </button>
@@ -143,6 +217,18 @@ export default function Languages() {
                             )}
                         </div>
                     </div>
+                    <div className="flex justify-end mt-6">
+                        <button
+                            onClick={saveLanguages}
+                            disabled={isSubmitting}
+                            className={`px-6 py-2 rounded-md text-sm text-white 
+        ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+                        >
+                            {isSubmitting ? "Saving..." : "Submit"}
+                        </button>
+
+                    </div>
+
                 </div>
             </div>
         </div>

@@ -1,18 +1,18 @@
 export interface Assignment {
-  id: string;
+  assignmentId?: number;
   image: string;
   title: string;
   description: string;
-  fromDate: string;
-  toDate: string;
+  fromDate: string | number;
+  toDate: string | number;
   totalSubmissions: string;
   totalSubmitted: string;
-  marks: string;
+  marks: string | number;
 }
 
 export const initialAssignments: Assignment[] = [
   {
-    id: "01",
+    assignmentId: 1,
     image: "/ds.jpg",
     title: "Data Structures",
     description: "Array Operations & Complexity",
@@ -23,7 +23,7 @@ export const initialAssignments: Assignment[] = [
     marks: "25",
   },
   {
-    id: "02",
+    assignmentId: 2,
     image: "/ds.jpg",
     title: "Data Structures",
     description: "Array Operations & Complexity",
@@ -34,7 +34,7 @@ export const initialAssignments: Assignment[] = [
     marks: "25",
   },
   {
-    id: "03",
+    assignmentId: 3,
     image: "/ds.jpg",
     title: "Data Structures",
     description: "Array Operations & Complexity",
@@ -45,54 +45,7 @@ export const initialAssignments: Assignment[] = [
     marks: "25",
   },
   {
-    id: "04",
-    image: "/ds.jpg",
-    title: "Data Structures",
-    description: "Array Operations & Complexity",
-    fromDate: "03/01/2025",
-    toDate: "03/01/2025",
-    totalSubmissions: "32",
-    totalSubmitted: "30",
-    marks: "25",
-  },
-];
-
-const activeAssignments = [
-  {
-    id: "01",
-    image: "/ds.jpg",
-    title: "Data Structures",
-    description: "Array Operations & Complexity",
-    fromDate: "03/01/2025",
-    toDate: "03/01/2025",
-    totalSubmissions: "32",
-    totalSubmitted: "30",
-    marks: "25",
-  },
-  {
-    id: "02",
-    image: "/ds.jpg",
-    title: "Data Structures",
-    description: "Array Operations & Complexity",
-    fromDate: "03/01/2025",
-    toDate: "03/01/2025",
-    totalSubmissions: "32",
-    totalSubmitted: "30",
-    marks: "25",
-  },
-  {
-    id: "03",
-    image: "/ds.jpg",
-    title: "Data Structures",
-    description: "Array Operations & Complexity",
-    fromDate: "03/01/2025",
-    toDate: "03/01/2025",
-    totalSubmissions: "32",
-    totalSubmitted: "30",
-    marks: "25",
-  },
-  {
-    id: "04",
+    assignmentId: 4,
     image: "/ds.jpg",
     title: "Data Structures",
     description: "Array Operations & Complexity",
@@ -104,9 +57,56 @@ const activeAssignments = [
   },
 ];
 
-const evaluatedAssignments = [
+export const activeAssignments: Assignment[] = [
   {
-    id: "01",
+    assignmentId: 1,
+    image: "/ds.jpg",
+    title: "Data Structures",
+    description: "Array Operations & Complexity",
+    fromDate: "03/01/2025",
+    toDate: "03/01/2025",
+    totalSubmissions: "32",
+    totalSubmitted: "30",
+    marks: "25",
+  },
+  {
+    assignmentId: 2,
+    image: "/ds.jpg",
+    title: "Data Structures",
+    description: "Array Operations & Complexity",
+    fromDate: "03/01/2025",
+    toDate: "03/01/2025",
+    totalSubmissions: "32",
+    totalSubmitted: "30",
+    marks: "25",
+  },
+  {
+    assignmentId: 3,
+    image: "/ds.jpg",
+    title: "Data Structures",
+    description: "Array Operations & Complexity",
+    fromDate: "03/01/2025",
+    toDate: "03/01/2025",
+    totalSubmissions: "32",
+    totalSubmitted: "30",
+    marks: "25",
+  },
+  {
+    assignmentId: 4,
+    image: "/ds.jpg",
+    title: "Data Structures",
+    description: "Array Operations & Complexity",
+    fromDate: "03/01/2025",
+    toDate: "03/01/2025",
+    totalSubmissions: "32",
+    totalSubmitted: "30",
+    marks: "25",
+  },
+];
+
+export const evaluatedAssignments: Assignment[] = [
+  {
+    assignmentId: 1,
     image: "/ds.jpg",
     title: "Web Technologies Lab",
     description: "Responsive Design Using HTML, CSS, JS",
@@ -117,7 +117,7 @@ const evaluatedAssignments = [
     marks: 88,
   },
   {
-    id: "02",
+    assignmentId: 2,
     image: "/ds.jpg",
     title: "Data Structures",
     description: "Array Operations & Complexity",
@@ -128,7 +128,7 @@ const evaluatedAssignments = [
     marks: 82,
   },
   {
-    id: "03",
+    assignmentId: 3,
     image: "/ds.jpg",
     title: "Operating Systems",
     description: "Process Scheduling & Deadlocks",
@@ -139,7 +139,7 @@ const evaluatedAssignments = [
     marks: 85,
   },
   {
-    id: "04",
+    assignmentId: 4,
     image: "/dbms.jpg",
     title: "DBMS",
     description: "Normalization & SQL Queries",

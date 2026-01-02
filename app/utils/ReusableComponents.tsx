@@ -68,7 +68,7 @@ export function Select({
                 value={value}
                 onChange={onChange}
                 disabled={disabled}
-                className="h-10 px-3 cursor-pointer border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none"
+                className="h-10 px-3 text-[#282828] cursor-pointer border border-[#CCCCCC] rounded-md text-sm bg-white focus:outline-none"
             >
                 <option value="">Select</option>
                 {options.map((opt) => (

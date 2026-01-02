@@ -1,7 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Assignment } from "../data";
+import { upsertFacultyAssignment } from "@/lib/helpers/faculty/upsertFacultyAssignment";
+import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabaseClient";
+import type { Assignment } from "../data";
+
 
 type Props = {
   initialData?: Assignment | null;
@@ -9,31 +13,107 @@ type Props = {
   onCancel: () => void;
 };
 
+// Convert saved DD/MM/YYYY or INT → YYYY-MM-DD (HTML date format)
+function toHtmlDate(dateStr: string | number | undefined) {
+  if (!dateStr) return "";
+
+  const str = dateStr.toString();
+
+  // If INT: 20250103
+  if (/^\d{8}$/.test(str)) {
+    return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+  }
+
+  // If DD/MM/YYYY
+  if (str.includes("/")) {
+    const [dd, mm, yyyy] = str.split("/");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return str; // Already YYYY-MM-DD
+}
+
+
 export default function AssignmentForm({
   initialData,
   onSave,
   onCancel,
 }: Props) {
+
+  /* -----------------------------------------
+     FIX 2: PROPER form STATE INITIALIZATION
+  ------------------------------------------ */
   const [form, setForm] = useState<Assignment>(
-    initialData ?? {
-      id: crypto.randomUUID(),
-      image: "/ds.jpg",
-      title: "",
-      description: "",
-      fromDate: "",
-      toDate: "",
-      totalSubmissions: "",
-      totalSubmitted: "32",
-      marks: "",
-    }
+    initialData
+      ? {
+        ...initialData,
+        fromDate: toHtmlDate(initialData.fromDate),
+        toDate: toHtmlDate(initialData.toDate),
+      }
+      : {
+        assignmentId: undefined,
+        image: "/ds.jpg",
+        title: "",
+        description: "",
+        fromDate: "",
+        toDate: "",
+        totalSubmissions: "",
+        totalSubmitted: "0",
+        marks: "",
+      }
   );
 
-  const handleSubmit = (e: FormEvent) => {
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    const { data: auth } = await supabase.auth.getUser();
+    const authId = auth?.user?.id;
+
+    if (!authId) {
+      toast.error("Faculty not logged in");
+      return;
+    }
+
+    const { data: faculty } = await supabase
+      .from("users")
+      .select("userId")
+      .eq("auth_id", authId)
+      .single();
+
+    if (!faculty) {
+      toast.error("Faculty record missing");
+      return;
+    }
+
+    const facultyId = faculty.userId;
+
+    const payload = {
+      assignmentId: form.assignmentId ?? undefined,
+      facultyId,
+      assignmentTitle: form.title,
+      topicName: form.description,
+      dateAssigned: form.fromDate,              // FIXED
+      submissionDeadline: form.toDate,          // FIXED
+      totalSubmissionsExpected: Number(form.totalSubmissions),
+      totalMarks: Number(form.marks),
+      instructions: form.description,
+    };
+
+    const res = await upsertFacultyAssignment(payload);
+
+    if (!res.success) {
+      toast.error(res.error);
+      return;
+    }
+
+    toast.success("Assignment saved!");
     onSave(form);
   };
+
+
   return (
-    <div className="w-[68%] mx-1 max-w-3xl">
+    <div className="bg-red-00 w-[68%] mx-1 max-w-3xl">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900">
           {initialData ? "Edit Assignment" : "Add New Assignment"}
@@ -86,7 +166,7 @@ export default function AssignmentForm({
                 </label>
                 <input
                   type="date"
-                  required
+                  required={!initialData} // only required for NEW assignment
                   value={form.fromDate}
                   onChange={(e) =>
                     setForm({ ...form, fromDate: e.target.value })
@@ -101,7 +181,7 @@ export default function AssignmentForm({
                 </label>
                 <input
                   type="date"
-                  required
+                  required={!initialData} // only required for NEW assignment
                   value={form.toDate}
                   onChange={(e) => setForm({ ...form, toDate: e.target.value })}
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
@@ -175,3 +255,13 @@ export default function AssignmentForm({
     </div>
   );
 }
+
+function convertToIntDate(dateStr: string) {
+  if (!dateStr) return null;
+  return Number(dateStr.replace(/-/g, ""));
+}
+
+function setAssignments(arg0: (prev: any) => any) {
+  throw new Error("Function not implemented.");
+}
+

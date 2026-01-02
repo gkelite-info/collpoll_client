@@ -25,9 +25,15 @@ export default function EducationSection() {
     const [open, setOpen] = useState(false);
     const router = useRouter()
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const dropdownRef = useRef<HTMLDivElement | null>(null);
 
     const primarySaveRef = useRef<any>(null);
+    const secondarySaveRef = useRef<any>(null);
+    const undergraduateSaveRef = useRef<any>(null);
+    const phdSaveRef = useRef<any>(null);
+
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -58,13 +64,33 @@ export default function EducationSection() {
 
 
     const handleSubmitAll = async () => {
-        if (primarySaveRef.current) {
-            await primarySaveRef.current();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+
+        try {
+            if (addedForms.includes("primary") && primarySaveRef.current)
+                await primarySaveRef.current();
+
+            if (addedForms.includes("secondary") && secondarySaveRef.current)
+                await secondarySaveRef.current();
+
+            if (addedForms.includes("undergraduate") && undergraduateSaveRef.current)
+                await undergraduateSaveRef.current();
+
+            if (addedForms.includes("phd") && phdSaveRef.current)
+                await phdSaveRef.current();
+
+            toast.success("Education form submitted successfully");
+
+            // router.push('/profile?key-skills');
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to submit. Try again.");
+        } finally {
+            setIsSubmitting(false);
         }
-
-        toast.success("Education form submitted Successfully");
     };
-
 
     return (
         <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow space-y-6">
@@ -115,17 +141,28 @@ export default function EducationSection() {
                             <EducationForm
                                 key={type}
                                 type={type}
-                                onSaveRef={primarySaveRef}
+                                onSaveRef={
+                                    type === "primary"
+                                        ? primarySaveRef
+                                        : type === "secondary"
+                                            ? secondarySaveRef
+                                            : type === "undergraduate"
+                                                ? undergraduateSaveRef
+                                                : phdSaveRef
+                                }
                                 onRemove={() => removeSection(type)}
                             />
+
                         )
                 )}
                 <div className="flex justify-end mt-6">
                     <button
                         onClick={handleSubmitAll}
-                        className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm"
+                        disabled={isSubmitting}
+                        className={`px-6 py-2 rounded-md text-sm text-white 
+            ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
                     >
-                        Submit
+                        {isSubmitting ? "Saving..." : "Submit"}
                     </button>
                 </div>
             </div>
