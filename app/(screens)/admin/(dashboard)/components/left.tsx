@@ -14,6 +14,7 @@ import { dashboardData } from "../data";
 import { DashboardGrid } from "./dashboardGrid";
 import SystemHealth from "./systemHealth";
 import TotalUsersView from "./totalUsers";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type ViewState = "MAIN" | "TOTAL_USERS" | "PENDING_APPROVALS" | "SYSTEM_HEALTH";
 
@@ -23,6 +24,8 @@ export default function AdminDashLeft({
   onPendingFull: () => void;
 }) {
   const [view, setView] = useState<ViewState>("MAIN");
+
+  const { fullName } = useUser();
 
   const cardData = [
     {
@@ -58,7 +61,7 @@ export default function AdminDashLeft({
   const card = [
     {
       show: false,
-      user: "Stephen Jones",
+      user: fullName ?? "User",
       activeFacultyTasks: 12,
       pendingApprovals: 3,
       adminSubject: "Keep the system running smoothly!",
@@ -86,7 +89,7 @@ export default function AdminDashLeft({
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
-          onViewDetails={() => {}}
+          onViewDetails={() => { }}
         />
       </div>
     );
@@ -95,7 +98,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
       </div>
     );
   }
