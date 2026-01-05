@@ -15,8 +15,16 @@ import { DashboardGrid } from "./dashboardGrid";
 import SystemHealth from "./systemHealth";
 import TotalUsersView from "./totalUsers";
 import { useUser } from "@/app/utils/context/UserContext";
+import ActiveAutomations from "./activeAutomations";
+import PolicyManagement from "./policyManagement";
+import { useRouter, useSearchParams } from "next/navigation";
 
-type ViewState = "MAIN" | "TOTAL_USERS" | "PENDING_APPROVALS" | "SYSTEM_HEALTH";
+type ViewState =
+  | "MAIN"
+  | "TOTAL_USERS"
+  | "PENDING_APPROVALS"
+  | "SYSTEM_HEALTH"
+  | "AUTOMATIONS";
 
 export default function AdminDashLeft({
   onPendingFull,
@@ -24,6 +32,35 @@ export default function AdminDashLeft({
   onPendingFull: () => void;
 }) {
   const [view, setView] = useState<ViewState>("MAIN");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const isAutomationsView = searchParams.get("view") === "automations";
+  const isPolicyView = searchParams.get("view") === "policy-setup";
+
+  const handleBack = () => {
+    if (isAutomationsView || isPolicyView) {
+      router.push("?");
+    } else {
+      setView("MAIN");
+    }
+  };
+
+  if (isAutomationsView) {
+    return (
+      <div className="w-[68%] p-2">
+        <ActiveAutomations onBack={handleBack} />
+      </div>
+    );
+  }
+
+  if (isPolicyView) {
+    return (
+      <div className="w-[68%] p-2">
+        <PolicyManagement onBack={handleBack} />
+      </div>
+    );
+  }
 
   const { fullName } = useUser();
 
@@ -70,26 +107,12 @@ export default function AdminDashLeft({
     },
   ];
 
-  const EmptyPage = (title: string) => (
-    <div className="w-full p-8 bg-[#F8F9FA] min-h-screen text-black">
-      <button
-        onClick={() => setView("MAIN")}
-        className="mb-4 text-sm font-bold flex items-center gap-2 underline decoration-2 underline-offset-4"
-      >
-        ← Back to Dashboard
-      </button>
-      <div className="h-96 border-2 border-dashed border-gray-200 rounded-3xl flex items-center justify-center">
-        <h2 className="text-xl font-semibold text-gray-400">{title} Page</h2>
-      </div>
-    </div>
-  );
-
   if (view === "TOTAL_USERS") {
     return (
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
-          onViewDetails={() => { }}
+          onViewDetails={() => {}}
         />
       </div>
     );
@@ -98,7 +121,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
       </div>
     );
   }
@@ -120,7 +143,7 @@ export default function AdminDashLeft({
               onClick={() => {
                 if (item.id === "TOTAL_USERS") setView("TOTAL_USERS");
                 if (item.id === "SYSTEM_HEALTH") setView("SYSTEM_HEALTH");
-
+                if (item.id === "AUTOMATIONS") router.push("?view=automations");
                 if (item.id === "PENDING_APPROVALS") {
                   onPendingFull();
                 }

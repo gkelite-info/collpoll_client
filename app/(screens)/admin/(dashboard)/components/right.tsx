@@ -4,10 +4,41 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Plus } from "@phosphor-icons/react";
 import { useState } from "react";
-import AddUserModal from "./addUserModal";
+import AddUserModal from "./modal/addUserModal";
+import { useSearchParams } from "next/navigation";
+import AddAutomationModal from "./modal/addAutomationModal";
+import AddPolicyModal from "./modal/addPolicyModal"; // Ensure this is imported
 
 export default function AdminDashRight() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] =
+    useState(false);
+  const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false); // New state
+
+  const searchParams = useSearchParams();
+
+  // Detection logic for query params
+  const isAutomationsPage = searchParams.get("view") === "automations";
+  const isPolicyPage = searchParams.get("view") === "policy-setup";
+
+  // Shared UI Component for the Navy Blue Button Style
+  const NavyActionButton = ({
+    onClick,
+    label,
+  }: {
+    onClick: () => void;
+    label: string;
+  }) => (
+    <button
+      onClick={onClick}
+      className="flex cursor-pointer items-center gap-2 bg-[#16284F] h-full hover:bg-[#1a3161] text-white py-2 rounded-lg transition-all shadow-md active:scale-95 group w-full justify-center"
+    >
+      <div className="flex items-center justify-center aspect-square bg-white text-[#16284F] h-7 w-7 rounded-full shadow-[0px_2px_4px_rgba(0,0,0,0.25)]">
+        <Plus size={18} weight="bold" />
+      </div>
+      <span className="text-sm text-nowrap">{label}</span>
+    </button>
+  );
 
   const card = [
     {
@@ -88,23 +119,48 @@ export default function AdminDashRight() {
     <>
       <div className="w-[32%] p-2 flex flex-col ">
         <div className="grid grid-cols-2 gap-4 w-full items-center">
-          <span
-            onClick={() => setIsModalOpen(true)}
-            className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around gap-1 text-[#EFEFEF] px-4"
-          >
-            <Plus size={24} />
-            <p className="text-lg">Add User</p>
-          </span>
+          {/* Conditional Button Logic */}
+          {isAutomationsPage ? (
+            <NavyActionButton
+              onClick={() => setIsAddAutomationModalOpen(true)}
+              label="Add Automation"
+            />
+          ) : isPolicyPage ? (
+            <NavyActionButton
+              onClick={() => setIsAddPolicyModalOpen(true)}
+              label="Add Policy"
+            />
+          ) : (
+            <span
+              onClick={() => setIsAddUserModalOpen(true)}
+              className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around gap-1 text-[#EFEFEF] px-4"
+            >
+              <Plus size={24} />
+              <p className="text-lg">Add User</p>
+            </span>
+          )}
 
           <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
+
         <WorkWeekCalendar />
         <AnnouncementsCard announceCard={card} />
       </div>
 
+      {/* Modals */}
       <AddUserModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={isAddUserModalOpen}
+        onClose={() => setIsAddUserModalOpen(false)}
+      />
+
+      <AddAutomationModal
+        isOpen={isAddAutomationModalOpen}
+        onClose={() => setIsAddAutomationModalOpen(false)}
+      />
+
+      <AddPolicyModal
+        isOpen={isAddPolicyModalOpen}
+        onClose={() => setIsAddPolicyModalOpen(false)}
       />
     </>
   );
