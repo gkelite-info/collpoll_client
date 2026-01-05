@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   UsersThree,
   CaretRight,
@@ -10,6 +10,9 @@ import {
   Circle,
 } from "@phosphor-icons/react";
 import { dashboardData } from "../data";
+import RolePermissionsModal from "./modal/rolePermissionsModal";
+import { useRouter, useSearchParams } from "next/navigation";
+import PolicyManagement from "./policyManagement";
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -28,20 +31,33 @@ const RowItem: React.FC<{
   icon?: React.ReactNode;
   hasArrow?: boolean;
   valueClassName?: string;
-}> = ({ label, value, icon, hasArrow, valueClassName = "text-gray-500" }) => (
+  onClick?: () => void;
+}> = ({
+  label,
+  value,
+  icon,
+  hasArrow,
+  valueClassName = "text-gray-500",
+  onClick,
+}) => (
   <div className="flex items-center justify-between py-1">
     <div className="flex items-center gap-2.5">
       {icon && (
         <div className="w-8 h-8 rounded-lg bg-[#EAF7F1] flex items-center justify-center text-[#4BB583]">
           {React.isValidElement(icon)
-            ? React.cloneElement(icon as React.ReactElement<any>, { size: 18 })
+            ? React.cloneElement(icon as React.ReactElement<{ size: number }>, {
+                size: 18,
+              })
             : icon}
         </div>
       )}
       <span className="text-gray-700 font-medium text-[13px]">{label}</span>
     </div>
-    <div className="flex items-center gap-1.5">
-      <span className={`text-[13px] font-semibold ${valueClassName}`}>
+    <div className="flex cursor-pointer items-center gap-1.5">
+      <span
+        onClick={onClick}
+        className={`text-[13px]  font-semibold ${valueClassName}`}
+      >
         {value}
       </span>
       {hasArrow && <CaretRight size={12} className="text-gray-400" />}
@@ -49,51 +65,66 @@ const RowItem: React.FC<{
   </div>
 );
 
-const Toggle: React.FC<{ checked?: boolean }> = ({ checked = true }) => (
+const Toggle: React.FC<{
+  checked?: boolean;
+  onChange?: (val: boolean) => void;
+}> = ({ checked = true, onChange }) => (
   <div
+    onClick={() => onChange?.(!checked)}
     className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${
       checked ? "bg-[#4BB583]" : "bg-gray-200"
     }`}
   >
     <div
-      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all ${
-        checked ? "right-0.5" : "left-0.5"
+      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-200 ${
+        checked ? "translate-x-4.5" : "translate-x-0.5"
       }`}
+      style={{ left: 0 }}
     />
   </div>
 );
 
-// --- FEATURE COMPONENTS ---
-
 const UserManagementSummary: React.FC<{
   data: typeof dashboardData.summary;
-}> = ({ data }) => (
-  <Card>
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="text-sm font-bold text-gray-800">
-        User Management Summary
-      </h2>
-    </div>
-    <div className="space-y-2">
-      <RowItem
-        label="Total Users"
-        value={data.totalUsers}
-        hasArrow
-        icon={<UsersThree weight="fill" />}
-      />
-      <RowItem
-        label="Pending User Registration"
-        value={data.pendingRegistrations}
-        hasArrow
-        icon={<UsersThree weight="fill" />}
-      />
-    </div>
-  </Card>
-);
+}> = ({ data }) => {
+  const router = useRouter();
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-bold text-gray-800">
+          User Management Summary
+        </h2>
+      </div>
+      <div className="space-y-2">
+        <RowItem
+          label="Total Users"
+          value={data.totalUsers}
+          hasArrow
+          icon={<UsersThree weight="fill" />}
+        />
+        <RowItem
+          label="Pending User Registration"
+          value={data.pendingRegistrations}
+          hasArrow
+          icon={<UsersThree weight="fill" />}
+          onClick={() => router.push("?view=pending-registration")}
+        />
+      </div>
+    </Card>
+  );
+};
 
 const ActiveAutomations: React.FC<{
   data: typeof dashboardData.automations;
 }> = ({ data }) => {
+  const [items, setItems] = useState(data);
+
+  const handleToggle = (index: number) => {
+    const newItems = [...items];
+    newItems[index].checked = !newItems[index].checked;
+    setItems(newItems);
+  };
+
   const getIcon = (label: string) => {
     if (label.includes("Backup")) return <ArrowsClockwise />;
     if (label.includes("Email")) return <EnvelopeSimple />;
@@ -109,12 +140,12 @@ const ActiveAutomations: React.FC<{
         <CaretRight size={14} className="text-gray-400" />
       </div>
       <div className="space-y-3">
-        {data.map((item, idx) => (
+        {items.map((item, idx) => (
           <div key={idx} className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#EAF7F1] flex items-center justify-center text-[#4BB583]">
                 {React.cloneElement(
-                  getIcon(item.label) as React.ReactElement<any>,
+                  getIcon(item.label) as React.ReactElement<{ size: number }>,
                   { size: 18 }
                 )}
               </div>
@@ -122,7 +153,7 @@ const ActiveAutomations: React.FC<{
                 {item.label}
               </span>
             </div>
-            <Toggle checked={item.checked} />
+            <Toggle checked={item.checked} onChange={() => handleToggle(idx)} />
           </div>
         ))}
       </div>
@@ -216,9 +247,10 @@ const SystemHealth: React.FC<{ data: typeof dashboardData.health }> = ({
   </Card>
 );
 
-const RolesPermissions: React.FC<{ data: typeof dashboardData.roles }> = ({
-  data,
-}) => (
+const RolesPermissions: React.FC<{
+  data: typeof dashboardData.roles;
+  onConfigure: () => void;
+}> = ({ data, onConfigure }) => (
   <Card className="flex-grow">
     <div className="mb-4">
       <h2 className="text-sm font-bold text-gray-800">Roles & Permissions</h2>
@@ -235,56 +267,80 @@ const RolesPermissions: React.FC<{ data: typeof dashboardData.roles }> = ({
         </div>
       ))}
     </div>
-    <div className="pt-3.5 border-t border-gray-50 flex items-center justify-between text-[#4BB583] text-[12px] font-bold cursor-pointer">
+    <div
+      onClick={onConfigure}
+      className="pt-3.5 border-t border-gray-50 flex items-center justify-between text-[#4BB583] text-[12px] font-bold cursor-pointer"
+    >
       Configure Roles <CaretRight size={12} />
     </div>
   </Card>
 );
 
-const PolicySetup: React.FC<{ data: typeof dashboardData.policies }> = ({
-  data,
-}) => (
-  <Card>
-    <div className="flex items-center justify-between">
-      <h2 className="text-sm font-bold text-gray-800">Policy Setup</h2>
-      <button className="bg-[#16284F] text-white text-[12px] px-3 py-1 mb-1 rounded-md flex items-center gap-1 tracking-wider">
-        Manage Policies <CaretRight size={8} weight="bold" />
-      </button>
-    </div>
-    <div className="space-y-3.5">
-      <div className="flex justify-between items-center">
-        <span className="font-semibold text-gray-700 text-[12px]">
-          Attendance Policy
-        </span>
-        <span className="text-gray-400 font-medium text-[12px]">
-          {data.attendance}
-        </span>
+const PolicySetup: React.FC<{ data: any }> = ({ data }) => {
+  const router = useRouter();
+
+  const handleManagePolicies = () => {
+    router.push("?view=policy-setup");
+  };
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-bold text-gray-800">Policy Setup</h2>
+        <button
+          onClick={handleManagePolicies}
+          className="bg-[#16284F] hover:bg-[#1a3161] transition-colors text-white text-[12px] px-3 py-1 mb-1 rounded-md flex items-center gap-1 tracking-wider"
+        >
+          Manage Policies <CaretRight size={8} weight="bold" />
+        </button>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="font-semibold text-gray-700 text-[12px]">
-          Assignment Window
-        </span>
-        <span className="text-gray-400 font-medium text-[12px]">
-          {data.assignment}
-        </span>
+      <div className="space-y-3.5">
+        <div className="flex justify-between items-center">
+          <span className="font-semibold text-gray-700 text-[12px]">
+            Attendance Policy
+          </span>
+          <span className="text-gray-400 font-medium text-[12px]">
+            {data.attendance}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="font-semibold text-gray-700 text-[12px]">
+            Assignment Window
+          </span>
+          <span className="text-gray-400 font-medium text-[12px]">
+            {data.assignment}
+          </span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="font-semibold text-gray-700 text-[12px]">
+            Leave Limit
+          </span>
+          <span className="text-gray-400 font-medium text-[12px]">
+            {data.leave}
+          </span>
+        </div>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="font-semibold text-gray-700 text-[12px]">
-          Leave Limit
-        </span>
-        <span className="text-gray-400 font-medium text-[12px]">
-          {data.leave}
-        </span>
-      </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
+
+export default PolicySetup;
 
 interface DashboardGridProps {
   data: typeof dashboardData;
 }
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ data }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const currentView = searchParams.get("view");
+
+  const handleBack = () => router.push("/dashboard");
+
+  if (currentView === "policy-setup") {
+    return <PolicyManagement onBack={handleBack} />;
+  }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full items-stretch">
       <div className="flex flex-col gap-3">
@@ -295,9 +351,17 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ data }) => {
 
       <div className="flex flex-col gap-3">
         <SystemHealth data={data.health} />
-        <RolesPermissions data={data.roles} />
+        <RolesPermissions
+          data={data.roles}
+          onConfigure={() => setIsModalOpen(true)}
+        />
         <PolicySetup data={data.policies} />
       </div>
+
+      <RolePermissionsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 };

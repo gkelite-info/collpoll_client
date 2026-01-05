@@ -1,10 +1,13 @@
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { CaretLeft, User, UsersThree } from "@phosphor-icons/react";
-import React from "react";
+import React, { useState } from "react";
 import CardComponent from "./cards";
 import { pendingRequests } from "../data";
-import PendingApprovalsTable from "./pendingApprovalsTable";
+import PendingApprovalsTable, {
+  RequestData,
+} from "./tables/pendingApprovalsTable";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import RequestDetail from "./requestDetails";
 
 const cardData = [
   {
@@ -46,6 +49,19 @@ interface PendingApprovalsProps {
 }
 
 const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
+  const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(
+    null
+  );
+
+  if (selectedRequest) {
+    return (
+      <RequestDetail
+        selectedRequest={selectedRequest}
+        onBack={() => setSelectedRequest(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col m-4 ">
       <div className="mb-6 flex justify-between items-center">
@@ -86,7 +102,11 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
           <WorkWeekCalendar style="h-full w-[350px]" />
         </div>
       </div>
-      <PendingApprovalsTable requests={pendingRequests} />
+
+      <PendingApprovalsTable
+        requests={pendingRequests}
+        onViewClick={(data) => setSelectedRequest(data)}
+      />
     </div>
   );
 };

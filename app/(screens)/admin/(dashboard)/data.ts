@@ -1,7 +1,7 @@
 import { ScheduledLesson } from "../utils/scheduledLessonsStrip";
 
 import { UpcomingLesson } from "../utils/upcomingClasses";
-import { RequestData } from "./components/pendingApprovalsTable";
+import { RequestData } from "./components/tables/pendingApprovalsTable";
 
 export interface DetailedStudent {
   rollNo: string;
