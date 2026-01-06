@@ -4,6 +4,10 @@ import { useState } from "react";
 import { CheckCircle, PencilSimple } from "@phosphor-icons/react";
 import TaskModal from "@/app/components/modals/taskModal";
 
+
+
+
+
 export type Task = {
   facultytaskId: number;
   title: string;
@@ -13,7 +17,8 @@ export type Task = {
 };
 
 export type TaskPanelProps = {
-  role: "faculty" | "student";
+  role?: "faculty" | "student";
+  tasks?: Task[];
   facultyTasks?: Task[];
   studentTasks?: Task[];
   onEditTask?: (task: Task) => void;
@@ -21,23 +26,26 @@ export type TaskPanelProps = {
 };
 
 export default function TaskPanel({
-  role,
+  role = "student",
+  tasks,
   facultyTasks = [],
   studentTasks = [],
   onEditTask,
   onAddTask,
 }: TaskPanelProps) {
+
   const [openModal, setOpenModal] = useState(false);
   const [activeView, setActiveView] = useState<"student" | "faculty">(
     role === "student" ? "student" : "faculty"
   );
 
   const tasksToShow =
-    role === "faculty"
+    tasks ??
+    (role === "faculty"
       ? facultyTasks
       : activeView === "student"
       ? studentTasks
-      : facultyTasks;
+      : facultyTasks);
 
   const formatTime = (time: string) => {
     const [hourStr, minute] = time.split(":");

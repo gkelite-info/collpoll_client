@@ -5,25 +5,49 @@ import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 
 export default function FacultyDashRight() {
+  // const myTasks = [
+  //   {
+  //     title: "Complete Python Lab",
+  //     description: "Finish all 10 lab programs and upload to portal.",
+  //     time: "12:40 PM",
+  //   },
+  //   {
+  //     title: "Group Discussion Prep",
+  //     description:
+  //       "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+  //     time: "02:40 PM",
+  //   },
+  //   {
+  //     title: "Resume Update",
+  //     description:
+  //       "Add latest internship experience to resume builder section.",
+  //     time: "03:40 PM",
+  //   },
+  // ];
+
   const myTasks = [
-    {
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-    },
-    {
-      title: "Group Discussion Prep",
-      description:
-        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-      time: "02:40 PM",
-    },
-    {
-      title: "Resume Update",
-      description:
-        "Add latest internship experience to resume builder section.",
-      time: "03:40 PM",
-    },
-  ];
+  {
+    facultytaskId: 1,
+    title: "Complete Python Lab",
+    description: "Finish all 10 lab programs and upload to portal.",
+    time: "12:40 PM",
+    facultytaskcreatedDate: null,
+  },
+  {
+    facultytaskId: 2,
+    title: "Group Discussion Prep",
+    description: "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+    time: "02:40 PM",
+    facultytaskcreatedDate: null,
+  },
+  {
+    facultytaskId: 3,
+    title: "Resume Update",
+    description: "Add latest internship experience to resume builder section.",
+    time: "03:40 PM",
+    facultytaskcreatedDate: null,
+  },
+];
 
   const card = [
     {
@@ -78,7 +102,7 @@ export default function FacultyDashRight() {
       <div className="w-[32%] p-2 flex flex-col">
         <CourseScheduleCard />
         <WorkWeekCalendar />
-        <TaskPanel tasks={myTasks} />
+          <TaskPanel role="faculty" facultyTasks={myTasks} />
         <AnnouncementsCard announceCard={card} />
       </div>
     </>
