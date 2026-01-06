@@ -5,13 +5,13 @@ export const getStudentId = async () => {
 
   if (!auth.user) return null;
 
-  const { data, error } = await supabase
-    .from("student_profile")
-    .select("studentId")
+   const { data, error } = await supabase
+    .from("users")
+    .select("userId")
     .eq("auth_id", auth.user.id)
     .single();
 
   if (error || !data) return null;
 
-  return data.studentId;
+  return data.userId;
 };

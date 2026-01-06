@@ -11,9 +11,10 @@ type UploadModalProps = {
     onUpload: (fileName: string, index: number) => void;
     card?: CardProp;
     index?: number;
+    existingFilePath?: string;
 };
 
-export default function UploadModal({ isOpen, onClose, onUpload, card, index }: UploadModalProps) {
+export default function UploadModal({ isOpen, onClose, onUpload, card, index, existingFilePath }: UploadModalProps) {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,8 +47,15 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index }: 
         if (!card) return;
 
         const file = selectedFiles[0];
-        const filePath = `assignments/${card.assignmentId}/${file.name}`;
+        const filePath = existingFilePath
+            ? existingFilePath
+            : `assignments/${card.assignmentId}/${file.name}`;
 
+        if (existingFilePath) {
+            await supabase.storage
+                .from("student_submissions")
+                .remove([existingFilePath]);
+        }
         // 1️⃣ Upload to Supabase Storage
         const { data: uploadData, error } = await supabase.storage
             .from("student_submissions")
@@ -59,17 +67,13 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index }: 
             return;
         }
 
-        // 2️⃣ Get public URL
-        const { data: urlData } = supabase.storage
-            .from("student_submissions")
-            .getPublicUrl(filePath);
-
-        // 3️⃣ Pass to parent UI
-        onUpload(urlData.publicUrl, index!);
+        // 3️⃣ Send ONLY the storage path
+        onUpload(filePath, index!);
 
         setSelectedFiles([]);
         onClose();
     };
+
 
 
     const removeFile = (idx: number) => {

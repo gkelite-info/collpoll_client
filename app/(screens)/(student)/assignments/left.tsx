@@ -14,9 +14,7 @@ export default function AssignmentsLeft() {
     useEffect(() => {
         fetchAssignments();
     }, []);
-
     async function fetchAssignments() {
-        // 1. Fetch ALL assignments of ALL faculty
         const { data, error } = await supabase
             .from("faculty_assignments")
             .select("*")
@@ -27,29 +25,20 @@ export default function AssignmentsLeft() {
             return;
         }
 
-        // 🔹 Extract unique faculty IDs
         const facultyIds = [...new Set(data.map(a => a.facultyId))];
 
-        // 🔹 Fetch faculty names from users table
-        const { data: facultyUsers, error: facultyErr } = await supabase
+        const { data: facultyUsers } = await supabase
             .from("users")
-            .select("userId, fullName")
-            .in("userId", facultyIds);
+            .select(`"userId","fullName"`)
+            .in("userId", facultyIds.length ? facultyIds : [-1]);
 
-        if (facultyErr) {
-            console.error("FACULTY FETCH ERROR:", facultyErr);
-        }
-
-        // 🔹 Create a lookup map: { 32: "Vamshi Vadla" }
         const facultyMap = Object.fromEntries(
             (facultyUsers || []).map(f => [f.userId, f.fullName])
         );
 
-        // 2. Convert today into YYYYMMDD int format
         const todayInt = Number(formatDateToInt(new Date()));
 
-        // 3. Transform rows for UI
-        const formatted = data.map((a) => ({
+        const formatted = data.map(a => ({
             assignmentId: a.assignmentId,
             facultyId: a.facultyId,
             status: a.status,
@@ -58,17 +47,17 @@ export default function AssignmentsLeft() {
             description: a.topicName,
             fromDate: convertIntToShow(a.dateAssignedInt),
             toDate: convertIntToShow(a.submissionDeadlineInt),
-
-            // ⭐ REPLACED → professor: "Faculty"
             professor: facultyMap[a.facultyId] || "Faculty",
-
             marksScored: null,
             marksTotal: a.totalMarks,
-            toDateInt: a.submissionDeadlineInt,
+            toDateInt: parseInt(a.submissionDeadlineInt, 10),
         }));
 
-        setActiveAssignments(formatted); // show all
-        setPreviousAssignments([]);      // no previous
+        const active = formatted.filter(a => a.toDateInt >= todayInt);
+        const previous = formatted.filter(a => a.toDateInt < todayInt);
+
+        setActiveAssignments(active);
+        setPreviousAssignments(previous);
     }
 
     function convertIntToShow(intVal: number) {
