@@ -5,6 +5,7 @@ import { CheckCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 import TaskModal from "@/app/components/modals/taskModal";
 
+
 export default function CalendarRight() {
 
     const [openModal, setOpenModal] = useState(false);

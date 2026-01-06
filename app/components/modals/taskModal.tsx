@@ -5,6 +5,15 @@ import { X } from "@phosphor-icons/react";
 // import { facultyTasks } from "@/app/utils/facultyTasks";
 import { insertFacultyTask, updateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 
+// ✅ ADD THIS TYPE (top of file)
+export type TaskPayload = {
+  title: string;
+  description: string;
+  dueDate: string;
+  dueTime: string;
+};
+
+
 type TaskModalProps = {
   open: boolean;
   onClose: () => void;
@@ -15,7 +24,7 @@ type TaskModalProps = {
     time: string;
     facultytaskcreatedDate: string | null;
   } | null;
-  onSave: () => void;   // ✅ FIXED
+  onSave: (task?: TaskPayload) => void;
 };
 
 
@@ -85,8 +94,18 @@ export default function TaskModal({
         return;
       }
 
-      onSave();
+      // ✅ BUILD PAYLOAD
+      const payload: TaskPayload = {
+        title,
+        description,
+        dueDate,
+        dueTime,
+      };
+
+      // ✅ SEND DATA (OPTIONAL)
+      onSave(payload);
       onClose();
+
       return; // 🔥 CRITICAL: prevents INSERT
     }
 
