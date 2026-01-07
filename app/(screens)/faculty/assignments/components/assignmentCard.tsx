@@ -97,7 +97,7 @@ export default function AssignmentCard({
                       <div
                         className="rounded-full bg-[#F6E3E3] p-1.5 flex items-center justify-center cursor-pointer"
                         onClick={() => {
-                          setDeleteId(item.assignmentId ?? null);   // <-- FIX HERE
+                          setDeleteId(item.assignmentId ?? null);
                           console.log("vamshi", item.assignmentId);
                         }}
                       >
@@ -137,7 +137,6 @@ export default function AssignmentCard({
               Total Marks
             </div>
           </div>
-
         </div>
       ))}
 

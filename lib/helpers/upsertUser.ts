@@ -1,18 +1,26 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export const upsertUser = async (payload: any) => {
+export const upsertUser = async (payload: {
+  auth_id?: string;
+  fullName: string;
+  email: string;
+  mobile: string;
+  linkedIn?: string
+  collegeId?: number | null;
+  currentCity?: string;
+  workStatus?: string;
+  role?: string;
+}) => {
   try {
-    const { data: authData } = await supabase.auth.getUser();
-    const auth_id = authData?.user?.id;
-
-    if (!auth_id) throw new Error("User not authenticated");
-
     const {
+      auth_id,
       fullName,
       mobile,
       email,
       linkedIn,
       collegeId,
+      currentCity,
+      workStatus,
       role,
     } = payload;
 
@@ -27,7 +35,9 @@ export const upsertUser = async (payload: any) => {
           mobile,
           email,
           linkedIn,
-          collegeId,
+          collegeId: collegeId ?? null,
+          currentCity,
+          workStatus,
           role: role ?? null,
           updatedAt: now,
           createdAt: now,
@@ -56,7 +66,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, linkedIn, collegeId, role")
+      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus")
       .eq("auth_id", auth_id)
       .single();
 
