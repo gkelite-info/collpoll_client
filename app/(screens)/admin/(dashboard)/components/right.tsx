@@ -17,11 +17,9 @@ export default function AdminDashRight() {
 
   const searchParams = useSearchParams();
 
-  // Detection logic for query params
   const isAutomationsPage = searchParams.get("view") === "automations";
   const isPolicyPage = searchParams.get("view") === "policy-setup";
 
-  // Shared UI Component for the Navy Blue Button Style
   const NavyActionButton = ({
     onClick,
     label,
@@ -119,7 +117,6 @@ export default function AdminDashRight() {
     <>
       <div className="w-[32%] p-2 flex flex-col ">
         <div className="grid grid-cols-2 gap-4 w-full items-center">
-          {/* Conditional Button Logic */}
           {isAutomationsPage ? (
             <NavyActionButton
               onClick={() => setIsAddAutomationModalOpen(true)}
@@ -147,7 +144,6 @@ export default function AdminDashRight() {
         <AnnouncementsCard announceCard={card} />
       </div>
 
-      {/* Modals */}
       <AddUserModal
         isOpen={isAddUserModalOpen}
         onClose={() => setIsAddUserModalOpen(false)}

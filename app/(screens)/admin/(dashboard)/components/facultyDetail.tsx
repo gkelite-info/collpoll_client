@@ -1,22 +1,8 @@
 import { CaretLeft, UserCircle } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./totalUsersCard";
-import FacultyCard from "../utils/facultyDetailCard";
+import FacultyCard, { FacultyData } from "../utils/facultyDetailCard";
 import SessionTable from "./tables/facultyDetailclassesTable";
 import { classSessions } from "../data";
-
-export interface FacultyData {
-  name: string;
-  subject: string;
-  role: string;
-  id: string;
-  department: string;
-  phone: string;
-  email: string;
-  address: string;
-  experience: string;
-  qualification: string;
-  avatar: string;
-}
 
 interface FacultyDetailProps {
   faculty: FacultyData;

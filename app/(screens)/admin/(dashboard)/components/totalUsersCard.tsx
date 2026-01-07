@@ -7,7 +7,6 @@ export interface CardProps {
   label: string;
   bgColor: string;
   icon: React.ReactElement<IconProps>;
-
   iconBgColor: string;
   iconColor: string;
 }

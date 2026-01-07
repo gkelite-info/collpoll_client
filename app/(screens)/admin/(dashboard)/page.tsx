@@ -31,7 +31,9 @@ function DashboardContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-10">Loading Dashboard...</div>}>
+    <Suspense
+      fallback={<div className="text-black p-10">Loading Dashboard...</div>}
+    >
       <DashboardContent />
     </Suspense>
   );

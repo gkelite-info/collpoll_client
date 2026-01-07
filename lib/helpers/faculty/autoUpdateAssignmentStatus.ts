@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 export const autoUpdateAssignmentStatus = async (assignmentId: number) => {
   try {
-    // Fetch all submissions of this assignment
     const { data: submissions, error: subErr } = await supabase
       .from("student_submissions")
       .select("status")
@@ -14,14 +13,10 @@ export const autoUpdateAssignmentStatus = async (assignmentId: number) => {
       return { success: false, error: "No submissions found" };
     }
 
-    // Check if all submissions are evaluated
-    const allEvaluated = submissions.every(
-      (s) => s.status === "evaluated"
-    );
+    const allEvaluated = submissions.every((s) => s.status === "evaluated");
 
     const newStatus = allEvaluated ? "evaluated" : "active";
 
-    // Update in faculty assignments
     const { data, error } = await supabase
       .from("faculty_assignments")
       .update({ active: newStatus })
