@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect  } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { fetchUserDetails, upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
@@ -15,42 +15,36 @@ export default function PersonalDetails() {
     const [email, setEmail] = useState("");
     const [linkedIn, setLinkedIn] = useState("");
     const [collegeId, setCollegeId] = useState<number | null>(null);
-    //const [currentCity, setCurrentCity] = useState("");
-    const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">(
-        "fresher"
-    );
+    const [currentCity, setCurrentCity] = useState("");
+    const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
 
 
     useEffect(() => {
-    async function loadData() {
-        // 1. get current auth user
-        const { data: authData } = await supabase.auth.getUser();
-        const authUser = authData?.user;
+        async function loadData() {
+            const { data: authData } = await supabase.auth.getUser();
+            const authUser = authData?.user;
 
-        if (!authUser) return;
+            if (!authUser) return;
 
-        // 2. fetch details from users table
-        const res = await fetchUserDetails(authUser.id);
+            const res = await fetchUserDetails(authUser.id);
 
-        if (res.success && res.user) {
-            const u = res.user;
+            if (res.success && res.user) {
+                const u = res.user;
 
-            setFullName(u.fullName || "");
-            setMobile(u.mobile || "");
-            setEmail(u.email || "");
-            setLinkedIn(u.linkedIn || "");
-            setCollegeId(u.collegeId || null);
-            setWorkStatus(u.role === "experienced" ? "experienced" : "fresher");
+                setFullName(u.fullName || "");
+                setMobile(u.mobile || "");
+                setEmail(u.email || "");
+                setLinkedIn(u.linkedIn || "");
+                setCollegeId(u.collegeId || null);
+                setCurrentCity(u.currentCity || "")
+                setWorkStatus(u.role === "experienced" ? "experienced" : "fresher");
+            }
         }
-    }
 
-    loadData();
-}, []);
+        loadData();
+    }, []);
 
 
-    // -----------------------------
-    // VALIDATION HELPERS
-    // -----------------------------
     const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
     const cityRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
     const mobileRegex = /^[0-9]{10}$/;
@@ -83,11 +77,8 @@ export default function PersonalDetails() {
     const sanitizeLinkedIn = (value: string) =>
         value.replace(/[^a-zA-Z0-9:/._-]/g, "");
 
-    // -----------------------------
-    // HANDLE SUBMIT
-    // -----------------------------
+
     const handleSubmit = async () => {
-        // VALIDATIONS
 
         if (!fullName) return toast.error("Full Name is required!");
         if (!nameRegex.test(fullName))
@@ -110,24 +101,22 @@ export default function PersonalDetails() {
         if (!linkedIn.startsWith("https://"))
             return toast.error("LinkedIn must start with https://");
 
-        //if (!currentCity) return toast.error("City name is required!");
-        //if (!cityRegex.test(currentCity))
-           // return toast.error("City must contain only letters!");
+        if (!currentCity) return toast.error("City name is required!");
+        if (!cityRegex.test(currentCity))
+            return toast.error("City must contain only letters!");
 
         if (!collegeId) return toast.error("College ID is required!");
 
-        // FINAL PAYLOAD
         const payload = {
             fullName,
             mobile,
             email,
             linkedIn,
             collegeId,
-           // currentCity,
+            currentCity,
             workStatus,
         };
 
-        // SEND TO BACKEND
         const res = await upsertUser(payload);
 
         if (res.success) {
@@ -214,8 +203,8 @@ export default function PersonalDetails() {
                         <input
                             type="text"
                             placeholder="Enter Current City"
-                           // value={currentCity}
-                           // onChange={(e) => setCurrentCity(sanitizeCity(e.target.value))}
+                            // value={currentCity}
+                            // onChange={(e) => setCurrentCity(sanitizeCity(e.target.value))}
                             className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
                     </div>

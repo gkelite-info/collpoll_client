@@ -1,13 +1,15 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export const upsertUser = async (payload: {
-  auth_id: string;
+  auth_id?: string;
   fullName: string;
   email: string;
   mobile: string;
   linkedIn?: string
   collegeId?: number | null;
-  role: string;
+  currentCity?: string;
+  workStatus?: string;
+  role?: string;
 }) => {
   try {
     const {
@@ -17,6 +19,8 @@ export const upsertUser = async (payload: {
       email,
       linkedIn,
       collegeId,
+      currentCity,
+      workStatus,
       role,
     } = payload;
 
@@ -32,6 +36,8 @@ export const upsertUser = async (payload: {
           email,
           linkedIn,
           collegeId: collegeId ?? null,
+          currentCity,
+          workStatus,
           role: role ?? null,
           updatedAt: now,
           createdAt: now,
@@ -60,7 +66,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, linkedIn, collegeId, role")
+      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus")
       .eq("auth_id", auth_id)
       .single();
 
