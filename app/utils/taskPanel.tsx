@@ -5,9 +5,6 @@ import { CheckCircle, PencilSimple } from "@phosphor-icons/react";
 import TaskModal from "@/app/components/modals/taskModal";
 
 
-
-
-
 export type Task = {
   facultytaskId: number;
   title: string;
@@ -23,6 +20,16 @@ export type TaskPanelProps = {
   studentTasks?: Task[];
   onEditTask?: (task: Task) => void;
   onAddTask?: () => void;
+  onSaveTask?: (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number
+  ) => void;
+
 };
 
 export default function TaskPanel({
@@ -32,20 +39,22 @@ export default function TaskPanel({
   studentTasks = [],
   onEditTask,
   onAddTask,
+  onSaveTask,
 }: TaskPanelProps) {
 
   const [openModal, setOpenModal] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
   const [activeView, setActiveView] = useState<"student" | "faculty">(
     role === "student" ? "student" : "faculty"
   );
 
   const tasksToShow =
-    tasks ??
-    (role === "faculty"
+    role === "faculty"
       ? facultyTasks
       : activeView === "student"
-      ? studentTasks
-      : facultyTasks);
+        ? studentTasks
+        : facultyTasks;
+
 
   const formatTime = (time: string) => {
     const [hourStr, minute] = time.split(":");
@@ -64,9 +73,8 @@ export default function TaskPanel({
             <div className="bg-[#E7F7EE] rounded-full p-1">
               <CheckCircle size={22} weight="fill" color="#43C17A" />
             </div>
-
             {role === "student" && (
-              <div className="flex items-center gap-2 text-sm font-semibold">
+              <div className="flex items-center gap-0 text-sm font-semibold ">
                 <button
                   onClick={() => setActiveView("student")}
                   className={
@@ -77,7 +85,6 @@ export default function TaskPanel({
                 >
                   My Tasks
                 </button>
-
                 <span className="text-gray-300">/</span>
 
                 <button
@@ -93,17 +100,28 @@ export default function TaskPanel({
               </div>
             )}
           </div>
+          {onAddTask &&
+            (
+              // ✅ faculty logic (UNCHANGED)
+              role === "faculty" ||
 
-          {role === "faculty" && onAddTask && (
-            <button
-              onClick={onAddTask}
-              className="flex items-center gap-2 px-3 py-1 rounded-full border border-[#43C17A] text-[#43C17A] text-xs font-medium hover:bg-[#43C17A] hover:text-white transition"
-            >
-              + Add Task
-            </button>
-          )}
+              // ✅ NEW: student logic (My Tasks only)
+              (role === "student" && activeView === "student")
+            ) && (
+              <button
+                onClick={() => {
+                  setOpenModal(true);   // ✅ OPEN MODAL (NEW)
+                  onAddTask?.();       // ✅ KEEP EXISTING BEHAVIOR
+                }}
+                className="flex items-center gap-2 px-3 py-1 rounded-full
+   border border-[#43C17A] text-[#43C17A] text-xs font-medium
+   hover:bg-[#43C17A] hover:text-white transition"
+              >
+                + Add Task
+              </button>
+
+            )}
         </div>
-
         {/* TASK LIST */}
         {tasksToShow.length === 0 ? (
           <p className="text-xs text-gray-400 text-center mt-10">
@@ -113,6 +131,8 @@ export default function TaskPanel({
           tasksToShow.map((task) => (
             <div
               key={task.facultytaskId}
+
+
               className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between h-[80px]"
             >
               <div className="w-[80%]">
@@ -130,14 +150,18 @@ export default function TaskPanel({
                 </p>
 
                 <div className="flex gap-2">
-                  {role === "faculty" && onEditTask && (
-                    <button
-                      onClick={() => onEditTask(task)}
-                      className="p-1 rounded-full hover:bg-[#DFF3E9]"
-                    >
-                      <PencilSimple size={18} color="#16284F" />
-                    </button>
-                  )}
+                  {((role === "faculty") ||
+                    (role === "student" && activeView === "student")) && (
+                      <button
+                        onClick={() => {
+                          setEditTask(task);
+                          setOpenModal(true);
+                        }}
+                        className="p-1 rounded-full hover:bg-[#DFF3E9]"
+                      >
+                        <PencilSimple size={18} color="#16284F" />
+                      </button>
+                    )}
                   <CheckCircle size={22} color="#282828" />
                 </div>
               </div>
@@ -146,12 +170,26 @@ export default function TaskPanel({
         )}
       </div>
 
-      {/* MODAL */}
-      <TaskModal
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        onSave={() => {}}
-      />
+      {onSaveTask && (
+        <TaskModal
+          open={openModal}
+          defaultValues={editTask}
+          onClose={() => {
+            setOpenModal(false);
+            setEditTask(null);
+          }}
+          onSave={(payload) => {
+            if (!payload) return;
+
+            onSaveTask(payload, editTask?.facultytaskId);
+
+            setOpenModal(false);
+            setEditTask(null);
+          }}
+        />
+      )}
+
+
     </>
   );
 }
