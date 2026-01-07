@@ -24,7 +24,7 @@ type TaskModalProps = {
     time: string;
     facultytaskcreatedDate: string | null;
   } | null;
-  onSave: (task?: TaskPayload) => void;
+  onSave: (task: TaskPayload) => void;
 };
 
 
@@ -122,7 +122,16 @@ export default function TaskModal({
       return;
     }
 
-    onSave();
+    // ✅ BUILD PAYLOAD (SAME AS EDIT MODE)
+    const payload: TaskPayload = {
+      title,
+      description,
+      dueDate,
+      dueTime,
+    };
+
+    // ✅ ALWAYS SEND PAYLOAD
+    onSave(payload);
     onClose();
   };
 

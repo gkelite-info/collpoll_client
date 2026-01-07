@@ -3,32 +3,93 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { useState } from "react";
+import type { Task } from "@/app/utils/taskPanel";
+
 
 export default function AssignmentsRight() {
   // 
-  const myTasks = [
-  {
-    facultytaskId: 1,                   // Add this
-    title: "Complete Python Lab",
-    description: "Finish all 10 lab programs and upload to portal.",
-    time: "12:40 PM",
-    facultytaskcreatedDate: null,       // Add this (or provide a date string)
-  },
-  {
-    facultytaskId: 2,
-    title: "Group Discussion Prep",
-    description: "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-    time: "02:40 PM",
-    facultytaskcreatedDate: null,
-  },
-  {
-    facultytaskId: 3,
-    title: "Resume Update",
-    description: "Add latest internship experience to resume builder section.",
-    time: "03:40 PM",
-    facultytaskcreatedDate: null,
-  },
-];
+  // const myTasks = [
+  //   {
+  //     facultytaskId: 1,                   
+  //     title: "Complete Python Lab",
+  //     description: "Finish all 10 lab programs and upload to portal.",
+  //     time: "12:40 PM",
+  //     facultytaskcreatedDate: null,       
+  //   },
+  //   {
+  //     facultytaskId: 2,
+  //     title: "Group Discussion Prep",
+  //     description: "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+  //     time: "02:40 PM",
+  //     facultytaskcreatedDate: null,
+  //   },
+  //   {
+  //     facultytaskId: 3,
+  //     title: "Resume Update",
+  //     description: "Add latest internship experience to resume builder section.",
+  //     time: "03:40 PM",
+  //     facultytaskcreatedDate: null,
+  //   },
+  // ];
+
+  // ✅ Faculty tasks state
+  const [facultyTasks, setFacultyTasks] = useState<Task[]>([
+    {
+      facultytaskId: 1,
+      title: "Complete Python Lab",
+      description: "Finish all 10 lab programs and upload to portal.",
+      time: "12:40 PM",
+      facultytaskcreatedDate: null,
+    },
+    {
+      facultytaskId: 2,
+      title: "Prepare Unit Test Question Bank",
+      description: "Prepare questions covering all important topics.",
+      time: "10:21 AM",
+      facultytaskcreatedDate: null,
+    },
+  ]);
+
+  // ✅ Save / Update handler
+  const handleSaveFacultyTask = (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number
+  ) => {
+    if (taskId) {
+      // ✏️ UPDATE
+      setFacultyTasks((prev) =>
+        prev.map((t) =>
+          t.facultytaskId === taskId
+            ? {
+              ...t,
+              title: payload.title,
+              description: payload.description,
+              time: payload.dueTime,
+            }
+            : t
+        )
+      );
+    } else {
+      // ➕ ADD
+      setFacultyTasks((prev) => [
+        {
+          facultytaskId: Date.now(), // temp id
+          title: payload.title,
+          description: payload.description,
+          time: payload.dueTime,
+          facultytaskcreatedDate: payload.dueDate,
+        },
+        ...prev,
+      ]);
+    }
+  };
+
 
   const card = [
     {
@@ -85,9 +146,11 @@ export default function AssignmentsRight() {
         <WorkWeekCalendar />
         <TaskPanel
           role="faculty"
-          facultyTasks={myTasks}
+          facultyTasks={facultyTasks}
+          onAddTask={() => { }}
+          onSaveTask={handleSaveFacultyTask}
         />
-         <AnnouncementsCard announceCard={card} />
+        <AnnouncementsCard announceCard={card} />
       </div>
     </>
   );

@@ -3,9 +3,31 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import type { Task } from "@/app/utils/taskPanel";
+
 
 export default function AssignmentsRight() {
-  const myTasks = [
+  // const myTasks = [
+  //   {
+  //     title: "Complete Python Lab",
+  //     description: "Finish all 10 lab programs and upload to portal.",
+  //     time: "12:40 PM",
+  //   },
+  //   {
+  //     title: "Group Discussion Prep",
+  //     description:
+  //       "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+  //     time: "02:40 PM",
+  //   },
+  //   {
+  //     title: "Resume Update",
+  //     description:
+  //       "Add latest internship experience to resume builder section.",
+  //     time: "03:40 PM",
+  //   },
+  // ];
+
+  const myTasks: Task[] = [
     {
       facultytaskId: 1,
       title: "Complete Python Lab",
@@ -17,7 +39,7 @@ export default function AssignmentsRight() {
       facultytaskId: 2,
       title: "Group Discussion Prep",
       description:
-        "Research topic 'Impact of AI on Education' for tomorrow’s discussion.",
+        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
       time: "02:40 PM",
       facultytaskcreatedDate: null,
     },
