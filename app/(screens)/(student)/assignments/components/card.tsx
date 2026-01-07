@@ -7,9 +7,64 @@ import { TfiPencil } from "react-icons/tfi";
 import { FaPlus } from "react-icons/fa6";
 import ViewDetailModal from "../modal/viewDetail";
 import UploadModal from "../modal/uploadModal";
+import { supabase } from "@/lib/supabaseClient";
+import { downloadAssignmentFile } from "@/app/utils/storageActions";
+
+
+
+async function downloadFile(filePath: string) {
+    try {
+        const { data, error } = await supabase.storage
+            .from("student_submissions")
+            .download(filePath);
+
+        if (error) {
+            console.error("DOWNLOAD ERROR:", error);
+            return;
+        }
+
+        // Convert to download link
+        const url = URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filePath.split("/").pop() || "file";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error("DOWNLOAD ERROR:", err);
+    }
+}
+
+async function updateFile(oldPath: string, newFile: File) {
+    try {
+        // 1. Delete old file
+        await supabase.storage
+            .from("student_submissions")
+            .remove([oldPath]);
+
+        // 2. Upload new file with SAME path
+        const { error: uploadErr } = await supabase.storage
+            .from("student_submissions")
+            .upload(oldPath, newFile, { upsert: true });
+
+        if (uploadErr) {
+            console.error("UPDATE ERROR:", uploadErr);
+            return false;
+        }
+
+        return true;
+
+    } catch (err) {
+        console.error("UPDATE ERROR:", err);
+        return false;
+    }
+}
 
 export type CardProp = {
-     assignmentId: number | string;
+    assignmentId: number | string;
     image: string;
     title: string;
     description: string;
@@ -33,6 +88,7 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
     const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
     const openModal = (item: CardProp) => {
         setSelectedCard(item);
@@ -48,6 +104,33 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
         setUploadingIndex(index);
         setShowUploadModal(true);
     };
+
+    const handleEdit = (index: number) => {
+        setEditingIndex(index);
+        setUploadingIndex(index);
+        setShowUploadModal(true);
+    }
+
+    const handleDownload = async (index: number, item: CardProp) => {
+        try {
+            const storedPath = uploadedFiles[index];
+            if (!storedPath) {
+                alert("No uploaded file found!");
+                return;
+            }
+
+            const fileName = storedPath.split("/").pop()!;
+
+            await downloadAssignmentFile(
+                Number(item.assignmentId),
+                fileName
+            );
+        } catch (error) {
+            console.error("DOWNLOAD ERROR:", error);
+        }
+    };
+
+
 
     return (
         <>
@@ -79,11 +162,19 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                             <div className="w-[40%] flex flex-col justify-between">
                                 <div className="flex items-center justify-center gap-5">
                                     <div className="flex items-center gap-3">
-                                        <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+                                        <div
+                                            className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                                            onClick={() => handleDownload(index, item)}
+
+                                        >
                                             <FiDownload className="text-md text-[#57C788]" />
                                         </div>
+
                                         {activeView === "active" && (
-                                            <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+                                            <div
+                                                className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                                                onClick={() => handleEdit(index)}
+                                            >
                                                 <TfiPencil className="text-md text-[#57C788]" />
                                             </div>
                                         )}
@@ -142,36 +233,44 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                                 <div className="flex items-center gap-2">
                                     {uploadedFiles[index] ? (
                                         <div className="flex items-center bg-[#E2F3E9] rounded-full px-2 py-1 gap-2 max-w-[210px]">
-
-                                            {/* ✅ CLICK TO DOWNLOAD */}
-                                            <a
-                                                href={uploadedFiles[index]}
-                                                target="_blank"
-                                                className="text-[#43C17A] text-xs underline truncate"
-                                                title="Download file"
+                                            {(() => {
+                                                console.log("Saved file path:", uploadedFiles[index]);
+                                                return null;
+                                            })()}
+                                            {/* DOWNLOAD */}
+                                            <span
+                                                onClick={() => downloadFile(uploadedFiles[index])}
+                                                className="text-[#43C17A] text-xs underline truncate cursor-pointer"
                                             >
-                                                {uploadedFiles[index].split("/").pop()}   {/* show only filename */}
-                                            </a>
+                                                {uploadedFiles[index].split("/").pop()}
+                                            </span>
 
-                                            {/* 🔁 EDIT (RE-UPLOAD) */}
-                                            <button
-                                                className="text-blue-500 text-xs font-bold px-1 cursor-pointer"
-                                                title="Re-upload file"
-                                                onClick={() => openUploadModal(index)}
-                                            >
-                                                ↻
-                                            </button>
+                                            {/* UPDATE */}
+                                            <label className="cursor-pointer text-blue-500 text-xs font-bold px-1">
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="application/pdf"
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
 
-                                            {/* ❌ DELETE */}
+                                                        const ok = await updateFile(uploadedFiles[index], file);
+                                                        if (ok) alert("File updated successfully!");
+                                                    }}
+                                                />
+                                            </label>
+
+                                            {/* DELETE UI */}
                                             <button
-                                                className="text-red-500 font-bold text-xs px-1 cursor-pointer"
-                                                onClick={() =>
+                                                className="text-red-500 px-1"
+                                                onClick={() => {
                                                     setUploadedFiles(prev => {
                                                         const updated = { ...prev };
                                                         delete updated[index];
                                                         return updated;
-                                                    })
-                                                }
+                                                    });
+                                                }}
                                             >
                                                 ✕
                                             </button>
@@ -193,13 +292,24 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                 </div>
             ))}
 
-            <ViewDetailModal isOpen={showModal} onClose={closeModal} card={selectedCard} />
+            <ViewDetailModal
+                isOpen={showModal}
+                onClose={closeModal}
+                card={selectedCard}
+                submissionFileName={
+                    uploadingIndex !== null ? uploadedFiles[uploadingIndex] : undefined
+                }
+            />
+
 
             <UploadModal
                 isOpen={showUploadModal}
-                onClose={() => setShowUploadModal(false)}
-                onUpload={(fileName, idx) =>
-                    setUploadedFiles(prev => ({ ...prev, [idx]: fileName }))
+                onClose={() => {
+                    setShowUploadModal(false)
+                    setEditingIndex(null);
+                }}
+                onUpload={(filePath, idx) =>
+                    setUploadedFiles(prev => ({ ...prev, [idx]: filePath }))
                 }
                 card={uploadingIndex !== null ? cardProp[uploadingIndex] : undefined}
                 index={uploadingIndex ?? undefined}

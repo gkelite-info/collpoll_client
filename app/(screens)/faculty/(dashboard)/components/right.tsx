@@ -1,29 +1,80 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
+import { supabase } from "@/lib/supabaseClient";
+import TaskModal from "@/app/components/modals/taskModal";
+
+type Task = {
+  facultytaskId: number;
+  title: string;
+  description: string;
+  time: string;
+  facultytaskcreatedDate: string | null;
+};
+
 
 export default function FacultyDashRight() {
-  const myTasks = [
-    {
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-    },
-    {
-      title: "Group Discussion Prep",
-      description:
-        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-      time: "02:40 PM",
-    },
-    {
-      title: "Resume Update",
-      description:
-        "Add latest internship experience to resume builder section.",
-      time: "03:40 PM",
-    },
-  ];
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [openModal, setOpenModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+
+
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        // 1️⃣ Get logged-in user
+        const { data: authData } = await supabase.auth.getUser();
+        const auth_id = authData?.user?.id;
+        if (!auth_id) return;
+
+        // 2️⃣ Get facultyId from users table
+        const { data: user, error: userError } = await supabase
+          .from("users")
+          .select("userId")
+          .eq("auth_id", auth_id)
+          .single();
+
+        if (userError || !user) {
+          console.error("USER FETCH ERROR", userError);
+          return;
+        }
+
+        // 3️⃣ Fetch faculty tasks
+        const res = await fetchFacultyTasks(user.userId);
+
+        // ✅ IMPORTANT: guard for TypeScript + runtime safety
+        if (!res.success || !res.tasks) {
+          setTasks([]);
+          return;
+        }
+        setTasks(
+          res.tasks.map((t: any) => ({
+            facultytaskId: t.facultytaskId,
+            title: t.facultytaskTitle,
+            description: t.facultytaskDescription,
+            time: t.facultytaskassignedTime,
+            facultytaskcreatedDate: t.facultytaskcreatedDate, // ✅ ADD THIS
+          }))
+        );
+
+
+      } catch (err) {
+        console.error("LOAD TASKS ERROR", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
 
   const card = [
     {
@@ -44,43 +95,43 @@ export default function FacultyDashRight() {
       cardBg: "#EEEDFF",
       imageBg: "#E3E1FF",
     },
-    {
-      image: "/book.png",
-      imgHeight: "h-10",
-      title: "DBMS Lab Report submissions are due by 10 Nov 2025.",
-      professor: "By Simran",
-      time: "1 min ago.",
-      cardBg: "#FBF5EA",
-      imageBg: "#F7EBD5",
-    },
-    {
-      image: "/exam.png",
-      imgHeight: "h-10",
-      title: "Mid-semester exams are scheduled from 15–20 Nov 2025.",
-      professor: "By Rajesh",
-      time: "9 mins ago.",
-      cardBg: "#E8F8EF",
-      imageBg: "#D3F1E0",
-    },
-    {
-      image: "/attendance.png",
-      imgHeight: "h-10",
-      title: "Attendance reports for October will be reviewed on 08 Nov 2025.",
-      professor: "By Sundar",
-      time: "6 mins ago.",
-      cardBg: "#E6F0FF",
-      imageBg: "#C9DEFF",
-    },
   ];
 
   return (
-    <>
-      <div className="w-[32%] p-2 flex flex-col">
-        <CourseScheduleCard />
-        <WorkWeekCalendar />
-        <TaskPanel tasks={myTasks} />
-        <AnnouncementsCard announceCard={card} />
-      </div>
-    </>
+    <div className="w-[32%] p-2 flex flex-col">
+      <CourseScheduleCard />
+      <WorkWeekCalendar />
+
+      <TaskPanel
+        role="faculty"
+        facultyTasks={loading ? [] : tasks}
+        studentTasks={[]}
+        onAddTask={() => {
+          setEditingTask(null);
+          setOpenModal(true);
+        }}
+        onEditTask={(task) => {
+          setEditingTask(task);
+          setOpenModal(true);
+        }}
+      />
+
+      {openModal && (
+        <TaskModal
+          open={openModal}
+          onClose={() => {
+            setOpenModal(false);
+            setEditingTask(null);
+          }}
+          defaultValues={editingTask}
+          onSave={() => {
+            setOpenModal(false);
+            setEditingTask(null);
+          }}
+        />
+      )}
+
+      <AnnouncementsCard announceCard={card} />
+    </div>
   );
 }

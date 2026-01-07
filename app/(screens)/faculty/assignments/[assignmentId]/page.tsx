@@ -114,7 +114,7 @@ export default function Page() {
         </div>
         <CourseScheduleCard style="w-[320px]" />
       </section>
-      <section className="bg-red-400 flex flex-row items-stretch gap-4 w-full mb-3">
+      <section className=" flex flex-row items-stretch gap-4 w-full mb-3">
         {cardData.map((item, index) => (
           <div key={index} className="flex-1">
             <CardComponent {...item} />
