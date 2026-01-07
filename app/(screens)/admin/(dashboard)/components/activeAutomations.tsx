@@ -112,7 +112,8 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   if (selectedDept) {
     return (
       <FacultyView
-        department={selectedDept}
+        departmentId={2} // Placeholder ID for now
+        departmentName={selectedDept}
         onBack={() => setSelectedDept(null)}
       />
     );
