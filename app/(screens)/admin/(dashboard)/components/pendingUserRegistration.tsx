@@ -68,49 +68,14 @@ const PendingUserRegistration: React.FC<TotalUsersProps> = ({ onBack }) => {
   if (selectedDept) {
     return (
       <FacultyView
-        department={selectedDept}
+        departmentId={2} // Placeholder ID for now
+        departmentName={selectedDept}
         onBack={() => setSelectedDept(null)}
       />
     );
   }
 
   return (
-    //     <div className="flex flex-col w-full min-h-screen">
-    //       <div className="mb-5">
-    //         <div className="flex items-center gap-2 group w-fit">
-    //           <CaretLeft
-    //             onClick={onBack}
-    //             size={24}
-    //             weight="bold"
-    //             className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
-    //           />
-    //           <h1 className="text-2xl font-bold text-[#282828]">System Health</h1>
-    //         </div>
-    //         <p className="text-[#282828] mt-2 ml-8 text-sm">
-    //           Review and track current uptime and response time metrics.
-    //         </p>
-    //       </div>
-
-    //       <article className="flex gap-3 justify-center items-center mb-4">
-    //         {cardData.map((item, index) => (
-    //           <CardComponent
-    //             key={index}
-    //             value={item.value}
-    //             label={item.label}
-    //             bgColor={item.bgColor}
-    //             icon={item.icon}
-    //             iconBgColor={item.iconBgColor}
-    //             iconColor={item.iconColor}
-    //           />
-    //         ))}
-    //       </article>
-
-    //       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-    //         <UserRequestsTable />
-    //       </div>
-    //     </div>
-    //   );
-
     <div className="flex flex-col m-4 ">
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">

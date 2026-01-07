@@ -3,173 +3,62 @@ import React, { useState } from "react";
 import { CaretLeft, MagnifyingGlass, UserCircle } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyDetail from "./facultyDetail";
+import { useFacultyByDepartment } from "../../hooks/useFacultyByDepartment";
+import { useStudentsByDepartment } from "../../hooks/useStudentsByDepartment";
+// import { useFacultyByDepartment } from "../../hooks/useFacultyByDepartment";
+// import { useStudentsByDepartment } from "../../hooks/useStudentsByDepartment";
 
 interface FacultyViewProps {
-  department: string;
+  departmentId: number;
+  departmentName: string;
   onBack: () => void;
 }
 
-const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
+const FacultyView: React.FC<FacultyViewProps> = ({
+  departmentId,
+  departmentName,
+  onBack,
+}) => {
   const [activeTab, setActiveTab] = useState<"Faculty" | "Students">("Faculty");
 
   const [selectedFaculty, setSelectedFaculty] = useState<any | null>(null);
 
-  const facultyList = [
-    {
-      name: "Arun Kumar",
-      subject: "Data Structures",
-      role: "Professor",
-      id: "21CSE006",
-      department: "CSE",
-      phone: "+91 9012345678",
-      email: "arunkumar@gmail.com",
-      address: "245 Delo Street",
-      experience: "8 Years",
-      qualification: "M.Tech, PhD",
-      avatar:
-        "https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-    },
-    {
-      name: "Sneha Rao",
-      subject: "DBMS",
-      role: "Asst. Professor",
-      id: "21CSE007",
-      department: "CSE",
-      phone: "+91 9012345679",
-      email: "sneha@college.edu",
-      address: "246 Delo Street",
-      experience: "5 Years",
-      qualification: "M.Tech",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    },
-    {
-      name: "Rajesh",
-      subject: "OS",
-      role: "Lecturer",
-      id: "21CSE008",
-      department: "IT",
-      phone: "+91 9012345680",
-      email: "rajesh@college.edu",
-      address: "247 Delo Street",
-      experience: "3 Years",
-      qualification: "B.Tech",
-      avatar:
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=880&q=80",
-    },
-    {
-      name: "Kavya Sharma",
-      subject: "Computer Networks",
-      role: "Professor",
-      id: "21CSE009",
-      department: "CSE",
-      phone: "+91 9012345681",
-      email: "kavya@college.edu",
-      address: "248 Delo Street",
-      experience: "10 Years",
-      qualification: "M.Tech, PhD",
-      avatar:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=761&q=80",
-    },
-    {
-      name: "Rohit Mehta",
-      subject: "Design & Analysis",
-      role: "Asst. Professor",
-      id: "21CSE010",
-      department: "CSE",
-      phone: "+91 9012345682",
-      email: "rohit@college.edu",
-      address: "249 Delo Street",
-      experience: "6 Years",
-      qualification: "M.Tech",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    },
-    {
-      name: "Divya Nair",
-      subject: "SE",
-      role: "Lecturer",
-      id: "21CSE011",
-      department: "IT",
-      phone: "+91 9012345683",
-      email: "divya@college.edu",
-      address: "250 Delo Street",
-      experience: "2 Years",
-      qualification: "B.Tech",
-      avatar:
-        "https://images.unsplash.com/photo-1554151228-14d9def656e4?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=686&q=80",
-    },
-    {
-      name: "Nitin Varma",
-      subject: "Artificial Intelligence",
-      role: "Professor",
-      id: "21CSE012",
-      department: "AI/ML",
-      phone: "+91 9012345684",
-      email: "nitin@college.edu",
-      address: "251 Delo Street",
-      experience: "12 Years",
-      qualification: "PhD",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80",
-    },
-  ];
+  // const { faculty, students, stats, loading } =
+  //   useFacultyCardView(departmentId);
+  const { faculty } = useFacultyByDepartment(departmentId);
+  const { students } = useStudentsByDepartment(departmentId);
 
-  const studentList = [
-    {
-      rollNo: "21CSE001",
-      name: "Rohan Patel",
-      attendance: "92%",
-      performance: "Excellent",
-      avatar: "https://i.pravatar.cc/150?u=rohan",
-    },
-    {
-      rollNo: "21CSE002",
-      name: "Aarav Mehta",
-      attendance: "67%",
-      performance: "Good",
-      avatar: "https://i.pravatar.cc/150?u=aarav",
-    },
-    {
-      rollNo: "21CSE003",
-      name: "Karthik Reddy",
-      attendance: "55%",
-      performance: "Average",
-      avatar: "https://i.pravatar.cc/150?u=karthik",
-    },
-    {
-      rollNo: "21CSE004",
-      name: "Sneha Reddy",
-      attendance: "76%",
-      performance: "Excellent",
-      avatar: "https://i.pravatar.cc/150?u=snehas",
-    },
-    {
-      rollNo: "21CSE005",
-      name: "Ananya Sharma",
-      attendance: "87%",
-      performance: "Good",
-      avatar: "https://i.pravatar.cc/150?u=ananya",
-    },
-    {
-      rollNo: "21CSE006",
-      name: "Neha Sinha",
-      attendance: "45%",
-      performance: "Average",
-      avatar: "https://i.pravatar.cc/150?u=neha",
-    },
-    {
-      rollNo: "21CSE007",
-      name: "Arjun Rao",
-      attendance: "50%",
-      performance: "Excellent",
-      avatar: "https://i.pravatar.cc/150?u=arjun",
-    },
-  ];
+  const facultyList = faculty.map((f: any) => ({
+    name: f.users.fullName,
+    subject: f.subject ?? "—",
+    role: f.designation,
+    contact: f.users.email,
 
-  const cardData: CardProps[] = [
+    email: f.users.email,
+    avatar:
+      f.users.avatar ??
+      `https://api.dicebear.com/9.x/initials/svg?seed=${f.users.fullName}`,
+
+    raw: f,
+  }));
+
+  const studentList = students.map((s: any) => ({
+    name: s.users.fullName,
+
+    rollNo: s.rollNumber,
+    semester: s.semester,
+
+    avatar:
+      s.users.avatar ??
+      `https://api.dicebear.com/9.x/initials/svg?seed=${s.users.fullName}`,
+    attendance: s.attendance ?? "—",
+    performance: s.performance ?? "—",
+  }));
+
+  const loading = false;
+  const cardData = [
     {
-      value: "80",
+      value: loading ? "…" : faculty.length.toString(),
       label: "Faculty",
       bgColor: "bg-[#E2DAFF]",
       icon: <UserCircle />,
@@ -177,7 +66,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
       iconColor: "text-[#6C20CA]",
     },
     {
-      value: "220",
+      value: loading ? "…" : students.length.toString(),
       label: "Students",
       bgColor: "bg-[#FFEDDA]",
       icon: <UserCircle />,
@@ -185,7 +74,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
       iconColor: "text-[#FFBB70]",
     },
     {
-      value: "10",
+      value: loading ? "…" : "1",
       label: "Sections",
       bgColor: "bg-[#E6FBEA]",
       icon: <UserCircle />,
@@ -216,7 +105,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({ department, onBack }) => {
 
           {activeTab === "Faculty" ? (
             <h1 className="text-2xl font-bold text-[#282828]">
-              {department} Faculty
+              {departmentName} Faculty
             </h1>
           ) : (
             <h1 className="text-xl font-semibold text-[#1A202C]">

@@ -18,6 +18,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import ActiveAutomations from "./activeAutomations";
 import PolicyManagement from "./policyManagement";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAdminDashboard } from "../../hooks/useAdminDashboard";
 
 type ViewState =
   | "MAIN"
@@ -34,7 +35,7 @@ export default function AdminDashLeft({
   const [view, setView] = useState<ViewState>("MAIN");
   const searchParams = useSearchParams();
   const router = useRouter();
-
+  const { cards, departments, loading, refresh } = useAdminDashboard();
   const isAutomationsView = searchParams.get("view") === "automations";
   const isPolicyView = searchParams.get("view") === "policy-setup";
 
@@ -69,7 +70,7 @@ export default function AdminDashLeft({
       id: "TOTAL_USERS",
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <UsersThree size={32} weight="fill" color="#714EF2" />,
-      value: "1200",
+      value: loading ? "..." : cards.totalUsers,
       label: "Total Users",
     },
     {
@@ -112,7 +113,7 @@ export default function AdminDashLeft({
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
-          onViewDetails={() => {}}
+          // onViewDetails={() => {}}
         />
       </div>
     );

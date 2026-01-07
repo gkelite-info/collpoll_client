@@ -2,6 +2,17 @@ import { Briefcase, Buildings, GraduationCap } from "@phosphor-icons/react";
 import React from "react";
 
 export interface FacultyData {
+  raw?: {
+    facultyId?: number;
+    designation?: string;
+    experienceYears?: number;
+    qualification?: string;
+    users?: {
+      userId?: number;
+      fullName?: string;
+      email?: string;
+    };
+  };
   name: string;
   subject: string;
   role: string;
@@ -20,6 +31,9 @@ interface FacultyCardProps {
 }
 
 const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
+  // fallback if raw data is missing
+  const raw = (data as any)?.raw ?? (data as any) ?? {};
+
   return (
     <div className="w-full bg-white rounded-[20px] shadow-sm p-5 font-sans border border-gray-100">
       <div className="flex items-center justify-between mb-6">
@@ -43,16 +57,18 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
         </div>
 
         <span className="rounded-full bg-[#E1F5EA] px-3 py-1 text-sm font-medium text-[#43C17A]">
-          ID {data.id}
+          ID {raw.facultyId ?? "N/A"}
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-y-4 sm:grid-cols-3 gap-x-2 mb-6 pl-1">
         <div>
           <p className="text-sm font-medium text-[#666666] mb-0.5">Contact</p>
-
-          <p className="text-base font-medium text-[#333333]">{data.phone}</p>
+          <p className="text-base font-medium text-[#333333]">
+            {raw.facultyId ?? "N/A"}
+          </p>
         </div>
+
         <div>
           <p className="text-sm font-medium text-[#666666] mb-0.5">Email</p>
           <p
@@ -62,6 +78,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
             {data.email}
           </p>
         </div>
+
         <div>
           <p className="text-sm font-medium text-[#666666] mb-0.5">Address</p>
           <p className="text-base font-medium text-[#333333] leading-tight">
@@ -77,7 +94,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
           </div>
           <div>
             <p className="text-base font-bold text-[#1a1a1a]">
-              {data.experience}
+              {raw.experienceYears ?? "N/A"} years
             </p>
             <p className="text-xs font-medium text-[#444444]">Experience</p>
           </div>
@@ -89,7 +106,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
           </div>
           <div>
             <p className="text-base font-bold text-[#1a1a1a]">
-              {data.qualification}
+              {raw.qualification ?? "N/A"}
             </p>
             <p className="text-xs font-medium text-[#444444]">Qualification</p>
           </div>
