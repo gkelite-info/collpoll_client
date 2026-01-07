@@ -1,13 +1,17 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export const upsertUser = async (payload: any) => {
+export const upsertUser = async (payload: {
+  auth_id: string;
+  fullName: string;
+  email: string;
+  mobile: string;
+  linkedIn?: string
+  collegeId?: number | null;
+  role: string;
+}) => {
   try {
-    const { data: authData } = await supabase.auth.getUser();
-    const auth_id = authData?.user?.id;
-
-    if (!auth_id) throw new Error("User not authenticated");
-
     const {
+      auth_id,
       fullName,
       mobile,
       email,
@@ -27,7 +31,7 @@ export const upsertUser = async (payload: any) => {
           mobile,
           email,
           linkedIn,
-          collegeId,
+          collegeId: collegeId ?? null,
           role: role ?? null,
           updatedAt: now,
           createdAt: now,

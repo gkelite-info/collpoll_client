@@ -47,49 +47,49 @@ export default function AdminNavbar() {
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Attendance",
-      path: "/attendance",
+      path: "/admin/attendance",
     },
     {
       icon: (isActive) => (
         <Note size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Assignments",
-      path: "/assignments",
+      path: "/admin/assignments",
     },
     {
       icon: (isActive) => (
         <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Academics",
-      path: "/academics",
+      path: "/admin/academics",
     },
     {
       icon: (isActive) => (
         <Student size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Student Progress",
-      path: "/student-progress",
+      path: "/admin/student-progress",
     },
     {
       icon: (isActive) => (
         <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Projects",
-      path: "/projects",
+      path: "/admin/projects",
     },
     {
       icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
-      path: "/placements",
+      path: "/admin/placements",
     },
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
-      path: "/drive",
+      path: "/admin/drive",
     },
     // {
     //     icon: (isActive) => (
@@ -106,7 +106,7 @@ export default function AdminNavbar() {
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Settings",
-      path: "/settings",
+      path: "/admin/settings",
     },
   ];
 
@@ -135,10 +135,9 @@ export default function AdminNavbar() {
               className={`flex relative items-center gap-3 w-[91.5%] ml-4 pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                    : "text-white hover:bg-[#50D689]/30"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                  : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -147,9 +146,8 @@ export default function AdminNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>

@@ -234,6 +234,11 @@ export default function LoginPage() {
                    text-[14px] text-black focus:outline-none  placeholder:text-gray-400"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleLogin();
+                }
+              }}
             />
           </div>
 

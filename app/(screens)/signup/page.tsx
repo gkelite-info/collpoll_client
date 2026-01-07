@@ -15,7 +15,7 @@ export default function Signup() {
     email: string;
     mobile: string;
     role: string;
-    collegeId: number | "";
+    collegeId: number | null;
     password: string;
     confirmPassword: string;
   }>({
@@ -23,7 +23,7 @@ export default function Signup() {
     email: "",
     mobile: "",
     role: "",
-    collegeId: "",
+    collegeId: null,
     password: "",
     confirmPassword: "",
   });
@@ -118,7 +118,7 @@ export default function Signup() {
       const numericValue = value.replace(/\D/g, "");
       setFormData((prev) => ({
         ...prev,
-        collegeId: numericValue === "" ? "" : Number(numericValue),
+        collegeId: numericValue === "" ? null : Number(numericValue),
       }));
       return;
     }
@@ -159,7 +159,7 @@ export default function Signup() {
 
       if (!formData.role) return toast.error("Role is required!");
 
-      if (formData.collegeId === "")
+      if (formData.collegeId === null)
         return toast.error("College ID is required!");
 
       if (!Number.isInteger(formData.collegeId))
@@ -228,7 +228,7 @@ export default function Signup() {
         fullName: "",
         email: "",
         mobile: "",
-        collegeId: "",
+        collegeId: null,
         role: "",
         password: "",
         confirmPassword: ""
@@ -236,6 +236,7 @@ export default function Signup() {
       toast.success("Please verify your email!");
       router.push("/login");
     } catch (err: any) {
+      console.log("catch error", err);
       toast.error(err.message || "Failed to save");
     } finally {
       setLoading(false);
@@ -396,6 +397,7 @@ export default function Signup() {
                 className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
               >
                 <option value="">Select Role</option>
+                <option value="SuperAdmin">Super Admin</option>
                 <option value="Admin">Admin</option>
                 <option value="Parent">Parent</option>
                 <option value="Student">Student</option>
@@ -410,19 +412,18 @@ export default function Signup() {
                 id="collegeId"
                 type="text"
                 inputMode="numeric"
-                value={formData.collegeId === "" ? "" : String(formData.collegeId)}
+                value={formData.collegeId ?? ""}
                 onChange={handleChange}
                 placeholder="Enter Your collegeId"
                 className="w-full h-[44px] border border-[#DCDCDC] rounded px-4 text-[14px] text-[#000] focus:outline-none"
+                onWheel={(e) => e.currentTarget.blur()}
               />
             </div>
-
 
             <div className="w-full">
               <label className="block text-[13px] text-[#414141] mb-1">
                 Password <span className="text-red-500 text-lg">*</span>
               </label>
-
               <div className="relative w-full">
                 <input
                   type={showPassword ? "text" : "password"}
