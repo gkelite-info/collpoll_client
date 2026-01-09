@@ -17,6 +17,7 @@ export default function PersonalDetails() {
     const [collegeId, setCollegeId] = useState<number | null>(null);
     const [currentCity, setCurrentCity] = useState("");
     const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
+    const [collegeCode, setCollegeCode] = useState("");
 
 
     useEffect(() => {
@@ -38,6 +39,7 @@ export default function PersonalDetails() {
                 setCollegeId(u.collegeId || null);
                 setCurrentCity(u.currentCity || "")
                 setWorkStatus(u.role === "experienced" ? "experienced" : "fresher");
+                setCollegeCode(u.collegeCode || "");
             }
         }
 
@@ -107,12 +109,15 @@ export default function PersonalDetails() {
 
         if (!collegeId) return toast.error("College ID is required!");
 
+        if (!collegeCode) return toast.error("CollegeCode is required");
+
         const payload = {
             fullName,
             mobile,
             email,
             linkedIn,
             collegeId,
+            collegeCode,
             currentCity,
             workStatus,
         };
@@ -185,6 +190,22 @@ export default function PersonalDetails() {
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
+                            College Code
+                        </label>
+
+                        <input
+                            type="text"
+                            value={collegeCode}
+                            readOnly
+                            disabled
+                            className="w-full border rounded-md px-3 py-2
+               text-[#282828] cursor-not-allowed
+               outline-none border-[#CCCCCC]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-[#282828] mb-1">
                             LinkedIn ID<span className="text-red-500">*</span>
                         </label>
                         <input
@@ -218,17 +239,15 @@ export default function PersonalDetails() {
                             placeholder="Enter College ID"
                             value={collegeId !== null ? collegeId : ""}
                             onChange={(e) => {
-                                let clean = e.target.value.replace(/\D/g, ""); // keep digits only
+                                let clean = e.target.value.replace(/\D/g, "");
 
-                                if (clean === "0") clean = ""; // prevent 0
-                                if (clean.startsWith("0")) clean = clean.replace(/^0+/, ""); // remove leading zeros
+                                if (clean === "0") clean = "";
+                                if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
 
                                 setCollegeId(clean === "" ? null : Number(clean));
                             }}
                             className="w-full border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
                         />
-
-
 
                     </div>
                 </div>
