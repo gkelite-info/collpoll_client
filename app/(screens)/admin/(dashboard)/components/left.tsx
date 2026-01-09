@@ -35,7 +35,7 @@ export default function AdminDashLeft({
   const [view, setView] = useState<ViewState>("MAIN");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { cards, departments, loading, refresh } = useAdminDashboard();
+  const { cards, departments,   loading: adminLoading, refresh } = useAdminDashboard();
   const isAutomationsView = searchParams.get("view") === "automations";
   const isPolicyView = searchParams.get("view") === "policy-setup";
 
@@ -122,11 +122,7 @@ export default function AdminDashLeft({
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
-<<<<<<< Updated upstream
           // onViewDetails={() => {}}
-=======
-          onViewDetails={() => { }}
->>>>>>> Stashed changes
         />
       </div>
     );
