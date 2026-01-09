@@ -122,7 +122,11 @@ export default function AdminDashLeft({
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
+<<<<<<< Updated upstream
           // onViewDetails={() => {}}
+=======
+          onViewDetails={() => { }}
+>>>>>>> Stashed changes
         />
       </div>
     );
