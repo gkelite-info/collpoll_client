@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [current, setCurrent] = useState(0);
 
 
+
+
   type Slide = {
     heading: string;
     para: string;
@@ -85,6 +87,7 @@ export default function LoginPage() {
     return true;
   };
 
+
   const handleLogin = async () => {
     if (!validate()) return;
 
@@ -118,6 +121,7 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
 
   const radius = 240;
 
