@@ -35,7 +35,12 @@ export default function AdminDashLeft({
   const [view, setView] = useState<ViewState>("MAIN");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { cards, departments,   loading: adminLoading, refresh } = useAdminDashboard();
+  const {
+    cards,
+    departments,
+    loading: adminLoading,
+    refresh,
+  } = useAdminDashboard();
   const isAutomationsView = searchParams.get("view") === "automations";
   const isPolicyView = searchParams.get("view") === "policy-setup";
 
@@ -46,7 +51,6 @@ export default function AdminDashLeft({
       setView("MAIN");
     }
   };
-
 
   if (isAutomationsView) {
     return (
@@ -70,15 +74,15 @@ export default function AdminDashLeft({
     !loading && gender === "Female"
       ? "/admin-f.png"
       : !loading && gender === "Male"
-        ? "/admin-m.png"
-        : null;
+      ? "/admin-m.png"
+      : null;
 
   const cardData = [
     {
       id: "TOTAL_USERS",
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <UsersThree size={32} weight="fill" color="#714EF2" />,
-      value: loading ? "..." : cards.totalUsers,
+      value: loading ? "..." : cards?.totalUsers,
       label: "Total Users",
     },
     {
@@ -113,7 +117,7 @@ export default function AdminDashLeft({
       adminSubject: "Keep the system running smoothly!",
       image: adminImage ?? undefined,
       top: "lg:top-[-172.5px]",
-      imageHeight: 170
+      imageHeight: 170,
     },
   ];
 
@@ -131,7 +135,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
       </div>
     );
   }
