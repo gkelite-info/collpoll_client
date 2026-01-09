@@ -25,7 +25,7 @@ const facultyImage =
     ? "/faculty-f.png"
     : !loading && gender === "Male"
     ? "/faculty-m.png"
-    : null; // 👈 important
+    : null; 
 
 
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>(INITIAL_LESSONS);

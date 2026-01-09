@@ -34,7 +34,7 @@ export default function ViewAcademicStructure({
             {data.map((row, i) => (
               <tr
                 key={i}
-                className="hover:bg-gray-50 transition"
+                className="hover:bg-gray-50 text-gray-800 transition"
               >
                 <td className="p-4">{row.degree}</td>
                 <td className="p-4">{row.dept}</td>
