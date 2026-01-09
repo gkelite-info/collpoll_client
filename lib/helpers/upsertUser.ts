@@ -10,6 +10,7 @@ export const upsertUser = async (payload: {
   currentCity?: string;
   workStatus?: string;
   role?: string;
+  collegeCode: string;
 }) => {
   try {
     const {
@@ -22,6 +23,7 @@ export const upsertUser = async (payload: {
       currentCity,
       workStatus,
       role,
+      collegeCode,
     } = payload;
 
     const now = new Date().toISOString();
@@ -39,6 +41,7 @@ export const upsertUser = async (payload: {
           currentCity,
           workStatus,
           role: role ?? null,
+          collegeCode,
           updatedAt: now,
           createdAt: now,
         },
@@ -66,7 +69,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus")
+      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus, collegeCode")
       .eq("auth_id", auth_id)
       .single();
 

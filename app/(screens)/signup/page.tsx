@@ -16,6 +16,7 @@ export default function Signup() {
     mobile: string;
     role: string;
     collegeId: number | null;
+    collegeCode: string,
     password: string;
     confirmPassword: string;
   }>({
@@ -24,6 +25,7 @@ export default function Signup() {
     mobile: "",
     role: "",
     collegeId: null,
+    collegeCode: "",
     password: "",
     confirmPassword: "",
   });
@@ -220,6 +222,7 @@ export default function Signup() {
         mobile: formData.mobile,
         collegeId: formData.collegeId,
         role: formData.role,
+        collegeCode: formData.collegeCode,
       });
 
       if (!res.success) throw new Error(res.error);
@@ -230,6 +233,7 @@ export default function Signup() {
         mobile: "",
         collegeId: null,
         role: "",
+        collegeCode: "",
         password: "",
         confirmPassword: ""
       })

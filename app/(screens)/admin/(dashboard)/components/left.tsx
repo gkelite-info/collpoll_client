@@ -124,10 +124,7 @@ export default function AdminDashLeft({
   if (view === "TOTAL_USERS") {
     return (
       <div className="w-[68%] p-2">
-        <TotalUsersView
-          onBack={() => setView("MAIN")}
-          // onViewDetails={() => {}}
-        />
+         <TotalUsersView onBack={() => setView("MAIN")} />
       </div>
     );
   }
