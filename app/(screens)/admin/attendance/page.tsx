@@ -1,7 +1,7 @@
 "use client";
-
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { Suspense } from "react";
 import {
   CaretDown,
   MagnifyingGlass,
@@ -130,8 +130,6 @@ const generateFullMockData = (): ExtendedDepartment[] => {
   return data;
 };
 
-const allData = generateFullMockData();
-
 const FilterDropdown = ({
   label,
   value,
@@ -164,7 +162,7 @@ const FilterDropdown = ({
   </div>
 );
 
-const Page = () => {
+const AttendancePage = () => {
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
@@ -173,6 +171,8 @@ const Page = () => {
   const [currentPage, setCurrentPage] = useState(1);
 
   const cardsPerPage = 15;
+
+  const allData = useMemo(() => generateFullMockData(), []);
 
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -363,4 +363,10 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AttendancePage />
+    </Suspense>
+  );
+}
