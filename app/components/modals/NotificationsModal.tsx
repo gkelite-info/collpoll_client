@@ -119,7 +119,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
             </button>
           </div>
 
-          {/* Tabs */}
+      
           <div className="flex px-4 pt-3 border-b border-[#E5E7EB]">
             {(["Academics", "Placements"] as const).map((tab) => (
               <button
@@ -142,7 +142,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
             ))}
           </div>
 
-          {/* Content */}
+        
           <div className="max-h-[280px] overflow-y-auto">
             {notifications[activeTab].length === 0 ? (
               <p className="text-center text-sm text-[#6B7280] py-10">
@@ -157,7 +157,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
                   transition={{ delay: index * 0.04 }}
                   className="flex gap-2 px-3 py-2 border-b border-[#F3F4F6] last:border-none"
                 >
-                  {/* Icon */}
+              
                   <div
                     className="flex items-center justify-center rounded-full"
                     style={{
@@ -169,7 +169,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
                     <BookIcon size={16} weight="fill" color="#3FAA6E" />
                   </div>
 
-                  {/* Text */}
+              
                   <div className="flex-1">
                     <p className="text-sm font-medium text-[#1F2937]">
                       {item.title}
@@ -179,7 +179,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
                     </p>
                   </div>
 
-                  {/* Time */}
+            
                   <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">
                     {item.time}
                   </span>

@@ -1,5 +1,5 @@
 'use client'
-import { UserInfoCard } from "../../faculty/utils/userInfoCard";
+import { UserInfoCard, UserInfoCardProps } from "../../faculty/utils/userInfoCard";
 import AssignMentCard from "./cards/assignmentsCard";
 import AttendanceCard from "./cards/attendanceCard";
 import NextExamCard from "./cards/nextExamCard";
@@ -11,19 +11,30 @@ import { useUser } from "@/app/utils/context/UserContext";
 
 
 export default function ParentLeft() {
-    const { fullName } = useUser();
+    const { fullName, gender, loading } = useUser();
 
-    const card = [{
-        show: true,
-        studentId: 12,
-        studentBranch: "CSE - 2nd Year",
-        user: fullName ?? "User",
-        studentName: "Deekshitha",
-        childPerformance: "Your child’s academic performance and attendance summary are available below.",
-        image: "../../../male-parent.png",
-        top: "lg:top-[-177px]"
-    }];
+    const parentImage =
+        !loading && gender === "Female"
+            ? "/parent-m.png"
+            : !loading && gender === "Male"
+                ? "/parent-d.png"
+                : null;
 
+
+    const card: UserInfoCardProps[] = [
+        {
+            show: true,
+            studentId: 12,
+            studentBranch: "CSE - 2nd Year",
+            user: fullName ?? "User",
+            studentName: "Deekshitha",
+            childPerformance:
+                "Your child’s academic performance and attendance summary are available below.",
+            image: parentImage ?? undefined,
+            imageHeight: 170,
+            imageAlign: "center",
+        },
+    ];
     const data = [
         {
             month: "Jan",

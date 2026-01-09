@@ -66,7 +66,13 @@ export default function TaskPanel({
 
   return (
     <>
-      <div className="bg-white mt-5 rounded-md shadow-md p-4 h-[345px]">
+      
+      <div className="bg-white mt-5 rounded-md shadow-md p-4 h-[345px]">    
+      {role === "faculty" && (
+        <h2 className="text-lg font-semibold text-[#16284F] mb-2">
+          My Tasks
+        </h2>
+      )}
         {/* HEADER */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-3">
@@ -188,8 +194,6 @@ export default function TaskPanel({
           }}
         />
       )}
-
-
     </>
   );
 }

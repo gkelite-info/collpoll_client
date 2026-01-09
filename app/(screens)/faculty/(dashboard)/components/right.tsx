@@ -17,15 +17,11 @@ type Task = {
   facultytaskcreatedDate: string | null;
 };
 
-
 export default function FacultyDashRight() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-
-
 
   useEffect(() => {
     const loadTasks = async () => {
