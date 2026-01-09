@@ -7,13 +7,13 @@ import { useState } from "react";
 import AddUserModal from "./modal/addUserModal";
 import { useSearchParams } from "next/navigation";
 import AddAutomationModal from "./modal/addAutomationModal";
-import AddPolicyModal from "./modal/addPolicyModal"; // Ensure this is imported
+import AddPolicyModal from "./modal/addPolicyModal";
 
 export default function AdminDashRight() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] =
     useState(false);
-  const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false); // New state
+  const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
 
   const searchParams = useSearchParams();
 

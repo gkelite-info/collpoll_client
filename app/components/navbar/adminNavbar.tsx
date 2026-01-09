@@ -77,6 +77,7 @@ export default function AdminNavbar() {
       ),
       label: "Projects",
       path: "/admin/projects",
+<<<<<<< Updated upstream
     },
     {
       icon: (isActive) => (
@@ -84,6 +85,8 @@ export default function AdminNavbar() {
       ),
       label: "Academic Setup",
       path: "/admin/academic-setup",
+=======
+>>>>>>> Stashed changes
     },
     {
       icon: (isActive) => (
