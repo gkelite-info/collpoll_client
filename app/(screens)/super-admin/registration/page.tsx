@@ -1,13 +1,13 @@
 "use client";
- 
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CollegeRegistration } from "./components/collegeRegistration";
 import { AdminRegistration } from "./components/adminRegistration";
- 
+
 export default function Page() {
   const [activeTab, setActiveTab] = useState("college");
- 
+
   return (
     <div className="min-h-screen bg-white rounded-xl flex justify-center p-6 mx-4 font-sans">
       <div className="w-full max-w-2xl">
@@ -20,7 +20,7 @@ export default function Page() {
           Add a new college to the CollPoll network by providing verified
           details below.
         </p>
- 
+
         <div className="flex justify-center mb-10">
           <div className="bg-[#F0F2F5] p-1.5 rounded-full flex relative w-full max-w-[400px]">
             <motion.div
@@ -50,7 +50,7 @@ export default function Page() {
             </button>
           </div>
         </div>
- 
+
         <AnimatePresence mode="wait">
           {activeTab === "college" ? (
             <CollegeRegistration key="college" />
