@@ -24,7 +24,7 @@ function Portal({ children }: { children: React.ReactNode }) {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onOpenPDF: () => void;   // ⭐ ADD THIS LINE HERE
+  onOpenPDF: () => void;   
 };
 
 type NewsItem =
@@ -126,7 +126,7 @@ export default function NewsModal(props: Props) {
     <AnimatePresence>
       {isOpen && (
         <Portal>
-          {/* Backdrop */}
+        
           <motion.div
             onClick={onClose}
             className="fixed inset-0 z-[999] bg-black/20 backdrop-blur-[2px]"
@@ -135,14 +135,14 @@ export default function NewsModal(props: Props) {
             exit={{ opacity: 0 }}
           />
 
-          {/* Modal */}
+       
           <motion.div
             className="fixed top-16 right-7 z-[1000] w-[360px] max-h-[520px] bg-white translate-x-3 rounded-xl border border-[#E5E7EB] shadow-xl flex flex-col"
             initial={{ opacity: 0, y: -12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
           >
-            {/* Header */}
+          
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
                 <NewspaperIcon size={22} weight="fill" color="#43C17A" />
@@ -166,7 +166,7 @@ export default function NewsModal(props: Props) {
             </div>
 
 
-            {/* Content */}
+        
             <div className="px-4 pt-3 pb-4 overflow-y-auto space-y-6">
               {newsData.map((section, i) => (
                 <div key={i}>
@@ -217,8 +217,8 @@ export default function NewsModal(props: Props) {
 
                               <button
                                 onClick={() => {
-                                  onClose();  // Close NewsModal
-                                  setTimeout(() => onOpenPDF(), 150); // Open DailyNewsModal in PDF mode
+                                  onClose();  
+                                  setTimeout(() => onOpenPDF(), 150); 
                                 }}
                                 className="flex items-center gap-1.5 h-[26px] px-3 bg-[#43C17A] rounded-full text-white text-[12px] font-medium">
                                 <span className="flex items-center justify-center w-5 h-5 bg-white rounded-full">

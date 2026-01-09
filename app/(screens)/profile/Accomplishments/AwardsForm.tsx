@@ -28,24 +28,23 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
         }
 
         if (name === "dateReceived") {
-            let cleaned = value.replace(/[^0-9]/g, ""); // only numbers
+            let cleaned = value.replace(/[^0-9]/g, ""); 
 
-            // Auto insert slashes DD/MM/YYYY
+            
             if (cleaned.length >= 5) {
                 cleaned = cleaned.replace(/(\d{2})(\d{2})(\d{0,4})/, "$1/$2/$3");
             } else if (cleaned.length >= 3) {
                 cleaned = cleaned.replace(/(\d{2})(\d{1,2})/, "$1/$2");
             }
 
-            cleaned = cleaned.slice(0, 10); // limit DD/MM/YYYY
+            cleaned = cleaned.slice(0, 10); 
             setForm({ ...form, dateReceived: cleaned });
             return;
         }
 
         if (name === "category") {
             const allowed = ["Hackathon", "Academic", "Sports", "Other"];
-            if (!allowed.includes(value)) return; // ignore invalid selection
-
+            if (!allowed.includes(value)) return; 
             setForm({ ...form, category: value });
             return;
         }

@@ -18,7 +18,16 @@ import { UserInfoCard } from "../../utils/userInfoCard";
 import { useUser } from "@/app/utils/context/UserContext";
 
 export default function FacultyDashLeft() {
-  const { fullName } = useUser();
+ const { fullName, gender, loading } = useUser();
+
+const facultyImage =
+  !loading && gender === "Female"
+    ? "/faculty-f.png"
+    : !loading && gender === "Male"
+    ? "/faculty-m.png"
+    : null; // 👈 important
+
+
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>(INITIAL_LESSONS);
   const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(INITIAL_SCHEDULED_LESSONS);
 
@@ -55,8 +64,9 @@ export default function FacultyDashLeft() {
       user: fullName ?? "User",
       studentsTaskPercentage: 85,
       facultySubject: "(Data Structures and Algorithms)",
-      image: "../../../female-professor.png",
-      top: "lg:top-[-173px]"
+      image: facultyImage ?? undefined,
+      top: "lg:top-[-173px]",
+      imageHeight: 170,
     },
   ];
 

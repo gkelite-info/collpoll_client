@@ -47,6 +47,7 @@ export default function AdminDashLeft({
     }
   };
 
+
   if (isAutomationsView) {
     return (
       <div className="w-[68%] p-2">
@@ -63,7 +64,14 @@ export default function AdminDashLeft({
     );
   }
 
-  const { fullName } = useUser();
+  const { fullName, gender, loading } = useUser();
+
+  const adminImage =
+    !loading && gender === "Female"
+      ? "/admin-f.png"
+      : !loading && gender === "Male"
+        ? "/admin-m.png"
+        : null;
 
   const cardData = [
     {
@@ -103,8 +111,9 @@ export default function AdminDashLeft({
       activeFacultyTasks: 12,
       pendingApprovals: 3,
       adminSubject: "Keep the system running smoothly!",
-      image: "./male-admin.png",
-      top: "lg:top-[-181.5px]",
+      image: adminImage ?? undefined,
+      top: "lg:top-[-172.5px]",
+      imageHeight: 170
     },
   ];
 
@@ -113,7 +122,11 @@ export default function AdminDashLeft({
       <div className="w-[68%] p-2">
         <TotalUsersView
           onBack={() => setView("MAIN")}
+<<<<<<< Updated upstream
           // onViewDetails={() => {}}
+=======
+          onViewDetails={() => { }}
+>>>>>>> Stashed changes
         />
       </div>
     );
@@ -122,7 +135,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
       </div>
     );
   }

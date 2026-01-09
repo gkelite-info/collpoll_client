@@ -13,6 +13,7 @@ type UserInfoCardProps = {
   pendingApprovals?: number;
   image?: string;
   top?: string;
+  imageHeight?: number
 };
 
 type UserInfoProps = {
@@ -72,11 +73,20 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
           className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"
           key={index}
         >
-          <img
+          {/* <img
             src={item.image}
             alt="Admin"
-            className={`lg:relative left-95 ${item.top} z-50 h-[193px]`}
-          />
+            //  style={{ height: `${item.imageHeight ?? 110}px` }}
+            className={`lg:relative left-95 ${item.top} z-10 h-[175px]`}
+          /> */}
+          {item.image && (
+            <img
+              src={item.image}
+              alt="Admin"
+              className={`lg:relative left-95 ${item.top} z-10 h-[175px]`}
+            />
+          )}
+
         </div>
       ))}
     </div>

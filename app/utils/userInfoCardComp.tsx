@@ -6,7 +6,8 @@ import { useUser } from "./context/UserContext";
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
-    const { userId, fullName } = useUser();
+    const { userId, fullName, gender, loading } = useUser();
+
 
     useEffect(() => {
         const currentDate = new Date();
@@ -37,7 +38,13 @@ export default function UserInfoCard() {
                     </div>
                 </div>
                 <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
-                    <img src="maleuser.png" className="lg:relative lg:top-[-6] z-50 h-[180px]" />
+                    {/* <img src="maleuser.png" className="lg:relative lg:top-[-6] z-50 h-[180px]" /> */}
+                    {!loading && (
+                        <img
+                            src="/maleuser.png"
+                            className="lg:relative lg:top-[-6] z-50 h-[180px]"
+                        />
+                    )}
                 </div>
             </div>
         </>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type UserInfoCardProps = {
+export type UserInfoCardProps = {
   show?: boolean;
   studentId?: number;
   studentBranch?: string;
@@ -12,8 +12,10 @@ type UserInfoCardProps = {
   studentsTaskPercentage?: number;
   childPerformance?: string;
   image?: string;
-  top?: string;
+  imageHeight?: number;
+  imageAlign?: "center" | "bottom";
 };
+
 
 type UserInfoProps = {
   cardProps: UserInfoCardProps[];
@@ -34,9 +36,10 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
   return (
     <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
+      {/* <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm overflow-hidden"> */}
       {cardProps.map((item, index) => (
         <div
-          className="relative z-10 flex h-full items-center justify-between px-8"
+          className="relative z-10 flex h-full items-center px-8"
           key={index}
         >
           <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
@@ -77,7 +80,15 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             </p>
           </div>
 
-          <div className="w-[35%] h-full"></div>
+          {item.image && (
+            <img
+              src={item.image}
+              alt="User"
+              style={{ height: `${item.imageHeight ?? 110}px` }}
+              className=""
+            />
+          )}
+
         </div>
       ))}
 
@@ -86,18 +97,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           {today ? today : "Loading..."}
         </div>
       </div>
-      {cardProps.map((item, index) => (
-        <div
-          className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"
-          key={index}
-        >
-          <img
-            src={item.image}
-            alt="Professor"
-            className={`lg:relative left-89 ${item.top} z-50 h-[185px]`}
-          />
-        </div>
-      ))}
 
       <svg
         className="absolute right-0 bottom-0 z-0 h-full w-auto"

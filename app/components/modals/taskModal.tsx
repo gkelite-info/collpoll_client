@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
-// import { facultyTasks } from "@/app/utils/facultyTasks";
 import { insertFacultyTask, updateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 
-// ✅ ADD THIS TYPE (top of file)
+
 export type TaskPayload = {
   title: string;
   description: string;
@@ -43,7 +42,7 @@ export default function TaskModal({
 
   if (!open) return null;
 
-  // ✅ REQUIRED STATE (DO NOT REMOVE)
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -51,7 +50,7 @@ export default function TaskModal({
 
   useEffect(() => {
     if (defaultValues?.facultytaskId) {
-      // ✏️ EDIT MODE
+     
       setTitle(defaultValues.title);
       setDescription(defaultValues.description);
       setDueTime(defaultValues.time);
@@ -61,7 +60,7 @@ export default function TaskModal({
         new Date().toISOString().split("T")[0]
       );
     } else {
-      // ➕ ADD MODE
+      
       setTitle("");
       setDescription("");
       setDueDate("");
@@ -80,7 +79,7 @@ export default function TaskModal({
       return;
     }
 
-    // ✏️ UPDATE MODE
+   
     if (defaultValues?.facultytaskId) {
       const response = await updateFacultyTask(defaultValues.facultytaskId, {
         facultytaskTitle: title,
@@ -94,7 +93,7 @@ export default function TaskModal({
         return;
       }
 
-      // ✅ BUILD PAYLOAD
+     
       const payload: TaskPayload = {
         title,
         description,
@@ -102,14 +101,13 @@ export default function TaskModal({
         dueTime,
       };
 
-      // ✅ SEND DATA (OPTIONAL)
+      
       onSave(payload);
       onClose();
 
-      return; // 🔥 CRITICAL: prevents INSERT
+      return; 
     }
 
-    // ➕ INSERT MODE
     const response = await insertFacultyTask({
       facultytaskTitle: title,
       facultytaskDescription: description,
@@ -122,7 +120,7 @@ export default function TaskModal({
       return;
     }
 
-    // ✅ BUILD PAYLOAD (SAME AS EDIT MODE)
+    
     const payload: TaskPayload = {
       title,
       description,
@@ -130,7 +128,7 @@ export default function TaskModal({
       dueTime,
     };
 
-    // ✅ ALWAYS SEND PAYLOAD
+    
     onSave(payload);
     onClose();
   };
