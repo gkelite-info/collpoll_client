@@ -80,13 +80,6 @@ export default function AdminNavbar() {
     },
     {
       icon: (isActive) => (
-        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Academic Setup",
-      path: "/admin/academic-setup",
-    },
-    {
-      icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
@@ -109,6 +102,13 @@ export default function AdminNavbar() {
     //     label: "Payments",
     //     path: "/payments",
     // },
+    {
+      icon: (isActive) => (
+        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Academic Setup",
+      path: "/admin/academic-setup",
+    },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
