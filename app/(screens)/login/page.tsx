@@ -104,7 +104,10 @@ export default function LoginPage() {
         parent: "/parent",
         faculty: "/faculty",
         student: "/stu_dashboard",
+        superadmin: "/super-admin"
       };
+
+      console.log("checking role", role)
 
       const redirectPath = roleRouteMap[role] || "/login";
       router.replace(redirectPath);

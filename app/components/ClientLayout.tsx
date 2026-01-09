@@ -8,6 +8,7 @@ import StudentNavbar from "./navbar/studentNavbar";
 import AdminNavbar from "./navbar/adminNavbar";
 import ParentNavbar from "./navbar/parentNavbar";
 import FacultyNavbar from "./navbar/facultyNavbar";
+import SuperAdminNavbar from "./navbar/superAdminNavbar";
 
 export default function ClientLayout({
   children,
@@ -33,6 +34,7 @@ export default function ClientLayout({
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;
     if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
+    if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     return <StudentNavbar />
   };
 
