@@ -2,11 +2,11 @@
 
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import SubjectAttendanceCards from "../../../components/subjectAttendanceCards";
-import SubjectAttendanceTable from "../../../components/subjectAttendanceTable";
 import { students } from "../../../data";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import SubjectAttendanceCards from "@/app/(screens)/faculty/attendance/components/subjectAttendanceCards";
+import SubjectAttendanceTable from "@/app/(screens)/faculty/attendance/components/subjectAttendanceTable";
 
 export default function SubjectDetailPage() {
   const { studentId, subjectId } = useParams<{
