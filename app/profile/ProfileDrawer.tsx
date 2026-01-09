@@ -27,7 +27,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { userId, fullName, mobile, email } = useUser();
+    const { userId, fullName, mobile, email, role } = useUser();
 
     const profileOptions: ProfileOptions[] = [
         { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: onOpenTerms, },
@@ -91,7 +91,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                 }} />
                             </div>
                         </div>
-                        <p className="text-xs text-[#282828] font-medium">B.Tech CSE - Year 2</p>
+                        {role === "Student" && (
+                            <>
+                                <p className="text-xs text-[#282828] font-medium">B.Tech CSE - Year 2</p>
+                            </>
+                        )}
                         <div className="flex gap-3 flex-wrap">
                             <div className="flex items-center gap-2 mt-2">
                                 <EnvelopeSimple size={22} className="bg-[#43C17A] rounded-full p-1 text-white" />

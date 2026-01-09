@@ -4,7 +4,6 @@ import ProfileDrawer from "./ProfileDrawer";
 import TermsModal from "./TermsAndConditions";
 import ProfileQuickMenu from "./ProfileQuickMenu";
 import { useRouter } from "next/navigation";
-import { useUser } from "../utils/context/UserContext";
 
 export default function ProfileWrapper({
     openProfile,

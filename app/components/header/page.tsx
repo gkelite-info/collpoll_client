@@ -30,7 +30,7 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { userId, fullName } = useUser();
+  const { userId, fullName, role } = useUser();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -40,6 +40,7 @@ export default function Header() {
     }, 150);
   }
 
+  console.log("Role is", role);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,14 +132,25 @@ export default function Header() {
                   className="cursor-pointer"
                 />
               </div>
-              <div className="flex items-center justify-between text-[#E5E5E5] w-full text-xs">
-                <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
-                <p style={{ fontSize: 12, color: "#E5E5E5" }}>
-                  ID -{" "}
-                  <span style={{ fontSize: 12, color: "#E5E5E5" }}>
-                    {userId}
-                  </span>
-                </p>
+              <div className="bg-red-00 flex items-center justify-between text-[#E5E5E5] w-full text-xs">
+                {["SuperAdmin", "Faculty", "Parent", null].includes(role) && (
+                  <>
+                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>{role}</p>
+                  </>
+                )}
+
+                {role === "Student" && (
+                  <>
+                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
+                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>
+                      ID -{" "}
+                      <span style={{ fontSize: 12, color: "#E5E5E5" }}>
+                        {userId}
+                      </span>
+                    </p>
+                  </>
+                )}
+
               </div>
             </div>
           </div >
