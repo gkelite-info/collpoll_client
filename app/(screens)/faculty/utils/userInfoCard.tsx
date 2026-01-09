@@ -60,7 +60,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                 {item.facultySubject}
               </span>
               <p className="text-[#454545] italic text-sm font-medium">
-                {item.show && "Father of"}{" "}
+                {item.show && "Parent of"}{" "}
                 <span className="text-[#089144] font-semibold">
                   {item.studentName}
                 </span>

@@ -12,7 +12,8 @@ type UserContextType = {
     mobile: string | null;
     email: string | null;
     gender: string | null;
-    
+    role: string | null;
+
 };
 
 const StudentContext = createContext<UserContextType>({
@@ -23,6 +24,7 @@ const StudentContext = createContext<UserContextType>({
     mobile: null,
     email: null,
     gender: null,
+    role: null
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -32,8 +34,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     const [fullName, setFullName] = useState<string | null>(null);
     const [mobile, setMobile] = useState<string | null>(null);
     const [email, setEmail] = useState<string | null>(null);
-    const [gender, setGender] =useState<string | null>(null);
- 
+    const [gender, setGender] = useState<string | null>(null);
+    const [role, setRole] = useState<string | null>(null);
+
     useEffect(() => {
         getStudentId().then(setStudentId).catch(console.error);
     }, []);
@@ -49,13 +52,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 setMobile(null);
                 setEmail(null);
                 setGender(null);
+                setRole(null);
                 setLoading(false);
                 return;
             }
 
             const { data, error } = await supabase
                 .from("users")
-                .select("userId, fullName, mobile, email, gender")
+                .select("userId, fullName, mobile, email, gender, role")
                 .eq("auth_id", auth.user.id)
                 .maybeSingle();
 
@@ -69,6 +73,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
                 setMobile(data.mobile);
                 setEmail(data.email);
                 setGender(data.gender);
+                setRole(data.role);
             }
 
             setLoading(false);
@@ -87,7 +92,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     return (
-        <StudentContext.Provider value={{ userId, loading, studentId, fullName, mobile, email, gender }}>
+        <StudentContext.Provider value={{ userId, loading, studentId, fullName, mobile, email, gender, role }}>
             {children}
         </StudentContext.Provider>
     );
