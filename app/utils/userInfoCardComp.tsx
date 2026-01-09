@@ -8,6 +8,13 @@ export default function UserInfoCard() {
     const [today, setToday] = useState("");
     const { userId, fullName, gender, loading } = useUser();
 
+    const studentImage =
+        !loading && gender === "Female"
+            ? "/student-f.png"
+            : !loading && gender === "Male"
+                ? "/maleuser.png"
+                : null;
+
 
     useEffect(() => {
         const currentDate = new Date();
@@ -37,15 +44,26 @@ export default function UserInfoCard() {
                         {today ? today : "Loading date..."}
                     </div>
                 </div>
-                <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
-                    {/* <img src="maleuser.png" className="lg:relative lg:top-[-6] z-50 h-[180px]" /> */}
-                    {!loading && (
+                {/* <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"> */}
+                {/* <img src="maleuser.png" className="lg:relative lg:top-[-6] z-50 h-[180px]" /> */}
+                {/* {!loading && (
                         <img
                             src="/maleuser.png"
                             className="lg:relative lg:top-[-6] z-50 h-[180px]"
                         />
                     )}
+                </div> */}
+
+                <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
+                    {!loading && gender && (
+                        <img
+                            src={gender === "Female" ? "/student-f.png" : "/maleuser.png"}
+                            className="lg:relative lg:top-[-6] z-50 h-[180px]"
+                            alt="Student"
+                        />
+                    )}
                 </div>
+
             </div>
         </>
     )
