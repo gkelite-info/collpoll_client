@@ -40,9 +40,6 @@ export default function Header() {
     }, 150);
   }
 
-  console.log("Role is", role);
-
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
     if (value.length > 0) {
