@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CollegeRegistration } from "./collegeRegistration/page";
-import { AdminRegistration } from "./adminRegistration/page";
+import CollegeRegistration from "./collegeRegistration/page";
+import AdminRegistration from "./adminRegistration/page";
 import EducationalType from "./educationalType/page";
 import DepartmentType from "./department/page";
 
