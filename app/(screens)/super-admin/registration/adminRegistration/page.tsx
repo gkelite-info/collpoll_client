@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from "framer-motion";
-import { InputField } from "./reusableComponents";
+import { motion } from "framer-motion";
+import { InputField } from "../components/reusableComponents";
 
 export const AdminRegistration = () => (
   <motion.div
@@ -9,7 +9,7 @@ export const AdminRegistration = () => (
     className="space-y-5"
   >
     <InputField label="FullName" placeholder='e.g., "Admin Mallareddy"' />
- 
+
     <div className="grid grid-cols-2 gap-4">
       <InputField
         label="Email Address"
@@ -32,12 +32,12 @@ export const AdminRegistration = () => (
         </div>
       </div>
     </div>
- 
+
     <div className="grid grid-cols-2 gap-4">
       <InputField label="College ID" placeholder='e.g., "MRCE001"' />
       <InputField label="College Code" placeholder='e.g., "MRCE"' />
     </div>
- 
+
     <div>
       <h4 className="text-[#333] font-bold text-base mb-3">Security Setup</h4>
       <InputField
@@ -46,7 +46,7 @@ export const AdminRegistration = () => (
         placeholder="Minimum 8 characters..."
         className="mb-4"
       />
- 
+
       <div className="flex items-end gap-4">
         <InputField
           label="Confirm Password"

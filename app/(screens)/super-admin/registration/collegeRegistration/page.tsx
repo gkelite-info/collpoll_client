@@ -1,5 +1,5 @@
-import { InputField, SelectField } from "./reusableComponents";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { InputField, SelectField } from "../components/reusableComponents";
 
 export const CollegeRegistration = () => (
     <motion.div
