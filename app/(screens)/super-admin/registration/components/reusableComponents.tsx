@@ -14,13 +14,13 @@ type InputFieldProps = {
 
 export const InputField = ({
   label,
+   name,
+  value,
+  onChange,
   placeholder,
   type = "text",
   className = "",
-  value,
-  onChange,
   rightIcon,
-  name,
   uppercase,
 }: InputFieldProps) => (
   <div className={`flex flex-col w-full ${className}`}>
@@ -37,6 +37,7 @@ export const InputField = ({
         className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${
           uppercase ? "uppercase" : ""
         }`}
+        onWheel={(e) => e.currentTarget.blur()}
       />
 
       {rightIcon && (
@@ -46,14 +47,30 @@ export const InputField = ({
   </div>
 );
 
-export const SelectField = ({ label, placeholder, className = "" }: any) => (
+// export const SelectField = ({ label,  name = "", value = "", onChange= () => {}, type,  placeholder, className = "" }: any) => (
+//     <input
+//     name={name}                 
+//       value={value ?? ""}         
+//       onChange={onChange}
+//       type={type}
+//       placeholder={placeholder}
+//       className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm"
+//       onWheel={(e) => e.currentTarget.blur()}
+//     />
+//   </div>
+// );
+ 
+export const SelectField = ({ label,  name = "", value = "", onChange= () => {},  placeholder, className = "" }: any) => (
   <div className={`flex flex-col w-full relative ${className}`}>
-    <label className="text-[#333] font-semibold text-[15px] mb-1.5">
+    <label className="text-[#333] font-semibold text-[15px] mb-1.5">     
       {label}
     </label>
     <div className="relative">
       <select
-        defaultValue=""
+        name={name}
+        value={value}        
+        onChange={onChange}  
+        // defaultValue=""
         className="appearance-none border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 w-full focus:outline-none focus:border-[#49C77F] bg-white cursor-pointer shadow-sm"
       >
         <option value="" disabled>
