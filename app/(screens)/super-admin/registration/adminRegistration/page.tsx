@@ -256,8 +256,8 @@ export default function AdminRegistration() {
             <input
               name="countryCode"
               placeholder="+91"
-              value={form.countryCode}
-              onChange={(e) => {
+              value={form.countryCode ?? ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                 const value = e.target.value;
                 if (/^\+?\d{0,4}$/.test(value)) {
                   handleChange("countryCode", value);
@@ -268,8 +268,8 @@ export default function AdminRegistration() {
             />
             <input
               placeholder="Enter mobile number"
-              value={form.mobile}
-              onChange={(e) =>
+              value={form.mobile ?? ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleChange("mobile", e.target.value.replace(/\D/g, ""))
               }
               maxLength={10}
