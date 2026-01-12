@@ -1,4 +1,4 @@
-import { CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { CaretDown } from "@phosphor-icons/react";
 
 type InputFieldProps = {
   label: string;
