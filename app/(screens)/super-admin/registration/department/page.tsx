@@ -6,7 +6,7 @@ import { InputField } from "../components/reusableComponents";
 import { insertEducationDepartments } 
   from "@/lib/helpers/superadmin/insertdepartment";
 
-/* ================= Types ================= */
+
 type DepartmentItem = {
   uuid: string;
   name: string;
@@ -20,7 +20,7 @@ export default function Department() {
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  /* ================= Add Department ================= */
+
   const addDepartment = () => {
     const name = departmentName.trim();
     const code = departmentCode.trim();
@@ -50,7 +50,7 @@ export default function Department() {
     setDepartmentCode("");
   };
 
-  /* ================= Submit ================= */
+  
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
@@ -79,7 +79,7 @@ export default function Department() {
 
       alert("Departments saved successfully");
 
-      // reset UI only
+     
       setDepartments([]);
       setDepartmentName("");
       setDepartmentCode("");
@@ -90,7 +90,7 @@ export default function Department() {
     }
   };
 
-  /* ================= UI ================= */
+  
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}

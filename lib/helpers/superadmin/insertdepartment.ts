@@ -13,7 +13,7 @@ export const insertEducationDepartments = async (payload: {
   const { educationId, departments } = payload;
   const now = new Date().toISOString();
 
-  /* ================= 1️⃣ Fetch createdBy from educations ================= */
+ 
   const { data: education, error: eduError } = await supabase
     .from("educations")
     .select("createdBy")
@@ -24,9 +24,9 @@ export const insertEducationDepartments = async (payload: {
     throw new Error("Education not found");
   }
 
-  const createdBy = education.createdBy; // ✅ dynamic & trusted
+  const createdBy = education.createdBy; 
 
-  /* ================= 2️⃣ Get existing departments (if any) ================= */
+  
   const { data: existingRow, error: fetchError } = await supabase
     .from("education_departments")
     .select("departments")
@@ -35,19 +35,19 @@ export const insertEducationDepartments = async (payload: {
 
   if (fetchError) throw fetchError;
 
-  /* ================= 3️⃣ Merge old + new departments ================= */
+ 
   const mergedDepartments = existingRow?.departments
     ? [...existingRow.departments, ...departments]
     : departments;
 
-  /* ================= 4️⃣ UPSERT (single row per educationId) ================= */
+ 
   const { data, error } = await supabase
     .from("education_departments")
     .upsert(
       {
         educationId,
         departments: mergedDepartments,
-        createdBy,          // ✅ ADDED (nothing else changed)
+        createdBy,          
         updatedAt: now,
         createdAt: now,
       },
