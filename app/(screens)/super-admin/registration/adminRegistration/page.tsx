@@ -1,14 +1,13 @@
-//adminRegistration.tsx
- 
 import { motion } from "framer-motion";
 
-import { useState } from "react";
+
 import toast from "react-hot-toast";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
-import { useRouter } from "next/navigation";
 import { InputField } from "../components/reusableComponents";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
  
 type AdminForm = {
     fullName: string;
