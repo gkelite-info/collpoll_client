@@ -12,7 +12,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-white rounded-xl flex justify-center p-6 mx-4 font-sans">
-      <div className="w-full max-w-2xl">
+      <div className="w-full p-4">
         <h1 className="text-[#333] text-2xl font-bold mb-1">
           {activeTab === "college"
             ?
@@ -34,7 +34,10 @@ export default function Page() {
           <div className="bg-[#F0F2F5] p-1.5 rounded-full flex relative w-full max-w-[650px]">
             <motion.div
               layoutId="activeTab"
-              className="absolute bg-[#49C77F] rounded-full h-[calc(100%-12px)] top-[6px]"
+              style={{
+                background: "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
+              }}
+              className="absolute bg-[#49C77F] shadow-[0_2px_8px_rgba(16,185,129,0.4)] rounded-full h-[calc(100%-12px)] top-[6px]"
               animate={{
                 left:
                   activeTab === "college"
@@ -50,15 +53,27 @@ export default function Page() {
             />
             <button
               onClick={() => setActiveTab("college")}
+<<<<<<< Updated upstream
               className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "college" ? "text-white" : "text-gray-600"
                 }`}
+=======
+              className={`flex-1 py-2 rounded-full text-sm cursor-pointer font-semibold z-10 ${
+                activeTab === "college" ? "text-white" : "text-gray-600"
+              }`}
+>>>>>>> Stashed changes
             >
               College Registration
             </button>
             <button
               onClick={() => setActiveTab("admin")}
+<<<<<<< Updated upstream
               className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "admin" ? "text-white" : "text-gray-600"
                 }`}
+=======
+              className={`flex-1 py-2 rounded-full text-sm cursor-pointer font-semibold z-10 ${
+                activeTab === "admin" ? "text-white" : "text-gray-600"
+              }`}
+>>>>>>> Stashed changes
             >
               Admin Registration
             </button>
