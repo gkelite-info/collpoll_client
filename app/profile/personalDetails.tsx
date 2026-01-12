@@ -129,7 +129,7 @@ export default function PersonalDetails() {
             localStorage.setItem("userId", user.userId.toString());
             toast.success("Personal Details Saved Successfully");
         } else {
-            toast.error(res.error);
+            toast.error(res.error || 'Failed to save personal details');
         }
     };
 
