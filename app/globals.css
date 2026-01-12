@@ -166,3 +166,25 @@ input[list]::-webkit-calendar-picker-indicator {
   opacity: 0;
   display: none;
 }
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+ 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+ 
+::-webkit-scrollbar {
+  display: none;
+}
+ 
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+ 
+input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
