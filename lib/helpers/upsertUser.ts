@@ -11,6 +11,8 @@ export const upsertUser = async (payload: {
   workStatus?: string;
   role?: string;
   collegeCode: string;
+  collegePublicId?: string;
+  gender?: "Male" | "Female";
 }) => {
   try {
     const {
@@ -24,6 +26,8 @@ export const upsertUser = async (payload: {
       workStatus,
       role,
       collegeCode,
+      collegePublicId,
+      gender
     } = payload;
 
     const now = new Date().toISOString();
@@ -42,6 +46,8 @@ export const upsertUser = async (payload: {
           workStatus,
           role: role ?? null,
           collegeCode,
+          collegePublicId,
+          gender,
           updatedAt: now,
           createdAt: now,
         },
@@ -59,7 +65,21 @@ export const upsertUser = async (payload: {
     };
   } catch (err: any) {
     console.error("UPSERT PERSONAL DETAILS ERROR:", err.message);
-    return { success: false, error: err.message };
+    let message = "Something went wrong";
+
+
+    if (err.code === "23505") {
+      if (err.message.includes("email")) {
+        message = "Email is already registered";
+      } else if (err.message.includes("mobile")) {
+        message = "Phone number is already registered";
+      } else if (err.message.includes("linkedIn")) {
+        message = "LinkedIn profile already exists";
+      } else {
+        message = "Duplicate record already exists";
+      }
+    }
+    return { success: false, error: message };
   }
 };
 
@@ -69,7 +89,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus, collegeCode")
+      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus, collegeCode, gender")
       .eq("auth_id", auth_id)
       .single();
 
