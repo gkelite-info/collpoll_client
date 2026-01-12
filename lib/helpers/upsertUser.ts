@@ -72,7 +72,7 @@ export const upsertUser = async (payload: {
       if (err.message.includes("email")) {
         message = "Email is already registered";
       } else if (err.message.includes("mobile")) {
-        message = "Phone number is already registered";
+        message = "Mobile number is already registered";
       } else if (err.message.includes("linkedIn")) {
         message = "LinkedIn profile already exists";
       } else {
@@ -105,5 +105,47 @@ export const fetchUserDetails = async (auth_id: string) => {
       success: false,
       error: err.message,
     };
+  }
+};
+
+export const upsertAdminEntry = async (payload: {
+  userId: number;
+  fullName: string;
+  email: string;
+  mobile: string;
+  gender?: "Male" | "Female";
+  collegePublicId: string;
+  collegeCode?: string;
+  createdBy: number;
+}) => {
+  try {
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from("admins")
+      .upsert(
+        {
+          userId: payload.userId,
+          fullName: payload.fullName,
+          email: payload.email,
+          mobile: payload.mobile,
+          gender: payload.gender ?? null,
+          collegePublicId: payload.collegePublicId,
+          collegeCode: payload.collegeCode ?? null,
+          createdBy: payload.createdBy,
+          updatedAt: now,
+          createdAt: now,
+        },
+        {
+          onConflict: "userId",
+        }
+      );
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("ADMIN UPSERT ERROR:", err.message);
+    return { success: false, error: err.message || "Admin creation failed" };
   }
 };
