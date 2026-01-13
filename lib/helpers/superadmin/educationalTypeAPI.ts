@@ -1,6 +1,4 @@
 import { supabase } from "@/lib/supabaseClient";
-import { getCurrentUser } from "../getCurrentUserAPI";
-import { useUser } from "@/app/utils/context/UserContext";
 
 export interface EducationInsertPayload {
     educationName: string;
