@@ -3,7 +3,6 @@ import { CalendarEventType, Department, Section, Semester } from "./types";
 
 
 export const upsertCalendarEvent = async (payload: {
-    calendarEventId?: number;
     facultyId: number;
     eventTitle: string;
     eventTopic: string;
@@ -26,9 +25,8 @@ export const upsertCalendarEvent = async (payload: {
 
         const { data, error } = await supabase
             .from("calendarEvent")
-            .upsert(
+            .insert(
                 {
-                    calendarEventId: payload.calendarEventId,
                     facultyId: payload.facultyId,
                     eventTitle: payload.eventTitle,
                     eventTopic: payload.eventTopic,
@@ -41,12 +39,9 @@ export const upsertCalendarEvent = async (payload: {
                     year: payload.year,
                     semester: payload.semester,
                     section: payload.section,
+                    createdAt: now,
                     updatedAt: now,
-                    ...(payload.calendarEventId ? {} : { createdAt: now }),
                 },
-                {
-                    onConflict: "calendarEventId",
-                }
             )
             .select()
             .single();
