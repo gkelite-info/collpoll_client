@@ -24,7 +24,7 @@ const StudentContext = createContext<UserContextType>({
     mobile: null,
     email: null,
     gender: null,
-    role: null
+    role: null,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
