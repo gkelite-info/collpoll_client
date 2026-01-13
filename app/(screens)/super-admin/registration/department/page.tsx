@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
-import { insertEducationDepartments } 
+import { insertEducationDepartments }
   from "@/lib/helpers/superadmin/insertdepartment";
 
 
@@ -50,7 +50,7 @@ export default function Department() {
     setDepartmentCode("");
   };
 
-  
+
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
@@ -79,7 +79,7 @@ export default function Department() {
 
       alert("Departments saved successfully");
 
-     
+
       setDepartments([]);
       setDepartmentName("");
       setDepartmentCode("");
@@ -90,35 +90,40 @@ export default function Department() {
     }
   };
 
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
-      className="space-y-5"
+      className="space-y-4 max-w-[980px]"
     >
-      <InputField
-        label="Education ID"
-        name="educationId"
-        type="number"
-        placeholder="1"
-        value={educationId}
-        onChange={(e: any) => setEducationId(e.target.value)}
-        
-      />
-
-      <div className="grid grid-cols-3 gap-4 items-end">
+      {/* Row 1 */}
+      <div className="grid grid-cols-2 gap-[32px]">
         <InputField
-          label="Department Name"
-          name="departmentName"
-          value={departmentName}
-          onChange={(e: any) => setDepartmentName(e.target.value)}
+          label="Education ID"
+          name="educationId"
+          type="number"
+          placeholder="Enter Education ID"
+          value={educationId}
+          onChange={(e: any) => setEducationId(e.target.value)}
         />
 
         <InputField
+          label="Department Name"
+          name="departmentName"
+          placeholder="Enter Department Name"
+          value={departmentName}
+          onChange={(e: any) => setDepartmentName(e.target.value)}
+        />
+      </div>
+
+      {/* Row 2 */}
+      <div className="grid grid-cols-2 gap-[32px] items-end">
+        <InputField
           label="Department Code"
           name="departmentCode"
+          placeholder="Enter Department Code"
           value={departmentCode}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
@@ -126,7 +131,11 @@ export default function Department() {
         <button
           type="button"
           onClick={addDepartment}
-          className="bg-[#49C77F] text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
+          className="bg-[#49C77F] text-white 
+             h-[42px] w-[450px]
+             rounded-md font-semibold
+             flex items-center justify-center
+             hover:bg-[#3fb070]"
         >
           Add
         </button>
@@ -149,17 +158,22 @@ export default function Department() {
         </div>
       ))}
 
-      <div className="flex justify-end">
+      <div className="flex justify-center pt-6">
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className={`bg-[#49C77F] text-white h-[42px] px-8 rounded-lg font-bold text-lg shadow-md ${
-            loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3fb070]"
-          }`}
+          className={`bg-[#49C77F] text-white 
+             h-[43px] w-[300px]
+             rounded-md font-semibold
+             flex items-center justify-center
+             hover:bg-[#3fb070]
+      ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d]"}
+    `}
         >
           {loading ? "Saving..." : "Save Departments"}
         </button>
       </div>
+
     </motion.div>
   );
 }
