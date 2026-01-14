@@ -110,7 +110,6 @@ export default function LoginPage() {
         superadmin: "/super-admin"
       };
 
-      console.log("checking role", role)
 
       const redirectPath = roleRouteMap[role] || "/login";
       router.replace(redirectPath);
