@@ -1,4 +1,4 @@
-import { Chalkboard, Island, Laptop, Users } from "@phosphor-icons/react";
+import { ChalkboardTeacher, Confetti, Exam, Island, Trash, PencilSimple } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
 
 const EVENT_STYLES: Record<
@@ -9,21 +9,21 @@ const EVENT_STYLES: Record<
     solidBg: "#E2DAFF",
     lightBg: "#E2DAFF8F",
     text: "#6C20CA",
-    Icon: Users,
+    Icon: Confetti,
   },
 
   class: {
     solidBg: "#96CAFF",
     lightBg: "#D9EBFF",
     text: "#0056AD",
-    Icon: Chalkboard,
+    Icon: ChalkboardTeacher,
   },
 
   exam: {
     solidBg: "#FFD8AF",
     lightBg: "#FFEDDA",
     text: "#FB8000",
-    Icon: Laptop,
+    Icon: Exam,
   },
   holiday: {
     solidBg: "#BFE8D5",
@@ -33,7 +33,7 @@ const EVENT_STYLES: Record<
   },
 };
 
-const EventCard = ({ event }: { event: CalendarEvent }) => {
+const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete: () => void, onEdit: () => void; }) => {
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.event;
   const Icon = style.Icon;
@@ -47,8 +47,27 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
 
   return (
     <div
-      className={`absolute inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20`}
+      className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        className="absolute cursor-pointer top-1 right-1 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
+      >
+        <Trash size={14} className="text-red-600" />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="absolute top-1 right-7 hidden group-hover:flex bg-white 
+             rounded-full p-1 shadow hover:bg-blue-50 z-50 cursor-pointer"
+      >
+        <PencilSimple size={14} className="text-blue-600" />
+      </button>
       <div
         className={`flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed`}
         style={{
@@ -68,7 +87,7 @@ const EventCard = ({ event }: { event: CalendarEvent }) => {
       </div>
 
       <div
-        className={`flex-1 p-2 h-full`}
+        className={`flex-1 p-2 h-full overflow-y-auto`}
         style={{ backgroundColor: style.lightBg }}
       >
         <p

@@ -1,20 +1,20 @@
 import { CalendarEvent } from "./types";
 
 export const TIME_SLOTS = [
-  "8:00 AM",
-  "9:00 AM",
+  "08:00 AM",
+  "09:00 AM",
   "10:00 AM",
   "11:00 AM",
-  "12:00 AM",
-  "1:00 PM",
-];
-
-export const WEEK_DAYS = [
-  { day: "MON", date: 24 },
-  { day: "TUE", date: 25 },
-  { day: "WED", date: 26 },
-  { day: "THU", date: 27 },
-  { day: "FRI", date: 28 },
+  "12:00 PM",
+  "01:00 PM",
+  "02:00 PM",
+  "03:00 PM",
+  "04:00 PM",
+  "05:00 PM",
+  "06:00 PM",
+  "07:00 PM",
+  "08:00 PM",
+  "09:00 PM",
 ];
 
 export const CALENDAR_EVENTS: CalendarEvent[] = [
@@ -34,7 +34,6 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
     startTime: "2023-10-24T10:00:00",
     endTime: "2023-10-24T11:00:00",
   },
-  // Tuesday
   {
     id: "3",
     title: "Class 10 Teach Design Principles",
@@ -51,7 +50,6 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
     startTime: "2023-10-25T11:00:00",
     endTime: "2023-10-25T12:00:00",
   },
-  // Wednesday
   {
     id: "5",
     title: "Class 10 Teach Design Principles",
@@ -68,7 +66,6 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
     startTime: "2023-10-26T12:00:00",
     endTime: "2023-10-26T13:00:00",
   },
-  // Thursday
   {
     id: "7",
     title: "Class 10 Teach Design Principles",
@@ -77,7 +74,6 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
     startTime: "2023-10-27T08:00:00",
     endTime: "2023-10-27T09:00:00",
   },
-  // Friday
   {
     id: "8",
     title: "Class 10 Teach Design Principles",
