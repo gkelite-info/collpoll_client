@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
-import { insertEducationDepartments }
+import { insertEducationDepartments } 
   from "@/lib/helpers/superadmin/insertdepartment";
 
-
+/* ================= Types ================= */
 type DepartmentItem = {
   uuid: string;
   name: string;
@@ -20,7 +20,7 @@ export default function Department() {
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-
+  /* ================= Add Department ================= */
   const addDepartment = () => {
     const name = departmentName.trim();
     const code = departmentCode.trim();
@@ -50,7 +50,7 @@ export default function Department() {
     setDepartmentCode("");
   };
 
-
+  /* ================= Submit ================= */
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
@@ -79,7 +79,7 @@ export default function Department() {
 
       alert("Departments saved successfully");
 
-
+      // reset UI only
       setDepartments([]);
       setDepartmentName("");
       setDepartmentCode("");
@@ -90,7 +90,7 @@ export default function Department() {
     }
   };
 
-
+  /* ================= UI ================= */
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}
@@ -131,11 +131,7 @@ export default function Department() {
         <button
           type="button"
           onClick={addDepartment}
-          className="bg-[#49C77F] text-white 
-             h-[42px] w-[450px]
-             rounded-md font-semibold
-             flex items-center justify-center
-             hover:bg-[#3fb070]"
+          className="bg-[#49C77F] text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
         >
           Add
         </button>
@@ -173,7 +169,6 @@ export default function Department() {
           {loading ? "Saving..." : "Save Departments"}
         </button>
       </div>
-
     </motion.div>
   );
 }
