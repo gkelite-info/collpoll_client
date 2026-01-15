@@ -27,7 +27,6 @@ export const InputField = ({
     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
       {label}
     </label>
-<<<<<<< Updated upstream
     <div className="relative flex items-center justify-center">
       <input
         type={type}
@@ -45,7 +44,6 @@ export const InputField = ({
         <div className="absolute right-3 flex text-gray-500">{rightIcon}</div>
       )}
     </div>
-=======
     <input
     name={name}                 
       value={value ?? ""}         
@@ -55,7 +53,6 @@ export const InputField = ({
       className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm"
       onWheel={(e) => e.currentTarget.blur()}
     />
->>>>>>> Stashed changes
   </div>
 );
 
