@@ -3,10 +3,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
+<<<<<<< Updated upstream
 import { insertEducationDepartments }
   from "@/lib/helpers/superadmin/insertdepartment";
 
 
+=======
+import { insertEducationDepartments } 
+  from "@/lib/helpers/superadmin/insertdepartment";
+
+/* ================= Types ================= */
+>>>>>>> Stashed changes
 type DepartmentItem = {
   uuid: string;
   name: string;
@@ -20,7 +27,11 @@ export default function Department() {
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+<<<<<<< Updated upstream
 
+=======
+  /* ================= Add Department ================= */
+>>>>>>> Stashed changes
   const addDepartment = () => {
     const name = departmentName.trim();
     const code = departmentCode.trim();
@@ -50,7 +61,11 @@ export default function Department() {
     setDepartmentCode("");
   };
 
+<<<<<<< Updated upstream
 
+=======
+  /* ================= Submit ================= */
+>>>>>>> Stashed changes
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
@@ -79,7 +94,11 @@ export default function Department() {
 
       alert("Departments saved successfully");
 
+<<<<<<< Updated upstream
 
+=======
+      // reset UI only
+>>>>>>> Stashed changes
       setDepartments([]);
       setDepartmentName("");
       setDepartmentCode("");
@@ -90,12 +109,17 @@ export default function Department() {
     }
   };
 
+<<<<<<< Updated upstream
 
+=======
+  /* ================= UI ================= */
+>>>>>>> Stashed changes
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
+<<<<<<< Updated upstream
       className="space-y-4 max-w-[980px]"
     >
       {/* Row 1 */}
@@ -124,6 +148,31 @@ export default function Department() {
           label="Department Code"
           name="departmentCode"
           placeholder="Enter Department Code"
+=======
+      className="space-y-5"
+    >
+      <InputField
+        label="Education ID"
+        name="educationId"
+        type="number"
+        placeholder="1"
+        value={educationId}
+        onChange={(e: any) => setEducationId(e.target.value)}
+        
+      />
+
+      <div className="grid grid-cols-3 gap-4 items-end">
+        <InputField
+          label="Department Name"
+          name="departmentName"
+          value={departmentName}
+          onChange={(e: any) => setDepartmentName(e.target.value)}
+        />
+
+        <InputField
+          label="Department Code"
+          name="departmentCode"
+>>>>>>> Stashed changes
           value={departmentCode}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
@@ -131,11 +180,15 @@ export default function Department() {
         <button
           type="button"
           onClick={addDepartment}
+<<<<<<< Updated upstream
           className="bg-[#49C77F] text-white 
              h-[42px] w-[450px]
              rounded-md font-semibold
              flex items-center justify-center
              hover:bg-[#3fb070]"
+=======
+          className="bg-[#49C77F] text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
+>>>>>>> Stashed changes
         >
           Add
         </button>
@@ -158,6 +211,7 @@ export default function Department() {
         </div>
       ))}
 
+<<<<<<< Updated upstream
       <div className="flex justify-center pt-6">
         <button
           onClick={handleSubmit}
@@ -169,11 +223,23 @@ export default function Department() {
              hover:bg-[#3fb070]
       ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d]"}
     `}
+=======
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className={`bg-[#49C77F] text-white h-[42px] px-8 rounded-lg font-bold text-lg shadow-md ${
+            loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3fb070]"
+          }`}
+>>>>>>> Stashed changes
         >
           {loading ? "Saving..." : "Save Departments"}
         </button>
       </div>
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
     </motion.div>
   );
 }
