@@ -6,7 +6,7 @@ export const upsertStudentEntry = async (payload: {
   email: string;
   mobile: string;
   role: string;
-  gender: "Male" | "Female" | "Other";
+  gender: "Male" | "Female";
   collegeId: number;
   createdBy: number;
   department: string;
