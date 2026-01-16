@@ -1,14 +1,14 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export const upsertParentEntry = async (payload: {
-  studentId: number;               
+  studentId: number;
   fullName: string;
   email: string;
   mobile: string;
-  role: "FATHER" | "MOTHER";
-  collegeId: string;               
+  gender: "Male" | "Female";
+  collegeId: string;
   collegeCode?: string | null;
-  createdBy: number;              
+  createdBy: number;
 }) => {
   try {
     const now = new Date().toISOString();
@@ -21,15 +21,15 @@ export const upsertParentEntry = async (payload: {
           fullName: payload.fullName,
           email: payload.email,
           mobile: payload.mobile,
-          role: payload.role,
-          collegeId: payload.collegeId,      
+          gender: payload.gender,
+          collegeId: payload.collegeId,
           collegeCode: payload.collegeCode ?? null,
           createdBy: payload.createdBy,
           updatedAt: now,
           createdAt: now,
         },
         {
-          onConflict: "studentId", 
+          onConflict: "studentId",
         }
       )
       .select()
@@ -50,6 +50,8 @@ export const upsertParentEntry = async (payload: {
     if (err.code === "23505") {
       if (err.message.includes("studentId")) {
         message = "Parent already exists for this student";
+      } else if (err.message.includes("mobile")) {
+        message = "This mobile number is already registered to another user.";
       } else {
         message = "Duplicate parent record";
       }
@@ -62,7 +64,6 @@ export const upsertParentEntry = async (payload: {
   }
 };
 
-
 export const fetchParentDetails = async (studentId: number) => {
   try {
     const { data, error } = await supabase
@@ -74,7 +75,7 @@ export const fetchParentDetails = async (studentId: number) => {
         fullName,
         email,
         mobile,
-        role,
+        gender,
         collegeId,
         collegeCode,
         createdBy

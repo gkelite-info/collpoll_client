@@ -53,7 +53,7 @@ export const CollegeRegistration = () => {
 
     const { data: userData, error: roleError } = await supabase
       .from("users")
-      .select("role")
+      .select("role, userId")
       .eq("auth_id", user.id)
       .single();
 
@@ -67,7 +67,10 @@ export const CollegeRegistration = () => {
       return null;
     }
 
-    return user;
+    return {
+      authUser: user,
+      userId: userData.userId,
+    };
   };
 
   const handleSave = async () => {
