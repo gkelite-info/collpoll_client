@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import AddAcademicSetup from "./components/AddAcademicSetup";
 import ViewAcademicStructure from "./components/ViewAcademicStructure";
@@ -16,6 +16,25 @@ type Tab = "view" | "add";
 
 export default function AcademicSetup() {
   const [activeTab, setActiveTab] = useState<Tab>("view");
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("user");
+    console.log("🔍 Raw localStorage user:", stored);
+    if (!stored) return;
+
+    const parsed = JSON.parse(stored);
+    const finalUser = Array.isArray(parsed) ? parsed[0] : parsed;
+
+
+    console.log("✅ Parsed user object:", finalUser);
+    console.log("🆔 userId (adminId):", finalUser?.userId, typeof finalUser?.userId);
+    setUser(finalUser);
+  }, []);
+
+  //   // 🔥 HANDLE ARRAY CASE
+  //   setUser(Array.isArray(parsed) ? parsed[0] : parsed);
+  // }, []);
 
   const tabs = [
     { id: "view", label: "View Academic Structure" },
@@ -28,6 +47,8 @@ export default function AcademicSetup() {
     setEditData(row);
     setActiveTab("add");
   };
+
+
 
   return (
     <section className="min-h-[85vh] p-2">
@@ -45,11 +66,10 @@ export default function AcademicSetup() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as Tab)}
-                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${
-                  activeTab === tab.id
-                    ? "text-white"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
+                  ? "text-white"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 {tab.label}
 
@@ -73,8 +93,19 @@ export default function AcademicSetup() {
           </div>
         </div>
 
-        {activeTab === "view" && <ViewAcademicStructure onEdit={handleEdit}/>}
-        {activeTab === "add" && <AddAcademicSetup editData={editData}/>}
+        {/* {activeTab === "view" && <ViewAcademicStructure onEdit={handleEdit}  adminId={user?.userId}
+ />} */}
+        {activeTab === "view" && (
+          <>
+            {console.log("➡️ Passing adminId to ViewAcademicStructure:", user?.userId)}
+            <ViewAcademicStructure
+              onEdit={handleEdit}
+              adminId={user?.userId}
+            />
+          </>
+        )}
+
+        {activeTab === "add" && <AddAcademicSetup editData={editData} />}
       </div>
     </section>
   );
