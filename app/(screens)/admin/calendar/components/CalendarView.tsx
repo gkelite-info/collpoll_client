@@ -32,12 +32,38 @@ export default function CalendarView({ faculty, onBack }: Props) {
     const [showConflictModal, setShowConflictModal] = useState(false);
     const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
     const [eventForm, setEventForm] = useState<any | null>(null);
+    const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
     const weekDays = getWeekDays(currentDate)
 
     const handleSaveEvent = (data: any) => {
         const start = combineDateAndTime(data.date, data.startTime);
         const end = combineDateAndTime(data.date, data.endTime);
+
+        if (editingEventId) {
+            setEvents((prev) =>
+                prev.map((e) =>
+                    e.id === editingEventId
+                        ? {
+                            ...e,
+                            title: data.title,
+                            type: data.type,
+                            startTime: start,
+                            endTime: end,
+                            day: new Date(data.date)
+                                .toLocaleDateString("en-US", { weekday: "short" })
+                                .toUpperCase(),
+                            rawFormData: data,
+                        }
+                        : e
+                )
+            );
+
+            setEditingEventId(null);
+            setEventForm(null);
+            setIsModalOpen(false);
+            return;
+        }
 
         const newEvent: CalendarEvent = {
             id: crypto.randomUUID(),
@@ -48,6 +74,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 .toUpperCase(),
             startTime: start,
             endTime: end,
+            rawFormData: data,
         };
 
         const sameDayEvents = events.filter((e) =>
@@ -66,6 +93,31 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setEventForm(null);
         setIsModalOpen(false);
     };
+
+    const handleEditEvent = (event: CalendarEvent) => {
+  setEditingEventId(event.id);
+
+  const startDate = event.startTime.split("T")[0];
+  const startTime = event.startTime.split("T")[1].slice(0, 5);
+  const endTime = event.endTime.split("T")[1].slice(0, 5);
+
+  setEventForm({
+    title: event.title,
+    topic: event.rawFormData?.topic ?? "",
+    roomNo: event.rawFormData?.roomNo ?? "",
+    departments: event.rawFormData?.departments ?? [],
+    sections: event.rawFormData?.sections ?? [],
+    year: event.rawFormData?.year ?? null,
+    semester: event.rawFormData?.semester ?? "",
+    type: event.type,
+    date: startDate,
+    startTime,
+    endTime,
+  });
+
+  setIsModalOpen(true);
+};
+
 
 
     const handleNextWeek = () => {
@@ -127,6 +179,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             <div className="flex justify-between mb-2">
                 <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
                 <CalendarHeader onAddClick={() => {
+                    setEditingEventId(null);
                     setEventForm(null);
                     setIsModalOpen(true);
                 }}
@@ -140,6 +193,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 onPrevWeek={handlePrevWeek}
                 onNextWeek={handleNextWeek}
                 onDeleteRequest={setEventToDelete}
+                onEditRequest={handleEditEvent}
             />
 
             <AddEventModal

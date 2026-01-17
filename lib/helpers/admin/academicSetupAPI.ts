@@ -1,14 +1,9 @@
 import { supabase } from "@/lib/supabaseClient";
 
-/**
- * Fetch all active college degrees
- * years  -> JSONB[]
- * sections -> JSONB[]
- */
 export async function fetchCollegeDegrees() {
-  const { data, error } = await supabase
-    .from("college_degree")
-    .select(`
+    const { data, error } = await supabase
+        .from("college_degree")
+        .select(`
       collegeDegreeId,
       degreeType,
       departments,
@@ -20,13 +15,13 @@ export async function fetchCollegeDegrees() {
       years,
       sections
     `)
-    .eq("is_deleted", false)
-    .order("collegeDegreeId", { ascending: true });
+        .eq("is_deleted", false)
+        .order("collegeDegreeId", { ascending: true });
 
-  if (error) {
-    console.error("fetchCollegeDegrees error:", error);
-    throw error;
-  }
+    if (error) {
+        console.error("fetchCollegeDegrees error:", error);
+        throw error;
+    }
 
-  return data ?? [];
+    return data ?? [];
 }
