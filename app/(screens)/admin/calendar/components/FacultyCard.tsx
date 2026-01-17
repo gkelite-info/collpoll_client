@@ -21,13 +21,13 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
       <div>
         <div className="flex gap-4 items-center">
           <div className="w-14 h-14 rounded-full bg-gray-300 shrink-0">
-            <Image
+            {/* <Image
               src={faculty.image}
               alt={faculty.id}
               width={56}
               height={56}
               className="rounded-full object-cover"
-            />
+            /> */}
           </div>
 
           <div className="min-w-0">
@@ -54,7 +54,9 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
                          text-[#525252]
                            flex-1          
                            min-w-0         
-                           truncate
+                          max-w-[220px]
+                          overflow-x-auto
+                          whitespace-nowrap
                            ml-1       
                         "
           >
