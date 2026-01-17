@@ -7,6 +7,7 @@ export interface CalendarEvent {
   startTime: string;
   endTime: string;
   day: string;
+  rawFormData?: any;
 }
 
 export interface WeekDay {

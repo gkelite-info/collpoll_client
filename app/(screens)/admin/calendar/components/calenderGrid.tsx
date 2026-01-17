@@ -12,6 +12,7 @@ interface CalendarGridProps {
   onNextWeek: () => void;
   activeTab: string;
   onDeleteRequest: (event: CalendarEvent) => void;
+  onEditRequest?: (event: CalendarEvent) => void;
 }
 
 const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -21,6 +22,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   onNextWeek,
   activeTab,
   onDeleteRequest,
+  onEditRequest,
 }) => {
   const matchesFilter = (event: CalendarEvent): boolean => {
     if (activeTab === "All") {
@@ -170,7 +172,11 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         : "opacity-100"
                         }`}
                     >
-                      <EventCard event={event} onDelete={() => onDeleteRequest(event)} />
+                      <EventCard
+                        event={event}
+                        onDelete={() => onDeleteRequest(event)}
+                        onEdit={() => onEditRequest?.(event)}
+                      />
                     </div>
                   );
                 })}

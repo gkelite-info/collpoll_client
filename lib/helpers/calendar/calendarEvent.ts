@@ -11,6 +11,7 @@ export const upsertCalendarEvent = async (payload: {
     roomNo: string;
     fromTime: string;
     toTime: string;
+    degree: string;
     department: Department[];
     year: string;
     semester: Semester[];
@@ -35,6 +36,7 @@ export const upsertCalendarEvent = async (payload: {
                     roomNo: payload.roomNo,
                     fromTime: payload.fromTime,
                     toTime: payload.toTime,
+                    degree: payload.degree,
                     department: payload.department,
                     year: payload.year,
                     semester: payload.semester,

@@ -21,7 +21,7 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
     { name: "Events", filterValue: "event", icon: Confetti },
     { name: "Classes", filterValue: "class", icon: ChalkboardTeacher },
     { name: "Exams", filterValue: "exam", icon: Exam },
-    { name: "Holidays", filterValue: "holiday", icon: Island },
+    { name: "Quiz", filterValue: "quiz", icon: Island },
   ];
 
   return (
