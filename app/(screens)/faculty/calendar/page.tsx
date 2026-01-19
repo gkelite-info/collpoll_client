@@ -1,105 +1,7 @@
-// "use client";
-
-// import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-// import { useState } from "react";
-// import { CALENDAR_EVENTS } from "./calenderData";
-// import AddEventModal from "./components/addEventModal";
-// import CalendarHeader from "./components/calendarHeader";
-// import CalendarGrid from "./components/calenderGrid";
-// import CalendarToolbar from "./components/calenderToolbar";
-// import { CalendarEvent } from "./types";
-// import { combineDateAndTime, getWeekDays } from "./utils";
-
-// export default function Page() {
-//   const [activeTab, setActiveTab] = useState("All");
-//   const [isModalOpen, setIsModalOpen] = useState(false);
-
-//   const [events, setEvents] = useState<CalendarEvent[]>(CALENDAR_EVENTS);
-
-//   const [currentDate, setCurrentDate] = useState(new Date());
-
-//   const weekDays = getWeekDays(currentDate);
-
-//   const handleNextWeek = () => {
-//     const next = new Date(currentDate);
-//     next.setDate(next.getDate() + 7);
-//     setCurrentDate(next);
-//   };
-
-//   const handlePrevWeek = () => {
-//     const prev = new Date(currentDate);
-//     prev.setDate(prev.getDate() - 7);
-//     setCurrentDate(prev);
-//   };
-
-//   const handleSaveEvent = (data: any) => {
-//     const startISO = combineDateAndTime(data.date, data.startTime);
-//     const endISO = combineDateAndTime(data.date, data.endTime);
-
-//     const newEvent: CalendarEvent = {
-//       id: Math.random().toString(36).substr(2, 9),
-//       title: data.title,
-//       type: data.type,
-//       day: new Date(data.date)
-//         .toLocaleDateString("en-US", { weekday: "short" })
-//         .toUpperCase(),
-//       startTime: startISO,
-//       endTime: endISO,
-//     };
-
-//     setEvents([...events, newEvent]);
-
-//     setCurrentDate(new Date(data.date));
-//   };
-
-//   return (
-//     <main className="p-4">
-//       <section className="flex justify-between items-center mb-4">
-//         <div className="flex items-start justify-center">
-//           <div>
-//             <div className="flex">
-//               <h1 className="text-black text-xl font-semibold">
-//                 Calendar & Events
-//               </h1>
-//             </div>
-//             <p className="text-black text-sm">
-//               Stay Organized And On Track With Your Personalised Calendar
-//             </p>
-//           </div>
-//         </div>
-
-//         <article className="flex justify-end w-[32%]">
-//           <CourseScheduleCard style="w-[320px]" />
-//         </article>
-//       </section>
-//       <div className="flex justify-between">
-//         <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-//         <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-//       </div>
-
-//       <div className="w-full min-h-screen bg-[#f3f4f6] text-gray-800">
-//         <CalendarGrid
-//           events={events}
-//           weekDays={weekDays}
-//           onPrevWeek={handlePrevWeek}
-//           onNextWeek={handleNextWeek}
-//           activeTab={activeTab}
-//         />
-
-//         <AddEventModal
-//           isOpen={isModalOpen}
-//           onClose={() => setIsModalOpen(false)}
-//           onSave={handleSaveEvent}
-//         />
-//       </div>
-//     </main>
-//   );
-// }
-
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CALENDAR_EVENTS } from "./calenderData";
 import AddEventModal from "./components/addEventModal";
 import CalendarHeader from "./components/calendarHeader";
@@ -113,6 +15,11 @@ import {
 } from "./utils";
 import ConfirmConflictModal from "../../admin/calendar/components/ConfirmConflictModal";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
+import toast from "react-hot-toast";
+import { upsertCalendarEvent } from "@/lib/helpers/calendar/calendarEvent";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
+import { getFacultyIdByUserId } from "@/lib/helpers/faculty/faculty";
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState("All");
@@ -124,8 +31,26 @@ export default function Page() {
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
   const [eventForm, setEventForm] = useState<any | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
-
+  const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
   const weekDays = getWeekDays(currentDate);
+  const { userId, role } = useUser();
+  const [facultyId, setFacultyId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!userId || role !== "Faculty") return;
+
+    const loadFacultyId = async () => {
+      try {
+        const id = await getFacultyIdByUserId(userId);
+        setFacultyId(id);
+      } catch (err) {
+        toast.error("Faculty record not found");
+        console.error("FACULTY LOOKUP FAILED", err);
+      }
+    };
+
+    loadFacultyId();
+  }, [userId, role]);
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);
@@ -139,70 +64,142 @@ export default function Page() {
     setCurrentDate(prev);
   };
 
-  const handleSaveEvent = (data: any) => {
-    const start = combineDateAndTime(data.date, data.startTime);
-    const end = combineDateAndTime(data.date, data.endTime);
-
-    if (editingEventId) {
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === editingEventId
-            ? {
-              ...e,
-              title: data.title,
-              type: data.type,
-              startTime: start,
-              endTime: end,
-              day: new Date(data.date)
-                .toLocaleDateString("en-US", { weekday: "short" })
-                .toUpperCase(),
-              rawFormData: data,
-            }
-            : e
-        )
-      );
-
-      setEditingEventId(null);
-      setEventForm(null);
-      setIsModalOpen(false);
-      return;
-    }
-
-    const newEvent: CalendarEvent = {
-      id: crypto.randomUUID(),
-      title: data.title,
-      type: data.type,
-      day: new Date(data.date)
-        .toLocaleDateString("en-US", { weekday: "short" })
-        .toUpperCase(),
-      startTime: start,
-      endTime: end,
-      rawFormData: data,
+  useEffect(() => {
+    const loadDegrees = async () => {
+      try {
+        const data = await fetchCollegeDegrees();
+        setDegreeOptions(data);
+      } catch (err) {
+        toast.error("LOAD DEGREES FAILED");
+        console.error("LOAD DEGREES FAILED", err);
+      }
     };
 
-    // const sameDayEvents = events.filter((e) =>
-    //   e.startTime.startsWith(data.date)
-    // );
-    const sameDayEvents = events.filter(
-      (e) =>
-        e.startTime.startsWith(data.date) &&
-        e.id !== editingEventId
-    );
+    loadDegrees();
+  }, []);
 
-    setEventForm(data);
 
-    if (hasTimeConflict(sameDayEvents, start, end)) {
-      setPendingEvent(newEvent);
-      setShowConflictModal(true);
+
+  // const handleSaveEvent = (data: any) => {
+  //   const start = combineDateAndTime(data.date, data.startTime);
+  //   const end = combineDateAndTime(data.date, data.endTime);
+
+  //   if (editingEventId) {
+  //     setEvents((prev) =>
+  //       prev.map((e) =>
+  //         e.id === editingEventId
+  //           ? {
+  //             ...e,
+  //             title: data.title,
+  //             type: data.type,
+  //             startTime: start,
+  //             endTime: end,
+  //             day: new Date(data.date)
+  //               .toLocaleDateString("en-US", { weekday: "short" })
+  //               .toUpperCase(),
+  //             rawFormData: data,
+  //           }
+  //           : e
+  //       )
+  //     );
+
+  //     setEditingEventId(null);
+  //     setEventForm(null);
+  //     setIsModalOpen(false);
+  //     return;
+  //   }
+
+  //   const newEvent: CalendarEvent = {
+  //     id: crypto.randomUUID(),
+  //     title: data.title,
+  //     type: data.type,
+  //     day: new Date(data.date)
+  //       .toLocaleDateString("en-US", { weekday: "short" })
+  //       .toUpperCase(),
+  //     startTime: start,
+  //     endTime: end,
+  //     rawFormData: data,
+  //   };
+
+  //   // const sameDayEvents = events.filter((e) =>
+  //   //   e.startTime.startsWith(data.date)
+  //   // );
+  //   const sameDayEvents = events.filter(
+  //     (e) =>
+  //       e.startTime.startsWith(data.date) &&
+  //       e.id !== editingEventId
+  //   );
+
+  //   setEventForm(data);
+
+  //   if (hasTimeConflict(sameDayEvents, start, end)) {
+  //     setPendingEvent(newEvent);
+  //     setShowConflictModal(true);
+  //     setIsModalOpen(false);
+  //     return;
+  //   }
+
+  //   setEvents((prev) => [...prev, newEvent]);
+  //   setEventForm(null);
+  //   setIsModalOpen(false);
+  // };
+
+  const handleSaveEvent = async (data: any) => {
+    try {
+      if (!facultyId) {
+        toast.error("faculty profile not found");
+        return;
+      }
+      const start = combineDateAndTime(data.date, data.startTime);
+      const end = combineDateAndTime(data.date, data.endTime);
+
+      const payload = {
+        facultyId: facultyId,
+        eventTitle: data.title,
+        eventTopic: data.topic,
+        type: data.type,
+        date: data.date,
+        roomNo: data.roomNo,
+        fromTime: data.startTime,
+        toTime: data.endTime,
+        degree: data.degree,
+        department: data.departments,
+        year: data.year?.toString() ?? "",
+        semester: Array.isArray(data.semester)
+          ? data.semester
+          : data.semester
+            ? [data.semester]
+            : [],
+        section: data.sections,
+      };
+
+      const res = await upsertCalendarEvent(payload);
+
+      if (!res.success) {
+        toast.error(res.error || "Failed to save event");
+        return;
+      }
+
+      const newEvent: CalendarEvent = {
+        id: res.data.calendarEventId,
+        title: data.title,
+        type: data.type,
+        day: new Date(data.date)
+          .toLocaleDateString("en-US", { weekday: "short" })
+          .toUpperCase(),
+        startTime: start,
+        endTime: end,
+        rawFormData: data,
+      };
+
+      setEvents((prev) => [...prev, newEvent]);
       setIsModalOpen(false);
-      return;
+      toast.success("Event saved successfully 🎉");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Something went wrong");
     }
-
-    setEvents((prev) => [...prev, newEvent]);
-    setEventForm(null);
-    setIsModalOpen(false);
   };
-
 
   const confirmAddEvent = () => {
     if (pendingEvent) {
@@ -256,7 +253,6 @@ export default function Page() {
   };
 
 
-
   return (
     <main className="p-4">
       <section className="flex justify-between items-center mb-4">
@@ -300,6 +296,7 @@ export default function Page() {
           initialData={eventForm}
           onClose={closeAddEventModal}
           onSave={handleSaveEvent}
+          degreeOptions={degreeOptions}
         />
 
         <ConfirmConflictModal
