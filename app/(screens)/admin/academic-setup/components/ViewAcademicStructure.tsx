@@ -1,47 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-import { AcademicData } from "../page";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 
-
-
-
-
-// const data = [
-//   { degree: "B.Tech", dept: "CSE", year: "4 Years", sections: "A, B, C, D" },
-//   { degree: "B.Tech", dept: "IT", year: "4 Years", sections: "A, B" },
-//   { degree: "B.Sc", dept: "Mathematics", year: "3 Years", sections: "A" },
-//   { degree: "MBA", dept: "Finance", year: "2 Years", sections: "A" },
-//   { degree: "B.Tech", dept: "CSE", year: "4 Years", sections: "A, B, C, D" },
-//   { degree: "B.Tech", dept: "IT", year: "4 Years", sections: "A, B" },
-//   { degree: "B.Sc", dept: "Mathematics", year: "3 Years", sections: "A" },
-//   { degree: "MBA", dept: "Finance", year: "2 Years", sections: "A" },
-// ];
+export type AcademicViewData = {
+  id: string;
+  degree: string;
+  dept: string;
+  year: any[];
+  sections: any[];
+};
 
 export default function ViewAcademicStructure({
   onEdit,
-  adminId,
 }: {
-  onEdit: (row: AcademicData) => void;
-  adminId?: number;
+  onEdit: (row: AcademicViewData) => void;
 }) {
-
-
-  const [data, setData] = useState<AcademicData[]>([]);
+  const [data, setData] = useState<AcademicViewData[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
       const degrees = await fetchCollegeDegrees();
 
-      // Map DB → UI shape (NO UI change)
-      const mapped: AcademicData[] = degrees.map((d: any) => ({
-        degree: d.degreeType,
-        dept: d.departments,
-        year: JSON.stringify(d.years ?? []),      // JSON as requested
-        sections: JSON.stringify(d.sections ?? []), // JSON as requested
-      }));
+      const mapped: AcademicViewData[] = degrees.map((d: any) => {
+        const parseVal = (val: any) => {
+          if (typeof val === "string") {
+            try {
+              return JSON.parse(val);
+            } catch (e) {
+              return [];
+            }
+          }
+          return Array.isArray(val) ? val : [];
+        };
+
+        return {
+          id: d.collegeDegreeId,
+          degree: d.degreeType,
+          dept: d.departments,
+          year: parseVal(d.years),
+          sections: parseVal(d.sections),
+        };
+      });
 
       setData(mapped);
     };
@@ -65,32 +65,24 @@ export default function ViewAcademicStructure({
 
           <tbody>
             {data.map((row, i) => (
-              <tr
-                key={i}
-                className="hover:bg-gray-50 text-gray-800 transition"
-              >
+              <tr key={i} className="hover:bg-gray-50 text-gray-800 transition">
                 <td className="p-4">{row.degree}</td>
                 <td className="p-4">{row.dept}</td>
 
                 <td className="p-4">
-                  {row.year === "[]" || !row.year
+                  {!row.year || row.year.length === 0
                     ? "-"
-                    : JSON.parse(row.year)
-                      .map((y: any) => y.name)
-                      .join(", ")}
+                    : row.year.map((y: any) => y.name || y).join(", ")}
                 </td>
 
                 <td className="p-4">
-                  {row.sections === "[]" || !row.sections
+                  {!row.sections || row.sections.length === 0
                     ? "-"
-                    : JSON.parse(row.sections)
-                      .map((s: any) => s.name)
-                      .join(", ")}
+                    : row.sections.map((s: any) => s.name || s).join(", ")}
                 </td>
 
-
                 <td
-                  className="p-4 text-[#16284F] cursor-pointer underline"
+                  className="p-4 text-[#16284F] hover:text-emerald-500 cursor-pointer underline"
                   onClick={() => onEdit(row)}
                 >
                   Edit
@@ -98,13 +90,8 @@ export default function ViewAcademicStructure({
               </tr>
             ))}
           </tbody>
-
         </table>
       </div>
     </div>
   );
 }
-// function useUserContext(): { user: any; } {
-//   throw new Error("Function not implemented.");
-// }
-

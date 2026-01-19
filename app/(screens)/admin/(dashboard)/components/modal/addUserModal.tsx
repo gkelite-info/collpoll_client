@@ -10,22 +10,13 @@ import {
 } from "@/lib/helpers/admin/upsertFaculty";
 
 import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
 import { upsertStudentEntry } from "@/lib/helpers/profile/students";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
+import { generateUUID } from "@/lib/helpers/generateUUID";
 
 const BASE_YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const SECTION_LETTERS = ["A", "B", "C", "D"];
-
-const generateUUID = () => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -104,7 +95,6 @@ const AddUserModal: React.FC<{
         if (formattedDbData) setDbData(formattedDbData);
       };
       init();
-
       if (user) {
         setBasicData((p: any) => ({
           ...p,
@@ -146,6 +136,7 @@ const AddUserModal: React.FC<{
     }
   }, [isOpen, user]);
 
+  // Memoized Options
   const degreeOptions = useMemo(
     () => dbData.educations.map((e: any) => e.name),
     [dbData.educations]
@@ -158,7 +149,6 @@ const AddUserModal: React.FC<{
     });
     return grouped;
   }, [selectedDegrees, dbData.educations]);
-
   const availableYearsGrouped = useMemo(() => {
     const grouped: Record<string, string[]> = {};
     selectedDepts.forEach((dept) => {
@@ -166,7 +156,6 @@ const AddUserModal: React.FC<{
     });
     return grouped;
   }, [selectedDepts]);
-
   const availableSectionsGrouped = useMemo(() => {
     const grouped: Record<string, string[]> = {};
     selectedDepts.forEach((dept) => {
@@ -180,7 +169,6 @@ const AddUserModal: React.FC<{
   ) => {
     setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
   };
-
   const toggleSelection = (list: string[], setList: Function, item: string) => {
     setList(
       list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
@@ -195,12 +183,8 @@ const AddUserModal: React.FC<{
   const handleSave = async () => {
     if (!basicData.fullName || !basicData.email || !basicData.role)
       return toast.error("Please fill in all required fields.");
-
-    // Parent Validation
     if (isParent && !basicData.studentId)
       return toast.error("Student ID is required for Parent accounts.");
-
-    // Student Validation
     if (isStudent) {
       if (selectedDegrees.length !== 1)
         return toast.error("Students must have exactly one Degree.");
@@ -211,7 +195,6 @@ const AddUserModal: React.FC<{
       if (selectedSections.length !== 1)
         return toast.error("Students must have exactly one Section.");
     }
-
     if (!user) {
       if (!basicData.password)
         return toast.error("Password is required for new users.");
@@ -220,11 +203,13 @@ const AddUserModal: React.FC<{
     }
 
     setLoading(true);
+
+    let createdUserId: number | null = null;
+
     try {
       const timestamp = new Date().toISOString();
       const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
 
-      // 1. Create User (Common)
       const targetUserId = await persistUser(
         !user,
         { ...basicData, collegePublicId: basicData.collegeId },
@@ -232,7 +217,10 @@ const AddUserModal: React.FC<{
         timestamp
       );
 
-      // --- FACULTY ---
+      if (!user) {
+        createdUserId = targetUserId;
+      }
+
       if (isFaculty && targetUserId) {
         const degreesPayload = dbData.educations
           .filter((e: any) => selectedDegrees.includes(e.name))
@@ -272,7 +260,6 @@ const AddUserModal: React.FC<{
         );
       }
 
-      // --- STUDENT ---
       if (isStudent && targetUserId) {
         const yearString = selectedYears[0] || "";
         const yearMatch = yearString.match(/(\d+)(?:st|nd|rd|th)/);
@@ -285,7 +272,7 @@ const AddUserModal: React.FC<{
           mobile: fullMobile,
           role: "Student",
           gender: basicData.gender,
-          collegeId: basicData.collegeId, // String collegePublicId
+          collegeId: basicData.collegeId,
           createdBy: basicData.adminId,
           department: selectedDepts[0],
           degree: selectedDegrees[0],
@@ -298,14 +285,15 @@ const AddUserModal: React.FC<{
           throw new Error(result.error || "Failed to save student profile");
       }
 
-      if (isParent) {
+      if (isParent && targetUserId) {
         const parentPayload = {
+          userId: targetUserId,
           studentId: parseInt(basicData.studentId),
           fullName: basicData.fullName,
           email: basicData.email,
           mobile: fullMobile,
           gender: basicData.gender,
-          collegeId: basicData.collegeId, // String collegePubliciD
+          collegeId: basicData.collegeId,
           collegeCode: basicData.collegeId.replace(/\d+/g, ""),
           createdBy: basicData.adminId,
         };
@@ -319,7 +307,17 @@ const AddUserModal: React.FC<{
       resetForm();
       onClose();
     } catch (e: any) {
-      console.error(e);
+      console.error("Save Error:", e);
+
+      if (createdUserId && !user) {
+        console.log("Rolling back: Deleting orphaned user", createdUserId);
+        try {
+          await supabase.from("users").delete().eq("userId", createdUserId);
+        } catch (cleanupError) {
+          console.error("Critical: Failed to rollback user", cleanupError);
+        }
+      }
+
       toast.error(e.message || "An error occurred");
     } finally {
       setLoading(false);
@@ -450,14 +448,14 @@ const AddUserModal: React.FC<{
               {isParent && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Student ID
+                    Student User ID
                   </label>
                   <input
                     type="number"
                     name="studentId"
                     value={basicData.studentId}
                     onChange={handleBasicChange}
-                    placeholder="Enter Student ID"
+                    placeholder="Enter Student's User ID"
                     className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                   />
                 </div>
