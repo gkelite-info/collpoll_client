@@ -1,5 +1,8 @@
 "use client";
 
+
+
+import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
 import { FilePdf } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
@@ -7,8 +10,14 @@ export default function CalendarTimeTable() {
 
     const [todayDate, setTodayDate] = useState("");
     const [todayDay, setTodayDay] = useState("");
+    const [timetable, setTimetable] = useState<any[]>([]);
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+
 
     useEffect(() => {
+        console.log("🟢 Header date useEffect triggered");
+
         const now = new Date();
 
         const formattedDate = String(now.getDate()).padStart(2, "0");
@@ -17,66 +26,100 @@ export default function CalendarTimeTable() {
             .toLocaleString("en-US", { weekday: "short" })
             .replace(".", "");
 
+        console.log("📅 Header date:", formattedDate, formattedDay);
+
         setTodayDate(formattedDate);
         setTodayDay(formattedDay);
     }, []);
 
-    const timeTableData = [
-        {
-            start: "09:00 AM",
-            end: "10:00 AM",
-            img: "/ds.png",
-            title: "Data Structures",
-            topic: "Stack Implementation using arrays",
-            room: "C-102",
-            faculty: "Dr. Priya",
-        },
-        {
-            start: "10:00 AM",
-            end: "11:00 AM",
-            img: "/os.png",
-            title: "Operating Systems",
-            topic: "Loops & Iterations",
-            room: "B-210",
-            faculty: "Mr. Ramesh",
-        },
-        {
-            start: "11:00 AM",
-            end: "12:00 PM",
-            img: "/wt.png",
-            title: "Web Technologies",
-            topic: "Search Algorithms",
-            room: "Lab-1",
-            faculty: "Dr. Kavitha",
-        },
-        {
-            start: "01:00 PM",
-            end: "02:00 PM",
-            img: "/ai.png",
-            title: "Artificial Intelligence",
-            topic: "SQL Joins",
-            room: "C-108",
-            faculty: "Mrs. Anitha",
-        },
-        {
-            start: "02:00 PM",
-            end: "03:00 PM",
-            img: "/development.png",
-            title: "Web Development",
-            topic: "React Components",
-            room: "Lab-3",
-            faculty: "Mr. Suresh",
-        },
-        {
-            start: "03:00 PM",
-            end: "04:00 PM",
-            img: "/cn.png",
-            title: "Computer Networks",
-            topic: "TCP/IP Model",
-            room: "C-205",
-            faculty: "Dr. Meera",
-        },
-    ];
+
+    useEffect(() => {
+        const loadTimetable = async () => {
+            const today = new Date();
+            const formattedDate = today.toISOString().split("T")[0];
+
+            const data = await fetchStudentTimetableByDate({
+                date: formattedDate,
+                degree: "B.Tech",
+                year: "1",
+                department: "IOT",
+            });
+
+            setTimetable(
+                data.map((item: any) => ({
+                    start: item.fromTime,
+                    end: item.toTime,
+                    title: item.eventTitle,
+                    topic: item.eventTopic,
+                    room: item.roomNo,
+                    faculty: item.facultyName,
+                    img: "/ai.png",
+                }))
+            );
+        };
+
+        loadTimetable();
+    }, []);
+
+
+
+
+    // const timeTableData = [
+    //     {
+    //         start: "09:00 AM",
+    //         end: "10:00 AM",
+    //         img: "/ds.png",
+    //         title: "Data Structures",
+    //         topic: "Stack Implementation using arrays",
+    //         room: "C-102",
+    //         faculty: "Dr. Priya",
+    //     },
+    //     {
+    //         start: "10:00 AM",
+    //         end: "11:00 AM",
+    //         img: "/os.png",
+    //         title: "Operating Systems",
+    //         topic: "Loops & Iterations",
+    //         room: "B-210",
+    //         faculty: "Mr. Ramesh",
+    //     },
+    //     {
+    //         start: "11:00 AM",
+    //         end: "12:00 PM",
+    //         img: "/wt.png",
+    //         title: "Web Technologies",
+    //         topic: "Search Algorithms",
+    //         room: "Lab-1",
+    //         faculty: "Dr. Kavitha",
+    //     },
+    //     {
+    //         start: "01:00 PM",
+    //         end: "02:00 PM",
+    //         img: "/ai.png",
+    //         title: "Artificial Intelligence",
+    //         topic: "SQL Joins",
+    //         room: "C-108",
+    //         faculty: "Mrs. Anitha",
+    //     },
+    //     {
+    //         start: "02:00 PM",
+    //         end: "03:00 PM",
+    //         img: "/development.png",
+    //         title: "Web Development",
+    //         topic: "React Components",
+    //         room: "Lab-3",
+    //         faculty: "Mr. Suresh",
+    //     },
+    //     {
+    //         start: "03:00 PM",
+    //         end: "04:00 PM",
+    //         img: "/cn.png",
+    //         title: "Computer Networks",
+    //         topic: "TCP/IP Model",
+    //         room: "C-205",
+    //         faculty: "Dr. Meera",
+    //     },
+    // ];
 
     return (
         <>
@@ -93,7 +136,7 @@ export default function CalendarTimeTable() {
                     </div>
 
                     <div className="bg-red-00 mt-5 flex flex-col gap-4">
-                        {timeTableData.map((item, index) => (
+                        {timetable.map((item, index) => (
                             <div
                                 key={index}
                                 className="bg-indigo-00 h-[102px] w-full flex justify-between"
