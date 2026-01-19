@@ -4,7 +4,7 @@ import {
   Confetti,
   ChalkboardTeacher,
   Exam,
-  Island,
+  Question,
 } from "@phosphor-icons/react";
 
 interface CalendarToolbarProps {
@@ -21,7 +21,7 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
     { name: "Events", filterValue: "event", icon: Confetti },
     { name: "Classes", filterValue: "class", icon: ChalkboardTeacher },
     { name: "Exams", filterValue: "exam", icon: Exam },
-    { name: "Holidays", filterValue: "holiday", icon: Island },
+    { name: "Quiz", filterValue: "quiz", icon: Question },
   ];
 
   return (
@@ -31,11 +31,10 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
           <button
             key={tab.name}
             onClick={() => setActiveTab(tab.filterValue)}
-            className={`flex items-center cursor-pointer gap-2 pb-1 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${
-              activeTab === tab.filterValue
-                ? "border-emerald-500 text-emerald-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
+            className={`flex items-center cursor-pointer gap-2 pb-1 border-b-2 text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.filterValue
+              ? "border-emerald-500 text-emerald-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
           >
             <tab.icon
               size={18}
