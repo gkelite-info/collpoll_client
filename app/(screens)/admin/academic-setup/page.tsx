@@ -1,54 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import AddAcademicSetup from "./components/AddAcademicSetup";
-import ViewAcademicStructure from "./components/ViewAcademicStructure";
-
-export type AcademicData = {
-  degree: string;
-  dept: string;
-  year: string;
-  sections: string;
-};
+import AddAcademicSetup, { AcademicData } from "./components/AddAcademicSetup";
+import ViewAcademicStructure, {
+  AcademicViewData,
+} from "./components/ViewAcademicStructure";
 
 type Tab = "view" | "add";
 
 export default function AcademicSetup() {
   const [activeTab, setActiveTab] = useState<Tab>("view");
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("user");
-    console.log("🔍 Raw localStorage user:", stored);
-    if (!stored) return;
-
-    const parsed = JSON.parse(stored);
-    const finalUser = Array.isArray(parsed) ? parsed[0] : parsed;
-
-
-    console.log("✅ Parsed user object:", finalUser);
-    console.log("🆔 userId (adminId):", finalUser?.userId, typeof finalUser?.userId);
-    setUser(finalUser);
-  }, []);
-
-  //   // 🔥 HANDLE ARRAY CASE
-  //   setUser(Array.isArray(parsed) ? parsed[0] : parsed);
-  // }, []);
+  const [editData, setEditData] = useState<AcademicData | null>(null);
 
   const tabs = [
     { id: "view", label: "View Academic Structure" },
     { id: "add", label: "Add Academic Setup" },
   ];
 
-  const [editData, setEditData] = useState<AcademicData | null>(null);
+  // --- Handle Edit Click ---
+  const handleEdit = (row: AcademicViewData) => {
+    // TRANSFORM DATA: Object Array -> String Array
+    const extractNames = (arr: any[]) => {
+      if (!Array.isArray(arr)) return [];
 
-  const handleEdit = (row: AcademicData) => {
-    setEditData(row);
+      return arr
+        .map((item) => {
+          // 1. If it's already a string/number, return it
+          if (typeof item === "string" || typeof item === "number")
+            return String(item);
+
+          // 2. If it's an object, try to find a valid text property
+          if (item && typeof item === "object") {
+            return item.name || item.code || item.label || item.value || "";
+            // Returning "" filters it out below if properties are missing
+          }
+
+          return "";
+        })
+        .filter((val) => val !== "" && val !== "[object Object]"); // Filter out invalid entries
+    };
+
+    const sanitizedData: AcademicData = {
+      id: row.id,
+      degree: row.degree,
+      dept: row.dept,
+      year: extractNames(row.year),
+      sections: extractNames(row.sections),
+    };
+
+    setEditData(sanitizedData);
     setActiveTab("add");
   };
 
-
+  // --- Handle Successful Save ---
+  const handleSaveSuccess = () => {
+    setEditData(null);
+    setActiveTab("view");
+  };
 
   return (
     <section className="min-h-[85vh] p-2">
@@ -60,32 +69,32 @@ export default function AcademicSetup() {
           Add new academic structures for your institution.
         </p>
 
+        {/* Tab Navigation */}
         <div className="flex justify-center mb-10">
           <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as Tab)}
-                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
-                  ? "text-white"
-                  : "text-gray-500 hover:text-gray-700"
-                  }`}
+                onClick={() => {
+                  setActiveTab(tab.id as Tab);
+                  if (tab.id === "add") setEditData(null);
+                }}
+                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${
+                  activeTab === tab.id
+                    ? "text-white"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
               >
                 {tab.label}
-
                 {activeTab === tab.id && (
                   <motion.div
                     layoutId="academic-pill"
-                    className="absolute inset-0 rounded-full -z-10"
+                    className="absolute shadow-[0_2px_8px_rgba(16,185,129,0.4)] inset-0 rounded-full -z-10"
                     style={{
                       background:
                         "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
                     }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 350,
-                      damping: 28,
-                    }}
+                    transition={{ type: "spring", stiffness: 350, damping: 28 }}
                   />
                 )}
               </button>
@@ -93,19 +102,12 @@ export default function AcademicSetup() {
           </div>
         </div>
 
-        {/* {activeTab === "view" && <ViewAcademicStructure onEdit={handleEdit}  adminId={user?.userId}
- />} */}
-        {activeTab === "view" && (
-          <>
-            {console.log("➡️ Passing adminId to ViewAcademicStructure:", user?.userId)}
-            <ViewAcademicStructure
-              onEdit={handleEdit}
-              adminId={user?.userId}
-            />
-          </>
-        )}
+        {/* Tab Content */}
+        {activeTab === "view" && <ViewAcademicStructure onEdit={handleEdit} />}
 
-        {activeTab === "add" && <AddAcademicSetup editData={editData} />}
+        {activeTab === "add" && (
+          <AddAcademicSetup editData={editData} onSuccess={handleSaveSuccess} />
+        )}
       </div>
     </section>
   );
