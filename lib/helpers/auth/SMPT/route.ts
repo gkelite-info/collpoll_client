@@ -11,6 +11,5 @@ export async function POST(req: Request) {
         subject: "Click link to verify",
         html: `<p>Your OTP is <strong>${otp}</strong></p>`,
     });
-
     return Response.json({ success: true });
 }
