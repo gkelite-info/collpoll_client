@@ -1,22 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
 
-<<<<<<< Updated upstream
-export async function fetchCollegeDegrees() {
-    const { data, error } = await supabase
-        .from("college_degree")
-        .select(`
-      collegeDegreeId,
-      degreeType,
-      departments,
-      createdBy,
-      is_deleted,
-      createdAt,
-      updatedAt,
-      deletedAt,
-      years,
-      sections
-    `)
-=======
 // export async function fetchCollegeDegrees() {
 //     const { data, error } = await supabase
 //         .from("college_degree")
@@ -64,7 +47,6 @@ export async function fetchCollegeDegrees() {
     const { data, error } = await supabase
         .from("college_degree")
         .select("collegeDegreeId, degreeType, departments, years, sections")
->>>>>>> Stashed changes
         .eq("is_deleted", false)
         .order("collegeDegreeId", { ascending: true });
 
@@ -73,10 +55,6 @@ export async function fetchCollegeDegrees() {
         throw error;
     }
 
-<<<<<<< Updated upstream
-    return data ?? [];
-}
-=======
     if (!data) return [];
 
     const degreeMap: Record<string, DegreeGroup> = {};
@@ -142,7 +120,4 @@ export async function fetchCollegeDegrees() {
             ])
         ),
     }));
-
-
 }
->>>>>>> Stashed changes
