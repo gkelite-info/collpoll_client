@@ -1,15 +1,23 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
+type DegreeOption = {
+  collegeDegreeId: number;
+  degreeType: string;
+  departments: string[];
+  years?: any;
+  sections?: any;
+};
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   value: any | null;
   onSave: (eventData: any) => void;
   initialData?: any | null;
+  degreeOptions: DegreeOption[];
 }
 
 const getTodayDateString = () => {
@@ -26,6 +34,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   onSave,
   value,
   initialData = null,
+  degreeOptions,
 }) => {
   const [title, setTitle] = useState("");
   const [selectedType, setSelectedType] = useState("Class");
@@ -39,60 +48,45 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const closedByUserRef = useRef(false);
   const [topic, setTopic] = useState("");
   const [roomNo, setRoomNo] = useState("");
-  const [department, setDepartment] = useState("");
   const [year, setYear] = useState("");
   const [semester, setSemester] = useState("");
-  const [section, setSection] = useState("");
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
-
-
+  const [degree, setDegree] = useState("");
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
-
-  const DEPARTMENTS = ["CSE", "IT", "ECE", "EEE"];
   const YEARS = ["1", "2", "3", "4"];
   const SEMESTERS = ["1", "2"];
-  const SECTIONS = ["A", "B", "C", "D"];
 
-  const DEPARTMENT_OPTIONS = ["ECE", "CIVIL", "IT", "EEE"];
+  const selectedDegreeObj = React.useMemo(() => {
+    return degreeOptions.find((d) => d.degreeType === degree);
+  }, [degree, degreeOptions]);
 
-  const SECTION_MAP: Record<string, string[]> = {
-    ECE: ["ECE-A", "ECE-B", "ECE-C", "ECE-D"],
-    CIVIL: ["CIVIL-A", "CIVIL-B"],
-    IT: ["IT-A", "IT-B"],
-    EEE: ["EEE-A"],
-  };
+  const departmentOptions = useMemo(() => {
+    if (!selectedDegreeObj?.departments) return [];
+    return selectedDegreeObj.departments.map((d: string) => d.trim());
+  }, [selectedDegreeObj]);
 
-  // useEffect(() => {
-  //   if (!isOpen || !initialData) return;
 
-  //   setTitle(initialData.title || "");
-  //   setTopic(initialData.topic || "");
-  //   setRoomNo(initialData.roomNo || "");
-  //   setSelectedDepartments(initialData.departments || []);
-  //   setSelectedSections(initialData.sections || []);
-  //   setYear(initialData.year ? String(initialData.year) : "");
-  //   setSemester(initialData.semester || "");
-  //   setSelectedType(initialData.type);
-  //   setDate(initialData.date);
+  const sectionMap = React.useMemo<Record<string, string[]>>(() => {
+    if (
+      !selectedDegreeObj?.sections ||
+      typeof selectedDegreeObj.sections !== "object"
+    ) {
+      return {};
+    }
+    return selectedDegreeObj.sections;
+  }, [selectedDegreeObj]);
 
-  //   const [sh, sm] = initialData.startTime.split(":");
-  //   const [eh, em] = initialData.endTime.split(":");
-
-  //   setStartHour(sh);
-  //   setStartMinute(sm);
-  //   setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
-
-  //   setEndHour(eh);
-  //   setEndMinute(em);
-  //   setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
-  // }, [isOpen, initialData]);
-
+  useEffect(() => {
+    if (!degree) return;
+    setSelectedDepartments([]);
+    setSelectedSections([]);
+  }, [degree]);
 
   useEffect(() => {
     if (!isOpen || !value) return;
@@ -100,6 +94,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setTitle(value.title || "");
     setTopic(value.topic || "");
     setRoomNo(value.roomNo || "");
+    setDegree(value.degree || "");
     setSelectedDepartments(value.departments || []);
     setSelectedSections(value.sections || []);
     setYear(value.year ? String(value.year) : "");
@@ -173,6 +168,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       title,
       topic,
       roomNo,
+      degree,
       departments: selectedDepartments,
       sections: selectedSections,
       year: year ? Number(year) : null,
@@ -182,7 +178,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       startTime,
       endTime,
     };
-    console.log("EVENT PAYLOAD 👉", newEvent);
     onSave(newEvent);
     onClose();
   }, [title, selectedType, date, selectedType,
@@ -204,7 +199,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         onClose();
       }
     };
-
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -259,20 +253,22 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   };
 
-  const availableSections = selectedDepartments.flatMap(
-    (dep) => SECTION_MAP[dep] || []
-  );
+  const availableSections = selectedDepartments.flatMap((dep) => {
+    const key = dep.trim();
+    const secs = sectionMap[key] ?? [];
+    return secs.map((s) => `${key}-${s}`);
+  });
 
-  // 🔴 UPDATED
+
+
   const toggleDepartment = (dep: string) => {
     setSelectedDepartments((prev) => {
       const updated =
         prev.includes(dep) ? prev.filter((d) => d !== dep) : [...prev, dep];
 
-      // 🔴 REMOVE sections belonging to removed department
       setSelectedSections((prevSections) =>
         prevSections.filter((sec) =>
-          updated.some((d) => sec.startsWith(d))
+          updated.some((d) => sec.startsWith(`${d}-`))
         )
       );
 
@@ -460,6 +456,43 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
           <div className="flex gap-4 items-start">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Degree *
+              </label>
+
+              <select
+                value={degree}
+                onChange={(e) => setDegree(e.target.value)}
+                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] 
+      rounded-lg px-3 bg-white outline-none cursor-pointer`}
+              >
+                <option value="">Select Degree</option>
+                {degreeOptions.map((deg) => (
+                  <option key={deg.degreeType} value={deg.degreeType}>
+                    {deg.degreeType}
+                  </option>
+                ))}
+              </select>
+              {degree && (
+                <div className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2`}>
+                  <span
+                    className="flex items-center gap-1 bg-green-100 text-green-700 
+      px-3 py-1 rounded-full text-xs"
+                  >
+                    {degree}
+                    <button
+                      onClick={() => setDegree("")}
+                      className="hover:text-blue-900 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </div>
+              )}
+
+            </div>
+
             <div className="flex-1 min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Department *
@@ -484,7 +517,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 {isDeptOpen && (
                   <div className="absolute left-0 top-full mt-1 w-full bg-white border 
         rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
-                    {DEPARTMENT_OPTIONS.map((dep) => (
+                    {departmentOptions.map((dep) => (
                       <label
                         key={dep}
                         className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
@@ -523,8 +556,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </div>
               }
             </div>
-
-
+          </div>
+          <div className="flex gap-4 items-start">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Year
@@ -542,10 +575,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 ))}
               </select>
             </div>
-          </div>
-
-
-          <div className="flex gap-4 items-start">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Semester
@@ -563,74 +592,72 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 ))}
               </select>
             </div>
-
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Section *
-              </label>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  disabled={!selectedDepartments.length}
-                  onClick={() => {
-                    setIsSectionOpen((v) => !v);
-                    setIsDeptOpen(false);
-                  }}
-                  className={`w-full cursor-pointer ${INPUT_HEIGHT} flex justify-between items-center 
-        border border-[#C9C9C9] rounded-lg px-3 bg-white disabled:bg-gray-100`}
-                >
-                  {selectedSections.length
-                    ? `${selectedSections.length} section(s) selected`
-                    : "Select Section"}
-                  <span className="mr-1 -mt-3">⌄</span>
-                </button>
-
-                {isSectionOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-full bg-white border 
-        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
-                    {availableSections.map((sec) => (
-                      <label
-                        key={sec}
-                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSections.includes(sec)}
-                          onChange={() => toggleSection(sec)}
-                        />
-                        {sec}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {selectedSections.length > 0 &&
-                <div
-                  className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
-      whitespace-nowrap scrollbar-hide`}
-                >
-                  {selectedSections.map((sec) => (
-                    <span
-                      key={sec}
-                      className="flex items-center gap-1 bg-green-100 text-green-700 
-          px-3 py-1 rounded-full text-xs shrink-0"
-                    >
-                      {sec}
-                      <button
-                        onClick={() => toggleSection(sec)}
-                        className="text-green-700 hover:text-green-900 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              }
-            </div>
-
           </div>
 
+          <div className="flex-1 min-w-0">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Section *
+            </label>
+
+            <div className="relative">
+              <button
+                type="button"
+                disabled={!selectedDepartments.length}
+                onClick={() => {
+                  setIsSectionOpen((v) => !v);
+                  setIsDeptOpen(false);
+                }}
+                className={`w-full cursor-pointer ${INPUT_HEIGHT} flex justify-between items-center 
+        border border-[#C9C9C9] rounded-lg px-3 bg-white disabled:bg-gray-100`}
+              >
+                {selectedSections.length
+                  ? `${selectedSections.length} section(s) selected`
+                  : "Select Section"}
+                <span className="mr-1 -mt-3">⌄</span>
+              </button>
+
+              {isSectionOpen && (
+                <div className="absolute left-0 top-full mt-1 w-full bg-white border 
+        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
+                  {availableSections.map((sec) => (
+                    <label
+                      key={sec}
+                      className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSections.includes(sec)}
+                        onChange={() => toggleSection(sec)}
+                      />
+                      {sec}
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            {selectedSections.length > 0 &&
+              <div
+                className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
+      whitespace-nowrap scrollbar-hide`}
+              >
+                {selectedSections.map((sec) => (
+                  <span
+                    key={sec}
+                    className="flex items-center gap-1 bg-green-100 text-green-700 
+          px-3 py-1 rounded-full text-xs shrink-0"
+                  >
+                    {sec}
+                    <button
+                      onClick={() => toggleSection(sec)}
+                      className="text-green-700 hover:text-green-900 cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            }
+          </div>
 
           <div className="pt-2">
             <button

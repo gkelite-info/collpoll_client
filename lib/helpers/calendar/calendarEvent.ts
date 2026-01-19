@@ -3,7 +3,7 @@ import { CalendarEventType, Department, Section, Semester } from "./types";
 
 
 export const upsertCalendarEvent = async (payload: {
-    facultyId: number;
+    facultyId: number | null;
     eventTitle: string;
     eventTopic: string;
     type: CalendarEventType;
