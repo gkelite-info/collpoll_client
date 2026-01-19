@@ -11,29 +11,46 @@ import LectureCard from "@/app/utils/lectureCard";
 import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
 
+
 export default function StuDashLeft() {
 
     const [view, setView] = useState<"dashboard" | "exams">("dashboard");
-
-
+    const [loadingLectures, setLoadingLectures] = useState(true);
     const [lectures, setLectures] = useState<any[]>([]);
 
 
-    const studentMeta = {
-        degree: "B.Tech CSE",
-        department: "CSE",
-        year: "2",
-    };
 
+
+
+    // const studentMeta = {
+    //     degree: "B.Tech CSE",
+    //     department: "CSE",
+    //     year: "2",
+    // };
+
+
+    // useEffect(() => {
+    //     const loadUpcomingClasses = async () => {
+    //         const data = await fetchUpcomingClassesForStudent();
+    //         setLectures(data);
+    //     };
+
+    //     loadUpcomingClasses();
+    // }, []);
 
     useEffect(() => {
         const loadUpcomingClasses = async () => {
+            setLoadingLectures(true);
+
             const data = await fetchUpcomingClassesForStudent();
             setLectures(data);
+
+            setLoadingLectures(false);
         };
 
         loadUpcomingClasses();
     }, []);
+
 
 
     const cardData = [
@@ -66,6 +83,7 @@ export default function StuDashLeft() {
             to: "/payments"
         }
     ];
+
 
     // const lectures = [
     //     {
@@ -166,17 +184,21 @@ export default function StuDashLeft() {
                                         <FaChevronRight className="cursor-pointer text-black" />
                                     </div>
                                     <div className="overflow-y-auto">
-
-                                        {lectures.map((lec) => (
-                                            <LectureCard
-                                                key={lec.calendarEventId}
-                                                time={lec.fromTime}
-                                                title={lec.eventTitle}
-                                                professor={`Prof. ${lec.facultyName}`}
-                                                description={lec.eventTopic}
-                                            />
-                                        ))}
-
+                                        {loadingLectures ? (
+                                            <div className="flex justify-center items-center h-[120px]">
+                                                <div className="w-8 h-8 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
+                                            </div>
+                                        ) : (
+                                            lectures.map((lec) => (
+                                                <LectureCard
+                                                    key={lec.calendarEventId}
+                                                    time={lec.fromTime}
+                                                    title={lec.eventTitle}
+                                                    professor={`Prof. ${lec.facultyName}`}
+                                                    description={lec.eventTopic}
+                                                />
+                                            ))
+                                        )}
                                         {/* {lectures.map((lec, index) => (
                                             <LectureCard
                                                 key={index}

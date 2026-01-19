@@ -1,62 +1,54 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export async function fetchStudentTimetableByDate({
-    date,
-    degree,
-    year,
-    department,
+  date,
+  degree,
+  year,
+  department,
 }: {
-    date: string;
-    degree: string;
-    year: string;
-    department: string;
+  date: string;
+  degree?: string;
+  year?: string;
+  department?: string;
 }) {
-    console.log("📌 Timetable query params:", {
-        date,
-        degree,
-        year,
-        department,
-    });
+  let query = supabase
+    .from("calendarEvent")
+    .select(`
+      calendarEventId,
+      fromTime,
+      toTime,
+      eventTitle,
+      eventTopic,
+      roomNo,
+      department,
+      faculty:facultyId ( fullName )
+    `)
+    .eq("date", date)
+    .eq("is_deleted", false);
 
-    const { data, error } = await supabase
-        .from("calendarEvent")
-        .select(`
-    calendarEventId,
-    fromTime,
-    toTime,
-    eventTitle,
-    eventTopic,
-    roomNo,
-    department,
-    faculty:facultyId ( fullName )
-  `)
-        .eq("date", date)
-        .eq("degree", degree)
-        .eq("year", year)
-        .eq("is_deleted", false)
-        .order("fromTime", { ascending: true });
+  if (degree) query = query.eq("degree", degree);
+  if (year) query = query.eq("year", year);
 
-    const filtered = (data ?? []).filter(item =>
-        item.department === null ||
-        (Array.isArray(item.department) &&
-            (item.department.length === 0 || item.department.includes(department)))
-    );
+  const { data, error } = await query.order("fromTime", { ascending: true });
 
+  if (error) {
+    console.error(error);
+    return [];
+  }
 
-    if (error) {
-        console.error("❌ Timetable fetch error:", error);
-        return [];
-    }
+  const filtered = department
+    ? (data ?? []).filter(item =>
+        Array.isArray(item.department) &&
+        item.department.some((d: any) => d.name === department)
+      )
+    : data ?? [];
 
-    console.log("✅ Supabase raw data:", data);
-
-    return (data ?? []).map((item: any) => ({
-        calendarEventId: item.calendarEventId,
-        fromTime: item.fromTime,
-        toTime: item.toTime,
-        eventTitle: item.eventTitle,
-        eventTopic: item.eventTopic,
-        roomNo: item.roomNo,
-        facultyName: item.faculty?.fullName ?? "Faculty",
-    }));
+  return filtered.map((item: any) => ({
+    fromTime: item.fromTime,
+    toTime: item.toTime,
+    eventTitle: item.eventTitle,
+    eventTopic: item.eventTopic,
+    roomNo: item.roomNo,
+    facultyName: item.faculty?.fullName ?? "Faculty",
+  }));
 }
