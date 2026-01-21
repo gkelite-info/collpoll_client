@@ -1,10 +1,10 @@
 import React from "react";
 import {
   CalendarBlank,
-  Confetti,
   ChalkboardTeacher,
   Exam,
   Question,
+  VideoConference,
 } from "@phosphor-icons/react";
 
 interface CalendarToolbarProps {
@@ -18,7 +18,7 @@ const CalendarToolbar: React.FC<CalendarToolbarProps> = ({
 }) => {
   const tabs = [
     { name: "All Scheduled", filterValue: "All", icon: CalendarBlank },
-    { name: "Events", filterValue: "event", icon: Confetti },
+    { name: "Meetings", filterValue: "meeting", icon: VideoConference },
     { name: "Classes", filterValue: "class", icon: ChalkboardTeacher },
     { name: "Exams", filterValue: "exam", icon: Exam },
     { name: "Quiz", filterValue: "quiz", icon: Question },

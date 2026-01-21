@@ -110,7 +110,6 @@ export default function LoginPage() {
         superadmin: "/super-admin"
       };
 
-
       const redirectPath = roleRouteMap[role] || "/login";
       router.replace(redirectPath);
       toast.success("Login successful!");
@@ -279,22 +278,22 @@ export default function LoginPage() {
                 />
               </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => router.push("/forgot-password")}
-              className="text-[13px] text-[#16284F] mt-2 w-full text-right cursor-pointer underline"
-            >
-              Forgot Password?
-            </button>
-
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="text-[13px] text-[#16284F] mt-2 text-right cursor-pointer underline"
+                onClick={() => router.push("/forgot-password")}
+              >
+                Forgot Password?
+              </button>
+            </div>
           </div>
 
           <div className="w-full flex justify-center mt-8">
             <button
               onClick={handleLogin}
               disabled={loading}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
+              className="cursor-pointer w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
             >
               {loading ? "Loading..." : "Login"}
             </button>

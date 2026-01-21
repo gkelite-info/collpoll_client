@@ -127,7 +127,32 @@ export default function AddAcademicSetup({
   }, [editData]);
 
   const getYearOptions = () => {
-    const maxYears = form.degree === "B.Tech" ? 4 : 3;
+    
+    let maxYears;
+    switch (form.degree.toLowerCase()) {
+      case "b.tech":
+      case "b.pharm":
+        maxYears = 4;
+        break;
+
+      case "degree":
+      case "diploma":
+      case "polytechnic":
+        maxYears = 3;
+        break;
+
+      case "b.arch":
+        maxYears = 5;
+        break;
+
+      case "mbbs":
+        maxYears = 6;
+        break;
+
+      default:
+        maxYears = 2;
+    }
+
     const getOrdinal = (n: number) => {
       const s = ["th", "st", "nd", "rd"];
       const v = n % 100;
@@ -204,7 +229,7 @@ export default function AddAcademicSetup({
     } else {
       toast.error(
         (result.error as { message?: string })?.message ||
-          "Failed to save data. Please try again."
+        "Failed to save data. Please try again."
       );
     }
   };
@@ -502,18 +527,15 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       <div className="relative">
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`w-full border ${
-            isOpen
-              ? "border-[#48C78E] ring-1 ring-[#48C78E]"
-              : "border-[#CCCCCC]"
-          } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${
-            disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
-          }`}
+          className={`w-full border ${isOpen
+            ? "border-[#48C78E] ring-1 ring-[#48C78E]"
+            : "border-[#CCCCCC]"
+            } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
+            }`}
         >
           <span
-            className={`truncate mr-2 ${
-              selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
-            }`}
+            className={`truncate mr-2 ${selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
+              }`}
           >
             {selectedValues.length > 0
               ? `${selectedValues.length} selected`
@@ -530,53 +552,52 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
           >
             {!isGrouped
               ? (options as string[]).map((opt) => (
-                  <div
-                    key={opt}
-                    onClick={() => {
-                      onChange(opt);
-                      if (opt === "+ other") setIsOpen(false);
-                    }}
-                    className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${
-                      opt === "+ other"
-                        ? "text-[#43C17A] font-semibold"
-                        : "text-gray-700"
+                <div
+                  key={opt}
+                  onClick={() => {
+                    onChange(opt);
+                    if (opt === "+ other") setIsOpen(false);
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${opt === "+ other"
+                    ? "text-[#43C17A] font-semibold"
+                    : "text-gray-700"
                     }`}
-                  >
-                    <span>{opt}</span>
-                    {selectedValues.includes(opt) && (
-                      <Check
-                        size={14}
-                        weight="bold"
-                        className="text-[#48C78E]"
-                      />
-                    )}
-                  </div>
-                ))
+                >
+                  <span>{opt}</span>
+                  {selectedValues.includes(opt) && (
+                    <Check
+                      size={14}
+                      weight="bold"
+                      className="text-[#48C78E]"
+                    />
+                  )}
+                </div>
+              ))
               : Object.entries(options as Record<string, string[]>).map(
-                  ([category, items]) => (
-                    <div key={category}>
-                      <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                        {category}
-                      </div>
-                      {items.map((opt) => (
-                        <div
-                          key={opt}
-                          onClick={() => onChange(opt)}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
-                        >
-                          <span>{opt}</span>
-                          {selectedValues.includes(opt) && (
-                            <Check
-                              size={14}
-                              weight="bold"
-                              className="text-[#48C78E]"
-                            />
-                          )}
-                        </div>
-                      ))}
+                ([category, items]) => (
+                  <div key={category}>
+                    <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                      {category}
                     </div>
-                  )
-                )}
+                    {items.map((opt) => (
+                      <div
+                        key={opt}
+                        onClick={() => onChange(opt)}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
+                      >
+                        <span>{opt}</span>
+                        {selectedValues.includes(opt) && (
+                          <Check
+                            size={14}
+                            weight="bold"
+                            className="text-[#48C78E]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
           </div>
         )}
       </div>
