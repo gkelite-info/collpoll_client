@@ -1,17 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import CalendarGrid from "./calenderGrid"
 import CalendarHeader from "./calendarHeader"
 import CalendarToolbar from "./calenderToolbar"
 import AddEventModal from "./addEventModal"
-import { CALENDAR_EVENTS } from "../calenderData"
 import { CalendarEvent } from "../types"
 import { combineDateAndTime, getWeekDays, hasTimeConflict } from "../utils"
 import ConfirmConflictModal from "./ConfirmConflictModal";
 import { CaretLeft } from "@phosphor-icons/react"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
+import toast from "react-hot-toast";
+import { deleteCalendarEvent, fetchCalendarEventById, fetchCalendarEventsByFaculty, updateCalendarEvent, upsertCalendarEventAdmin } from "@/lib/helpers/calendar/calendarEvent";
+import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 
 interface Props {
     faculty: {
@@ -26,98 +28,229 @@ interface Props {
 export default function CalendarView({ faculty, onBack }: Props) {
     const [activeTab, setActiveTab] = useState("All")
     const [isModalOpen, setIsModalOpen] = useState(false)
-    const [events, setEvents] = useState<CalendarEvent[]>(CALENDAR_EVENTS)
+    const [events, setEvents] = useState<CalendarEvent[]>([])
     const [currentDate, setCurrentDate] = useState(new Date())
-    const [pendingEvent, setPendingEvent] = useState<CalendarEvent | null>(null);
+    const [pendingEvent, setPendingEvent] = useState<any | null>(null);
     const [showConflictModal, setShowConflictModal] = useState(false);
     const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
     const [eventForm, setEventForm] = useState<any | null>(null);
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
+    const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+    const [formMode, setFormMode] = useState<"create" | "edit">("create");
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const weekDays = getWeekDays(currentDate)
 
-    const handleSaveEvent = (data: any) => {
-        const start = combineDateAndTime(data.date, data.startTime);
-        const end = combineDateAndTime(data.date, data.endTime);
+    useEffect(() => {
+        loadEvents();
+        loadDegrees()
+    }, [faculty.id]);
 
-        if (editingEventId) {
-            setEvents((prev) =>
-                prev.map((e) =>
-                    e.id === editingEventId
-                        ? {
-                            ...e,
-                            title: data.title,
-                            type: data.type,
-                            startTime: start,
-                            endTime: end,
-                            day: new Date(data.date)
-                                .toLocaleDateString("en-US", { weekday: "short" })
-                                .toUpperCase(),
-                            rawFormData: data,
-                        }
-                        : e
-                )
-            );
-
-            setEditingEventId(null);
-            setEventForm(null);
-            setIsModalOpen(false);
-            return;
+    const loadDegrees = async () => {
+        try {
+            const data = await fetchCollegeDegrees();
+            setDegreeOptions(data);
+        } catch {
+            toast.error("Failed to load degrees");
         }
+    };
+    const loadEvents = async () => {
+        setIsLoadingEvents(true);
+        try {
+            const res = await fetchCalendarEventsByFaculty(Number(faculty.id));
 
-        const newEvent: CalendarEvent = {
-            id: crypto.randomUUID(),
-            title: data.title,
-            type: data.type,
-            day: new Date(data.date)
-                .toLocaleDateString("en-US", { weekday: "short" })
-                .toUpperCase(),
-            startTime: start,
-            endTime: end,
-            rawFormData: data,
-        };
+            if (!res.success) {
+                toast.error("Failed to load calendar events");
+                return;
+            }
 
-        const sameDayEvents = events.filter((e) =>
-            e.startTime.startsWith(data.date)
-        );
-        setEventForm(data);
+            const formatted: CalendarEvent[] = (res.events ?? []).map((e: any) => ({
+                id: String(e.calendarEventId),
+                title: e.eventTitle,
+                type: e.type,
+                day: new Date(e.date)
+                    .toLocaleDateString("en-US", { weekday: "short" })
+                    .toUpperCase(),
+                startTime: combineDateAndTime(e.date, e.fromTime),
+                endTime: combineDateAndTime(e.date, e.toTime),
+                rawFormData: {
+                    title: e.eventTitle,
+                    topic: e.eventTopic,
+                    roomNo: e.roomNo,
+                    degree: e.degree,
+                    departments: (e.department ?? []).map((d: any) => ({
+                        uuid: d.uuid,
+                        name: d.name,
+                    })),
+                    sections: (e.section ?? []).map((s: any) => ({
+                        uuid: s.uuid,
+                        name: s.name,
+                    })),
+                    year: e.year,
+                    semester: (e.semester ?? []).map((s: any) => ({
+                        uuid: s.uuid,
+                        name: s.name,
+                    })),
+                    type: e.type,
+                    date: e.date,
+                    startTime: e.fromTime,
+                    endTime: e.toTime,
+                },
+            }));
 
-        if (hasTimeConflict(sameDayEvents, start, end)) {
-            setPendingEvent(newEvent);
-            setShowConflictModal(true);
-            setIsModalOpen(false);
-            return;
+            setEvents(formatted);
+        } finally {
+            setIsLoadingEvents(false);
         }
-
-        setEvents((prev) => [...prev, newEvent])
-        setEventForm(null);
-        setIsModalOpen(false);
     };
 
-    const handleEditEvent = (event: CalendarEvent) => {
-  setEditingEventId(event.id);
 
-  const startDate = event.startTime.split("T")[0];
-  const startTime = event.startTime.split("T")[1].slice(0, 5);
-  const endTime = event.endTime.split("T")[1].slice(0, 5);
+    const hasDbConflict = async (
+        date: string,
+        startTime: string,
+        endTime: string,
+        ignoreEventId?: number
+    ): Promise<boolean> => {
+        const res = await fetchCalendarEventsByFaculty(Number(faculty.id));
 
-  setEventForm({
-    title: event.title,
-    topic: event.rawFormData?.topic ?? "",
-    roomNo: event.rawFormData?.roomNo ?? "",
-    departments: event.rawFormData?.departments ?? [],
-    sections: event.rawFormData?.sections ?? [],
-    year: event.rawFormData?.year ?? null,
-    semester: event.rawFormData?.semester ?? "",
-    type: event.type,
-    date: startDate,
-    startTime,
-    endTime,
-  });
+        if (!res.success || !res.events) return false;
 
-  setIsModalOpen(true);
-};
+        return res.events.some((e: any) => {
+            if (ignoreEventId && e.calendarEventId === ignoreEventId) {
+                return false;
+            }
 
+            if (e.date !== date) return false;
+
+            const dbStart = combineDateAndTime(e.date, e.fromTime);
+            const dbEnd = combineDateAndTime(e.date, e.toTime);
+
+            return hasTimeConflict(
+                [{ startTime: dbStart, endTime: dbEnd } as CalendarEvent],
+                combineDateAndTime(date, startTime),
+                combineDateAndTime(date, endTime)
+            );
+        });
+    };
+
+    const handleSaveEvent = async (data: any) => {
+        try {
+            setIsSaving(true);
+            const start = combineDateAndTime(data.date, data.startTime);
+            const end = combineDateAndTime(data.date, data.endTime);
+            setEventForm(data);
+
+
+            const conflict = await hasDbConflict(
+                data.date,
+                data.startTime,
+                data.endTime,
+                editingEventId ? Number(editingEventId) : undefined
+            );
+
+            if (conflict) {
+                setPendingEvent(data);
+                setShowConflictModal(true);
+                setIsModalOpen(false);
+                return;
+            }
+
+
+            const payload = {
+                facultyId: Number(faculty.id),
+                eventTitle: data.title,
+                eventTopic: data.topic?.trim(),
+                type: data.type,
+                date: data.date,
+                roomNo: data.roomNo?.trim(),
+                fromTime: data.startTime,
+                toTime: data.endTime,
+                degree: data.degree,
+                department: data.departments,
+                //year: data.year?.toString() ?? "",
+                year: data.year ?? null,
+                semester: data.semester?.map((s: any) => ({
+                    uuid: s.uuid ?? crypto.randomUUID(),
+                    name: s.name,
+                })),
+                section: data.sections,
+            };
+
+            if (editingEventId) {
+                const updateres = await updateCalendarEvent(Number(editingEventId), payload);
+
+                if (!updateres.success) {
+                    toast.error(updateres.error || "Failed to update event");
+                    return;
+                }
+                await loadEvents();
+                setIsModalOpen(false);
+                setEventForm(null);
+                setEditingEventId(null);
+                toast.success("Event updated successfully.");
+                return;
+            }
+
+            const res = await upsertCalendarEventAdmin(payload);
+
+            if (!res.success) {
+                toast.error(res.error || "Failed to save event");
+                return;
+            }
+            await loadEvents();
+            setIsModalOpen(false);
+            setEventForm(null);
+            setPendingEvent(null);
+            setEditingEventId(null);
+            toast.success("Event saved successfully.");
+        } catch (err) {
+            console.error(err);
+            toast.error("Something went wrong");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleEditEvent = async (event: CalendarEvent) => {
+        const res = await fetchCalendarEventById(Number(event.id));
+
+        if (!res.success) {
+            toast.error("Failed to load event");
+            return;
+        }
+
+        const e = res.event;
+
+        setEditingEventId(e.calendarEventId);
+
+        setEventForm({
+            title: e.eventTitle,
+            topic: e.eventTopic,
+            roomNo: e.roomNo,
+            degree: e.degree,
+            departments: (e.department ?? []).map((d: any) => ({
+                uuid: d.uuid,
+                name: d.name,
+            })),
+            sections: (e.section ?? []).map((s: any) => ({
+                uuid: s.uuid,
+                name: s.name,
+            })),
+            year: e.year,
+            semester: (e.semester ?? []).map((s: any) => ({
+                uuid: s.uuid,
+                name: s.name,
+            })),
+            type: e.type,
+            date: e.date,
+            startTime: e.fromTime,
+            endTime: e.toTime,
+        });
+        setFormMode("edit");
+        setIsModalOpen(true);
+    };
 
 
     const handleNextWeek = () => {
@@ -132,26 +265,85 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setCurrentDate(prev)
     }
 
-    const confirmAddEvent = () => {
-        if (pendingEvent) {
-            setEvents((prev) => [...prev, pendingEvent]);
-        }
+    // const confirmAddEvent = async () => {
+    //     if (!pendingEvent) return;
+    //     setShowConflictModal(false);
+    //     await saveEventDirectly(pendingEvent);
+    //     setPendingEvent(null);
+    // };
 
-        setPendingEvent(null)
+    const confirmAddEvent = async () => {
+        if (!pendingEvent) return;
+
         setShowConflictModal(false);
+        setIsSaving(true);
+
+        try {
+            const payload = {
+                facultyId: Number(faculty.id),
+                eventTitle: pendingEvent.title,
+                eventTopic: String(pendingEvent.topic ?? ""),
+                type: pendingEvent.type as "class" | "meeting" | "exam" | "quiz",
+                date: pendingEvent.date,
+                roomNo: pendingEvent.roomNo?.trim(),
+                fromTime: pendingEvent.startTime,
+                toTime: pendingEvent.endTime,
+                degree: pendingEvent.degree,
+                department: pendingEvent.departments,
+                year: pendingEvent.year ?? null,
+                semester: pendingEvent.semester,
+                section: pendingEvent.sections,
+            };
+
+            if (editingEventId) {
+                await updateCalendarEvent(Number(editingEventId), payload);
+                toast.success("Event updated despite conflict.");
+            } else {
+                await upsertCalendarEventAdmin(payload);
+                toast.success("Event created despite conflict.");
+            }
+
+            await loadEvents();
+
+            setEditingEventId(null);
+            setEventForm(null);
+            setFormMode("create");
+            setIsModalOpen(false);
+            setPendingEvent(null);
+
+        } catch (err) {
+            toast.error("Failed to save event");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
 
 
+    const handleDeleteEvent = async (eventId: string) => {
+        try {
+            setIsDeleting(true);
+            const res = await deleteCalendarEvent(Number(eventId));
+            if (!res.success) {
+                toast.error("Failed to delete event.");
+                return false;
+            }
 
-    const handleDeleteEvent = (eventId: string) => {
-        setEvents((prev) => prev.filter((e) => e.id !== eventId));
+            await loadEvents();
+            toast.success("Event deleted successfully.");
+            return true;
+        } catch (error) {
+            toast.error("Failed to delete event.");
+            return false;
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
 
     const handleConflictCancel = () => {
-        setPendingEvent(null);
         setShowConflictModal(false);
+        setFormMode("create");
         setIsModalOpen(true);
     };
 
@@ -159,6 +351,41 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setIsModalOpen(false)
         setEventForm(null);
     };
+
+
+    // const saveEventDirectly = async (data: any) => {
+    //     try {
+    //         setIsSaving(true);
+    //         const payload = {
+    //             facultyId: Number(faculty.id),
+    //             eventTitle: data.title,
+    //             eventTopic: data.topic?.trim(),
+    //             type: data.type,
+    //             date: data.date,
+    //             roomNo: data.roomNo?.trim(),
+    //             fromTime: data.startTime,
+    //             toTime: data.endTime,
+    //             degree: data.degree,
+    //             department: data.departments,
+    //             year: data.year ?? null,
+    //             semester: data.semester,
+    //             section: data.sections,
+    //         };
+
+    //         await upsertCalendarEventAdmin(payload);
+    //         await loadEvents();
+
+    //         setIsModalOpen(false);
+    //         setEventForm(null);
+    //         toast.success("Event saved successfully.");
+    //     } catch (err) {
+    //         toast.error("Failed to save event");
+    //     }
+    //     finally {
+    //         setIsSaving(false);
+    //     }
+    // };
+
 
 
     return (
@@ -181,26 +408,36 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 <CalendarHeader onAddClick={() => {
                     setEditingEventId(null);
                     setEventForm(null);
+                    setFormMode("create");
                     setIsModalOpen(true);
                 }}
                 />
             </div>
 
-            <CalendarGrid
-                events={events}
-                weekDays={weekDays}
-                activeTab={activeTab}
-                onPrevWeek={handlePrevWeek}
-                onNextWeek={handleNextWeek}
-                onDeleteRequest={setEventToDelete}
-                onEditRequest={handleEditEvent}
-            />
+            {isLoadingEvents ? (
+                <div className="flex justify-center items-center h-[300px]">
+                    <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+            ) : (
+                <CalendarGrid
+                    events={events}
+                    weekDays={weekDays}
+                    activeTab={activeTab}
+                    onPrevWeek={handlePrevWeek}
+                    onNextWeek={handleNextWeek}
+                    onDeleteRequest={setEventToDelete}
+                    onEditRequest={handleEditEvent}
+                />
+            )}
 
             <AddEventModal
                 isOpen={isModalOpen}
                 value={eventForm}
                 onClose={closeAddEventModal}
                 onSave={handleSaveEvent}
+                degreeOptions={degreeOptions}
+                isSaving={isSaving}
+                mode={formMode}
             />
 
             <ConfirmConflictModal
@@ -211,12 +448,17 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
             <ConfirmDeleteModal
                 open={!!eventToDelete}
-                onCancel={() => setEventToDelete(null)}
-                onConfirm={() => {
-                    if (eventToDelete) {
-                        handleDeleteEvent(eventToDelete.id);
-                    }
+                isDeleting={isDeleting}
+                onCancel={() => {
+                    if (isDeleting) return;
                     setEventToDelete(null);
+                }}
+                onConfirm={async () => {
+                    if (!eventToDelete) return;
+                    const success = await handleDeleteEvent(eventToDelete.id);
+                    if (success) {
+                        setEventToDelete(null);
+                    }
                 }}
             />
 

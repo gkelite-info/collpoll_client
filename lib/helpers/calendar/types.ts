@@ -18,3 +18,13 @@ export type CalendarEventType =
     | "meeting"
     | "exam"
     | "quiz"
+
+export type UiNamedItem = {
+    uuid?: string;
+    name: string;
+};
+
+export type DbNamedItem = {
+    uuid: string;
+    name: string;
+};

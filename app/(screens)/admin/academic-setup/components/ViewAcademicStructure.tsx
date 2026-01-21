@@ -1,7 +1,7 @@
 "use client";
 
+import { fetchDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { useEffect, useState } from "react";
-import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 
 export type AcademicViewData = {
   id: string;
@@ -20,7 +20,7 @@ export default function ViewAcademicStructure({
 
   useEffect(() => {
     const loadData = async () => {
-      const degrees = await fetchCollegeDegrees();
+      const degrees = await fetchDegrees();
 
       const mapped: AcademicViewData[] = degrees.map((d: any) => {
         const parseVal = (val: any) => {
