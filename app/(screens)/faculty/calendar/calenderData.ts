@@ -21,7 +21,7 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
   {
     id: "1",
     title: "Class 10 Teach Design Principles",
-    type: "event",
+    type: "meeting",
     day: "MON",
     startTime: "2023-10-24T08:00:00",
     endTime: "2023-10-24T09:00:00",
@@ -45,7 +45,7 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
   {
     id: "4",
     title: "Class 10 Teach Design Principles",
-    type: "event",
+    type: "meeting",
     day: "TUE",
     startTime: "2023-10-25T11:00:00",
     endTime: "2023-10-25T12:00:00",
@@ -85,7 +85,7 @@ export const CALENDAR_EVENTS: CalendarEvent[] = [
   {
     id: "9",
     title: "Class 10 Teach Design Principles",
-    type: "event",
+    type: "meeting",
     day: "FRI",
     startTime: "2023-10-28T11:00:00",
     endTime: "2023-10-28T12:00:00",
