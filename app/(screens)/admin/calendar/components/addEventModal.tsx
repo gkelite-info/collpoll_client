@@ -1,15 +1,16 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { UiNamedItem } from "@/lib/helpers/calendar/types";
 
 type DegreeOption = {
   collegeDegreeId: number;
   degreeType: string;
   departments: string;
   years?: any;
-  sections?: any;
+  sections?: Record<string, string[]>;
 };
 interface AddEventModalProps {
   isOpen: boolean;
@@ -18,12 +19,16 @@ interface AddEventModalProps {
   onSave: (eventData: any) => void;
   initialData?: any | null;
   degreeOptions?: DegreeOption[];
+  isSaving?: boolean;
+  mode: "create" | "edit";
 }
 
 const getTodayDateString = () => {
   const d = new Date();
   return d.toISOString().split("T")[0];
 };
+
+const TODAY = getTodayDateString();
 
 const INPUT_HEIGHT = "h-[44px]";
 const CHIP_CONTAINER_HEIGHT = "h-[32px]";
@@ -35,10 +40,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   value,
   initialData = null,
   degreeOptions,
+  isSaving = false,
+  mode
 }) => {
   const [title, setTitle] = useState("");
   const [selectedType, setSelectedType] = useState("Class");
-  const [date, setDate] = useState(getTodayDateString());
+  const [date, setDate] = useState(TODAY);
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
   const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
@@ -48,32 +55,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const closedByUserRef = useRef(false);
   const [topic, setTopic] = useState("");
   const [roomNo, setRoomNo] = useState("");
-  const [year, setYear] = useState("");
-  const [semester, setSemester] = useState("");
-  const [section, setSection] = useState("");
-  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
-  const [selectedSections, setSelectedSections] = useState<string[]>([]);
+  const [year, setYear] = useState<string>("");
+  const [semester, setSemester] = useState<UiNamedItem[]>([]);
+  const [selectedDepartments, setSelectedDepartments] = useState<UiNamedItem[]>([]);
+  const [selectedSections, setSelectedSections] = useState<UiNamedItem[]>([]);
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
   const [degree, setDegree] = useState("");
 
-
+  const deptDropdownRef = useRef<HTMLDivElement>(null);
+  const sectionDropdownRef = useRef<HTMLDivElement>(null);
   const [isDateInputFocused, setIsDateInputFocused] = useState(false);
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
-  const DEPARTMENTS = ["CSE", "IT", "ECE", "EEE"];
   const YEARS = ["1", "2", "3", "4"];
   const SEMESTERS = ["1", "2"];
-  const SECTIONS = ["A", "B", "C", "D"];
-
-  const SECTION_MAP: Record<string, string[]> = {
-    ECE: ["ECE-A", "ECE-B", "ECE-C", "ECE-D"],
-    CIVIL: ["CIVIL-A", "CIVIL-B"],
-    IT: ["IT-A", "IT-B"],
-    EEE: ["EEE-A"],
-  };
+  const isEditMode = mode === "edit";
 
   const selectedDegreeObj = React.useMemo(() => {
     return degreeOptions?.find((d) => d.degreeType === degree);
@@ -81,25 +80,45 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   const departmentOptions = React.useMemo(() => {
     if (!selectedDegreeObj?.departments) return [];
-    return selectedDegreeObj.departments
-      .split(",")
-      .map((d) => d.trim());
+
+    if (Array.isArray(selectedDegreeObj.departments)) {
+      return selectedDegreeObj.departments;
+    }
+
+    if (typeof selectedDegreeObj.departments === "string") {
+      return selectedDegreeObj.departments
+        .split(",")
+        .map((d) => d.trim());
+    }
+
+    return [];
   }, [selectedDegreeObj]);
 
+  const availableSections = React.useMemo<UiNamedItem[]>(() => {
+    if (!selectedDegreeObj?.sections) return [];
+    if (!selectedDepartments.length) return [];
 
-  // const selectedDegreeObj = degreeOptions.find(
-  //   (d) => d.degreeType === degree
-  // );
+    return selectedDepartments.flatMap(dep =>
+      (selectedDegreeObj.sections?.[dep.name] ?? []).map(sec => ({
+        name: `${dep.name}-${sec}`,
+      }))
+    );
+  }, [selectedDegreeObj, selectedDepartments]);
 
-  // const departmentOptions = selectedDegreeObj?.departments
-  //   ? selectedDegreeObj.departments.split(",").map((d: string) => d.trim())
-  //   : [];
+  const yearOptions = React.useMemo(() => {
+    return selectedDegreeObj?.years ?? [];
+  }, [selectedDegreeObj?.years]);
+
 
   useEffect(() => {
     if (!degree) return;
+    if (isEditMode) return;
     setSelectedDepartments([]);
     setSelectedSections([]);
-  }, [degree]);
+    if (year && !yearOptions.some((y: any) => y.value === year)) {
+      setYear("");
+    }
+  }, [degree, isEditMode, yearOptions]);
 
   useEffect(() => {
     if (!isOpen || !value) return;
@@ -110,8 +129,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setDegree(value.degree || "");
     setSelectedDepartments(value.departments || []);
     setSelectedSections(value.sections || []);
-    setYear(value.year ? String(value.year) : "");
-    setSemester(value.semester || "");
+    //setYear(value.year ? String(value.year) : "");
+    setYear(value.year || "");
+    setSemester(value.semester || []);
     setSelectedType(value.type || "class");
     setDate(value.date || getTodayDateString());
 
@@ -131,8 +151,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen && !value) {
       setTitle("");
+      setTopic("");
+      setRoomNo("");
+      setDegree("");
+      setSelectedDepartments([]);
+      setSelectedSections([]);
+      setYear("");
+      setSemester([]);
       setSelectedType("class");
       setDate(getTodayDateString());
       setStartHour("09");
@@ -141,8 +168,56 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       setEndHour("10");
       setEndMinute("00");
       setEndPeriod("AM");
+      setIsDeptOpen(false);
+      setIsSectionOpen(false);
     }
-  }, [isOpen]);
+  }, [isOpen, value]);
+
+  // ✅ ADD
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleDropdownClose = (e: MouseEvent) => {
+      const target = e.target as Node;
+
+      // Close department dropdown
+      if (
+        isDeptOpen &&
+        deptDropdownRef.current &&
+        !deptDropdownRef.current.contains(target)
+      ) {
+        setIsDeptOpen(false);
+      }
+
+      // Close section dropdown
+      if (
+        isSectionOpen &&
+        sectionDropdownRef.current &&
+        !sectionDropdownRef.current.contains(target)
+      ) {
+        setIsSectionOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleDropdownClose);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDropdownClose);
+    };
+  }, [isOpen, isDeptOpen, isSectionOpen]);
+
+
+  // const parse24HourTo12Hour = (time: string) => {
+  //   const [h, m] = time.split(":").map(Number);
+  //   const period = h >= 12 ? "PM" : "AM";
+  //   const hour12 = h % 12 === 0 ? 12 : h % 12;
+
+  //   return {
+  //     hour: String(hour12).padStart(2, "0"),
+  //     minute: String(m).padStart(2, "0"),
+  //     period,
+  //   };
+  // };
 
 
   const to24Hour = (
@@ -158,11 +233,43 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   };
 
 
-  const handleSave = useCallback(() => {
-    if (!title || !date) {
-      toast.error("Please fill in the required fields (Title and Date).");
+  const handleSave = () => {
+    if (date < TODAY) {
+      toast.error("Past dates are not allowed");
       return;
     }
+    if (!title) {
+      toast.error("Please enter Event Title.");
+      return;
+    }
+
+    if (!date) {
+      toast.error("Please select a Date.");
+      return;
+    }
+
+    if (topic.trim() === "") {
+      toast.error("Please enter an Event Topic.");
+      return;
+    }
+
+    if (!degree) {
+      toast.error("Please select a Degree.");
+      return;
+    }
+    if (selectedDepartments.length === 0) {
+      toast.error("Please select at least one Department.");
+      return;
+    }
+    if (selectedSections.length === 0) {
+      toast.error("Please select at least one Section.");
+      return;
+    }
+
+    if (semester.length === 0) {
+      toast.error("Please select Semester.");
+    }
+
 
     const startTime = to24Hour(startHour, startMinute, startPeriod);
     const endTime = to24Hour(endHour, endMinute, endPeriod);
@@ -184,7 +291,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       degree,
       departments: selectedDepartments,
       sections: selectedSections,
-      year: year ? Number(year) : null,
+      year: year || null,
       semester,
       type: selectedType.toLowerCase(),
       date,
@@ -193,14 +300,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
     console.log("EVENT PAYLOAD 👉", newEvent);
     onSave(newEvent);
-    onClose();
-  }, [title, selectedType, date, selectedType,
-    startHour,
-    startPeriod,
-    endHour,
-    startMinute,
-    endMinute,
-    endPeriod, onSave, onClose]);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -228,6 +328,20 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       document.removeEventListener("keydown", handleKeyPress);
     };
   }, [isOpen, onClose, handleSave]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (!value?.year) return;
+    if (!degree) return;
+    if (!yearOptions.length) return;
+
+    const exists = yearOptions.some((y: any) => y.value === value.year);
+
+    if (exists) {
+      setYear(value.year);
+    }
+  }, [isEditMode, value?.year, degree, yearOptions]);
+
 
   if (!isOpen) return null;
 
@@ -267,20 +381,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   };
 
-  const availableSections = selectedDepartments.flatMap(
-    (dep) => SECTION_MAP[dep] || []
-  );
+  const toggleDepartment = (dep: UiNamedItem) => {
+    setSelectedDepartments(prev => {
+      const exists = prev.some(d => d.name === dep.name);
 
-  // 🔴 UPDATED
-  const toggleDepartment = (dep: string) => {
-    setSelectedDepartments((prev) => {
-      const updated =
-        prev.includes(dep) ? prev.filter((d) => d !== dep) : [...prev, dep];
+      const updated = exists
+        ? prev.filter(d => d.name !== dep.name)
+        : [...prev, { name: dep.name }];
 
-      // 🔴 REMOVE sections belonging to removed department
-      setSelectedSections((prevSections) =>
-        prevSections.filter((sec) =>
-          updated.some((d) => sec.startsWith(d))
+      setSelectedSections(prevSections =>
+        prevSections.filter(sec =>
+          updated.some(d => sec.name.startsWith(`${d.name}-`))
         )
       );
 
@@ -288,14 +399,30 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     });
   };
 
-
-  const toggleSection = (section: string) => {
-    setSelectedSections((prev) =>
-      prev.includes(section)
-        ? prev.filter((s) => s !== section)
-        : [...prev, section]
+  const toggleSection = (section: UiNamedItem) => {
+    setSelectedSections(prev =>
+      prev.some(s => s.name === section.name)
+        ? prev.filter(s => s.name !== section.name)
+        : [...prev, { name: section.name }]
     );
   };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setDate(e.target.value);
+  };
+
+  const handleDateBlur = () => {
+    if (!date) return;
+
+    if (date.length !== 10) return;
+
+    if (date < TODAY) {
+      toast.error("You cannot select a past date");
+      setDate(TODAY);
+    }
+  };
+
+
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -305,7 +432,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky  z-10">
           <h2 className="text-xl font-bold text-gray-800">
-            {value ? "Edit Event" : "New Calendar Event"}
+            {isEditMode ? "Edit Event" : "New Calendar Event"}
           </h2>
           <button
             onClick={handleClose}
@@ -371,7 +498,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <input
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  min={TODAY}
+                  onChange={handleDateChange}
+                  onBlur={handleDateBlur}
+                  //onChange={(e) => setDate(e.target.value)}
                   className="w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                 />
               </div>
@@ -380,7 +510,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <label className="block text-sm font-medium text-gray-700">Room No.</label>
                 <input
                   value={roomNo}
-                  onChange={(e) => setRoomNo(e.target.value)}
+                  onChange={(e) => setRoomNo(e.target.value.toUpperCase())}
                   className="w-full border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                   placeholder="Enter Room no."
                 />
@@ -476,7 +606,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <select
                 value={degree}
                 onChange={(e) => setDegree(e.target.value)}
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] 
+                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 
       rounded-lg px-3 bg-white outline-none cursor-pointer`}
               >
                 <option value="">Select Degree</option>
@@ -510,7 +640,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 Department *
               </label>
 
-              <div className="relative">
+              <div className="relative" ref={deptDropdownRef}>
                 <button
                   type="button"
                   onClick={() => {
@@ -536,8 +666,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                       >
                         <input
                           type="checkbox"
-                          checked={selectedDepartments.includes(dep)}
-                          onChange={() => toggleDepartment(dep)}
+                          checked={selectedDepartments.some(d => d.name === dep)}
+                          onChange={() => toggleDepartment({ name: dep })}
                         />
                         {dep}
                       </label>
@@ -552,11 +682,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 >
                   {selectedDepartments.map((dep) => (
                     <span
-                      key={dep}
+                      key={dep?.name}
                       className="flex items-center gap-1 bg-green-100 text-green-700 
           px-3 py-1 rounded-full text-xs shrink-0"
                     >
-                      {dep}
+                      {dep?.name}
                       <button
                         onClick={() => toggleDepartment(dep)}
                         className="text-green-700 cursor-pointer hover:text-green-900"
@@ -580,12 +710,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <select
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
+                disabled={!degree}
                 className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 cursor-pointer
         rounded-lg px-3 bg-white`}
               >
                 <option value="">Select Year</option>
-                {YEARS.map((y) => (
-                  <option key={y} className="cursor-pointer">{y}</option>
+                {yearOptions.map((y: any) => (
+                  <option key={y.uuid} value={y.value} className="cursor-pointer">{y.label}</option>
                 ))}
               </select>
             </div>
@@ -596,9 +727,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </label>
 
               <select
-                value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] 
+                value={semester[0]?.name ?? ""}
+                onChange={(e) =>
+                  setSemester(
+                    e.target.value
+                      ? [{ name: e.target.value }]
+                      : []
+                  )
+                }
+                className={`w-full ${INPUT_HEIGHT} border cursor-pointer border-[#C9C9C9] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700
         rounded-lg px-3 bg-white`}
               >
                 <option value="">Select Semester</option>
@@ -614,7 +751,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               Section *
             </label>
 
-            <div className="relative">
+            <div className="relative" ref={sectionDropdownRef}>
               <button
                 type="button"
                 disabled={!selectedDepartments.length}
@@ -623,7 +760,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   setIsDeptOpen(false);
                 }}
                 className={`w-full cursor-pointer ${INPUT_HEIGHT} flex justify-between items-center 
-        border border-[#C9C9C9] rounded-lg px-3 bg-white disabled:bg-gray-100`}
+        border border-[#C9C9C9] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 rounded-lg px-3 bg-white disabled:bg-gray-100`}
               >
                 {selectedSections.length
                   ? `${selectedSections.length} section(s) selected`
@@ -636,15 +773,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
                   {availableSections.map((sec) => (
                     <label
-                      key={sec}
+                      key={sec?.name}
                       className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
                     >
                       <input
                         type="checkbox"
-                        checked={selectedSections.includes(sec)}
+                        checked={selectedSections.some(s => s.name === sec.name)}
                         onChange={() => toggleSection(sec)}
                       />
-                      {sec}
+                      {sec?.name}
                     </label>
                   ))}
                 </div>
@@ -657,11 +794,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               >
                 {selectedSections.map((sec) => (
                   <span
-                    key={sec}
+                    key={sec.name}
                     className="flex items-center gap-1 bg-green-100 text-green-700 
           px-3 py-1 rounded-full text-xs shrink-0"
                   >
-                    {sec}
+                    {sec.name}
                     <button
                       onClick={() => toggleSection(sec)}
                       className="text-green-700 hover:text-green-900 cursor-pointer"
@@ -677,9 +814,16 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           <div className="pt-2">
             <button
               onClick={handleSave}
+              disabled={isSaving}
               className="w-full cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base"
             >
-              {value ? "Update Event" : "Save Event"}
+              {isSaving
+                ? isEditMode
+                  ? "Updating..."
+                  : "Saving..."
+                : isEditMode
+                  ? "Update Event"
+                  : "Save Event"}
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
-import { CalendarEventType, Department, Section, Semester } from "./types";
-
+import { CalendarEventType, Department, Section, Semester, UiNamedItem } from "./types";
+import { adminNormalizeWithUUID, normalizeWithUUID } from "@/app/utils/jsonWithUuid";
 
 export const upsertCalendarEvent = async (payload: {
     facultyId: number | null;
@@ -12,10 +12,10 @@ export const upsertCalendarEvent = async (payload: {
     fromTime: string;
     toTime: string;
     degree: string;
-    department: Department[];
+    department: UiNamedItem[];
     year: string;
-    semester: Semester[];
-    section: Section[];
+    semester: UiNamedItem[];
+    section: UiNamedItem[];
 }) => {
     try {
 
@@ -37,12 +37,80 @@ export const upsertCalendarEvent = async (payload: {
                     fromTime: payload.fromTime,
                     toTime: payload.toTime,
                     degree: payload.degree,
-                    department: payload.department,
+
+                    department: adminNormalizeWithUUID(payload.department),
+                    semester: adminNormalizeWithUUID(payload.semester),
+                    section: adminNormalizeWithUUID(payload.section),
+
                     year: payload.year,
-                    semester: payload.semester,
-                    section: payload.section,
                     createdAt: now,
                     updatedAt: now,
+
+                },
+            )
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            message: "Calendar event saved successfully",
+            data,
+        };
+    } catch (err: any) {
+        console.error("UPSERT CALENDAR EVENT ERROR:", err.message);
+        return {
+            success: false,
+            error: err.message || "Failed to save calendar event",
+        };
+    }
+};
+
+export const upsertCalendarEventAdmin = async (payload: {
+    facultyId: number | null;
+    eventTitle: string;
+    eventTopic: string;
+    type: CalendarEventType;
+    date: string;
+    roomNo: string;
+    fromTime: string;
+    toTime: string;
+    degree: string;
+    department: UiNamedItem[];
+    year: string;
+    semester: UiNamedItem[];
+    section: UiNamedItem[];
+}) => {
+    try {
+
+        if (payload.fromTime >= payload.toTime) {
+            throw new Error("From time must be earlier than To time");
+        }
+        const now = new Date().toISOString();
+
+        const { data, error } = await supabase
+            .from("calendarEvent")
+            .insert(
+                {
+                    facultyId: payload.facultyId,
+                    eventTitle: payload.eventTitle,
+                    eventTopic: payload.eventTopic,
+                    type: payload.type,
+                    date: payload.date,
+                    roomNo: payload.roomNo,
+                    fromTime: payload.fromTime,
+                    toTime: payload.toTime,
+                    degree: payload.degree,
+
+                    department: adminNormalizeWithUUID(payload.department),
+                    semester: adminNormalizeWithUUID(payload.semester),
+                    section: adminNormalizeWithUUID(payload.section),
+
+                    year: payload.year,
+                    createdAt: now,
+                    updatedAt: now,
+
                 },
             )
             .select()
@@ -134,5 +202,57 @@ export const deleteCalendarEvent = async (calendarEventId: number) => {
             success: false,
             error: err.message,
         };
+    }
+};
+
+export const updateCalendarEvent = async (
+    calendarEventId: number,
+    payload: any
+) => {
+    try {
+        const now = new Date().toISOString();
+
+        const { error } = await supabase
+            .from("calendarEvent")
+            .update({
+                ...payload,
+                semester: normalizeWithUUID(payload.semester),
+                department: normalizeWithUUID(payload.department),
+                section: normalizeWithUUID(payload.section),
+                updatedAt: now,
+            })
+            .eq("calendarEventId", calendarEventId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err.message };
+    }
+};
+
+export const updateCalendarEventAdmin = async (
+    calendarEventId: number,
+    payload: any
+) => {
+    try {
+        const now = new Date().toISOString();
+
+        const { error } = await supabase
+            .from("calendarEvent")
+            .update({
+                ...payload,
+                semester: adminNormalizeWithUUID(payload.semester),
+                department: adminNormalizeWithUUID(payload.department),
+                section: adminNormalizeWithUUID(payload.section),
+                updatedAt: now,
+            })
+            .eq("calendarEventId", calendarEventId);
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (err: any) {
+        return { success: false, error: err.message };
     }
 };

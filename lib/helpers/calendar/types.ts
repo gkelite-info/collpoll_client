@@ -14,7 +14,17 @@ export interface Section {
 }
 
 export type CalendarEventType =
-    | "Class"
-    | "Meeting"
-    | "Exam"
-    | "Quiz"
+    | "class"
+    | "meeting"
+    | "exam"
+    | "quiz"
+
+export type UiNamedItem = {
+    uuid?: string;
+    name: string;
+};
+
+export type DbNamedItem = {
+    uuid: string;
+    name: string;
+};
