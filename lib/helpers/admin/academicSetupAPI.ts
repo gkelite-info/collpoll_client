@@ -5,14 +5,14 @@ type CollegeDegreeRow = {
     collegeDegreeId: number;
     degreeType: string;
     departments: string | string[] | null;
-    years: unknown;
+    years: string[] | number[] | null;
     sections: any;
 };
 
 type DegreeGroup = {
     degreeType: string;
     departments: Set<string>;
-    years: Set<number>;
+    years: Map<string, string>;
     sections: Record<string, Set<string>>;
 };
 
@@ -55,7 +55,7 @@ export async function fetchCollegeDegrees() {
             degreeMap[row.degreeType] = {
                 degreeType: row.degreeType,
                 departments: new Set(),
-                years: new Set(),
+                years: new Map(),
                 sections: {},
             };
         }
@@ -71,7 +71,18 @@ export async function fetchCollegeDegrees() {
         deps.forEach(dep => group.departments.add(dep));
 
         if (Array.isArray(row.years)) {
-            row.years.forEach(year => { if (typeof year === "number") group.years.add(year); });
+            row.years.forEach((y: any) => {
+                if (!y?.uuid || !y?.name) return;
+
+                const match = String(y.name).match(/\d+/);
+                if (!match) return;
+
+                const yearNumber = match[0];
+
+                if (!group.years.has(yearNumber)) {
+                    group.years.set(yearNumber, y.uuid);
+                }
+            });
         }
 
         group.departments.forEach(dep => {
@@ -85,7 +96,13 @@ export async function fetchCollegeDegrees() {
         collegeDegreeId: index + 1,
         degreeType: group.degreeType,
         departments: Array.from(group.departments),
-        years: Array.from(group.years).sort((a, b) => a - b),
+        years: Array.from(group.years.entries())
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([yearNumber, uuid]) => ({
+                uuid,
+                label: yearNumber,
+                value: uuid,
+            })),
         sections: Object.fromEntries(
             Object.entries(group.sections).map(([dep, secs]) => [
                 dep.trim(),
@@ -210,3 +227,30 @@ export async function saveAcademicSetup(
     }
 }
 
+export async function fetchDegrees() {
+    const { data, error } = await supabase
+        .from("college_degree")
+        .select(
+            `
+      collegeDegreeId,
+      degreeType,
+      departments,
+      createdBy,
+      is_deleted,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      years,
+      sections
+    `
+        )
+        .eq("is_deleted", false)
+        .order("collegeDegreeId", { ascending: true });
+
+    if (error) {
+        console.error("fetchCollegeDegrees error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}

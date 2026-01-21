@@ -172,7 +172,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         : "opacity-100"
                         }`}
                     >
-                      <EventCard event={event} onDelete={() => onDeleteRequest(event)} onEdit={() => onEditRequest(event)}/>
+                      <EventCard event={event} onDelete={() => onDeleteRequest(event)} onEdit={() => onEditRequest(event)} />
                     </div>
                   );
                 })}
