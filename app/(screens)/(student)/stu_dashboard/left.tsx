@@ -4,15 +4,54 @@ import AcademicPerformance from "@/app/utils/AcademicPerformance";
 import CardComponent from "@/app/utils/card";
 import { BookOpen, Chalkboard, ClockAfternoon, UsersThree } from "@phosphor-icons/react";
 import { FaChevronRight } from "react-icons/fa6";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import MidExams from "./midExams";
 import UserInfoCard from "@/app/utils/userInfoCardComp";
 import LectureCard from "@/app/utils/lectureCard";
 import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
+import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
+
 
 export default function StuDashLeft() {
 
     const [view, setView] = useState<"dashboard" | "exams">("dashboard");
+    const [loadingLectures, setLoadingLectures] = useState(true);
+    const [lectures, setLectures] = useState<any[]>([]);
+
+
+
+
+
+    // const studentMeta = {
+    //     degree: "B.Tech CSE",
+    //     department: "CSE",
+    //     year: "2",
+    // };
+
+
+    // useEffect(() => {
+    //     const loadUpcomingClasses = async () => {
+    //         const data = await fetchUpcomingClassesForStudent();
+    //         setLectures(data);
+    //     };
+
+    //     loadUpcomingClasses();
+    // }, []);
+
+    useEffect(() => {
+        const loadUpcomingClasses = async () => {
+            setLoadingLectures(true);
+
+            const data = await fetchUpcomingClassesForStudent();
+            setLectures(data);
+
+            setLoadingLectures(false);
+        };
+
+        loadUpcomingClasses();
+    }, []);
+
+
 
     const cardData = [
         {
@@ -45,32 +84,33 @@ export default function StuDashLeft() {
         }
     ];
 
-    const lectures = [
-        {
-            time: "10:30 AM",
-            title: "Java Programming",
-            professor: "Prof. Ramesh Kumar",
-            description: "We’ll cover classes, objects, and inheritance with examples.",
-        },
-        {
-            time: "12:00 PM",
-            title: "Data Structures",
-            professor: "Prof. Anita Sharma",
-            description: "Introduction to arrays, linked lists, and stacks.",
-        },
-        {
-            time: "02:00 PM",
-            title: "Operating Systems",
-            professor: "Prof. Suresh Reddy",
-            description: "Processes, threads, and memory management explained.",
-        },
-        {
-            time: "03:30 PM",
-            title: "DBMS",
-            professor: "Prof. Rajesh Gupta",
-            description: "SQL queries, normalization, and transactions.",
-        },
-    ];
+
+    // const lectures = [
+    //     {
+    //         time: "10:30 AM",
+    //         title: "Java Programming",
+    //         professor: "Prof. Ramesh Kumar",
+    //         description: "We’ll cover classes, objects, and inheritance with examples.",
+    //     },
+    //     {
+    //         time: "12:00 PM",
+    //         title: "Data Structures",
+    //         professor: "Prof. Anita Sharma",
+    //         description: "Introduction to arrays, linked lists, and stacks.",
+    //     },
+    //     {
+    //         time: "02:00 PM",
+    //         title: "Operating Systems",
+    //         professor: "Prof. Suresh Reddy",
+    //         description: "Processes, threads, and memory management explained.",
+    //     },
+    //     {
+    //         time: "03:30 PM",
+    //         title: "DBMS",
+    //         professor: "Prof. Rajesh Gupta",
+    //         description: "SQL queries, normalization, and transactions.",
+    //     },
+    // ];
 
     const subjects = [
         {
@@ -144,15 +184,32 @@ export default function StuDashLeft() {
                                         <FaChevronRight className="cursor-pointer text-black" />
                                     </div>
                                     <div className="overflow-y-auto">
-                                        {lectures.map((lec, index) => (
+                                        {loadingLectures ? (
+                                            <div className="flex justify-center items-center h-[120px]">
+                                                <div className="w-8 h-8 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
+                                            </div>
+                                        ) : (
+                                            lectures.map((lec) => (
+                                                <LectureCard
+                                                    key={lec.calendarEventId}
+                                                    time={lec.fromTime}
+                                                    title={lec.eventTitle}
+                                                    professor={`Prof. ${lec.facultyName}`}
+                                                    description={lec.eventTopic}
+                                                />
+                                            ))
+                                        )}
+                                        {/* {lectures.map((lec, index) => (
                                             <LectureCard
                                                 key={index}
                                                 time={lec.time}
                                                 title={lec.title}
                                                 professor={lec.professor}
-                                                description={lec.description}
-                                            />
-                                        ))}
+                                        {/* />
+                                        ))} */
+
+
+                                        }
                                     </div>
                                 </div>
                             </div>

@@ -226,6 +226,7 @@ export default function ForgotPassword() {
     text-white text-[15px]
     font-medium
     rounded
+    cursor-pointer
     ${loading ? "opacity-60 cursor-not-allowed" : ""}
   `}
                         >
@@ -233,12 +234,14 @@ export default function ForgotPassword() {
                         </button>
 
                     </div>
-                    <p
-                        onClick={() => router.push("/login")}
-                        className="text-[13px] text-[#0A8E2E] text-center mt-5 cursor-pointer underline"
-                    >
-                        Back to Login
-                    </p>
+                    <div className="flex justify-center">
+                        <button
+                            onClick={() => router.push("/login")}
+                            className="text-[13px] text-[#0A8E2E] text-center mt-5 cursor-pointer underline"
+                        >
+                            Back to Login
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

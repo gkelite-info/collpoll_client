@@ -12,7 +12,7 @@ import ConfirmConflictModal from "./ConfirmConflictModal";
 import { CaretLeft } from "@phosphor-icons/react"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import toast from "react-hot-toast";
-import { deleteCalendarEvent, fetchCalendarEventById, fetchCalendarEventsByFaculty, updateCalendarEventAdmin, upsertCalendarEventAdmin } from "@/lib/helpers/calendar/calendarEvent";
+import { deleteCalendarEvent, fetchCalendarEventById, fetchCalendarEventsByFaculty, updateCalendarEvent, upsertCalendarEventAdmin } from "@/lib/helpers/calendar/calendarEvent";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 
 interface Props {
@@ -179,7 +179,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             };
 
             if (editingEventId) {
-                const updateres = await updateCalendarEventAdmin(Number(editingEventId), payload);
+                const updateres = await updateCalendarEvent(Number(editingEventId), payload);
 
                 if (!updateres.success) {
                     toast.error(updateres.error || "Failed to update event");
@@ -296,7 +296,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             };
 
             if (editingEventId) {
-                await updateCalendarEventAdmin(Number(editingEventId), payload);
+                await updateCalendarEvent(Number(editingEventId), payload);
                 toast.success("Event updated despite conflict.");
             } else {
                 await upsertCalendarEventAdmin(payload);

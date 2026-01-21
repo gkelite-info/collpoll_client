@@ -1,15 +1,15 @@
 export interface Department {
-    id: number;
+    uuid?: string;
     name: string;
 }
 
 export interface Semester {
-    id: number;
-    label: string;
+    uuid?: string;
+    name: string;
 }
 
 export interface Section {
-    id: number;
+    uuid?: string;
     name: string;
 }
 

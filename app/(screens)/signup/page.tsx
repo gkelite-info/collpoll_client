@@ -237,11 +237,13 @@ export default function Signup() {
         password: "",
         confirmPassword: ""
       })
+      console.log("res is", res);
+
       toast.success("Please verify your email!");
       router.push("/login");
     } catch (err: any) {
-      console.log("catch error", err);
       toast.error(err.message || "Failed to save");
+      console.log("catch error", err);
     } finally {
       setLoading(false);
     }
@@ -495,7 +497,7 @@ export default function Signup() {
           <div className="w-full flex flex-col items-center mt-5">
             <button
               onClick={handleSignup}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white text-[15px] font-semibold rounded"
+              className="cursor-pointer w-[200px] h-[50px] bg-[#16284F] text-white text-[15px] font-semibold rounded"
               disabled={loading}
             >
               {loading ? "Loading..." : "Register"}

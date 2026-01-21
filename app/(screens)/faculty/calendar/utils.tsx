@@ -1,4 +1,4 @@
-import { CalendarEvent, WeekDay } from "./types";
+import { CalendarEvent, CalendarEventUI, WeekDay } from "./types";
 
 export const getEventStyle = (event: CalendarEvent) => {
   const start = new Date(event.startTime);
@@ -91,3 +91,26 @@ export const hasTimeConflict = (
     return newStartTime < existingEnd && newEndTime > existingStart;
   });
 };
+
+
+const extractNames = (value: any): string[] =>
+  Array.isArray(value) ? value.map((v) => v?.name).filter(Boolean) : [];
+
+export const mapDbToUiEvent = (row: any): CalendarEventUI => ({
+  calendarEventId: row.calendarEventId,
+  facultyId: row.facultyId,
+  eventTitle: row.eventTitle,
+  eventTopic: row.eventTopic,
+  type: row.type,
+  date: row.date,
+  roomNo: row.roomNo,
+  fromTime: row.fromTime,
+  toTime: row.toTime,
+  degree: row.degree,
+  year: row.year,
+  departments: extractNames(row.department),
+  sections: extractNames(row.section),
+  semester: extractNames(row.semester)[0] ?? "",
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+});

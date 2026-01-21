@@ -1,15 +1,15 @@
-import { ChalkboardTeacher, Confetti, Exam, Island, Trash, PencilSimple } from "@phosphor-icons/react";
+import { ChalkboardTeacher, Exam, Question, Trash, PencilSimple, VideoConference } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
 
 const EVENT_STYLES: Record<
   EventType,
   { solidBg: string; lightBg: string; text: string; Icon: any }
 > = {
-  event: {
+  meeting: {
     solidBg: "#E2DAFF",
     lightBg: "#E2DAFF8F",
     text: "#6C20CA",
-    Icon: Confetti,
+    Icon: VideoConference,
   },
 
   class: {
@@ -25,17 +25,17 @@ const EVENT_STYLES: Record<
     text: "#FB8000",
     Icon: Exam,
   },
-  holiday: {
+  quiz: {
     solidBg: "#BFE8D5",
     lightBg: "#E6F6EF",
     text: "#1E7F5C",
-    Icon: Island,
+    Icon: Question,
   },
 };
 
 const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete: () => void, onEdit: () => void; }) => {
   const style =
-    EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.event;
+    EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.meeting;
   const Icon = style.Icon;
 
   const start = new Date(event.startTime);
