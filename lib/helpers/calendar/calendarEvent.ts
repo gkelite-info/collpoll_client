@@ -45,7 +45,11 @@ export const upsertCalendarEvent = async (
             department: normalizeWithUUID(payload.department),
             semester: normalizeWithUUID(payload.semester),
             section: normalizeWithUUID(payload.section),
-            year: payload.year,
+            // year: payload.year,
+            year:
+                ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
+                    ? String(payload.year)
+                    : "",
             updatedAt: now,
         };
 
@@ -120,7 +124,11 @@ export const upsertCalendarEventAdmin = async (payload: {
                     semester: adminNormalizeWithUUID(payload.semester),
                     section: adminNormalizeWithUUID(payload.section),
 
-                    year: payload.year,
+                    // year: payload.year,
+                    year:
+                        ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
+                            ? String(payload.year)
+                            : "",
                     createdAt: now,
                     updatedAt: now,
 
@@ -252,6 +260,10 @@ export const updateCalendarEvent = async (
             .from("calendarEvent")
             .update({
                 ...payload,
+                year:
+                    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
+                        ? String(payload.year)
+                        : "",
                 semester: adminNormalizeWithUUID(payload.semester),
                 department: adminNormalizeWithUUID(payload.department),
                 section: adminNormalizeWithUUID(payload.section),
