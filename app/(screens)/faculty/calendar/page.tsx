@@ -156,6 +156,11 @@ export default function Page() {
       return;
     }
 
+    const safeYear =
+      ["1", "2", "3", "4"].includes(String(data.year))
+        ? String(data.year)
+        : "";
+
     const payload = {
       facultyId,
       eventTitle: data.title,
@@ -168,7 +173,8 @@ export default function Page() {
       degree: data.degree,
       department: data.departments,
       // year: data.year?.toString() ?? "",
-      year: data.year ?? null,
+      // year: data.year ?? null,
+      year: safeYear,
       semester: data.semester ? [data.semester] : [],
       section: data.sections,
     };
@@ -235,7 +241,7 @@ export default function Page() {
     }
 
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    toast.success("Event deleted 🗑️")
+    toast.success("Event deleted successfully");
   };
 
   const closeAddEventModal = () => {
@@ -246,6 +252,7 @@ export default function Page() {
 
   const handleEditEvent = (event: CalendarEvent) => {
     setEditingEventId(event.id);
+    setFormMode("edit");
 
     const startDate = event.startTime.split("T")[0];
     const startTime = event.startTime.split("T")[1].slice(0, 5);
@@ -259,7 +266,8 @@ export default function Page() {
       departments: event.rawFormData?.departments ?? [],
       sections: event.rawFormData?.sections ?? [],
       // year: event.rawFormData?.year ?? "",
-      year: event.year,
+      // year: event.year,
+      year: String(event.rawFormData?.year ?? ""),
       semester: event.rawFormData?.semester ?? "",
       type: event.type,
       date: startDate,
@@ -317,7 +325,8 @@ export default function Page() {
         degree: pendingEvent.degree,
         department: pendingEvent.departments,
         // year: pendingEvent.year?.toString() ?? "",
-        year: pendingEvent.year ?? null,
+        // year: pendingEvent.year ?? null,
+        year: String(pendingEvent.year ?? ""),
         semester: pendingEvent.semester,
         section: pendingEvent.sections,
       };
@@ -373,6 +382,7 @@ export default function Page() {
         <CalendarHeader
           onAddClick={() => {
             setEditingEventId(null);
+            setFormMode("create");
             setEventForm(null);
             setIsModalOpen(true);
           }}

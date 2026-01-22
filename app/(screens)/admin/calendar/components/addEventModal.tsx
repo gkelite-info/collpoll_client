@@ -120,6 +120,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [degree, isEditMode, yearOptions]);
 
+  const normalizeYear = (y: any) =>
+    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y)) ? String(y) : "";
+
   useEffect(() => {
     if (!isOpen || !value) return;
 
@@ -130,22 +133,23 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setSelectedDepartments(value.departments || []);
     setSelectedSections(value.sections || []);
     //setYear(value.year ? String(value.year) : "");
-    setYear(value.year || "");
+    // setYear(value.year || "");
+    setYear(normalizeYear(value.year));
     setSemester(value.semester || []);
     setSelectedType(value.type || "class");
     setDate(value.date || getTodayDateString());
 
     if (value.startTime && value.endTime) {
-      const [sh, sm] = value.startTime.split(":");
-      const [eh, em] = value.endTime.split(":");
+      const start = parse24HourTo12Hour(value.startTime);
+      const end = parse24HourTo12Hour(value.endTime);
 
-      setStartHour(sh);
-      setStartMinute(sm);
-      setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
+      setStartHour(start.hour);
+      setStartMinute(start.minute);
+      setStartPeriod(start.period);
 
-      setEndHour(eh);
-      setEndMinute(em);
-      setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
+      setEndHour(end.hour);
+      setEndMinute(end.minute);
+      setEndPeriod(end.period);
     }
   }, [isOpen, value]);
 
@@ -173,14 +177,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [isOpen, value]);
 
-  // ✅ ADD
   useEffect(() => {
     if (!isOpen) return;
 
     const handleDropdownClose = (e: MouseEvent) => {
       const target = e.target as Node;
 
-      // Close department dropdown
       if (
         isDeptOpen &&
         deptDropdownRef.current &&
@@ -189,7 +191,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         setIsDeptOpen(false);
       }
 
-      // Close section dropdown
       if (
         isSectionOpen &&
         sectionDropdownRef.current &&
@@ -206,19 +207,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
   }, [isOpen, isDeptOpen, isSectionOpen]);
 
+  const parse24HourTo12Hour = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
 
-  // const parse24HourTo12Hour = (time: string) => {
-  //   const [h, m] = time.split(":").map(Number);
-  //   const period = h >= 12 ? "PM" : "AM";
-  //   const hour12 = h % 12 === 0 ? 12 : h % 12;
+    const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
 
-  //   return {
-  //     hour: String(hour12).padStart(2, "0"),
-  //     minute: String(m).padStart(2, "0"),
-  //     period,
-  //   };
-  // };
-
+    return {
+      hour: String(hour12).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+      period,
+    };
+  };
 
   const to24Hour = (
     hour: string,
@@ -291,14 +291,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       degree,
       departments: selectedDepartments,
       sections: selectedSections,
-      year: year || null,
+      year: year,
       semester,
       type: selectedType.toLowerCase(),
       date,
       startTime,
       endTime,
     };
-    console.log("EVENT PAYLOAD 👉", newEvent);
     onSave(newEvent);
   };
 
@@ -335,11 +334,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!degree) return;
     if (!yearOptions.length) return;
 
-    const exists = yearOptions.some((y: any) => y.value === value.year);
+    //const exists = yearOptions.some((y: any) => y.value === value.year);
 
-    if (exists) {
-      setYear(value.year);
-    }
+    // if (exists) {
+    // setYear(value.year);
+    // }
+    setYear(String(value.year));
   }, [isEditMode, value?.year, degree, yearOptions]);
 
 
@@ -715,9 +715,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         rounded-lg px-3 bg-white`}
               >
                 <option value="">Select Year</option>
-                {yearOptions.map((y: any) => (
+                {/* {yearOptions.map((y: any) => (
                   <option key={y.uuid} value={y.value} className="cursor-pointer">{y.label}</option>
-                ))}
+                ))} */}
+                {yearOptions.map((y: any) => {
+                  const yearValue = String(y.label);
+                  return (
+                    <option key={yearValue} value={yearValue}>
+                      {yearValue}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

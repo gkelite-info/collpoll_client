@@ -157,6 +157,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 return;
             }
 
+            const safeYear =
+                ["1", "2", "3", "4"].includes(String(data.year))
+                    ? String(data.year)
+                    : "";
 
             const payload = {
                 facultyId: Number(faculty.id),
@@ -170,7 +174,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 degree: data.degree,
                 department: data.departments,
                 //year: data.year?.toString() ?? "",
-                year: data.year ?? null,
+                // year: data.year ?? null,
+                year: safeYear,
                 semester: data.semester?.map((s: any) => ({
                     uuid: s.uuid ?? crypto.randomUUID(),
                     name: s.name,
@@ -238,7 +243,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 uuid: s.uuid,
                 name: s.name,
             })),
-            year: e.year,
+            //year: e.year,
+            year: String(e.year ?? ""),
             semester: (e.semester ?? []).map((s: any) => ({
                 uuid: s.uuid,
                 name: s.name,
@@ -290,7 +296,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 toTime: pendingEvent.endTime,
                 degree: pendingEvent.degree,
                 department: pendingEvent.departments,
-                year: pendingEvent.year ?? null,
+                // year: pendingEvent.year ?? null,
+                year: String(pendingEvent.year ?? ""),
                 semester: pendingEvent.semester,
                 section: pendingEvent.sections,
             };
@@ -351,42 +358,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setIsModalOpen(false)
         setEventForm(null);
     };
-
-
-    // const saveEventDirectly = async (data: any) => {
-    //     try {
-    //         setIsSaving(true);
-    //         const payload = {
-    //             facultyId: Number(faculty.id),
-    //             eventTitle: data.title,
-    //             eventTopic: data.topic?.trim(),
-    //             type: data.type,
-    //             date: data.date,
-    //             roomNo: data.roomNo?.trim(),
-    //             fromTime: data.startTime,
-    //             toTime: data.endTime,
-    //             degree: data.degree,
-    //             department: data.departments,
-    //             year: data.year ?? null,
-    //             semester: data.semester,
-    //             section: data.sections,
-    //         };
-
-    //         await upsertCalendarEventAdmin(payload);
-    //         await loadEvents();
-
-    //         setIsModalOpen(false);
-    //         setEventForm(null);
-    //         toast.success("Event saved successfully.");
-    //     } catch (err) {
-    //         toast.error("Failed to save event");
-    //     }
-    //     finally {
-    //         setIsSaving(false);
-    //     }
-    // };
-
-
 
     return (
         <main>

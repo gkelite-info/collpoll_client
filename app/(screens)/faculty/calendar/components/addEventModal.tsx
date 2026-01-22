@@ -128,18 +128,22 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return selectedDegreeObj.sections;
   }, [selectedDegreeObj]);
 
+  const normalizeYear = (y: any) =>
+    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y)) ? String(y) : "";
+
   useEffect(() => {
     if (!degree) return;
-
+    if (!isEditMode) return;
     if (value) return;
     // setYear("");
     setSemester("");
     setSelectedDepartments([]);
     setSelectedSections([]);
-    if (year && !yearOptions.some((y: any) => y.value === year)) {
-      setYear("");
-    }
-  }, [degree, value, yearOptions]);
+    // if (year && !yearOptions.some((y: any) => y.value === year)) {
+    //   setYear("");
+    // }
+    // setYear(normalizeYear(value.year));
+  }, [degree, value, isEditMode]);
 
   const resetForm = () => {
     setTitle("");
@@ -161,6 +165,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setEndPeriod("AM");
   };
 
+  const parse24HourTo12Hour = (time: string) => {
+    const [h, m] = time.split(":").map(Number);
+
+    const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+
+    return {
+      hour: String(hour12).padStart(2, "0"),
+      minute: String(m).padStart(2, "0"),
+      period,
+    };
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -185,22 +201,29 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         : []
     );
     // setYear(value.year ? String(value.year) : "");
-    setYear(value.year || "");
+    // setYear(value.year || "");
+    // setYear(normalizeYear(value.year));
+    const normalizedYear = String(value.year || "").trim();
+    if (normalizedYear && ["1", "2", "3", "4", "5", "6", "7", "8"].includes(normalizedYear)) {
+      setYear(normalizedYear);
+    } else {
+      setYear("");
+    }
     setSemester(value.semester || "");
     setSelectedType(value.type || "class");
     setDate(value.date || getTodayDateString());
 
     if (value.startTime && value.endTime) {
-      const [sh, sm] = value.startTime.split(":");
-      const [eh, em] = value.endTime.split(":");
+      const start = parse24HourTo12Hour(value.startTime);
+      const end = parse24HourTo12Hour(value.endTime);
 
-      setStartHour(sh);
-      setStartMinute(sm);
-      setStartPeriod(Number(sh) >= 12 ? "PM" : "AM");
+      setStartHour(start.hour);
+      setStartMinute(start.minute);
+      setStartPeriod(start.period);
 
-      setEndHour(eh);
-      setEndMinute(em);
-      setEndPeriod(Number(eh) >= 12 ? "PM" : "AM");
+      setEndHour(end.hour);
+      setEndMinute(end.minute);
+      setEndPeriod(end.period);
     }
   }, [isOpen, value]);
 
@@ -239,10 +262,24 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!degree) return;
     if (!yearOptions.length) return;
 
-    const exists = yearOptions.some((y: any) => y.value === value.year);
+    // const exists = yearOptions.some((y: any) => y.value === value.year);
+
+    // if (exists) {
+    //   setYear(value.year);
+    // }
+    // setYear(String(value.year));
+    const incomingYear = String(value.year).trim();
+
+    const exists = yearOptions.some((y: any) => {
+      const optionYear = String(y.label).trim();
+      return optionYear === incomingYear;
+    });
 
     if (exists) {
-      setYear(value.year);
+      // 🔴 CHANGED: Set year directly from incoming value
+      setYear(incomingYear);
+    } else {
+      console.warn(`Year ${incomingYear} not found in yearOptions`, yearOptions);
     }
   }, [isEditMode, value?.year, degree, yearOptions]);
 
@@ -273,7 +310,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       departments: selectedDepartments,
       sections: selectedSections,
       // year: year ? Number(year) : null,
-      year: year || null,
+      year: year,
       semester,
       type: selectedType.toLowerCase(),
       date,
@@ -666,9 +703,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         rounded-lg px-3 bg-white`}
               >
                 <option value="">Select Year</option>
-                {yearOptions.map((y: any) => (
+                {/* {yearOptions.map((y: any) => (
                   <option key={y.uuid} value={y.value} className="cursor-pointer">{y.label}</option>
-                ))}
+                ))} */}
+                {yearOptions.map((y: any) => {
+                  const yearValue = String(y.label);
+                  return (
+                    <option key={yearValue} value={yearValue}>
+                      {yearValue}
+                    </option>
+                  );
+                })}
               </select>
             </div>
             <div className="flex-1">
@@ -767,7 +812,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 : isEditMode
                   ? "Update Event"
                   : "Save Event"}
-              {value ? "Update Event" : "Save Event"}
+              {/* {value ? "Update Event" : "Save Event"} */}
             </button>
           </div>
         </div>
