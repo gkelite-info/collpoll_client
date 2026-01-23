@@ -1,12 +1,15 @@
 "use client";
 
 import { Timer } from "@phosphor-icons/react";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 // import { SubjectDetailsCard } from "./subjectDetails";
 // import AddNewCardModal from "./addNewCardModal";
 
 export type CardProps = {
+  facultyName?: string;
+  facultyProfile?: string;
   subjectTitle: string;
   year: string | number;
   units: number;
@@ -45,7 +48,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   return (
     <>
       <div className="flex justify-between items-start">
-        <div className="mb-6 flex flex-wrap gap-8">
+        {/* <div className="mb-6 flex flex-wrap gap-8">
           <FilterLabel label="Subject" value="All" />
           <FilterSelect label="Semester" options={["I", "II"]} />
           <FilterSelect label="Year" options={["1st Year", "2nd Year"]} />
@@ -55,7 +58,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d]"
         >
           Add Class
-        </button>
+        </button> */}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -116,28 +119,59 @@ const IndividualCard = ({
   item: CardProps;
   onViewDetails: () => void;
 }) => {
+  const router = useRouter();
   const percentage = item.percentage ?? 0;
   const ballWidthPx = 16;
   const ballLeft =
     percentage <= 0
       ? "0px"
       : percentage >= 100
-      ? `calc(100% - ${ballWidthPx}px)`
-      : `calc(${percentage}% - ${ballWidthPx / 2}px)`;
+        ? `calc(100% - ${ballWidthPx}px)`
+        : `calc(${percentage}% - ${ballWidthPx / 2}px)`;
   const filledWidth = `calc(${percentage}% + ${ballWidthPx / 2}px)`;
+
+  const params = useParams<{ category: string }>()
+
+  const handleClick = (subjectTitle: string) => {
+    const slug = subjectTitle
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+
+    router.push(
+      `/admin/academics/${params.category}/${slug}?year=${item.year}`
+    )
+  }
 
   return (
     <div className="bg-white rounded-2xl w-full p-6 flex flex-col shadow-sm border border-gray-100">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-[#282828] font-semibold text-xl">
-          {item.subjectTitle} – {item.year}
+        <h3 className="text-[#282828] font-semibold text-xl flex items-center gap-3">
+          {item.subjectTitle} <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full text-sm">Credits : 4</span>
         </h3>
         <button
-          onClick={onViewDetails}
+          //onClick={onViewDetails}
+           onClick={() => handleClick(item.subjectTitle)}
           className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm"
         >
           View Details
         </button>
+      </div>
+      <div className="flex gap-2 items-center -mt-1 mb-2">
+        <p className="text-[#282828] font-semibold text-lg">Faculty - </p>
+        <div>
+          <div
+            key={item.facultyProfile}
+            className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+          >
+            <img
+              src={`${item.facultyProfile}`}
+              alt="faculty"
+              className="w-full h-full object-cover contrast-125"
+            />
+          </div>
+
+        </div>
+        <p className="text-[#525252] font-lg">{item.facultyName}</p>
       </div>
       <div className="space-y-3 text-[#525252] text-lg">
         <div className="flex gap-6">
@@ -149,17 +183,17 @@ const IndividualCard = ({
             <span className="font-semibold text-[#282828]">
               Topics Covered :{" "}
             </span>
-            {item.topicsCovered}
+            {item.topicsCovered}/20
           </p>
         </div>
         <p>
           <span className="font-semibold text-[#282828]">Next lesson : </span>
           {item.nextLesson}
         </p>
-        <p>
+        {/* <p>
           <span className="font-semibold text-[#282828]">Students : </span>
           {item.students}
-        </p>
+        </p> */}
       </div>
       <div className="flex flex-col justify-between relative">
         <div className="relative lg:w-full rounded-full h-[17px] bg-gray-200 mt-4 overflow-hidden">

@@ -8,6 +8,8 @@ import { Suspense } from "react";
 
 const MOCK_SUBJECT_DATA: CardProps[] = [
     {
+        facultyName : "John Doe",
+        facultyProfile : "https://i.pravatar.cc/100?u=JohnDoe",
         subjectTitle: "Data Structures",
         year: "Year 2 – CSE A",
         units: 15,
@@ -20,6 +22,8 @@ const MOCK_SUBJECT_DATA: CardProps[] = [
         toDate: "01-01-2026",
     },
     {
+        facultyName : "Jane Smith",
+        facultyProfile : "https://i.pravatar.cc/100?u=JaneSmith",
         subjectTitle: "Algorithms",
         year: "Year 3 CSE",
         units: 3,
@@ -32,6 +36,8 @@ const MOCK_SUBJECT_DATA: CardProps[] = [
         toDate: "10 Apr 2026",
     },
     {
+        facultyName : "Alice Johnson",
+        facultyProfile : "https://i.pravatar.cc/100?u=AliceJohnson",
         subjectTitle: "Data Structures",
         year: "Year 2 IT",
         units: 8,
@@ -44,6 +50,8 @@ const MOCK_SUBJECT_DATA: CardProps[] = [
         toDate: "02 Mar 2026",
     },
     {
+        facultyName : "Michael Lee",
+        facultyProfile : "https://i.pravatar.cc/100?u=MichaelLee",
         subjectTitle: "Algorithms",
         year: "Year 3 CSE",
         units: 3,
@@ -56,6 +64,8 @@ const MOCK_SUBJECT_DATA: CardProps[] = [
         toDate: "10 Apr 2026",
     },
     {
+        facultyName : "Emily Davis",
+        facultyProfile : "https://i.pravatar.cc/100?u=EmilyDavis",
         subjectTitle: "OS",
         year: "Year 3 CSE",
         units: 8,
@@ -68,6 +78,8 @@ const MOCK_SUBJECT_DATA: CardProps[] = [
         toDate: "02 Mar 2026",
     },
     {
+        facultyName : "David Wilson",
+        facultyProfile : "https://i.pravatar.cc/100?u=DavidWilson",
         subjectTitle: "Algorithms",
         year: "Year 3 CSE",
         units: 3,
@@ -107,7 +119,7 @@ function Academics() {
                             Academics - {category} Year {year}
                         </h1>
                     </div>
-                    <p className="text-[#282828] text-sm">
+                    <p className="text-[#282828] text-s ml-5">
                         Track syllabus Progress and manage notes by semester
                     </p>
                 </div>
