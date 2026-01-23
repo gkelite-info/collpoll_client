@@ -2,6 +2,7 @@ import { CaretDown, UserCircle } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export interface Department {
+  facultyName: string;
   name: string;
   text: string;
   color: string;
@@ -23,8 +24,8 @@ const FacultyAcademicCard = ({
   year = "2",
 }: Department) => {
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  // const pathname = usePathname();
+  // const searchParams = useSearchParams();
 
   const handleViewDetails = () => {
     // const params = new URLSearchParams(searchParams);
