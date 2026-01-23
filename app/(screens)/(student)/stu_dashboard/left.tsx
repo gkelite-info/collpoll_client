@@ -19,9 +19,6 @@ export default function StuDashLeft() {
     const [lectures, setLectures] = useState<any[]>([]);
 
 
-
-
-
     // const studentMeta = {
     //     degree: "B.Tech CSE",
     //     department: "CSE",
