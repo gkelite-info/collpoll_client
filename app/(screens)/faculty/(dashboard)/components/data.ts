@@ -172,42 +172,6 @@ export const STUDENT_DATA: StudentPerformance[] = [
     percentage: 60,
   },
 ];
-export const INITIAL_LESSONS: UpcomingLesson[] = [
-  {
-    id: "1",
-    title: "B.Tech CSE – Year 2",
-    description:
-      "Prepare slides on array implementation and complexity analysis.",
-    time: "9:00 Am",
-  },
-  {
-    id: "2",
-    title: "B.Tech CSE – Year 1",
-    description:
-      "Introduction to Object Oriented Programming concepts and classes.",
-    time: "10:00 Am",
-  },
-  {
-    id: "3",
-    title: "B.Tech CSE – Year 2",
-    description:
-      "Advanced Graph Algorithms: Dijkstra and Bellman-Ford implementations.",
-    time: "11:30 Am",
-  },
-  {
-    id: "4",
-    title: "B.Tech CSE – Year 3",
-    description:
-      "Database normalization forms (1NF, 2NF, 3NF, BCNF) with real examples.",
-    time: "2:00 Pm",
-  },
-  {
-    id: "5",
-    title: "M.Tech CSE – Year 1",
-    description: "Research methodology and technical paper writing workshop.",
-    time: "4:00 Pm",
-  },
-];
 
 export const TOP_PERFORMERS: TopPerformer[] = [
   {

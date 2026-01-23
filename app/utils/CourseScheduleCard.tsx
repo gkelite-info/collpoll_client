@@ -5,6 +5,7 @@ type Props = {
   style?: string;
   isVisibile?: boolean;
   department?: string;
+  degree?: string;
   year?: string;
   fullWidth?: boolean;
 };
@@ -13,6 +14,7 @@ export default function CourseScheduleCard({
   style = "",
   isVisibile = true,
   department = "CSE",
+  degree = "B.Tech",
   year = "2",
   fullWidth = false,
 }: Props) {
@@ -47,7 +49,7 @@ export default function CourseScheduleCard({
       {isVisibile && (
         <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
           <p className="text-[#EFEFEF] text-sm">
-            B.Tech {department} – Year {year}
+            {degree} {department} – Year {year}
           </p>
         </div>
       )}

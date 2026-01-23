@@ -1,12 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import SubjectAttendanceCards from "../../../components/subjectAttendanceCards";
-import SubjectAttendanceTable from "../../../components/subjectAttendanceTable";
-import { students } from "../../../data";
-import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { useEffect, useState } from "react";
+import SubjectAttendanceTable from "../../../components/subjectAttendanceTable"; // Removed unused Cards import
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import {
+  getStudentDetails,
+  getSubjectAttendanceDetails,
+} from "@/lib/helpers/attendance/attendanceActions";
+import AiBotCard from "../../../components/aiBotCard";
+import StudentProfileCard from "../../../components/stuProfileCard";
 
 export default function SubjectDetailPage() {
   const { studentId, subjectId } = useParams<{
@@ -18,31 +21,87 @@ export default function SubjectDetailPage() {
     "ALL"
   );
 
-  const student = useMemo(
-    () => students.find((s) => s.id === studentId),
-    [studentId]
-  );
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [student, setStudent] = useState<any>(null);
 
-  const subject = useMemo(
-    () => student?.subjects.find((s) => s.subjectId === subjectId),
-    [student, subjectId]
-  );
+  const response =
+    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
 
-  if (!student || !subject) {
+  useEffect(() => {
+    if (!studentId || !subjectId) return;
+
+    let isMounted = true;
+
+    const fetchData = async () => {
+      setLoading(true);
+
+      const [attendanceRes, studentRes] = await Promise.allSettled([
+        getSubjectAttendanceDetails(studentId, subjectId),
+        getStudentDetails(studentId),
+      ]);
+
+      if (!isMounted) return;
+
+      if (attendanceRes.status === "fulfilled") {
+        setData(attendanceRes.value);
+      } else {
+        console.error(
+          "Error fetching subject attendance:",
+          attendanceRes.reason
+        );
+      }
+
+      if (studentRes.status === "fulfilled") {
+        setStudent(studentRes.value);
+      } else {
+        console.error("Error fetching student details:", studentRes.reason);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentId, subjectId]);
+
+  if (loading) {
     return (
-      <div className="p-6 text-md text-red-500 font-medium">
-        Invalid student or subject
+      <div className="p-8 text-center text-gray-500">
+        Loading Attendance Records...
       </div>
     );
   }
 
+  if (!data || !student) {
+    return (
+      <div className="p-6 text-md text-red-500 font-medium">
+        Subject records not found.
+      </div>
+    );
+  }
+
+  const leaveCount = data.records.filter(
+    (r: any) => r.status === "Leave"
+  ).length;
+
+  const subjectSummary = {
+    total: data.summary.totalClasses,
+    present: data.summary.attended,
+    absent: data.summary.absent,
+    leave: leaveCount,
+  };
+
   const filteredRecords =
     filter === "ALL"
-      ? subject.records
-      : subject.records.filter((r) => r.status === filter);
+      ? data.records
+      : data.records.filter((r: any) => r.status === filter);
 
   return (
-    <main className="px-4 py-4">
+    <main className="px-4 py-4 min-h-screen">
       <section className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
@@ -54,20 +113,29 @@ export default function SubjectDetailPage() {
         <CourseScheduleCard style="w-[320px]" />
       </section>
 
-      <section className="flex gap-4 mb-7 ">
-        <div className="flex-grow">
-          <SubjectAttendanceCards
-            summary={subject.summary}
-            active={filter}
-            onChange={setFilter}
+      <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <StudentProfileCard
+            name={student.fullName}
+            department={student.department}
+            studentId={student.studentsId.toString()}
+            phone={student.mobile}
+            email={student.email}
+            address={student.address || "Address not available"}
+            photo={student.photo || ""}
+            isSubjectMode={true}
+            subjectSummary={subjectSummary}
+            activeFilter={filter}
+            onFilterChange={setFilter}
           />
         </div>
-        <div className="">
-          <WorkWeekCalendar style="w-[345px]" />
+
+        <div className="lg:col-span-1">
+          <AiBotCard response={response} />
         </div>
       </section>
 
-      <section className="mb-8">
+      <section className="mb-8 mt-5">
         <h2 className="text-lg font-medium text-[#1A1C1E] mb-4">
           Subject Detail View
         </h2>
@@ -77,8 +145,8 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Subject :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              {subject.subjectName}
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4  rounded-full font-medium">
+              {data.subjectName}
             </span>
           </div>
 
@@ -86,8 +154,8 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Faculty :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              {subject.facultyName}
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4  rounded-full font-medium">
+              {data.facultyName}
             </span>
           </div>
 
@@ -95,10 +163,10 @@ export default function SubjectDetailPage() {
             <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
               Sort :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              Classes Held: {subject.summary.totalClasses} | Attended:{" "}
-              {subject.summary.attended} | Missed: {subject.summary.absent} |
-              Total: {subject.summary.percentage}%
+            <span className="bg-[#43C17A1C] text-[#43C17A] px-4  rounded-full font-medium">
+              Classes Held: {data.summary.totalClasses} | Attended:{" "}
+              {data.summary.attended} | Missed: {data.summary.absent} | Total:{" "}
+              {data.summary.percentage}%
             </span>
           </div>
         </div>

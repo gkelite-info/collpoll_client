@@ -1,24 +1,54 @@
 "use client";
 
-import { CaretDown, CheckCircle, XCircle, Clock } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Prohibit,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Student, students } from "../data";
 
-type AttendanceStatus = "Present" | "Absent" | "Leave";
+export interface UIStudent {
+  id: string;
+  roll: string;
+  name: string;
+  photo: string;
+  attendance: "Present" | "Absent" | "Leave" | "Class Cancelled";
+  percentage: number;
+  department?: string;
+}
 
-export default function StuAttendanceTable() {
+interface Props {
+  students: UIStudent[];
+  setStudents: (students: UIStudent[]) => void;
+  saving: boolean;
+  isTopicMode: boolean;
+  handleSaveAttendance: () => Promise<void>;
+}
+
+export default function StuAttendanceTable({
+  students,
+  setStudents,
+  handleSaveAttendance,
+  saving,
+  isTopicMode,
+}: Props) {
   const router = useRouter();
 
-  const [data, setData] = useState<Student[]>(students);
-  const [sort, setSort] = useState<"All" | AttendanceStatus>("All");
+  const [sort, setSort] = useState<
+    "All" | "Present" | "Absent" | "Leave" | "Class Cancelled"
+  >("All");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const filtered = data.filter((s) => sort === "All" || s.attendance === sort);
+  const filtered = students.filter(
+    (s) => sort === "All" || s.attendance === sort
+  );
 
-  const updateAttendance = (id: string, value: AttendanceStatus) => {
-    setData((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, attendance: value } : s))
+  const updateAttendance = (id: string, value: UIStudent["attendance"]) => {
+    setStudents(
+      students.map((s) => (s.id === id ? { ...s, attendance: value } : s))
     );
   };
 
@@ -36,9 +66,9 @@ export default function StuAttendanceTable() {
     );
   };
 
-  const bulkUpdate = (status: AttendanceStatus) => {
-    setData((prev) =>
-      prev.map((s) =>
+  const bulkUpdate = (status: UIStudent["attendance"]) => {
+    setStudents(
+      students.map((s) =>
         selectedIds.includes(s.id) ? { ...s, attendance: status } : s
       )
     );
@@ -53,6 +83,8 @@ export default function StuAttendanceTable() {
         return "bg-red-100 text-red-600";
       case "Leave":
         return "bg-blue-100 text-blue-600";
+      case "Class Cancelled":
+        return "bg-gray-200 text-gray-600";
       default:
         return "bg-gray-100 text-gray-600";
     }
@@ -61,18 +93,31 @@ export default function StuAttendanceTable() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-500 font-medium">Sort By:</span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as any)}
-            className="rounded-full bg-[#43C17A1C] px-3 py-1 text-[#43C17A] outline-none border-none font-medium"
-          >
-            <option value="All">All Students</option>
-            <option value="Present">Present</option>
-            <option value="Absent">Absent</option>
-            <option value="Leave">Leave</option>
-          </select>
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-gray-500 font-medium">Sort By:</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as any)}
+              className="rounded-full bg-[#43C17A1C] px-3 py-1 text-[#43C17A] outline-none border-none font-medium cursor-pointer"
+            >
+              <option value="All">All Students</option>
+              <option value="Present">Present</option>
+              <option value="Absent">Absent</option>
+              <option value="Leave">Leave</option>
+              <option value="Class Cancelled">Class Cancelled</option>
+            </select>
+          </div>
+
+          {isTopicMode && (
+            <button
+              onClick={handleSaveAttendance}
+              disabled={saving}
+              className="bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white text-md px-3.5 py-1 rounded-lg shadow-md transition-transform active:scale-95 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Attendance"}
+            </button>
+          )}
         </div>
 
         {selectedIds.length > 0 && (
@@ -84,19 +129,26 @@ export default function StuAttendanceTable() {
               onClick={() => bulkUpdate("Present")}
               className="flex items-center gap-1 px-3 py-1 text-xs font-bold bg-[#43C17A] text-white rounded-lg hover:opacity-90 transition"
             >
-              <CheckCircle weight="fill" /> Mark Present
+              <CheckCircle weight="fill" /> Present
             </button>
             <button
               onClick={() => bulkUpdate("Absent")}
               className="flex items-center gap-1 px-3 py-1 text-xs font-bold bg-red-500 text-white rounded-lg hover:opacity-90 transition"
             >
-              <XCircle weight="fill" /> Mark Absent
+              <XCircle weight="fill" /> Absent
             </button>
             <button
               onClick={() => bulkUpdate("Leave")}
               className="flex items-center gap-1 px-3 py-1 text-xs font-bold bg-blue-500 text-white rounded-lg hover:opacity-90 transition"
             >
-              <Clock weight="fill" /> Mark Leave
+              <Clock weight="fill" /> Leave
+            </button>
+
+            <button
+              onClick={() => bulkUpdate("Class Cancelled")}
+              className="flex items-center gap-1 px-3 py-1 text-xs font-bold bg-gray-500 text-white rounded-lg hover:opacity-90 transition"
+            >
+              <Prohibit weight="fill" /> Cancel
             </button>
           </div>
         )}
@@ -131,7 +183,6 @@ export default function StuAttendanceTable() {
                 <th className="px-4 py-4 text-left font-semibold">Actions</th>
               </tr>
             </thead>
-
             <tbody className="divide-y divide-gray-50">
               {filtered.map((s) => (
                 <tr
@@ -148,50 +199,73 @@ export default function StuAttendanceTable() {
                       onChange={() => toggleSelectOne(s.id)}
                     />
                   </td>
-
                   <td className="px-4 py-4 font-medium">
                     <span className="text-[#43C17A]">ID </span> - {s.roll}
                   </td>
-
                   <td className="px-4 py-4">
-                    <img
-                      src={s.photo}
-                      className="h-8 w-8 rounded-full border border-gray-200"
-                      alt={s.name}
-                    />
+                    {s.photo ? (
+                      <img
+                        src={s.photo}
+                        className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                        alt={s.name}
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
+                        {s.name?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                   </td>
-
                   <td className="px-4 py-4 font-semibold text-gray-800">
                     {s.name}
                   </td>
-
                   <td className="px-4 py-4">
-                    <div className="relative group">
+                    <div
+                      className={`relative inline-flex items-center rounded-full w-max ${getStatusStyle(
+                        s.attendance
+                      )}`}
+                    >
                       <select
                         value={s.attendance}
                         onChange={(e) =>
-                          updateAttendance(
-                            s.id,
-                            e.target.value as AttendanceStatus
-                          )
+                          updateAttendance(s.id, e.target.value as any)
                         }
-                        className={`appearance-none flex items-center gap-1 rounded-full px-4 py-1.5 text-xs font-bold cursor-pointer outline-none border-none ${getStatusStyle(
-                          s.attendance
-                        )}`}
+                        className="appearance-none bg-transparent border-none outline-none text-xs font-bold pl-4 pr-8 py-1.5 cursor-pointer z-10"
                       >
-                        <option value="Present">Present</option>
-                        <option value="Absent">Absent</option>
-                        <option value="Leave">Leave</option>
+                        <option
+                          value="Present"
+                          className="bg-white text-gray-800"
+                        >
+                          Present
+                        </option>
+                        <option
+                          value="Absent"
+                          className="bg-white text-gray-800"
+                        >
+                          Absent
+                        </option>
+                        <option
+                          value="Leave"
+                          className="bg-white text-gray-800"
+                        >
+                          Leave
+                        </option>
+
+                        {s.attendance === "Class Cancelled" && (
+                          <option
+                            value="Class Cancelled"
+                            className="bg-white text-gray-800"
+                          >
+                            Class Cancelled
+                          </option>
+                        )}
                       </select>
                       <CaretDown
-                        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60"
-                        size={10}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-60"
+                        size={12}
                       />
                     </div>
                   </td>
-
                   <td className="px-4 py-4 font-medium">{s.percentage}%</td>
-
                   <td className="px-4 py-4">
                     <span
                       className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
@@ -209,11 +283,10 @@ export default function StuAttendanceTable() {
                         : "Low"}
                     </span>
                   </td>
-
                   <td className="px-4 py-4">
                     <button
                       onClick={() => router.push(`/faculty/attendance/${s.id}`)}
-                      className="text-gray-400 hover:text-[#43C17A] font-bold text-xs transition-colors"
+                      className="text-gray-600 cursor-pointer hover:text-[#43C17A] font-medium text-xs transition-colors"
                     >
                       View Details
                     </button>
@@ -224,10 +297,9 @@ export default function StuAttendanceTable() {
           </table>
         </div>
       </div>
-
       {filtered.length === 0 && (
         <div className="text-center py-10 bg-white rounded-xl border border-dashed border-gray-200 text-gray-400 italic">
-          No students found for the selected filter.
+          No students found.
         </div>
       )}
     </div>
