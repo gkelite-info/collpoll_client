@@ -318,7 +318,20 @@ const AddUserModal: React.FC<{
         }
       }
 
-      toast.error(e.message || "An error occurred");
+      // toast.error(e.message || "An error occurred");
+      const errorMsg = e?.message || "";
+
+      if (
+        errorMsg.includes("duplicate key") ||
+        errorMsg.includes("users_email")
+      ) {
+        toast.error(
+          "This email ID is already registered. Please use a different email."
+        );
+      } else {
+        toast.error("Unable to save user. Please try again.");
+      }
+
     } finally {
       setLoading(false);
     }
@@ -499,7 +512,7 @@ const AddUserModal: React.FC<{
                               setSelectedSubjects,
                               subjectInput
                             ),
-                            setSubjectInput(""))
+                              setSubjectInput(""))
                           }
                           className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                         />
@@ -511,7 +524,7 @@ const AddUserModal: React.FC<{
                               setSelectedSubjects,
                               subjectInput
                             ),
-                            setSubjectInput(""))
+                              setSubjectInput(""))
                           }
                           className="bg-[#43C17A] text-white p-1.5 rounded-md hover:bg-[#3ea876] transition-colors"
                         >
@@ -580,11 +593,10 @@ const AddUserModal: React.FC<{
                     className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                        basicData.gender === g
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g
                           ? "border-[#48C78E]"
                           : "border-gray-300"
-                      }`}
+                        }`}
                     >
                       {basicData.gender === g && (
                         <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
