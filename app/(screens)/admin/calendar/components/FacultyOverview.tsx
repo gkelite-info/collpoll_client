@@ -94,13 +94,33 @@ export default function FacultyOverview({ onSelect }: Props) {
         )
     );
 
+    // const subjectOptions = Array.from(
+    //     new Set(
+    //         facultyList
+    //             .flatMap(f => f.subjects.split(","))
+    //             .map(s => s.trim())
+    //     )
+    // );
+
     const subjectOptions = Array.from(
         new Set(
             facultyList
-                .flatMap(f => f.subjects.split(","))
-                .map(s => s.trim())
+                .filter(f => {
+                    if (department === "All") return true;
+
+                    return f.department
+                        .split(",")
+                        .map(d => d.trim())
+                        .includes(department);
+                })
+                .flatMap(f =>
+                    f.subjects
+                        .split(",")
+                        .map(s => s.trim())
+                )
         )
     );
+
 
     const formatYearLabel = (y: string | number) => {
         const n = Number(y);
