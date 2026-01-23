@@ -5,23 +5,47 @@ import { FaAngleRight, FaAngleLeft } from "react-icons/fa6";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const months = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 type Gradient = { from: string; to: string };
 
+interface WorkWeekCalendarProps {
+  style?: string;
+  activeDate?: Date;
+  onDateSelect?: (date: Date) => void;
+}
+
 export default function WorkWeekCalendar({
   style = "mt-5",
-}: {
-  style?: string;
-}) {
-  const today = new Date();
+  activeDate,
+  onDateSelect,
+}: WorkWeekCalendarProps) {
+  const initialDate = activeDate || new Date();
 
-  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
 
-  const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [currentYear, setCurrentYear] = useState(today.getFullYear());
+  useEffect(() => {
+    if (activeDate) {
+      setSelectedDate(activeDate);
+      setCurrentMonth(activeDate.getMonth());
+      setCurrentYear(activeDate.getFullYear());
+    }
+  }, [activeDate]);
+
+  const [currentMonth, setCurrentMonth] = useState(initialDate.getMonth());
+  const [currentYear, setCurrentYear] = useState(initialDate.getFullYear());
 
   const [monthOpen, setMonthOpen] = useState(false);
   const [yearOpen, setYearOpen] = useState(false);
@@ -60,25 +84,45 @@ export default function WorkWeekCalendar({
     weekDays.push(d);
   }
 
+  const handleDateChange = (newDate: Date) => {
+    setSelectedDate(newDate);
+    setCurrentMonth(newDate.getMonth());
+    setCurrentYear(newDate.getFullYear());
+
+    if (onDateSelect) {
+      onDateSelect(newDate);
+    }
+  };
+
   const prevWeek = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 7);
-    setSelectedDate(d);
-    setCurrentMonth(d.getMonth());
-    setCurrentYear(d.getFullYear());
+    handleDateChange(d);
   };
 
   const nextWeek = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + 7);
-    setSelectedDate(d);
-    setCurrentMonth(d.getMonth());
-    setCurrentYear(d.getFullYear());
+    handleDateChange(d);
+  };
+
+  const handleMonthSelect = (index: number) => {
+    const d = new Date(selectedDate);
+    d.setMonth(index);
+    handleDateChange(d);
+    setMonthOpen(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    const d = new Date(selectedDate);
+    d.setFullYear(year);
+    handleDateChange(d);
+    setYearOpen(false);
   };
 
   const years = Array.from(
     { length: 11 },
-    (_, i) => today.getFullYear() - 5 + i
+    (_, i) => new Date().getFullYear() - 5 + i
   );
 
   return (
@@ -103,13 +147,7 @@ export default function WorkWeekCalendar({
                 {months.map((month, index) => (
                   <div
                     key={month}
-                    onClick={() => {
-                      const d = new Date(selectedDate);
-                      d.setMonth(index);
-                      setSelectedDate(d);
-                      setCurrentMonth(index);
-                      setMonthOpen(false);
-                    }}
+                    onClick={() => handleMonthSelect(index)}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
                     {month}
@@ -134,13 +172,7 @@ export default function WorkWeekCalendar({
                 {years.map((year) => (
                   <div
                     key={year}
-                    onClick={() => {
-                      const d = new Date(selectedDate);
-                      d.setFullYear(year);
-                      setSelectedDate(d);
-                      setCurrentYear(year);
-                      setYearOpen(false);
-                    }}
+                    onClick={() => handleYearSelect(year)}
                     className="px-3 py-1 cursor-pointer hover:bg-gray-200"
                   >
                     {year}
@@ -152,8 +184,16 @@ export default function WorkWeekCalendar({
         </div>
 
         <div className="flex w-[15%] justify-between">
-          <FaAngleLeft size={12} className="cursor-pointer" onClick={prevWeek} />
-          <FaAngleRight size={12} className="cursor-pointer" onClick={nextWeek} />
+          <FaAngleLeft
+            size={12}
+            className="cursor-pointer"
+            onClick={prevWeek}
+          />
+          <FaAngleRight
+            size={12}
+            className="cursor-pointer"
+            onClick={nextWeek}
+          />
         </div>
       </div>
 
@@ -162,12 +202,12 @@ export default function WorkWeekCalendar({
           const dateObj = weekDays[idx];
           const isActive =
             dateObj.toDateString() === selectedDate.toDateString();
-          const isSaturday = day === "Sat";
+          const isSaturday = day === "Saturday";
 
           return (
             <div
               key={day}
-              onClick={() => !isSaturday && setSelectedDate(dateObj)}
+              onClick={() => !isSaturday && handleDateChange(dateObj)}
               className="flex flex-col items-center justify-center gap-2 h-16 rounded cursor-pointer"
               style={
                 isActive

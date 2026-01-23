@@ -14,7 +14,7 @@ type InputFieldProps = {
 
 export const InputField = ({
   label,
-   name,
+  name,
   value,
   onChange,
   placeholder,
@@ -44,7 +44,7 @@ export const InputField = ({
         <div className="absolute right-3 flex text-gray-500">{rightIcon}</div>
       )}
     </div>
-    <input
+    {/* <input
     name={name}                 
       value={value ?? ""}         
       onChange={onChange}
@@ -52,14 +52,14 @@ export const InputField = ({
       placeholder={placeholder}
       className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm"
       onWheel={(e) => e.currentTarget.blur()}
-    />
+    /> */}
   </div>
 );
 
 // export const SelectField = ({ label,  name = "", value = "", onChange= () => {}, type,  placeholder, className = "" }: any) => (
 //     <input
-//     name={name}                 
-//       value={value ?? ""}         
+//     name={name}
+//       value={value ?? ""}
 //       onChange={onChange}
 //       type={type}
 //       placeholder={placeholder}
@@ -68,17 +68,24 @@ export const InputField = ({
 //     />
 //   </div>
 // );
- 
-export const SelectField = ({ label,  name = "", value = "", onChange= () => {},  placeholder, className = "" }: any) => (
+
+export const SelectField = ({
+  label,
+  name = "",
+  value = "",
+  onChange = () => {},
+  placeholder,
+  className = "",
+}: any) => (
   <div className={`flex flex-col w-full relative ${className}`}>
-    <label className="text-[#333] font-semibold text-[15px] mb-1.5">     
+    <label className="text-[#333] font-semibold text-[15px] mb-1.5">
       {label}
     </label>
     <div className="relative">
       <select
         name={name}
-        value={value}        
-        onChange={onChange}  
+        value={value}
+        onChange={onChange}
         // defaultValue=""
         className="appearance-none border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 w-full focus:outline-none focus:border-[#49C77F] bg-white cursor-pointer shadow-sm"
       >

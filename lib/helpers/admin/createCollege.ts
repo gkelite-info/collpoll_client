@@ -38,7 +38,7 @@ export async function createCollege(payload: CreateCollegePayload, file: File) {
     .insert({
       collegeName: payload.collegeName,
       collegeEmail: payload.collegeEmail,
-      collegeCode: payload.collegeCode,
+      collegeCode: payload.collegeCode.toUpperCase(),
       address: payload.address,
       countryCode: payload.countryCode,
       phoneNumber: payload.phoneNumber,

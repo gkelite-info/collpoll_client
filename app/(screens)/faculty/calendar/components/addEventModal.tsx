@@ -97,14 +97,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const modalContentRef = useRef<HTMLDivElement>(null);
   // const YEARS = ["1", "2", "3", "4"];
   const SEMESTERS = ["1", "2"];
-  const isEditMode = mode === "edit"
+  const isEditMode = mode === "edit";
 
   const selectedDegreeObj = React.useMemo(() => {
     return degreeOptions.find((d) => d.degreeType === degree);
   }, [degree, degreeOptions]);
 
   console.log("degree options are", degreeOptions);
-
 
   const departmentOptions = useMemo(() => {
     if (!selectedDegreeObj?.departments) return [];
@@ -117,7 +116,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return selectedDegreeObj?.years ?? [];
   }, [selectedDegreeObj?.years]);
 
-
   const sectionMap = React.useMemo<Record<string, string[]>>(() => {
     if (
       !selectedDegreeObj?.sections ||
@@ -129,7 +127,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   }, [selectedDegreeObj]);
 
   const normalizeYear = (y: any) =>
-    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y)) ? String(y) : "";
+    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y))
+      ? String(y)
+      : "";
 
   useEffect(() => {
     if (!degree) return;
@@ -192,19 +192,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setDegree(value.degree || "");
     setSelectedDepartments(
       Array.isArray(value.departments)
-        ? value.departments.filter((d: any) => typeof d === "string" && d.trim() !== "")
+        ? value.departments.filter(
+            (d: any) => typeof d === "string" && d.trim() !== ""
+          )
         : []
     );
     setSelectedSections(
       Array.isArray(value.sections)
-        ? value.sections.filter((s: any) => typeof s === "string" && s.trim() !== "")
+        ? value.sections.filter(
+            (s: any) => typeof s === "string" && s.trim() !== ""
+          )
         : []
     );
     // setYear(value.year ? String(value.year) : "");
     // setYear(value.year || "");
     // setYear(normalizeYear(value.year));
     const normalizedYear = String(value.year || "").trim();
-    if (normalizedYear && ["1", "2", "3", "4", "5", "6", "7", "8"].includes(normalizedYear)) {
+    if (
+      normalizedYear &&
+      ["1", "2", "3", "4", "5", "6", "7", "8"].includes(normalizedYear)
+    ) {
       setYear(normalizedYear);
     } else {
       setYear("");
@@ -227,7 +234,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [isOpen, value]);
 
-
   useEffect(() => {
     if (!isOpen) {
       setYear("");
@@ -243,12 +249,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     }
   }, [isOpen]);
 
-
-  const to24Hour = (
-    hour: string,
-    minute: string,
-    period: "AM" | "PM"
-  ) => {
+  const to24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
     let h = parseInt(hour, 10);
     if (period === "PM" && h !== 12) h += 12;
     if (period === "AM" && h === 12) h = 0;
@@ -279,7 +280,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       // 🔴 CHANGED: Set year directly from incoming value
       setYear(incomingYear);
     } else {
-      console.warn(`Year ${incomingYear} not found in yearOptions`, yearOptions);
+      console.warn(
+        `Year ${incomingYear} not found in yearOptions`,
+        yearOptions
+      );
     }
   }, [isEditMode, value?.year, degree, yearOptions]);
 
@@ -321,7 +325,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     onClose();
   };
 
-
   useEffect(() => {
     if (!isOpen) return;
 
@@ -356,7 +359,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const formatLabel = (value: string) =>
     value.charAt(0).toUpperCase() + value.slice(1);
 
-
   const dateInputType = date || isDateInputFocused ? "date" : "text";
 
   const openDatePicker = () => {
@@ -388,7 +390,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   };
 
   const availableSections = selectedDepartments
-    .filter((dep): dep is string => typeof dep === "string" && dep.trim() !== "")
+    .filter(
+      (dep): dep is string => typeof dep === "string" && dep.trim() !== ""
+    )
     .flatMap((dep) => {
       const key = dep.trim();
       const secs = sectionMap[key] ?? [];
@@ -397,8 +401,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   const toggleDepartment = (dep: string) => {
     setSelectedDepartments((prev) => {
-      const updated =
-        prev.includes(dep) ? prev.filter((d) => d !== dep) : [...prev, dep];
+      const updated = prev.includes(dep)
+        ? prev.filter((d) => d !== dep)
+        : [...prev, dep];
 
       setSelectedSections((prevSections) =>
         prevSections.filter((sec) =>
@@ -456,7 +461,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">Event Topic</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Event Topic
+            </label>
             <input
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
@@ -474,10 +481,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
+                    selectedType === type
+                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   {formatLabel(type)}
                 </button>
@@ -488,7 +496,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           <div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Date</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Date
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -498,7 +508,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Room No.</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Room No.
+                </label>
                 <input
                   value={roomNo}
                   onChange={(e) => setRoomNo(e.target.value)}
@@ -541,7 +553,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={startPeriod}
-                      onChange={(e) => setStartPeriod(e.target.value as "AM" | "PM")}
+                      onChange={(e) =>
+                        setStartPeriod(e.target.value as "AM" | "PM")
+                      }
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -577,7 +591,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={endPeriod}
-                      onChange={(e) => setEndPeriod(e.target.value as "AM" | "PM")}
+                      onChange={(e) =>
+                        setEndPeriod(e.target.value as "AM" | "PM")
+                      }
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -623,7 +639,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   </span>
                 </div>
               )}
-
             </div>
 
             <div className="flex-1 min-w-0">
@@ -648,8 +663,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </button>
 
                 {isDeptOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-full bg-white border 
-        rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                  <div
+                    className="absolute left-0 top-full mt-1 w-full bg-white border 
+        rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto"
+                  >
                     {departmentOptions.map((dep) => (
                       <label
                         key={dep}
@@ -666,7 +683,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   </div>
                 )}
               </div>
-              {selectedDepartments.length > 0 &&
+              {selectedDepartments.length > 0 && (
                 <div
                   className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
       whitespace-nowrap scrollbar-hide`}
@@ -687,7 +704,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                     </span>
                   ))}
                 </div>
-              }
+              )}
             </div>
           </div>
           <div className="flex gap-4 items-start">
@@ -758,8 +775,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </button>
 
               {isSectionOpen && (
-                <div className="absolute left-0 top-full mt-1 w-full bg-white border 
-        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
+                <div
+                  className="absolute left-0 top-full mt-1 w-full bg-white border 
+        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto"
+                >
                   {availableSections.map((sec) => (
                     <label
                       key={sec}
@@ -776,7 +795,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 </div>
               )}
             </div>
-            {selectedSections.length > 0 &&
+            {selectedSections.length > 0 && (
               <div
                 className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
       whitespace-nowrap scrollbar-hide`}
@@ -797,7 +816,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   </span>
                 ))}
               </div>
-            }
+            )}
           </div>
 
           <div className="pt-2">
@@ -810,8 +829,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   ? "Updating..."
                   : "Saving..."
                 : isEditMode
-                  ? "Update Event"
-                  : "Save Event"}
+                ? "Update Event"
+                : "Save Event"}
               {/* {value ? "Update Event" : "Save Event"} */}
             </button>
           </div>

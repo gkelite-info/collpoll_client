@@ -2,13 +2,22 @@
 
 import { CaretDown, DotsThreeVertical, Plus, X } from "@phosphor-icons/react";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation"; // Import this
+import { ClassActionModal } from "../(dashboard)/components/ClassActionModal";
 
 export interface UpcomingLesson {
   id: string;
   title: string;
   description: string;
-  time: string;
+  fromTime: string;
+  toTime: string;
   section?: string;
+  date?: string;
+  roomNo?: string;
+  semester: string[];
+  department: { name: string }[];
+  degree: string;
+  year: number;
 }
 
 interface UpcomingClassesProps {
@@ -23,6 +32,7 @@ interface ModalProps {
   onSave: (data: any) => void;
 }
 
+// --- Component 1: Add Lesson Modal (Your Original) ---
 const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
   if (!isOpen) return null;
 
@@ -160,12 +170,17 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
 };
 
 const LessonCard: React.FC<{ lesson: UpcomingLesson }> = ({ lesson }) => (
-  <div className="relative flex bg-[#eff2f7] rounded-r-md rounded-l overflow-hidden min-h-[100px] shrink-0 group cursor-pointer hover:shadow-sm transition-all">
+  <div className="relative flex bg-[#eff2f7] rounded-r-md rounded-l overflow-hidden min-h-[100px] shrink-0 group hover:shadow-sm transition-all">
     <div className="w-1.5 bg-[#1e2952] absolute left-0 top-0 bottom-0 rounded-l-sm" />
     <div className="flex-1 py-3 px-4 ml-2 flex flex-col justify-between">
       <div>
         <h3 className="text-[#1e2952] font-bold text-[15px] leading-tight">
-          {lesson.title}
+          {`${lesson.title}`}
+        </h3>
+        <h3 className="text-[#1e2952] font-bold text-xs leading-tight">
+          {`${lesson.degree} ${lesson.department
+            .map((item) => item.name)
+            .join(", ")} - Year ${lesson.year}`}
         </h3>
         <p className="text-gray-600 text-[13px] mt-1 leading-snug line-clamp-2">
           {lesson.description}
@@ -173,7 +188,7 @@ const LessonCard: React.FC<{ lesson: UpcomingLesson }> = ({ lesson }) => (
       </div>
       <div className="flex justify-end mt-2">
         <span className="text-emerald-500 text-xs font-medium">
-          {lesson.time}
+          {lesson.fromTime}
         </span>
       </div>
     </div>
@@ -185,6 +200,29 @@ export default function UpcomingClasses({
   onAddLesson,
 }: UpcomingClassesProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<UpcomingLesson | null>(
+    null
+  );
+
+  const handleLessonClick = (lesson: UpcomingLesson) => {
+    setSelectedLesson(lesson);
+    setIsActionModalOpen(true);
+  };
+
+  const router = useRouter();
+
+  const handleAcceptClass = (id: string) => {
+    router.push(`/faculty/attendance?classId=${id}`);
+    setIsActionModalOpen(false);
+  };
+
+  const handleCancelClass = (id: string) => {
+    console.log("Cancelled class ID:", id);
+    // Add API logic here
+    setIsActionModalOpen(false);
+  };
 
   return (
     <>
@@ -208,7 +246,13 @@ export default function UpcomingClasses({
 
         <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 max-h-[350px]">
           {lessons.map((lesson) => (
-            <LessonCard key={lesson.id} lesson={lesson} />
+            <div
+              key={lesson.id}
+              onClick={() => handleLessonClick(lesson)}
+              className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+            >
+              <LessonCard lesson={lesson} />
+            </div>
           ))}
           {lessons.length === 0 && (
             <div className="text-center py-10 text-gray-400 text-sm italic">
@@ -222,6 +266,14 @@ export default function UpcomingClasses({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={onAddLesson}
+      />
+
+      <ClassActionModal
+        isOpen={isActionModalOpen}
+        onClose={() => setIsActionModalOpen(false)}
+        lesson={selectedLesson}
+        onAccept={handleAcceptClass}
+        onCancelClass={handleCancelClass}
       />
     </>
   );

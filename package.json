@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^3.0.12",
     "@hookform/resolvers": "^5.2.2",
     "@iconify/react": "^6.0.2",
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.89.0",
+    "ai": "^6.0.44",
     "framer-motion": "^12.23.26",
     "groq-sdk": "^0.37.0",
     "lucide-react": "^0.552.0",
