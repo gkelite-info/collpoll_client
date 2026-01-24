@@ -96,6 +96,7 @@ export default function Department() {
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -10 }}
+<<<<<<< Updated upstream
       className="space-y-4 max-w-[980px]"
     >
       {/* Row 1 */}
@@ -124,6 +125,31 @@ export default function Department() {
           label="Department Code"
           name="departmentCode"
           placeholder="Enter Department Code"
+=======
+      className="space-y-5"
+    >
+      <InputField
+        label="Education ID"
+        name="educationId"
+        type="number"
+        placeholder="1"
+        value={educationId}
+        onChange={(e: any) => setEducationId(e.target.value)}
+        
+      />
+
+      <div className="grid grid-cols-3 gap-4 items-end">
+        <InputField
+          label="Department Name"
+          name="departmentName"
+          value={departmentName}
+          onChange={(e: any) => setDepartmentName(e.target.value)}
+        />
+
+        <InputField
+          label="Department Code"
+          name="departmentCode"
+>>>>>>> Stashed changes
           value={departmentCode}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
@@ -154,6 +180,7 @@ export default function Department() {
         </div>
       ))}
 
+<<<<<<< Updated upstream
       <div className="flex justify-center pt-6">
         <button
           onClick={handleSubmit}
@@ -165,6 +192,15 @@ export default function Department() {
              hover:bg-[#3fb070]
       ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d]"}
     `}
+=======
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className={`bg-[#49C77F] text-white h-[42px] px-8 rounded-lg font-bold text-lg shadow-md ${
+            loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3fb070]"
+          }`}
+>>>>>>> Stashed changes
         >
           {loading ? "Saving..." : "Save Departments"}
         </button>
