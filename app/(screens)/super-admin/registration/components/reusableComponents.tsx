@@ -34,9 +34,8 @@ export const InputField = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${
-          uppercase ? "uppercase" : ""
-        }`}
+        className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${uppercase ? "uppercase" : ""
+          }`}
         onWheel={(e) => e.currentTarget.blur()}
       />
  
@@ -68,12 +67,20 @@ export const InputField = ({
 //     />
 //   </div>
 // );
+<<<<<<< Updated upstream
  
+=======
+
+>>>>>>> Stashed changes
 export const SelectField = ({
   label,
   name = "",
   value = "",
+<<<<<<< Updated upstream
   onChange = () => {},
+=======
+  onChange = () => { },
+>>>>>>> Stashed changes
   placeholder,
   className = "",
 }: any) => (
@@ -100,5 +107,9 @@ export const SelectField = ({
       />
     </div>
   </div>
+<<<<<<< Updated upstream
 );
  
+=======
+);
+>>>>>>> Stashed changes
