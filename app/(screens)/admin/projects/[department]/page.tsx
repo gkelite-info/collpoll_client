@@ -29,3 +29,11 @@
 //     </div>
 //   );
 // }
+
+export default function Page(){
+    return(
+        <div>
+            Department sub page
+        </div>
+    )
+}
