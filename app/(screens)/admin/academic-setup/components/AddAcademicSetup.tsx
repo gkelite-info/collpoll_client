@@ -53,7 +53,7 @@ export default function AddAcademicSetup({
   );
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingExisting, setIsFetchingExisting] = useState(false); // New loading state
+  const [isFetchingExisting, setIsFetchingExisting] = useState(false);
 
   const [customMode, setCustomMode] = useState({
     degree: false,
@@ -432,7 +432,7 @@ export default function AddAcademicSetup({
             //     year: form.year.filter((y) => y !== val),
             //   });
             // }}
-            onRemove={() => {
+            onRemove={(_val) => {
               setForm({ ...form, year: "" });
             }}
 

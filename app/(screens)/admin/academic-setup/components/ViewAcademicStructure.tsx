@@ -7,6 +7,7 @@ export type AcademicViewData = {
   id: string;
   degree: string;
   dept: string;
+  branch: string;
   year: any[];
   sections: any[];
 };
@@ -37,6 +38,7 @@ export default function ViewAcademicStructure({
         return {
           id: d.collegeDegreeId,
           degree: d.degreeType,
+          branch: d.branch,
           dept: d.departments,
           year: parseVal(d.years),
           sections: parseVal(d.sections),
