@@ -1,5 +1,5 @@
 import { CaretDown } from "@phosphor-icons/react/dist/ssr";
- 
+
 type InputFieldProps = {
   label: string;
   placeholder?: string;
@@ -11,7 +11,7 @@ type InputFieldProps = {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   rightIcon?: React.ReactNode;
 };
- 
+
 export const InputField = ({
   label,
   name,
@@ -34,12 +34,11 @@ export const InputField = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${
-          uppercase ? "uppercase" : ""
-        }`}
+        className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${uppercase ? "uppercase" : ""
+          }`}
         onWheel={(e) => e.currentTarget.blur()}
       />
- 
+
       {rightIcon && (
         <div className="absolute right-3 flex text-gray-500">{rightIcon}</div>
       )}
@@ -55,7 +54,7 @@ export const InputField = ({
     /> */}
   </div>
 );
- 
+
 // export const SelectField = ({ label,  name = "", value = "", onChange= () => {}, type,  placeholder, className = "" }: any) => (
 //     <input
 //     name={name}
@@ -68,12 +67,12 @@ export const InputField = ({
 //     />
 //   </div>
 // );
- 
+
 export const SelectField = ({
   label,
   name = "",
   value = "",
-  onChange = () => {},
+  onChange = () => { },
   placeholder,
   className = "",
 }: any) => (
@@ -101,4 +100,3 @@ export const SelectField = ({
     </div>
   </div>
 );
- 

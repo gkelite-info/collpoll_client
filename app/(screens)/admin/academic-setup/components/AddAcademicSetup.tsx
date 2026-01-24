@@ -10,12 +10,17 @@ import {
 } from "@/lib/helpers/admin/academicSetupAPI";
 import { generateUUID } from "@/lib/helpers/generateUUID";
 import toast, { Toaster } from "react-hot-toast";
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { saveCollegeEducation } from "@/lib/helpers/admin/academicEducationAPI";
+import { upsertCollegeBranches } from "@/lib/helpers/admin/collegeBranchAPI";
+import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 
 export type AcademicData = {
   id?: string;
   degree: string;
+  branch: string;
   dept: string;
-  year: string[];
+  year: string;
   sections: string[];
 };
 
@@ -26,12 +31,13 @@ export default function AddAcademicSetup({
   editData: AcademicData | null;
   onSuccess?: () => void;
 }) {
-  const { userId: adminId, loading: userLoading } = useUser();
+  const { userId, loading: userLoading } = useUser();
 
   const [form, setForm] = useState<AcademicData>({
     degree: "",
+    branch: "",
     dept: "",
-    year: [],
+    year: "",
     sections: [],
   });
 
@@ -47,7 +53,7 @@ export default function AddAcademicSetup({
   );
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isFetchingExisting, setIsFetchingExisting] = useState(false); // New loading state
+  const [isFetchingExisting, setIsFetchingExisting] = useState(false);
 
   const [customMode, setCustomMode] = useState({
     degree: false,
@@ -75,59 +81,60 @@ export default function AddAcademicSetup({
     }
   }, [form.degree, academicOptions]);
 
-  useEffect(() => {
-    const checkExisting = async () => {
-      if (
-        form.degree &&
-        form.dept &&
-        !customMode.degree &&
-        !customMode.dept &&
-        !editData
-      ) {
-        setIsFetchingExisting(true);
-        const { success, data } = await fetchExistingSetup(
-          form.degree,
-          form.dept
-        );
+  // useEffect(() => {
+  //   const checkExisting = async () => {
+  //     if (
+  //       form.degree &&
+  //       form.dept &&
+  //       !customMode.degree &&
+  //       !customMode.dept &&
+  //       !editData
+  //     ) {
+  //       setIsFetchingExisting(true);
+  //       const { success, data } = await fetchExistingSetup(
+  //         form.degree,
+  //         form.dept
+  //       );
 
-        if (success && data) {
-          setForm((prev) => ({
-            ...prev,
-            id: data.id,
-            sections: data.sections,
-            year: data.year,
-          }));
+  //       if (success && data) {
+  //         setForm((prev) => ({
+  //           ...prev,
+  //           id: data.id,
+  //           sections: data.sections,
+  //           year: data.year,
+  //         }));
 
-          toast.success("Loaded existing configuration.", {
-            id: "loaded-existing",
-          });
-        } else {
-          setForm((prev) => ({
-            ...prev,
-            id: undefined,
-            sections: [],
-            year: [],
-          }));
-        }
-        setIsFetchingExisting(false);
-      }
-    };
+  //         toast.success("Loaded existing configuration.", {
+  //           id: "loaded-existing",
+  //         });
+  //       } else {
+  //         setForm((prev) => ({
+  //           ...prev,
+  //           id: undefined,
+  //           sections: [],
+  //           year: [],
+  //         }));
+  //       }
+  //       setIsFetchingExisting(false);
+  //     }
+  //   };
 
-    checkExisting();
-  }, [form.degree, form.dept]);
+  //   checkExisting();
+  // }, [form.degree, form.dept]);
 
   useEffect(() => {
     if (editData) {
       setForm({
         ...editData,
-        year: Array.isArray(editData.year) ? editData.year : [],
+        // year: Array.isArray(editData.year) ? editData.year : [],
+        year: editData.year ?? "",
         sections: Array.isArray(editData.sections) ? editData.sections : [],
       });
     }
   }, [editData]);
 
   const getYearOptions = () => {
-    
+
     let maxYears;
     switch (form.degree.toLowerCase()) {
       case "b.tech":
@@ -164,75 +171,67 @@ export default function AddAcademicSetup({
     );
   };
 
+  const branches = [
+    {
+      type: form.dept,
+      code: form.dept.replace(/\s+/g, "").toUpperCase(),
+    },
+  ];
+
+  const sectionItems = form.sections.map((s) => ({
+    section: s,
+    uuid: generateUUID(),
+  }));
+
+
   const handleSave = async () => {
-    if (userLoading) return;
-    if (!adminId) {
-      toast.error("User session not found. Please reload or log in.");
+    if (userLoading || !userId) {
+      toast.error("User session not ready");
       return;
     }
 
-    if (!form.degree.trim()) return toast.error("Please select a Degree Type.");
-    if (!form.dept.trim()) return toast.error("Please select a Department.");
-    if (form.year.length === 0)
-      return toast.error("Please select at least one Year.");
-    if (form.sections.length === 0)
-      return toast.error("Please select at least one Section.");
-
-    if (customMode.degree || customMode.dept || customMode.sections) {
-      return toast.error(
-        "You have unsaved custom input. Please click the checkmark or cancel."
+    if (
+      !form.degree.trim() ||
+      !form.branch.trim() ||
+      !form.dept.trim() ||
+      !form.year.trim()
+    ) {
+      toast.error(
+        "Education, Branch, Branch Code and Academic Year are required"
       );
+      return;
     }
 
     setIsLoading(true);
 
-    const payload = {
-      ...form,
-      year: form.year.map((y) => ({
-        name: y,
-        uuid: generateUUID(),
-      })),
-      sections: form.sections.map((s) => ({
-        name: s,
-        uuid: generateUUID(),
-      })),
-    };
+    try {
+      const adminCtx = await fetchAdminContext(userId);
 
-    // @ts-ignore
-    const result = await saveAcademicSetup(payload, adminId, !!form.id);
-
-    setIsLoading(false);
-
-    if (result.success) {
-      toast.success("Academic setup saved successfully!");
-      if (!editData) {
-        setForm({
-          id: undefined,
-          degree: "",
-          dept: "",
-          year: [],
-          sections: [],
-        });
-      }
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        if (!editData)
-          setForm({
-            id: undefined,
-            degree: "",
-            dept: "",
-            year: [],
-            sections: [],
-          });
-      }
-    } else {
-      toast.error(
-        (result.error as { message?: string })?.message ||
-        "Failed to save data. Please try again."
+      await saveAcademicSetupMaster(
+        {
+          educationType: form.degree,
+          branch: {
+            type: form.branch,
+            code: form.dept.replace(/\s+/g, "").toUpperCase(),
+            academicYear: form.year,
+            sections: sectionItems,
+          },
+        },
+        {
+          adminId: adminCtx.adminId,
+          collegeId: adminCtx.collegeId,
+        }
       );
+
+      toast.success("Education, Branch & Academic Year saved successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong");
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   const handleSingleSelectChange = (
     field: "degree" | "dept",
@@ -248,7 +247,7 @@ export default function AddAcademicSetup({
           ...prev,
           degree: value,
           dept: "",
-          year: [],
+          year: "",
           sections: [],
           id: undefined,
         }));
@@ -325,43 +324,68 @@ export default function AddAcademicSetup({
   return (
     <div className="bg-white rounded-xl p-6 space-y-6">
       <Toaster position="top-right" />
-      <div>
-        <label className="block text-sm text-[#16284F] font-medium mb-1">
-          Degree Type
-        </label>
-        {customMode.degree ? (
-          renderCustomInput("degree", "Enter Degree Name")
-        ) : (
-          <select
-            value={form.degree}
-            onChange={(e) => handleSingleSelectChange("degree", e.target.value)}
-            className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2"
-          >
-            <option value="" disabled>
-              Select Degree
-            </option>
-            {availableDegrees.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm text-[#16284F] font-medium mb-1">
+            Eduation Type
+          </label>
+          {customMode.degree ? (
+            renderCustomInput("degree", "Enter Education Name")
+          ) : (
+            <select
+              value={form.degree}
+              onChange={(e) => handleSingleSelectChange("degree", e.target.value)}
+              className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2"
+            >
+              <option value="" disabled>
+                Select Education
               </option>
-            ))}
-            {!availableDegrees.includes(form.degree) && form.degree && (
-              <option value={form.degree}>{form.degree}</option>
-            )}
-            <option className="text-[#43C17A] font-semibold" value="+ other">
-              + Other
-            </option>
-          </select>
-        )}
+              {availableDegrees.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+              {!availableDegrees.includes(form.degree) && form.degree && (
+                <option value={form.degree}>{form.degree}</option>
+              )}
+              <option className="text-[#43C17A] font-semibold" value="+ other">
+                + Other
+              </option>
+            </select>
+          )}
+        </div>
+        <div>
+          <label className="block text-sm text-[#16284F] font-medium mb-1">
+            Branch Type
+          </label>
+          <input
+            type="text"
+            value={form.branch}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              const formatted = value
+                .toLowerCase()
+                .replace(/\b\w/g, (char) => char.toUpperCase());
+
+              setForm((prev) => ({
+                ...prev,
+                branch: formatted,
+              }));
+            }}
+            placeholder="Enter Branch"
+            className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Department
+            Branch Code
           </label>
           {customMode.dept ? (
-            renderCustomInput("dept", "Enter Department")
+            renderCustomInput("dept", "Enter Branch Code")
           ) : (
             <select
               value={form.dept}
@@ -370,7 +394,7 @@ export default function AddAcademicSetup({
               disabled={!form.degree && !customMode.degree}
             >
               <option value="" disabled>
-                Select Department
+                Select Branch Code
               </option>
               {availableDepts.map((opt) => (
                 <option key={opt} value={opt}>
@@ -392,23 +416,30 @@ export default function AddAcademicSetup({
             label="Year"
             placeholder="Select Years"
             options={getYearOptions()}
-            selectedValues={form.year}
+            selectedValues={form.year ? [form.year] : []}
+            // onChange={(val) => {
+            //   if (!form.year.includes(val)) {
+            //     setForm({ ...form, year: [...form.year, val].sort() });
+            //   }
+            // }}
             onChange={(val) => {
-              if (!form.year.includes(val)) {
-                setForm({ ...form, year: [...form.year, val].sort() });
-              }
+              setForm({ ...form, year: val });
             }}
-            onRemove={(val) => {
-              setForm({
-                ...form,
-                year: form.year.filter((y) => y !== val),
-              });
+
+            // onRemove={(val) => {
+            //   setForm({
+            //     ...form,
+            //     year: form.year.filter((y) => y !== val),
+            //   });
+            // }}
+            onRemove={(_val) => {
+              setForm({ ...form, year: "" });
             }}
+
           />
         </div>
       </div>
 
-      {/* Sections & Save Button */}
       <div className="grid grid-cols-2 gap-6 items-end">
         <div>
           {customMode.sections ? (

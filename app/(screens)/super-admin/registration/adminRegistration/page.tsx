@@ -105,11 +105,14 @@ export default function AdminRegistration() {
 
   const handleSubmit = async () => {
     setIsLoading(true)
+    console.log("rester");
     try {
+
       const superAdmin = await checkSuperAdminAuth();
       if (!superAdmin) return;
       if (!form.fullName.trim()) return toast.error("Full Name is required");
       if (!form.email.trim()) return toast.error("Email Address is required");
+
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(normalizedEmail))
@@ -273,7 +276,7 @@ export default function AdminRegistration() {
                 handleChange("mobile", e.target.value.replace(/\D/g, ""))
               }
               maxLength={10}
-              className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm w-full focus:outline-none focus:border-[#49C77F]"
+              className="border text-black border-gray-300 rounded-lg px-4 py-2.5 text-sm w-full focus:outline-none focus:border-[#49C77F]"
             />
           </div>
         </div>

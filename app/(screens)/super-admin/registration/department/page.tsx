@@ -131,7 +131,7 @@ export default function Department() {
         <button
           type="button"
           onClick={addDepartment}
-          className="bg-[#49C77F] text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
+          className="bg-[#49C77F] cursor-pointer text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
         >
           Add
         </button>
@@ -163,7 +163,7 @@ export default function Department() {
              rounded-md font-semibold
              flex items-center justify-center
              hover:bg-[#3fb070]
-      ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d]"}
+      ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d] cursor-pointer"}
     `}
         >
           {loading ? "Saving..." : "Save Departments"}

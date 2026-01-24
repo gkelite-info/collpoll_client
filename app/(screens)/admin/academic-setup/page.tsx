@@ -43,29 +43,46 @@ export default function AcademicSetup() {
   ];
 
   const handleEdit = (row: AcademicViewData) => {
-    const extractNames = (arr: any[]) => {
-      if (!Array.isArray(arr)) return [];
+    const extractSingleValue = (value: any): string => {
+      if (!value) return "";
 
-      return arr
-        .map((item) => {
-          if (typeof item === "string" || typeof item === "number")
-            return String(item);
+      if (typeof value === "string" || typeof value === "number") {
+        return String(value);
+      }
 
-          if (item && typeof item === "object") {
-            return item.name || item.code || item.label || item.value || "";
-          }
+      if (Array.isArray(value)) {
+        const firstValid = value.find(Boolean);
+        return extractSingleValue(firstValid);
+      }
 
-          return "";
-        })
-        .filter((val) => val !== "" && val !== "[object Object]");
+      if (typeof value === "object") {
+        return (
+          value.name ||
+          value.code ||
+          value.label ||
+          value.value ||
+          ""
+        );
+      }
+
+      return "";
     };
 
     const sanitizedData: AcademicData = {
       id: row.id,
       degree: row.degree,
       dept: row.dept,
-      year: extractNames(row.year),
-      sections: extractNames(row.sections),
+      branch: row.branch,
+      year: extractSingleValue(row.year),
+      sections: Array.isArray(row.sections)
+        ? row.sections
+          .map((s: any) =>
+            typeof s === "string"
+              ? s
+              : s?.name || s?.code || s?.label || s?.value || ""
+          )
+          .filter(Boolean)
+        : [],
     };
 
     setEditData(sanitizedData);
