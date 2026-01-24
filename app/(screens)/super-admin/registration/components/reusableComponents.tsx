@@ -1,5 +1,5 @@
 import { CaretDown } from "@phosphor-icons/react/dist/ssr";
-
+ 
 type InputFieldProps = {
   label: string;
   placeholder?: string;
@@ -11,14 +11,10 @@ type InputFieldProps = {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   rightIcon?: React.ReactNode;
 };
-
+ 
 export const InputField = ({
   label,
-<<<<<<< Updated upstream
   name,
-=======
-   name,
->>>>>>> Stashed changes
   value,
   onChange,
   placeholder,
@@ -31,7 +27,6 @@ export const InputField = ({
     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
       {label}
     </label>
-<<<<<<< Updated upstream
     <div className="relative flex items-center justify-center">
       <input
         type={type}
@@ -44,27 +39,23 @@ export const InputField = ({
         }`}
         onWheel={(e) => e.currentTarget.blur()}
       />
-
+ 
       {rightIcon && (
         <div className="absolute right-3 flex text-gray-500">{rightIcon}</div>
       )}
     </div>
     {/* <input
-=======
-    <input
->>>>>>> Stashed changes
-    name={name}                 
-      value={value ?? ""}         
+    name={name}                
+      value={value ?? ""}        
       onChange={onChange}
       type={type}
       placeholder={placeholder}
       className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm"
       onWheel={(e) => e.currentTarget.blur()}
-<<<<<<< Updated upstream
     /> */}
   </div>
 );
-
+ 
 // export const SelectField = ({ label,  name = "", value = "", onChange= () => {}, type,  placeholder, className = "" }: any) => (
 //     <input
 //     name={name}
@@ -77,7 +68,7 @@ export const InputField = ({
 //     />
 //   </div>
 // );
-
+ 
 export const SelectField = ({
   label,
   name = "",
@@ -86,27 +77,15 @@ export const SelectField = ({
   placeholder,
   className = "",
 }: any) => (
-=======
-    />
-  </div>
-);
- 
-export const SelectField = ({ label,  name = "", value = "", onChange= () => {},  placeholder, className = "" }: any) => (
->>>>>>> Stashed changes
   <div className={`flex flex-col w-full relative ${className}`}>
-    <label className="text-[#333] font-semibold text-[15px] mb-1.5">     
+    <label className="text-[#333] font-semibold text-[15px] mb-1.5">
       {label}
     </label>
     <div className="relative">
       <select
         name={name}
-<<<<<<< Updated upstream
         value={value}
         onChange={onChange}
-=======
-        value={value}        
-        onChange={onChange}  
->>>>>>> Stashed changes
         // defaultValue=""
         className="appearance-none border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-600 w-full focus:outline-none focus:border-[#49C77F] bg-white cursor-pointer shadow-sm"
       >
@@ -122,3 +101,4 @@ export const SelectField = ({ label,  name = "", value = "", onChange= () => {},
     </div>
   </div>
 );
+ 
