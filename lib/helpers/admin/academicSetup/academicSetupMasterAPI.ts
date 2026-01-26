@@ -1,8 +1,7 @@
 import { saveCollegeEducation } from "../academicEducationAPI";
 import { upsertCollegeBranches } from "../collegeBranchAPI";
 import { saveCollegeAcademicYear } from "../collegeAcademicYearAPI";
-import { saveCollegeSections, SectionItem } from "../collegeSectionsAPI";
-import { generateUUID } from "@/lib/helpers/generateUUID";
+import { saveCollegeSections } from "../collegeSectionsAPI";
 
 export async function saveAcademicSetupMaster(
     input: {
@@ -13,7 +12,7 @@ export async function saveAcademicSetupMaster(
             type: string;
             code: string;
             academicYear: string;
-            sections: SectionItem[];
+            sections: string[];
         };
     },
     context: {

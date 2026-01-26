@@ -1,13 +1,9 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export type SectionItem = {
-    section: string;
-    uuid: string;
-};
 
 export type CollegeSectionsRow = {
     collegeSectionsId: number;
-    collegeSections: SectionItem[];
+    collegeSections: string;
     collegeEducationId: number;
     collegeBranchId: number;
     collegeAcademicYearId: number;
@@ -44,19 +40,20 @@ export async function fetchCollegeSections(
         .eq("collegeAcademicYearId", collegeAcademicYearId)
         .eq("isActive", true)
         .is("deletedAt", null)
-        .single();
 
-    if (error) {
-        if (error.code === "PGRST116") return null;
-        throw error;
-    }
+    // if (error) {
+    //     if (error.code === "PGRST116") return null;
+    //     throw error;
+    // }
 
-    return data as CollegeSectionsRow;
+    if (error) throw error;
+
+    return data as CollegeSectionsRow[];
 }
 
 export async function saveCollegeSections(
     payload: {
-        collegeSections: SectionItem[];
+        collegeSections: string[];
         collegeEducationId: number;
         collegeBranchId: number;
         collegeAcademicYearId: number;
@@ -66,42 +63,37 @@ export async function saveCollegeSections(
 ) {
     const now = new Date().toISOString();
 
-    const { data, error } = await supabase
+    await supabase
         .from("college_sections")
-        .upsert(
-            {
-                collegeSections: payload.collegeSections,
-                collegeEducationId: payload.collegeEducationId,
-                collegeBranchId: payload.collegeBranchId,
-                collegeAcademicYearId: payload.collegeAcademicYearId,
-                collegeId: payload.collegeId,
-                createdBy: adminId,
-                isActive: true,
-                createdAt: now,
-                updatedAt: now,
-            },
-            {
-                onConflict:
-                    "collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeId",
-            }
-        )
-        .select("collegeSectionsId")
-        .single();
+        .delete()
+        .eq("collegeId", payload.collegeId)
+        .eq("collegeBranchId", payload.collegeBranchId)
+        .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
 
-    if (error) {
-        console.error("saveCollegeSections error:", error);
-        throw error;
-    }
+    const rows = payload.collegeSections.map((section) => ({
+        collegeSections: section,
+        collegeEducationId: payload.collegeEducationId,
+        collegeBranchId: payload.collegeBranchId,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeId: payload.collegeId,
+        createdBy: adminId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+    }));
 
-    return {
-        success: true,
-        collegeSectionsId: data.collegeSectionsId,
-    };
+    const { error } = await supabase
+        .from("college_sections")
+        .insert(rows);
+
+    if (error) throw error;
+
+    return { success: true };
 }
 
 export async function updateCollegeSections(
     collegeSectionsId: number,
-    sections: SectionItem[]
+    sections: string
 ) {
     const { error } = await supabase
         .from("college_sections")
