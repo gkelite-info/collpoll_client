@@ -3,16 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import {
-  fetchDegreeAndDepartments,
-  saveAcademicSetup,
-  fetchExistingSetup,
-} from "@/lib/helpers/admin/academicSetupAPI";
-import { generateUUID } from "@/lib/helpers/generateUUID";
+import { fetchDegreeAndDepartments } from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
-import { saveCollegeEducation } from "@/lib/helpers/admin/academicEducationAPI";
-import { upsertCollegeBranches } from "@/lib/helpers/admin/collegeBranchAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 
 export type AcademicData = {
@@ -48,9 +41,6 @@ export default function AddAcademicSetup({
   const [availableDepts, setAvailableDepts] = useState<string[]>([]);
 
   const defaultSectionOptions = ["A", "B", "C", "D"];
-  const [currentSectionOptions, setCurrentSectionOptions] = useState<string[]>(
-    defaultSectionOptions
-  );
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingExisting, setIsFetchingExisting] = useState(false);
@@ -81,52 +71,10 @@ export default function AddAcademicSetup({
     }
   }, [form.degree, academicOptions]);
 
-  // useEffect(() => {
-  //   const checkExisting = async () => {
-  //     if (
-  //       form.degree &&
-  //       form.dept &&
-  //       !customMode.degree &&
-  //       !customMode.dept &&
-  //       !editData
-  //     ) {
-  //       setIsFetchingExisting(true);
-  //       const { success, data } = await fetchExistingSetup(
-  //         form.degree,
-  //         form.dept
-  //       );
-
-  //       if (success && data) {
-  //         setForm((prev) => ({
-  //           ...prev,
-  //           id: data.id,
-  //           sections: data.sections,
-  //           year: data.year,
-  //         }));
-
-  //         toast.success("Loaded existing configuration.", {
-  //           id: "loaded-existing",
-  //         });
-  //       } else {
-  //         setForm((prev) => ({
-  //           ...prev,
-  //           id: undefined,
-  //           sections: [],
-  //           year: [],
-  //         }));
-  //       }
-  //       setIsFetchingExisting(false);
-  //     }
-  //   };
-
-  //   checkExisting();
-  // }, [form.degree, form.dept]);
-
   useEffect(() => {
     if (editData) {
       setForm({
         ...editData,
-        // year: Array.isArray(editData.year) ? editData.year : [],
         year: editData.year ?? "",
         sections: Array.isArray(editData.sections) ? editData.sections : [],
       });
@@ -171,19 +119,6 @@ export default function AddAcademicSetup({
     );
   };
 
-  const branches = [
-    {
-      type: form.dept,
-      code: form.dept.replace(/\s+/g, "").toUpperCase(),
-    },
-  ];
-
-  const sectionItems = form.sections.map((s) => ({
-    section: s,
-    uuid: generateUUID(),
-  }));
-
-
   const handleSave = async () => {
     if (userLoading || !userId) {
       toast.error("User session not ready");
@@ -214,7 +149,7 @@ export default function AddAcademicSetup({
             type: form.branch,
             code: form.dept.replace(/\s+/g, "").toUpperCase(),
             academicYear: form.year,
-            sections: sectionItems,
+            sections: form.sections,
           },
         },
         {

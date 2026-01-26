@@ -47,7 +47,6 @@ export async function fetchCollegeAcademicYears(
     return data ?? [];
 }
 
-
 export async function fetchAcademicYearOptions(
     collegeId: number,
     collegeBranchId: number
