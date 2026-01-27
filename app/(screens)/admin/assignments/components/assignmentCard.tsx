@@ -8,19 +8,15 @@ export interface Department {
   color: string;
   bgColor: string;
   totalStudents: number;
-  avgAttendance: number;
-  belowThresholdCount: number;
   year?: string;
 }
 
-const FacultyAcademicCard = ({
+const AssignmentCard = ({
   name,
   text,
   color,
   bgColor,
   totalStudents,
-  avgAttendance,
-  belowThresholdCount,
   year = "2",
 }: Department) => {
   const router = useRouter();
@@ -117,4 +113,4 @@ const FacultyAcademicCard = ({
   );
 };
 
-export default FacultyAcademicCard;
+export default AssignmentCard;

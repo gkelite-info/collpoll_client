@@ -14,12 +14,13 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { User, UsersThree } from "@phosphor-icons/react";
 import { useSearchParams } from "next/navigation";
-import {SubjectWiseAttendance} from "../attendance/components/subjectWiseAttendance";
+import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
 import { useRouter } from "next/navigation";
+
+import CardComponent from "../attendance/components/cards";
 import FacultyAcademicCard, {
   Department,
 } from "./components/facultyAcademicCard";
-import CardComponent from "../attendance/components/cards";
 
 const cardData = [
   {
@@ -73,7 +74,7 @@ interface FilterProps {
 
 const DEPT_CONFIGS = [
   {
-    facultyName : "John Doe",
+    facultyName: "John Doe",
     name: "CSE",
     text: "#FF767D",
     color: "#FFB4B8",
@@ -81,7 +82,7 @@ const DEPT_CONFIGS = [
     subjects: ["Data Structures", "DBMS", "AI"],
   },
   {
-    facultyName : "Jane Smith",
+    facultyName: "Jane Smith",
     name: "ECE",
     text: "#FF9F7E",
     color: "#F3D3C8",
@@ -89,7 +90,7 @@ const DEPT_CONFIGS = [
     subjects: ["VLSI", "Signals", "Embedded"],
   },
   {
-    facultyName : "Alice Johnson",
+    facultyName: "Alice Johnson",
     name: "MECH",
     text: "#F8CF64",
     color: "#F3E2B6",
@@ -97,7 +98,7 @@ const DEPT_CONFIGS = [
     subjects: ["Thermodynamics", "Robotics"],
   },
   {
-    facultyName : "Bob Brown",
+    facultyName: "Bob Brown",
     name: "IT",
     text: "#66EEFA",
     color: "#BCECF0",
@@ -117,7 +118,7 @@ const generateFullMockData = (): ExtendedDepartment[] => {
         dept.subjects.forEach((sub) => {
           data.push({
             id: `${dept.name}-${yr}-${sec}-${sub}`,
-            facultyName : dept.facultyName,
+            facultyName: dept.facultyName,
             name: `${dept.name} - ${sec} (${sub})`,
             deptCode: dept.name,
             text: dept.text,
@@ -193,7 +194,7 @@ const AcademicPage = () => {
 
   const uniqueSubjects = useMemo(
     () => ["All", ...Array.from(new Set(allData.map((d) => d.subject)))],
-    []
+    [],
   );
 
   const filteredResults = useMemo(() => {
@@ -242,9 +243,7 @@ const AcademicPage = () => {
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div className="flex items-center gap-2 group w-fit cursor-pointer">
-            <h1 className="text-xl font-bold text-[#282828]">
-              Academics
-            </h1>
+            <h1 className="text-xl font-bold text-[#282828]">Academics</h1>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
             Track syllabus Progress and manage notes by semester
@@ -360,4 +359,3 @@ export default function Page() {
     </Suspense>
   );
 }
-
