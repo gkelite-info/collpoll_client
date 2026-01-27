@@ -101,7 +101,7 @@ export default function AddProjectPage() {
                       className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                     >
                       <img
-                        src={`https://i.pravatar.cc/100?u=${name}${seed}`}
+                       src={`https://i.pravatar.cc/100?u=member-${seed}`}
                         alt="faculty"
                         className="w-full h-full object-cover contrast-125"
                       />
