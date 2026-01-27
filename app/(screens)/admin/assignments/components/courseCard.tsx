@@ -39,7 +39,7 @@ const CourseCard: React.FC<CourseCardData> = ({
   const router = useRouter();
 
   const handleViewAssignments = () => {
-    router.push(`/admin/assignments/${id}`);
+    router.push(`/admin/assignments/1/subject/${id}`);
   };
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[320px] p-4 flex flex-col">
@@ -75,7 +75,7 @@ const CourseCard: React.FC<CourseCardData> = ({
       </div>
 
       <button
-        // onClick={handleViewAssignments}
+        onClick={handleViewAssignments}
         className=" w-full bg-[#16284F] hover:bg-[#1b3878] text-white py-1.5 rounded-full transition-colors duration-200 text-md cursor-pointer"
       >
         View Assignments

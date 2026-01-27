@@ -7,20 +7,20 @@ export interface Department {
   text: string;
   color: string;
   bgColor: string;
+  issuesRaised: number;
+  activeSubjects: number;
   totalStudents: number;
-  avgAttendance: number;
-  belowThresholdCount: number;
   year?: string;
 }
 
-const FacultyAcademicCard = ({
+const FacultyAssignmentCard = ({
   name,
   text,
   color,
   bgColor,
   totalStudents,
-  avgAttendance,
-  belowThresholdCount,
+  issuesRaised,
+  activeSubjects,
   year = "2",
 }: Department) => {
   const router = useRouter();
@@ -32,7 +32,8 @@ const FacultyAcademicCard = ({
     // params.set("view", "subjectWise");
     // params.set("deptId", name);
     // router.push(`${pathname}?${params.toString()}`);
-    router.push(`/admin/academics/${encodeURIComponent(name)}?year=${year}`);
+    router.push(`/admin/assignments/${encodeURIComponent(name)}?year=${year}`);
+    // router.push(`/admin/academics/${encodeURIComponent(name)}?year=${year}`);
   };
 
   return (
@@ -96,8 +97,22 @@ const FacultyAcademicCard = ({
             {belowThresholdCount}
           </span>
         </div> */}
+
         <div>
-          <p className="text-[#282828] text-sm">Last Update - Nov 15, 2025</p>
+          <div className="flex gap-2">
+            <p className="text-[#282828] text-sm">
+              Active Subjects with Assignments
+            </p>
+            <div className="bg-[#D0EFDE] text-xs flex justify-center items-center text-[#43C17A] px-3 h-4.5 rounded-full">
+              {issuesRaised}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <p className="text-[#282828] text-sm">Issues Raised</p>
+            <div className="bg-[#D0EFDE] text-xs flex justify-center items-center text-[#43C17A] px-3 h-4.5 rounded-full">
+              {issuesRaised}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -117,4 +132,4 @@ const FacultyAcademicCard = ({
   );
 };
 
-export default FacultyAcademicCard;
+export default FacultyAssignmentCard;
