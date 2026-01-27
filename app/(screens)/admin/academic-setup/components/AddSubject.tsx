@@ -40,17 +40,17 @@ export default function AddSubject({
 
   return (
     <div className="w-[60%] mx-auto bg-gray-50 p-6 rounded-lg">
-      <h2 className="text-lg font-semibold mb-6">
+      <h2 className="text-lg font-semibold mb-6 text-gray-900">
         {editData ? "Edit Subject" : "Add Subject"}
       </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 text-gray-400">
         <input
           name="subjectName"
           value={form.subjectName}
           onChange={handleChange}
           placeholder="Subject Name"
-          className="w-full px-4 py-2 border rounded-md"
+          className="w-full px-4 py-2 border rounded-md text-gray-900 placeholder-gray-400 "
           required
         />
 
@@ -59,7 +59,7 @@ export default function AddSubject({
           value={form.degree}
           onChange={handleChange}
           placeholder="Degree"
-          className="w-full px-4 py-2 border rounded-md"
+          className="w-full px-4 py-2 border rounded-md text-gray-900 placeholder-gray-400 "
           required
         />
 
@@ -68,7 +68,7 @@ export default function AddSubject({
           value={form.department}
           onChange={handleChange}
           placeholder="Department"
-          className="w-full px-4 py-2 border rounded-md"
+          className="w-full px-4 py-2 border rounded-md text-gray-900 placeholder-gray-400 "
           required
         />
 

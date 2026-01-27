@@ -1,8 +1,8 @@
 "use client";
 
-import { PlusCircle } from "@phosphor-icons/react";
+import { Plus, CaretDown } from "@phosphor-icons/react";
 
-interface Props {
+interface ProjectCardProps {
   title: string;
   type: string;
   description: string;
@@ -22,67 +22,137 @@ export default function ProjectCard({
   mentor,
   marks,
   status,
-}: Props) {
+}: ProjectCardProps) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="font-semibold text-[#282828]">{title}</h3>
-        <span className="bg-[#E7F9F0] text-[#22C55E] px-3 py-0.5 rounded-full text-xs font-medium">
-          {status}
-        </span>
+    <div className="bg-white rounded-2xl p-6 shadow-sm relative">
+      {/* HEADER */}
+      <div className="flex justify-between items-start mb-3">
+        <h3 className="text-lg font-semibold text-[#282828]">
+          {title}
+        </h3>
+
+        {/* Completed pill */}
+        <div className="flex items-center gap-1 h-7 px-3 rounded-full bg-[#43C17A]">
+          <span className="text-sm font-medium text-[#FFFFFF]">
+            {status}
+          </span>
+          <CaretDown size={12} className="text-[#ffffff]" />
+        </div>
       </div>
 
-      {/* Type */}
-      <span className="bg-[#EEE9FF] text-[#7051E1] w-fit px-3 py-0.5 rounded-full text-xs">
-        {type}
-      </span>
-
-      {/* Description */}
-      <p className="text-sm text-[#525252]">{description}</p>
-
-      {/* Details */}
-      <div className="text-sm space-y-1">
-        <Detail label="Duration" value={duration} />
-        <Detail label="Tech Stack" value={tech} />
-        <Detail label="Mentor" value={mentor} />
-        <Detail label="Marks" value={marks} />
+      {/* TYPE PILL */}
+      <div className="mb-3">
+        <div className="inline-flex items-center h-7 px-3 rounded-full" style={{ backgroundColor: "#795FD924" }}>
+          <span className="text-sm font-medium" style={{ color: "#795FD9" }}>
+            {type}
+          </span>
+        </div>
       </div>
 
-      {/* Team */}
-      <div className="flex justify-between items-center mt-2">
-        <div className="flex -space-x-2">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <img
-              key={i}
-              src={`https://i.pravatar.cc/40?img=${i}`}
-              className="w-7 h-7 rounded-full border-2 border-white"
-            />
-          ))}
-          <span className="text-xs bg-[#EAF6EF] text-[#22C55E] px-2 py-0.5 rounded-full ml-2">
-            See all
+      {/* DESCRIPTION */}
+      <p className="text-sm text-[#4B5563] mb-4">
+        {description}
+      </p>
+
+      {/* DETAILS */}
+      <div className="space-y-3 text-sm">
+        {/* Duration */}
+        <div className="flex items-center gap-4 ">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Duration
+          </span>
+          <div
+            className="
+    inline-flex items-center
+    h-[23px] px-[10px] py-[3px]
+    rounded-md
+  "
+            style={{ backgroundColor: "#795FD924" }}
+          >
+            <span className="text-[13px] font-medium px-2 py-1" style={{ color: "#795FD9" }}>
+              {duration}
+            </span>
+          </div>
+        </div>
+
+        {/* Tech Stack */}
+        <div className="flex items-start gap-4">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Tech Stack
+          </span>
+          <span className="text-[#374151]">
+            {tech}
           </span>
         </div>
 
-        <PlusCircle
-          size={28}
-          className="text-[#7051E1] cursor-pointer"
-          weight="fill"
-        />
+        {/* Team Members */}
+        <div className="flex items-center gap-4">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Team Members
+          </span>
+
+          <div className="flex items-center gap-3">
+            <div className="flex -space-x-2.5">
+              {[10, 20, 30, 40, 50].map((seed, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                >
+                  <img
+                    src={`https://i.pravatar.cc/100?u=${name}${seed}`}
+                    alt="faculty"
+                    className="w-full h-full object-cover contrast-125"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="h-7 px-3 rounded-full bg-[#43C17A1C] flex items-center">
+              <span className="text-xs font-medium text-[#22C55E] cursor-pointer">
+                See all
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mentor */}
+        <div className="flex items-start gap-4">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Mentor
+          </span>
+          <span className="text-[#374151]">
+            {mentor}
+          </span>
+        </div>
+
+        {/* Marks */}
+        <div className="flex items-start gap-4">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Marks
+          </span>
+          <span className="text-[#374151]">
+            {marks}
+          </span>
+        </div>
+
+        {/* Attachments */}
+        <div className="flex items-start gap-4">
+          <span className="w-[120px] font-medium text-[#282828]">
+            Attachments
+          </span>
+          <a
+            href="#"
+            className="text-[#6B7280] truncate hover:underline"
+          >
+            https://ai-attendance-demo.vercel.app
+          </a>
+        </div>
       </div>
-    </div>
+
+      {/* FLOATING PLUS */}
+      <button className="absolute bottom-4 right-4 w-9 h-9 rounded-full bg-[#7C5CFF] flex items-center justify-center text-white">
+        <Plus size={16} />
+      </button>
+    </div >
   );
 }
-
-const Detail = ({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) => (
-  <p>
-    <span className="font-medium text-[#282828]">{label} :</span>{" "}
-    <span className="text-[#525252]">{value}</span>
-  </p>
-);

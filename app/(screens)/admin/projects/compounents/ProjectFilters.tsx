@@ -1,40 +1,76 @@
-// "use client";
+"use client";
 
-// import { CaretDown, Plus } from "@phosphor-icons/react";
+import { CaretDown, Plus } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 
-// export default function ProjectFilters() {
-//   return (
-//     <div className="flex flex-wrap items-center gap-4 bg-white p-3 rounded-xl shadow-sm">
-//       {/* Add Project */}
-//       <button className="flex items-center gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#3ab36e] transition">
-//         <Plus size={16} weight="bold" />
-//         Add Project
-//       </button>
 
-//       {/* Year */}
-//       <FilterPill label="Year" value="2nd Year" />
+export default function ProjectFilters() {
+  const router = useRouter();
+  return (
+    <div className="mt-6 space-y-4">
+      {/* Top Row */}
+      <div className="flex items-center gap-6">
+        {/* Add Project */}
+        <button
+          onClick={() => router.push("/admin/projects/add")}
+          className="flex items-center gap-2 h-9 px-4 bg-[#43C17A] rounded-lg cursor-pointer"
+        >
+          <Plus size={16} color="#FFFFFF" weight="bold" />
+          <span className="text-sm font-medium text-white">
+            Add Project
+          </span>
+        </button>
 
-//       {/* Subject */}
-//       <FilterPill label="Subject" value="DBMS Project" />
+        {/* Year */}
+        <FilterSelect
+          label="Year"
+          value="2nd Year"
+        />
 
-//       {/* Status */}
-//       <FilterPill label="Status" value="Completed" />
-//     </div>
-//   );
-// }
+        {/* Subject */}
+        <FilterSelect
+          label="Subject"
+          value="DBMS Project"
+        />
 
-// function FilterPill({
-//   label,
-//   value,
-// }: {
-//   label: string;
-//   value: string;
-// }) {
-//   return (
-//     <div className="flex items-center gap-2 bg-[#EAF6EF] px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-[#dff2e6] transition">
-//       <span className="text-[#525252]">{label}</span>
-//       <span className="text-[#22C55E] font-medium">{value}</span>
-//       <CaretDown size={14} className="text-[#22C55E]" />
-//     </div>
-//   );
-// }
+        {/* Status */}
+        <FilterSelect
+          label="Status"
+          value="Completed"
+        />
+      </div>
+
+      {/* Bottom helper text (optional like Opportunities) */}
+      {/* <p className="text-sm font-medium text-[#43C17A]">
+        Projects
+      </p> */}
+    </div>
+  );
+}
+
+/* -------------------------------
+   Reusable Filter Select
+-------------------------------- */
+
+function FilterSelect({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-[#5C5C5C]">
+        {label}
+      </span>
+
+      <div className="flex items-center gap-1 h-9 px-4 rounded-full bg-[#43C17A1C] cursor-pointer">
+        <span className="text-sm font-medium text-[#43C17A]">
+          {value}
+        </span>
+        <CaretDown size={14} color="#43C17A" />
+      </div>
+    </div>
+  );
+}

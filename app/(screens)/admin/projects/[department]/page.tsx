@@ -1,39 +1,34 @@
-// "use client";
+"use client";
 
-// import { useParams } from "next/navigation";
-// import ProjectsHeader from "../compounents/ProjectsHeader";
-// import ProjectFilters from "../compounents/ProjectFilters";
-// import ProjectGrid from "../compounents/ProjectGrid";
-// import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { useParams } from "next/navigation";
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import ProjectsHeader from "../compounents/ProjectsHeader";
+import ProjectFilters from "../compounents/ProjectFilters";
+import ProjectGrid from "../compounents/ProjectGrid";
 
-// export default function DepartmentProjectsPage() {
-//   const params = useParams();
-//   const department = decodeURIComponent(params.department as string);
+export default function DepartmentProjectsPage() {
+  const params = useParams();
+  const department = decodeURIComponent(params.department as string);
 
-//   return (
-//     <div className="p-4 flex flex-col">
-//       {/* Header */}
-//       <div className="flex w-full justify-between items-center mb-4">
-//         <ProjectsHeader title={`${department} Projects`} />
+  return (
+    <div className="h-full overflow-y-auto p-6 flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-[18px]">
+        <ProjectsHeader title={`${department} Projects`} />
 
-//         <div className="w-[350px]">
-//           <CourseScheduleCard />
-//         </div>
-//       </div>
-
-//       {/* Filters */}
-//       <ProjectFilters/>
-
-//       {/* Projects List */}
-//       <ProjectGrid department={department} />
-//     </div>
-//   );
-// }
-
-export default function Page(){
-    return(
-        <div>
-            Department sub page
+        {/* Right side date card */}
+        <div className="w-[350px]">
+          <CourseScheduleCard />
         </div>
-    )
+      </div>
+
+      {/* Filters */}
+      <div style={{marginTop:"-25px", marginBottom:"15px"}}>
+      <ProjectFilters />
+      </div>
+
+      {/* Projects Grid */}
+      <ProjectGrid department={department} />
+    </div>
+  );
 }
