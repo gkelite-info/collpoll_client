@@ -15,15 +15,15 @@ export default function ViewSubjects({
   onEdit: (row: SubjectViewData) => void;
 }) {
   return (
-    <div className="w-[80%] mx-auto bg-white rounded-md shadow-lg">
+    <div className="w-[80%] mx-auto bg-white rounded-md shadow-lg border border-gray-200">
       <div className="max-h-[420px] overflow-y-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm text-gray-800">
           <thead className="bg-gray-100 sticky top-0">
             <tr>
-              <th className="p-4 text-left">Subject</th>
-              <th className="p-4 text-left">Degree</th>
-              <th className="p-4 text-left">Department</th>
-              <th className="p-4 text-left">Action</th>
+              <th className="p-4 text-left text-gray-700">Subject</th>
+              <th className="p-4 text-left text-gray-700">Degree</th>
+              <th className="p-4 text-left text-gray-700">Department</th>
+              <th className="p-4 text-left text-gray-700">Action</th>
             </tr>
           </thead>
 
