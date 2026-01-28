@@ -285,7 +285,7 @@ export function SubjectDetailsCard({
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto">
+      <div className="flex gap-6 overflow-x-auto pb-4">
         {units.map((unit) => (
           <div key={unit.id} className="min-w-[300px] shrink-0">
             <UnitCard unit={unit} />

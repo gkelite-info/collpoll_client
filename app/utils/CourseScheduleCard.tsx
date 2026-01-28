@@ -49,7 +49,7 @@ export default function CourseScheduleCard({
       {isVisibile && (
         <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
           <p className="text-[#EFEFEF] text-sm">
-            {degree} {department} – Year {year}
+            {degree} {department} – {year}
           </p>
         </div>
       )}

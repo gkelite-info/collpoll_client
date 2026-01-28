@@ -19,8 +19,11 @@ export type SubjectViewData = {
   semester: string;
 };
 
-export default function ViewSubjects({ onEdit }: { onEdit: (row: SubjectViewData) => void; }) {
-
+export default function ViewSubjects({
+  onEdit,
+}: {
+  onEdit: (row: SubjectViewData) => void;
+}) {
   const { userId } = useUser();
   const [subjects, setSubjects] = useState<SubjectViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,9 +42,7 @@ export default function ViewSubjects({ onEdit }: { onEdit: (row: SubjectViewData
       const res = await getAcademicSubjects(collegeId);
 
       if (!res.success) {
-        toast.error(
-          res.error || "Unable to load subjects. Please try again."
-        );
+        toast.error(res.error || "Unable to load subjects. Please try again.");
         setSubjects([]);
         return;
       }
@@ -61,7 +62,7 @@ export default function ViewSubjects({ onEdit }: { onEdit: (row: SubjectViewData
       setSubjects(mapped);
     } catch (err: any) {
       toast.error(
-        err.message || "Something went wrong while loading subjects."
+        err.message || "Something went wrong while loading subjects.",
       );
     } finally {
       setIsLoading(false);
@@ -86,39 +87,38 @@ export default function ViewSubjects({ onEdit }: { onEdit: (row: SubjectViewData
         </thead>
 
         <tbody>
-          {isLoading ?
+          {isLoading ? (
             <tr>
               <td colSpan={9} className="text-center p-3">
                 Loading...
               </td>
             </tr>
-            :
-            subjects.length > 0 ?
-              subjects.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
-                  <td className="p-3 text-[#2D3748]">{row.subjectName}</td>
-                  <td className="p-3 text-[#2D3748]">{row.subjectCode}</td>
-                  <td className="p-3 text-[#2D3748]">{row.subjectKey}</td>
-                  <td className="p-3 text-[#2D3748]">{row.credits}</td>
-                  <td className="p-3 text-[#2D3748]">{row.education}</td>
-                  <td className="p-3 text-[#2D3748]">{row.branch}</td>
-                  <td className="p-3 text-[#2D3748]">{row.year}</td>
-                  <td className="p-3 text-[#2D3748]">{row.semester}</td>
-                  <td
-                    className="p-3 underline cursor-pointer text-[#16284F]"
-                    onClick={() => onEdit(row)}
-                  >
-                    Edit
-                  </td>
-                </tr>
-              ))
-              :
-              <tr>
-                <td colSpan={9} className="text-center p-3">
-                  No Subjects Available.
+          ) : subjects.length > 0 ? (
+            subjects.map((row) => (
+              <tr key={row.id} className="hover:bg-gray-50">
+                <td className="p-3 text-[#2D3748]">{row.subjectName}</td>
+                <td className="p-3 text-[#2D3748]">{row.subjectCode}</td>
+                <td className="p-3 text-[#2D3748]">{row.subjectKey}</td>
+                <td className="p-3 text-[#2D3748]">{row.credits}</td>
+                <td className="p-3 text-[#2D3748]">{row.education}</td>
+                <td className="p-3 text-[#2D3748]">{row.branch}</td>
+                <td className="p-3 text-[#2D3748]">{row.year}</td>
+                <td className="p-3 text-[#2D3748]">{row.semester}</td>
+                <td
+                  className="p-3 underline cursor-pointer text-[#16284F]"
+                  onClick={() => onEdit(row)}
+                >
+                  Edit
                 </td>
               </tr>
-          }
+            ))
+          ) : (
+            <tr>
+              <td colSpan={9} className="text-center p-3">
+                No Subjects Available.
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>

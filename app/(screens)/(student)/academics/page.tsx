@@ -1,8 +1,23 @@
+"use client";
+
+import { useEffect, useState, Suspense } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { FaChevronDown } from "react-icons/fa6";
 import SubjectCard from "./components/subjectCard";
+import { useUser } from "@/app/utils/context/UserContext";
+
+type StudentAcademicDetails = {
+  department: string;
+  degree: string;
+  year: string;
+};
 
 export default function Academics() {
+  const { userId, loading: userLoading } = useUser();
+  const [studentDetails, setStudentDetails] =
+    useState<StudentAcademicDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const cardData = [
     {
       profileIcon: "/lec-1.png",
@@ -15,7 +30,7 @@ export default function Academics() {
       nextLesson: "Stacks and Queues",
       fromDate: "12-10-2025",
       toDate: "31-01-2026",
-      percentage: 50,
+      percentage: 0,
     },
     {
       profileIcon: "/lec-2.png",
@@ -84,25 +99,84 @@ export default function Academics() {
     },
   ];
 
-  return (
-    <div className="p-2 flex flex-col lg:pb-5">
-      <div className="flex justify-between items-center mb-5">
-        <div className="flex flex-col w-[50%]">
-          <h1 className="text-[#282828] font-bold text-[28px] mb-1">
-            Academics
-          </h1>
-          <p className="text-[#282828] text-[18px]">
-            Track syllabus Progress and manage notes by semester
-          </p>
-        </div>
-        <div className="flex justify-end w-[32%]">
-          <CourseScheduleCard style="w-[320px]" />
-        </div>
-      </div>
+  useEffect(() => {
+    const fetchStudentDetails = async () => {
+      if (!userId) return;
 
-      <div className="mt-4">
-        <SubjectCard subjectProps={cardData} />
+      try {
+        const { data, error } = await supabase
+          .from("students")
+          .select(
+            `
+            college_branch (
+              collegeBranchCode
+            ),
+            college_education (
+              collegeEducationType
+            ),
+            college_academic_year (
+              collegeAcademicYear
+            )
+          `,
+          )
+          .eq("userId", userId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching student details:", error);
+          return;
+        }
+
+        if (data) {
+          const branch = data.college_branch as any;
+          const education = data.college_education as any;
+          const academicYear = data.college_academic_year as any;
+
+          setStudentDetails({
+            department: branch?.collegeBranchCode || "N/A",
+            degree: education?.collegeEducationType || "N/A",
+            year: academicYear?.collegeAcademicYear || "N/A",
+          });
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (!userLoading && userId) {
+      fetchStudentDetails();
+    }
+  }, [userId, userLoading]);
+
+  return (
+    <Suspense fallback={null}>
+      <div className="p-2 flex flex-col lg:pb-5">
+        {/* header */}
+        <div className="flex justify-between items-center mb-5">
+          <div className="flex flex-col w-[50%]">
+            <h1 className="text-[#282828] font-bold text-[28px] mb-1">
+              Academics
+            </h1>
+            <p className="text-[#282828] text-[18px]">
+              Track syllabus Progress and manage notes by semester
+            </p>
+          </div>
+          <div className="flex justify-end w-[32%]">
+            <CourseScheduleCard
+              department={loading ? "..." : studentDetails?.department || "N/A"}
+              degree={loading ? "..." : studentDetails?.degree || "N/A"}
+              year={loading ? "..." : studentDetails?.year || "N/A"}
+              style="w-[320px]"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <SubjectCard subjectProps={cardData} />
+        </div>
       </div>
-    </div>
+    </Suspense>
   );
 }
