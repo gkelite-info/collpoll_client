@@ -100,7 +100,7 @@ export default function AttendanceClient() {
     return () => {
       isMounted = false;
     };
-  }, [userId, userLoading, viewDate]); // 4. Add viewDate to dependencies
+  }, [userId, userLoading, viewDate]);
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
