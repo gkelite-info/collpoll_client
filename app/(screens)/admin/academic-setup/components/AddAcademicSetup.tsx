@@ -216,6 +216,7 @@ export default function AddAcademicSetup({
       setForm((prev) => ({ ...prev, [field]: tempCustomInput }));
       setCustomMode((prev) => ({ ...prev, [field]: false }));
     }
+
     setTempCustomInput("");
   };
 

@@ -236,12 +236,22 @@ export default function AcademicSetup() {
           <AddAcademicSetup editData={editData} onSuccess={handleSaveSuccess} />
         )}
         {activeTab === "view-subject" && (
+<<<<<<< Updated upstream
           <ViewSubjects onEdit={handleSubjectEdit} />
+=======
+          <ViewSubjects
+            data={subjects}
+            onEdit={handleSubjectEdit}
+          />
+>>>>>>> Stashed changes
         )}
         {activeTab === "add-subject" && (
           <AddSubject
             editData={editSubject}
+<<<<<<< Updated upstream
             editUi={editSubjectUi}
+=======
+>>>>>>> Stashed changes
             onSave={handleSubjectSave}
           />
         )}
