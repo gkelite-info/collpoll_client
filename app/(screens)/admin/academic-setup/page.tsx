@@ -9,8 +9,11 @@ import ViewAcademicStructure, {
 import ViewSubjects, {
   SubjectViewData,
 } from "./components/ViewSubjects";
-import AddSubject, { SubjectFormData } from "./components/AddSubject";
+import AddSubject, { SubjectFormData, SubjectUIState } from "./components/AddSubject";
 import toast from "react-hot-toast";
+import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds, } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
 
 type Tab = "view" | "add" | "view-subject" | "add-subject";
 
@@ -19,22 +22,9 @@ export default function AcademicSetup() {
   const [editData, setEditData] = useState<AcademicData | null>(null);
   const [editSubject, setEditSubject] =
     useState<SubjectFormData | null>(null);
-
-  const [subjects, setSubjects] = useState<SubjectViewData[]>([
-    {
-      id: "1",
-      subjectName: "Mathematics",
-      degree: "B.Tech",
-      department: "CSE",
-    },
-    {
-      id: "2",
-      subjectName: "Physics",
-      degree: "B.Sc",
-      department: "Science",
-    },
-  ]);
-
+  const { userId } = useUser()
+  const [editSubjectUi, setEditSubjectUi] =
+    useState<SubjectUIState | null>(null);
   const tabs = [
     { id: "view", label: "View Academic Structure" },
     { id: "add", label: "Add Academic Setup" },
@@ -94,28 +84,98 @@ export default function AcademicSetup() {
     setActiveTab("view");
   };
 
-  const handleSubjectEdit = (row: SubjectViewData) => {
-    setEditSubject(row);
-    setActiveTab("add-subject");
-  };
+  const handleSubjectEdit = async (row: SubjectViewData) => {
+    try {
+      toast.loading("Loading subject details...", { id: "subject-edit" });
 
-  const handleSubjectSave = (data: SubjectFormData) => {
-    if (data.id) {
-      setSubjects((prev) =>
-        prev.map((s) => (s.id === data.id ? { ...s, ...data } : s))
-      );
-      toast.success("Subject updated successfully");
-    } else {
-      setSubjects((prev) => [
-        ...prev,
-        { ...data, id: Date.now().toString() },
-      ]);
-      toast.success("Subject added successfully");
+      const res = await getAcademicSubjectById(row.id);
+
+      if (!res.success || !res.data) {
+        toast.error("Failed to load subject details", { id: "subject-edit" });
+        return;
+      }
+
+      // 🔹 MAP DB → FORM MODEL (IMPORTANT)
+      const mappedForm: SubjectFormData = {
+        id: res.data.collegeSubjectId,
+        collegeEducationId: res.data.collegeEducationId,
+        collegeBranchId: res.data.collegeBranchId,
+        collegeAcademicYearId: res.data.collegeAcademicYearId,
+        collegeSemesterId: res.data.collegeSemesterId,
+        subjectName: res.data.subjectName,
+        subjectCode: res.data.subjectCode,
+        subjectKey: res.data.subjectKey ?? "",
+        credits: res.data.credits,
+      };
+
+      const uiValues = await resolveSubjectUIFromIds({
+        collegeEducationId: res.data.collegeEducationId,
+        collegeBranchId: res.data.collegeBranchId,
+        collegeAcademicYearId: res.data.collegeAcademicYearId,
+        collegeSemesterId: res.data.collegeSemesterId,
+      });
+
+      setEditSubject(mappedForm);
+      setEditSubjectUi(uiValues);
+      setActiveTab("add-subject");
+
+      toast.success("Subject loaded", { id: "subject-edit" });
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong", {
+        id: "subject-edit",
+      });
     }
-
-    setEditSubject(null);
-    setActiveTab("view-subject");
   };
+
+
+  const handleSubjectSave = async (form: SubjectFormData,
+    ui: SubjectUIState) => {
+    try {
+      if (!userId) return toast.error("User not found");
+      const { collegeId } = await fetchAdminContext(userId);
+      const resolvedIds = await resolveSubjectIds({
+        education: ui.education,
+        branch: ui.branch,
+        year: ui.year,
+        semester: ui.semester,
+        collegeId,
+      });
+
+      // const payload = {
+      //   ...form,
+      //   ...resolvedIds,
+      //   collegeId,
+      //   createdBy: userId,
+      // };
+
+      const payload = {
+        ...(form.id && { collegeSubjectId: form.id }),
+        subjectName: form.subjectName,
+        subjectCode: form.subjectCode,
+        subjectKey: form.subjectKey,
+        credits: form.credits,
+
+        ...resolvedIds,
+        collegeId,
+        createdBy: userId,
+      };
+
+      const res = await upsertAcademicSubject(payload);
+
+      if (!res.success) {
+        throw new Error(res.error);
+      }
+
+      setEditSubject(null);
+      setEditSubjectUi(null);
+      setActiveTab("view-subject");
+      toast.success(form.id ? "Subject updated successfully" : "Subject added successfully");
+    } catch (err: any) {
+      toast.error(err.message || "Subject save failed");
+    }
+  };
+
+
 
   return (
     <section className="min-h-[85vh] p-2">
@@ -132,9 +192,20 @@ export default function AcademicSetup() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                // onClick={() => {
+                //   setActiveTab(tab.id as Tab);
+                //   if (tab.id === "add") setEditData(null);
+                // }}
                 onClick={() => {
                   setActiveTab(tab.id as Tab);
-                  if (tab.id === "add") setEditData(null);
+
+                  if (tab.id !== "add-subject") {
+                    setEditSubject(null);
+                  }
+
+                  if (tab.id === "add") {
+                    setEditData(null);
+                  }
                 }}
                 className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
                   ? "text-white"
@@ -165,7 +236,7 @@ export default function AcademicSetup() {
         )}
         {activeTab === "view-subject" && (
           <ViewSubjects
-            data={subjects} // 🔹 NEW
+            // data={subjects}
             onEdit={handleSubjectEdit}
           />
         )}
@@ -173,7 +244,8 @@ export default function AcademicSetup() {
         {activeTab === "add-subject" && (
           <AddSubject
             editData={editSubject}
-            onSave={handleSubjectSave} // 🔹 NEW
+            editUi={editSubjectUi}
+            onSave={handleSubjectSave}
           />
         )}
       </div>
