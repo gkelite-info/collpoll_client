@@ -1,19 +1,17 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import { X, CaretDown, Eye, EyeSlash, Plus, Lock } from "@phosphor-icons/react";
-import toast, { Toaster } from "react-hot-toast";
-import { CustomMultiSelect, PillTag } from "./userModalComponents";
 import {
+  fetchAdminContext,
   fetchModalInitialData,
-  persistUser,
   persistFaculty,
+  persistUser,
 } from "@/lib/helpers/admin/upsertFaculty";
-
-import { useUser } from "@/app/utils/context/UserContext";
-import { supabase } from "@/lib/supabaseClient";
-import { upsertStudentEntry } from "@/lib/helpers/profile/students";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
-import { generateUUID } from "@/lib/helpers/generateUUID";
+import { upsertStudentEntry } from "@/lib/helpers/profile/students";
+import { supabase } from "@/lib/supabaseClient";
+import { CaretDown, Eye, EyeSlash, Lock, X } from "@phosphor-icons/react";
+import React, { useEffect, useMemo, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import { CustomMultiSelect } from "./userModalComponents";
 
 const BASE_YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const SECTION_LETTERS = ["A", "B", "C", "D"];
@@ -23,18 +21,14 @@ const AddUserModal: React.FC<{
   onClose: () => void;
   user?: any;
 }> = ({ isOpen, onClose, user }) => {
-  const {
-    userId: adminId,
-    collegeId,
-    collegePublicId,
-    loading: userLoading,
-  } = useUser();
+  const [dbData, setDbData] = useState<{
+    educations: any[];
+    branches: any[];
+    years: any[];
+    sections: any[];
+    subjects: any[];
+  }>({ educations: [], branches: [], years: [], sections: [], subjects: [] });
 
-  const [dbData, setDbData] = useState<any>({
-    educations: [],
-    departments: [],
-    subjects: [],
-  });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -48,12 +42,22 @@ const AddUserModal: React.FC<{
     password: "",
     confirmPassword: "",
     studentId: "",
-    collegeId: collegePublicId || "",
-    collegeIntId: collegeId || 0,
-    adminId: adminId || 0,
+    collegeId: "",
+    collegeIntId: 0,
+    adminId: 0,
   };
-
   const [basicData, setBasicData] = useState<any>(initialBasicData);
+
+  const [selectedEducationId, setSelectedEducationId] = useState<number | null>(
+    null,
+  );
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
+    null,
+  );
+  const [selectedSectionIds, setSelectedSectionIds] = useState<number[]>([]);
+
   const [selectedDegrees, setSelectedDegrees] = useState<string[]>([]);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
@@ -61,24 +65,18 @@ const AddUserModal: React.FC<{
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [subjectInput, setSubjectInput] = useState("");
 
-  useEffect(() => {
-    if (!user && !userLoading && adminId) {
-      setBasicData((prev: any) => ({
-        ...prev,
-        collegeId: collegePublicId || "",
-        collegeIntId: collegeId || 0,
-        adminId: adminId || 0,
-      }));
-    }
-  }, [userLoading, adminId, collegeId, collegePublicId, user]);
-
   const resetForm = () => {
-    setBasicData({
+    setBasicData((prev: any) => ({
       ...initialBasicData,
-      collegeId: collegePublicId || "",
-      collegeIntId: collegeId || 0,
-      adminId: adminId || 0,
-    });
+      collegeId: prev.collegeId,
+      collegeIntId: prev.collegeIntId,
+      adminId: prev.adminId,
+    }));
+    setSelectedEducationId(null);
+    setSelectedBranchId(null);
+    setSelectedYearId(null);
+    setSelectedSubjectId(null);
+    setSelectedSectionIds([]);
     setSelectedDegrees([]);
     setSelectedDepts([]);
     setSelectedYears([]);
@@ -91,10 +89,38 @@ const AddUserModal: React.FC<{
   useEffect(() => {
     if (isOpen) {
       const init = async () => {
-        const { formattedDbData } = await fetchModalInitialData();
-        if (formattedDbData) setDbData(formattedDbData);
+        try {
+          const {
+            data: { user: authUser },
+          } = await supabase.auth.getUser();
+          if (!authUser) return;
+
+          const { data: userData } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("auth_id", authUser.id)
+            .single();
+          if (!userData) return;
+
+          const adminContext = await fetchAdminContext(userData.userId);
+
+          setBasicData((prev: any) => ({
+            ...prev,
+            collegeId: adminContext.collegePublicId,
+            collegeIntId: adminContext.collegeId,
+            adminId: adminContext.adminId,
+          }));
+
+          const data = await fetchModalInitialData(adminContext.collegeId);
+          setDbData(data);
+        } catch (error) {
+          console.error("Error initializing modal data:", error);
+          toast.error("Failed to load college data");
+        }
       };
+
       init();
+
       if (user) {
         setBasicData((p: any) => ({
           ...p,
@@ -104,172 +130,146 @@ const AddUserModal: React.FC<{
           role: user.role || "Faculty",
           gender: user.gender || "Male",
           studentId: user.studentId ? String(user.studentId) : "",
-          collegeIntId: user.collegeId || p.collegeIntId,
         }));
-        if (user.degrees)
-          setSelectedDegrees(
-            Array.isArray(user.degrees)
-              ? user.degrees.map((d: any) => d.name || d)
-              : JSON.parse(user.degrees)
-          );
-        if (user.departments)
-          setSelectedDepts(
-            Array.isArray(user.departments)
-              ? user.departments.map((d: any) => d.name || d)
-              : JSON.parse(user.departments)
-          );
-        if (user.subjects)
-          setSelectedSubjects(
-            Array.isArray(user.subjects)
-              ? user.subjects.map((s: any) => s.name || s)
-              : JSON.parse(user.subjects)
-          );
-        if (user.sections)
-          setSelectedSections(
-            Array.isArray(user.sections)
-              ? user.sections.map((s: any) => s.name || s)
-              : JSON.parse(user.sections)
-          );
       } else {
         resetForm();
       }
     }
   }, [isOpen, user]);
 
-  // Memoized Options
+  const filteredBranches = useMemo(
+    () =>
+      dbData.branches.filter(
+        (b) => b.collegeEducationId === selectedEducationId,
+      ),
+    [dbData.branches, selectedEducationId],
+  );
+
+  const filteredYears = useMemo(
+    () => dbData.years.filter((y) => y.collegeBranchId === selectedBranchId),
+    [dbData.years, selectedBranchId],
+  );
+
+  const filteredSubjects = useMemo(
+    () =>
+      dbData.subjects.filter((s) => s.collegeAcademicYearId === selectedYearId),
+    [dbData.subjects, selectedYearId],
+  );
+
+  const filteredSections = useMemo(
+    () =>
+      dbData.sections.filter((s) => s.collegeAcademicYearId === selectedYearId),
+    [dbData.sections, selectedYearId],
+  );
+
+  const handleBasicChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
+  const toggleSelection = (list: string[], setList: Function, item: string) =>
+    setList(
+      list.includes(item) ? list.filter((i) => i !== item) : [...list, item],
+    );
+  const toggleSectionId = (idStr: string) => {
+    const id = parseInt(idStr);
+    setSelectedSectionIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
   const degreeOptions = useMemo(
-    () => dbData.educations.map((e: any) => e.name),
-    [dbData.educations]
+    () => dbData.educations.map((e: any) => e.collegeEducationType),
+    [dbData.educations],
   );
   const availableDeptsGrouped = useMemo(() => {
     const grouped: Record<string, string[]> = {};
-    selectedDegrees.forEach((deg) => {
-      const edu = dbData.educations.find((e: any) => e.name === deg);
-      if (edu?.rawDepts) grouped[deg] = edu.rawDepts.map((d: any) => d.code);
+    selectedDegrees.forEach((degName) => {
+      const edu = dbData.educations.find(
+        (e: any) => e.collegeEducationType === degName,
+      );
+      if (edu) {
+        grouped[degName] = dbData.branches
+          .filter((b: any) => b.collegeEducationId === edu.collegeEducationId)
+          .map((b: any) => b.collegeBranchCode);
+      }
     });
     return grouped;
-  }, [selectedDegrees, dbData.educations]);
+  }, [selectedDegrees, dbData.educations, dbData.branches]);
   const availableYearsGrouped = useMemo(() => {
     const grouped: Record<string, string[]> = {};
     selectedDepts.forEach((dept) => {
-      grouped[dept] = BASE_YEARS.map((year) => `${dept} - ${year}`);
+      grouped[dept] = BASE_YEARS.map((y) => `${dept} - ${y}`);
     });
     return grouped;
   }, [selectedDepts]);
   const availableSectionsGrouped = useMemo(() => {
     const grouped: Record<string, string[]> = {};
     selectedDepts.forEach((dept) => {
-      grouped[dept] = SECTION_LETTERS.map((letter) => `${dept}-${letter}`);
+      grouped[dept] = SECTION_LETTERS.map((l) => `${dept}-${l}`);
     });
     return grouped;
   }, [selectedDepts]);
 
-  const handleBasicChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
-  };
-  const toggleSelection = (list: string[], setList: Function, item: string) => {
-    setList(
-      list.includes(item) ? list.filter((i) => i !== item) : [...list, item]
-    );
-  };
-
   const isFaculty = basicData.role === "Faculty";
   const isStudent = basicData.role === "Student";
   const isParent = basicData.role === "Parent";
-  const showAcademicFields = isFaculty || isStudent;
 
   const handleSave = async () => {
     if (!basicData.fullName || !basicData.email || !basicData.role)
-      return toast.error("Please fill in all required fields.");
+      return toast.error("Required fields missing.");
+
+    if (
+      isFaculty &&
+      (!selectedEducationId ||
+        !selectedBranchId ||
+        !selectedYearId ||
+        !selectedSubjectId ||
+        selectedSectionIds.length === 0)
+    )
+      return toast.error("Complete all academic fields.");
     if (isParent && !basicData.studentId)
-      return toast.error("Student ID is required for Parent accounts.");
-    if (isStudent) {
-      if (selectedDegrees.length !== 1)
-        return toast.error("Students must have exactly one Degree.");
-      if (selectedDepts.length !== 1)
-        return toast.error("Students must have exactly one Department.");
-      if (selectedYears.length !== 1)
-        return toast.error("Students must have exactly one Year.");
-      if (selectedSections.length !== 1)
-        return toast.error("Students must have exactly one Section.");
-    }
-    if (!user) {
-      if (!basicData.password)
-        return toast.error("Password is required for new users.");
-      if (basicData.password !== basicData.confirmPassword)
-        return toast.error("Passwords do not match.");
-    }
+      return toast.error("Student ID required.");
+    if (
+      !user &&
+      (!basicData.password || basicData.password !== basicData.confirmPassword)
+    )
+      return toast.error("Check passwords.");
 
     setLoading(true);
-
     let createdUserId: number | null = null;
 
     try {
       const timestamp = new Date().toISOString();
-      const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
-
       const targetUserId = await persistUser(
         !user,
         { ...basicData, collegePublicId: basicData.collegeId },
         user ? user.userId : null,
-        timestamp
+        timestamp,
       );
-
-      if (!user) {
-        createdUserId = targetUserId;
-      }
+      if (!user) createdUserId = targetUserId;
 
       if (isFaculty && targetUserId) {
-        const degreesPayload = dbData.educations
-          .filter((e: any) => selectedDegrees.includes(e.name))
-          .map((e: any) => ({ uuid: generateUUID(), name: e.name }));
-        const departmentsPayload = dbData.departments
-          .filter((d: any) => selectedDepts.includes(d.code))
-          .map((d: any) => ({
-            uuid: generateUUID(),
-            name: d.name,
-            code: d.code,
-          }));
-        const subjectsPayload = selectedSubjects.map((name) => {
-          const found = dbData.subjects.find((s: any) => s.name === name);
-          return { uuid: found?.uuid || generateUUID(), name };
-        });
-        const sectionsPayload = selectedSections.map((name) => ({
-          uuid: generateUUID(),
-          name,
-        }));
-        const yearsPayload = selectedYears.map((y) => ({
-          uuid: generateUUID(),
-          name: y,
-        }));
-
         await persistFaculty(
           targetUserId,
           { ...basicData, collegePublicId: basicData.collegeId },
           {
-            degrees: degreesPayload,
-            departments: departmentsPayload,
-            subjects: subjectsPayload,
-            sections: sectionsPayload,
-            years: yearsPayload,
+            educationId: selectedEducationId!,
+            branchId: selectedBranchId!,
+            yearId: selectedYearId!,
+            subjectId: selectedSubjectId!,
+            sectionIds: selectedSectionIds,
           },
           timestamp,
-          !!user
+          !!user,
         );
       }
 
       if (isStudent && targetUserId) {
-        const yearString = selectedYears[0] || "";
-        const yearMatch = yearString.match(/(\d+)(?:st|nd|rd|th)/);
-        const yearInt = yearMatch ? parseInt(yearMatch[1]) : 1;
-
-        const studentPayload = {
+        const yearInt = parseInt(selectedYears[0]?.match(/(\d+)/)?.[1] || "1");
+        await upsertStudentEntry({
           userId: targetUserId,
           fullName: basicData.fullName,
           email: basicData.email,
-          mobile: fullMobile,
+          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
           role: "Student",
           gender: basicData.gender,
           collegeId: basicData.collegeId,
@@ -278,60 +278,30 @@ const AddUserModal: React.FC<{
           degree: selectedDegrees[0],
           year: yearInt,
           section: selectedSections[0],
-        };
-
-        const result = await upsertStudentEntry(studentPayload);
-        if (!result.success)
-          throw new Error(result.error || "Failed to save student profile");
+        });
       }
 
       if (isParent && targetUserId) {
-        const parentPayload = {
-          userId: targetUserId,
+        await upsertParentEntry({
           studentId: parseInt(basicData.studentId),
           fullName: basicData.fullName,
           email: basicData.email,
-          mobile: fullMobile,
+          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
           gender: basicData.gender,
           collegeId: basicData.collegeId,
           collegeCode: basicData.collegeId.replace(/\d+/g, ""),
           createdBy: basicData.adminId,
-        };
-
-        const result = await upsertParentEntry(parentPayload);
-        if (!result.success)
-          throw new Error(result.error || "Failed to save parent profile");
+        });
       }
 
       toast.success("Saved Successfully");
       resetForm();
       onClose();
     } catch (e: any) {
-      console.error("Save Error:", e);
-
-      if (createdUserId && !user) {
-        console.log("Rolling back: Deleting orphaned user", createdUserId);
-        try {
-          await supabase.from("users").delete().eq("userId", createdUserId);
-        } catch (cleanupError) {
-          console.error("Critical: Failed to rollback user", cleanupError);
-        }
-      }
-
-      // toast.error(e.message || "An error occurred");
-      const errorMsg = e?.message || "";
-
-      if (
-        errorMsg.includes("duplicate key") ||
-        errorMsg.includes("users_email")
-      ) {
-        toast.error(
-          "This email ID is already registered. Please use a different email."
-        );
-      } else {
-        toast.error("Unable to save user. Please try again.");
-      }
-
+      console.error(e);
+      if (createdUserId && !user)
+        await supabase.from("users").delete().eq("userId", createdUserId);
+      toast.error(e.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -379,7 +349,6 @@ const AddUserModal: React.FC<{
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
-
             <div className="grid grid-cols-2 gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -388,7 +357,7 @@ const AddUserModal: React.FC<{
                 <div className="relative">
                   <input
                     type="text"
-                    value={basicData.collegeId}
+                    value={basicData.collegeIntId}
                     readOnly
                     className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
                   />
@@ -432,7 +401,7 @@ const AddUserModal: React.FC<{
                     className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                   >
                     <option value="" disabled>
-                      Select a role
+                      Select Role
                     </option>
                     <option value="Faculty">Faculty</option>
                     <option value="Student">Student</option>
@@ -444,7 +413,40 @@ const AddUserModal: React.FC<{
                   />
                 </div>
               </div>
-              {showAcademicFields && (
+              {isFaculty && (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    Education Type
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedEducationId || ""}
+                      onChange={(e) => {
+                        setSelectedEducationId(Number(e.target.value));
+                        setSelectedBranchId(null);
+                      }}
+                      className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer"
+                    >
+                      <option value="" disabled>
+                        Select Education Type
+                      </option>
+                      {dbData.educations.map((e: any) => (
+                        <option
+                          key={e.collegeEducationId}
+                          value={e.collegeEducationId}
+                        >
+                          {e.collegeEducationType}
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    />
+                  </div>
+                </div>
+              )}
+              {isStudent && (
                 <CustomMultiSelect
                   label="Degree"
                   placeholder="Select Degree"
@@ -461,21 +463,150 @@ const AddUserModal: React.FC<{
               {isParent && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Student User ID
+                    Student ID
                   </label>
                   <input
                     type="number"
                     name="studentId"
                     value={basicData.studentId}
                     onChange={handleBasicChange}
-                    placeholder="Enter Student's User ID"
+                    placeholder="Enter Student ID"
                     className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                   />
                 </div>
               )}
             </div>
 
-            {showAcademicFields && (
+            {isFaculty && (
+              <>
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Branch
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedBranchId || ""}
+                        disabled={!selectedEducationId}
+                        onChange={(e) => {
+                          setSelectedBranchId(Number(e.target.value));
+                          setSelectedYearId(null);
+                        }}
+                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                      >
+                        <option value="" disabled>
+                          Select Branch
+                        </option>
+                        {filteredBranches.map((b: any) => (
+                          <option
+                            key={b.collegeBranchId}
+                            value={b.collegeBranchId}
+                          >
+                            {b.collegeBranchCode}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Year
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedYearId || ""}
+                        disabled={!selectedBranchId}
+                        onChange={(e) => {
+                          setSelectedYearId(Number(e.target.value));
+                          setSelectedSubjectId(null);
+                        }}
+                        className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                      >
+                        <option value="" disabled>
+                          Select Year
+                        </option>
+                        {filteredYears.map((y: any) => (
+                          <option
+                            key={y.collegeAcademicYearId}
+                            value={y.collegeAcademicYearId}
+                          >
+                            {y.collegeAcademicYear}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Subject
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedSubjectId || ""}
+                        disabled={!selectedYearId}
+                        onChange={(e) =>
+                          setSelectedSubjectId(Number(e.target.value))
+                        }
+                        className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                      >
+                        <option value="" disabled>
+                          Select Subject
+                        </option>
+                        {filteredSubjects.map((s: any) => (
+                          <option
+                            key={s.collegeSubjectId}
+                            value={s.collegeSubjectId}
+                          >
+                            {s.subjectName}
+                          </option>
+                        ))}
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
+                  </div>
+                  <CustomMultiSelect
+                    label="Sections"
+                    placeholder="Select Sections"
+                    options={filteredSections.map(
+                      (s: any) => s.collegeSections,
+                    )}
+                    selectedValues={filteredSections
+                      .filter((s: any) =>
+                        selectedSectionIds.includes(s.collegeSectionsId),
+                      )
+                      .map((s: any) => s.collegeSections)}
+                    disabled={!selectedYearId}
+                    onChange={(v) => {
+                      const s = filteredSections.find(
+                        (i: any) => i.collegeSections === v,
+                      );
+                      if (s) toggleSectionId(String(s.collegeSectionsId));
+                    }}
+                    onRemove={(v) => {
+                      const s = filteredSections.find(
+                        (i: any) => i.collegeSections === v,
+                      );
+                      if (s) toggleSectionId(String(s.collegeSectionsId));
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
+            {isStudent && (
               <>
                 <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
@@ -492,64 +623,7 @@ const AddUserModal: React.FC<{
                       toggleSelection(selectedDepts, setSelectedDepts, v)
                     }
                   />
-                  {isFaculty ? (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#2D3748]">
-                        Subject
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Enter Subject"
-                          value={subjectInput}
-                          disabled={selectedDepts.length === 0}
-                          onChange={(e) => setSubjectInput(e.target.value)}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" &&
-                            subjectInput &&
-                            (toggleSelection(
-                              selectedSubjects,
-                              setSelectedSubjects,
-                              subjectInput
-                            ),
-                              setSubjectInput(""))
-                          }
-                          className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                        />
-                        <button
-                          onClick={() =>
-                            subjectInput &&
-                            (toggleSelection(
-                              selectedSubjects,
-                              setSelectedSubjects,
-                              subjectInput
-                            ),
-                              setSubjectInput(""))
-                          }
-                          className="bg-[#43C17A] text-white p-1.5 rounded-md hover:bg-[#3ea876] transition-colors"
-                        >
-                          <Plus size={16} weight="bold" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {selectedSubjects.map((s) => (
-                          <PillTag
-                            key={s}
-                            label={s}
-                            onRemove={() =>
-                              toggleSelection(
-                                selectedSubjects,
-                                setSelectedSubjects,
-                                s
-                              )
-                            }
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="hidden md:block"></div>
-                  )}
+                  <div className="hidden md:block"></div>
                 </div>
                 <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
@@ -593,10 +667,7 @@ const AddUserModal: React.FC<{
                     className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g
-                          ? "border-[#48C78E]"
-                          : "border-gray-300"
-                        }`}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
                     >
                       {basicData.gender === g && (
                         <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
