@@ -2,6 +2,8 @@ import { saveCollegeEducation } from "../academicEducationAPI";
 import { upsertCollegeBranches } from "../collegeBranchAPI";
 import { saveCollegeAcademicYear } from "../collegeAcademicYearAPI";
 import { saveCollegeSections } from "../collegeSectionsAPI";
+import { deriveSemesters } from "../deriveSemesters";
+import { saveCollegeSemesters } from "../collegeSemesterAPI";
 
 export async function saveAcademicSetupMaster(
     input: {
@@ -70,6 +72,25 @@ export async function saveAcademicSetupMaster(
     }
 
     const collegeAcademicYearId = yearResult.collegeAcademicYearId;
+
+    if (input.branch.academicYear?.trim()) {
+        const semesters = deriveSemesters(
+            input.educationType,
+            input.branch.academicYear
+        );
+
+        if (semesters.length) {
+            await saveCollegeSemesters(
+                {
+                    collegeSemesters: semesters,
+                    collegeEducationId,
+                    collegeAcademicYearId,
+                    collegeId: context.collegeId,
+                },
+                context.adminId
+            );
+        }
+    }
 
     if (input.branch.sections?.length) {
 
