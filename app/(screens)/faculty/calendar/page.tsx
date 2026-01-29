@@ -11,18 +11,20 @@ import { combineDateAndTime, getWeekDays, hasTimeConflict } from "./utils";
 import ConfirmConflictModal from "../../admin/calendar/components/ConfirmConflictModal";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
 import toast from "react-hot-toast";
-import { deleteCalendarEventByFaculty, fetchCalendarEventsByFaculty, updateCalendarEvent, upsertCalendarEvent } from "@/lib/helpers/calendar/calendarEvent";
+import {
+  deleteCalendarEventByFaculty,
+  fetchCalendarEventsByFaculty,
+  updateCalendarEvent,
+  upsertCalendarEvent,
+} from "@/lib/helpers/calendar/calendarEvent";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { getFacultyIdByUserId } from "@/lib/helpers/faculty/faculty";
 
-export const extractValues = (
-  items?: { name: string }[]
-): string[] => {
+export const extractValues = (items?: { name: string }[]): string[] => {
   if (!Array.isArray(items)) return [];
   return items.map((i) => i.name);
 };
-
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState("All");
@@ -31,7 +33,9 @@ export default function Page() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [pendingEvent, setPendingEvent] = useState<any | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(
+    null,
+  );
   const [eventForm, setEventForm] = useState<any | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
@@ -59,7 +63,7 @@ export default function Page() {
   }, [userId, role]);
 
   const loadCalendarEvents = async () => {
-    if (!facultyId) return
+    if (!facultyId) return;
 
     try {
       setLoading(true);
@@ -98,8 +102,7 @@ export default function Page() {
       setEvents(formattedEvents);
     } catch (error) {
       toast.error("Failed to loadCalendarEvents");
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   };
@@ -146,7 +149,7 @@ export default function Page() {
       data.date,
       data.startTime,
       data.endTime,
-      editingEventId ? Number(editingEventId) : undefined
+      editingEventId ? Number(editingEventId) : undefined,
     );
 
     if (conflict) {
@@ -156,10 +159,9 @@ export default function Page() {
       return;
     }
 
-    const safeYear =
-      ["1", "2", "3", "4"].includes(String(data.year))
-        ? String(data.year)
-        : "";
+    const safeYear = ["1", "2", "3", "4"].includes(String(data.year))
+      ? String(data.year)
+      : "";
 
     const payload = {
       facultyId,
@@ -181,7 +183,7 @@ export default function Page() {
 
     const res = await upsertCalendarEvent(
       payload,
-      editingEventId ? Number(editingEventId) : undefined
+      editingEventId ? Number(editingEventId) : undefined,
     );
 
     if (!res.success) {
@@ -212,7 +214,7 @@ export default function Page() {
     setEvents((prev) =>
       editingEventId
         ? prev.map((e) => (e.id === editingEventId ? updatedEvent : e))
-        : [...prev, updatedEvent]
+        : [...prev, updatedEvent],
     );
 
     setEditingEventId(null);
@@ -230,14 +232,11 @@ export default function Page() {
   const handleDeleteEvent = async (eventId: string) => {
     if (!facultyId) return;
 
-    const res = await deleteCalendarEventByFaculty(
-      Number(eventId),
-      facultyId
-    )
+    const res = await deleteCalendarEventByFaculty(Number(eventId), facultyId);
 
     if (!res.success) {
       toast.error(res.error || "Failed to delete!!");
-      return
+      return;
     }
 
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -282,7 +281,7 @@ export default function Page() {
     date: string,
     startTime: string,
     endTime: string,
-    ignoreEventId?: number
+    ignoreEventId?: number,
   ): Promise<boolean> => {
     const res = await fetchCalendarEventsByFaculty(Number(facultyId));
 
@@ -301,10 +300,10 @@ export default function Page() {
       return hasTimeConflict(
         [{ startTime: dbStart, endTime: dbEnd } as CalendarEvent],
         combineDateAndTime(date, startTime),
-        combineDateAndTime(date, endTime)
+        combineDateAndTime(date, endTime),
       );
     });
-  }
+  };
 
   const confirmAddEvent = async () => {
     if (!pendingEvent) return;
@@ -346,7 +345,6 @@ export default function Page() {
       setFormMode("create");
       setIsModalOpen(false);
       setPendingEvent(null);
-
     } catch (err) {
       toast.error("Failed to save event");
     } finally {
@@ -359,7 +357,7 @@ export default function Page() {
       <div className="flex justify-center items-center h-screen">
         <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
@@ -431,4 +429,3 @@ export default function Page() {
     </main>
   );
 }
-

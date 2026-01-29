@@ -13,41 +13,79 @@ export type UserBasicData = {
   adminId: number;
 };
 
-export const fetchModalInitialData = async () => {
-  const { data: eduDepts } = await supabase
-    .from("education_departments")
-    .select(
-      `educationId, departments, educations (educationName, educationCode)`
+export async function fetchAdminContext(userId: number) {
+  const { data: admin, error } = await supabase
+    .from("admins")
+    .select("adminId, collegePublicId")
+    .eq("userId", userId)
+    .is("deletedAt", null)
+    .single();
+
+  if (error) throw error;
+
+  const { data: college, error: collegeErr } = await supabase
+    .from("colleges")
+    .select("collegeId")
+    .eq("collegePublicId", admin.collegePublicId)
+    .single();
+
+  if (collegeErr) throw collegeErr;
+
+  return {
+    adminId: admin.adminId,
+    collegeId: college.collegeId,
+    collegePublicId: admin.collegePublicId,
+  };
+}
+
+export const fetchModalInitialData = async (collegeId: number) => {
+  try {
+    const [educations, branches, years, sections, subjects] = await Promise.all(
+      [
+        supabase
+          .from("college_education")
+          .select("*")
+          .eq("collegeId", collegeId),
+        supabase.from("college_branch").select("*").eq("collegeId", collegeId),
+        supabase
+          .from("college_academic_year")
+          .select("*")
+          .eq("collegeId", collegeId),
+        supabase
+          .from("college_sections")
+          .select("*")
+          .eq("collegeId", collegeId),
+        supabase
+          .from("college_subjects")
+          .select("*")
+          .eq("collegeId", collegeId),
+      ],
     );
 
-  const { data: subjs } = await supabase.from("subjects").select("*");
-
-  const formattedDbData = {
-    educations:
-      eduDepts?.map((item: any) => ({
-        id: item.educationId,
-        name: item.educations.educationCode,
-        code: item.educations.educationCode,
-        rawDepts: item.departments,
-      })) || [],
-    departments:
-      eduDepts?.flatMap((item: any) =>
-        item.departments.map((d: any) => ({
-          ...d,
-          educationName: item.educations.educationName,
-        }))
-      ) || [],
-    subjects: subjs || [],
-  };
-
-  return { formattedDbData };
+    return {
+      educations: educations.data || [],
+      branches: branches.data || [],
+      years: years.data || [],
+      sections: sections.data || [],
+      subjects: subjects.data || [],
+    };
+  } catch (error) {
+    console.error("Critical error in fetchModalInitialData:", error);
+    return {
+      educations: [],
+      branches: [],
+      years: [],
+      sections: [],
+      subjects: [],
+    };
+  }
 };
 
 export const persistUser = async (
   isNewUser: boolean,
   basicData: UserBasicData,
   targetUserId: number | null,
-  timestamp: string
+  timestamp: string,
 ) => {
   const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
   let finalUserId = targetUserId;
@@ -57,29 +95,20 @@ export const persistUser = async (
       email: basicData.email,
       password: basicData.password!,
       options: {
-        data: {
-          full_name: basicData.fullName,
-          role: basicData.role,
-        },
+        data: { full_name: basicData.fullName, role: basicData.role },
       },
     });
 
     if (authError) throw authError;
     const authId = authData.user?.id;
+    if (!authId) throw new Error("Authentication failed");
 
-    if (!authId) throw new Error("Authentication failed: No User ID returned");
-
-    const { data: existingUser } = await supabase
+    const { data: existing } = await supabase
       .from("users")
       .select("userId")
       .eq("auth_id", authId)
       .maybeSingle();
-
-    if (existingUser) {
-      throw new Error(
-        "A user with this email already exists. Please use the edit feature or use a different email."
-      );
-    }
+    if (existing) throw new Error("User already exists.");
 
     const { data: newUser, error: userError } = await supabase
       .from("users")
@@ -93,17 +122,16 @@ export const persistUser = async (
         collegeId: basicData.collegeIntId,
         collegePublicId: basicData.collegePublicId,
         isActive: true,
-        is_deleted: false,
         createdAt: timestamp,
         updatedAt: timestamp,
       })
       .select("userId")
       .single();
 
-    if (userError) throw new Error(`User DB Error: ${userError.message}`);
+    if (userError) throw userError;
     finalUserId = newUser.userId;
   } else {
-    const { error: updateError } = await supabase
+    await supabase
       .from("users")
       .update({
         fullName: basicData.fullName,
@@ -113,8 +141,6 @@ export const persistUser = async (
         updatedAt: timestamp,
       })
       .eq("userId", targetUserId);
-
-    if (updateError) throw updateError;
   }
 
   return finalUserId;
@@ -123,35 +149,62 @@ export const persistUser = async (
 export const persistFaculty = async (
   userId: number,
   basicData: UserBasicData,
-  payloads: any,
+  selections: {
+    educationId: number;
+    branchId: number;
+    yearId: number;
+    subjectId: number;
+    sectionIds: number[];
+  },
   timestamp: string,
-  isEditMode: boolean
+  isEditMode: boolean,
 ) => {
   const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
 
-  const facultyData: any = {
-    userId,
+  const facultyPayload: any = {
+    userId: userId,
     fullName: basicData.fullName,
     email: basicData.email,
     mobile: fullMobile,
     gender: basicData.gender,
     collegeId: basicData.collegeIntId,
     role: "Faculty",
-    ...payloads,
+    collegeEducationId: selections.educationId,
+    collegeBranchId: selections.branchId,
     createdBy: basicData.adminId,
-    createdAt: timestamp,
+    isActive: true,
     updatedAt: timestamp,
-    is_deleted: false,
   };
 
-  if (isEditMode) {
-    delete facultyData.createdBy;
-    delete facultyData.createdAt;
-  }
+  if (!isEditMode) facultyPayload.createdAt = timestamp;
+  else delete facultyPayload.createdBy;
 
-  const { error } = await supabase
+  const { data: faculty, error: facultyError } = await supabase
     .from("faculty")
-    .upsert(facultyData, { onConflict: "userId" });
+    .upsert(facultyPayload, { onConflict: "userId" })
+    .select("facultyId")
+    .single();
 
-  if (error) throw new Error(`Faculty DB Error: ${error.message}`);
+  if (facultyError)
+    throw new Error(`Faculty Profile Error: ${facultyError.message}`);
+
+  if (selections.sectionIds.length > 0) {
+    const sectionPayloads = selections.sectionIds.map((sectionId) => ({
+      facultyId: faculty.facultyId,
+      collegeSectionsId: sectionId,
+      collegeSubjectId: selections.subjectId,
+      collegeAcademicYearId: selections.yearId,
+      createdBy: basicData.adminId,
+      isActive: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }));
+
+    const { error: sectionError } = await supabase
+      .from("faculty_sections")
+      .insert(sectionPayloads);
+
+    if (sectionError)
+      throw new Error(`Faculty Sections Error: ${sectionError.message}`);
+  }
 };
