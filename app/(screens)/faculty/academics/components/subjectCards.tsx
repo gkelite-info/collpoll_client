@@ -1,14 +1,26 @@
 "use client";
 
 import { Timer } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 import { SubjectDetailsCard } from "./subjectDetails";
 import AddNewCardModal from "./addNewCardModal";
+import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 
 export type CardProps = {
+  collegeId: number;
+
+  collegeEducationId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSemesterId: number;
+
+  collegeSubjectId: number;
+
   subjectTitle: string;
-  year: string | number;
+  semester: string; 
+  year: string;     
+
   units: number;
   topicsCovered: number;
   topicsTotal: number;
@@ -19,13 +31,25 @@ export type CardProps = {
   toDate: string;
 };
 
+
 type SubjectCardProps = { subjectProps: CardProps[] };
 
+
+
+
 export default function SubjectCard({ subjectProps }: SubjectCardProps) {
+  console.log("🟣 SubjectCard received props:", subjectProps);
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const [subjectId, setSubjectId] = useState<number | null>(null);
+  const [sectionId, setSectionId] = useState<number | null>(null);
+
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
+
 
   const handleSaveNewCard = (newCard: CardProps) => {
     setCards((prev) => [newCard, ...prev]);
@@ -42,14 +66,73 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
     );
   }
 
+  const context = subjectProps[0];
+
+
   return (
     <>
       <div className="flex justify-between items-start">
         <div className="mb-6 flex flex-wrap gap-8">
+
+       
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Subject :</p>
+            <div className="relative">
+              <select
+                value={subjectId ?? ""}
+                onChange={(e) =>
+                  setSubjectId(e.target.value ? Number(e.target.value) : null)
+                }
+                className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+              >
+                <option value="">All</option>
+                {subjects.map((s) => (
+                  <option
+                    key={s.collegeSubjectId}
+                    value={s.collegeSubjectId}
+                  >
+                    {s.subjectName}
+                  </option>
+                ))}
+              </select>
+
+              <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
+            </div>
+          </div>
+
+        
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Section :</p>
+            <div className="relative">
+              <select
+                value={sectionId ?? ""}
+                onChange={(e) =>
+                  setSectionId(e.target.value ? Number(e.target.value) : null)
+                }
+                className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+              >
+                <option value="">All</option>
+                {sections.map((sec) => (
+                  <option
+                    key={sec.collegeSectionsId}
+                    value={sec.collegeSectionsId}
+                  >
+                    {sec.collegeSections}
+                  </option>
+                ))}
+              </select>
+
+              <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
+            </div>
+          </div>
+
+        </div>
+
+        {/* <div className="mb-6 flex flex-wrap gap-8">
           <FilterLabel label="Subject" value="All" />
           <FilterSelect label="Semester" options={["I", "II"]} />
           <FilterSelect label="Year" options={["1st Year", "2nd Year"]} />
-        </div>
+        </div> */}
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d]"
@@ -64,9 +147,14 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             key={index}
             item={item}
             onViewDetails={() => {
-              setSelectedCard(item);
+              console.log("➡️ View Details clicked for:", item);
+              setSelectedCard({
+                ...item,
+                collegeSubjectId: item.collegeSubjectId, 
+              });
               setShowDetails(true);
             }}
+
           />
         ))}
       </div>
@@ -122,8 +210,8 @@ const IndividualCard = ({
     percentage <= 0
       ? "0px"
       : percentage >= 100
-      ? `calc(100% - ${ballWidthPx}px)`
-      : `calc(${percentage}% - ${ballWidthPx / 2}px)`;
+        ? `calc(100% - ${ballWidthPx}px)`
+        : `calc(${percentage}% - ${ballWidthPx / 2}px)`;
   const filledWidth = `calc(${percentage}% + ${ballWidthPx / 2}px)`;
 
   return (
