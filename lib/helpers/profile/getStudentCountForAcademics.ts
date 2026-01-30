@@ -1,0 +1,45 @@
+import { supabase } from "@/lib/supabaseClient";
+
+export async function getStudentCountForAcademics(params: {
+  collegeAcademicYearId?: number;
+  collegeSemesterId?: number;
+  collegeSectionsId?: number;
+}) {
+  console.log("🟡 getStudentCountForAcademics params:", params);
+
+  let query = supabase
+    .from("student_academic_history")
+    .select("studentAcademicHistoryId", {
+      count: "exact",
+      head: true,
+    })
+    .eq("isCurrent", true)
+    .is("deletedAt", null);
+
+  // ✅ VALID filters ONLY
+  if (params.collegeAcademicYearId) {
+    query = query.eq(
+      "collegeAcademicYearId",
+      params.collegeAcademicYearId
+    );
+  }
+
+  if (params.collegeSemesterId) {
+    query = query.eq("collegeSemesterId", params.collegeSemesterId);
+  }
+
+  if (params.collegeSectionsId) {
+    query = query.eq("collegeSectionsId", params.collegeSectionsId);
+  }
+
+  const { count, error } = await query;
+
+  console.log("🧮 student_academic_history result:", { count, error });
+
+  if (error) {
+    console.error("❌ getStudentCountForAcademics error", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}

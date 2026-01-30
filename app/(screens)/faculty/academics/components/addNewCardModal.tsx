@@ -4,11 +4,20 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
 import { FaChevronDown } from "react-icons/fa6";
 import { CardProps } from "./subjectCards";
-import { upsertFacultyAcademics } from "@/lib/helpers/faculty/upsertFacultyAcademics";
+// import { upsertFacultyAcademics } from "@/lib/helpers/faculty/upsertFacultyAcademics";
 import { supabase } from "@/lib/supabaseClient";
 // import { suggestTopicsAI } from "@/lib/helpers/faculty/ai/suggestTopics.client";
 // import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
+import { useUser } from "@/app/utils/context/UserContext";
+// import { fetchFacultyContext } from "@/lib/helpers/faculty/fetchFacultyContext";
+import { upsertCollegeSubjectUnitWithTopics } from "@/lib/helpers/faculty/upsertCollegeSubjectUnitWithTopics";
+import toast from "react-hot-toast";
+import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
+import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
+import { getInternalUserId } from "@/lib/helpers/getInternalUserId";
+
 
 
 type AddNewCardModalProps = {
@@ -16,6 +25,31 @@ type AddNewCardModalProps = {
   onClose: () => void;
   onSave: (newCard: CardProps) => void;
 };
+
+type Branch = {
+  collegeBranchId: number;
+  collegeBranchType: string;
+  collegeBranchCode: string;
+};
+
+
+type FacultyAcademicForm = {
+  educationId?: number;
+  branchId?: number;
+  academicYearId?: number;
+  semester?: number; // ✅ this is collegeSemesterId
+  subjectName: string;
+  subjectId?: number;   // ✅ ADD THIS
+  section?: string;
+  sectionId?: number;
+  unitName: string;
+  unitNumber: number;
+  startDate: string;   // ✅ NEW
+  endDate: string;     // ✅ NEW
+  topics: string[];
+};
+
+
 
 // // 🔹 AI unit name suggestion helper
 // function suggestUnitName(subject: string, unitNumber: number) {
@@ -26,31 +60,59 @@ type AddNewCardModalProps = {
 
 export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProps) {
 
+  const [formData, setFormData] = useState<FacultyAcademicForm>({
+    educationId: undefined,
+    branchId: undefined,
+    academicYearId: undefined,
+    semester: undefined,
 
-  const [formData, setFormData] = useState({
-    facultyAcademicsId: undefined as number | undefined,
-    facultyId: 0,
     subjectName: "",
-    degree: "",
-    department: "",
-    academicYear: "",
-    section: "",
-    semester: "",
-
+    subjectId: undefined,
+    // section: "",
     unitName: "",
     unitNumber: 1,
-    topics: [] as string[],
+    startDate: "",   // ✅
+    endDate: "",     // ✅
+    topics: [],
   });
 
+  const [facultyId, setFacultyId] = useState<number | null>(null);
 
 
 
+
+
+
+  // const [formData, setFormData] = useState({
+  //   facultyAcademicsId: undefined as number | undefined,
+  //   facultyId: 0,
+  //   subjectName: "",
+  //   degree: "",
+  //   department: "",
+  //   academicYear: "",
+  //   section: "",
+  //   semester: "",
+
+  //   unitName: "",
+  //   unitNumber: 1,
+  //   topics: [] as string[],
+  // });
+
+
+
+
+  const [educations, setEducations] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [semesters, setSemesters] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [sections, setSections] = useState<any[]>([]);
 
 
 
 
   const [aiTopics, setAiTopics] = useState<string[]>([]);
-  const [facultyId, setFacultyId] = useState<number | null>(null);
+  // const [facultyId, setFacultyId] = useState<number | null>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isPending, startTransition] = useTransition();
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
@@ -58,6 +120,25 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
   const [searchQuery, setSearchQuery] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+
+  const { userId, collegeId, loading } = useUser();
+
+
+  useEffect(() => {
+    if (!userId || loading) return;
+
+    fetchFacultyContext(userId)
+      .then((ctx) => {
+        setFacultyId(ctx.facultyId);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch faculty context", err);
+        toast.error("Faculty profile not found");
+      });
+  }, [userId, loading]);
+
+
+  console.log("vamshi", facultyId);
 
 
   useEffect(() => {
@@ -125,14 +206,182 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
 
 
   useEffect(() => {
-    const loadFaculty = async () => {
-      const { data } = await supabase.auth.getUser();
-      // fetch faculty profile using userId
-      setFacultyId(12); // example
-    };
+    if (!isOpen || loading || !collegeId) return;
 
-    loadFaculty();
-  }, []);
+    fetchAcademicDropdowns({
+      type: "education",
+      collegeId,
+    }).then((data) => setEducations(data ?? []));
+  }, [isOpen, collegeId, loading]);
+
+
+
+
+
+  useEffect(() => {
+    if (!collegeId || !formData.educationId) return;
+
+    console.log("📘 Fetching branches for:", {
+      collegeId,
+      educationId: formData.educationId,
+    });
+
+    fetchAcademicDropdowns({
+      type: "branch",
+      collegeId,
+      educationId: formData.educationId,
+    }).then((data) => {
+      const branchesData = (data ?? []) as Branch[];
+
+      console.log("🌿 Branch list:", branchesData);
+
+      branchesData.forEach((branch) => {
+        console.log(
+          "🏷️ Branch →",
+          "ID:", branch.collegeBranchId,
+          "| Code:", branch.collegeBranchCode,
+          "| Type:", branch.collegeBranchType
+        );
+      });
+
+      setBranches(branchesData);
+    });
+
+    // reset children
+    setFormData((prev) => ({
+      ...prev,
+      branchId: undefined,
+      academicYearId: undefined,
+      semester: undefined,
+      subjectName: "",
+    }));
+  }, [collegeId, formData.educationId]);
+
+
+
+
+
+  useEffect(() => {
+    if (!collegeId || !formData.educationId || !formData.branchId) return;
+
+    fetchAcademicDropdowns({
+      type: "academicYear",
+      collegeId,
+      educationId: formData.educationId,
+      branchId: formData.branchId,
+    }).then((data) => setAcademicYears(data ?? []));
+  }, [collegeId, formData.educationId, formData.branchId]);
+
+
+
+  useEffect(() => {
+    if (
+      loading ||
+      !collegeId ||
+      !formData.educationId ||
+      !formData.academicYearId
+    ) {
+      return;
+    }
+
+    fetchAcademicDropdowns({
+      type: "semester",
+      collegeId,
+      educationId: formData.educationId,
+      academicYearId: formData.academicYearId,
+    }).then((data) => setSemesters(data ?? []));
+  }, [
+    collegeId,
+    loading,
+    formData.educationId,
+    formData.academicYearId,
+  ]);
+
+
+  useEffect(() => {
+    // 🔥 Clear subject list & selection immediately
+    setSubjects([]);
+    setFormData(prev => ({
+      ...prev,
+      subjectName: "",
+    }));
+  }, [formData.academicYearId, formData.semester]);
+
+
+  useEffect(() => {
+    if (
+      loading ||
+      !collegeId ||
+      !formData.educationId ||
+      !formData.branchId ||
+      !formData.academicYearId ||
+      !formData.semester
+    ) {
+      return;
+    }
+
+    fetchAcademicDropdowns({
+      type: "subject",
+      collegeId,
+      educationId: formData.educationId,
+      branchId: formData.branchId,
+      academicYearId: formData.academicYearId,
+      semester: formData.semester, // collegeSemesterId
+    }).then((data) => setSubjects(data ?? []));
+  }, [
+    collegeId,
+    loading,
+    formData.educationId,
+    formData.branchId,
+    formData.academicYearId,
+    formData.semester,
+  ]);
+
+
+
+  // useEffect(() => {
+  //   if (loading || !collegeId) return;
+
+  //   fetchAcademicDropdowns({
+  //     type: "section",
+  //     collegeId,
+  //   }).then((data) => {
+  //     console.log("📦 Sections fetched from DB:", data);
+  //     setSections(data ?? []);
+  //   });
+  // }, [collegeId, loading]);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !collegeId ||
+      !formData.educationId ||
+      !formData.branchId ||
+      !formData.academicYearId
+    )
+      return;
+
+    fetchAcademicDropdowns({
+      type: "section",
+      collegeId,
+      educationId: formData.educationId,
+      branchId: formData.branchId,
+      academicYearId: formData.academicYearId,
+    }).then((data) => {
+      console.log("📦 Filtered sections:", data);
+      setSections(data ?? []);
+    });
+  }, [
+    collegeId,
+    loading,
+    formData.educationId,
+    formData.branchId,
+    formData.academicYearId,
+  ]);
+
+
+
+
 
 
 
@@ -185,34 +434,144 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
   );
 
 
+  // const handleSave = async () => {
+  //   try {
+  //     await upsertFacultyAcademics({
+  //       facultyAcademicsId: formData.facultyAcademicsId,
+  //       facultyId: formData.facultyId,
+
+  //       subjectName: formData.subjectName,
+  //       department: formData.department,
+  //       academicYear: formData.academicYear,
+  //       section: formData.section,
+  //       semester: formData.semester,
+
+  //       unitName: formData.unitName,
+  //       unitNumber: formData.unitNumber,
+  //       topics: formData.topics,
+  //     });
+  //     setAiTopics([]);
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       topics: [],
+  //       unitName: "",
+  //     }));
+
+  //     onClose();
+  //   } catch (error) {
+  //     console.error("Failed to save academic unit", error);
+  //   }
+  // };
+
+  console.log("Vamshi", facultyId);
+
+
   const handleSave = async () => {
+    if (loading) return;
+
+    /* -----------------------------
+     * BASIC VALIDATIONS
+     * ----------------------------- */
+    if (!collegeId) {
+      toast.error("College not found");
+      return;
+    }
+
+    if (!facultyId) {
+      toast.error("Faculty not authenticated");
+      return;
+    }
+
+    if (!formData.subjectId) {
+      toast.error("Please select subject");
+      return;
+    }
+
+    if (!formData.unitName.trim()) {
+      toast.error("Please enter unit name");
+      return;
+    }
+
+    if (!formData.unitNumber || formData.unitNumber < 1) {
+      toast.error("Please enter a valid unit number");
+      return;
+    }
+
+    if (selectedTopics.length === 0) {
+      toast.error("Please add at least one topic");
+      return;
+    }
+
+    //   /* -----------------------------
+    // * RESOLVE SECTION ID (CORRECT)
+    // * ----------------------------- */
+    //   const sectionRow = sections.find(
+    //     (s) =>
+    //       s.collegeSections === formData.section &&
+    //       s.collegeId === collegeId
+    //   );
+
+    //   console.log("🎯 sectionRow matched:", sectionRow);
+
+
+    //   console.log("🎯 sectionRow matched:", sectionRow);
+
+    //   if (!sectionRow) {
+    //     toast.error("Section not found for selected context");
+    //     return;
+    //   }
+
+    //   const sectionId = sectionRow.collegeSectionsId;
+
+    /* -----------------------------
+     * SAVE UNIT + TOPICS → THEN ACADEMICS
+     * ----------------------------- */
     try {
-      await upsertFacultyAcademics({
-        facultyAcademicsId: formData.facultyAcademicsId,
-        facultyId: formData.facultyId,
-
-        subjectName: formData.subjectName,
-        department: formData.department,
-        academicYear: formData.academicYear,
-        section: formData.section,
-        semester: formData.semester,
-
-        unitName: formData.unitName,
+      // 1️⃣ Unit + Topics
+      const unitResult = await upsertCollegeSubjectUnitWithTopics({
+        collegeId,
+        collegeSubjectId: formData.subjectId,
+        createdBy: facultyId,
         unitNumber: formData.unitNumber,
-        topics: formData.topics,
+        unitTitle: formData.unitName,
+        startDate: formData.startDate || undefined,
+        endDate: formData.endDate || undefined,
+        topics: selectedTopics,
       });
-      setAiTopics([]);
-      setFormData(prev => ({
-        ...prev,
-        topics: [],
-        unitName: "",
-      }));
 
+      const collegeSubjectUnitId = unitResult.collegeSubjectUnitId;
+
+      // 2️⃣ Academics mapping
+      await saveAcademicUnit({
+        collegeId,
+        collegeEducationId: formData.educationId!,
+        collegeBranchId: formData.branchId!,
+        collegeAcademicYearId: formData.academicYearId!,
+        collegeSemesterId: formData.semester!,
+        collegeSubjectId: formData.subjectId!,
+        collegeSectionId: formData.sectionId!,
+        collegeSubjectUnitId,
+        createdBy: facultyId,
+      });
+
+      console.log("college section id", formData.sectionId)
+
+      /* -----------------------------
+       * SUCCESS
+       * ----------------------------- */
+      toast.success("Unit saved successfully");
       onClose();
-    } catch (error) {
-      console.error("Failed to save academic unit", error);
+    } catch (err: any) {
+      console.error("❌ Save unit failed:", err);
+      toast.error(err?.message || "Failed to save unit");
     }
   };
+
+  const uniqueSections = Array.from(
+    new Map(
+      sections.map((s) => [s.collegeSections, s])
+    ).values()
+  );
 
 
 
@@ -231,302 +590,312 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
           {/* Form */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
 
-            {/* Subject Name */}
-            {/* Subject Name */}
+            {/* shared select style */}
+            {/*
+    placeholder → text-gray-400
+    selected → text-gray-900
+  */}
+
+            {/* 1️⃣ Education */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Subject Name
-              </label>
-              <input
-                type="text"
-                value={formData.subjectName}
+              <label className="text-sm font-semibold text-[#282828]">Education</label>
+              <select
+                value={formData.educationId ?? ""}
                 onChange={(e) =>
                   setFormData(prev => ({
                     ...prev,
-                    subjectName: e.target.value,
-                  }))
-                }
-                placeholder="Enter Subject Name"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
-      text-gray-900 bg-white placeholder:text-gray-400
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              />
-            </div>
-
-            {/* Degree */}
-            <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Degree
-              </label>
-              <select
-                value={formData.degree}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    degree: e.target.value,
+                    educationId: Number(e.target.value),
+                    branchId: undefined,
+                    academicYearId: undefined,
+                    semester: undefined,
+                    subjectName: "",
                   }))
                 }
                 className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.degree ? "text-gray-900" : "text-gray-400"}
+    ${formData.educationId ? "text-gray-900" : "text-gray-400"}
   `}
               >
-                <option value="">Select degree</option>
-                <option value="B.Tech">B.Tech</option>
-                <option value="B.Sc">B.Sc</option>
-                <option value="M.Tech">M.Tech</option>
-                <option value="M.Sc">M.Sc</option>
+                <option value="" disabled hidden>
+                  Select education
+                </option>
+
+                {educations.map((e) => (
+                  <option
+                    key={e.collegeEducationId}
+                    value={e.collegeEducationId}
+                  >
+                    {e.collegeEducationType}
+                  </option>
+                ))}
               </select>
 
             </div>
 
-
-            {/* Department */}
+            {/* 2️⃣ Branch */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Department
-              </label>
+              <label className="text-sm font-semibold text-[#282828]">Branch</label>
               <select
-                value={formData.department}
+                value={formData.branchId ?? ""}
                 onChange={(e) =>
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
-                    department: e.target.value,
+                    branchId: Number(e.target.value),
                   }))
                 }
+                disabled={!formData.educationId}
                 className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.department ? "text-gray-900" : "text-gray-400"}
+    ${formData.branchId ? "text-gray-900" : "text-gray-400"}
+    ${!formData.educationId ? "bg-gray-100 cursor-not-allowed" : ""}
   `}
               >
-                <option value="">Select department</option>
-                <option value="CSE">CSE</option>
-                <option value="ECE">ECE</option>
-                <option value="EEE">EEE</option>
-                <option value="Mechanical">Mechanical</option>
+                <option value="" disabled hidden>
+                  Select branch
+                </option>
+
+                {branches.map((branch) => (
+                  <option
+                    key={branch.collegeBranchId}
+                    value={branch.collegeBranchId}
+                    title={branch.collegeBranchType}
+                  >
+                    {branch.collegeBranchCode}
+                  </option>
+                ))}
               </select>
 
             </div>
 
-            {/* Year */}
+            {/* 3️⃣ Year */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Year
-              </label>
-              {/* <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 bg-white focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              >
-                <option>Select academic year</option>
-              </select> */}
+              <label className="text-sm font-semibold text-[#282828]">Year</label>
               <select
-                value={formData.academicYear}
                 onChange={(e) =>
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
-                    academicYear: e.target.value,
+                    academicYearId: Number(e.target.value),
+                    semester: undefined,     // ✅ reset
+                    subjectName: "",         // ✅ reset
                   }))
                 }
                 className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.academicYear ? "text-gray-900" : "text-gray-400"}
-  `}
-              >
-                <option value="">Select academic year</option>
-                <option value="1st Year">1st Year</option>
-                <option value="2nd Year">2nd Year</option>
-                <option value="3rd Year">3rd Year</option>
-                <option value="4th Year">4th Year</option>
-              </select>
-            </div>
-
-            {/* Section */}
-            <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Section
-              </label>
-              {/* <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 bg-white focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              >
-                <option>Select section</option>
-              </select> */}
-              <select
-                value={formData.section}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    section: e.target.value,
-                  }))
-                }
-                className={`
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.section ? "text-gray-900" : "text-gray-400"}
+    ${formData.academicYearId ? "text-gray-900" : "text-gray-400"}
   `}
               >
                 <option value="">
-                  Select section
+                  Select year
                 </option>
-                <option value="A">A</option>
-                <option value="B">B</option>
-                <option value="C">C</option>
+
+                {academicYears.map((y) => (
+                  <option
+                    key={y.collegeAcademicYearId}
+                    value={y.collegeAcademicYearId}
+                  >
+                    {y.collegeAcademicYear}
+                  </option>
+                ))}
               </select>
+
             </div>
 
-            {/* Semester */}
+            {/* 4️⃣ Semester */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Semester
-              </label>
-              {/* <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 bg-white focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              >
-                <option>Choose semester</option>
-              </select> */}
+              <label className="text-sm font-semibold text-[#282828]">Semester</label>
               <select
-                value={formData.semester}
+                value={formData.semester ?? ""}
                 onChange={(e) =>
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
-                    semester: e.target.value,
+                    semester: e.target.value === ""
+                      ? undefined
+                      : Number(e.target.value),
+                    subjectName: "",          // 🔥 reset subject
                   }))
                 }
+
                 className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
     ${formData.semester ? "text-gray-900" : "text-gray-400"}
   `}
               >
-                <option value="">
+                <option value="" disabled hidden>
                   Choose semester
                 </option>
-                <option value="1st Semester">1st Semester</option>
-                <option value="2nd Semester">2nd Semester</option>
+
+                {semesters.map((s) => (
+                  <option
+                    key={s.collegeSemesterId}
+                    value={s.collegeSemesterId}   // ✅ ID goes here
+                  >
+                    Semester {s.collegeSemester}
+                  </option>
+                ))}
+              </select>
+
+            </div>
+
+            {/* 5️⃣ Subject Name */}
+            <div>
+              <label className="text-sm font-semibold text-[#282828]">Subject Name</label>
+              <select
+                value={formData.subjectId ?? ""}
+                onChange={(e) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    subjectId: Number(e.target.value),
+                    subjectName: subjects.find(
+                      s => s.collegeSubjectId === Number(e.target.value)
+                    )?.subjectName,
+                  }))
+                }
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"
+              >
+                <option value="" disabled hidden>
+                  Select subject
+                </option>
+
+                {subjects.map((s) => (
+                  <option
+                    key={s.collegeSubjectId}
+                    value={s.collegeSubjectId}   // ✅ ID AS VALUE
+                  >
+                    {s.subjectName}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Unit Name */}
+            {/* 6️⃣ Section */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Unit Name
-              </label>
+              <label className="text-sm font-semibold text-[#282828]">Section</label>
+              {/* <select
+                value={formData.section}
+                onChange={(e) => {
+                  console.log("🧭 Section selected from UI:", e.target.value);
+
+                  setFormData(prev => ({
+                    ...prev,
+                    section: e.target.value,
+                  }));
+                }}
+
+                className={`
+    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
+    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    ${formData.section ? "text-gray-900" : "text-gray-400"}
+  `}
+              >
+                <option value="" disabled hidden>
+                  Select section
+                </option>
+
+                {Array.from(
+                  new Set(sections.map(s => s.collegeSections))
+                ).map((section) => (
+                  <option
+                    key={section}     // ✅ unique (A, B, C…)
+                    value={section}   // ✅ string value
+                  >
+                    {section}
+                  </option>
+                ))}
+              </select> */}
+
+              <select
+                value={formData.sectionId ?? ""}                 // 🔴 CHANGED
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (!value) return;
+
+                  const sectionId = Number(value);
+
+                  console.log("🧭 Section selected:", sectionId);
+
+                  setFormData(prev => ({
+                    ...prev,
+                    sectionId,                                   // 🔴 CHANGED
+                  }));
+                }}
+                className={`
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      ${formData.sectionId ? "text-gray-900" : "text-gray-400"}
+    `}
+              >
+                <option value="" disabled hidden>
+                  Select section
+                </option>
+
+                {sections.map((s) => (
+                  <option
+                    key={s.collegeSectionsId}                     // 🔴 CHANGED
+                    value={s.collegeSectionsId}                   // 🔴 CHANGED (ID!)
+                  >
+                    {s.collegeSections}                           {/* A / B / C */}
+                  </option>
+                ))}
+              </select>
+
+            </div>
+
+
+            {/* 7️⃣ Unit Name */}
+            <div>
+              <label className="text-sm font-semibold text-[#282828]">Unit Name</label>
               <input
                 type="text"
                 value={formData.unitName}
                 onChange={(e) => {
                   const value = e.target.value;
-                  const subject = formData.subjectName; // ✅ capture immediately
+                  const subject = formData.subjectName;
 
-                  setFormData(prev => ({
-                    ...prev,
-                    unitName: value,
-                  }));
+                  console.log("✏️ Unit typed:", value);
+                  console.log("📘 Subject:", subject);
 
-                  // reset if empty
+                  setFormData(prev => ({ ...prev, unitName: value }));
+
                   if (!value || !subject) {
-                    setAiTopics([]);
+                    console.warn("❌ AI blocked: missing subject or unit");
+                    setAvailableTopics([]);
                     return;
                   }
 
-                  // clear previous debounce
                   if (aiTimeoutRef.current) {
                     clearTimeout(aiTimeoutRef.current);
                   }
 
-                  // debounce AI call
                   aiTimeoutRef.current = setTimeout(async () => {
                     try {
-                      console.log("🤖 Calling AI with:", {
-                        subject,
-                        unit: value,
-                      });
+                      console.log("🤖 Calling AI with:", { subject, unit: value });
 
-                      const suggestions = await suggestTopicsAction(
-                        subject,
-                        value
-                      );
+                      const suggestions = await suggestTopicsAction(subject, value);
 
-                      console.log("✅ AI Topics:", suggestions);
-                      // setAiTopics(suggestions);
+                      console.log("✅ AI returned:", suggestions);
+
                       setAvailableTopics(suggestions);
-                      setSelectedTopics([]);
-                      setSearchQuery("");
-                      setSelectAll(false);
                     } catch (err) {
-                      console.error("❌ AI failed", err);
+                      console.error("❌ AI error:", err);
                     }
-                  }, 2000);
+                  }, 1500);
                 }}
-                // onChange={(e) => {
-                //   const value = e.target.value;
 
-                //   setFormData((prev) => ({
-                //     ...prev,
-                //     unitName: value,
-                //   }));
 
-                //   // ❌ Stop if no unit name or subject
-                //   if (!value || !formData.subjectName) {
-                //     setAiTopics([]);
-                //     return;
-                //   }
-
-                //   // 🧹 Clear previous timer
-                //   if (aiTimeoutRef.current) {
-                //     clearTimeout(aiTimeoutRef.current);
-                //   }
-
-                //   // ⏱ Debounce AI call
-                //   aiTimeoutRef.current = setTimeout(async () => {
-                //     try {
-                //       console.log("🧠 Calling AI with:", {
-                //         subject: formData.subjectName,
-                //         unit: value,
-                //       });
-
-                //       const suggestions = await suggestTopicsAI(
-                //         formData.subjectName,
-                //         value
-                //       );
-
-                //       console.log("✅ AI Topics:", suggestions);
-
-                //       setAiTopics(suggestions);
-                //     } catch (err) {
-                //       console.error("❌ AI failed", err);
-                //     }
-                //   }, 600); // debounce delay
-                // }}
-                placeholder="Enter Unit Name"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
-             text-gray-900 bg-white placeholder:text-gray-400
-             focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
+                placeholder="Enter unit name"
+                className="
+        w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+        text-gray-900 placeholder:text-gray-400
+        focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      "
               />
-              {/* <input
-                type="text"
-                value={formData.unitName}
-                onChange={async (e) => {
-                  const value = e.target.value;
-
-                  setFormData((prev) => ({
-                    ...prev,
-                    unitName: value,
-                  }));
-
-                  const suggestions = await suggestTopicsAI(
-                    formData.subjectName,
-                    value
-                  );
-                  setAiTopics(suggestions);
-                }}
-
-                placeholder="Enter Unit Name"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              /> */}
               {(availableTopics.length > 0 || selectedTopics.length > 0) && (
-                <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3">
+                <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
+
                   {/* Header */}
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-[#43C17A]">
@@ -554,447 +923,156 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
                         Select All
                       </label>
 
-                      {/* 🔍 Search icon */}
                       <button
                         type="button"
                         onClick={() => setShowSearch(prev => !prev)}
                         className="p-1 rounded-md hover:bg-white/70"
                       >
-                        <MagnifyingGlass size={16} weight="bold" className="text-[#43C17A]" />
+                        <MagnifyingGlass size={16} className="text-[#43C17A]" />
                       </button>
                     </div>
                   </div>
 
                   {/* Search */}
                   {showSearch && (
-                    <div className="relative mb-3">
-                      <input
-                        type="text"
-                        placeholder="Search topics..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="
-        w-full rounded-lg px-3 py-2 text-xs
-        border border-[#BBF7D0]
-        bg-[#ECFDF5]
-        text-[#065F46]
-        placeholder:text-[#86EFAC]
-        focus:outline-none
-        focus:ring-2 focus:ring-[#43C17A]
-      "
-                      />
-                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="
+          w-full rounded-lg px-3 py-2 text-xs
+          border border-[#BBF7D0]
+          bg-[#ECFDF5]
+          text-[#065F46]
+          placeholder:text-[#86EFAC]
+          focus:ring-2 focus:ring-[#43C17A]
+        "
+                    />
                   )}
 
                   {/* Selected Topics */}
                   {selectedTopics.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-[11px] font-semibold text-[#6B7280] mb-1">
-                        Selected
-                      </p>
-
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTopics.map((topic) => (
-                          <div
-                            key={topic}
-                            className="
-                flex items-center gap-2
-                bg-white border border-[#D1FAE5]
-                rounded-full px-3 py-1 text-xs
-                text-[#374151]
-              "
-                          >
-                            <span>{topic}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedTopics(prev => prev.filter(t => t !== topic));
-                                setAvailableTopics(prev => [...prev, topic]);
-                                setSelectAll(false); // ✅ ADD THIS LINE
-                              }}
-                              className="text-[#EF4444] font-bold"
-                            >
-                              ×
-                            </button>
-
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {showSearch && searchQuery && (
-                    <div className="mt-2 space-y-2">
-
-                      {/* 1️⃣ Matching AVAILABLE topics (LIKE Unit Name behavior) */}
-                      {filteredAvailableTopics.length > 0 && (
-                        filteredAvailableTopics.map(topic => (
-                          <div
-                            key={topic}
-                            className="flex items-center gap-2 bg-white border border-[#D1FAE5]
-                     rounded-full px-3 py-1 text-xs"
-                          >
-                            <span>{topic}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedTopics(prev => [...prev, topic]);
-                                setAvailableTopics(prev => prev.filter(t => t !== topic));
-                                setSearchQuery("");
-                                setShowSearch(false);
-                                setSelectAll(false);
-                              }}
-                              className="text-[#43C17A] font-bold"
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))
-                      )}
-
-                      {/* 2️⃣ Already selected */}
-                      {filteredAvailableTopics.length === 0 &&
-                        selectedTopics.some(t =>
-                          t.toLowerCase().includes(searchQuery.toLowerCase())
-                        ) && (
-                          <p className="text-[11px] text-[#16A34A] px-1">
-                            Topic already added
-                          </p>
-                        )}
-
-                      {/* 3️⃣ Brand new topic */}
-                      {filteredAvailableTopics.length === 0 &&
-                        !selectedTopics.some(t =>
-                          t.toLowerCase().includes(searchQuery.toLowerCase())
-                        ) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedTopics(prev => [...prev, searchQuery]);
-                              setSearchQuery("");
-                              setShowSearch(false);
-                              setSelectAll(false);
-                            }}
-                            className="text-left text-xs px-3 py-1 rounded-lg
-                     bg-white border border-dashed border-[#43C17A]
-                     text-[#065F46] hover:bg-[#ECFDF5]"
-                          >
-                            ➕ Add new topic: <b>{searchQuery}</b>
-                          </button>
-                        )}
-                    </div>
-                  )}
-
-
-                  {/* ALREADY SELECTED */}
-                  {selectedTopics.some(t =>
-                    t.toLowerCase() === searchQuery.toLowerCase()
-                  ) && (
-                      <p className="text-[11px] text-[#16A34A] px-1">
-                        Topic already added
-                      </p>
-                    )}
-
-                  {/* ADD NEW TOPIC (ONLY IF NO MATCH FOUND) */}
-                  {/* {availableTopics.filter(t =>
-                    t.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length === 0 &&
-                    !selectedTopics.some(t =>
-                      t.toLowerCase() === searchQuery.toLowerCase()
-                    ) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedTopics(prev => [...prev, searchQuery]);
-                          setSearchQuery("");
-                          setShowSearch(false);
-                        }}
-                        className="text-left text-xs px-3 py-1 rounded-lg
-                     bg-white border border-dashed border-[#43C17A]
-                     text-[#065F46] hover:bg-[#ECFDF5]"
-                      >
-                        ➕ Add new topic: <b>{searchQuery}</b>
-                      </button>
-                    )} */}
-                </div>
-              )}
-
-
-              {/* {showSearch && searchQuery && (
-                    <div className="flex flex-wrap gap-2">
-                      {availableTopics
-                        .filter(topic =>
-                          topic.toLowerCase().includes(searchQuery.toLowerCase())
-                        )
-                        .map(topic => (
-                          <div
-                            key={topic}
-                            className="flex items-center gap-2 bg-white border
-                     border-[#D1FAE5] rounded-full px-3 py-1 text-xs"
-                          >
-                            <span>{topic}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedTopics(prev => [...prev, topic]);
-                                setAvailableTopics(prev => prev.filter(t => t !== topic));
-                                setSearchQuery("");      // optional
-                                setShowSearch(false);    // optional UX
-                              }}
-                              className="text-[#43C17A] font-bold"
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  )} */}
-
-              {/* Available Topics */}
-              {availableTopics.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {availableTopics
-                    .filter(topic =>
-                      topic.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map(topic => (
-                      <div
-                        key={topic}
-                        className="
-            flex items-center gap-2
-            bg-white border border-[#D1FAE5]
-            rounded-full px-3 py-1 text-xs
-            text-[#374151]
-          "
-                      >
-                        <span>{topic}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedTopics(prev => [...prev, topic]);
-                            setAvailableTopics(prev => prev.filter(t => t !== topic));
-                            setSelectAll(false);
-                          }}
-                          className="text-[#43C17A] font-bold hover:scale-110 transition"
-                        >
-                          +
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
-              {/* {availableTopics.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {availableTopics
-                        .filter(topic =>
-                          showSearch
-                            ? topic.toLowerCase().includes(searchQuery.toLowerCase())
-                            : true
-                        )
-                        .map(topic => (
-                          <div
-                            key={topic}
-                            className="
-            flex items-center gap-2
-            bg-white border border-[#D1FAE5]
-            rounded-full px-3 py-1 text-xs
-            text-[#374151]
-          "
-                          >
-                            <span>{topic}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedTopics(prev => [...prev, topic]);
-                                setAvailableTopics(prev => prev.filter(t => t !== topic));
-                                setSelectAll(false);
-                              }}
-                              className="text-[#43C17A] font-bold hover:scale-110 transition"
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  )} */}
-              {/* <div className="flex flex-wrap gap-2">
-                    {availableTopics
-                      .filter((topic) =>
-                        topic.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map((topic) => (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedTopics.map(topic => (
                         <div
                           key={topic}
-                          className="
-              flex items-center gap-2
-              bg-white border border-[#D1FAE5]
-              rounded-full px-3 py-1 text-xs
-              text-[#374151]
-            "
+                          className="flex items-center gap-2 bg-white border border-[#D1FAE5]
+              rounded-full px-3 py-1 text-xs  text-[#065F46]"
                         >
                           <span>{topic}</span>
                           <button
                             type="button"
                             onClick={() => {
-                              setSelectedTopics((prev) => [...prev, topic]);
-                              setAvailableTopics((prev) => prev.filter((t) => t !== topic));
+                              setSelectedTopics(prev => prev.filter(t => t !== topic));
+                              setAvailableTopics(prev => [...prev, topic]);
+                              setSelectAll(false);
                             }}
-                            className="text-[#43C17A] font-bold hover:scale-110 transition"
+                            className="text-red-500 font-bold"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Available Topics */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {availableTopics
+                      .filter(t =>
+                        t.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                      .map(topic => (
+                        <div
+                          key={topic}
+                          className="flex items-center gap-2 bg-white border border-[#D1FAE5]
+              rounded-full px-3 py-1 text-xs  text-[#065F46]"
+                        >
+                          <span>{topic}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTopics(prev => [...prev, topic]);
+                              setAvailableTopics(prev => prev.filter(t => t !== topic));
+                              setSelectAll(false);
+                            }}
+                            className="text-[#43C17A] font-bold"
                           >
                             +
                           </button>
                         </div>
                       ))}
-                  </div> */}
-              {/* </div> */}
-              {/* {aiTopics.length > 0 && (
-              <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3">
-                <p className="text-xs font-semibold text-[#43C17A] mb-2">
-                  AI Suggested Topics
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {aiTopics.map((topic) => (
-                    <div
-                      key={topic}
-                      className="
-            flex items-center gap-2
-            border border-[#D1FAE5]
-            rounded-full
-            px-3 py-1
-            text-xs
-            bg-white
-            text-[#374151]
-          "
-                    >
-                      <span>{topic}</span> */}
-
-              {/* <button
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => ({
-                              ...prev,
-                              topics: prev.topics.includes(topic)
-                                ? prev.topics
-                                : [...prev.topics, topic],
-                            }));
-
-                            setAiTopics((prev) =>
-                              prev.filter((t) => t !== topic)
-                            );
-                          }}
-                          className="text-[#43C17A] font-bold hover:scale-110"
-                        >
-                          +
-                        </button> */}
-              {/* <button
-                        type="button"
-                        onClick={() => handleAddTopicFromAI(topic)}
-                        className="text-[#43C17A] font-bold hover:scale-110"
-                      >
-                        +
-                      </button>
-                    </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            )} */}
+              )}
 
-              {/* <input
-                type="text"
-                placeholder="Enter Unit Name"
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 bg-white placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              /> */}
             </div>
 
-
-            {/* Unit */}
+            {/* 8️⃣ Unit */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">
-                Unit
-              </label>
-              {/* <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-400 bg-white focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
-              >
-                <option>Select Unit</option>
-              </select> */}
+              <label className="text-sm font-semibold text-[#282828]">Unit</label>
               <input
                 type="number"
                 min={1}
-                step={1}
                 value={formData.unitNumber || ""}
                 onChange={(e) =>
-                  setFormData((prev) => ({
+                  setFormData(prev => ({
                     ...prev,
                     unitNumber: Number(e.target.value),
                   }))
                 }
-                placeholder="Enter Unit Number"
+                placeholder="Enter unit number"
                 className="
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
-    text-gray-900 bg-white
-    placeholder:text-gray-400
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-  "
+        w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+        text-gray-900 placeholder:text-gray-400
+        focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      "
               />
-
             </div>
-
-            {/* Topics (RIGHT side under Unit) */}
-            {/* <div className="col-span-1 col-start-2">
-            <label className="text-sm font-semibold text-[#282828] mb-1 block">
-              Topics
-            </label> */}
-
-            {/* INPUT + BUTTON (fixed height) */}
-            {/* <div className="relative">
+            {/* 9️⃣ Start Date */}
+            <div>
+              <label className="text-sm font-semibold text-[#282828]">
+                Start Date
+              </label>
               <input
-                type="text"
-                placeholder="Add topics"
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-14 text-sm"
+                type="date"
+                value={formData.startDate}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, startDate: e.target.value }))
+                }
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
               />
-
-              <button
-                type="button"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#43C17A] text-white"
-              >
-                +
-              </button>
             </div>
 
-            {/* TOPICS LIST (separate block) */}
-            {/* {formData.topics.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {formData.topics.map(topic => (
-                  <div
-                    key={topic}
-                    className="flex items-center gap-2 border rounded-full px-3 py-1 text-xs"
-                  >
-                    <span>{topic}</span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setFormData(prev => ({
-                          ...prev,
-                          topics: prev.topics.filter(t => t !== topic),
-                        }))
-                      }
-                      className="text-red-500 font-bold"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>  */}
-
+            {/* 🔟 End Date */}
+            <div>
+              <label className="text-sm font-semibold text-[#282828]">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={formData.endDate}
+                onChange={(e) =>
+                  setFormData(prev => ({ ...prev, endDate: e.target.value }))
+                }
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
+              />
+            </div>
           </div>
 
           <div className="flex gap-4 mt-4">
             <button
               onClick={handleSave}
-              className="flex-1 bg-[#43C17A] text-white font-semibold py-1.5 rounded-xl hover:bg-[#3bad6d] cursor-pointer"
+              className="flex-1 bg-[#43C17A] text-white font-semibold py-1.5 rounded-xl hover:bg-[#3bad6d]"
             >
               Save
             </button>
