@@ -23,7 +23,22 @@ import { getInternalUserId } from "@/lib/helpers/getInternalUserId";
 type AddNewCardModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (newCard: CardProps) => void;
+  onSave: (card: CardProps) => void;
+
+  facultySubjects: {
+    collegeSubjectId: number;
+    subjectName: string;
+  }[];
+
+  facultySections: {
+    collegeSubjectId: number;
+    collegeSectionsId: number;
+    college_sections: {
+      collegeSections: string;
+    };
+  }[];
+
+  defaultSubjectId: number | null;
 };
 
 type Branch = {
@@ -39,7 +54,8 @@ type FacultyAcademicForm = {
   academicYearId?: number;
   semester?: number; // ✅ this is collegeSemesterId
   subjectName: string;
-  subjectId?: number;   // ✅ ADD THIS
+  subjectId?: number;
+  collegeSubjectId?: number;   // ✅ ADD THIS
   section?: string;
   sectionId?: number;
   unitName: string;
@@ -58,23 +74,32 @@ type FacultyAcademicForm = {
 // }
 
 
-export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProps) {
+export default function AddNewCardModal({
+  isOpen,
+  onClose,
+  onSave,
+  facultySubjects,
+  facultySections,
+  defaultSubjectId,
+}: AddNewCardModalProps) {
+
 
   const [formData, setFormData] = useState<FacultyAcademicForm>({
     educationId: undefined,
     branchId: undefined,
     academicYearId: undefined,
     semester: undefined,
+    collegeSubjectId: undefined,
 
     subjectName: "",
-    subjectId: undefined,
-    // section: "",
+    subjectId: undefined,   // ✅ CORRECT
     unitName: "",
     unitNumber: 1,
-    startDate: "",   // ✅
-    endDate: "",     // ✅
+    startDate: "",
+    endDate: "",
     topics: [],
   });
+
 
   const [facultyId, setFacultyId] = useState<number | null>(null);
 
@@ -111,6 +136,8 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
 
 
 
+
+
   const [aiTopics, setAiTopics] = useState<string[]>([]);
   // const [facultyId, setFacultyId] = useState<number | null>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -122,6 +149,28 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
   const [showSearch, setShowSearch] = useState(false);
 
   const { userId, collegeId, loading } = useUser();
+  const [facultyCtx, setFacultyCtx] = useState<any>(null);
+
+
+  // const [subjectId, setSubjectId] = useState<number | null>(
+  //   defaultSubjectId
+  // );
+
+  // useEffect(() => {
+  //   if (defaultSubjectId) {
+  //     setSubjectId(defaultSubjectId);
+  //   }
+  // }, [defaultSubjectId]);
+
+  const filteredSections = facultySections.filter(fs => {
+    // If subjectId exists → filter by subject
+    if (formData.collegeSubjectId) {
+      return fs.collegeSubjectId === formData.collegeSubjectId;
+    }
+
+    // Otherwise show all assigned sections
+    return true;
+  });
 
 
   useEffect(() => {
@@ -130,6 +179,14 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
     fetchFacultyContext(userId)
       .then((ctx) => {
         setFacultyId(ctx.facultyId);
+        setFacultyCtx(ctx);
+
+        // ✅ AUTO-FILL EDUCATION + BRANCH
+        setFormData(prev => ({
+          ...prev,
+          educationId: ctx.collegeEducationId,
+          branchId: ctx.collegeBranchId,
+        }));
       })
       .catch((err) => {
         console.error("Failed to fetch faculty context", err);
@@ -137,8 +194,38 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
       });
   }, [userId, loading]);
 
-
   console.log("vamshi", facultyId);
+
+
+
+  useEffect(() => {
+    if (!facultyCtx) return;
+
+    const yearIds = facultyCtx.academicYearIds ?? [];
+
+    // ✅ Auto-fill year ONLY if exactly one
+    if (yearIds.length === 1) {
+      setFormData(prev => ({
+        ...prev,
+        academicYearId: yearIds[0],
+      }));
+    }
+  }, [facultyCtx]);
+
+
+
+  useEffect(() => {
+    if (facultySubjects.length === 1) {
+      const only = facultySubjects[0];
+
+      setFormData(prev => ({
+        ...prev,
+        subjectId: only.collegeSubjectId,
+        subjectName: only.subjectName,
+      }));
+    }
+  }, [facultySubjects]);
+
 
 
   useEffect(() => {
@@ -301,10 +388,10 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
   useEffect(() => {
     // 🔥 Clear subject list & selection immediately
     setSubjects([]);
-    setFormData(prev => ({
-      ...prev,
-      subjectName: "",
-    }));
+    // setFormData(prev => ({
+    //   ...prev,
+    //   subjectName: "",
+    // }));
   }, [formData.academicYearId, formData.semester]);
 
 
@@ -336,6 +423,20 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
     formData.academicYearId,
     formData.semester,
   ]);
+
+  useEffect(() => {
+    if (subjects.length === 1) {
+      const onlySubject = subjects[0];
+
+      console.log("✅ AUTO-FILL SUBJECT:", onlySubject);
+
+      setFormData(prev => ({
+        ...prev,
+        subjectId: onlySubject.collegeSubjectId,
+        subjectName: onlySubject.subjectName,
+      }));
+    }
+  }, [subjects]);
 
 
 
@@ -380,11 +481,21 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
   ]);
 
 
+  useEffect(() => {
+    if (
+      filteredSections.length === 1 &&
+      !formData.sectionId // 🛑 critical guard
+    ) {
+      const only = filteredSections[0];
 
+      console.log("🟢 Auto-selecting section:", only);
 
-
-
-
+      setFormData(prev => ({
+        ...prev,
+        sectionId: only.collegeSectionsId,
+      }));
+    }
+  }, [filteredSections, formData.sectionId]);
   // const [formData, setFormData] = useState({
   //   subjectTitle: "",
   //   year: "",
@@ -599,108 +710,64 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
             {/* 1️⃣ Education */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Education</label>
-              <select
-                value={formData.educationId ?? ""}
-                onChange={(e) =>
-                  setFormData(prev => ({
-                    ...prev,
-                    educationId: Number(e.target.value),
-                    branchId: undefined,
-                    academicYearId: undefined,
-                    semester: undefined,
-                    subjectName: "",
-                  }))
+
+              <input
+                type="text"
+                value={
+                  educations.find(
+                    e => e.collegeEducationId === formData.educationId
+                  )?.collegeEducationType || ""
                 }
-                className={`
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.educationId ? "text-gray-900" : "text-gray-400"}
-  `}
-              >
-                <option value="" disabled hidden>
-                  Select education
-                </option>
-
-                {educations.map((e) => (
-                  <option
-                    key={e.collegeEducationId}
-                    value={e.collegeEducationId}
-                  >
-                    {e.collegeEducationType}
-                  </option>
-                ))}
-              </select>
-
+                readOnly
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
+              />
             </div>
 
             {/* 2️⃣ Branch */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Branch</label>
-              <select
-                value={formData.branchId ?? ""}
-                onChange={(e) =>
-                  setFormData(prev => ({
-                    ...prev,
-                    branchId: Number(e.target.value),
-                  }))
+
+              <input
+                type="text"
+                value={
+                  branches.find(
+                    b => b.collegeBranchId === formData.branchId
+                  )?.collegeBranchCode || ""
                 }
-                disabled={!formData.educationId}
-                className={`
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.branchId ? "text-gray-900" : "text-gray-400"}
-    ${!formData.educationId ? "bg-gray-100 cursor-not-allowed" : ""}
-  `}
-              >
-                <option value="" disabled hidden>
-                  Select branch
-                </option>
-
-                {branches.map((branch) => (
-                  <option
-                    key={branch.collegeBranchId}
-                    value={branch.collegeBranchId}
-                    title={branch.collegeBranchType}
-                  >
-                    {branch.collegeBranchCode}
-                  </option>
-                ))}
-              </select>
-
+                readOnly
+                placeholder="Branch"
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900 placeholder:text-gray-400
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
+              />
             </div>
 
             {/* 3️⃣ Year */}
+            {/* 3️⃣ Year (Auto from faculty context, NOT editable) */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Year</label>
-              <select
-                onChange={(e) =>
-                  setFormData(prev => ({
-                    ...prev,
-                    academicYearId: Number(e.target.value),
-                    semester: undefined,     // ✅ reset
-                    subjectName: "",         // ✅ reset
-                  }))
+
+              <input
+                type="text"
+                value={
+                  academicYears.find(
+                    y => y.collegeAcademicYearId === formData.academicYearId
+                  )?.collegeAcademicYear || ""
                 }
-                className={`
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.academicYearId ? "text-gray-900" : "text-gray-400"}
-  `}
-              >
-                <option value="">
-                  Select year
-                </option>
-
-                {academicYears.map((y) => (
-                  <option
-                    key={y.collegeAcademicYearId}
-                    value={y.collegeAcademicYearId}
-                  >
-                    {y.collegeAcademicYear}
-                  </option>
-                ))}
-              </select>
-
+                readOnly
+                placeholder="Year"
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900 placeholder:text-gray-400
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
+              />
             </div>
 
             {/* 4️⃣ Semester */}
@@ -714,7 +781,7 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
                     semester: e.target.value === ""
                       ? undefined
                       : Number(e.target.value),
-                    subjectName: "",          // 🔥 reset subject
+                    // subjectName: "",          // 🔥 reset subject
                   }))
                 }
 
@@ -743,83 +810,35 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
             {/* 5️⃣ Subject Name */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Subject Name</label>
-              <select
-                value={formData.subjectId ?? ""}
-                onChange={(e) =>
-                  setFormData(prev => ({
-                    ...prev,
-                    subjectId: Number(e.target.value),
-                    subjectName: subjects.find(
-                      s => s.collegeSubjectId === Number(e.target.value)
-                    )?.subjectName,
-                  }))
-                }
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm"
-              >
-                <option value="" disabled hidden>
-                  Select subject
-                </option>
 
-                {subjects.map((s) => (
-                  <option
-                    key={s.collegeSubjectId}
-                    value={s.collegeSubjectId}   // ✅ ID AS VALUE
-                  >
-                    {s.subjectName}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                value={formData.subjectName || ""}
+                readOnly
+                placeholder="Subject"
+                className="
+      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      text-gray-900 placeholder:text-gray-400
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+    "
+              />
             </div>
-
+            {/* 6️⃣ Section */}
             {/* 6️⃣ Section */}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Section</label>
-              {/* <select
-                value={formData.section}
-                onChange={(e) => {
-                  console.log("🧭 Section selected from UI:", e.target.value);
-
-                  setFormData(prev => ({
-                    ...prev,
-                    section: e.target.value,
-                  }));
-                }}
-
-                className={`
-    w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-    focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-    ${formData.section ? "text-gray-900" : "text-gray-400"}
-  `}
-              >
-                <option value="" disabled hidden>
-                  Select section
-                </option>
-
-                {Array.from(
-                  new Set(sections.map(s => s.collegeSections))
-                ).map((section) => (
-                  <option
-                    key={section}     // ✅ unique (A, B, C…)
-                    value={section}   // ✅ string value
-                  >
-                    {section}
-                  </option>
-                ))}
-              </select> */}
+              <label className="text-sm font-semibold text-[#282828]">
+                Section
+              </label>
 
               <select
-                value={formData.sectionId ?? ""}                 // 🔴 CHANGED
+                value={formData.sectionId ?? ""}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (!value) return;
 
-                  const sectionId = Number(value);
-
-                  console.log("🧭 Section selected:", sectionId);
-
                   setFormData(prev => ({
                     ...prev,
-                    sectionId,                                   // 🔴 CHANGED
+                    sectionId: Number(value),
                   }));
                 }}
                 className={`
@@ -832,19 +851,16 @@ export default function addNewCardModal({ isOpen, onClose }: AddNewCardModalProp
                   Select section
                 </option>
 
-                {sections.map((s) => (
+                {filteredSections.map(fs => (
                   <option
-                    key={s.collegeSectionsId}                     // 🔴 CHANGED
-                    value={s.collegeSectionsId}                   // 🔴 CHANGED (ID!)
+                    key={fs.collegeSectionsId}
+                    value={fs.collegeSectionsId}
                   >
-                    {s.collegeSections}                           {/* A / B / C */}
+                    {fs.college_sections.collegeSections} {/* A / B / C */}
                   </option>
                 ))}
               </select>
-
             </div>
-
-
             {/* 7️⃣ Unit Name */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Unit Name</label>

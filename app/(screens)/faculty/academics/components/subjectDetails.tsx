@@ -89,6 +89,7 @@ type SubjectDetailsCardProps = {
   onBack: () => void;
 };
 
+
 export type TopicItem = {
   title: string;
   date: string;
@@ -147,8 +148,12 @@ export async function getFacultySubjects(params: {
 }) {
   console.log("🟡 getFacultySubjects called with:", params);
 
+
   const { collegeId } = params;
 
+  /* ----------------------------
+   * 1️⃣ Fetch Subjects
+   * ---------------------------- */
   const { data: subjects, error: subjectErr } = await supabase
     .from("college_subjects")
     .select(`
@@ -171,6 +176,17 @@ export async function getFacultySubjects(params: {
     throw subjectErr;
   }
 
+  console.log(
+    "📚 SUBJECTS FROM DB:",
+    (subjects ?? []).map(s => ({
+      id: s.collegeSubjectId,
+      name: s.subjectName,
+      edu: s.collegeEducationId,
+      branch: s.collegeBranchId,
+      year: s.collegeAcademicYearId,
+      sem: s.collegeSemesterId,
+    }))
+  );
 
   const { data: units, error: unitErr } = await supabase
     .from("college_subject_units")
@@ -351,10 +367,10 @@ export async function getFacultySubjects(params: {
         collegeSemesterId: s.collegeSemesterId,
 
         collegeSubjectId: s.collegeSubjectId,
-
         subjectTitle: s.subjectName,
         semester: `Sem ${s.collegeSemesterId}`,
         year: `Year ${s.collegeAcademicYearId}`,
+
 
         units: unitsCount,
         topicsCovered,

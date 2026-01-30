@@ -20,6 +20,7 @@ import {
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { getFacultyIdByUserId } from "@/lib/helpers/faculty/faculty";
+import { log } from "console";
 
 export const extractValues = (items?: { name: string }[]): string[] => {
   if (!Array.isArray(items)) return [];
@@ -52,6 +53,8 @@ export default function Page() {
     const loadFacultyId = async () => {
       try {
         const id = await getFacultyIdByUserId(userId);
+        console.log("ID", id);
+        
         setFacultyId(id);
       } catch (err) {
         toast.error("Faculty record not found");
