@@ -10,6 +10,12 @@ import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
 
 
 
+import { CircleNotch } from "@phosphor-icons/react";
+
+
+
+
+
 export default function Academics() {
   /* --------------------------------
    * Auth / Base Context
@@ -26,6 +32,8 @@ export default function Academics() {
    * Load Faculty → Subjects
    * -------------------------------- */
 
+
+
   useEffect(() => {
     if (loading) return;
 
@@ -33,6 +41,8 @@ export default function Academics() {
       console.warn("❌ Missing userId / collegeId", { userId, collegeId });
       return;
     }
+
+    setPageLoading(true);
 
     // 🔐 TS-SAFE: now these are `number`
     const resolvedUserId: number = userId;
@@ -163,8 +173,23 @@ export default function Academics() {
       </div>
 
       <div className="mt-4">
-        {loading ? (
-          <p className="text-sm text-gray-500">Loading classes...</p>
+        {pageLoading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-3">
+              <CircleNotch
+                size={48}
+                weight="bold"
+                className="animate-spin text-[#795FD9]"
+              />
+              <p className="text-sm font-medium text-[#795FD9]">
+                Loading classes...
+              </p>
+            </div>
+          </div>
+        ) : subjects.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center mt-10">
+            No classes assigned
+          </p>
         ) : (
           <SubjectCard subjectProps={subjects} />
         )}

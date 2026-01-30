@@ -5,7 +5,7 @@ export const getFacultyIdByUserId = async (userId: number) => {
         .from("faculty")
         .select("facultyId")
         .eq("userId", userId)
-        .eq("is_deleted", false)
+        // .eq("is_deleted", false)
         .maybeSingle();
 
     if (error) throw error;

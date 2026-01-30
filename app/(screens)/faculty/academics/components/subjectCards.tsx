@@ -6,6 +6,9 @@ import { FaChevronDown } from "react-icons/fa6";
 import { SubjectDetailsCard } from "./subjectDetails";
 import AddNewCardModal from "./addNewCardModal";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
+import { useUser } from "@/app/utils/context/UserContext";
+import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
+import { supabase } from "@/lib/supabaseClient";
 
 export type CardProps = {
   collegeId: number;
@@ -16,10 +19,12 @@ export type CardProps = {
   collegeSemesterId: number;
 
   collegeSubjectId: number;
+  collegeSectionId?: number;
 
   subjectTitle: string;
-  semester: string; 
-  year: string;     
+  semester: string;
+  year: string;
+  sectionName?: string;
 
   units: number;
   topicsCovered: number;
@@ -50,6 +55,101 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
 
+  const {
+    userId,
+    role,
+    collegeId,
+    loading,
+  } = useUser();
+
+
+  const [facultySubjects, setFacultySubjects] = useState<any[]>([]);
+  const [facultySections, setFacultySections] = useState<any[]>([]);
+  const [defaultSubjectId, setDefaultSubjectId] = useState<number | null>(null);
+  const [rawCards, setRawCards] = useState<CardProps[]>(subjectProps);
+
+
+
+  useEffect(() => {
+    async function loadFacultyContext() {
+      if (!userId || role !== "Faculty") return;
+
+      const { data: faculty, error } = await supabase
+        .from("faculty")
+        .select("facultyId")
+        .eq("userId", userId)
+        .single();
+
+      if (error || !faculty) {
+        console.error("Faculty not found");
+        return;
+      }
+
+      const mappings = await getFacultyAssignedSubjects({
+        facultyId: faculty.facultyId,
+      });
+
+      // unique subjects
+      const subjects = Array.from(
+        new Map(
+          mappings.map((m: any) => [
+            m.collegeSubjectId,
+            {
+              collegeSubjectId: m.collegeSubjectId,
+              subjectName: m.college_subjects.subjectName,
+            },
+          ])
+        ).values()
+      );
+
+      setFacultySubjects(subjects);
+      setFacultySections(mappings);
+
+      if (subjects.length === 1) {
+        setDefaultSubjectId(subjects[0].collegeSubjectId);
+      }
+    }
+
+    loadFacultyContext();
+  }, [userId, role]);
+
+  useEffect(() => {
+    console.log("🟢 facultySections:", facultySections);
+  }, [facultySections]);
+
+  useEffect(() => {
+    setSectionId(null);
+  }, [subjectId]);
+
+  useEffect(() => {
+    console.log("🔵 cards:", cards);
+  }, [cards]);
+
+  useEffect(() => {
+    if (!rawCards.length || !facultySections.length) return;
+
+    const enriched = rawCards.map(card => {
+      const match = facultySections.find(
+        fs => fs.collegeSubjectId === card.collegeSubjectId
+      );
+
+      if (!match) {
+        console.warn("⚠️ No section mapping for card:", card);
+        return card;
+      }
+
+      return {
+        ...card,
+        collegeSectionId: match.collegeSectionsId,
+        sectionName: match.college_sections.collegeSections,
+      };
+    });
+
+    console.log("🟣 Enriched cards:", enriched);
+    setCards(enriched);
+  }, [rawCards, facultySections]);
+
+
 
   const handleSaveNewCard = (newCard: CardProps) => {
     setCards((prev) => [newCard, ...prev]);
@@ -68,13 +168,27 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
 
   const context = subjectProps[0];
 
+  const filteredSections = facultySections.filter(fs =>
+    subjectId ? fs.collegeSubjectId === subjectId : true
+  );
 
+  const filteredCards = cards.filter(card => {
+    if (subjectId && card.collegeSubjectId !== subjectId) {
+      return false;
+    }
+
+    if (sectionId && card.collegeSectionId !== sectionId) {
+      return false;
+    }
+
+    return true;
+  });
   return (
     <>
       <div className="flex justify-between items-start">
         <div className="mb-6 flex flex-wrap gap-8">
 
-       
+
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Subject :</p>
             <div className="relative">
@@ -86,7 +200,8 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                 className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
               >
                 <option value="">All</option>
-                {subjects.map((s) => (
+
+                {facultySubjects.map(s => (
                   <option
                     key={s.collegeSubjectId}
                     value={s.collegeSubjectId}
@@ -100,7 +215,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             </div>
           </div>
 
-        
+
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Section :</p>
             <div className="relative">
@@ -112,12 +227,13 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                 className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
               >
                 <option value="">All</option>
-                {sections.map((sec) => (
+
+                {filteredSections.map(fs => (
                   <option
-                    key={sec.collegeSectionsId}
-                    value={sec.collegeSectionsId}
+                    key={fs.collegeSectionsId}
+                    value={fs.collegeSectionsId}
                   >
-                    {sec.collegeSections}
+                    {fs.college_sections.collegeSections}
                   </option>
                 ))}
               </select>
@@ -137,12 +253,12 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           onClick={() => setIsModalOpen(true)}
           className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d]"
         >
-          Add Class
+          Add Unit
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {cards.map((item, index) => (
+        {filteredCards.map((item, index) => (
           <IndividualCard
             key={index}
             item={item}
@@ -150,7 +266,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
               console.log("➡️ View Details clicked for:", item);
               setSelectedCard({
                 ...item,
-                collegeSubjectId: item.collegeSubjectId, 
+                collegeSubjectId: item.collegeSubjectId,
               });
               setShowDetails(true);
             }}
@@ -163,7 +279,11 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveNewCard}
+        facultySubjects={facultySubjects}
+        facultySections={facultySections}
+        defaultSubjectId={defaultSubjectId}
       />
+
     </>
   );
 }
@@ -238,6 +358,10 @@ const IndividualCard = ({
               Topics Covered :{" "}
             </span>
             {item.topicsCovered}
+          </p>
+          <p>
+            <span className="font-semibold text-[#282828]">Section : </span>
+            {item.sectionName}
           </p>
         </div>
         <p>
