@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
 import { useRouter } from "next/navigation";
-
 import FacultyAcademicCard from "./components/facultyAcademicCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
@@ -43,7 +42,6 @@ const DEFAULT_CARD_STYLE = {
   belowThresholdCount: 0,
 };
 
-
 const AcademicPage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,17 +50,11 @@ const AcademicPage = () => {
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-
   const [mounted, setMounted] = useState(false);
-
-
   const cardsPerPage = 15;
-
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
-
   const router = useRouter();
-
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
   useEffect(() => {
@@ -75,13 +67,11 @@ const AcademicPage = () => {
     years,
     sections,
     subjects,
-
     education,
     branch,
     year,
     section,
     subject,
-
     selectEducation,
     selectBranch,
     selectYear,
@@ -89,8 +79,6 @@ const AcademicPage = () => {
     setSubject,
     resetEducation,
   } = useAcademicFilters(userId ?? undefined);
-
-
 
   const apiFilters = {
     educationId: education?.collegeEducationId ?? null,
