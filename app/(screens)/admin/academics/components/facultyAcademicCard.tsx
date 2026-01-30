@@ -11,6 +11,11 @@ export interface Department {
   avgAttendance: number;
   belowThresholdCount: number;
   year?: string;
+  faculties?: {
+    facultyId: number;
+    fullName: string;
+    email: string;
+  }[];
 }
 
 const FacultyAcademicCard = ({
@@ -21,7 +26,8 @@ const FacultyAcademicCard = ({
   totalStudents,
   avgAttendance,
   belowThresholdCount,
-  year = "2",
+  year,
+  faculties
 }: Department) => {
   const router = useRouter();
   // const pathname = usePathname();
@@ -51,8 +57,8 @@ const FacultyAcademicCard = ({
           className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
           style={{ backgroundColor: bgColor, color: text }}
         >
-          Year <span className="ml-1">{year}</span>
-          <CaretDown size={12} weight="bold" />
+          <span className="ml-1">{year}</span>
+          {/* <CaretDown size={12} weight="bold" /> */}
         </div>
       </div>
 
@@ -61,7 +67,7 @@ const FacultyAcademicCard = ({
           Faculty -
         </span>
         <div className="flex -space-x-2.5">
-          {[10, 20, 30, 40, 50].map((seed, i) => (
+          {/* {[10, 20, 30, 40, 50].map((seed, i) => (
             <div
               key={i}
               className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
@@ -72,11 +78,32 @@ const FacultyAcademicCard = ({
                 className="w-full h-full object-cover contrast-125"
               />
             </div>
-          ))}
+          ))} */}
+          {faculties && faculties.length > 0 ? (
+            <>
+              {faculties.slice(0, 5).map((f, i) => (
+                <div
+                  key={f.facultyId}
+                  title={f.fullName}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                >
+                  <img
+                    src={`https://i.pravatar.cc/100?u=${f.email}`}
+                    alt={f.fullName}
+                    className="w-full h-full object-cover contrast-125"
+                  />
+                </div>
+              ))}
+              {faculties.length > 5 && (
+                <span className="text-gray-700 font-semibold text-sm ml-1">
+                  +{faculties.length - 5}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-gray-400 text-xs">No Faculty</span>
+          )}
         </div>
-        <span className="text-gray-700 font-semibold text-base ml-0.5">
-          +10
-        </span>
       </div>
 
       <div className="flex items-center gap-3 mb-6">
@@ -104,7 +131,7 @@ const FacultyAcademicCard = ({
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2 text-[#282828] font-medium">
           <UserCircle size={28} className="text-[#43C17A]" weight="fill" />
-          <span className="text-[13px]">{totalStudents} Students</span>
+          <span className="text-[13px]">{totalStudents ?? 0} Students</span>
         </div>
         <button
           onClick={handleViewDetails}
