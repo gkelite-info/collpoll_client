@@ -1,13 +1,11 @@
 "use client";
 
 import { Timer } from "@phosphor-icons/react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { FaChevronDown } from "react-icons/fa6";
-// import { SubjectDetailsCard } from "./subjectDetails";
-// import AddNewCardModal from "./addNewCardModal";
 
 export type CardProps = {
+  subjectId?: number;
   facultyName?: string;
   facultyProfile?: string;
   subjectTitle: string;
@@ -20,105 +18,26 @@ export type CardProps = {
   students: number;
   fromDate: string;
   toDate: string;
+  credits?: number;
 };
 
 type SubjectCardProps = { subjectProps: CardProps[] };
 
 export default function SubjectCard({ subjectProps }: SubjectCardProps) {
-  const [cards, setCards] = useState<CardProps[]>(subjectProps);
-  const [showDetails, setShowDetails] = useState(false);
-  const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleSaveNewCard = (newCard: CardProps) => {
-    setCards((prev) => [newCard, ...prev]);
-  };
-
-  // if (showDetails && selectedCard) {
-  //   return (
-  //     <div className="h-screen overflow-x-scroll">
-  //       <SubjectDetailsCard
-  //         details={selectedCard}
-  //         onBack={() => setShowDetails(false)}
-  //       />
-  //     </div>
-  //   );
-  // }
+  const [cards] = useState<CardProps[]>(subjectProps);
 
   return (
     <>
-      <div className="flex justify-between items-start">
-        {/* <div className="mb-6 flex flex-wrap gap-8">
-          <FilterLabel label="Subject" value="All" />
-          <FilterSelect label="Semester" options={["I", "II"]} />
-          <FilterSelect label="Year" options={["1st Year", "2nd Year"]} />
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d]"
-        >
-          Add Class
-        </button> */}
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {cards.map((item, index) => (
-          <IndividualCard
-            key={index}
-            item={item}
-            onViewDetails={() => {
-              setSelectedCard(item);
-              setShowDetails(true);
-            }}
-          />
+          <IndividualCard key={index} item={item} />
         ))}
       </div>
-
-      {/* <AddNewCardModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveNewCard}
-      /> */}
     </>
   );
 }
 
-const FilterLabel = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex items-center gap-2">
-    <p className="text-[#525252] text-sm">{label} :</p>
-    <p className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-      {value}
-    </p>
-  </div>
-);
-
-const FilterSelect = ({
-  label,
-  options,
-}: {
-  label: string;
-  options: string[];
-}) => (
-  <div className="flex items-center gap-2">
-    <p className="text-[#525252] text-sm">{label} :</p>
-    <div className="relative flex items-center">
-      <select className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium appearance-none pr-8 focus:outline-none">
-        {options.map((opt) => (
-          <option key={opt}>{opt}</option>
-        ))}
-      </select>
-      <FaChevronDown className="absolute right-3 pointer-events-none text-[#43C17A] text-xs" />
-    </div>
-  </div>
-);
-
-const IndividualCard = ({
-  item,
-  onViewDetails,
-}: {
-  item: CardProps;
-  onViewDetails: () => void;
-}) => {
+const IndividualCard = ({ item }: { item: CardProps }) => {
   const router = useRouter();
   const percentage = item.percentage ?? 0;
   const ballWidthPx = 16;
@@ -130,93 +49,118 @@ const IndividualCard = ({
         : `calc(${percentage}% - ${ballWidthPx / 2}px)`;
   const filledWidth = `calc(${percentage}% + ${ballWidthPx / 2}px)`;
 
-  const params = useParams<{ category: string }>()
+  const params = useParams<{ category: string }>();
+  const searchParams = useSearchParams();
+  const yearQuery = searchParams.get("year");
 
-  const handleClick = (subjectTitle: string) => {
-    const slug = subjectTitle
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-
-    router.push(
-      `/admin/academics/${params.category}/${slug}?year=${item.year}`
-    )
-  }
+  const handleClick = () => {
+    if (item.subjectId) {
+      router.push(
+        `/admin/academics/${params.category}/${item.subjectId}?year=${yearQuery}`,
+      );
+    } else {
+      // Fallback for mock data
+      const slug = item.subjectTitle.toLowerCase().replace(/\s+/g, "-");
+      router.push(
+        `/admin/academics/${params.category}/${slug}?year=${yearQuery}`,
+      );
+    }
+  };
 
   return (
-    <div className="bg-white rounded-2xl w-full p-6 flex flex-col shadow-sm border border-gray-100">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-[#282828] font-semibold text-xl flex items-center gap-3">
-          {item.subjectTitle} <span className="bg-[#43C17A1C] text-[#43C17A] px-3 py-1 rounded-full text-sm">Credits : 4</span>
-        </h3>
-        <button
-          //onClick={onViewDetails}
-           onClick={() => handleClick(item.subjectTitle)}
-          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm"
-        >
-          View Details
-        </button>
-      </div>
-      <div className="flex gap-2 items-center -mt-1 mb-2">
-        <p className="text-[#282828] font-semibold text-lg">Faculty - </p>
-        <div>
-          <div
-            key={item.facultyProfile}
-            className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
-          >
-            <img
-              src={`${item.facultyProfile}`}
-              alt="faculty"
-              className="w-full h-full object-cover contrast-125"
-            />
+    <div className="bg-white rounded-lg w-full min-h-[230px] p-4 flex flex-col justify-between shadow-md">
+      {/* Top section */}
+      <div className="flex flex-col justify-start gap-1.5">
+        {/* Title + Credits + Button */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <h5 className="text-[#282828] font-medium text-[17px] truncate">
+              {item.subjectTitle}
+            </h5>
+            <p className="flex-shrink-0 px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+              Credits: {item.credits ?? 4}
+            </p>
           </div>
 
-        </div>
-        <p className="text-[#525252] font-lg">{item.facultyName}</p>
-      </div>
-      <div className="space-y-3 text-[#525252] text-lg">
-        <div className="flex gap-6">
-          <p>
-            <span className="font-semibold text-[#282828]">Units : </span>
-            {item.units.toString().padStart(2, "0")}
-          </p>
-          <p>
-            <span className="font-semibold text-[#282828]">
-              Topics Covered :{" "}
-            </span>
-            {item.topicsCovered}/20
+          <p
+            onClick={handleClick}
+            className="bg-[#7051E1] px-2.5 py-1 text-white font-medium rounded-md text-xs cursor-pointer"
+          >
+            View Details
           </p>
         </div>
-        <p>
-          <span className="font-semibold text-[#282828]">Next lesson : </span>
-          {item.nextLesson}
-        </p>
-        {/* <p>
-          <span className="font-semibold text-[#282828]">Students : </span>
-          {item.students}
-        </p> */}
+
+        {/* Faculty */}
+        <div className="flex flex-col gap-2 mt-1">
+          <div className="flex items-center gap-2">
+            <h4 className="text-[#282828] font-medium text-[15px]">
+              Faculty -
+            </h4>
+            <div className="h-[30px] w-[30px] rounded-full overflow-hidden">
+              <img
+                src={`https://i.pravatar.cc/100?u=${item.facultyProfile}`}
+                alt="faculty"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <p className="text-[#525252] text-[15px]">{item.facultyName}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="flex items-center gap-5">
+            <h5 className="text-[#525252] text-[15px]">
+              <strong className="text-[#282828] font-medium mr-1.5">
+                Units:
+              </strong>
+              {item.units.toString().padStart(2, "0")}
+            </h5>
+            <h5 className="text-[#525252] text-[15px]">
+              <strong className="text-[#282828] font-medium mr-1.5">
+                Topics Covered :
+              </strong>
+              {item.topicsCovered}/{item.topicsTotal}
+            </h5>
+          </div>
+
+          <h5 className="text-[#525252] text-[15px] truncate">
+            <strong className="text-[#282828] font-medium mr-1.5">
+              Next lesson :
+            </strong>
+            {item.nextLesson}
+          </h5>
+        </div>
       </div>
-      <div className="flex flex-col justify-between relative">
-        <div className="relative lg:w-full rounded-full h-[17px] bg-gray-200 mt-4 overflow-hidden">
+
+      {/* Progress Section */}
+      <div className="flex flex-col justify-between mt-1 relative">
+        <div className="relative w-full rounded-full h-3 bg-gray-200 mt-3 overflow-hidden">
           <div
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#9B83F4] to-[#6D4EE0] rounded-full"
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#9B83F4] to-[#6D4EE0] transition-all duration-700 ease-out rounded-full"
             style={{ width: filledWidth }}
           />
+
           <div
-            className="absolute top-0 h-4 w-4 bg-white rounded-full shadow-lg"
-            style={{ left: ballLeft }}
+            className="absolute top-1/2 -translate-y-1/2 bg-white rounded-full shadow-sm transition-all duration-700 ease-out"
+            style={{
+              left: ballLeft,
+              height: "12px",
+              width: "12px",
+            }}
           />
         </div>
-        <div className="relative w-full h-4">
+
+        <div className="relative w-full h-5 mt-0.5">
           <span
             className="absolute bg-gradient-to-b from-[#7153E1] to-[#2D1A76] bg-clip-text text-transparent font-medium text-xs"
-            style={{ left: ballLeft, transform: "translateX(-10%)" }}
+            style={{ left: ballLeft, transform: "translateX(-50%)" }}
           >
             {percentage}%
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          <Timer size={16} weight="fill" className="text-[#9880F3]" />
-          <p className="text-[13px] text-[#7153E1]">
+
+        <div className="flex items-center gap-1.5">
+          <Timer size={15} weight="fill" className="text-[#9880F3]" />
+          <p className="text-xs text-[#7153E1]">
             {item.fromDate} - {item.toDate}
           </p>
         </div>

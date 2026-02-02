@@ -1,7 +1,10 @@
+"use client";
+
 import { CaretDown, UserCircle } from "@phosphor-icons/react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export interface Department {
+  id: string;
   facultyName: string;
   name: string;
   text: string;
@@ -19,6 +22,7 @@ export interface Department {
 }
 
 const FacultyAcademicCard = ({
+  id,
   name,
   text,
   color,
@@ -27,18 +31,12 @@ const FacultyAcademicCard = ({
   avgAttendance,
   belowThresholdCount,
   year,
-  faculties
+  faculties,
 }: Department) => {
   const router = useRouter();
-  // const pathname = usePathname();
-  // const searchParams = useSearchParams();
 
   const handleViewDetails = () => {
-    // const params = new URLSearchParams(searchParams);
-    // params.set("view", "subjectWise");
-    // params.set("deptId", name);
-    // router.push(`${pathname}?${params.toString()}`);
-    router.push(`/admin/academics/${encodeURIComponent(name)}?year=${year}`);
+    router.push(`/admin/academics/${id}?year=${year}`);
   };
 
   return (
@@ -58,7 +56,6 @@ const FacultyAcademicCard = ({
           style={{ backgroundColor: bgColor, color: text }}
         >
           <span className="ml-1">{year}</span>
-          {/* <CaretDown size={12} weight="bold" /> */}
         </div>
       </div>
 
@@ -67,21 +64,9 @@ const FacultyAcademicCard = ({
           Faculty -
         </span>
         <div className="flex -space-x-2.5">
-          {/* {[10, 20, 30, 40, 50].map((seed, i) => (
-            <div
-              key={i}
-              className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
-            >
-              <img
-                src={`https://i.pravatar.cc/100?u=${name}${seed}`}
-                alt="faculty"
-                className="w-full h-full object-cover contrast-125"
-              />
-            </div>
-          ))} */}
           {faculties && faculties.length > 0 ? (
             <>
-              {faculties.slice(0, 5).map((f, i) => (
+              {faculties.slice(0, 5).map((f) => (
                 <div
                   key={f.facultyId}
                   title={f.fullName}
@@ -107,22 +92,6 @@ const FacultyAcademicCard = ({
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        {/* <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 text-[12px] font-medium whitespace-nowrap">
-            Avg Attendance -
-          </span>
-          <span className="bg-[#E7F9F0] text-[#22C55E] px-2 py-0.5 rounded-full text-[11px] font-bold">
-            {avgAttendance}%
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 text-[12px] font-medium whitespace-nowrap">
-            Below 75% -
-          </span>
-          <span className="bg-[#E7F9F0] text-[#22C55E] px-2 py-0.5 rounded-full text-[11px] font-bold">
-            {belowThresholdCount}
-          </span>
-        </div> */}
         <div>
           <p className="text-[#282828] text-sm">Last Update - Nov 15, 2025</p>
         </div>

@@ -23,7 +23,6 @@ async function getStudentCountBySection(params: {
   return count ?? 0;
 }
 
-
 export async function getAdminAcademicsCards(
   collegeId: number,
   page: number,
@@ -35,7 +34,7 @@ export async function getAdminAcademicsCards(
     academicYearId?: number | null;
     sectionId?: number | null;
     subjectId?: number | null;
-  }
+  },
 ) {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -66,7 +65,7 @@ export async function getAdminAcademicsCards(
         )
       )
     `,
-      { count: "exact" }
+      { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("isActive", true)
@@ -86,7 +85,7 @@ export async function getAdminAcademicsCards(
   if (branchSearch) {
     query = query.or(
       `collegeBranchCode.ilike.%${branchSearch}%,collegeBranchType.ilike.%${branchSearch}%`,
-      { foreignTable: "collegeBranch" }
+      { foreignTable: "collegeBranch" },
     );
   }
 
@@ -111,10 +110,7 @@ export async function getAdminAcademicsCards(
   }
 
   if (filters?.subjectId) {
-    query = query.eq(
-      "faculty_sections.collegeSubjectId",
-      filters.subjectId
-    );
+    query = query.eq("faculty_sections.collegeSubjectId", filters.subjectId);
   }
 
   const { data, count, error } = await query.range(from, to);
@@ -134,7 +130,7 @@ export async function getAdminAcademicsCards(
         ...row,
         studentCount,
       };
-    })
+    }),
   );
 
   return {
@@ -174,7 +170,7 @@ export async function getEducationTypes(collegeId: number) {
 
 export async function getBranchesByEducation(
   collegeId: number,
-  educationId: number
+  educationId: number,
 ) {
   const { data, error } = await supabase
     .from("college_branch")
@@ -188,7 +184,11 @@ export async function getBranchesByEducation(
   return data ?? [];
 }
 
-export async function getAcademicYears(collegeId: number, educationId: number, branchId: number) {
+export async function getAcademicYears(
+  collegeId: number,
+  educationId: number,
+  branchId: number,
+) {
   const { data, error } = await supabase
     .from("college_academic_year")
     .select("collegeAcademicYearId, collegeAcademicYear")
@@ -205,7 +205,7 @@ export async function getAcademicYears(collegeId: number, educationId: number, b
 export async function getSections(
   collegeId: number,
   branchId: number,
-  academicYearId: number
+  academicYearId: number,
 ) {
   const { data, error } = await supabase
     .from("college_sections")
@@ -223,7 +223,7 @@ export async function getSections(
 export async function getSubjects(
   collegeId: number,
   branchId: number,
-  academicYearId: number
+  academicYearId: number,
 ) {
   const { data, error } = await supabase
     .from("college_subjects")

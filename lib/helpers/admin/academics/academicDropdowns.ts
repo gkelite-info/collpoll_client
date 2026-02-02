@@ -19,7 +19,7 @@ export async function fetchEducations(collegeId: number) {
 ========================= */
 export async function fetchBranches(
   collegeId: number,
-  collegeEducationId: number
+  collegeEducationId: number,
 ) {
   const { data, error } = await supabase
     .from("college_branch")
@@ -38,7 +38,7 @@ export async function fetchBranches(
 export async function fetchAcademicYears(
   collegeId: number,
   collegeEducationId: number,
-  collegeBranchId: number
+  collegeBranchId: number,
 ) {
   const { data, error } = await supabase
     .from("college_academic_year")
@@ -57,7 +57,7 @@ export async function fetchAcademicYears(
 export async function fetchSemesters(
   collegeId: number,
   collegeEducationId: number,
-  collegeAcademicYearId: number
+  collegeAcademicYearId: number,
 ) {
   const { data, error } = await supabase
     .from("college_semester")
@@ -78,7 +78,7 @@ export async function fetchSections(
   collegeId: number,
   collegeEducationId: number,
   collegeBranchId: number,
-  collegeAcademicYearId: number
+  collegeAcademicYearId: number,
 ) {
   const { data, error } = await supabase
     .from("college_sections")
