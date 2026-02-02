@@ -1,23 +1,58 @@
 "use client";
 
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { Suspense } from "react";
-import {
-  MagnifyingGlass,
-  CaretLeft,
-  CaretRight,
-} from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
-import { useRouter } from "next/navigation";
-import FacultyAcademicCard from "./components/facultyAcademicCard";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
-import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
+import {
+  getAdminAcademicsCards,
+  mapAcademicCards,
+} from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import FacultyAcademicCard from "./components/facultyAcademicCard";
 import { FilterDropdown } from "./components/filterDropdown";
+import { AcademicSectionsSkeleton } from "./shimmer/academicSectionsSkeleton";
+import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
+
+/* =========================================
+   1. COLOR PALETTE & HELPER
+   ========================================= */
+const COLOR_PALETTE = [
+  { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" }, // CSE
+  { text: "#FF9F7E", color: "#F3D3C8", bgColor: "#FFF9DB" }, // ECE
+  { text: "#F8CF64", color: "#F3E2B6", bgColor: "#FFF9DB" }, // MECH
+  { text: "#66EEFA", color: "#BCECF0", bgColor: "#E7F5FF" }, // IT
+  { text: "#10B981", color: "#6EE7B7", bgColor: "#ECFDF5" }, // Green
+  { text: "#8B5CF6", color: "#C4B5FD", bgColor: "#F5F3FF" }, // Purple
+  { text: "#EC4899", color: "#F9A8D4", bgColor: "#FDF2F8" }, // Pink
+  { text: "#6366F1", color: "#A5B4FC", bgColor: "#EEF2FF" }, // Indigo
+  { text: "#14B8A6", color: "#5EEAD4", bgColor: "#F0FDFA" }, // Teal
+  { text: "#84CC16", color: "#BEF264", bgColor: "#F7FEE7" }, // Lime
+  { text: "#0EA5E9", color: "#7DD3FC", bgColor: "#F0F9FF" }, // Sky
+  { text: "#F59E0B", color: "#FCD34D", bgColor: "#FFFBEB" }, // Amber
+  { text: "#F43F5E", color: "#FDA4AF", bgColor: "#FFF1F2" }, // Rose
+  { text: "#7C3AED", color: "#C4B5FD", bgColor: "#F5F3FF" }, // Violet
+  { text: "#D946EF", color: "#F0ABFC", bgColor: "#FDF4FF" }, // Fuchsia
+  { text: "#F97316", color: "#FDBA74", bgColor: "#FFF7ED" }, // Orange
+  { text: "#64748B", color: "#CBD5E1", bgColor: "#F8FAFC" }, // Slate
+  { text: "#059669", color: "#6EE7B7", bgColor: "#ECFDF5" }, // Mint
+  { text: "#DC2626", color: "#FCA5A5", bgColor: "#FEF2F2" }, // Crimson
+  { text: "#2563EB", color: "#93C5FD", bgColor: "#EFF6FF" }, // Royal
+];
+
+const getDynamicBranchStyle = (branchCode: string) => {
+  if (!branchCode) return COLOR_PALETTE[0];
+  const code = branchCode.trim().toUpperCase();
+  let hash = 0;
+  for (let i = 0; i < code.length; i++) {
+    hash = code.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % COLOR_PALETTE.length;
+  return COLOR_PALETTE[index];
+};
 
 export type AcademicCardData = {
   id: string;
@@ -33,15 +68,9 @@ export type AcademicCardData = {
   }[];
 };
 
-const DEFAULT_CARD_STYLE = {
-  facultyName: "N/A",
-  text: "#16284F",
-  color: "#16284F",
-  bgColor: "#E7F5FF",
-  avgAttendance: 0,
-  belowThresholdCount: 0,
-};
-
+/* =========================================
+   2. MAIN COMPONENT
+   ========================================= */
 const AcademicPage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,8 +78,8 @@ const AcademicPage = () => {
   const [cards, setCards] = useState<AcademicCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [mounted, setMounted] = useState(false);
+
   const cardsPerPage = 15;
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -91,56 +120,47 @@ const AcademicPage = () => {
   useEffect(() => {
     if (!userId) return;
     loadCardsOnly();
-  }, [
-    userId,
-    currentPage,
-    debouncedSearch,
-    education,
-    branch,
-    year,
-    section,
-    subject
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, currentPage, education, branch, year, section, subject]);
 
   const loadCardsOnly = async () => {
     try {
       setLoading(true);
       const { collegeId } = await fetchAdminContext(userId!);
+
       const { data, totalCount } = await getAdminAcademicsCards(
         collegeId,
         currentPage,
         cardsPerPage,
-        debouncedSearch,
-        apiFilters
+        "",
+        apiFilters,
       );
+
       setCards(mapAcademicCards(data));
       setTotalRecords(totalCount);
     } catch (error: any) {
-      toast.error(
-        error?.message ||
-        "Unable to load academic records. Please try again later."
-      );
+      toast.error(error?.message || "Unable to load academic records.");
       setCards([]);
       setTotalRecords(0);
-    }
-    finally {
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setCurrentPage(1);
-    }, 400);
+  const filteredCards = useMemo(() => {
+    if (!search.trim()) return cards;
 
-    return () => clearTimeout(timer);
-  }, [search]);
+    const lowerQuery = search.toLowerCase();
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search]);
-
+    return cards.filter((card) => {
+      return (
+        card.branchCode.toLowerCase().includes(lowerQuery) ||
+        card.branchName.toLowerCase().includes(lowerQuery) ||
+        card.section.toLowerCase().includes(lowerQuery) ||
+        card.year.toLowerCase().includes(lowerQuery)
+      );
+    });
+  }, [search, cards]);
 
   if (!mounted) return null;
 
@@ -154,6 +174,7 @@ const AcademicPage = () => {
 
   return (
     <div className="flex flex-col m-4">
+      {/* Header */}
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div className="flex items-center gap-2 group w-fit cursor-pointer">
@@ -168,11 +189,12 @@ const AcademicPage = () => {
         </div>
       </div>
 
+      {/* Search & Filters */}
       <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative w-full md:w-[32%]">
           <input
             type="text"
-            placeholder="Search here......"
+            placeholder="Search here..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full text-black h-11 pl-5 pr-12 rounded-full bg-[#EAEAEA] text-sm outline-none"
@@ -188,20 +210,24 @@ const AcademicPage = () => {
           <FilterDropdown
             label="Education"
             value={education?.collegeEducationId?.toString() ?? "All"}
-            options={["All", ...educations.map(e => e.collegeEducationId.toString())]}
+            options={[
+              "All",
+              ...educations.map((e) => e.collegeEducationId.toString()),
+            ]}
             onChange={(val) => {
               if (val === "All") {
                 resetEducation();
                 return;
               }
-              const edu = educations.find(e => e.collegeEducationId === +val);
+              const edu = educations.find((e) => e.collegeEducationId === +val);
               edu && selectEducation(edu);
             }}
             displayModifier={(val) =>
               val === "All"
                 ? "All"
-                : educations.find(e => e.collegeEducationId.toString() === val)
-                  ?.collegeEducationType ?? val
+                : (educations.find(
+                    (e) => e.collegeEducationId.toString() === val,
+                  )?.collegeEducationType ?? val)
             }
           />
 
@@ -210,20 +236,23 @@ const AcademicPage = () => {
             value={branch?.collegeBranchId?.toString() ?? "All"}
             disabled={!education}
             placeholder="Select Branch"
-            options={["All", ...branches.map(b => b.collegeBranchId.toString())]}
+            options={[
+              "All",
+              ...branches.map((b) => b.collegeBranchId.toString()),
+            ]}
             onChange={(val) => {
               if (val === "All") {
                 selectEducation(education);
                 return;
               }
-              const br = branches.find(b => b.collegeBranchId === +val);
+              const br = branches.find((b) => b.collegeBranchId === +val);
               br && selectBranch(br);
             }}
             displayModifier={(val) =>
               val === "All"
                 ? "All"
-                : branches.find(b => b.collegeBranchId.toString() === val)
-                  ?.collegeBranchCode ?? val
+                : (branches.find((b) => b.collegeBranchId.toString() === val)
+                    ?.collegeBranchCode ?? val)
             }
           />
 
@@ -232,21 +261,24 @@ const AcademicPage = () => {
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             disabled={!branch}
             placeholder="Select Year"
-            options={["All", ...years.map(y => y.collegeAcademicYearId.toString())]}
+            options={[
+              "All",
+              ...years.map((y) => y.collegeAcademicYearId.toString()),
+            ]}
             onChange={(val) => {
               if (val === "All") {
                 setSection(null);
                 setSubject(null);
                 return;
               }
-              const yr = years.find(y => y.collegeAcademicYearId === +val);
+              const yr = years.find((y) => y.collegeAcademicYearId === +val);
               yr && selectYear(yr);
             }}
             displayModifier={(val) =>
               val === "All"
                 ? "All"
-                : years.find(y => y.collegeAcademicYearId.toString() === val)
-                  ?.collegeAcademicYear ?? val
+                : (years.find((y) => y.collegeAcademicYearId.toString() === val)
+                    ?.collegeAcademicYear ?? val)
             }
           />
 
@@ -255,21 +287,24 @@ const AcademicPage = () => {
             value={section?.collegeSectionsId?.toString() ?? "All"}
             disabled={!year}
             placeholder="Select Section"
-            options={["All", ...sections.map(s => s.collegeSectionsId.toString())]}
+            options={[
+              "All",
+              ...sections.map((s) => s.collegeSectionsId.toString()),
+            ]}
             onChange={(val) => {
               if (val === "All") {
                 setSection(null);
                 setSubject(null);
                 return;
               }
-              const sec = sections.find(s => s.collegeSectionsId === +val);
+              const sec = sections.find((s) => s.collegeSectionsId === +val);
               sec && setSection(sec);
             }}
             displayModifier={(val) =>
               val === "All"
                 ? "All"
-                : sections.find(s => s.collegeSectionsId.toString() === val)
-                  ?.collegeSections ?? val
+                : (sections.find((s) => s.collegeSectionsId.toString() === val)
+                    ?.collegeSections ?? val)
             }
           />
 
@@ -278,49 +313,59 @@ const AcademicPage = () => {
             value={subject?.collegeSubjectId?.toString() ?? "All"}
             disabled={!section}
             placeholder="Select Subject"
-            options={["All", ...subjects.map(s => s.collegeSubjectId.toString())]}
+            options={[
+              "All",
+              ...subjects.map((s) => s.collegeSubjectId.toString()),
+            ]}
             onChange={(val) => {
               if (val === "All") {
                 setSubject(null);
                 return;
               }
-              const sub = subjects.find(s => s.collegeSubjectId === +val);
+              const sub = subjects.find((s) => s.collegeSubjectId === +val);
               sub && setSubject(sub);
             }}
             displayModifier={(val) =>
               val === "All"
                 ? "All"
-                : subjects.find(s => s.collegeSubjectId.toString() === val)
-                  ?.subjectName ?? val
+                : (subjects.find((s) => s.collegeSubjectId.toString() === val)
+                    ?.subjectName ?? val)
             }
           />
         </div>
-        
       </div>
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
           {loading ? (
-            <div className="col-span-full flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-900"></div>
+            [...Array(6)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
+          ) : !loading && filteredCards.length === 0 ? (
+            <div className="col-span-full flex justify-center py-20 text-gray-400">
+              {cards.length > 0
+                ? "No matches found on this page."
+                : "No academic records found."}
             </div>
-          ) :
-            !loading && cards.length === 0 ? (
-              <div className="col-span-full flex justify-center py-20 text-gray-400">
-                No academic records found.
-              </div>
-            ) : (
-              cards.map((dept) => (
-                // <FacultyAcademicCard key={dept.id} {...dept} />
+          ) : (
+            filteredCards.map((dept) => {
+              const style = getDynamicBranchStyle(dept.branchCode);
+              return (
                 <FacultyAcademicCard
                   key={dept.id}
+                  id={dept.id}
                   name={`${dept.branchCode} - ${dept.section}`}
                   year={dept.year}
                   totalStudents={dept.totalStudents}
                   faculties={dept.faculties}
-                  {...DEFAULT_CARD_STYLE}
+                  facultyName="N/A"
+                  avgAttendance={0}
+                  belowThresholdCount={0}
+                  text={style.text}
+                  color={style.color}
+                  bgColor={style.bgColor}
                 />
-              )))}
+              );
+            })
+          )}
         </div>
 
         {totalPages > 1 && (
@@ -338,10 +383,11 @@ const AcademicPage = () => {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
-                    ? "bg-[#16284F] text-white"
-                    : "bg-white text-gray-600 border hover:border-gray-300"
-                    }`}
+                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "bg-white text-gray-600 border hover:border-gray-300"
+                  }`}
                 >
                   {i + 1}
                 </button>
