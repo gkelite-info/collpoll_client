@@ -1,20 +1,18 @@
 "use client";
 import {
-  fetchAdminContext,
   fetchModalInitialData,
   persistFaculty,
-  persistUser,
 } from "@/lib/helpers/admin/upsertFaculty";
+import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
-import { upsertStudentEntry } from "@/lib/helpers/profile/students";
 import { supabase } from "@/lib/supabaseClient";
 import { CaretDown, Eye, EyeSlash, Lock, X } from "@phosphor-icons/react";
 import React, { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { CustomMultiSelect } from "./userModalComponents";
-
-const BASE_YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const SECTION_LETTERS = ["A", "B", "C", "D"];
+import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
+import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -27,7 +25,15 @@ const AddUserModal: React.FC<{
     years: any[];
     sections: any[];
     subjects: any[];
-  }>({ educations: [], branches: [], years: [], sections: [], subjects: [] });
+    semesters: any[];
+  }>({
+    educations: [],
+    branches: [],
+    years: [],
+    sections: [],
+    subjects: [],
+    semesters: [],
+  });
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -43,6 +49,7 @@ const AddUserModal: React.FC<{
     confirmPassword: "",
     studentId: "",
     collegeId: "",
+    collegeCode: "",
     collegeIntId: 0,
     adminId: 0,
   };
@@ -63,7 +70,11 @@ const AddUserModal: React.FC<{
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [subjectInput, setSubjectInput] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
+  const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
 
   const resetForm = () => {
     setBasicData((prev: any) => ({
@@ -77,13 +88,24 @@ const AddUserModal: React.FC<{
     setSelectedYearId(null);
     setSelectedSubjectId(null);
     setSelectedSectionIds([]);
+
     setSelectedDegrees([]);
     setSelectedDepts([]);
     setSelectedYears([]);
     setSelectedSections([]);
     setSelectedSubjects([]);
-    setSubjectInput("");
+    setSelectedSemester([]);
+    setSelectedEntryType([]);
+
     setShowPassword(false);
+    setIsSuccess(false);
+  };
+
+  const handleSingleSelect = (
+    value: string,
+    setList: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => {
+    setList((prev) => (prev[0] === value ? [] : [value]));
   };
 
   useEffect(() => {
@@ -108,11 +130,19 @@ const AddUserModal: React.FC<{
             ...prev,
             collegeId: adminContext.collegePublicId,
             collegeIntId: adminContext.collegeId,
+            collegeCode: adminContext.collegeCode,
             adminId: adminContext.adminId,
           }));
 
           const data = await fetchModalInitialData(adminContext.collegeId);
-          setDbData(data);
+
+          const { data: semesterData } = await supabase
+            .from("college_semester")
+            .select("*")
+            .eq("collegeId", adminContext.collegeId)
+            .eq("isActive", true);
+
+          setDbData({ ...data, semesters: semesterData || [] });
         } catch (error) {
           console.error("Error initializing modal data:", error);
           toast.error("Failed to load college data");
@@ -137,38 +167,130 @@ const AddUserModal: React.FC<{
     }
   }, [isOpen, user]);
 
+  // const filteredBranches = useMemo(
+  //   () =>
+  //     dbData.branches.filter(
+  //       (b) => b.collegeEducationId === selectedEducationId,
+  //     ),
+  //   [dbData.branches, selectedEducationId],
+  // );
+
+  // const filteredYears = useMemo(
+  //   () => dbData.years.filter((y) => y.collegeBranchId === selectedBranchId),
+  //   [dbData.years, selectedBranchId],
+  // );
+
+  // const filteredSubjects = useMemo(
+  //   () =>
+  //     dbData.subjects.filter((s) => s.collegeAcademicYearId === selectedYearId),
+  //   [dbData.subjects, selectedYearId],
+  // );
+
+  // const filteredSections = useMemo(
+  //   () =>
+  //     dbData.sections.filter((s) => s.collegeAcademicYearId === selectedYearId),
+  //   [dbData.sections, selectedYearId],
+  // );
+
   const filteredBranches = useMemo(
     () =>
       dbData.branches.filter(
-        (b) => b.collegeEducationId === selectedEducationId,
+        (b) => b.collegeEducationId == selectedEducationId,
       ),
     [dbData.branches, selectedEducationId],
   );
 
   const filteredYears = useMemo(
-    () => dbData.years.filter((y) => y.collegeBranchId === selectedBranchId),
+    () => dbData.years.filter((y) => y.collegeBranchId == selectedBranchId),
     [dbData.years, selectedBranchId],
   );
 
   const filteredSubjects = useMemo(
     () =>
-      dbData.subjects.filter((s) => s.collegeAcademicYearId === selectedYearId),
+      dbData.subjects.filter((s) => s.collegeAcademicYearId == selectedYearId),
     [dbData.subjects, selectedYearId],
   );
 
   const filteredSections = useMemo(
     () =>
-      dbData.sections.filter((s) => s.collegeAcademicYearId === selectedYearId),
+      dbData.sections.filter((s) => s.collegeAcademicYearId == selectedYearId),
     [dbData.sections, selectedYearId],
+  );
+
+  const studentSelectedEducation = useMemo(
+    () =>
+      dbData.educations.find(
+        (e) => e.collegeEducationType === selectedDegrees[0],
+      ),
+    [selectedDegrees, dbData.educations],
+  );
+
+  const studentAvailableBranches = useMemo(
+    () =>
+      studentSelectedEducation
+        ? dbData.branches.filter(
+            (b) =>
+              b.collegeEducationId ===
+              studentSelectedEducation.collegeEducationId,
+          )
+        : [],
+    [studentSelectedEducation, dbData.branches],
+  );
+
+  const studentSelectedBranch = useMemo(
+    () =>
+      studentAvailableBranches.find(
+        (b) => b.collegeBranchCode === selectedDepts[0],
+      ),
+    [studentAvailableBranches, selectedDepts],
+  );
+
+  const studentAvailableYears = useMemo(
+    () =>
+      studentSelectedBranch
+        ? dbData.years.filter(
+            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+          )
+        : [],
+    [studentSelectedBranch, dbData.years],
+  );
+
+  const studentSelectedYear = useMemo(
+    () =>
+      studentAvailableYears.find(
+        (y) => y.collegeAcademicYear === selectedYears[0],
+      ),
+    [studentAvailableYears, selectedYears],
+  );
+
+  const studentAvailableSemesters = useMemo(
+    () =>
+      studentSelectedYear
+        ? dbData.semesters.filter(
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
+        : [],
+    [studentSelectedYear, dbData.semesters],
+  );
+
+  const studentAvailableSections = useMemo(
+    () =>
+      studentSelectedYear
+        ? dbData.sections.filter(
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
+        : [],
+    [studentSelectedYear, dbData.sections],
   );
 
   const handleBasicChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
-  const toggleSelection = (list: string[], setList: Function, item: string) =>
-    setList(
-      list.includes(item) ? list.filter((i) => i !== item) : [...list, item],
-    );
+
   const toggleSectionId = (idStr: string) => {
     const id = parseInt(idStr);
     setSelectedSectionIds((prev) =>
@@ -180,34 +302,22 @@ const AddUserModal: React.FC<{
     () => dbData.educations.map((e: any) => e.collegeEducationType),
     [dbData.educations],
   );
-  const availableDeptsGrouped = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
-    selectedDegrees.forEach((degName) => {
-      const edu = dbData.educations.find(
-        (e: any) => e.collegeEducationType === degName,
-      );
-      if (edu) {
-        grouped[degName] = dbData.branches
-          .filter((b: any) => b.collegeEducationId === edu.collegeEducationId)
-          .map((b: any) => b.collegeBranchCode);
-      }
-    });
-    return grouped;
-  }, [selectedDegrees, dbData.educations, dbData.branches]);
-  const availableYearsGrouped = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
-    selectedDepts.forEach((dept) => {
-      grouped[dept] = BASE_YEARS.map((y) => `${dept} - ${y}`);
-    });
-    return grouped;
-  }, [selectedDepts]);
-  const availableSectionsGrouped = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
-    selectedDepts.forEach((dept) => {
-      grouped[dept] = SECTION_LETTERS.map((l) => `${dept}-${l}`);
-    });
-    return grouped;
-  }, [selectedDepts]);
+  const branchOptions = useMemo(
+    () => studentAvailableBranches.map((b) => b.collegeBranchCode),
+    [studentAvailableBranches],
+  );
+  const yearOptions = useMemo(
+    () => studentAvailableYears.map((y) => y.collegeAcademicYear),
+    [studentAvailableYears],
+  );
+  const semesterOptions = useMemo(
+    () => studentAvailableSemesters.map((s) => s.collegeSemester.toString()),
+    [studentAvailableSemesters],
+  );
+  const sectionOptions = useMemo(
+    () => studentAvailableSections.map((s) => s.collegeSections),
+    [studentAvailableSections],
+  );
 
   const isFaculty = basicData.role === "Faculty";
   const isStudent = basicData.role === "Student";
@@ -225,9 +335,24 @@ const AddUserModal: React.FC<{
         !selectedSubjectId ||
         selectedSectionIds.length === 0)
     )
-      return toast.error("Complete all academic fields.");
+      return toast.error("Complete all academic fields for Faculty.");
+
+    if (isStudent) {
+      if (
+        !selectedDegrees.length ||
+        !selectedDepts.length ||
+        !selectedYears.length ||
+        !selectedSemester.length ||
+        !selectedEntryType.length ||
+        !selectedSections.length
+      ) {
+        return toast.error("Complete all academic fields for Student.");
+      }
+    }
+
     if (isParent && !basicData.studentId)
       return toast.error("Student ID required.");
+
     if (
       !user &&
       (!basicData.password || basicData.password !== basicData.confirmPassword)
@@ -239,6 +364,7 @@ const AddUserModal: React.FC<{
 
     try {
       const timestamp = new Date().toISOString();
+
       const targetUserId = await persistUser(
         !user,
         { ...basicData, collegePublicId: basicData.collegeId },
@@ -247,7 +373,9 @@ const AddUserModal: React.FC<{
       );
       if (!user) createdUserId = targetUserId;
 
-      if (isFaculty && targetUserId) {
+      if (!targetUserId) throw new Error("User creation failed");
+
+      if (isFaculty) {
         await persistFaculty(
           targetUserId,
           { ...basicData, collegePublicId: basicData.collegeId },
@@ -263,21 +391,43 @@ const AddUserModal: React.FC<{
         );
       }
 
-      if (isStudent && targetUserId) {
-        const yearInt = parseInt(selectedYears[0]?.match(/(\d+)/)?.[1] || "1");
-        await upsertStudentEntry({
-          userId: targetUserId,
-          fullName: basicData.fullName,
-          email: basicData.email,
-          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-          role: "Student",
-          gender: basicData.gender,
-          collegeId: basicData.collegeId,
-          createdBy: basicData.adminId,
-          department: selectedDepts[0],
-          degree: selectedDegrees[0],
-          year: yearInt,
-          section: selectedSections[0],
+      if (isStudent) {
+        const eduId = studentSelectedEducation?.collegeEducationId;
+        const branchId = studentSelectedBranch?.collegeBranchId;
+        const yearId = studentSelectedYear?.collegeAcademicYearId;
+        const semesterId = studentAvailableSemesters.find(
+          (s) => s.collegeSemester.toString() === selectedSemester[0],
+        )?.collegeSemesterId;
+        const sectionId = studentAvailableSections.find(
+          (s) => s.collegeSections === selectedSections[0],
+        )?.collegeSectionsId;
+
+        if (!eduId || !branchId || !yearId || !semesterId || !sectionId) {
+          throw new Error("Invalid academic selection data");
+        }
+
+        const studentId = await createStudent(
+          {
+            userId: targetUserId,
+            collegeEducationId: eduId,
+            collegeBranchId: branchId,
+            collegeId: basicData.collegeIntId,
+            createdBy: basicData.adminId,
+            entryType: selectedEntryType[0] as any,
+            status: "Active",
+          },
+          timestamp,
+        );
+
+        await createStudentAcademicHistory({
+          studentId: studentId,
+          collegeAcademicYearId: yearId,
+          collegeSemesterId: semesterId,
+          collegeSectionsId: sectionId,
+          promotedBy: basicData.adminId,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          isCurrent: true,
         });
       }
 
@@ -294,13 +444,19 @@ const AddUserModal: React.FC<{
         });
       }
 
-      toast.success("Saved Successfully");
-      resetForm();
-      onClose();
+      toast.success("User Created Successfully");
+      setIsSuccess(true);
+      setTimeout(() => {
+        resetForm();
+        onClose();
+        setLoading(false);
+        setIsSuccess(false);
+      }, 2000);
     } catch (e: any) {
       console.error(e);
-      if (createdUserId && !user)
+      if (createdUserId && !user) {
         await supabase.from("users").delete().eq("userId", createdUserId);
+      }
       toast.error(e.message || "An error occurred");
     } finally {
       setLoading(false);
@@ -380,11 +536,12 @@ const AddUserModal: React.FC<{
                     className="w-[60px] border border-gray-200 rounded-md px-2 py-1 text-sm text-center outline-none focus:ring-1 focus:ring-[#48C78E]"
                   />
                   <input
-                    type="number"
+                    type="tel"
                     name="mobileNumber"
                     value={basicData.mobileNumber}
                     onChange={handleBasicChange}
                     className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    maxLength={10}
                   />
                 </div>
               </div>
@@ -413,6 +570,7 @@ const AddUserModal: React.FC<{
                   />
                 </div>
               </div>
+
               {isFaculty && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
@@ -446,20 +604,24 @@ const AddUserModal: React.FC<{
                   </div>
                 </div>
               )}
+
               {isStudent && (
                 <CustomMultiSelect
-                  label="Degree"
-                  placeholder="Select Degree"
+                  label="Education Type"
+                  placeholder="Select Education"
                   options={degreeOptions}
                   selectedValues={selectedDegrees}
-                  onChange={(v) =>
-                    toggleSelection(selectedDegrees, setSelectedDegrees, v)
-                  }
-                  onRemove={(v) =>
-                    toggleSelection(selectedDegrees, setSelectedDegrees, v)
-                  }
+                  onChange={(v) => {
+                    handleSingleSelect(v, setSelectedDegrees);
+                    setSelectedDepts([]);
+                    setSelectedYears([]);
+                    setSelectedSemester([]);
+                    setSelectedSections([]);
+                  }}
+                  onRemove={() => setSelectedDegrees([])}
                 />
               )}
+
               {isParent && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
@@ -610,49 +772,64 @@ const AddUserModal: React.FC<{
               <>
                 <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
-                    label="Department"
-                    placeholder="Select Dept"
-                    options={availableDeptsGrouped}
+                    label="Branch Type"
+                    placeholder="Select Branch"
+                    options={branchOptions}
                     selectedValues={selectedDepts}
                     disabled={selectedDegrees.length === 0}
-                    isGrouped={true}
-                    onChange={(v) =>
-                      toggleSelection(selectedDepts, setSelectedDepts, v)
-                    }
-                    onRemove={(v) =>
-                      toggleSelection(selectedDepts, setSelectedDepts, v)
-                    }
+                    onChange={(v) => {
+                      handleSingleSelect(v, setSelectedDepts);
+                      setSelectedYears([]);
+                      setSelectedSemester([]);
+                      setSelectedSections([]);
+                    }}
+                    onRemove={() => setSelectedDepts([])}
                   />
-                  <div className="hidden md:block"></div>
-                </div>
-                <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
                     label="Year"
                     placeholder="Select Year"
-                    options={availableYearsGrouped}
+                    options={yearOptions}
                     selectedValues={selectedYears}
                     disabled={selectedDepts.length === 0}
-                    isGrouped={true}
-                    onChange={(v) =>
-                      toggleSelection(selectedYears, setSelectedYears, v)
-                    }
-                    onRemove={(v) =>
-                      toggleSelection(selectedYears, setSelectedYears, v)
-                    }
+                    onChange={(v) => {
+                      handleSingleSelect(v, setSelectedYears);
+                      setSelectedSemester([]);
+                      setSelectedSections([]);
+                    }}
+                    onRemove={() => setSelectedYears([])}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <CustomMultiSelect
+                    label="Semester"
+                    placeholder="Select Semester"
+                    options={semesterOptions}
+                    selectedValues={selectedSemester}
+                    disabled={selectedYears.length === 0}
+                    onChange={(v) => handleSingleSelect(v, setSelectedSemester)}
+                    onRemove={() => setSelectedSemester([])}
                   />
                   <CustomMultiSelect
                     label="Section"
                     placeholder="Select Section"
-                    options={availableSectionsGrouped}
+                    options={sectionOptions}
                     selectedValues={selectedSections}
-                    disabled={selectedDepts.length === 0}
-                    isGrouped={true}
+                    disabled={selectedYears.length === 0}
+                    onChange={(v) => handleSingleSelect(v, setSelectedSections)}
+                    onRemove={() => setSelectedSections([])}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-5">
+                  <CustomMultiSelect
+                    label="Entry Type"
+                    placeholder="Select Entry Type"
+                    options={ENTRY_TYPES}
+                    selectedValues={selectedEntryType}
+                    disabled={selectedSemester.length === 0}
                     onChange={(v) =>
-                      toggleSelection(selectedSections, setSelectedSections, v)
+                      handleSingleSelect(v, setSelectedEntryType)
                     }
-                    onRemove={(v) =>
-                      toggleSelection(selectedSections, setSelectedSections, v)
-                    }
+                    onRemove={() => setSelectedEntryType([])}
                   />
                 </div>
               </>
@@ -737,14 +914,18 @@ const AddUserModal: React.FC<{
           <div className="px-6 py-5 border-t border-gray-50 flex gap-4 flex-shrink-0 bg-white">
             <button
               onClick={handleSave}
-              disabled={loading}
-              className="flex-1 bg-[#43C17A] text-white text-sm font-medium py-1 rounded-md hover:bg-[#3ea876] transition-all shadow-sm"
+              disabled={loading || isSuccess}
+              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
+                isSuccess
+                  ? "bg-green-600 cursor-default"
+                  : "bg-[#43C17A] hover:bg-[#3ea876]"
+              }`}
             >
-              {loading ? "Saving..." : "Save"}
+              {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>
             <button
               onClick={onClose}
-              className="flex-1 border border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
+              className="flex-1 border cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>
