@@ -1,280 +1,125 @@
 import { supabase } from "@/lib/supabaseClient";
-import { CalendarEventType, Department, Section, Semester, UiNamedItem } from "./types";
-import { adminNormalizeWithUUID, normalizeWithUUID } from "@/app/utils/jsonWithUuid";
 
-type FetchCalendarEventsResult =
-    | { success: true; events: any[] }
-    | { success: false; error: string };
-
-
-export const upsertCalendarEvent = async (
-    payload: {
-        facultyId: number | null;
-        eventTitle: string;
-        eventTopic: string;
-        type: CalendarEventType;
-        date: string;
-        roomNo: string;
-        fromTime: string;
-        toTime: string;
-        degree: string;
-        department: Department[];
-        year: string;
-        semester: Semester[];
-        section: Section[];
-    },
-    calendarEventId?: number
-) => {
-    try {
-        if (payload.fromTime >= payload.toTime) {
-            throw new Error("From time must be earlier than To time");
-        }
-
-        const now = new Date().toISOString();
-
-        const baseData = {
-            facultyId: payload.facultyId,
-            eventTitle: payload.eventTitle,
-            eventTopic: payload.eventTopic,
-            type: payload.type,
-            date: payload.date,
-            roomNo: payload.roomNo,
-            fromTime: payload.fromTime,
-            toTime: payload.toTime,
-            degree: payload.degree,
-            department: normalizeWithUUID(payload.department),
-            semester: normalizeWithUUID(payload.semester),
-            section: normalizeWithUUID(payload.section),
-            // year: payload.year,
-            year:
-                ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
-                    ? String(payload.year)
-                    : "",
-            updatedAt: now,
-        };
-
-        if (calendarEventId) {
-            const { data, error } = await supabase
-                .from("calendarEvent")
-                .update(baseData)
-                .eq("calendarEventId", calendarEventId)
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            return { success: true, data };
-        }
-
-        const { data, error } = await supabase
-            .from("calendarEvent")
-            .insert({
-                ...baseData,
-                createdAt: now,
-            })
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return { success: true, data };
-
-    } catch (err: any) {
-        return { success: false, error: err.message };
-    }
-};
-
-export const upsertCalendarEventAdmin = async (payload: {
-    facultyId: number | null;
-    eventTitle: string;
+export type CalendarEventRow = {
+    facultyId: number;
+    subject: string | null;
     eventTopic: string;
-    type: CalendarEventType;
+    type: string;
     date: string;
     roomNo: string;
     fromTime: string;
     toTime: string;
-    degree: string;
-    department: UiNamedItem[];
-    year: string;
-    semester: UiNamedItem[];
-    section: UiNamedItem[];
-}) => {
-    try {
-
-        if (payload.fromTime >= payload.toTime) {
-            throw new Error("From time must be earlier than To time");
-        }
-        const now = new Date().toISOString();
-
-        const { data, error } = await supabase
-            .from("calendarEvent")
-            .insert(
-                {
-                    facultyId: payload.facultyId,
-                    eventTitle: payload.eventTitle,
-                    eventTopic: payload.eventTopic,
-                    type: payload.type,
-                    date: payload.date,
-                    roomNo: payload.roomNo,
-                    fromTime: payload.fromTime,
-                    toTime: payload.toTime,
-                    degree: payload.degree,
-
-                    department: adminNormalizeWithUUID(payload.department),
-                    semester: adminNormalizeWithUUID(payload.semester),
-                    section: adminNormalizeWithUUID(payload.section),
-
-                    // year: payload.year,
-                    year:
-                        ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
-                            ? String(payload.year)
-                            : "",
-                    createdAt: now,
-                    updatedAt: now,
-
-                },
-            )
-            .select()
-            .single();
-
-        if (error) throw error;
-
-        return {
-            success: true,
-            message: "Calendar event saved successfully",
-            data,
-        };
-    } catch (err: any) {
-        console.error("UPSERT CALENDAR EVENT ERROR:", err.message);
-        return {
-            success: false,
-            error: err.message || "Failed to save calendar event",
-        };
-    }
+    meetingLink: string | null;
+    is_deleted: boolean | null;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt: string | null;
 };
 
+export async function fetchCalendarEvents(
+    filters: {
+        facultyId?: number;
+        date?: string;
+    } = {}
+) {
+    let query = supabase
+        .from("calendar_event")
+        .select(`
+      calendarEventId,
+      facultyId,
+      subject,
+      eventTopic,
+      type,
+      date,
+      roomNo,
+      fromTime,
+      toTime,
+      meetingLink,
+      is_deleted,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `)
+        .is("deletedAt", null);
 
-export const fetchCalendarEventsByFaculty = async (facultyId: number): Promise<FetchCalendarEventsResult> => {
-    try {
-        const { data, error } = await supabase
-            .from("calendarEvent")
-            .select("*")
-            .eq("facultyId", facultyId)
-            .eq("is_deleted", false)
-            .order("date", { ascending: true });
-
-        if (error) throw error;
-
-        return {
-            success: true,
-            events: data ?? [],
-        };
-    } catch (err: any) {
-        console.error("FETCH CALENDAR EVENTS ERROR:", err.message);
-        return {
-            success: false,
-            error: err.message,
-        };
+    if (filters.facultyId) {
+        query = query.eq("facultyId", filters.facultyId);
     }
-};
 
-export const fetchCalendarEventById = async (calendarEventId: number) => {
-    try {
-        const { data, error } = await supabase
-            .from("calendarEvent")
-            .select("*")
-            .eq("calendarEventId", calendarEventId)
-            .single();
-
-        if (error) throw error;
-
-        return {
-            success: true,
-            event: data,
-        };
-    } catch (err: any) {
-        console.error("FETCH CALENDAR EVENT ERROR:", err.message);
-        return {
-            success: false,
-            error: err.message,
-        };
+    if (filters.date) {
+        query = query.eq("date", filters.date);
     }
-};
 
-export const deleteCalendarEventByFaculty = async (
-    calendarEventId: number,
-    facultyId: number
-) => {
-    try {
-        const { error } = await supabase
-            .from("calendarEvent")
-            .delete()
-            .eq("calendarEventId", calendarEventId)
-            .eq("facultyId", facultyId);
+    const { data, error } = await query.order("fromTime", { ascending: true });
 
-        if (error) throw error;
-
-        return { success: true };
-    } catch (err: any) {
-        console.error("DELETE CALENDAR EVENT ERROR:", err.message);
-        return {
-            success: false,
-            error: err.message,
-        };
+    if (error) {
+        console.error("fetchCalendarEvents error:", error);
+        throw error;
     }
-};
 
-export const deleteCalendarEvent = async (calendarEventId: number) => {
-    try {
-        const now = new Date().toISOString();
+    return data ?? [];
+}
 
-        const { error } = await supabase
-            .from("calendarEvent")
-            .update({
-                is_deleted: true,
-                deletedAt: now,
+export async function saveCalendarEvent(
+    payload: {
+        facultyId: number;
+        subject?: string | null;
+        eventTopic: string;
+        type: string;
+        date: string;
+        roomNo: string;
+        fromTime: string;
+        toTime: string;
+        meetingLink?: string | null;
+    }
+) {
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+        .from("calendar_event")
+        .upsert(
+            {
+                facultyId: payload.facultyId,
+                subject: payload.subject ?? null,
+                eventTopic: payload.eventTopic,
+                type: payload.type,
+                date: payload.date,
+                roomNo: payload.roomNo,
+                fromTime: payload.fromTime,
+                toTime: payload.toTime,
+                meetingLink: payload.meetingLink ?? null,
                 updatedAt: now,
-            })
-            .eq("calendarEventId", calendarEventId);
+                createdAt: now,
+            },
+            { onConflict: "calendarEventId" }
+        )
+        .select("calendarEventId")
+        .single();
 
-        if (error) throw error;
-
-        return { success: true };
-    } catch (err: any) {
-        console.error("DELETE CALENDAR EVENT ERROR:", err.message);
-        return {
-            success: false,
-            error: err.message,
-        };
+    if (error) {
+        console.error("saveCalendarEvent error:", error);
+        return { success: false, error };
     }
-};
 
-export const updateCalendarEvent = async (
-    calendarEventId: number,
-    payload: any
-) => {
-    try {
-        const now = new Date().toISOString();
+    return {
+        success: true,
+        calendarEventId: data.calendarEventId,
+    };
+}
 
-        const { error } = await supabase
-            .from("calendarEvent")
-            .update({
-                ...payload,
-                year:
-                    ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(payload.year))
-                        ? String(payload.year)
-                        : "",
-                semester: adminNormalizeWithUUID(payload.semester),
-                department: adminNormalizeWithUUID(payload.department),
-                section: adminNormalizeWithUUID(payload.section),
-                updatedAt: now,
-            })
-            .eq("calendarEventId", calendarEventId);
+export async function deleteCalendarEvent(calendarEventId: number) {
+    const { error } = await supabase
+        .from("calendar_event")
+        .update({
+            is_deleted: true,
+            deletedAt: new Date().toISOString(),
+        })
+        .eq("calendarEventId", calendarEventId);
 
-        if (error) throw error;
-
-        return { success: true };
-    } catch (err: any) {
-        return { success: false, error: err.message };
+    if (error) {
+        console.error("deleteCalendarEvent error:", error);
+        return { success: false };
     }
-};
+
+    return { success: true };
+}
