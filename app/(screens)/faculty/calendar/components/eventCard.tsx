@@ -33,7 +33,18 @@ const EVENT_STYLES: Record<
   },
 };
 
-const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete: () => void, onEdit: () => void; }) => {
+const EventCard = ({
+  event,
+  onDelete,
+  onEdit,
+  onClick,
+}: {
+  event: CalendarEvent;
+  onDelete: () => void;
+  onEdit: () => void;
+  onClick: () => void;
+}) => {
+  console.log("🟡 EventCard received event:", event);
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.meeting;
   const Icon = style.Icon;
@@ -47,6 +58,7 @@ const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete
 
   return (
     <div
+     onClick={onClick}
       className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
       <button
@@ -87,15 +99,43 @@ const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete
       </div>
 
       <div
-        className={`flex-1 p-2 h-full overflow-y-auto`}
+        className="flex-1 p-2 h-full overflow-y-auto space-y-1"
         style={{ backgroundColor: style.lightBg }}
       >
+        {/* ✅ TOPIC (TITLE) */}
         <p
-          className={`text-sm font-semibold leading-snug`}
+          className="text-sm font-semibold leading-snug"
           style={{ color: style.text }}
         >
           {event.title}
         </p>
+
+        {/* ✅ BRANCH / SECTION / YEAR — INSIDE COLOR BOX */}
+        <div
+          className="text-[11px] space-y-0.5"
+          style={{ color: style.text }}
+        >
+          {event.branch && (
+            <div className="flex gap-1">
+              <span className="font-medium">Branch:</span>
+              <span>{event.branch}</span>
+            </div>
+          )}
+
+          {event.section && (
+            <div className="flex gap-1">
+              <span className="font-medium">Section:</span>
+              <span>{event.section}</span>
+            </div>
+          )}
+
+          {event.year && (
+            <div className="flex gap-1">
+              <span className="font-medium">Year:</span>
+              <span>{event.year}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

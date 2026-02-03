@@ -650,17 +650,6 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
     LessonData[] | null
   >(null);
 
-  if (selectedUnitLessons) {
-    return (
-      <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6">
-        {/* <LessonCard
-          lesson={selectedUnitLessons}
-          onBack={() => setSelectedUnitLessons(null)}
-        /> */}
-      </div>
-    );
-  }
-
   // const [topics, setTopics] = useState<UnitTopic[]>(unit.topics);
   const [localTopics, setLocalTopics] = useState<UnitTopic[]>(unit.topics);
 
@@ -672,6 +661,18 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
     console.log("✅ UNIT TOPICS", localTopics);
   }, [localTopics]);
 
+
+
+  if (selectedUnitLessons) {
+    return (
+      <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6">
+        {/* <LessonCard
+          lesson={selectedUnitLessons}
+          onBack={() => setSelectedUnitLessons(null)}
+        /> */}
+      </div>
+    );
+  }
 
 
   // const toggleTopic = (index: number) => {
@@ -699,7 +700,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
 
   return (
     <div className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full`}>
-      <div className="flex items-center gap-2 mb-2">
+      {/* <div className="flex items-center gap-2 mb-2">
         <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
         <div
           className={`font-semibold text-md flex w-full justify-between items-center text-[${colors.solidEnd}]`}
@@ -709,7 +710,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
             <CaretRight size={24} color="#282828" />
           </button>
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col">
         <h3
@@ -747,38 +748,26 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
               className="flex items-center gap-2"
             >
               <button
-                onClick={async () => {
-                  const updated = !topic.isCompleted;
-
-                  // 1️⃣ Update DB
-                  const { error } = await supabase
-                    .from("college_subject_unit_topics")
-                    .update({
-                      isCompleted: updated,
-                      updatedAt: new Date().toISOString(),
-                    })
-                    .eq("collegeSubjectUnitTopicId", topic.id);
-
-                  if (error) {
-                    toast.error("Failed to update topic");
-                    return;
-                  }
-
-                  // 2️⃣ Update UI
+                onClick={() => {
+                  // ✅ UI-only toggle
                   setLocalTopics(prev =>
                     prev.map(t =>
-                      t.id === topic.id ? { ...t, isCompleted: updated } : t
+                      t.id === topic.id
+                        ? { ...t, isCompleted: !t.isCompleted }
+                        : t
                     )
                   );
 
+                  // ✅ mark draft state
                   setHasChanges(true);
                 }}
-
               >
                 <CheckCircleIcon
                   size={16}
                   weight="fill"
-                  className={topic.isCompleted ? colors.accent : "text-gray-300"}
+                  className={
+                    topic.isCompleted ? colors.accent : "text-gray-300"
+                  }
                 />
               </button>
 
@@ -934,31 +923,62 @@ export function SubjectDetailsCard({
     toast.success("Progress saved ✅");
   };
 
-
   const saveProgress = async () => {
-    console.log("💾 Saving all units progress", units);
-
-    for (const unit of units) {
-      await supabase
-        .from("college_subject_units")
-        .update({
-          completionPercentage: unit.percentage,
-          completedTopics: unit.topics.filter(t => t.isCompleted).length,
-        })
-        .eq("collegeSubjectUnitId", unit.id);
-    }
-
     try {
-      console.log("✅ All units saved");
-      toast.success("Saved successfully 💾");
+      for (const unit of units) {
+        // 1️⃣ Save topics
+        for (const topic of unit.topics) {
+          await supabase
+            .from("college_subject_unit_topics")
+            .update({
+              isCompleted: topic.isCompleted,
+              updatedAt: new Date().toISOString(),
+            })
+            .eq("collegeSubjectUnitTopicId", topic.id);
+        }
 
+        // 2️⃣ Save unit percentage
+        await supabase
+          .from("college_subject_units")
+          .update({
+            completionPercentage: unit.percentage,
+            updatedAt: new Date().toISOString(),
+          })
+          .eq("collegeSubjectUnitId", unit.id);
+      }
+
+      toast.success("Saved successfully 💾");
       setHasChanges(false);
       onBack();
     } catch (err) {
       toast.error("Failed to save changes");
     }
-
   };
+
+  // const saveProgress = async () => {
+  //   console.log("💾 Saving all units progress", units);
+
+  //   for (const unit of units) {
+  //     await supabase
+  //       .from("college_subject_units")
+  //       .update({
+  //         completionPercentage: unit.percentage,
+  //         completedTopics: unit.topics.filter(t => t.isCompleted).length,
+  //       })
+  //       .eq("collegeSubjectUnitId", unit.id);
+  //   }
+
+  //   try {
+  //     console.log("✅ All units saved");
+  //     toast.success("Saved successfully 💾");
+
+  //     setHasChanges(false);
+  //     onBack();
+  //   } catch (err) {
+  //     toast.error("Failed to save changes");
+  //   }
+
+  // };
 
 
   return (
