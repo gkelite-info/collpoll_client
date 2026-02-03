@@ -17,7 +17,81 @@ type AcademicDropdownParams = {
     | "section";
 };
 
-export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
+type AcademicDropdownMap = {
+    education: {
+        collegeEducationId: number;
+        collegeEducationType: string;
+    };
+    branch: {
+        collegeBranchId: number;
+        collegeBranchType: string;
+        collegeBranchCode: string;
+    };
+    academicYear: {
+        collegeAcademicYearId: number;
+        collegeAcademicYear: string;
+    };
+    semester: {
+        collegeSemesterId: number;
+        collegeSemester: number;
+    };
+    subject: {
+        collegeSubjectId: number;
+        subjectName: string;
+    };
+    section: {
+        collegeSectionsId: number;
+        collegeSections: string;
+    };
+};
+
+
+export function fetchAcademicDropdowns(params: {
+    type: "education";
+    collegeId: number;
+}): Promise<AcademicDropdownMap["education"][]>;
+
+export function fetchAcademicDropdowns(params: {
+    type: "branch";
+    collegeId: number;
+    educationId: number;
+}): Promise<AcademicDropdownMap["branch"][]>;
+
+export function fetchAcademicDropdowns(params: {
+    type: "academicYear";
+    collegeId: number;
+    educationId: number;
+    branchId: number;
+}): Promise<AcademicDropdownMap["academicYear"][]>;
+
+export function fetchAcademicDropdowns(params: {
+    type: "semester";
+    collegeId: number;
+    educationId: number;
+    academicYearId: number;
+    branchId?: number; // ✅ allow extra param
+}): Promise<AcademicDropdownMap["semester"][]>;
+
+export function fetchAcademicDropdowns(params: {
+    type: "subject";
+    collegeId: number;
+    educationId: number;
+    branchId: number;
+    academicYearId: number;
+    semester: number;
+}): Promise<AcademicDropdownMap["subject"][]>;
+
+export function fetchAcademicDropdowns(params: {
+    type: "section";
+    collegeId: number;
+    educationId: number;
+    branchId: number;
+    academicYearId: number;
+}): Promise<AcademicDropdownMap["section"][]>;
+
+export async function fetchAcademicDropdowns(
+    params: AcademicDropdownParams
+) {
     const {
         type,
         collegeId,
@@ -28,7 +102,7 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
     } = params;
 
     switch (type) {
-        /* ===================== EDUCATION ===================== */
+
         case "education": {
             const { data, error } = await supabase
                 .from("college_education")
@@ -41,7 +115,7 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
             return data;
         }
 
-        /* ===================== BRANCH (depends on education) ===================== */
+
         case "branch": {
             if (!educationId) return [];
 
@@ -58,7 +132,7 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
         }
 
 
-        /* ===================== YEAR (depends on education + branch) ===================== */
+
         case "academicYear": {
             if (!educationId || !branchId) return [];
 
@@ -74,11 +148,18 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
             return data;
         }
 
-        /* ===================== SEMESTER (depends on education + year) ===================== */
+
         case "semester": {
             if (!educationId || !academicYearId) return [];
 
-            const { data } = await supabase
+            console.log("🟡 SEMESTER FETCH PARAMS", {
+                collegeId,
+                educationId,
+                branchId,
+                academicYearId,
+            });
+
+            const { data, error } = await supabase
                 .from("college_semester")
                 .select("collegeSemesterId, collegeSemester")
                 .eq("collegeId", collegeId)
@@ -87,17 +168,24 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
                 .eq("isActive", true)
                 .order("collegeSemester");
 
+            console.log("🟢 SEMESTER DATA FROM DB:", data);
+
+            if (error) {
+                console.error("❌ SEMESTER FETCH ERROR:", error);
+                throw error;
+            }
+
             return data;
         }
 
 
-        /* ===================== SUBJECT (depends on education + year + semester) ===================== */
+
         case "subject": {
             if (
                 !educationId ||
                 !branchId ||
                 !academicYearId ||
-                !semester || // this is collegeSemesterId
+                !semester ||
                 !collegeId
             )
                 return [];
@@ -117,23 +205,6 @@ export async function fetchAcademicDropdowns(params: AcademicDropdownParams) {
             return data;
         }
 
-
-        /* ===================== SECTION (depends on education + branch + year) ===================== */
-        // case "section": {
-        //     if (!collegeId) return [];
-
-        //     const { data, error } = await supabase
-        //         .from("college_sections")
-        //         .select("collegeSections")
-        //         .eq("collegeId", collegeId)
-        //         .eq("isActive", true)
-        //         .order("collegeSections");
-
-        //     if (error) throw error;
-        //     return data;
-        // }
-
-        /* ===================== SECTION (depends on education + branch + year) ===================== */
         case "section": {
             if (!collegeId || !educationId || !branchId || !academicYearId) return [];
 

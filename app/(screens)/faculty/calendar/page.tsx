@@ -11,20 +11,44 @@ import { combineDateAndTime, getWeekDays, hasTimeConflict } from "./utils";
 import ConfirmConflictModal from "../../admin/calendar/components/ConfirmConflictModal";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
 import toast from "react-hot-toast";
-import {
-  deleteCalendarEventByFaculty,
-  fetchCalendarEventsByFaculty,
-  updateCalendarEvent,
-  upsertCalendarEvent,
-} from "@/lib/helpers/calendar/calendarEvent";
+
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { getFacultyIdByUserId } from "@/lib/helpers/faculty/faculty";
-import { log } from "console";
+import {
+  deleteCalendarEvent,
+  fetchCalendarEvents,
+  saveCalendarEvent,
+} from "@/lib/helpers/calendar/calendarEventAPI";
+import {
+  deleteCalendarEventSections,
+  fetchCalendarEventSections,
+  saveCalendarEventSections,
+} from "@/lib/helpers/calendar/calendarEventSectionsAPI";
+import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
+import EventDetailsModal from "./modal/EventDetailsModal";
+// import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 
-export const extractValues = (items?: { name: string }[]): string[] => {
-  if (!Array.isArray(items)) return [];
-  return items.map((i) => i.name);
+export type CalendarEventPayload = {
+  facultyId: number;
+  subjectId: number | null;
+
+
+  eventTitle: string;
+  eventTopic: number | null;
+  type: "class" | "meeting" | "exam" | "quiz";
+
+  date: string;
+  fromTime: string;
+  toTime: string;
+  roomNo: string;
+  meetingLink?: string | null;
+
+  collegeEducationId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSemesterId: number;
+  sectionIds: number[];
 };
 
 export default function Page() {
@@ -32,20 +56,28 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [pendingEvent, setPendingEvent] = useState<any | null>(null);
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(
+
+  const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(
     null,
   );
+  const [showConflictModal, setShowConflictModal] = useState(false);
+
+  const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(null);
   const [eventForm, setEventForm] = useState<any | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
   const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
-  const weekDays = getWeekDays(currentDate);
-  const { userId, role } = useUser();
+  const { userId, role, collegeId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
+
+  const weekDays = getWeekDays(currentDate);
+
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     if (!userId || role !== "Faculty") return;
@@ -53,8 +85,6 @@ export default function Page() {
     const loadFacultyId = async () => {
       try {
         const id = await getFacultyIdByUserId(userId);
-        console.log("ID", id);
-        
         setFacultyId(id);
       } catch (err) {
         toast.error("Faculty record not found");
@@ -65,46 +95,143 @@ export default function Page() {
     loadFacultyId();
   }, [userId, role]);
 
+
+
   const loadCalendarEvents = async () => {
     if (!facultyId) return;
 
     try {
       setLoading(true);
-      const res = await fetchCalendarEventsByFaculty(facultyId);
 
-      if (!res.success || !res.events) {
-        toast.error("Failed to load calendar events");
+      /* 🔹 1. FETCH EVENTS FIRST (rows was the root cause) */
+      const rows = await fetchCalendarEvents({ facultyId });
+      if (!rows || rows.length === 0) {
+        setEvents([]);
         return;
       }
 
-      const formattedEvents: CalendarEvent[] = res.events.map((row: any) => {
+      /* 🔹 2. FETCH SECTIONS FOR FIRST EVENT (SOURCE OF TRUTH) */
+      const firstEventSections = await fetchCalendarEventSections(
+        rows[0].calendarEventId
+      );
+
+      if (!firstEventSections || firstEventSections.length === 0) {
+        setEvents([]);
+        return;
+      }
+
+      /* ✅ THESE IDs COME ONLY FROM calendar_event_sections */
+      const educationId = firstEventSections[0].collegeEducationId;
+      const branchId = firstEventSections[0].collegeBranchId;
+      const academicYearId = firstEventSections[0].collegeAcademicYearId;
+
+      /* 🔹 3. FETCH LOOKUPS (UNCHANGED API, CORRECT TYPES) */
+      const branches = await fetchAcademicDropdowns({
+        type: "branch",
+        collegeId: collegeId!,
+        educationId,
+      });
+
+      const academicYears = await fetchAcademicDropdowns({
+        type: "academicYear",
+        collegeId: collegeId!,
+        educationId,
+        branchId,
+      });
+
+      const allSections = await fetchAcademicDropdowns({
+        type: "section",
+        collegeId: collegeId!,
+        educationId,
+        branchId,
+        academicYearId,
+      });
+
+      /* 🔹 4. BUILD MAPS (ONCE, NO DUPLICATES) */
+      const branchMap = new Map<number, string>(
+        branches.map((b: any) => [
+          b.collegeBranchId,
+          b.collegeBranchCode,
+        ])
+      );
+
+      const yearMap = new Map<number, string>(
+        academicYears.map((y: any) => [
+          y.collegeAcademicYearId,
+          y.collegeAcademicYear,
+        ])
+      );
+
+      const sectionNameMap = new Map<number, string>(
+        allSections.map((s: any) => [
+          s.collegeSectionsId,
+          s.collegeSections,
+        ])
+      );
+
+      /* 🔹 5. FETCH SECTIONS PER EVENT (UNCHANGED) */
+      const sectionMap = new Map<number, number[]>();
+
+      await Promise.all(
+        rows.map(async (row: any) => {
+          const sections = await fetchCalendarEventSections(row.calendarEventId);
+          sectionMap.set(
+            row.calendarEventId,
+            (sections ?? []).map((s: any) => s.collegeSectionId)
+          );
+        })
+      );
+
+      /* 🔹 6. EXPAND EVENTS → DISPLAY BRANCH · YEAR · SECTION */
+      const expandedEvents: CalendarEvent[] = [];
+
+      rows.forEach((row: any) => {
         const startTime = `${row.date}T${row.fromTime}`;
         const endTime = `${row.date}T${row.toTime}`;
 
-        return {
-          id: row.calendarEventId.toString(),
-          title: row.eventTitle,
-          type: row.type,
-          day: new Date(row.date)
-            .toLocaleDateString("en-US", { weekday: "short" })
-            .toUpperCase(),
-          startTime,
-          endTime,
-          rawFormData: {
-            topic: row.eventTopic,
-            roomNo: row.roomNo,
-            degree: row.degree,
-            departments: extractValues(row.department),
-            sections: extractValues(row.section),
-            semester: extractValues(row.semester)[0],
-            year: row.year,
-          },
-        };
+        const sectionIds = sectionMap.get(row.calendarEventId) ?? [];
+
+        sectionIds.forEach((sectionId) => {
+          expandedEvents.push({
+            id: `${row.calendarEventId}-${sectionId}`,
+
+            title:
+              row.type === "meeting"
+                ? "Meeting"
+                : row.college_subject_unit_topics?.topicTitle ??
+                row.college_subject_unit_topics?.[0]?.topicTitle ??
+                "",
+
+            type: row.type,
+             subjectName: row.college_subjects?.subjectName ?? "-",
+             subjectKey: row.college_subjects?.subjectKey ?? "",
+
+            day: new Date(row.date)
+              .toLocaleDateString("en-US", { weekday: "short" })
+              .toUpperCase(),
+
+            startTime,
+            endTime,
+
+            /* ✅ THIS IS EXACTLY WHAT YOU ASKED */
+            branch: branchMap.get(branchId) ?? "",
+            year: yearMap.get(academicYearId) ?? "",
+            section: sectionNameMap.get(sectionId) ?? "",
+
+            calendarEventId: row.calendarEventId,
+
+            rawFormData: {
+              topicId: row.eventTopic,
+              roomNo: row.roomNo,
+            },
+          });
+        });
       });
 
-      setEvents(formattedEvents);
+      setEvents(expandedEvents);
     } catch (error) {
-      toast.error("Failed to loadCalendarEvents");
+      console.error("❌ Failed to load calendar events", error);
+      toast.error("Failed to load calendar events");
     } finally {
       setLoading(false);
     }
@@ -112,21 +239,9 @@ export default function Page() {
 
   useEffect(() => {
     if (!facultyId) return;
-
     loadCalendarEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facultyId]);
-
-  const handleNextWeek = () => {
-    const next = new Date(currentDate);
-    next.setDate(next.getDate() + 7);
-    setCurrentDate(next);
-  };
-
-  const handlePrevWeek = () => {
-    const prev = new Date(currentDate);
-    prev.setDate(prev.getDate() - 7);
-    setCurrentDate(prev);
-  };
 
   useEffect(() => {
     const loadDegrees = async () => {
@@ -142,142 +257,16 @@ export default function Page() {
     loadDegrees();
   }, []);
 
-  const handleSaveEvent = async (data: any) => {
-    if (!facultyId) {
-      toast.error("faculty profile not found");
-      return;
-    }
-
-    const conflict = await hasDbConflict(
-      data.date,
-      data.startTime,
-      data.endTime,
-      editingEventId ? Number(editingEventId) : undefined,
-    );
-
-    if (conflict) {
-      setPendingEvent(data);
-      setShowConflictModal(true);
-      setIsModalOpen(false);
-      return;
-    }
-
-    const safeYear = ["1", "2", "3", "4"].includes(String(data.year))
-      ? String(data.year)
-      : "";
-
-    const payload = {
-      facultyId,
-      eventTitle: data.title,
-      eventTopic: data.topic,
-      type: data.type,
-      date: data.date,
-      roomNo: data.roomNo,
-      fromTime: data.startTime,
-      toTime: data.endTime,
-      degree: data.degree,
-      department: data.departments,
-      // year: data.year?.toString() ?? "",
-      // year: data.year ?? null,
-      year: safeYear,
-      semester: data.semester ? [data.semester] : [],
-      section: data.sections,
-    };
-
-    const res = await upsertCalendarEvent(
-      payload,
-      editingEventId ? Number(editingEventId) : undefined,
-    );
-
-    if (!res.success) {
-      toast.error(res.error);
-      return;
-    }
-
-    const updatedEvent: CalendarEvent = {
-      id: res.data.calendarEventId.toString(),
-      title: data.title,
-      type: data.type,
-      day: new Date(data.date)
-        .toLocaleDateString("en-US", { weekday: "short" })
-        .toUpperCase(),
-      startTime: `${data.date}T${data.startTime}`,
-      endTime: `${data.date}T${data.endTime}`,
-      rawFormData: {
-        roomNo: res.data.roomNo,
-        topic: res.data.topic,
-        degree: res.data.degree,
-        year: res.data.year,
-        departments: extractValues(res.data.department),
-        sections: extractValues(res.data.section),
-        semester: extractValues(res.data.semester)[0] ?? "",
-      },
-    };
-
-    setEvents((prev) =>
-      editingEventId
-        ? prev.map((e) => (e.id === editingEventId ? updatedEvent : e))
-        : [...prev, updatedEvent],
-    );
-
-    setEditingEventId(null);
-    setEventForm(null);
-    setIsModalOpen(false);
-    toast.success(editingEventId ? "Event updated ✏️" : "Event created 🎉");
+  const handleNextWeek = () => {
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + 7);
+    setCurrentDate(next);
   };
 
-  const handleConflictCancel = () => {
-    setPendingEvent(null);
-    setShowConflictModal(false);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteEvent = async (eventId: string) => {
-    if (!facultyId) return;
-
-    const res = await deleteCalendarEventByFaculty(Number(eventId), facultyId);
-
-    if (!res.success) {
-      toast.error(res.error || "Failed to delete!!");
-      return;
-    }
-
-    setEvents((prev) => prev.filter((e) => e.id !== eventId));
-    toast.success("Event deleted successfully");
-  };
-
-  const closeAddEventModal = () => {
-    setIsModalOpen(false);
-    setEventForm(null);
-    setEditingEventId(null);
-  };
-
-  const handleEditEvent = (event: CalendarEvent) => {
-    setEditingEventId(event.id);
-    setFormMode("edit");
-
-    const startDate = event.startTime.split("T")[0];
-    const startTime = event.startTime.split("T")[1].slice(0, 5);
-    const endTime = event.endTime.split("T")[1].slice(0, 5);
-
-    setEventForm({
-      title: event.title,
-      topic: event.rawFormData?.topic ?? "",
-      roomNo: event.rawFormData?.roomNo ?? "",
-      degree: event.rawFormData?.degree ?? "",
-      departments: event.rawFormData?.departments ?? [],
-      sections: event.rawFormData?.sections ?? [],
-      // year: event.rawFormData?.year ?? "",
-      // year: event.year,
-      year: String(event.rawFormData?.year ?? ""),
-      semester: event.rawFormData?.semester ?? "",
-      type: event.type,
-      date: startDate,
-      startTime,
-      endTime,
-    });
-
-    setIsModalOpen(true);
+  const handlePrevWeek = () => {
+    const prev = new Date(currentDate);
+    prev.setDate(prev.getDate() - 7);
+    setCurrentDate(prev);
   };
 
   const hasDbConflict = async (
@@ -286,15 +275,13 @@ export default function Page() {
     endTime: string,
     ignoreEventId?: number,
   ): Promise<boolean> => {
-    const res = await fetchCalendarEventsByFaculty(Number(facultyId));
+    if (!facultyId) return false;
 
-    if (!res.success || !res.events) return false;
+    const rows = await fetchCalendarEvents({ facultyId });
+    if (!rows || rows.length === 0) return false;
 
-    return res.events.some((e: any) => {
-      if (ignoreEventId && e.calendarEventId === ignoreEventId) {
-        return false;
-      }
-
+    return rows.some((e: any) => {
+      if (ignoreEventId && e.calendarEventId === ignoreEventId) return false;
       if (e.date !== date) return false;
 
       const dbStart = combineDateAndTime(e.date, e.fromTime);
@@ -308,53 +295,226 @@ export default function Page() {
     });
   };
 
-  const confirmAddEvent = async () => {
-    if (!pendingEvent) return;
+  const handleSaveEvent = async (payload: CalendarEventPayload) => {
+    if (!facultyId) {
+      toast.error("Faculty not found");
+      return;
+    }
 
-    setShowConflictModal(false);
+    // ✅ conflict check first (optional - you can remove if not needed)
+    const conflict = await hasDbConflict(
+      payload.date,
+      payload.fromTime,
+      payload.toTime,
+      editingEventId ? Number(editingEventId) : undefined,
+    );
+
+    if (conflict) {
+      setPendingEvent(payload);
+      setShowConflictModal(true);
+      setIsModalOpen(false);
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      const payload = {
-        facultyId: Number(facultyId),
-        eventTitle: pendingEvent.title,
-        eventTopic: String(pendingEvent.topic ?? ""),
-        type: pendingEvent.type as "class" | "meeting" | "exam" | "quiz",
-        date: pendingEvent.date,
-        roomNo: pendingEvent.roomNo?.trim(),
-        fromTime: pendingEvent.startTime,
-        toTime: pendingEvent.endTime,
-        degree: pendingEvent.degree,
-        department: pendingEvent.departments,
-        // year: pendingEvent.year?.toString() ?? "",
-        // year: pendingEvent.year ?? null,
-        year: String(pendingEvent.year ?? ""),
-        semester: pendingEvent.semester,
-        section: pendingEvent.sections,
-      };
+      const eventRes = await saveCalendarEvent({
+        calendarEventId: editingEventId ? Number(editingEventId) : undefined, // 🔥 THIS LINE
+        facultyId,
+        subjectId: payload.type === "meeting" ? null : payload.subjectId ?? null,
+        eventTopic: payload.eventTopic,
+        type: payload.type,
+        date: payload.date,
+        roomNo: payload.roomNo,
+        fromTime: payload.fromTime,
+        toTime: payload.toTime,
+        meetingLink: payload.meetingLink ?? null,
+      });
 
-      if (editingEventId) {
-        await updateCalendarEvent(Number(editingEventId), payload);
-        toast.success("Event updated despite conflict.");
-      } else {
-        await upsertCalendarEvent(payload);
-        toast.success("Event created despite conflict.");
+      if (!eventRes.success) {
+        toast.error("Failed to save event");
+        return;
       }
 
-      await loadCalendarEvents();
+      const calendarEventId = eventRes.calendarEventId;
 
+      if (editingEventId) {
+        await deleteCalendarEventSections(Number(editingEventId));
+      }
+
+      await saveCalendarEventSections(calendarEventId, {
+        collegeEducationId: payload.collegeEducationId,
+        collegeBranchId: payload.collegeBranchId,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSemesterId: payload.collegeSemesterId,
+        sectionIds: payload.sectionIds,
+      });
+
+      toast.success(editingEventId ? "Event updated ✏️" : "Event created 🎉");
+
+      setIsModalOpen(false);
       setEditingEventId(null);
       setEventForm(null);
       setFormMode("create");
-      setIsModalOpen(false);
-      setPendingEvent(null);
+
+      await loadCalendarEvents();
     } catch (err) {
+      console.error("handleSaveEvent failed", err);
       toast.error("Failed to save event");
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleConflictCancel = () => {
+    setPendingEvent(null);
+    setShowConflictModal(false);
+    setIsModalOpen(true);
+  };
+
+  const confirmAddEvent = async () => {
+    if (!pendingEvent || !facultyId) return;
+
+    setShowConflictModal(false);
+    setIsSaving(true);
+
+    try {
+      const eventRes = await saveCalendarEvent({
+        facultyId,
+        subjectId:
+          pendingEvent.type === "meeting"
+            ? null
+            : pendingEvent.subjectId ?? null,
+        eventTopic: pendingEvent.eventTopic,
+        type: pendingEvent.type,
+        date: pendingEvent.date,
+        roomNo: pendingEvent.roomNo,
+        fromTime: pendingEvent.fromTime,
+        toTime: pendingEvent.toTime,
+        meetingLink: pendingEvent.meetingLink ?? null,
+      });
+
+      if (!eventRes.success) {
+        toast.error("Failed to save event");
+        return;
+      }
+
+      const calendarEventId = eventRes.calendarEventId;
+
+      if (editingEventId) {
+        await deleteCalendarEventSections(Number(editingEventId));
+      }
+
+      await saveCalendarEventSections(calendarEventId, {
+        collegeEducationId: pendingEvent.collegeEducationId,
+        collegeBranchId: pendingEvent.collegeBranchId,
+        collegeAcademicYearId: pendingEvent.collegeAcademicYearId,
+        collegeSemesterId: pendingEvent.collegeSemesterId,
+        sectionIds: pendingEvent.sectionIds,
+      });
+
+      toast.success("Event saved despite conflict ⚠️");
+
+      setPendingEvent(null);
+      setIsModalOpen(false);
+      setEditingEventId(null);
+      setEventForm(null);
+      setFormMode("create");
+
+      await loadCalendarEvents();
+    } catch (err) {
+      console.error("confirmAddEvent error", err);
+      toast.error("Failed to save event");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await deleteCalendarEventSections(Number(eventId));
+      await deleteCalendarEvent(Number(eventId));
+
+      setEvents((prev: CalendarEvent[]) => prev.filter((e) => e.id !== eventId));
+      toast.success("Event deleted successfully");
+    } catch (err) {
+      toast.error("Failed to delete event");
+      console.error(err);
+    }
+  };
+
+  const closeAddEventModal = () => {
+    setIsModalOpen(false);
+    setEventForm(null);
+    setEditingEventId(null);
+    setFormMode("create");
+  };
+
+  const parse24To12 = (time24: string) => {
+    const [hStr, mStr] = time24.split(":");
+    let h = Number(hStr);
+    const minute = mStr;
+
+    const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    if (h === 0) h = 12;
+
+    return {
+      hour: String(h).padStart(2, "0"),
+      minute,
+      period,
+    };
+  };
+
+  const handleEditEvent = async (event: CalendarEvent) => {
+    // 🔑 Always store DB event id for update
+    setEditingEventId(String(event.calendarEventId));
+    setFormMode("edit");
+
+    // 📅 Date & time parsing
+    const startDate = event.startTime.split("T")[0];
+    const start24 = event.startTime.split("T")[1].slice(0, 5);
+    const end24 = event.endTime.split("T")[1].slice(0, 5);
+
+    const start = parse24To12(start24);
+    const end = parse24To12(end24);
+
+    // 🔥 Fetch ALL sections using DB calendarEventId (NOT event.id)
+    let dbSectionIds: number[] = [];
+    try {
+      const rows = await fetchCalendarEventSections(event.calendarEventId);
+      dbSectionIds = (rows ?? []).map(
+        (r: any) => r.collegeSectionId
+      );
+    } catch (err) {
+      console.warn("⚠️ Sections fetch failed", err);
+    }
+
+    // 🧠 Populate modal form
+    setEventForm({
+      title: event.title ?? "",
+      topicId: event.rawFormData?.topicId ?? null,
+      roomNo: event.rawFormData?.roomNo ?? "",
+
+      date: startDate,
+
+      startHour: start.hour,
+      startMinute: start.minute,
+      startPeriod: start.period,
+
+      endHour: end.hour,
+      endMinute: end.minute,
+      endPeriod: end.period,
+
+      // ✅ MULTI-SECTION AUTOFILL
+      sectionIds: dbSectionIds,
+
+      type: event.type,
+    });
+
+    setIsModalOpen(true);
+  };
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -367,9 +527,7 @@ export default function Page() {
     <main className="p-4">
       <section className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-black text-xl font-semibold">
-            Calendar & Events
-          </h1>
+          <h1 className="text-black text-xl font-semibold">Calendar & Events</h1>
           <p className="text-black text-sm">
             Stay Organized And On Track With Your Personalised Calendar
           </p>
@@ -399,6 +557,19 @@ export default function Page() {
           onNextWeek={handleNextWeek}
           onDeleteRequest={setEventToDelete}
           onEditRequest={handleEditEvent}
+          onEventClick={(event) => {
+            setSelectedEvent(event);
+            setShowDetails(true);
+          }}
+        />
+
+        <EventDetailsModal
+          open={showDetails}
+          event={selectedEvent}
+          onClose={() => {
+            setShowDetails(false);
+            setSelectedEvent(null);
+          }}
         />
 
         <AddEventModal
@@ -422,9 +593,7 @@ export default function Page() {
           open={!!eventToDelete}
           onCancel={() => setEventToDelete(null)}
           onConfirm={() => {
-            if (eventToDelete) {
-              handleDeleteEvent(eventToDelete.id);
-            }
+            if (eventToDelete) handleDeleteEvent(eventToDelete.id);
             setEventToDelete(null);
           }}
         />

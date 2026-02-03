@@ -4,156 +4,75 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { FaChevronDown } from "react-icons/fa6";
 import SubjectCard, { CardProps } from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getFacultySubjects } from "./components/subjectDetails";
 import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
 
-
-
 import { CircleNotch } from "@phosphor-icons/react";
 
-
-
-
-
 export default function Academics() {
-  /* --------------------------------
-   * Auth / Base Context
-   * -------------------------------- */
-  const { userId, collegeId, loading } = useUser();
-
-  /* --------------------------------
-   * Local State
-   * -------------------------------- */
-  const [subjects, setSubjects] = useState<CardProps[]>([]);
+  const { userId, collegeId, loading: userLoading } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
+  const [subjects, setSubjects] = useState<CardProps[]>([]);
 
-  /* --------------------------------
-   * Load Faculty → Subjects
-   * -------------------------------- */
-
-
+  // ✅ Track first (cold) load only
+  const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
-    if (loading) return;
+    if (userLoading) return;
 
     if (userId === null || collegeId === null) {
-      console.warn("❌ Missing userId / collegeId", { userId, collegeId });
+      setPageLoading(false);
       return;
     }
 
-    setPageLoading(true);
-
-    // 🔐 TS-SAFE: now these are `number`
-    const resolvedUserId: number = userId;
-    const resolvedCollegeId: number = collegeId;
+    // ✅ Show full loader ONLY on first load
+    if (!hasLoadedOnce.current) {
+      setPageLoading(true);
+    }
 
     async function loadSubjects() {
       try {
-        console.log("🚀 Fetching faculty context for userId:", resolvedUserId);
+        // ✅ Type guard (TS-safe)
+        if (userId === null || collegeId === null) return;
 
-        const facultyCtx = await fetchFacultyContext(resolvedUserId);
-        // fetchFacultyContext(userId) ❌ WRONG
-        // fetchFacultyContext(resolvedUserId) ✅ CORRECT
-
-        console.log("✅ Faculty Context:", facultyCtx);
+        const facultyCtx = await fetchFacultyContext(userId);
 
         const data = await getFacultySubjects({
-          collegeId: resolvedCollegeId,
+          collegeId,
           facultyId: facultyCtx.facultyId,
         });
 
-        console.log("📦 Subjects fetched:", data);
         setSubjects(data);
       } catch (err) {
         console.error("❌ Failed to load faculty subjects", err);
       } finally {
         setPageLoading(false);
+        hasLoadedOnce.current = true; // 🔥 mark page as loaded
       }
     }
 
     loadSubjects();
-  }, [userId, collegeId, loading]);
+  }, [userId, collegeId, userLoading]);
 
-
-
-
-
-  // export default function Academics() {
-  // const MOCK_SUBJECT_DATA: CardProps[] = [
-  //   {
-  //     subjectTitle: "Data Structures",
-  //     year: "Year 2 – CSE A",
-  //     units: 15,
-  //     topicsCovered: 15,
-  //     topicsTotal: 15,
-  //     nextLesson: "Trees & Traversals",
-  //     students: 35,
-  //     percentage: 100,
-  //     fromDate: "10-12-2025",
-  //     toDate: "01-01-2026",
-  //   },
-  //   {
-  //     subjectTitle: "Algorithms",
-  //     year: "Year 3 CSE",
-  //     units: 3,
-  //     topicsCovered: 10,
-  //     topicsTotal: 15,
-  //     nextLesson: "Trees & Traversals",
-  //     students: 35,
-  //     percentage: 60,
-  //     fromDate: "15 Jan 2026",
-  //     toDate: "10 Apr 2026",
-  //   },
-  //   {
-  //     subjectTitle: "Data Structures",
-  //     year: "Year 2 IT",
-  //     units: 8,
-  //     topicsCovered: 15,
-  //     topicsTotal: 20,
-  //     nextLesson: "Hashing",
-  //     students: 38,
-  //     percentage: 55,
-  //     fromDate: "12 Dec 2025",
-  //     toDate: "02 Mar 2026",
-  //   },
-  //   {
-  //     subjectTitle: "Algorithms",
-  //     year: "Year 3 CSE",
-  //     units: 3,
-  //     topicsCovered: 10,
-  //     topicsTotal: 15,
-  //     nextLesson: "Trees & Traversals",
-  //     students: 35,
-  //     percentage: 60,
-  //     fromDate: "15 Jan 2026",
-  //     toDate: "10 Apr 2026",
-  //   },
-  //   {
-  //     subjectTitle: "OS",
-  //     year: "Year 3 CSE",
-  //     units: 8,
-  //     topicsCovered: 15,
-  //     topicsTotal: 30,
-  //     nextLesson: "Hashing",
-  //     students: 38,
-  //     percentage: 40,
-  //     fromDate: "12 Dec 2025",
-  //     toDate: "02 Mar 2026",
-  //   },
-  //   {
-  //     subjectTitle: "Algorithms",
-  //     year: "Year 3 CSE",
-  //     units: 3,
-  //     topicsCovered: 10,
-  //     topicsTotal: 15,
-  //     nextLesson: "Trees & Traversals",
-  //     students: 35,
-  //     percentage: 60,
-  //     fromDate: "15 Jan 2026",
-  //     toDate: "10 Apr 2026",
-  //   },
-  // ];
+  // ✅ Full-screen loader ONLY for first load / refresh
+  if (userLoading || pageLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-3">
+          <CircleNotch
+            size={48}
+            weight="bold"
+            className="animate-spin text-indigo-600"
+            style={{color:"blue"}}
+          />
+          <p className="text-sm font-medium text-indigo-600" style={{color:"red"}}>
+            Loading classes...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-2 flex flex-col lg:pb-5">
@@ -173,20 +92,7 @@ export default function Academics() {
       </div>
 
       <div className="mt-4">
-        {pageLoading ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="flex flex-col items-center gap-3">
-              <CircleNotch
-                size={48}
-                weight="bold"
-                className="animate-spin text-[#795FD9]"
-              />
-              <p className="text-sm font-medium text-[#795FD9]">
-                Loading classes...
-              </p>
-            </div>
-          </div>
-        ) : subjects.length === 0 ? (
+        {subjects.length === 0 ? (
           <p className="text-sm text-gray-500 text-center mt-10">
             No classes assigned
           </p>

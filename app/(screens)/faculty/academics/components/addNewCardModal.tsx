@@ -967,6 +967,36 @@ export default function AddNewCardModal({
                     />
                   )}
 
+                  {searchQuery && searchState.type === "new" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTopic = searchQuery.trim();
+                        if (!newTopic) return;
+
+                        // 1️⃣ Add directly to SELECTED
+                        setSelectedTopics(prev =>
+                          prev.includes(newTopic) ? prev : [...prev, newTopic]
+                        );
+
+                        // 2️⃣ Ensure it is NOT in available
+                        setAvailableTopics(prev =>
+                          prev.filter(t => t.toLowerCase() !== newTopic.toLowerCase())
+                        );
+
+                        // 3️⃣ Reset UI state
+                        setSearchQuery("");
+                        setSelectAll(false);
+                      }}
+                      className="
+      mt-2 text-xs font-semibold
+      text-[#43C17A]
+      flex items-center gap-1
+    "
+                    >
+                      + Add “{searchQuery}”
+                    </button>
+                  )}
                   {/* Selected Topics */}
                   {selectedTopics.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-3">

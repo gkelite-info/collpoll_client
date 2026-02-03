@@ -3,10 +3,17 @@ export type EventType = "meeting" | "class" | "exam" | "quiz";
 export interface CalendarEvent {
   id: string;
   title: string;
+  calendarEventId: number;
   type: EventType;
   startTime: string;
   endTime: string;
-  year?: string[];
+  // year?: string[];
+  subjectName?: string;
+  subjectCode?: string;
+  subjectKey?: string;
+  year?: string;
+  branch?: string;
+  section?: string;
   day: string;
   rawFormData?: any;
 }
@@ -16,6 +23,8 @@ export interface WeekDay {
   date: number;
   fullDate: string;
 }
+
+
 
 export type CalendarEventUI = {
   calendarEventId: number;
