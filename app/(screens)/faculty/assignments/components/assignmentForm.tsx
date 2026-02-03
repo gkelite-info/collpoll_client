@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { upsertFacultyAssignment } from "@/lib/helpers/faculty/upsertFacultyAssignment";
+import { FormEvent, useEffect, useState, useMemo } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
-import type { Assignment } from "../data";
-
+import { Assignment } from "./left";
+import { fetchFacultyContext } from "@/lib/helpers/faculty/assignment/fetchFacultyContext";
+import { upsertFacultyAssignment } from "@/lib/helpers/faculty/assignment/upsertFacultyAssignment";
+import FormSkeleton from "../shimmer/FormSkeleton";
 
 type Props = {
   initialData?: Assignment | null;
@@ -13,239 +14,380 @@ type Props = {
   onCancel: () => void;
 };
 
-// Convert saved DD/MM/YYYY or INT → YYYY-MM-DD (HTML date format)
+const getSafe = (data: any) => (Array.isArray(data) ? data[0] : data) || {};
+
 function toHtmlDate(dateStr: string | number | undefined) {
   if (!dateStr) return "";
-
   const str = dateStr.toString();
-
-  // If INT: 20250103
   if (/^\d{8}$/.test(str)) {
     return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
   }
-
-  // If DD/MM/YYYY
-  if (str.includes("/")) {
-    const [dd, mm, yyyy] = str.split("/");
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  return str; // Already YYYY-MM-DD
+  return str;
 }
-
 
 export default function AssignmentForm({
   initialData,
   onSave,
   onCancel,
 }: Props) {
+  const [facultyId, setFacultyId] = useState<number | null>(null);
+  const [facultySections, setFacultySections] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  /* -----------------------------------------
-     FIX 2: PROPER form STATE INITIALIZATION
-  ------------------------------------------ */
-  const [form, setForm] = useState<Assignment>(
-    initialData
-      ? {
-        ...initialData,
-        fromDate: toHtmlDate(initialData.fromDate),
-        toDate: toHtmlDate(initialData.toDate),
-      }
-      : {
-        assignmentId: undefined,
-        image: "/ds.jpg",
-        title: "",
-        description: "",
-        fromDate: "",
-        toDate: "",
-        totalSubmissions: "",
-        totalSubmitted: "0",
-        marks: "",
-      }
-  );
+  const [form, setForm] = useState({
+    assignmentId: initialData?.assignmentId,
+    topicName: initialData?.description || "",
+    fromDate: toHtmlDate(initialData?.fromDate),
+    toDate: toHtmlDate(initialData?.toDate),
+    totalMarks: initialData?.marks ? String(initialData.marks) : "",
 
+    subjectId: "",
+    branchId: "",
+    sectionId: "",
+    yearId: "",
+  });
+
+  useEffect(() => {
+    const loadContext = async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) throw new Error("Not authenticated");
+
+        const { data: userRecord } = await supabase
+          .from("users")
+          .select("userId")
+          .eq("auth_id", auth.user.id)
+          .single();
+
+        if (!userRecord) throw new Error("User record not found");
+
+        const context = await fetchFacultyContext(userRecord.userId);
+
+        setFacultyId(context.facultyId);
+        setFacultySections(context.sections);
+
+        if (initialData?.sectionId && context.sections.length > 0) {
+          const matchedSection = context.sections.find(
+            (s: any) => s.collegeSectionsId === Number(initialData.sectionId),
+          );
+
+          if (matchedSection) {
+            const sectionObj = getSafe(matchedSection.college_sections);
+
+            setForm((prev) => ({
+              ...prev,
+              subjectId: String(matchedSection.collegeSubjectId),
+              branchId: String(sectionObj.collegeBranchId),
+              sectionId: String(matchedSection.collegeSectionsId),
+              yearId: String(matchedSection.collegeAcademicYearId),
+            }));
+          }
+        }
+      } catch (err: any) {
+        console.error("Context Load Error:", err);
+        toast.error("Failed to load faculty details");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContext();
+  }, [initialData]);
+
+  const uniqueSubjects = useMemo(() => {
+    const map = new Map();
+    facultySections.forEach((s) => {
+      const subjectObj = getSafe(s.college_subjects);
+      if (subjectObj && !map.has(s.collegeSubjectId)) {
+        map.set(s.collegeSubjectId, subjectObj.subjectName);
+      }
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections]);
+
+  const availableBranches = useMemo(() => {
+    if (!form.subjectId) return [];
+    const map = new Map();
+    facultySections
+      .filter((s) => s.collegeSubjectId === Number(form.subjectId))
+      .forEach((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        const branchObj = getSafe(sectionObj?.college_branch);
+
+        if (sectionObj && branchObj) {
+          const bId = sectionObj.collegeBranchId;
+          const bName = branchObj.collegeBranchCode;
+          if (!map.has(bId)) map.set(bId, bName);
+        }
+      });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections, form.subjectId]);
+
+  const availableSections = useMemo(() => {
+    if (!form.subjectId || !form.branchId) return [];
+    const map = new Map();
+    facultySections
+      .filter((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        return (
+          s.collegeSubjectId === Number(form.subjectId) &&
+          sectionObj?.collegeBranchId === Number(form.branchId)
+        );
+      })
+      .forEach((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        if (sectionObj) {
+          const secId = s.collegeSectionsId;
+          const secName = sectionObj.collegeSections;
+          if (!map.has(secId)) map.set(secId, secName);
+        }
+      });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections, form.subjectId, form.branchId]);
+
+  const availableYears = useMemo(() => {
+    if (!form.subjectId || !form.branchId || !form.sectionId) return [];
+    const map = new Map();
+    facultySections
+      .filter((s) => {
+        const sectionObj = getSafe(s.college_sections);
+        return (
+          s.collegeSubjectId === Number(form.subjectId) &&
+          sectionObj?.collegeBranchId === Number(form.branchId) &&
+          s.collegeSectionsId === Number(form.sectionId)
+        );
+      })
+      .forEach((s) => {
+        const yearObj = getSafe(s.college_academic_year);
+        if (yearObj) {
+          const yId = s.collegeAcademicYearId;
+          const yName = yearObj.collegeAcademicYear;
+          if (!map.has(yId)) map.set(yId, yName);
+        }
+      });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [facultySections, form.subjectId, form.branchId, form.sectionId]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    const { data: auth } = await supabase.auth.getUser();
-    const authId = auth?.user?.id;
-
-    if (!authId) {
-      toast.error("Faculty not logged in");
-      return;
-    }
-
-    const { data: faculty } = await supabase
-      .from("users")
-      .select("userId")
-      .eq("auth_id", authId)
-      .single();
-
-    if (!faculty) {
-      toast.error("Faculty record missing");
-      return;
-    }
-
-    const facultyId = faculty.userId;
+    if (!facultyId) return toast.error("Faculty ID missing");
 
     const payload = {
-      assignmentId: form.assignmentId ?? undefined,
-      facultyId,
-      assignmentTitle: form.title,
-      topicName: form.description,
-      dateAssigned: form.fromDate,              // FIXED
-      submissionDeadline: form.toDate,          // FIXED
-      totalSubmissionsExpected: Number(form.totalSubmissions),
-      totalMarks: Number(form.marks),
-      instructions: form.description,
+      assignmentId: form.assignmentId,
+      facultyId: facultyId,
+      subjectId: form.subjectId,
+      topicName: form.topicName,
+      dateAssigned: form.fromDate,
+      submissionDeadline: form.toDate,
+      collegeBranchId: form.branchId,
+      collegeSectionsId: form.sectionId,
+      collegeAcademicYearId: form.yearId,
+      marks: form.totalMarks,
     };
 
     const res = await upsertFacultyAssignment(payload);
 
-    if (!res.success) {
+    if (res.success) {
+      toast.success(res.message || "Operation completed successfully.");
+      onSave({
+        ...initialData,
+        assignmentId: res.data ? res.data[0]?.assignmentId : undefined,
+        description: form.topicName,
+        title: form.topicName,
+        fromDate: form.fromDate,
+        toDate: form.toDate,
+        marks: form.totalMarks,
+      } as Assignment);
+    } else {
       toast.error(res.error);
-      return;
     }
-
-    toast.success("Assignment saved!");
-    onSave(form);
   };
 
+  if (isLoading) return <FormSkeleton />;
 
   return (
-    <div className="bg-red-00 w-[68%] mx-1 max-w-3xl">
+    <div className="w-[68%] mx-1 max-w-3xl">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900">
           {initialData ? "Edit Assignment" : "Add New Assignment"}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Create, manage, and evaluate assignments for your students efficiently
-        </p>
       </div>
+
       <form onSubmit={handleSubmit}>
         <div className="bg-white p-4 rounded-xl text-[#282828]">
+          {/* Subject */}
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Assignment Title
+              Subject
             </label>
-            <input
-              type="text"
-              required
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Implementation of Stack and Queue"
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              Topic Name
-            </label>
-            <textarea
-              value={form.description}
+            <select
+              value={form.subjectId}
               required
               onChange={(e) =>
-                setForm({ ...form, description: e.target.value })
+                setForm({
+                  ...form,
+                  subjectId: e.target.value,
+                  branchId: "",
+                  sectionId: "",
+                  yearId: "",
+                })
               }
-              placeholder="Student will implement stack and queue data structure using arrays and linked lists."
-              className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-              rows={3}
-            />
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">Select Subject</option>
+              {uniqueSubjects.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Schedule
-            </label>
-
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="mb-1 block text-xs text-gray-500">
-                  Date Assigned
-                </label>
-                <input
-                  type="date"
-                  required={!initialData} // only required for NEW assignment
-                  value={form.fromDate}
-                  onChange={(e) =>
-                    setForm({ ...form, fromDate: e.target.value })
-                  }
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-xs text-gray-500">
-                  Submission Deadline
-                </label>
-                <input
-                  type="date"
-                  required={!initialData} // only required for NEW assignment
-                  value={form.toDate}
-                  onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-            <div className="mb-4">
+          {/* Topic & Marks */}
+          <div className="mb-4 flex gap-4">
+            <div className="flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Total Submissions
+                Topic Name
               </label>
-              <input
-                value={form.totalSubmissions}
+              <textarea
+                value={form.topicName}
+                placeholder="e.g., Implementation of Stack and Queue"
                 required
-                type="number"
                 onChange={(e) =>
-                  setForm({ ...form, totalSubmissions: e.target.value })
+                  setForm({ ...form, topicName: e.target.value })
                 }
-                placeholder="32"
-                className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                rows={3}
               />
             </div>
-            <div className="mb-4">
+            <div className="flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Total Marks
               </label>
               <input
-                value={form.marks}
-                required
+                value={form.totalMarks}
                 type="number"
-                onChange={(e) => setForm({ ...form, marks: e.target.value })}
-                placeholder="32"
-                className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                placeholder="e.g., 100"
+                required
+                onChange={(e) =>
+                  setForm({ ...form, totalMarks: e.target.value })
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Instructions
-            </label>
+          {/* Branch, Section, Year */}
+          <div className="flex gap-4">
+            <div className="mb-4 flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Branch
+              </label>
+              <select
+                value={form.branchId}
+                required
+                disabled={!form.subjectId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    branchId: e.target.value,
+                    sectionId: "",
+                    yearId: "",
+                  })
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+              >
+                <option value="">Select Branch</option>
+                {availableBranches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <div className="rounded-md border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Read the question carefully before starting your work.</li>
-                <li>Submit before the deadline to avoid late penalties.</li>
-                <li>Attach files in the required format (PDF, ZIP, or DOC).</li>
-                <li>Add brief notes or explanations if required.</li>
-                <li>Review and confirm your submission before uploading.</li>
-              </ul>
+            <div className="mb-4 flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Section
+              </label>
+              <select
+                value={form.sectionId}
+                required
+                disabled={!form.branchId}
+                onChange={(e) =>
+                  setForm({ ...form, sectionId: e.target.value, yearId: "" })
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+              >
+                <option value="">Select Section</option>
+                {availableSections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4 flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Year
+              </label>
+              <select
+                value={form.yearId}
+                required
+                disabled={!form.sectionId}
+                onChange={(e) => setForm({ ...form, yearId: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+              >
+                <option value="">Select Year</option>
+                {availableYears.map((y) => (
+                  <option key={y.id} value={y.id}>
+                    {y.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          <div className="flex w-full items-center gap-3">
+          {/* Schedule */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">
+                Date Assigned
+              </label>
+              <input
+                type="date"
+                required
+                value={form.fromDate}
+                onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-gray-500">
+                Submission Deadline
+              </label>
+              <input
+                type="date"
+                required
+                value={form.toDate}
+                onChange={(e) => setForm({ ...form, toDate: e.target.value })}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
             <button
               type="submit"
-              className="rounded-md flex-1 cursor-pointer bg-[#43C17A] px-6 py-2 text-sm font-medium text-white hover:bg-green-600"
+              className="flex-1 bg-[#43C17A] cursor-pointer text-white py-2 rounded-md hover:bg-green-600"
             >
               Save
             </button>
-
             <button
               type="button"
               onClick={onCancel}
-              className="rounded-md cursor-pointer flex-1 border border-gray-300 px-6 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+              className="flex-1 border cursor-pointer py-2 rounded-md hover:bg-gray-100"
             >
               Cancel
             </button>
@@ -255,13 +397,3 @@ export default function AssignmentForm({
     </div>
   );
 }
-
-function convertToIntDate(dateStr: string) {
-  if (!dateStr) return null;
-  return Number(dateStr.replace(/-/g, ""));
-}
-
-function setAssignments(arg0: (prev: any) => any) {
-  throw new Error("Function not implemented.");
-}
-

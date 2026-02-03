@@ -17,9 +17,6 @@ import { FilterDropdown } from "./components/filterDropdown";
 import { AcademicSectionsSkeleton } from "./shimmer/academicSectionsSkeleton";
 import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
 
-/* =========================================
-   1. COLOR PALETTE & HELPER
-   ========================================= */
 const COLOR_PALETTE = [
   { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" }, // CSE
   { text: "#FF9F7E", color: "#F3D3C8", bgColor: "#FFF9DB" }, // ECE
@@ -68,9 +65,6 @@ export type AcademicCardData = {
   }[];
 };
 
-/* =========================================
-   2. MAIN COMPONENT
-   ========================================= */
 const AcademicPage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
