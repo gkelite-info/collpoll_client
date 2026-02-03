@@ -74,8 +74,8 @@ export default function AdminDashLeft({
     !loading && gender === "Female"
       ? "/admin-f.png"
       : !loading && gender === "Male"
-      ? "/admin-m.png"
-      : null;
+        ? "/admin-m.png"
+        : null;
 
   const cardData = [
     {
@@ -124,7 +124,7 @@ export default function AdminDashLeft({
   if (view === "TOTAL_USERS") {
     return (
       <div className="w-[68%] p-2">
-         <TotalUsersView onBack={() => setView("MAIN")} />
+        <TotalUsersView onBack={() => setView("MAIN")} />
       </div>
     );
   }

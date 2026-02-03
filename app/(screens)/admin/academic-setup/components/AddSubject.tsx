@@ -1,6 +1,8 @@
 "use client";
 
-import { supabase } from "@/lib/supabaseClient";
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchSubjectOptions } from "@/lib/helpers/admin/academicSetup/subjectDropdownsAPI";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -27,11 +29,14 @@ export default function AddSubject({
   editData,
   editUi,
   onSave,
+  onFormReady,
 }: {
   editData: SubjectFormData | null;
   editUi: SubjectUIState | null;
   onSave: (form: SubjectFormData, ui: SubjectUIState) => Promise<void>;
+  onFormReady?: () => void;
 }) {
+  const { userId } = useUser();
   const [form, setForm] = useState<SubjectFormData>({
     collegeEducationId: 0,
     collegeBranchId: 0,
@@ -57,7 +62,23 @@ export default function AddSubject({
     semesters: [] as { id: number; label: string }[],
   });
 
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadOptions = async () => {
+    if (!userId) return;
+    setIsLoadingOptions(true);
+    try {
+      const { collegeId } = await fetchAdminContext(userId);
+      const newOptions = await fetchSubjectOptions(collegeId, ui);
+      setOptions(newOptions);
+    } catch {
+      toast.error("Failed to load dropdowns");
+    } finally {
+      setIsLoadingOptions(false);
+      if (onFormReady) onFormReady();
+    }
+  };
 
   useEffect(() => {
     loadOptions();
@@ -69,79 +90,6 @@ export default function AddSubject({
       setUi(editUi);
     }
   }, [editData, editUi]);
-
-  useEffect(() => {
-    if (!editData) {
-      setIsSubmitting(false);
-    }
-  }, [editData]);
-
-  const loadOptions = async () => {
-    try {
-      const { data: eduData } = await supabase
-        .from("college_education")
-        .select("collegeEducationId, collegeEducationType")
-        .is("isActive", true);
-      const selectedEdu = eduData?.find(
-        (e) => e.collegeEducationType === ui.education,
-      );
-
-      const { data: branchData } = selectedEdu
-        ? await supabase
-            .from("college_branch")
-            .select("collegeBranchId, collegeBranchCode")
-            .eq("collegeEducationId", selectedEdu.collegeEducationId)
-            .is("deletedAt", null)
-        : { data: [] };
-      const selectedBranch = branchData?.find(
-        (b) => b.collegeBranchCode === ui.branch,
-      );
-
-      const { data: yearData } = selectedBranch
-        ? await supabase
-            .from("college_academic_year")
-            .select("collegeAcademicYearId, collegeAcademicYear")
-            .eq("collegeBranchId", selectedBranch.collegeBranchId)
-            .is("deletedAt", null)
-        : { data: [] };
-      const selectedYear = yearData?.find(
-        (y) => y.collegeAcademicYear === ui.year,
-      );
-
-      const { data: semData } = selectedYear
-        ? await supabase
-            .from("college_semester")
-            .select("collegeSemesterId, collegeSemester")
-            .eq("collegeAcademicYearId", selectedYear.collegeAcademicYearId)
-            .is("deletedAt", null)
-        : { data: [] };
-
-      setOptions({
-        educations:
-          eduData?.map((e) => ({
-            id: e.collegeEducationId,
-            label: e.collegeEducationType,
-          })) ?? [],
-        branches:
-          branchData?.map((b) => ({
-            id: b.collegeBranchId,
-            label: b.collegeBranchCode,
-          })) ?? [],
-        years:
-          yearData?.map((y) => ({
-            id: y.collegeAcademicYearId,
-            label: y.collegeAcademicYear,
-          })) ?? [],
-        semesters:
-          semData?.map((s) => ({
-            id: s.collegeSemesterId,
-            label: String(s.collegeSemester),
-          })) ?? [],
-      });
-    } catch {
-      toast.error("Failed to load dropdowns");
-    }
-  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -157,6 +105,7 @@ export default function AddSubject({
       }));
       return;
     }
+
     if (name === "subjectName") {
       let cleaned = value.replace(/[^a-zA-Z\s&-]/g, "").replace(/\s{2,}/g, " ");
       const parts = cleaned.split("-");
@@ -187,7 +136,8 @@ export default function AddSubject({
       return;
     }
     if (name === "credits") {
-      setForm({ ...form, credits: Number(value) });
+      const numValue = value === "" ? 0 : Number(value);
+      setForm({ ...form, credits: numValue });
       return;
     }
     setForm({ ...form, [name]: value });
@@ -210,13 +160,12 @@ export default function AddSubject({
 
     setIsSubmitting(true);
 
-    // FIX IS HERE: Await the promise and use finally
     try {
       await onSave(form, ui);
     } catch (error) {
       console.error("Save error in form:", error);
     } finally {
-      setIsSubmitting(false); // This ensures the button unstucks
+      setIsSubmitting(false);
     }
   };
 
@@ -333,6 +282,7 @@ export default function AddSubject({
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
             />
           </div>
+
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Credits
@@ -340,8 +290,9 @@ export default function AddSubject({
             <input
               type="number"
               name="credits"
-              value={form.credits}
               onChange={handleChange}
+              value={form.credits === 0 ? "" : form.credits}
+              onFocus={(e) => e.target.select()}
               placeholder="e.g. 4"
               step={1}
               onKeyDown={(e) => {
