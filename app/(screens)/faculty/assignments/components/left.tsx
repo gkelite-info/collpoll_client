@@ -1,70 +1,101 @@
 "use client";
 
 import { useState, useEffect } from "react";
-
 import AssignmentForm from "./assignmentForm";
 import AssignmentCard from "./assignmentCard";
 import { supabase } from "@/lib/supabaseClient";
-import type { Assignment } from "../data";
-import { deleteFacultyAssignment } from "@/lib/helpers/faculty/deleteFacultyAssignment";
 import toast from "react-hot-toast";
+import { fetchFacultyAssignments } from "@/lib/helpers/faculty/assignment/fetchFacultyAssignments";
+import { deleteFacultyAssignment } from "@/lib/helpers/faculty/assignment/deleteFacultyAssignment";
+import AssignmentSkeleton from "../shimmer/assignmentShimmer";
+
+export interface Assignment {
+  sectionId: string | number | readonly string[] | undefined;
+  assignmentId?: number;
+  image: string;
+  title: string;
+  description: string;
+  fromDate: string | number;
+  toDate: string | number;
+  totalSubmissions: string;
+  totalSubmitted: string;
+  marks: string | number;
+}
 
 export default function AssignmentsLeft() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [activeView, setActiveView] = useState<"active" | "previous">("active");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchAssignments();
   }, []);
 
   async function fetchAssignments() {
-    const { data, error } = await supabase
-      .from("faculty_assignments")
-      .select("*")
-      .order("assignmentId", { ascending: false });
+    try {
+      setIsLoading(true);
 
-    if (error) {
-      console.error("FETCH ERROR:", error);
-      return;
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+
+      const { data: userData } = await supabase
+        .from("users")
+        .select("userId")
+        .eq("auth_id", auth.user.id)
+        .single();
+
+      if (!userData) return;
+
+      const { data: facultyData } = await supabase
+        .from("faculty")
+        .select("facultyId")
+        .eq("userId", userData.userId)
+        .single();
+
+      if (!facultyData) return;
+
+      const { data, error } = await fetchFacultyAssignments(
+        facultyData.facultyId,
+      );
+
+      if (error) {
+        toast.error("Failed to fetch assignments");
+        return;
+      }
+
+      if (data) {
+        const formatted: Assignment[] = data.map((a: any) => ({
+          sectionId: a.collegeSectionsId,
+          assignmentId: a.assignmentId,
+          image: "/ds.jpg",
+          title: a.college_subjects?.subjectName || "Unknown Subject",
+          description: a.topicName,
+          fromDate: a.dateAssignedInt,
+          toDate: a.submissionDeadlineInt,
+          totalSubmissions: String(a.totalSubmissionsExpected || 0),
+          totalSubmitted: "0",
+          marks: a.marks ? String(a.marks) : "0",
+        }));
+        setAssignments(formatted);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
-
-    const formatted: Assignment[] = data.map(a => ({
-      assignmentId: a.assignmentId,
-      image: "/ds.jpg",
-      title: a.assignmentTitle,
-      description: a.topicName,
-      fromDate: convertIntToDate(a.dateAssignedInt),
-      toDate: convertIntToDate(a.submissionDeadlineInt),
-      totalSubmissions: String(a.totalSubmissionsExpected),
-      totalSubmitted: "0",
-      marks: String(a.totalMarks),
-    }));
-
-    setAssignments(formatted);
   }
 
   const handleDelete = async (id: number) => {
-  console.log("Deleting:", id);
-
-  const res = await deleteFacultyAssignment(id);
-
-  if (!res.success) {
-    toast.error("Failed to delete: " + res.error);
-    return;
-  }
-
-  toast.success("Assignment deleted");
-
-  setAssignments(prev => prev.filter(a => a.assignmentId !== id));
-};
-
-  function convertIntToDate(intVal: number) {
-    if (!intVal) return "";
-    const s = intVal.toString();
-    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
-  }
+    const res = await deleteFacultyAssignment(id);
+    if (!res.success) {
+      toast.error("Failed to delete: " + res.error);
+      return;
+    }
+    toast.success("Assignment deleted");
+    setAssignments((prev) => prev.filter((a) => a.assignmentId !== id));
+  };
 
   if (view === "add" || view === "edit") {
     return (
@@ -88,7 +119,8 @@ export default function AssignmentsLeft() {
       <div className="mb-4">
         <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
         <p className="text-[#282828]">
-          Create, manage, and evaluate assignments for your students efficiently.
+          Create, manage, and evaluate assignments for your students
+          efficiently.
         </p>
       </div>
 
@@ -127,15 +159,27 @@ export default function AssignmentsLeft() {
             </button>
           </div>
 
-          <AssignmentCard
-            cardProp={assignments}
-            activeView={activeView}
-            onEdit={(a) => {
-              setEditing(a);
-              setView("edit");
-            }}
-             onDelete={handleDelete}
-          />
+          {isLoading ? (
+            <div className="w-full">
+              {[1, 2, 3].map((i) => (
+                <AssignmentSkeleton key={i} />
+              ))}
+            </div>
+          ) : assignments.length === 0 ? (
+            <div className="w-full py-10 text-center text-gray-500">
+              No assignments found.
+            </div>
+          ) : (
+            <AssignmentCard
+              cardProp={assignments}
+              activeView={activeView}
+              onEdit={(a) => {
+                setEditing(a);
+                setView("edit");
+              }}
+              onDelete={handleDelete}
+            />
+          )}
         </div>
       </div>
     </div>

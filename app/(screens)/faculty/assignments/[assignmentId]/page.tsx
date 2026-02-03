@@ -2,7 +2,7 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { ChartLineDown, UserCircle, UsersThree } from "@phosphor-icons/react";
+import { UserCircle, UsersThree } from "@phosphor-icons/react";
 import AssignmentTable from "./components/assignmentTable";
 import CardComponent, {
   CardProps,
@@ -44,7 +44,7 @@ export default function Page() {
   async function fetchAssignmentDetails() {
     // 1. Fetch assignment from faculty_assignments
     const { data, error } = await supabase
-      .from("faculty_assignments")
+      .from("assignments")
       .select("*")
       .eq("assignmentId", assignmentId)
       .single();
@@ -67,7 +67,6 @@ export default function Page() {
     });
   }
 
-
   // While loading data
   if (!assignment) {
     return <p className="p-6 text-gray-600">Loading assignment...</p>;
@@ -86,7 +85,7 @@ export default function Page() {
       iconColor: "text-white",
     },
     {
-      value: assignment.totalMarks || "—",
+      value: assignment.marks || "—",
       label: "Total Marks",
       bgColor: "bg-[#FFEDDA]",
       icon: <UsersThree />,
@@ -109,7 +108,8 @@ export default function Page() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Create, manage, and evaluate assignments for your students efficiently
+            Create, manage, and evaluate assignments for your students
+            efficiently
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" />
@@ -120,7 +120,7 @@ export default function Page() {
             <CardComponent {...item} />
           </div>
         ))}
-        <div className="bg-green-400 flex-[1.6]">
+        <div className="flex-[1.6]">
           <WorkWeekCalendar style="h-full" />
         </div>
       </section>
