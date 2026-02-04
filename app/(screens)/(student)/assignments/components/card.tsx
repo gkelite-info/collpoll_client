@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDots, LinkSimpleHorizontal, UserCircle } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import {
+    CalendarDots,
+    LinkSimpleHorizontal,
+    UserCircle,
+} from "@phosphor-icons/react";
 import { FiDownload } from "react-icons/fi";
 import { TfiPencil } from "react-icons/tfi";
 import { FaPlus } from "react-icons/fa6";
@@ -9,8 +13,6 @@ import ViewDetailModal from "../modal/viewDetail";
 import UploadModal from "../modal/uploadModal";
 import { supabase } from "@/lib/supabaseClient";
 import { downloadAssignmentFile } from "@/app/utils/storageActions";
-
-
 
 async function downloadFile(filePath: string) {
     try {
@@ -23,7 +25,6 @@ async function downloadFile(filePath: string) {
             return;
         }
 
-        // Convert to download link
         const url = URL.createObjectURL(data);
         const a = document.createElement("a");
         a.href = url;
@@ -32,7 +33,6 @@ async function downloadFile(filePath: string) {
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
-
     } catch (err) {
         console.error("DOWNLOAD ERROR:", err);
     }
@@ -40,12 +40,8 @@ async function downloadFile(filePath: string) {
 
 async function updateFile(oldPath: string, newFile: File) {
     try {
-        // 1. Delete old file
-        await supabase.storage
-            .from("student_submissions")
-            .remove([oldPath]);
+        await supabase.storage.from("student_submissions").remove([oldPath]);
 
-        // 2. Upload new file with SAME path
         const { error: uploadErr } = await supabase.storage
             .from("student_submissions")
             .upload(oldPath, newFile, { upsert: true });
@@ -56,7 +52,6 @@ async function updateFile(oldPath: string, newFile: File) {
         }
 
         return true;
-
     } catch (err) {
         console.error("UPDATE ERROR:", err);
         return false;
@@ -67,6 +62,9 @@ export type CardProp = {
     assignmentId: number | string;
     image: string;
     title: string;
+    studentId: number;
+    subjectName?: string;
+    topicName: string;
     description: string;
     fromDate: string;
     toDate: string;
@@ -75,6 +73,7 @@ export type CardProp = {
     marksScored?: number;
     marksTotal?: number;
     assignmentTitle?: string;
+    existingFilePath?: string | null;
 };
 
 type AssignmentCardProps = {
@@ -82,8 +81,24 @@ type AssignmentCardProps = {
     activeView: "active" | "previous";
 };
 
-export default function AssignmentCard({ cardProp, activeView }: AssignmentCardProps) {
-    const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>({});
+export default function AssignmentCard({
+    cardProp,
+    activeView,
+}: AssignmentCardProps) {
+    // ✅ KEEP this (you said don't remove working things)
+    const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>(
+        {}
+    );
+
+    // ✅ SYNC backend file path into uploadedFiles so your old logic still works
+    useEffect(() => {
+        const map: { [key: number]: string } = {};
+        cardProp.forEach((item, idx) => {
+            if (item.existingFilePath) map[idx] = item.existingFilePath;
+        });
+        setUploadedFiles((prev) => ({ ...prev, ...map }));
+    }, [cardProp]);
+
     const [showModal, setShowModal] = useState(false);
     const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);
     const [showUploadModal, setShowUploadModal] = useState(false);
@@ -109,28 +124,30 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
         setEditingIndex(index);
         setUploadingIndex(index);
         setShowUploadModal(true);
-    }
+    };
 
+    // ✅ RESTORED handleDownload (so no TS error)
     const handleDownload = async (index: number, item: CardProp) => {
         try {
-            const storedPath = uploadedFiles[index];
+            // Prefer backend file path (existingFilePath), else fallback uploadedFiles
+            const storedPath = item.existingFilePath ?? uploadedFiles[index];
+
             if (!storedPath) {
                 alert("No uploaded file found!");
                 return;
             }
 
-            const fileName = storedPath.split("/").pop()!;
+            const fileName = storedPath.split("/").pop();
+            if (!fileName) {
+                alert("Invalid file path!");
+                return;
+            }
 
-            await downloadAssignmentFile(
-                Number(item.assignmentId),
-                fileName
-            );
+            await downloadAssignmentFile(Number(item.assignmentId), fileName);
         } catch (error) {
             console.error("DOWNLOAD ERROR:", error);
         }
     };
-
-
 
     return (
         <>
@@ -146,8 +163,12 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                     <div className="h-[139px] w-[520px] flex flex-col justify-between">
                         <div className="w-full h-[75%] flex">
                             <div className="w-[60%] flex flex-col pt-1 gap-1">
-                                <h5 className="text-[#111827] font-semibold text-lg">{item.title}</h5>
-                                <p className="text-[#111827] font-medium text-sm">{item.description}</p>
+                                <h5 className="text-[#111827] font-semibold text-lg">
+                                    {item.title}
+                                </h5>
+                                <p className="text-[#111827] font-medium text-sm">
+                                    {item.description}
+                                </p>
 
                                 <div className="flex items-center gap-2 mt-auto pb-2">
                                     <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
@@ -165,7 +186,6 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                                         <div
                                             className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
                                             onClick={() => handleDownload(index, item)}
-
                                         >
                                             <FiDownload className="text-md text-[#57C788]" />
                                         </div>
@@ -191,24 +211,30 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                                 {activeView === "previous" && (
                                     <div className="flex flex-col items-center justify-center">
                                         <div className="rounded-full w-[55px] h-[55px] bg-[#16284F] flex flex-col items-center justify-center relative">
-                                            <p style={{ fontSize: 14, color: "white" }}>{item.marksScored}</p>
-                                            <p style={{ fontSize: 14, color: "white" }}>{item.marksTotal}</p>
+                                            <p style={{ fontSize: 14, color: "white" }}>
+                                                {item.marksScored}
+                                            </p>
+                                            <p style={{ fontSize: 14, color: "white" }}>
+                                                {item.marksTotal}
+                                            </p>
 
                                             <style jsx>{`
-                                                div::before {
-                                                    content: "";
-                                                    position: absolute;
-                                                    width: 70%;
-                                                    height: 1px;
-                                                    background: white;
-                                                    top: 50%;
-                                                    left: 50%;
-                                                    transform: translate(-50%, -50%);
-                                                    opacity: 0.7;
-                                                }
-                                            `}</style>
+                        div::before {
+                          content: "";
+                          position: absolute;
+                          width: 70%;
+                          height: 1px;
+                          background: white;
+                          top: 50%;
+                          left: 50%;
+                          transform: translate(-50%, -50%);
+                          opacity: 0.7;
+                        }
+                      `}</style>
                                         </div>
-                                        <p className="text-xs text-[#282828] font-regular mt-0.5">Marks</p>
+                                        <p className="text-xs text-[#282828] font-regular mt-0.5">
+                                            Marks
+                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -232,48 +258,14 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                             {activeView === "active" && (
                                 <div className="flex items-center gap-2">
                                     {uploadedFiles[index] ? (
-                                        <div className="flex items-center bg-[#E2F3E9] rounded-full px-2 py-1 gap-2 max-w-[210px]">
-                                            {(() => {
-                                                console.log("Saved file path:", uploadedFiles[index]);
-                                                return null;
-                                            })()}
-                                            {/* DOWNLOAD */}
+                                        <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
                                             <span
                                                 onClick={() => downloadFile(uploadedFiles[index])}
                                                 className="text-[#43C17A] text-xs underline truncate cursor-pointer"
+                                                title={uploadedFiles[index]}
                                             >
                                                 {uploadedFiles[index].split("/").pop()}
                                             </span>
-
-                                            {/* UPDATE */}
-                                            <label className="cursor-pointer text-blue-500 text-xs font-bold px-1">
-                                                <input
-                                                    type="file"
-                                                    className="hidden"
-                                                    accept="application/pdf"
-                                                    onChange={async (e) => {
-                                                        const file = e.target.files?.[0];
-                                                        if (!file) return;
-
-                                                        const ok = await updateFile(uploadedFiles[index], file);
-                                                        if (ok) alert("File updated successfully!");
-                                                    }}
-                                                />
-                                            </label>
-
-                                            {/* DELETE UI */}
-                                            <button
-                                                className="text-red-500 px-1"
-                                                onClick={() => {
-                                                    setUploadedFiles(prev => {
-                                                        const updated = { ...prev };
-                                                        delete updated[index];
-                                                        return updated;
-                                                    });
-                                                }}
-                                            >
-                                                ✕
-                                            </button>
                                         </div>
                                     ) : (
                                         <div
@@ -284,7 +276,6 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                                             <FaPlus size={8} className="text-[#43C17A]" />
                                         </div>
                                     )}
-
                                 </div>
                             )}
                         </div>
@@ -301,18 +292,24 @@ export default function AssignmentCard({ cardProp, activeView }: AssignmentCardP
                 }
             />
 
-
             <UploadModal
                 isOpen={showUploadModal}
                 onClose={() => {
-                    setShowUploadModal(false)
+                    setShowUploadModal(false);
                     setEditingIndex(null);
                 }}
-                onUpload={(filePath, idx) =>
-                    setUploadedFiles(prev => ({ ...prev, [idx]: filePath }))
-                }
+                onUpload={(filePath, idx) => {
+                    // ✅ keep your old behavior + close modal
+                    setUploadedFiles((prev) => ({ ...prev, [idx]: filePath }));
+                    setShowUploadModal(false);
+                }}
                 card={uploadingIndex !== null ? cardProp[uploadingIndex] : undefined}
                 index={uploadingIndex ?? undefined}
+                existingFilePath={
+                    uploadingIndex !== null
+                        ? cardProp[uploadingIndex]?.existingFilePath ?? undefined
+                        : undefined
+                }
             />
         </>
     );
