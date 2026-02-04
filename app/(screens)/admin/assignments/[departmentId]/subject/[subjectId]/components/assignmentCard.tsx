@@ -2,15 +2,23 @@
 
 import { Book, CalendarDots, CaretRight, Trash } from "@phosphor-icons/react";
 import { TfiPencil } from "react-icons/tfi";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import ConfirmDeleteModal from "./confirmDeleteModal";
-import { Assignment } from "../data";
-//import { Assignment } from "./assignmentForm"; 
 import { deleteFacultyAssignment } from "@/lib/helpers/faculty/deleteFacultyAssignment";
 import toast from "react-hot-toast";
 
-
+export interface Assignment {
+  assignmentId?: number;
+  image: string;
+  title: string;
+  description: string;
+  fromDate: string | number;
+  toDate: string | number;
+  totalSubmissions: string;
+  totalSubmitted: string;
+  marks: string | number;
+}
 
 function formatDate(dateValue: number | string) {
   if (!dateValue) return "";
@@ -34,9 +42,6 @@ function formatDate(dateValue: number | string) {
   return "";
 }
 
-
-
-
 type AssignmentCardProps = {
   cardProp: Assignment[];
   activeView: "active" | "previous";
@@ -53,7 +58,18 @@ export default function AssignmentCard({
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
+  const params = useParams();
+  const searchParams = useSearchParams();
 
+  const facultyId = searchParams.get("facultyId");
+  const departmentId = params.departmentId;
+  const subjectId = params.subjectId;
+
+  const handleViewSubmissions = (assignmentId: number) => {
+    router.push(
+      `/admin/assignments/${departmentId}/subject/${subjectId}/${assignmentId}?facultyId=${facultyId}`,
+    );
+  };
   return (
     <div className="flex flex-col">
       {cardProp.map((item, index) => (
@@ -92,22 +108,13 @@ export default function AssignmentCard({
                     >
                       <TfiPencil className="text-md text-[#57C788]" />
                     </div>
-
-                    {activeView === "active" && (
-                      <div
-                        className="rounded-full bg-[#F6E3E3] p-1.5 flex items-center justify-center cursor-pointer"
-                        onClick={() => {
-                          setDeleteId(item.assignmentId ?? null);   // <-- FIX HERE
-                          console.log("vamshi", item.assignmentId);
-                        }}
-                      >
-                        <Trash className="text-md text-[#C14343]" />
-                      </div>
-                    )}
                   </div>
                   <h4
                     className="text-[#43C17A] text-sm cursor-pointer underline"
-                    onClick={() => router.push(`/faculty/assignments/${item.assignmentId}`)}
+                    onClick={() =>
+                      item.assignmentId !== undefined &&
+                      handleViewSubmissions(item.assignmentId)
+                    }
                   >
                     View Submissions
                   </h4>
@@ -137,7 +144,6 @@ export default function AssignmentCard({
               Total Marks
             </div>
           </div>
-
         </div>
       ))}
 

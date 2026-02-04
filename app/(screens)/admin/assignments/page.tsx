@@ -1,32 +1,19 @@
 "use client";
-// export default function page() {
-//   return <div className="text-black">page</div>;
-// }
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { Suspense } from "react";
 import {
   CaretDown,
-  MagnifyingGlass,
   CaretLeft,
   CaretRight,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
-import { User, UsersThree } from "@phosphor-icons/react";
-import { useSearchParams } from "next/navigation";
-import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-import CardComponent from "../attendance/components/cards";
-import { Department } from "./components/assignmentCard";
-import FacultyAssignmentCard from "./[departmentId]/subject/[subjectId]/[assignmentId]/components/FacultyAssignmentCard";
-
-interface ExtendedDepartment extends Department {
-  id: string;
-  deptCode: string;
-  activeSubjects: number;
-  issuesRaised: number;
-}
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
+import AssignmentCard from "./components/assignmentCard";
 
 interface FilterProps {
   label: string;
@@ -35,73 +22,6 @@ interface FilterProps {
   onChange: (val: string) => void;
   displayModifier?: (opt: string) => string;
 }
-
-const DEPT_CONFIGS = [
-  {
-    facultyName: "John Doe",
-    name: "CSE",
-    text: "#FF767D",
-    color: "#FFB4B8",
-    bgColor: "#FFF5F5",
-    subjects: ["Data Structures", "DBMS", "AI"],
-  },
-  {
-    facultyName: "Jane Smith",
-    name: "ECE",
-    text: "#FF9F7E",
-    color: "#F3D3C8",
-    bgColor: "#FFF9DB",
-    subjects: ["VLSI", "Signals", "Embedded"],
-  },
-  {
-    facultyName: "Alice Johnson",
-    name: "MECH",
-    text: "#F8CF64",
-    color: "#F3E2B6",
-    bgColor: "#FFF9DB",
-    subjects: ["Thermodynamics", "Robotics"],
-  },
-  {
-    facultyName: "Bob Brown",
-    name: "IT",
-    text: "#66EEFA",
-    color: "#BCECF0",
-    bgColor: "#E7F5FF",
-    subjects: ["Web Dev", "Cloud", "Cyber"],
-  },
-];
-
-const SECTIONS = ["A", "B", "C", "D"];
-const YEARS = ["1", "2", "3", "4"];
-
-const generateFullMockData = (): ExtendedDepartment[] => {
-  const data: ExtendedDepartment[] = [];
-
-  DEPT_CONFIGS.forEach((dept) => {
-    YEARS.forEach((yr) => {
-      data.push({
-        id: `${dept.name}-${yr}`,
-
-        facultyName: dept.facultyName,
-
-        name: dept.name,
-
-        deptCode: dept.name,
-        text: dept.text,
-        color: dept.color,
-        bgColor: dept.bgColor,
-
-        totalStudents: Math.floor(Math.random() * 15) + 50,
-        activeSubjects: Math.floor(Math.random() * 25) + 70,
-        issuesRaised: Math.floor(Math.random() * 10),
-
-        year: yr,
-      });
-    });
-  });
-
-  return data;
-};
 
 const FilterDropdown = ({
   label,
@@ -140,22 +60,43 @@ const AssignmentPage = () => {
   const [deptFilter, setDeptFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [dataList, setDataList] = useState<any[]>([]);
+
   const cardsPerPage = 15;
-
-  const allData = useMemo(() => generateFullMockData(), []);
-
-  const searchParams = useSearchParams();
-  const view = searchParams.get("view");
-
   const router = useRouter();
 
-  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    setMounted(true);
+    const loadData = async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) return;
+
+        const { data: userRecord } = await supabase
+          .from("users")
+          .select("userId")
+          .eq("auth_id", auth.user.id)
+          .single();
+
+        if (!userRecord) return;
+
+        const adminCtx = await fetchAdminContext(userRecord.userId);
+
+        // 2. Fetch Aggregated Stats
+        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId);
+        setDataList(data || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
   }, []);
 
+  // Filtering Logic
   const filteredResults = useMemo(() => {
-    return allData.filter((item) => {
+    return dataList.filter((item) => {
       const matchesSearch = item.name
         .toLowerCase()
         .includes(search.toLowerCase());
@@ -163,23 +104,28 @@ const AssignmentPage = () => {
       const matchesYear = yearFilter === "All" || item.year === yearFilter;
       return matchesSearch && matchesDept && matchesYear;
     });
-  }, [search, deptFilter, yearFilter]);
+  }, [search, deptFilter, yearFilter, dataList]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, deptFilter, yearFilter]);
-
+  // Pagination Logic
   const totalPages = Math.ceil(filteredResults.length / cardsPerPage);
   const currentCards = useMemo(() => {
     const start = (currentPage - 1) * cardsPerPage;
     return filteredResults.slice(start, start + cardsPerPage);
   }, [filteredResults, currentPage]);
 
-  if (!mounted) return null;
+  const uniqueDepts = useMemo(
+    () => ["All", ...Array.from(new Set(dataList.map((d) => d.name)))],
+    [dataList],
+  );
+  const uniqueYears = useMemo(
+    () => ["All", ...Array.from(new Set(dataList.map((d) => d.year)))],
+    [dataList],
+  );
 
-  const handleBack = () => {
-    router.push("/admin/assignments");
-  };
+  if (loading)
+    return (
+      <div className="p-10 text-black text-center">Loading Overview...</div>
+    );
 
   return (
     <div className="flex flex-col m-4">
@@ -220,58 +166,45 @@ const AssignmentPage = () => {
           <FilterDropdown
             label="Department"
             value={deptFilter}
-            options={["All", ...DEPT_CONFIGS.map((d) => d.name)]}
+            options={uniqueDepts}
             onChange={setDeptFilter}
           />
           <FilterDropdown
             label="Year"
             value={yearFilter}
-            options={["All", ...YEARS]}
+            options={uniqueYears}
             onChange={setYearFilter}
             displayModifier={(o) => (o === "All" ? o : `${o} Year`)}
           />
         </div>
       </div>
 
-      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col">
+      <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
           {currentCards.map((dept) => (
-            <FacultyAssignmentCard key={dept.id} {...dept} />
+            <AssignmentCard key={dept.id} {...dept} />
           ))}
         </div>
 
+        {/* Pagination Controls (Hidden if 1 page) */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-8 mb-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+              className="p-2 rounded-lg border bg-white disabled:opacity-30"
             >
-              <CaretLeft size={18} weight="bold" color="black" />
+              <CaretLeft size={18} />
             </button>
-
-            <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === i + 1
-                      ? "bg-[#16284F] text-white"
-                      : "bg-white text-gray-600 border hover:border-gray-300"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+              className="p-2 rounded-lg border bg-white disabled:opacity-30"
             >
-              <CaretRight size={18} weight="bold" color="black" />
+              <CaretRight size={18} />
             </button>
           </div>
         )}

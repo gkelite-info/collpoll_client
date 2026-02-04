@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 export interface CourseCardData {
   id: number;
@@ -37,12 +37,16 @@ const CourseCard: React.FC<CourseCardData> = ({
   issuesRaised,
 }) => {
   const router = useRouter();
+  const params = useParams();
 
   const handleViewAssignments = () => {
-    router.push(`/admin/assignments/1/subject/${id}`);
+    router.push(
+      `/admin/assignments/${params.departmentId}/subject/${id}?facultyId=${instructorId}`,
+    );
   };
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-[320px] p-4 flex flex-col">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex flex-col">
       <div className="text-center mb-3">
         <h3 className="text-[#43C17A] font-bold text-lg tracking-tight uppercase">
           {subject}
@@ -55,10 +59,10 @@ const CourseCard: React.FC<CourseCardData> = ({
           <img
             src={avatarUrl}
             alt={instructorName}
-            className="w-full h-full rounded-full object-cover shadow-sm"
+            className="w-full h-full rounded-full object-cover"
           />
         </div>
-        <div className="flex flex-col">
+        <div>
           <p className="text-[#282828] font-bold text-base leading-tight">
             {instructorName}
           </p>
@@ -76,7 +80,7 @@ const CourseCard: React.FC<CourseCardData> = ({
 
       <button
         onClick={handleViewAssignments}
-        className=" w-full bg-[#16284F] hover:bg-[#1b3878] text-white py-1.5 rounded-full transition-colors duration-200 text-md cursor-pointer"
+        className="w-full bg-[#16284F] hover:bg-[#1b3878] text-white py-2 rounded-full text-sm font-medium transition-colors"
       >
         View Assignments
       </button>

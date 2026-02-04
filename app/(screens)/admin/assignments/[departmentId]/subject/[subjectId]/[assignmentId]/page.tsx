@@ -1,37 +1,25 @@
 "use client";
 
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { UserCircle, UsersThree } from "@phosphor-icons/react";
+
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { ChartLineDown, UserCircle, UsersThree } from "@phosphor-icons/react";
 import AssignmentTable from "./components/assignmentTable";
 import CardComponent, { CardProps } from "./components/cardComponent";
-import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { useEffect, useState } from "react";
 
 function formatDate(value: number | string) {
   if (!value) return "";
-
   const str = value.toString();
-
-  // Case: YYYYMMDD
   if (/^\d{8}$/.test(str)) {
     return `${str.slice(6, 8)}/${str.slice(4, 6)}/${str.slice(0, 4)}`;
   }
-
-  // Case: YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    const [year, month, day] = str.split("-");
-    return `${day}/${month}/${year}`;
-  }
-
-  // Case: Already DD/MM/YYYY
-  if (str.includes("/")) return str;
-
-  return str;
+  return str.includes("/") ? str : str;
 }
 
-export default function Page() {
+export default function AdminAssignmentDetailPage() {
   const { assignmentId } = useParams();
   const [assignment, setAssignment] = useState<any>(null);
 
@@ -40,37 +28,40 @@ export default function Page() {
   }, [assignmentId]);
 
   async function fetchAssignmentDetails() {
-    // 1. Fetch assignment from faculty_assignments
-    const { data, error } = await supabase
-      .from("faculty_assignments")
-      .select("*")
-      .eq("assignmentId", assignmentId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("assignments")
+        .select("*")
+        .eq("assignmentId", assignmentId)
+        .single();
 
-    if (error) {
-      console.error("Error fetching assignment:", error);
-      return;
+      if (error) throw error;
+
+      const { count: submittedCount } = await supabase
+        .from("student_assignments_submission")
+        .select("*", { count: "exact", head: true })
+        .eq("assignmentId", assignmentId);
+
+      const { count: expectedCount } = await supabase
+        .from("students")
+        .select("*", { count: "exact", head: true })
+        .eq("collegeBranchId", data.collegeBranchId)
+        .eq("collegeAcademicYearId", data.collegeAcademicYearId)
+        .eq("isActive", true);
+
+      setAssignment({
+        ...data,
+        totalSubmitted: submittedCount || 0,
+        totalSubmissionsExpected: expectedCount || 0,
+      });
+    } catch (err) {
+      console.error("Error fetching detail stats:", err);
     }
-
-    // 2. Count how many submissions
-    const { count: submittedCount } = await supabase
-      .from("student_submissions")
-      .select("*", { count: "exact", head: true })
-      .eq("assignmentId", assignmentId);
-
-    // 3. Merge the count into assignment object
-    setAssignment({
-      ...data,
-      totalSubmitted: submittedCount || 0,
-    });
   }
 
-  // While loading data
-  if (!assignment) {
-    return <p className="p-6 text-gray-600">Loading assignment...</p>;
-  }
+  if (!assignment)
+    return <div className="p-6 text-gray-500">Loading Summary...</div>;
 
-  // Build card data AFTER assignment is loaded
   const cardData: CardProps[] = [
     {
       value: assignment.submissionDeadlineInt
@@ -83,7 +74,7 @@ export default function Page() {
       iconColor: "text-white",
     },
     {
-      value: assignment.totalMarks || "—",
+      value: assignment.marks || "—",
       label: "Total Marks",
       bgColor: "bg-[#FFEDDA]",
       icon: <UsersThree />,
@@ -91,9 +82,7 @@ export default function Page() {
       iconColor: "text-white",
     },
     {
-      value: `${assignment.totalSubmitted || 0}/${
-        assignment.totalSubmissionsExpected || 0
-      }`,
+      value: `${assignment.totalSubmitted} `,
       label: "Total Submissions",
       bgColor: "bg-[#E6FBEA]",
       icon: <UserCircle />,
@@ -103,30 +92,30 @@ export default function Page() {
   ];
 
   return (
-    <main className="px-4 py-4 min-h-screen">
+    <main className="px-4 py-4 min-h-screen bg-[#F3F6F9]">
       <section className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Create, manage, and evaluate assignments for your students
-            efficiently
+            Reviewing submission stats and evaluating student work.
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" />
       </section>
-      <section className=" flex flex-row items-stretch gap-4 w-full mb-3">
+
+      <section className="flex flex-row items-stretch gap-4 w-full mb-3">
         {cardData.map((item, index) => (
           <div key={index} className="flex-1">
             <CardComponent {...item} />
           </div>
         ))}
-        <div className="bg-green-400 flex-[1.6]">
+        <div className="flex-[1.6]">
           <WorkWeekCalendar style="h-full" />
         </div>
       </section>
 
       <section>
-        <AssignmentTable />
+        <AssignmentTable assignmentId={assignmentId as string} />
       </section>
     </main>
   );
