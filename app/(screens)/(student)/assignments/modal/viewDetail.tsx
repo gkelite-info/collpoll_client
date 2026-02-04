@@ -17,28 +17,28 @@ export default function ViewDetailModal({ isOpen, onClose, card, submissionFileN
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999]">
             <div className="bg-white lg:w-fit lg:h-fit lg:p-5 lg:rounded-xl lg:relative lg:shadow-lg">
-                 <div className="bg-red-00 w-full flex items-center justify-between lg:gap-2"> 
-                     <div className="flex items-center gap-5"> 
-                         <button 
-                             onClick={onClose} 
-                             className="text-[#282828] hover:text-black text-xl cursor-pointer" 
-                         > 
-                             ✕ 
-                         </button> 
+                <div className="bg-red-00 w-full flex items-center justify-between lg:gap-2">
+                    <div className="flex items-center gap-5">
+                        <button
+                            onClick={onClose}
+                            className="text-[#282828] hover:text-black text-xl cursor-pointer"
+                        >
+                            ✕
+                        </button>
                         {/* <h4 className="text-[#282828] font-semibold text-lg">Assignment Details View</h4> */}
-                    {/* </div> */}
-                    {/* <div className="flex items-center gap-4"> */}
+                        {/* </div> */}
+                        {/* <div className="flex items-center gap-4"> */}
                         {/* <div className="lg:rounded-full p-2 bg-[#E2F3E9] cursor-pointer"> */}
-                            {/* <FiDownload className="text-[#43C17A]" /> */}
+                        {/* <FiDownload className="text-[#43C17A]" /> */}
                         {/* </div> */}
                         {/* <div className="flex justify-between items-center gap-2 bg-[#16284F] rounded-lg px-3 py-1.5 cursor-pointer"> */}
-                            {/* <div className="lg:p-1 lg:rounded-full bg-white flex items-center justify-center"> */}
-                                {/* <PaperPlaneRight size={15} weight="fill" color="16284F" /> */}
-                            {/* </div> */}
-                            {/* <p className="text-white lg:font-medium text-md">Submit</p> */}
+                        {/* <div className="lg:p-1 lg:rounded-full bg-white flex items-center justify-center"> */}
+                        {/* <PaperPlaneRight size={15} weight="fill" color="16284F" /> */}
                         {/* </div> */}
-                     </div> 
-                 </div> 
+                        {/* <p className="text-white lg:font-medium text-md">Submit</p> */}
+                        {/* </div> */}
+                    </div>
+                </div>
 
                 <div className="bg-blue-00 mt-3 grid grid-cols-2 gap-x-3">
                     {/* Left Labels */}
@@ -51,12 +51,30 @@ export default function ViewDetailModal({ isOpen, onClose, card, submissionFileN
                     </div>
 
                     {/* Right Values */}
+                    {/* Right Values */}
                     <div className="flex flex-col gap-3">
-                        <p className="text-[#474747] text-sm">{card.assignmentTitle}</p>
-                        <p className="text-[#474747] text-sm">{card.title}</p>
-                        <p className="text-[#474747] text-sm">{card.professor}</p>
-                        <p className="text-[#474747] text-sm">{card.fromDate}</p>
-                        <p className="text-[#474747] text-sm">{card.toDate}</p>
+                        {/* Assignment Title = Topic */}
+                        <p className="text-[#474747] text-sm">
+                            {card.title}
+                        </p>
+
+                        {/* Subject Name ✅ */}
+                        <p className="text-[#474747] text-sm">
+                            {card.subjectName}
+                        </p>
+
+                        {/* Faculty Name ✅ */}
+                        <p className="text-[#474747] text-sm">
+                            {card.professor}
+                        </p>
+
+                        <p className="text-[#474747] text-sm">
+                            {card.fromDate}
+                        </p>
+
+                        <p className="text-[#474747] text-sm">
+                            {card.toDate}
+                        </p>
                     </div>
                 </div>
 
