@@ -1,13 +1,13 @@
 import { supabase } from "@/lib/supabaseClient";
-
+ 
 type AcademicDropdownParams = {
     collegeId: number;
-
+ 
     educationId?: number;
     branchId?: number;
     academicYearId?: number;
     semester?: number;
-
+ 
     type:
     | "education"
     | "branch"
@@ -16,7 +16,7 @@ type AcademicDropdownParams = {
     | "subject"
     | "section";
 };
-
+ 
 type AcademicDropdownMap = {
     education: {
         collegeEducationId: number;
@@ -44,26 +44,26 @@ type AcademicDropdownMap = {
         collegeSections: string;
     };
 };
-
-
+ 
+ 
 export function fetchAcademicDropdowns(params: {
     type: "education";
     collegeId: number;
 }): Promise<AcademicDropdownMap["education"][]>;
-
+ 
 export function fetchAcademicDropdowns(params: {
     type: "branch";
     collegeId: number;
     educationId: number;
 }): Promise<AcademicDropdownMap["branch"][]>;
-
+ 
 export function fetchAcademicDropdowns(params: {
     type: "academicYear";
     collegeId: number;
     educationId: number;
     branchId: number;
 }): Promise<AcademicDropdownMap["academicYear"][]>;
-
+ 
 export function fetchAcademicDropdowns(params: {
     type: "semester";
     collegeId: number;
@@ -71,7 +71,7 @@ export function fetchAcademicDropdowns(params: {
     academicYearId: number;
     branchId?: number; // ✅ allow extra param
 }): Promise<AcademicDropdownMap["semester"][]>;
-
+ 
 export function fetchAcademicDropdowns(params: {
     type: "subject";
     collegeId: number;
@@ -80,7 +80,7 @@ export function fetchAcademicDropdowns(params: {
     academicYearId: number;
     semester: number;
 }): Promise<AcademicDropdownMap["subject"][]>;
-
+ 
 export function fetchAcademicDropdowns(params: {
     type: "section";
     collegeId: number;
@@ -88,7 +88,7 @@ export function fetchAcademicDropdowns(params: {
     branchId: number;
     academicYearId: number;
 }): Promise<AcademicDropdownMap["section"][]>;
-
+ 
 export async function fetchAcademicDropdowns(
     params: AcademicDropdownParams
 ) {
@@ -100,9 +100,9 @@ export async function fetchAcademicDropdowns(
         academicYearId,
         semester,
     } = params;
-
+ 
     switch (type) {
-
+ 
         case "education": {
             const { data, error } = await supabase
                 .from("college_education")
@@ -110,15 +110,15 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeId", collegeId)
                 .eq("isActive", true)
                 .order("collegeEducationType");
-
+ 
             if (error) throw error;
             return data;
         }
-
-
+ 
+ 
         case "branch": {
             if (!educationId) return [];
-
+ 
             const { data, error } = await supabase
                 .from("college_branch")
                 .select("collegeBranchId, collegeBranchType, collegeBranchCode")
@@ -126,16 +126,16 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeEducationId", educationId)
                 .eq("isActive", true)
                 .order("collegeBranchType");
-
+ 
             if (error) throw error;
             return data;
         }
-
-
-
+ 
+ 
+ 
         case "academicYear": {
             if (!educationId || !branchId) return [];
-
+ 
             const { data, error } = await supabase
                 .from("college_academic_year")
                 .select("collegeAcademicYearId, collegeAcademicYear")
@@ -143,22 +143,22 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeEducationId", educationId)
                 .eq("collegeBranchId", branchId)
                 .order("collegeAcademicYear");
-
+ 
             if (error) throw error;
             return data;
         }
-
-
+ 
+ 
         case "semester": {
             if (!educationId || !academicYearId) return [];
-
+ 
             console.log("🟡 SEMESTER FETCH PARAMS", {
                 collegeId,
                 educationId,
                 branchId,
                 academicYearId,
             });
-
+ 
             const { data, error } = await supabase
                 .from("college_semester")
                 .select("collegeSemesterId, collegeSemester")
@@ -167,19 +167,19 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeAcademicYearId", academicYearId)
                 .eq("isActive", true)
                 .order("collegeSemester");
-
+ 
             console.log("🟢 SEMESTER DATA FROM DB:", data);
-
+ 
             if (error) {
                 console.error("❌ SEMESTER FETCH ERROR:", error);
                 throw error;
             }
-
+ 
             return data;
         }
-
-
-
+ 
+ 
+ 
         case "subject": {
             if (
                 !educationId ||
@@ -189,7 +189,7 @@ export async function fetchAcademicDropdowns(
                 !collegeId
             )
                 return [];
-
+ 
             const { data, error } = await supabase
                 .from("college_subjects")
                 .select("collegeSubjectId, subjectName")
@@ -200,14 +200,14 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeSemesterId", semester)
                 .eq("isActive", true)
                 .order("subjectName");
-
+ 
             if (error) throw error;
             return data;
         }
-
+ 
         case "section": {
             if (!collegeId || !educationId || !branchId || !academicYearId) return [];
-
+ 
             const { data, error } = await supabase
                 .from("college_sections")
                 // 🔴 CHANGED: fetch ID + NAME
@@ -218,10 +218,10 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeAcademicYearId", academicYearId)
                 .eq("isActive", true)
                 .order("collegeSections");
-
+ 
             if (error) throw error;
             return data;
         }
-
+ 
     }
 }

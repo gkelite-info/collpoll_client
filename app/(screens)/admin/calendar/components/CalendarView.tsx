@@ -19,7 +19,7 @@ interface Props {
     faculty: {
         name: string
         id: string
-        department: string
+        branch: string
         year?: string
     }
     onBack: () => void
@@ -141,8 +141,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
             const start = combineDateAndTime(data.date, data.startTime);
             const end = combineDateAndTime(data.date, data.endTime);
             setEventForm(data);
-
-
             const conflict = await hasDbConflict(
                 data.date,
                 data.startTime,
@@ -158,57 +156,85 @@ export default function CalendarView({ faculty, onBack }: Props) {
             }
 
             const safeYear =
-                ["1", "2", "3", "4"].includes(String(data.year))
+                ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(String(data.year))
                     ? String(data.year)
                     : "";
 
+            // const payload = {
+            //     facultyId: Number(faculty.id),
+            //     eventTitle: data.title,
+            //     eventTopic: data.topic?.trim(),
+            //     type: data.type,
+            //     date: data.date,
+            //     roomNo: data.roomNo?.trim(),
+            //     fromTime: data.startTime,
+            //     toTime: data.endTime,
+            //     degree: data.degree,
+            //     department: data.departments,
+            //     //year: data.year?.toString() ?? "",
+            //     // year: data.year ?? null,
+            //     year: safeYear,
+            //     semester: data.semester?.map((s: any) => ({
+            //         uuid: s.uuid ?? crypto.randomUUID(),
+            //         name: s.name,
+            //     })),
+            //     section: data.sections,
+            // };
+
             const payload = {
-                facultyId: Number(faculty.id),
-                eventTitle: data.title,
-                eventTopic: data.topic?.trim(),
+                calendarEventId: data.calendarEventId ?? undefined,
+
+                facultyId: data.facultyId,
+
+                // academic context
+                educationId: data.educationId,
+                branchId: data.branchId,
+                academicYearId: data.academicYearId,
+                semester: data.semester,
+
+                // event data
+                subjectId: data.subjectId,
+                eventTopicId: data.eventTopic,
                 type: data.type,
                 date: data.date,
-                roomNo: data.roomNo?.trim(),
-                fromTime: data.startTime,
-                toTime: data.endTime,
-                degree: data.degree,
-                department: data.departments,
-                //year: data.year?.toString() ?? "",
-                // year: data.year ?? null,
-                year: safeYear,
-                semester: data.semester?.map((s: any) => ({
-                    uuid: s.uuid ?? crypto.randomUUID(),
-                    name: s.name,
-                })),
-                section: data.sections,
+                roomNo: data.roomNo,
+                fromTime: data.fromTime,
+                toTime: data.toTime,
+                meetingLink: data.meetingLink,
+                meetingTitle: data.meetingTitle,
+
+                // sections
+                sections: data.sections, // [{ collegeSectionId }]
             };
 
-            if (editingEventId) {
-                const updateres = await updateCalendarEvent(Number(editingEventId), payload);
+            console.log("Payload to save:", payload);
 
-                if (!updateres.success) {
-                    toast.error(updateres.error || "Failed to update event");
-                    return;
-                }
-                await loadEvents();
-                setIsModalOpen(false);
-                setEventForm(null);
-                setEditingEventId(null);
-                toast.success("Event updated successfully.");
-                return;
-            }
+            // if (editingEventId) {
+            //     const updateres = await updateCalendarEvent(Number(editingEventId), payload);
 
-            const res = await upsertCalendarEventAdmin(payload);
+            //     if (!updateres.success) {
+            //         toast.error(updateres.error || "Failed to update event");
+            //         return;
+            //     }
+            //     await loadEvents();
+            //     setIsModalOpen(false);
+            //     setEventForm(null);
+            //     setEditingEventId(null);
+            //     toast.success("Event updated successfully.");
+            //     return;
+            // }
 
-            if (!res.success) {
-                toast.error(res.error || "Failed to save event");
-                return;
-            }
-            await loadEvents();
-            setIsModalOpen(false);
-            setEventForm(null);
-            setPendingEvent(null);
-            setEditingEventId(null);
+            // const res = await upsertCalendarEventAdmin(payload);
+
+            // if (!res.success) {
+            //     toast.error(res.error || "Failed to save event");
+            //     return;
+            // }
+            // await loadEvents();
+            // setIsModalOpen(false);
+            // setEventForm(null);
+            // setPendingEvent(null);
+            // setEditingEventId(null);
             toast.success("Event saved successfully.");
         } catch (err) {
             console.error(err);
@@ -271,13 +297,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setCurrentDate(prev)
     }
 
-    // const confirmAddEvent = async () => {
-    //     if (!pendingEvent) return;
-    //     setShowConflictModal(false);
-    //     await saveEventDirectly(pendingEvent);
-    //     setPendingEvent(null);
-    // };
-
     const confirmAddEvent = async () => {
         if (!pendingEvent) return;
 
@@ -325,8 +344,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-
-
     const handleDeleteEvent = async (eventId: string) => {
         try {
             setIsDeleting(true);
@@ -367,11 +384,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
                         <CaretLeft size={23} onClick={onBack} className="cursor-pointer -ml-1.5" />  Calendar & Events
                     </h1>
                     <p className="text-sm text-[#282828] mt-1">
-                        Viewing Calendar for {faculty.name} ({faculty.department}) – ID {faculty.id}
+                        Viewing Calendar for {faculty.name} ({faculty.branch}) – ID {faculty.id}
                     </p>
                 </div>
 
-                <CourseScheduleCard style="w-[320px]" department={faculty.department} year={faculty.year} />
+                <CourseScheduleCard style="w-[320px]" department={faculty.branch} year={faculty.year} />
             </section>
 
             <div className="flex justify-between mb-2">
@@ -403,7 +420,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
             <AddEventModal
                 isOpen={isModalOpen}
-                value={eventForm}
+                //value={eventForm}
+                value={{ ...eventForm, facultyId: faculty.id }}
                 onClose={closeAddEventModal}
                 onSave={handleSaveEvent}
                 degreeOptions={degreeOptions}
