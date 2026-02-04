@@ -72,6 +72,36 @@ export async function fetchSemesters(
 }
 
 /* =========================
+   SUBJECTS
+========================= */
+export async function fetchSubjects(
+  collegeId: number,
+  collegeEducationId: number,
+  collegeBranchId: number,
+  collegeAcademicYearId: number,
+  collegeSemesterId: number
+) {
+  const { data, error } = await supabase
+    .from("college_subjects")
+    .select(`
+      collegeSubjectId,
+      subjectName,
+      subjectCode,
+      subjectKey,
+      credits
+    `)
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("collegeBranchId", collegeBranchId)
+    .eq("collegeAcademicYearId", collegeAcademicYearId)
+    .eq("collegeSemesterId", collegeSemesterId)
+    .eq("isActive", true);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+/* =========================
    SECTIONS
 ========================= */
 export async function fetchSections(

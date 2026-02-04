@@ -3,13 +3,12 @@ import Image from "next/image";
 interface Faculty {
   id: string;
   name: string;
-  department: string;
+  branch: string;
   subjects: string;
   lastUpdate: string;
   image: string;
   year?: string;
 }
-
 interface Props {
   faculty: Faculty;
   onSelect: (faculty: Faculty) => void;
@@ -21,13 +20,13 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
       <div>
         <div className="flex gap-4 items-center">
           <div className="w-14 h-14 rounded-full bg-gray-300 shrink-0">
-            {/* <Image
+            <Image
               src={faculty.image}
               alt={faculty.id}
               width={56}
               height={56}
               className="rounded-full object-cover"
-            /> */}
+            />
           </div>
 
           <div className="min-w-0">
@@ -41,24 +40,16 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
 
       <div className="mt-3 flex flex-col gap-2">
         <p className="text-sm text-[#282828] mb-1">
-          Department –{" "}
+          Branch –{" "}
           <span className="inline-block bg-[#43C17A42] text-[#00C757] px-4 py-0.5 rounded-full text-xs">
-            {faculty.department}
+            {faculty.branch}
           </span>
         </p>
 
         <p className="text-sm text-[#282828] mb-1 flex items-center">
           Subjects Handled –{" "}
           <span
-            className="
-                         text-[#525252]
-                           flex-1          
-                           min-w-0         
-                          max-w-[220px]
-                          overflow-x-auto
-                          whitespace-nowrap
-                           ml-1       
-                        "
+            className="text-[#525252] flex-1 min-w-0 max-w-[220px] overflow-x-auto whitespace-nowrap ml-1"
           >
             {faculty.subjects}
           </span>
