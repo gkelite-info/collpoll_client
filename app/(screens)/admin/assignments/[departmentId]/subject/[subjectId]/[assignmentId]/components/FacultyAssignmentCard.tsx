@@ -24,16 +24,9 @@ const FacultyAssignmentCard = ({
   year = "2",
 }: Department) => {
   const router = useRouter();
-  // const pathname = usePathname();
-  // const searchParams = useSearchParams();
 
   const handleViewDetails = () => {
-    // const params = new URLSearchParams(searchParams);
-    // params.set("view", "subjectWise");
-    // params.set("deptId", name);
-    // router.push(`${pathname}?${params.toString()}`);
     router.push(`/admin/assignments/${encodeURIComponent(name)}?year=${year}`);
-    // router.push(`/admin/academics/${encodeURIComponent(name)}?year=${year}`);
   };
 
   return (
@@ -81,23 +74,6 @@ const FacultyAssignmentCard = ({
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        {/* <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 text-[12px] font-medium whitespace-nowrap">
-            Avg Attendance -
-          </span>
-          <span className="bg-[#E7F9F0] text-[#22C55E] px-2 py-0.5 rounded-full text-[11px] font-bold">
-            {avgAttendance}%
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 text-[12px] font-medium whitespace-nowrap">
-            Below 75% -
-          </span>
-          <span className="bg-[#E7F9F0] text-[#22C55E] px-2 py-0.5 rounded-full text-[11px] font-bold">
-            {belowThresholdCount}
-          </span>
-        </div> */}
-
         <div>
           <div className="flex gap-2">
             <p className="text-[#282828] text-sm">
