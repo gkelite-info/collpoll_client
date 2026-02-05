@@ -1,12 +1,5 @@
 "use client";
-import {
-  BellSimple,
-  CaretDown,
-  EnvelopeSimple,
-  MagnifyingGlass,
-  Megaphone,
-  Newspaper,
-} from "@phosphor-icons/react";
+import { BellSimple, CaretDown, EnvelopeSimple, MagnifyingGlass, Megaphone, Newspaper } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
@@ -18,9 +11,7 @@ import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";
 
 
-
 export default function Header() {
-  const router = useRouter();
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -30,7 +21,7 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { userId, fullName, role } = useUser();
+  const { fullName, role, collegeEducationType, collegeBranchCode, studentId } = useUser();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -138,11 +129,15 @@ export default function Header() {
 
                 {role === "Student" && (
                   <>
-                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>B.Tech CSE</p>
+                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>
+                      {collegeEducationType && collegeBranchCode
+                        ? `${collegeEducationType} ${collegeBranchCode}`
+                        : "—"}
+                    </p>
                     <p style={{ fontSize: 12, color: "#E5E5E5" }}>
                       ID -{" "}
                       <span style={{ fontSize: 12, color: "#E5E5E5" }}>
-                        {userId}
+                        {studentId}
                       </span>
                     </p>
                   </>
@@ -157,13 +152,11 @@ export default function Header() {
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
       />
-
       <NewsModal
         isOpen={isNewsOpen}
         onClose={() => setIsNewsOpen(false)}
         onOpenPDF={openPDFModal}
       />
-
       <EmailModal
         isOpen={isEmailOpen}
         onClose={() => setIsEmailOpen(false)}
@@ -180,8 +173,6 @@ export default function Header() {
           Subject: "",
         }}
       />
-
-
       <AnnouncementModal
         isOpen={isAnnouncementOpen}
         onClose={() => setIsAnnouncementOpen(false)}

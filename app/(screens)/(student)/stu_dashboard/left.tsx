@@ -32,31 +32,11 @@ export default function StuDashLeft() {
     const [loadingLectures, setLoadingLectures] = useState(true);
     const [lectures, setLectures] = useState<any[]>([]);
 
-
-    // const studentMeta = {
-    //     degree: "B.Tech CSE",
-    //     department: "CSE",
-    //     year: "2",
-    // };
-
-
-    // useEffect(() => {
-    //     const loadUpcomingClasses = async () => {
-    //         const data = await fetchUpcomingClassesForStudent();
-    //         setLectures(data);
-    //     };
-
-    //     loadUpcomingClasses();
-    // }, []);
-
     useEffect(() => {
         const loadUpcomingClasses = async () => {
             try {
                 setLoadingLectures(true);
 
-                console.log("🟡 [StuDashLeft] Loading upcoming classes");
-
-                // 1️⃣ get auth user
                 const {
                     data: { user },
                 } = await supabase.auth.getUser();
@@ -65,7 +45,6 @@ export default function StuDashLeft() {
                     throw new Error("No auth user found");
                 }
 
-                // 2️⃣ map auth user → internal userId
                 const { data: userRow, error: userErr } = await supabase
                     .from("users")
                     .select("userId")
@@ -77,13 +56,9 @@ export default function StuDashLeft() {
                 }
 
                 const internalUserId = userRow.userId;
-                console.log("👤 [StuDashLeft] Internal userId:", internalUserId);
 
-                // 3️⃣ fetch student context
                 const studentContext = await fetchStudentContext(internalUserId);
-                console.log("📌 [StuDashLeft] Student context:", studentContext);
 
-                // 4️⃣ fetch upcoming classes using student context
                 const data = await fetchUpcomingClassesForStudent({
                     collegeEducationId: studentContext.collegeEducationId,
                     collegeBranchId: studentContext.collegeBranchId,
@@ -92,11 +67,9 @@ export default function StuDashLeft() {
                     collegeSectionId: studentContext.collegeSectionsId,
                 });
 
-                console.log("📘 [StuDashLeft] Upcoming classes:", data);
-
                 setLectures(data);
             } catch (err) {
-                console.error("❌ [StuDashLeft] Failed to load classes", err);
+                console.error("Failed to load classes", err);
             } finally {
                 setLoadingLectures(false);
             }
@@ -245,9 +218,9 @@ export default function StuDashLeft() {
                                                 <LectureCard
                                                     key={lec.calendarEventId}
                                                     time={formatTimeToAMPM(lec.fromTime)}
-                                                    title={lec.eventTitle}                
+                                                    title={lec.eventTitle}
                                                     professor={`Prof. ${lec.facultyName}`}
-                                                    description={lec.eventTopic}         
+                                                    description={lec.eventTopic}
                                                 />
                                             ))
                                         )}

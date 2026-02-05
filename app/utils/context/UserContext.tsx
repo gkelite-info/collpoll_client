@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
+import { fetchStudentContext } from "./studentContextAPI";
 
 type UserContextType = {
   userId: number | null;
@@ -15,6 +16,8 @@ type UserContextType = {
   role: string | null;
   collegePublicId: string | null;
   collegeId: number | null;
+  collegeEducationType?: string | null;
+  collegeBranchCode?: string | null;
 };
 
 const StudentContext = createContext<UserContextType>({
@@ -28,6 +31,8 @@ const StudentContext = createContext<UserContextType>({
   role: null,
   collegePublicId: null,
   collegeId: null,
+  collegeEducationType: null,
+  collegeBranchCode: null
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -41,10 +46,26 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
   const [collegePublicId, setCollegePublicId] = useState<string | null>(null);
   const [collegeId, setCollegeId] = useState<number | null>(null);
+  const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
+  const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
+
 
   useEffect(() => {
     getStudentId().then(setStudentId).catch(console.error);
   }, []);
+
+  useEffect(() => {
+    async function loadStudentContext() {
+      if (!userId || role !== "Student" || collegeEducationType) return;
+
+      const student = await fetchStudentContext(userId);
+
+      setCollegeEducationType(student.collegeEducationType);
+      setCollegeBranchCode(student.collegeBranchCode);
+    }
+
+    loadStudentContext();
+  }, [userId, role]);
 
   useEffect(() => {
     const resolveStudentId = async () => {
@@ -61,6 +82,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setLoading(false);
         setCollegePublicId(null);
         setCollegeId(null);
+        setCollegeEducationType(null);
+        setCollegeBranchCode(null);
         return;
       }
 
@@ -114,6 +137,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         role,
         collegePublicId,
         collegeId,
+        collegeEducationType,
+        collegeBranchCode,
       }}
     >
       {children}
