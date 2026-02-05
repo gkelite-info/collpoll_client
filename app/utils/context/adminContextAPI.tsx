@@ -18,10 +18,21 @@ export async function fetchAdminContext(userId: number) {
 
   if (collegeErr) throw collegeErr;
 
+  const { data: education, error: eduErr } = await supabase
+    .from("college_education")
+    .select("collegeEducationId")
+    .eq("createdBy", admin.adminId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .single();
+
+  if (eduErr) throw eduErr;
+
   return {
     adminId: admin.adminId,
     collegeId: college.collegeId,
     collegePublicId: admin.collegePublicId,
     collegeCode: college.collegeCode,
+    collegeEducationId: education.collegeEducationId,
   };
 }
