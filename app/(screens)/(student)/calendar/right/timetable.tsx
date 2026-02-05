@@ -1,10 +1,28 @@
 "use client";
+import { fetchStudentContext } from "@/app/utils/context/studentContextAPI";
 import { fetchStudentTimetableByDate }
     from "@/lib/helpers/profile/calender/fetchStudentTimetable";
+import { supabase } from "@/lib/supabaseClient";
 
 
 import { FilePdf } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+
+const formatTimeToAMPM = (time24: string) => {
+    const [h, m] = time24.split(":");
+    let hour = Number(h);
+
+    const period = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+
+    return `${hour}:${m} ${period}`;
+};
+
+export const Loader = () => (
+    <div className="flex justify-center items-center h-[300px]">
+        <div className="w-10 h-10 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
+    </div>
+);
 
 export default function CalendarTimeTable() {
 
@@ -41,47 +59,79 @@ export default function CalendarTimeTable() {
 
     useEffect(() => {
         const loadTimetable = async () => {
-            setLoading(true);
+            try {
+                setLoading(true);
 
-            const today = new Date();
-            const formattedDate =
-                today.getFullYear() +
-                "-" +
-                String(today.getMonth() + 1).padStart(2, "0") +
-                "-" +
-                String(today.getDate()).padStart(2, "0");
+                // 1️⃣ Today date (YYYY-MM-DD)
+                const today = new Date();
+                const formattedDate =
+                    today.getFullYear() +
+                    "-" +
+                    String(today.getMonth() + 1).padStart(2, "0") +
+                    "-" +
+                    String(today.getDate()).padStart(2, "0");
 
-            console.log("📅 Query date:", formattedDate);
+                console.log("📅 Query date:", formattedDate);
 
-            const data = await fetchStudentTimetableByDate({
-                date: formattedDate,
-                degree,
-                year,
-                department,
-            });
+                // 2️⃣ Get auth user
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
 
-            console.log("📚 Timetable rows:", data);
+                if (!user) {
+                    throw new Error("No auth user");
+                }
 
-            setTimetable(
-                data.map((item: any) => ({
-                    start: item.fromTime?.slice(0, 5),
-                    end: item.toTime?.slice(0, 5),
-                    title: item.eventTitle,
-                    topic: item.eventTopic,
-                    room: item.roomNo,
-                    faculty: item.facultyName,
-                    img: "/ai.png",
-                }))
-            );
+                // 3️⃣ Map auth user → internal userId
+                const { data: userRow, error: userErr } = await supabase
+                    .from("users")
+                    .select("userId")
+                    .eq("auth_id", user.id)
+                    .single();
 
-            setLoading(false);
+                if (userErr || !userRow) {
+                    throw new Error("Internal user not found");
+                }
+
+                // 4️⃣ Fetch student context
+                const studentContext = await fetchStudentContext(userRow.userId);
+
+                console.log("📌 Student context:", studentContext);
+
+                // 5️⃣ Fetch timetable for this student + date
+                const data = await fetchStudentTimetableByDate({
+                    date: formattedDate,
+                    collegeEducationId: studentContext.collegeEducationId,
+                    collegeBranchId: studentContext.collegeBranchId,
+                    collegeAcademicYearId: studentContext.collegeAcademicYearId,
+                    collegeSemesterId: studentContext.collegeSemesterId,
+                    collegeSectionId: studentContext.collegeSectionsId,
+                });
+
+                console.log("📚 Timetable rows:", data);
+
+                // 6️⃣ Shape data for UI
+                setTimetable(
+                    data.map((item: any) => ({
+                        start: formatTimeToAMPM(item.fromTime), // ✅
+                        end: formatTimeToAMPM(item.toTime),     // ✅
+                        title: item.eventTitle,     // Subject
+                        topic: item.eventTopic,     // Topic
+                        room: item.roomNo,
+                        faculty: item.facultyName,
+                        img: "/ai.png",
+                    }))
+                );
+            } catch (err) {
+                console.error("❌ Failed to load timetable", err);
+                setTimetable([]);
+            } finally {
+                setLoading(false);
+            }
         };
 
         loadTimetable();
-    }, [degree, year, department]);
-
-
-
+    }, []);
 
     // const timeTableData = [
     //     {
@@ -140,11 +190,7 @@ export default function CalendarTimeTable() {
     //     },
     // ];
 
-    const Loader = () => (
-        <div className="flex justify-center items-center h-[300px]">
-            <div className="w-10 h-10 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
-        </div>
-    );
+
 
 
     return (

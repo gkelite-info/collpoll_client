@@ -436,6 +436,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         if (cancelled) return;
         setSemesters(semesters ?? []);
 
+        // ✅ AUTO-SELECT SEMESTER CORRECTLY
+        if ((semesters ?? []).length === 1) {
+          setSemester(semesters[0].collegeSemesterId); // ← THIS WILL BE 20
+          setIsSemesterAuto(true);
+        }
+
         /* 5️⃣ Section (filtered by faculty access) */
         const sections = await fetchAcademicDropdowns({
           type: "section",
@@ -448,6 +454,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         const filteredSections = (sections ?? []).filter((s: any) =>
           facultyCtx.sectionIds.includes(s.collegeSectionsId)
         );
+
+        setSections(filteredSections);
+
+        // ✅ AUTO-FILL SECTION
+        if (filteredSections.length === 1) {
+          setSectionIds([filteredSections[0].collegeSectionsId]);
+        }
 
         if (cancelled) return;
         setSections(filteredSections);
@@ -501,24 +514,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   }, [collegeId, facultyCtx]);
 
 
-  // ✅ FINAL — KEEP ONLY THIS
-  useEffect(() => {
-    if (!subjectId || semester !== undefined) return;
+  // useEffect(() => {
+  //   if (!subjectId) return;
 
-    supabase
-      .from("college_subjects")
-      .select("collegeSemesterId")
-      .eq("collegeSubjectId", subjectId)
-      .single()
-      .then(({ data, error }) => {
-        if (error) return;
+  //   supabase
+  //     .from("college_subjects")
+  //     .select("collegeSemesterId")
+  //     .eq("collegeSubjectId", subjectId)
+  //     .single()
+  //     .then(({ data, error }) => {
+  //       if (error) {
+  //         console.error("Semester auto-fetch failed", error);
+  //         return;
+  //       }
 
-        if (data?.collegeSemesterId) {
-          setSemester(data.collegeSemesterId);
-          setIsSemesterAuto(true);
-        }
-      });
-  }, [subjectId]);
+  //       if (data?.collegeSemesterId) {
+  //        setSemester(semesters[0].collegeSemesterId);
+  //         setIsSemesterAuto(true);             // ✅ lock dropdown
+  //       }
+  //     });
+  // }, [subjectId]);
 
   useEffect(() => {
     if (!subjectId) {
@@ -548,6 +563,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const handleSave = () => {
     if (!date) {
       toast.error("Please select date");
+      return;
+    }
+
+    if (!semester) {
+      toast.error("Please select semester");
       return;
     }
 
@@ -653,7 +673,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setSectionIds(editSectionIds); // ✅ now UI can resolve names
     setEditSectionIds(null);       // cleanup
   }, [sections, editSectionIds]);
-  
+
   if (!isOpen) return null;
 
   const eventTypes = ["class", "meeting", "exam", "quiz"];

@@ -1,55 +1,57 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export type UpcomingClass = {
-  calendarEventId: number;
-  fromTime: string;      // HH:mm
-  eventTitle: string;
-  eventTopic: string;
-  facultyName: string;
-};
-
-// ✅ local date helper (NO UTC bug)
-const getTodayLocalDate = () => {
-  const d = new Date();
-  return (
-    d.getFullYear() +
-    "-" +
-    String(d.getMonth() + 1).padStart(2, "0") +
-    "-" +
-    String(d.getDate()).padStart(2, "0")
-  );
-};
-
-export async function fetchUpcomingClassesForStudent(): Promise<UpcomingClass[]> {
-  const today = getTodayLocalDate();
-
-  console.log("📅 Fetch upcoming classes from:", today);
+export async function fetchUpcomingClassesForStudent(filters: {
+  collegeEducationId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSemesterId: number;
+  collegeSectionId: number;
+}) {
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
   const { data, error } = await supabase
-    .from("calendarEvent")
+    .from("calendar_event")
     .select(`
       calendarEventId,
       date,
       fromTime,
-      eventTitle,
-      eventTopic,
-      faculty:facultyId ( fullName )
+      faculty:facultyId ( fullName ),
+      subject:subject ( subjectName ),
+      topic:eventTopic ( topicTitle ),
+      sections:calendar_event_section (
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId,
+        collegeSemesterId,
+        collegeSectionId
+      )
     `)
     .eq("is_deleted", false)
-    .gte("date", today)                 // ✅ today + future
-    .order("date", { ascending: true }) // first by date
-    .order("fromTime", { ascending: true }); // then by time
+    .eq("type", "class")
+    .gte("date", today)           // ✅ TODAY + FUTURE
+    .order("date", { ascending: true })
+    .order("fromTime", { ascending: true });
 
   if (error) {
-    console.error("❌ Error fetching upcoming classes:", error);
+    console.error(error);
     return [];
   }
 
-  return (data ?? []).map((item: any) => ({
+  const filtered = (data ?? []).filter((event: any) =>
+    event.sections?.some((s: any) =>
+      s.collegeEducationId === filters.collegeEducationId &&
+      s.collegeBranchId === filters.collegeBranchId &&
+      s.collegeAcademicYearId === filters.collegeAcademicYearId &&
+      s.collegeSemesterId === filters.collegeSemesterId &&
+      s.collegeSectionId === filters.collegeSectionId
+    )
+  );
+
+  return filtered.map((item: any) => ({
     calendarEventId: item.calendarEventId,
-    fromTime: item.fromTime?.slice(0, 5), // ✅ remove seconds
-    eventTitle: item.eventTitle,
-    eventTopic: item.eventTopic,
+    fromTime: item.fromTime.slice(0, 5),
+    eventTitle: item.subject?.subjectName ?? "Class",
+    eventTopic: item.topic?.topicTitle ?? "",
     facultyName: item.faculty?.fullName ?? "Faculty",
   }));
 }
