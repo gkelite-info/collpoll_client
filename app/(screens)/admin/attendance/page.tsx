@@ -18,42 +18,11 @@ import CardComponent from "./components/cards";
 import { useSearchParams } from "next/navigation";
 import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 import { useRouter } from "next/navigation";
-
-const cardData = [
-  {
-    id: "1",
-    style: "bg-[#CEE6FF]",
-    icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#60AEFF",
-    value: "08",
-    label: "Total Departments",
-  },
-  {
-    id: "2",
-    style: "bg-[#E6FBEA]",
-    icon: <User size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#43C17A",
-    value: "1200",
-    label: "Total Students",
-  },
-  {
-    id: "3",
-    style: "bg-[#FFE0E0] ",
-    icon: <User size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#FF2020",
-    value: "92",
-    label: "Students below 75%",
-  },
-  {
-    id: "4",
-    style: "bg-[#CEE6FF]",
-    icon: <User size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#60AEFF",
-    value: "15",
-    label: "Pending Attendance Corrections",
-  },
-];
-
+import { fetchAttendanceStats } from "@/lib/helpers/admin/attendance/attendanceStats";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import toast from "react-hot-toast";
+import { Loader } from "../../(student)/calendar/right/timetable";
 interface ExtendedDepartment extends Department {
   id: string;
   section: string;
@@ -169,6 +138,123 @@ const AttendancePage = () => {
   const [sectionFilter, setSectionFilter] = useState("All");
   const [subjectFilter, setSubjectFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
+  const [adminContext, setAdminContext] = useState<{
+    adminId: number;
+    collegeId: number;
+    collegePublicId: string;
+    collegeCode: string;
+    collegeEducationId: number;
+  } | null>(null);
+
+  const [adminLoading, setAdminLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const showStatsLoader = adminLoading || statsLoading;
+  const { userId } = useUser()
+
+  const [stats, setStats] = useState({
+    totalDepartments: 0,
+    totalStudents: 0,
+    studentsBelow75: 0,
+    pendingCorrections: 0,
+  });
+
+  useEffect(() => {
+    if (!userId) return;
+    let isMounted = true;
+
+    const loadAdminContext = async () => {
+      try {
+        setAdminLoading(true);
+        const ctx = await fetchAdminContext(userId);
+        if (isMounted) {
+          setAdminContext(ctx);
+        }
+      } catch (err: any) {
+        console.error("Failed to load admin context", err);
+        toast.error("Failed to load admin information. Please try again.");
+      } finally {
+        if (isMounted) {
+          setAdminLoading(false);
+        }
+      }
+    };
+
+    loadAdminContext();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!adminContext) return;
+    let isMounted = true;
+
+    const loadStats = async () => {
+      try {
+        setStatsLoading(true);
+
+        const data = await fetchAttendanceStats({
+          collegeId: adminContext.collegeId,
+          collegeEducationId: adminContext.collegeEducationId,
+        });
+
+        if (isMounted) {
+          setStats(data);
+        }
+      } catch (err) {
+        console.error("Failed to load attendance stats", err);
+        toast.error(
+          "Unable to load attendance statistics. Please refresh or try again."
+        );
+      } finally {
+        if (isMounted) {
+          setStatsLoading(false);
+        }
+      }
+    };
+    loadStats();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [adminContext]);
+
+
+  const cardData = [
+    {
+      id: "1",
+      style: "bg-[#CEE6FF]",
+      icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#60AEFF",
+      value: stats.totalDepartments,
+      label: "Total Branches",
+    },
+    {
+      id: "2",
+      style: "bg-[#E6FBEA]",
+      icon: <User size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#43C17A",
+      value: stats.totalStudents,
+      label: "Total Students",
+    },
+    {
+      id: "3",
+      style: "bg-[#FFE0E0] ",
+      icon: <User size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#FF2020",
+      value: stats.studentsBelow75,
+      label: "Students below 75%",
+    },
+    {
+      id: "4",
+      style: "bg-[#CEE6FF]",
+      icon: <User size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#60AEFF",
+      value: stats.pendingCorrections,
+      label: "Pending Attendance Corrections",
+    },
+  ];
 
   const cardsPerPage = 15;
 
@@ -250,16 +336,21 @@ const AttendancePage = () => {
       </div>
 
       <div className="flex gap-4 w-full h-full mb-3">
-        {cardData.map((item, index) => (
-          <CardComponent
-            key={index}
-            style={`${item.style} w-[156px] h-[156px]`}
-            icon={item.icon}
-            iconBgColor={item.iconBgColor}
-            value={item.value}
-            label={item.label}
-          />
-        ))}
+        {showStatsLoader ? (
+          <div className="flex items-center justify-center w-full h-32">
+            <Loader />
+          </div>
+        ) : (
+          cardData.map((item, index) => (
+            <CardComponent
+              key={index}
+              style={`${item.style} w-[156px] h-[156px]`}
+              icon={item.icon}
+              iconBgColor={item.iconBgColor}
+              value={item.value}
+              label={item.label}
+            />
+          )))}
         <div>
           <WorkWeekCalendar style="h-full w-[350px]" />
         </div>
@@ -333,11 +424,10 @@ const AttendancePage = () => {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === i + 1
-                      ? "bg-[#16284F] text-white"
-                      : "bg-white text-gray-600 border hover:border-gray-300"
-                  }`}
+                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
+                    ? "bg-[#16284F] text-white"
+                    : "bg-white text-gray-600 border hover:border-gray-300"
+                    }`}
                 >
                   {i + 1}
                 </button>
