@@ -268,6 +268,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
     // setSemester(value.semester || []);
     setSelectedType(value.type || "class");
     setDate(value.date || getTodayDateString());
+    if (typeof value.subjectId === "number") {
+      setSubjectId(value.subjectId);
+    }
+
+    if (typeof value.topicId === "number") {
+      setTopicId(value.topicId);
+    }
     if (isEditMode && typeof value.semester === "number") {
       setSemester(value.semester);
     }
@@ -288,28 +295,37 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
 
 
   useEffect(() => {
-  if (!isOpen) {
-    setTitle("");
-    setTopic("");
-    setRoomNo("");
-    setDegree("");
-    setSelectedDepartments([]);
-    setSelectedSections([]);
-    setYear("");
-    setSemester(undefined); // 🔴 FIX
-    setSemesterLabel(null); // 🔴 FIX
-    setSelectedType("class");
-    setDate(getTodayDateString());
-    setStartHour("09");
-    setStartMinute("00");
-    setStartPeriod("AM");
-    setEndHour("10");
-    setEndMinute("00");
-    setEndPeriod("AM");
-    setIsDeptOpen(false);
-    setIsSectionOpen(false);
-  }
-}, [isOpen]);
+    if (!isOpen) {
+      setTitle("");
+      setTopic("");
+      setRoomNo("");
+      setDegree("");
+      setSelectedDepartments([]);
+      setSelectedSections([]);
+      setYear("");
+      setSemester(undefined); // 🔴 FIX
+      setSemesterLabel(null); // 🔴 FIX
+      setSelectedType("class");
+      setDate(getTodayDateString());
+      setStartHour("09");
+      setStartMinute("00");
+      setStartPeriod("AM");
+      setEndHour("10");
+      setEndMinute("00");
+      setEndPeriod("AM");
+      setIsDeptOpen(false);
+      setIsSectionOpen(false);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (!topics.length) return;
+    if (typeof value?.topicId !== "number") return;
+
+    setTopicId(value.topicId);
+  }, [topics, isEditMode, value?.topicId]);
+
 
 
   useEffect(() => {
