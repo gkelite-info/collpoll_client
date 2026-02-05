@@ -10,6 +10,20 @@ import UserInfoCard from "@/app/utils/userInfoCardComp";
 import LectureCard from "@/app/utils/lectureCard";
 import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
+import { fetchStudentContext } from "@/app/utils/context/studentContextAPI";
+import { supabase } from "@/lib/supabaseClient";
+
+
+
+const formatTimeToAMPM = (time24: string) => {
+    const [h, m] = time24.split(":");
+    let hour = Number(h);
+
+    const period = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+
+    return `${hour}:${m} ${period}`;
+};
 
 
 export default function StuDashLeft() {
@@ -37,18 +51,59 @@ export default function StuDashLeft() {
 
     useEffect(() => {
         const loadUpcomingClasses = async () => {
-            setLoadingLectures(true);
+            try {
+                setLoadingLectures(true);
 
-            const data = await fetchUpcomingClassesForStudent();
-            setLectures(data);
+                console.log("🟡 [StuDashLeft] Loading upcoming classes");
 
-            setLoadingLectures(false);
+                // 1️⃣ get auth user
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+
+                if (!user) {
+                    throw new Error("No auth user found");
+                }
+
+                // 2️⃣ map auth user → internal userId
+                const { data: userRow, error: userErr } = await supabase
+                    .from("users")
+                    .select("userId")
+                    .eq("auth_id", user.id)
+                    .single();
+
+                if (userErr || !userRow) {
+                    throw new Error("Internal user not found");
+                }
+
+                const internalUserId = userRow.userId;
+                console.log("👤 [StuDashLeft] Internal userId:", internalUserId);
+
+                // 3️⃣ fetch student context
+                const studentContext = await fetchStudentContext(internalUserId);
+                console.log("📌 [StuDashLeft] Student context:", studentContext);
+
+                // 4️⃣ fetch upcoming classes using student context
+                const data = await fetchUpcomingClassesForStudent({
+                    collegeEducationId: studentContext.collegeEducationId,
+                    collegeBranchId: studentContext.collegeBranchId,
+                    collegeAcademicYearId: studentContext.collegeAcademicYearId,
+                    collegeSemesterId: studentContext.collegeSemesterId,
+                    collegeSectionId: studentContext.collegeSectionsId,
+                });
+
+                console.log("📘 [StuDashLeft] Upcoming classes:", data);
+
+                setLectures(data);
+            } catch (err) {
+                console.error("❌ [StuDashLeft] Failed to load classes", err);
+            } finally {
+                setLoadingLectures(false);
+            }
         };
 
         loadUpcomingClasses();
     }, []);
-
-
 
     const cardData = [
         {
@@ -189,10 +244,10 @@ export default function StuDashLeft() {
                                             lectures.map((lec) => (
                                                 <LectureCard
                                                     key={lec.calendarEventId}
-                                                    time={lec.fromTime}
-                                                    title={lec.eventTitle}
+                                                    time={formatTimeToAMPM(lec.fromTime)}
+                                                    title={lec.eventTitle}                
                                                     professor={`Prof. ${lec.facultyName}`}
-                                                    description={lec.eventTopic}
+                                                    description={lec.eventTopic}         
                                                 />
                                             ))
                                         )}

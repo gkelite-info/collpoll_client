@@ -14,6 +14,7 @@ import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCountForAcademics";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 type FilterBannerProps = {
   filterBannerDetails: CardProps;
@@ -435,176 +436,6 @@ export async function getFacultySubjects(params: {
 }
 
 
-
-// const MOCK_LESSONS: LessonData[] = [
-//   {
-//     lessonNumber: 1,
-//     lessonTitle: "Introduction to Programming",
-//     topics: [
-//       {
-//         title: "Introduction to Programming & Problem Solving",
-//         date: "25/01/2025",
-//         isCompleted: true,
-//       },
-//       { title: "Primitive Data Types", date: "21/02/2025", isCompleted: true },
-//       {
-//         title: "Looping Constructs (for, while, switch)",
-//         date: "28/02/2025",
-//         isCompleted: true,
-//       },
-//       {
-//         title: "Abstract Data Types (ADTs)",
-//         date: "25/03/2025",
-//         isCompleted: true,
-//       },
-//     ],
-//   },
-//   {
-//     lessonNumber: 2,
-//     lessonTitle: "Fundamentals of Programming & Data Types",
-//     topics: [
-//       { title: "Memory Management", date: "10/04/2025", isCompleted: true },
-//       { title: "Pointer Arithmetic", date: "15/04/2025", isCompleted: false },
-//       { title: "Arrays & Strings", date: "20/04/2025", isCompleted: false },
-//     ],
-//   },
-//   {
-//     lessonNumber: 3,
-//     lessonTitle: "Fundamentals of Programming & Data Types",
-//     topics: [
-//       { title: "Memory Management", date: "10/04/2025", isCompleted: true },
-//       { title: "Pointer Arithmetic", date: "15/04/2025", isCompleted: false },
-//       { title: "Arrays & Strings", date: "20/04/2025", isCompleted: false },
-//     ],
-//   },
-//   {
-//     lessonNumber: 4,
-//     lessonTitle: "Fundamentals of Programming & Data Types",
-//     topics: [
-//       { title: "Memory Management", date: "10/04/2025", isCompleted: true },
-//       { title: "Pointer Arithmetic", date: "15/04/2025", isCompleted: false },
-//       { title: "Arrays & Strings", date: "20/04/2025", isCompleted: false },
-//     ],
-//   },
-//   {
-//     lessonNumber: 5,
-//     lessonTitle: "Fundamentals of Programming & Data Types",
-//     topics: [
-//       { title: "Memory Management", date: "10/04/2025", isCompleted: true },
-//       { title: "Pointer Arithmetic", date: "15/04/2025", isCompleted: false },
-//       { title: "Arrays & Strings", date: "20/04/2025", isCompleted: false },
-//     ],
-//   },
-// ];
-
-// const units: Unit[] = [
-//   {
-//     id: 1,
-//     unitLabel: "Unit - 1",
-//     title: "Introduction to Data Structures",
-//     color: "purple",
-//     dateRange: "10-12-2025 - 01-01-2026",
-//     percentage: 80,
-//     topics: [
-//       "Concept of Data and Information",
-//       "Characteristics of Data Structures",
-//       "Abstract Data Type (ADT)",
-//       "Classification of Data Structures",
-//       "Role of Data Structures in Programming",
-//       "Memory Allocation - Static vs Dynamic",
-//       "Time and Space Complexity Basics",
-//       "Big O Notation Introduction",
-//       "Types of Data - Primitive and Non-Primitive",
-//       "Arrays vs Linked Structures",
-//       "Real world Applications of Data Structures",
-//       "Choosing the Right Data Structure",
-//       "Stack vs Queue Overview",
-//       "Trees and Graphs Overview",
-//       "Implementation Examples in C",
-//     ],
-//     lessons: MOCK_LESSONS,
-//   },
-//   {
-//     id: 2,
-//     unitLabel: "Unit - 2",
-//     title: "Arrays and Linked Lists",
-//     color: "orange",
-//     dateRange: "10-12-2025 - 01-01-2026",
-//     percentage: 60,
-//     topics: [
-//       "Concept of Linear Data Structures",
-//       "1D, 2D, and Multidimensional Arrays",
-//       "Insertion and Deletion in Arrays",
-//       "Searching in Arrays",
-//       "Linked List Concepts",
-//       "Singly Linked List Implementation",
-//       "Doubly Linked List Implementation",
-//       "Circular Linked List Implementation",
-//       "Linked List Operations",
-//       "Merging and Splitting Lists",
-//       "Applications of Linked Lists",
-//       "Dynamic Memory Allocation",
-//       "Advantages of Linked Lists",
-//       "Comparison Table - Arrays vs Linked Lists",
-//       "Implementation Examples in C",
-//       "Linked List Traversal Logic",
-//       "Memory Representation",
-//     ],
-//     lessons: MOCK_LESSONS,
-//   },
-//   {
-//     id: 3,
-//     unitLabel: "Unit - 3",
-//     title: "Stacks and Queues",
-//     color: "blue",
-//     dateRange: "10-12-2025 - 01-01-2026",
-//     percentage: 90,
-//     topics: [
-//       "Stack ADT and Operations",
-//       "Stack Implementation",
-//       "Applications of Stacks",
-//       "Infix to Postfix Conversion",
-//       "Recursion using Stack",
-//       "Queue ADT and Operations",
-//       "Circular Queue Concepts",
-//       "Circular Queue Implementation",
-//       "Linked List based Queue",
-//       "Merging and Splitting Queues",
-//       "Applications of Queues",
-//       "Dynamic Memory Implementation",
-//       "Comparison - Stack vs Queue",
-//       "Implementation Examples",
-//     ],
-//     lessons: MOCK_LESSONS,
-//   },
-//   {
-//     id: 4,
-//     unitLabel: "Unit - 4",
-//     title: "Introduction to Data Structures",
-//     color: "purple",
-//     dateRange: "10-12-2025 - 01-01-2026",
-//     percentage: 60,
-//     topics: [
-//       "Concept of Data and Information",
-//       "Characteristics of Data Structures",
-//       "Abstract Data Type (ADT)",
-//       "Classification of Data Structures",
-//       "Role of Data Structures in Programming",
-//       "Memory Allocation - Static vs Dynamic",
-//       "Time and Space Complexity Basics",
-//       "Big O Notation Introduction",
-//       "Types of Data - Primitive and Non-Primitive",
-//       "Arrays vs Linked Structures",
-//       "Real world Applications of Data Structures",
-//       "Choosing the Right Data Structure",
-//       "Stack vs Queue Overview",
-//       "Trees and Graphs Overview",
-//       "Implementation Examples in C",
-//     ],
-//     lessons: MOCK_LESSONS,
-//   },
-// ];
-
 const colorMap = {
   purple: {
     cardBg: "bg-[#E9E3FFF5]",
@@ -649,6 +480,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
   const [selectedUnitLessons, setSelectedUnitLessons] = useState<
     LessonData[] | null
   >(null);
+  const [isMarkAsLoading, setIsMarkAsLoading] = useState<boolean>(false);
 
   // const [topics, setTopics] = useState<UnitTopic[]>(unit.topics);
   const [localTopics, setLocalTopics] = useState<UnitTopic[]>(unit.topics);
@@ -812,7 +644,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
                 : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
               }`}
           >
-            Mark As Complete
+            {isMarkAsLoading ? "Marking..." : "Mark As Complete"}
           </button>
 
           {/* <button
@@ -825,7 +657,6 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
             Mark As Complete
           </button> */}
         </div>
-
       </div>
     </div>
   );
@@ -837,60 +668,53 @@ export function SubjectDetailsCard({
 }: SubjectDetailsCardProps) {
 
   const [units, setUnits] = useState<Unit[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
-    console.log("DETAILS RECEIVED 👉", details);
-
     if (!details.collegeId || !details.collegeSubjectId) {
-      console.warn("Missing IDs, skipping fetch", details);
       return;
-    }
-
-    async function loadUnits() {
-      try {
-        setLoading(true);
-
-        const data = await getUnitsWithTopics({
-          collegeId: details.collegeId,
-          collegeSubjectId: details.collegeSubjectId, // ✅ FIX
-        });
-
-        console.log("UNITS FETCHED ✅", data);
-        console.log("RAW UI UNITS", data);
-
-
-        setUnits(
-          data.map((u: any) => ({
-            id: u.id, // collegeSubjectUnitId
-
-            unitNumber: Number(
-              u.unitLabel.replace("Unit - ", "")
-            ),
-            unitLabel: u.unitLabel,
-            title: u.title,
-            dateRange: u.dateRange,
-            percentage: u.percentage ?? 0,
-            color: u.color,
-            lessons: [],
-
-            // ✅ topics are already correct — DO NOT remap
-            topics: u.topics,
-          }))
-        );
-
-
-
-      } catch (err) {
-        console.error("Failed to load units", err);
-      } finally {
-        setLoading(false);
-      }
     }
 
     loadUnits();
   }, [details.collegeId, details.collegeSubjectId]);
+
+  async function loadUnits() {
+    try {
+      setLoading(true);
+
+      const data = await getUnitsWithTopics({
+        collegeId: details.collegeId,
+        collegeSubjectId: details.collegeSubjectId, // ✅ FIX
+      });
+
+      setUnits(
+        data.map((u: any) => ({
+          id: u.id, // collegeSubjectUnitId
+
+          unitNumber: Number(
+            u.unitLabel.replace("Unit - ", "")
+          ),
+          unitLabel: u.unitLabel,
+          title: u.title,
+          dateRange: u.dateRange,
+          percentage: u.percentage ?? 0,
+          color: u.color,
+          lessons: [],
+
+          // ✅ topics are already correct — DO NOT remap
+          topics: u.topics,
+        }))
+      );
+
+    } catch (err) {
+      console.error("Failed to load units", err);
+      toast.error("Failed to load units")
+    } finally {
+      setLoading(false);
+    }
+  }
 
 
   const handleMarkComplete = async (
@@ -924,6 +748,7 @@ export function SubjectDetailsCard({
   };
 
   const saveProgress = async () => {
+    setIsSaveLoading(true)
     try {
       for (const unit of units) {
         // 1️⃣ Save topics
@@ -952,6 +777,8 @@ export function SubjectDetailsCard({
       onBack();
     } catch (err) {
       toast.error("Failed to save changes");
+    } finally {
+      setIsSaveLoading(false)
     }
   };
 
@@ -996,33 +823,40 @@ export function SubjectDetailsCard({
         {/* ✅ SAVE BUTTON */}
         <button
           onClick={saveProgress}
-          disabled={!hasChanges}
+          disabled={!hasChanges || isSaveLoading}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition
     ${hasChanges
               ? "bg-[#43C17A] text-white hover:bg-[#3aad6c]"
               : "bg-[#43C17A] text-white opacity-50 cursor-not-allowed"
             }`}
         >
-          Save
+          {isSaveLoading ? "Saving.." : "Save"}
         </button>
 
 
       </div>
 
       <div className="flex gap-6 overflow-x-auto">
-        {units.map((unit) => (
-          <div
-            key={`unit-${unit.id}`}
-            className="min-w-[300px] shrink-0"
-          >
-            <UnitCard
-              unit={unit}
-              onMarkComplete={handleMarkComplete}
-              setHasChanges={setHasChanges}
-            />
+        {loading
+          ? <div className="flex justify-center w-full">
+            <Loader />
+          </div> :
+          units.length > 0 ?
+            units.map((unit) => (
+              <div
+                key={`unit-${unit.id}`}
+                className="min-w-[300px] shrink-0"
+              >
+                <UnitCard
+                  unit={unit}
+                  onMarkComplete={handleMarkComplete}
+                  setHasChanges={setHasChanges}
+                />
 
-          </div>
-        ))}
+              </div>
+            ))
+            : <div className="text-black text-center">No units available.</div>
+        }
       </div>
 
     </div>

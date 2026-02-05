@@ -1,54 +1,70 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function fetchStudentTimetableByDate({
-  date,
-  degree,
-  year,
-  department,
-}: {
+export type StudentTimetableRow = {
+  calendarEventId: number;
+  fromTime: string;
+  toTime: string;
+  eventTitle: string;   // Subject
+  eventTopic: string;   // Topic
+  facultyName: string;
+  roomNo: string;
+};
+
+export async function fetchStudentTimetableByDate(params: {
   date: string;
-  degree?: string;
-  year?: string;
-  department?: string;
-}) {
-  let query = supabase
-    .from("calendarEvent")
+  collegeEducationId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSemesterId: number;
+  collegeSectionId: number;
+}): Promise<StudentTimetableRow[]> {
+  const { data, error } = await supabase
+    .from("calendar_event")
     .select(`
       calendarEventId,
+      date,
       fromTime,
       toTime,
-      eventTitle,
-      eventTopic,
       roomNo,
-      department,
-      faculty:facultyId ( fullName )
+      faculty:facultyId (
+        fullName
+      ),
+      subject:subject (
+        subjectName
+      ),
+      topic:eventTopic (
+        topicTitle
+      ),
+      sections:calendar_event_section!inner (
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId,
+        collegeSemesterId,
+        collegeSectionId
+      )
     `)
-    .eq("date", date)
-    .eq("is_deleted", false);
-
-  if (degree) query = query.eq("degree", degree);
-  if (year) query = query.eq("year", year);
-
-  const { data, error } = await query.order("fromTime", { ascending: true });
+    .eq("type", "class")
+    .eq("is_deleted", false)
+    .eq("date", params.date)
+    .eq("sections.collegeEducationId", params.collegeEducationId)
+    .eq("sections.collegeBranchId", params.collegeBranchId)
+    .eq("sections.collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("sections.collegeSemesterId", params.collegeSemesterId)
+    .eq("sections.collegeSectionId", params.collegeSectionId)
+    .order("fromTime", { ascending: true });
 
   if (error) {
-    console.error(error);
+    console.error("❌ [StudentTimetable] Supabase error", error);
     return [];
   }
 
-  const filtered = department
-    ? (data ?? []).filter(item =>
-        Array.isArray(item.department) &&
-        item.department.some((d: any) => d.name === department)
-      )
-    : data ?? [];
-
-  return filtered.map((item: any) => ({
-    fromTime: item.fromTime,
-    toTime: item.toTime,
-    eventTitle: item.eventTitle,
-    eventTopic: item.eventTopic,
-    roomNo: item.roomNo,
+  return (data ?? []).map((item: any) => ({
+    calendarEventId: item.calendarEventId,
+    fromTime: item.fromTime?.slice(0, 5),
+    toTime: item.toTime?.slice(0, 5),
+    eventTitle: item.subject?.subjectName ?? "Class",
+    eventTopic: item.topic?.topicTitle ?? "",
     facultyName: item.faculty?.fullName ?? "Faculty",
+    roomNo: item.roomNo ?? "",
   }));
 }
