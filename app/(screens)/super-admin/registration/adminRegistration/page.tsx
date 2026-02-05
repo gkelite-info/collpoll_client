@@ -105,7 +105,6 @@ export default function AdminRegistration() {
 
   const handleSubmit = async () => {
     setIsLoading(true)
-    console.log("rester");
     try {
 
       const superAdmin = await checkSuperAdminAuth();

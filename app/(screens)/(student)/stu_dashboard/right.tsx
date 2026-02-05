@@ -58,7 +58,7 @@ export default function StuDashRight() {
         const data = await getStudentTasks(studentId as number);
 
         const formatted = data.map((task: any) => ({
-          facultytaskId: task.studenttaskId, // reuse key
+          facultytaskId: task.studenttaskId,
           title: task.studenttaskTitle,
           description: task.studenttaskDescription,
           time: task.studenttaskassignedTime,
@@ -82,7 +82,6 @@ export default function StuDashRight() {
 
     const loadFacultyTasks = async () => {
       try {
-        // 1️⃣ Fetch faculty users in same college
         const { data: facultyUsers, error } = await supabase
           .from("users")
           // .select("userId")
@@ -96,7 +95,6 @@ export default function StuDashRight() {
           return;
         }
 
-        // 2️⃣ Fetch tasks for each faculty
         const allTasks: any[] = [];
 
         for (const faculty of facultyUsers) {
@@ -125,7 +123,6 @@ export default function StuDashRight() {
   }, [collegeId]);
 
 
-
   const handleSaveStudentTask = async (
     payload: {
       title: string;
@@ -139,7 +136,6 @@ export default function StuDashRight() {
 
     try {
       if (taskId) {
-        // ✏️ UPDATE
         const updated = await updateStudentTask(taskId, {
           studenttaskTitle: payload.title,
           studenttaskDescription: payload.description,
@@ -161,7 +157,6 @@ export default function StuDashRight() {
           )
         );
       } else {
-        // ➕ INSERT
         const inserted = await addStudentTask({
           studentId,
           studenttaskTitle: payload.title,
@@ -185,8 +180,6 @@ export default function StuDashRight() {
       console.error("Save student task failed", err);
     }
   };
-
-
 
   const myTasks = [
     {

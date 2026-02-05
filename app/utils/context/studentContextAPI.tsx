@@ -1,5 +1,22 @@
 import { supabase } from "@/lib/supabaseClient";
 
+type StudentJoin = {
+    studentId: number;
+    collegeId: number;
+    collegeBranchId: number;
+    collegeEducationId: number;
+    entryType: string;
+    status: string;
+
+    college_education: {
+        collegeEducationType: string;
+    };
+
+    college_branch: {
+        collegeBranchCode: string;
+    };
+};
+
 export async function fetchStudentContext(userId: number) {
     const { data: student, error: studentErr } = await supabase
         .from("students")
@@ -9,13 +26,24 @@ export async function fetchStudentContext(userId: number) {
       collegeBranchId,
       collegeEducationId,
       entryType,
-      status
+      status,
+
+      college_education:collegeEducationId!inner (
+        collegeEducationType
+      ),
+
+      college_branch:collegeBranchId!inner (
+        collegeBranchCode
+      )
     `)
         .eq("userId", userId)
         .is("deletedAt", null)
-        .single();
+        .single<StudentJoin>();
 
     if (studentErr) throw studentErr;
+
+    console.log("RAW STUDENT:", student);
+
 
     const { data: academic, error: academicErr } = await supabase
         .from("student_academic_history")
@@ -36,6 +64,13 @@ export async function fetchStudentContext(userId: number) {
         collegeId: student.collegeId,
         collegeBranchId: student.collegeBranchId,
         collegeEducationId: student.collegeEducationId,
+
+        collegeEducationType:
+            student.college_education?.collegeEducationType ?? null,
+
+        collegeBranchCode:
+            student.college_branch?.collegeBranchCode ?? null,
+
 
         collegeAcademicYearId: academic.collegeAcademicYearId,
         collegeSemesterId: academic.collegeSemesterId,

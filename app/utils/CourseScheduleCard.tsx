@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useUser } from "./context/UserContext";
 
 type Props = {
   style?: string;
@@ -13,14 +14,14 @@ type Props = {
 export default function CourseScheduleCard({
   style = "",
   isVisibile = true,
-  department = "CSE",
-  degree = "B.Tech",
   year = "2",
   fullWidth = false,
 }: Props) {
   const [time, setTime] = useState("");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
+
+  const { collegeEducationType, collegeBranchCode } = useUser()
 
   useEffect(() => {
     const updateTime = () => {
@@ -42,22 +43,22 @@ export default function CourseScheduleCard({
 
   return (
     <div
-      className={`flex ${
-        isVisibile ? "justify-between" : "justify-end"
-      } ${style} ${fullWidth ? "w-full flex-shrink-0" : ""}`}
+      className={`flex ${isVisibile ? "justify-between" : "justify-end"
+        } ${style} ${fullWidth ? "w-full flex-shrink-0" : ""}`}
     >
       {isVisibile && (
         <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
-          <p className="text-[#EFEFEF] text-sm">
-            {degree} {department} – {year}
+          <p className="text-[#EFEFEF] text-sm font-medium">
+            {collegeEducationType && collegeBranchCode
+              ? `${collegeEducationType} ${collegeBranchCode}`
+              : "—"} – {year}
           </p>
         </div>
       )}
 
       <div
-        className={`bg-white shadow-md h-[54px] rounded-lg flex items-center ${
-          fullWidth ? "w-full" : "w-[49%]"
-        }`}
+        className={`bg-white shadow-md h-[54px] rounded-lg flex items-center ${fullWidth ? "w-full" : "w-[49%]"
+          }`}
       >
         <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
           <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
