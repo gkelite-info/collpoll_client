@@ -18,6 +18,7 @@ type UserContextType = {
   collegeId: number | null;
   collegeEducationType?: string | null;
   collegeBranchCode?: string | null;
+  collegeAcademicYear?: string | null;
 };
 
 const StudentContext = createContext<UserContextType>({
@@ -32,7 +33,8 @@ const StudentContext = createContext<UserContextType>({
   collegePublicId: null,
   collegeId: null,
   collegeEducationType: null,
-  collegeBranchCode: null
+  collegeBranchCode: null,
+  collegeAcademicYear: null
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -48,6 +50,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [collegeId, setCollegeId] = useState<number | null>(null);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
+  const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
       setCollegeEducationType(student.collegeEducationType);
       setCollegeBranchCode(student.collegeBranchCode);
+      setCollegeAcademicYear(student.collegeAcademicYear);
     }
 
     loadStudentContext();
@@ -84,6 +88,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setCollegeId(null);
         setCollegeEducationType(null);
         setCollegeBranchCode(null);
+        setCollegeAcademicYear(null);
         return;
       }
 
@@ -139,6 +144,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         collegeId,
         collegeEducationType,
         collegeBranchCode,
+        collegeAcademicYear
       }}
     >
       {children}

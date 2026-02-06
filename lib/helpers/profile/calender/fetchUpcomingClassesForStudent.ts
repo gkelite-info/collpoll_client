@@ -7,7 +7,7 @@ export async function fetchUpcomingClassesForStudent(filters: {
   collegeSemesterId: number;
   collegeSectionId: number;
 }) {
-  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("calendar_event")
@@ -28,7 +28,7 @@ export async function fetchUpcomingClassesForStudent(filters: {
     `)
     .eq("is_deleted", false)
     .eq("type", "class")
-    .gte("date", today)           // ✅ TODAY + FUTURE
+    .gte("date", today)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
 

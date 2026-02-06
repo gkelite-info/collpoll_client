@@ -6,6 +6,7 @@ import { useUser } from "../utils/context/UserContext";
 import ConfirmLogoutModal from "../components/modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
+import { extractAcademicYearNumber } from "../utils/academicYear";
 
 type Props = {
     open: boolean;
@@ -22,12 +23,13 @@ interface ProfileOptions {
 }
 
 
-
 export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu, }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { userId, fullName, mobile, email, role } = useUser();
+    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+
+    const academicYear = extractAcademicYearNumber(collegeAcademicYear);
 
     const profileOptions: ProfileOptions[] = [
         { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: onOpenTerms, },
@@ -84,7 +86,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         <div className="flex items-center justify-between">
                             <p className="font-semibold text-md text-[#282828]">{fullName}</p>
                             <div className="flex gap-2 items-center">
-                                <span className="text-xs text-[#282828]">ID - {userId}</span>
+                                <span className="text-xs text-[#282828]">ID - {studentId}</span>
                                 <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                     e.stopPropagation();
                                     onOpenQuickMenu();
@@ -93,7 +95,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         </div>
                         {role === "Student" && (
                             <>
-                                <p className="text-xs text-[#282828] font-medium">B.Tech CSE - Year 2</p>
+                                <p className="text-xs text-[#282828] font-medium">{collegeEducationType ? `${collegeEducationType}` : "—"} {collegeBranchCode ? `${collegeBranchCode}` : "—"} - {academicYear ? `${academicYear}` : "—"}</p>
                             </>
                         )}
                         <div className="flex gap-3 flex-wrap">
