@@ -5,51 +5,28 @@ import { useParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import StudentProfileCard from "../components/stuProfileCard";
 import SubjectWiseAttendance from "../components/subjectWiseTable";
-import { getStudentDetails } from "@/lib/helpers/attendance/attendanceActions";
 import AiBotCard from "../components/aiBotCard";
+import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 
-import Groq from "groq-sdk";
+// 1. UPDATE IMPORT to the new helper file
 
 export default function StudentAttendanceDetailsPage() {
-  const { studentId } = useParams<{ studentId: string }>();
+  const params = useParams();
+  const studentId = Array.isArray(params?.studentId)
+    ? params.studentId[0]
+    : params?.studentId;
 
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [llmResponse, setLlmResponse] = useState("");
 
-  const response =
+  const llmResponse =
     "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
-
-  // const groq = new Groq({
-  //   apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY,
-  //   dangerouslyAllowBrowser: true,
-  // });
-
-  // async function getGroqChatCompletion() {
-  //   return groq.chat.completions.create({
-  //     messages: [
-  //       {
-  //         role: "user",
-  //         content: "Importance of good attentence in class under 14 words",
-  //       },
-  //     ],
-  //     model: "llama-3.3-70b-versatile",
-  //   });
-  // }
-
-  // useEffect(() => {
-  //   async function fetchllm() {
-  //     const chatCompletion = await getGroqChatCompletion();
-  //     setLlmResponse(chatCompletion.choices[0]?.message?.content || "");
-  //   }
-  //   fetchllm();
-  // }, []);
 
   useEffect(() => {
     async function fetchData() {
       if (!studentId) return;
       try {
-        const data = await getStudentDetails(studentId);
+        const data = await getStudentAttendanceDetails(studentId);
         setStudent(data);
       } catch (error) {
         console.error("Failed to fetch student profile", error);
@@ -62,7 +39,7 @@ export default function StudentAttendanceDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center  text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
         Loading Student Profile...
       </div>
     );
@@ -70,14 +47,14 @@ export default function StudentAttendanceDetailsPage() {
 
   if (!student) {
     return (
-      <div className="min-h-screen flex items-center justify-center  text-gray-500">
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
         Student not found.
       </div>
     );
   }
 
   return (
-    <main className="p-4 space-y-6  min-h-screen">
+    <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Info label="Department" value={student.department} />
@@ -102,7 +79,7 @@ export default function StudentAttendanceDetailsPage() {
             studentId={student.studentsId.toString()}
             phone={student.mobile}
             email={student.email}
-            address={student.address || "Address not available"}
+            address={student.address}
             photo={student.photo || ""}
             attendanceDays={student.attendanceDays}
             absentDays={student.absentDays}
@@ -111,13 +88,13 @@ export default function StudentAttendanceDetailsPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <AiBotCard response={llmResponse || response} />
+          <AiBotCard response={llmResponse} />
         </div>
       </section>
 
       <section className="w-full">
         <SubjectWiseAttendance
-          studentId={studentId}
+          studentId={studentId || ""}
           data={student.subjectAttendance}
         />
       </section>
@@ -129,8 +106,8 @@ function Info({ label, value }: { label: string; value: string }) {
   if (!value) return null;
   return (
     <div className="flex items-center gap-2">
-      <span className="text-base font-medium text-[#666666]">{label} :</span>
-      <span className="rounded-full bg-[#E8F5E9] px-4 py-1 text-sm font-semibold text-[#4CAF50]">
+      <span className="font-medium text-xs text-[#666666]">{label} :</span>
+      <span className="rounded-full bg-[#E8F5E9] px-2.5 py-0.5 text-xs font-medium text-[#4CAF50]">
         {value}
       </span>
     </div>
