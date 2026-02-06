@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabaseClient";
 
+function getBranch(row: any) {
+  return Array.isArray(row.collegeBranch)
+    ? row.collegeBranch[0]
+    : row.collegeBranch;
+}
+
 async function getStudentCountBySection(params: {
   collegeAcademicYearId: number;
   collegeSectionsId: number;
@@ -46,6 +52,7 @@ export async function getAdminAcademicsCards(
       collegeSectionsId,
       collegeSections,
       collegeAcademicYearId,
+      collegeEducationId,
       collegeAcademicYear:collegeAcademicYearId (
         collegeAcademicYear,
         collegeAcademicYearId
@@ -61,7 +68,9 @@ export async function getAdminAcademicsCards(
         faculty (
           facultyId,
           fullName,
-          email
+          email,
+          collegeBranchId,
+          collegeEducationId
         )
       )
     `,
@@ -126,9 +135,26 @@ export async function getAdminAcademicsCards(
         collegeAcademicYearId: row.collegeAcademicYearId,
         collegeSectionsId: row.collegeSectionsId,
       });
+
+      const subjectCount = await getSubjectCountBySection({
+        collegeSectionsId: row.collegeSectionsId,
+        collegeAcademicYearId: row.collegeAcademicYearId,
+      });
+
+      const branch = getBranch(row);
+
+      const facultyCount = await getFacultyCountBySection({
+        collegeSectionsId: row.collegeSectionsId,
+        collegeAcademicYearId: row.collegeAcademicYearId,
+        //collegeBranchId: row.collegeBranch[0]?.collegeBranchId,
+        collegeBranchId: branch?.collegeBranchId,
+        collegeEducationId: row.collegeEducationId,
+      });
       return {
         ...row,
         studentCount,
+        subjectCount,
+        facultyCount,
       };
     }),
   );
@@ -140,21 +166,104 @@ export async function getAdminAcademicsCards(
 }
 
 export function mapAcademicCards(data: any[]) {
-  return data.map((row) => ({
-    id: row.collegeSectionsId.toString(),
-    branchName: row.collegeBranch?.collegeBranchType ?? "-",
-    branchCode: row.collegeBranch?.collegeBranchCode ?? "-",
-    section: row.collegeSections ?? "-",
-    year: row.collegeAcademicYear?.collegeAcademicYear?.toString() ?? "-",
-    totalStudents: row.studentCount ?? 0,
-    faculties:
-      row.faculty_sections?.map((fs: any) => ({
-        facultyId: fs.faculty.facultyId,
-        fullName: fs.faculty.fullName,
-        email: fs.faculty.email,
-      })) ?? [],
-  }));
+  return data.map((row) => {
+    const branch = Array.isArray(row.collegeBranch)
+      ? row.collegeBranch[0]
+      : row.collegeBranch;
+    return {
+      id: row.collegeSectionsId.toString(),
+      // branchName: row.collegeBranch?.collegeBranchType ?? "-",
+      // branchCode: row.collegeBranch?.collegeBranchCode ?? "-",
+      branchName: branch?.collegeBranchType ?? "-",
+      branchCode: branch?.collegeBranchCode ?? "-",
+      section: row.collegeSections ?? "-",
+      year: row.collegeAcademicYear?.collegeAcademicYear?.toString() ?? "-",
+      totalStudents: row.studentCount ?? 0,
+      totalFaculties: row.facultyCount ?? 0,
+      totalSubjects: row.subjectCount ?? 0,
+      faculties:
+        row.faculty_sections
+          ?.filter(
+            (fs: any) =>
+              fs.collegeAcademicYearId === row.collegeAcademicYearId &&
+              fs.faculty?.collegeBranchId === branch?.collegeBranchId &&
+              fs.faculty?.collegeEducationId === row.collegeEducationId,
+          )
+          .map((fs: any) => ({
+            facultyId: fs.faculty.facultyId,
+            fullName: fs.faculty.fullName,
+            email: fs.faculty.email,
+          })) ?? [],
+    }
+  });
 }
+
+// ✅ FIXED — branch + education safe faculty count
+async function getFacultyCountBySection(params: {
+  collegeSectionsId: number;
+  collegeAcademicYearId: number;
+  collegeBranchId: number;
+  collegeEducationId: number;
+}) {
+  const { data, error } = await supabase
+    .from("faculty_sections")
+    .select(
+      `
+      facultyId,
+      faculty (
+        collegeBranchId,
+        collegeEducationId
+      )
+    `,
+    )
+    .eq("collegeSectionsId", params.collegeSectionsId)
+    .eq("collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("getFacultyCountBySection error", error);
+    return 0;
+  }
+
+  const validFacultyIds = new Set(
+    data
+      ?.filter(
+        (r: any) =>
+          r.faculty?.collegeBranchId === params.collegeBranchId &&
+          r.faculty?.collegeEducationId === params.collegeEducationId,
+      )
+      .map((r: any) => r.facultyId),
+  );
+
+  return validFacultyIds.size;
+}
+
+
+
+// ✅ FIXED — DISTINCT subject count
+async function getSubjectCountBySection(params: {
+  collegeSectionsId: number;
+  collegeAcademicYearId: number;
+}) {
+  const { data, error } = await supabase
+    .from("faculty_sections")
+    .select("collegeSubjectId")
+    .eq("collegeSectionsId", params.collegeSectionsId)
+    .eq("collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("getSubjectCountBySection error", error);
+    return 0;
+  }
+
+  // ✅ DISTINCT subject count
+  return new Set(data?.map((r) => r.collegeSubjectId)).size;
+}
+
+
 
 export async function getEducationTypes(collegeId: number) {
   const { data, error } = await supabase

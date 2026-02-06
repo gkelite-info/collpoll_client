@@ -1,33 +1,18 @@
-import { CaretDown, UserCircle } from "@phosphor-icons/react";
+import { UserCircle } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
-// export interface Department {
-//   name: string;
-//   text: string;
-//   color: string;
-//   bgColor: string;
-//   totalStudents: number;
-//   avgAttendance: number;
-//   belowThresholdCount: number;
-//   year?: string;
-// }
-
-// ✅ UPDATED: Make some fields optional for now
 export interface Department {
   name: string;
   text: string;
   color: string;
   bgColor: string;
-
+  branch: string;
+  section: string;
   totalStudents: number;
-
-  // ✅ OPTIONAL (can remove later)
+  totalSubjects: number;
+  totalFaculties: number;
   avgAttendance?: number;
   belowThresholdCount?: number;
-
   year?: string;
-
-  // ✅ NEW: dynamic faculties support
   faculties?: {
     facultyId: number;
     fullName: string;
@@ -43,8 +28,12 @@ const FacultyAttendanceCard = ({
   bgColor,
   totalStudents,
   avgAttendance,
+  totalSubjects,
+  totalFaculties,
+  branch,
+  section,
   belowThresholdCount,
-  year = "2",
+  year,
   faculties = [],
 }: Department) => {
   const router = useRouter();
@@ -54,7 +43,12 @@ const FacultyAttendanceCard = ({
   const handleViewDetails = () => {
     const params = new URLSearchParams(searchParams);
     params.set("view", "subjectWise");
-    params.set("deptId", name);
+    params.set("branch", branch);
+    params.set("section", section);
+    params.set("students", totalStudents.toString());
+    params.set("subjects", totalSubjects.toString());
+    params.set("below75", (belowThresholdCount ?? 0).toString());
+    params.set("faculties", totalFaculties.toString());
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -75,11 +69,9 @@ const FacultyAttendanceCard = ({
           style={{ backgroundColor: bgColor, color: text }}
         >
           <span className="ml-1">{year}</span>
-          {/* <CaretDown size={12} weight="bold" /> */}
         </div>
       </div>
 
-      {/* ✅ DYNAMIC FACULTIES */}
       <div className="flex items-center gap-2 mb-4">
         <span className="text-[#282828] text-[13px] font-medium">
           Faculty -
@@ -112,7 +104,6 @@ const FacultyAttendanceCard = ({
           )}
         </div>
       </div>
-
 
       <div className="flex items-center gap-3 mb-6">
         <div className="flex items-center gap-1.5">

@@ -126,7 +126,7 @@ async function getStudentsBelow75(
             stats[rec.studentId] = { total: 0, present: 0 };
         }
         stats[rec.studentId].total += 1;
-        if (rec.status === "Present") {
+        if (!["PRESENT", "LATE"].includes(rec.status)) {
             stats[rec.studentId].present += 1;
         }
     });
