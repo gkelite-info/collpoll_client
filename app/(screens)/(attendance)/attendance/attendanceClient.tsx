@@ -13,14 +13,16 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import SubjectAttendance from "../../(attendance)/subject-attendance/page";
 import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
 import { useUser } from "@/app/utils/context/UserContext";
-import { getStudentDashboardData } from "@/lib/helpers/attendance/studentAtendanceActions";
+
 import {
   DashboardSkeleton,
   TableSkeleton,
 } from "../shimmer/attendanceDashSkeleton";
+import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 
 interface TableRow {
   Subject: string;
+  Faculty: string;
   "Today's Status": string;
   "Class Attendance": string;
   "Percentage %": string;
@@ -41,11 +43,29 @@ interface CardItem {
 
 const columns = [
   "Subject",
-  "Daily Status",
+  "Faculty",
+  "Today's Status",
   "Class Attendance",
   "Percentage %",
   "Notes",
 ];
+
+const STATUS_COLOR_CLASS: Record<string, string> = {
+  Present: "text-green-600",
+  Late: "text-yellow-600",
+  Absent: "text-red-600",
+  Leave: "text-blue-600",
+  "Class Cancel": "text-gray-600",
+};
+
+
+function formatAttendanceStatus(status: string) {
+  return status
+    .toLowerCase()              // class_cancel
+    .replace(/_/g, " ")         // class cancel
+    .replace(/\b\w/g, c => c.toUpperCase()); // Class Cancel
+}
+
 
 export default function AttendanceClient() {
   const searchParams = useSearchParams();
@@ -63,10 +83,23 @@ export default function AttendanceClient() {
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
 
+
   useEffect(() => {
-    if (userLoading) return;
+    console.log("🔁 Attendance useEffect triggered", {
+      userId,
+      userLoading,
+      viewDate,
+    });
+
+    // 1️⃣ Wait until user context is ready
+    if (userLoading) {
+      console.log("⏳ User context still loading...");
+      return;
+    }
+
+    // 2️⃣ Guard: user not logged in
     if (!userId) {
-      console.warn("No User ID found: Student not logged in");
+      console.warn("❌ No User ID found: Student not logged in");
       setLoading(false);
       return;
     }
@@ -76,28 +109,53 @@ export default function AttendanceClient() {
     async function fetchData() {
       try {
         setLoading(true);
-        // 2. Convert date to YYYY-MM-DD (local time)
+
+        // 3️⃣ Convert selected date → YYYY-MM-DD (local date)
         const year = viewDate.getFullYear();
         const month = String(viewDate.getMonth() + 1).padStart(2, "0");
         const day = String(viewDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
 
-        // 3. Pass dateStr to server action
-        const data = await getStudentDashboardData(userId!, dateStr);
+        console.log("📅 Fetching attendance dashboard for date:", dateStr);
 
+        // 4️⃣ Call helper (ALL business logic lives there)
+        if (!userId) {
+          console.warn("⚠️ User ID became null before helper call");
+          setLoading(false);
+          return;
+        }
+
+        const safeUserId = userId;
+        console.log("👤 Using safeUserId for dashboard fetch:", safeUserId);
+
+        const data = await getStudentDashboardData(safeUserId, dateStr);
+
+        console.log("✅ Dashboard data received:", {
+          cards: data?.cards,
+          semesterStats: data?.semesterStats,
+          tableDataLength: data?.tableData?.length,
+        });
+
+        // 5️⃣ Update state only if component is still mounted
         if (isMounted) {
           setDashboardData(data);
+          console.log("🧠 Dashboard state updated");
         }
       } catch (err) {
-        console.error("Failed to fetch dashboard", err);
+        console.error("🔥 Failed to fetch attendance dashboard", err);
       } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          console.log("✅ Attendance dashboard loading finished");
+        }
       }
     }
 
     fetchData();
 
+    // 6️⃣ Cleanup to avoid state update on unmounted component
     return () => {
+      console.log("🧹 Attendance useEffect cleanup");
       isMounted = false;
     };
   }, [userId, userLoading, viewDate]);
@@ -108,13 +166,16 @@ export default function AttendanceClient() {
     }
   };
 
+
+
   const tableRows: TableRow[] =
     dashboardData?.tableData?.map((row: any) => ({
       Subject: row.subject,
-      "Today's Status": row.status,
+      Faculty: row.faculty,
+      "Today's Status": formatAttendanceStatus(row.status),
       "Class Attendance": row.classAttendance,
       "Percentage %": row.percentage,
-      Notes: <FilePdf size={32} />,
+      Notes: <FilePdf size={17} />,
     })) || [];
 
   const dynamicCards: CardItem[] = [
@@ -122,9 +183,9 @@ export default function AttendanceClient() {
       id: 1,
       icon: <UsersThree size={32} />,
       value: dashboardData
-        ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
+        ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
-      label: "Total Classes Attended",
+      label: "Today Total Classes",
       style: "bg-[#FFEDDA] w-44",
       iconBgColor: "#FFBB70",
       iconColor: "#EFEFEF",
@@ -135,7 +196,7 @@ export default function AttendanceClient() {
       value: dashboardData
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
-      label: "Semester wise Classes",
+      label: "Semester wise Attendance",
       style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
@@ -190,9 +251,8 @@ export default function AttendanceClient() {
     <>
       <div className="bg-red-00 flex w-full h-fit p-2">
         <div
-          className={`flex flex-col gap-2 ${
-            hideRightSection ? "w-full" : "w-[68%]"
-          }`}
+          className={`flex flex-col gap-2 ${hideRightSection ? "w-full" : "w-[68%]"
+            }`}
         >
           {!showSubjectAttendanceTable && !showSubjectAttendanceDetails && (
             <>
@@ -226,8 +286,12 @@ export default function AttendanceClient() {
                   presentPercent={dashboardData?.semesterStats.present || 0}
                   absentPercent={dashboardData?.semesterStats.absent || 0}
                   latePercent={dashboardData?.semesterStats.late || 0}
-                  overallPercent={dashboardData?.cards.percentage || 0}
+                  overallPercent={
+                    (dashboardData?.semesterStats.present || 0) +
+                    (dashboardData?.semesterStats.late || 0)
+                  }
                 />
+
               </div>
 
               <div className="bg-red-00 flex flex-col">
@@ -240,7 +304,7 @@ export default function AttendanceClient() {
                   Classes on {formattedDate}
                 </p>
                 {loading ? (
-                  <div className="mt-5">
+                  <div className=" mt-5">
                     <TableSkeleton />
                   </div>
                 ) : (

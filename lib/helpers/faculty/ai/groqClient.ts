@@ -29,7 +29,7 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
           { role: "system", content: "You are an academic syllabus expert." },
           { role: "user", content: prompt },
         ],
-        temperature: 0.4,
+        temperature: 0.2,
       });
 
       const text = response.choices[0]?.message?.content;
