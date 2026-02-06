@@ -6,7 +6,7 @@ export const getStudentId = async () => {
 
   const { data: user, error: userError } = await supabase
     .from("users")
-    .select("userId")
+    .select("userId, role")
     .eq("auth_id", auth.user.id)
     .single();
 
@@ -15,16 +15,19 @@ export const getStudentId = async () => {
     return null;
   }
 
-  const { data: student, error: studentError } = await supabase
-    .from("students")
-    .select("studentId")
-    .eq("userId", user.userId)
-    .single();
+  if (user.role === 'Student') {
+    const { data: student, error: studentError } = await supabase
+      .from("students")
+      .select("studentId")
+      .eq("userId", user.userId)
+      .single();
 
-  if (studentError || !student) {
-    console.error("Student not found", studentError);
-    return null;
+    if (studentError || !student) {
+      console.error("Student not found", studentError);
+      return null;
+    }
+
+    return student.studentId;
   }
 
-  return student.studentId;
 };
