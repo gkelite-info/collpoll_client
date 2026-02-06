@@ -16,41 +16,6 @@ import AttendanceTable from "../tables/attendanceTable";
 import CardComponent from "./cards";
 import StudentAttendanceDetailsPage from "./stuSubjectWise";
 
-const cardData = [
-  {
-    id: "1",
-    style: "bg-[#FFEDDA]",
-    icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#FFBB70",
-    value: "300",
-    label: "Total Students",
-  },
-  {
-    id: "2",
-    style: "bg-[#E6FBEA]",
-    icon: <BookOpenText size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#43C17A",
-    value: "08",
-    label: "Total Subjects",
-  },
-  {
-    id: "3",
-    style: "bg-[#FFE0E0] ",
-    icon: <User size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#FF2020",
-    value: "25",
-    label: "Students below 75%",
-  },
-  {
-    id: "4",
-    style: "bg-[#CEE6FF]",
-    icon: <Calendar size={23} weight="fill" color="#EFEFEF" />,
-    iconBgColor: "#60AEFF",
-    value: "08/01/2025",
-    label: "Last Updated",
-  },
-];
-
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
@@ -59,7 +24,13 @@ export const SubjectWiseAttendance = ({
   onBack,
 }: SubjectWiseAttendanceProps) => {
   const searchParams = useSearchParams();
+  const branch = searchParams.get("branch");
+  const section = searchParams.get("section");
+  const totalStudents = searchParams.get("students");
+  const totalSubjects = searchParams.get("subjects");
+  const below75 = searchParams.get("below75");
   const selectedStudentId = searchParams.get("studentId");
+  const totalFaculties = searchParams.get("faculties");
   const router = useRouter();
   const pathname = usePathname();
 
@@ -120,27 +91,62 @@ export const SubjectWiseAttendance = ({
     );
   }
 
+  const cardData = [
+    {
+      id: "1",
+      style: "bg-[#FFEDDA]",
+      icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#FFBB70",
+      value: totalStudents || 0,
+      label: "Total Students",
+    },
+    {
+      id: "2",
+      style: "bg-[#E6FBEA]",
+      icon: <BookOpenText size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#43C17A",
+      value: totalSubjects || 0,
+      label: "Total Subjects",
+    },
+    {
+      id: "3",
+      style: "bg-[#FFE0E0] ",
+      icon: <User size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#FF2020",
+      value: below75 ||0 ,
+      label: "Students below 75%",
+    },
+    {
+      id: "4",
+      style: "bg-[#CEE6FF]",
+      icon: <User size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#60AEFF",
+      value: totalFaculties || 0,
+      label: "Total Faculties",
+    },
+  ];
+
   return (
     <div className="flex flex-col m-4 relative">
       <div className="mb-3 flex justify-between items-center">
         <div className="w-50% flex-0.5">
-          <div className="flex items-center gap-2 group w-fit cursor-pointer">
+          <div className="flex items-center gap-2 group w-fit">
             <div
-              className="flex items-center gap-2 group w-fit cursor-pointer"
-              onClick={onBack}
+              className="flex items-center gap-2 group w-fit "
             >
               <CaretLeft
                 size={20}
                 weight="bold"
-                className="text-[#2D3748] group-hover:-translate-x-1 transition-transform"
+                onClick={onBack}
+                className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
               />
               <h1 className="text-xl font-bold text-[#282828]">
-                CSE Department — Subject-wise Attendance
+                {branch} Branch — Subject-wise Attendance
               </h1>
             </div>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            View attendance reports across the CSE Department.
+            View attendance reports across the {branch} Branch.
           </p>
         </div>
         <div className="w-80">
@@ -160,7 +166,7 @@ export const SubjectWiseAttendance = ({
         </svg>
 
         <span className="text-slate-800 text-sm font-medium">
-          CSE Department
+          {branch} Branch
         </span>
       </div>
 

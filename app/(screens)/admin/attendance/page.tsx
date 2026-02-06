@@ -3,7 +3,6 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Suspense } from "react";
 import {
-  CaretDown,
   MagnifyingGlass,
   CaretLeft,
   CaretRight,
@@ -32,75 +31,6 @@ interface ExtendedDepartment extends Department {
   subject: string;
   deptCode: string;
 }
-
-interface FilterProps {
-  label: string;
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
-  displayModifier?: (opt: string) => string;
-}
-
-const DEPT_CONFIGS = [
-  {
-    name: "CSE",
-    text: "#FF767D",
-    color: "#FFB4B8",
-    bgColor: "#FFF5F5",
-    subjects: ["Data Structures", "DBMS", "AI"],
-  },
-  {
-    name: "ECE",
-    text: "#FF9F7E",
-    color: "#F3D3C8",
-    bgColor: "#FFF9DB",
-    subjects: ["VLSI", "Signals", "Embedded"],
-  },
-  {
-    name: "MECH",
-    text: "#F8CF64",
-    color: "#F3E2B6",
-    bgColor: "#FFF9DB",
-    subjects: ["Thermodynamics", "Robotics"],
-  },
-  {
-    name: "IT",
-    text: "#66EEFA",
-    color: "#BCECF0",
-    bgColor: "#E7F5FF",
-    subjects: ["Web Dev", "Cloud", "Cyber"],
-  },
-];
-
-const SECTIONS = ["A", "B", "C", "D"];
-const YEARS = ["1", "2", "3", "4"];
-
-const generateFullMockData = (): ExtendedDepartment[] => {
-  const data: ExtendedDepartment[] = [];
-  DEPT_CONFIGS.forEach((dept) => {
-    YEARS.forEach((yr) => {
-      SECTIONS.forEach((sec) => {
-        dept.subjects.forEach((sub) => {
-          data.push({
-            id: `${dept.name}-${yr}-${sec}-${sub}`,
-            name: `${dept.name} - ${sec} (${sub})`,
-            deptCode: dept.name,
-            text: dept.text,
-            color: dept.color,
-            bgColor: dept.bgColor,
-            totalStudents: Math.floor(Math.random() * 15) + 50,
-            avgAttendance: Math.floor(Math.random() * 25) + 70,
-            belowThresholdCount: Math.floor(Math.random() * 10),
-            year: yr,
-            section: sec,
-            subject: sub,
-          });
-        });
-      });
-    });
-  });
-  return data;
-};
 
 const COLOR_PALETTE = [
   { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" }, // CSE
@@ -136,7 +66,6 @@ const getDynamicBranchStyle = (branchCode: string) => {
   return COLOR_PALETTE[index];
 };
 
-// ✅ NEW: Academic Card type (MARKED)
 interface AcademicCard {
   id: string;
   branchName: string;
@@ -144,6 +73,8 @@ interface AcademicCard {
   section: string;
   year: string;
   totalStudents: number;
+  totalSubjects: number;
+  totalFaculties: number;
   faculties: {
     facultyId: number;
     fullName: string;
@@ -154,10 +85,6 @@ interface AcademicCard {
 
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
-  const [deptFilter, setDeptFilter] = useState("All");
-  const [yearFilter, setYearFilter] = useState("All");
-  const [sectionFilter, setSectionFilter] = useState("All");
-  const [subjectFilter, setSubjectFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [cards, setCards] = useState<AcademicCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +139,6 @@ const AttendancePage = () => {
   useEffect(() => {
     if (!userId) return;
     loadCardsOnly();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, currentPage, education, branch, year, section, subject]);
 
   const loadCardsOnly = async () => {
@@ -354,8 +280,6 @@ const AttendancePage = () => {
 
   const cardsPerPage = 15;
 
-  const allData = useMemo(() => generateFullMockData(), []);
-
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
 
@@ -366,14 +290,9 @@ const AttendancePage = () => {
     setMounted(true);
   }, []);
 
-  const uniqueSubjects = useMemo(
-    () => ["All", ...Array.from(new Set(allData.map((d) => d.subject)))],
-    []
-  );
-
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, deptFilter, yearFilter, sectionFilter, subjectFilter]);
+  }, [search]);
 
   const totalPages = Math.ceil(totalRecords / cardsPerPage);
 
@@ -427,51 +346,6 @@ const AttendancePage = () => {
         </div>
       </div>
 
-      {/* <div className="mt-4 mb-4 flex flex-col md:flex-row items-center gap-4">
-        <div className="relative w-full md:w-[43%]">
-          <input
-            type="text"
-            placeholder="Search here......"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full text-black h-11 pl-5 pr-12 rounded-full bg-[#EAEAEA] text-sm outline-none"
-          />
-          <MagnifyingGlass
-            size={22}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#22C55E]"
-            weight="bold"
-          />
-        </div>
-
-        <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
-          <FilterDropdown
-            label="Department"
-            value={deptFilter}
-            options={["All", ...DEPT_CONFIGS.map((d) => d.name)]}
-            onChange={setDeptFilter}
-          />
-          <FilterDropdown
-            label="Year"
-            value={yearFilter}
-            options={["All", ...YEARS]}
-            onChange={setYearFilter}
-            displayModifier={(o) => (o === "All" ? o : `${o} Year`)}
-          />
-          <FilterDropdown
-            label="Section"
-            value={sectionFilter}
-            options={["All", ...SECTIONS]}
-            onChange={setSectionFilter}
-            displayModifier={(o) => (o === "All" ? o : `Section ${o}`)}
-          />
-          <FilterDropdown
-            label="Subject"
-            value={subjectFilter}
-            options={uniqueSubjects}
-            onChange={setSubjectFilter}
-          />
-        </div>
-      </div> */}
       <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative w-full md:w-[32%]">
           <input
@@ -638,23 +512,19 @@ const AttendancePage = () => {
                 return (
                   <FacultyAttendanceCard
                     key={dept.id}
-
-                    // ✅ Branch + Section
                     name={`${dept.branchCode} - ${dept.section}`}
-
-                    // ✅ Dynamic styling
                     text={style.text}
                     color={style.color}
                     bgColor={style.bgColor}
-
-                    // ✅ Dynamic data
                     year={dept.year}
                     totalStudents={dept.totalStudents}
                     faculties={dept.faculties}
-
-                    // ✅ Optional placeholders (safe for now)
                     avgAttendance={0}
                     belowThresholdCount={0}
+                    totalSubjects={dept.totalSubjects}
+                    branch={dept.branchCode}
+                    section={dept.section}
+                    totalFaculties={dept.totalFaculties}
                   />
                 );
               })}
