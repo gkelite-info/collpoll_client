@@ -11,6 +11,8 @@ export interface CalendarEvent {
   branch?: string;
   year?: string;
   section?: string;
+  subjectName?: string;
+  subjectKey?: string;
   rawFormData?: any;
 }
 

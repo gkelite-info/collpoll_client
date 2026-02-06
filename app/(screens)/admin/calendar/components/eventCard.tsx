@@ -1,4 +1,4 @@
-import { ChalkboardTeacher, Confetti, Exam, PencilSimple, Question, Trash, VideoConference } from "@phosphor-icons/react";
+import { ChalkboardTeacher, Exam, Question, Trash, PencilSimple, VideoConference } from "@phosphor-icons/react";
 import { CalendarEvent, EventType } from "../types";
 
 const EVENT_STYLES: Record<
@@ -33,7 +33,7 @@ const EVENT_STYLES: Record<
   },
 };
 
-const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete: () => void; onEdit?: () => void; }) => {
+const EventCard = ({ event, onDelete, onEdit, onClick, }: { event: CalendarEvent; onDelete: () => void; onEdit: () => void; onClick: () => void; }) => {
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] || EVENT_STYLES.meeting;
   const Icon = style.Icon;
@@ -47,18 +47,9 @@ const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete
 
   return (
     <div
+      onClick={onClick}
       className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onEdit?.();
-        }}
-        className="absolute top-1 right-7 hidden group-hover:flex bg-white 
-    rounded-full p-1 shadow hover:bg-blue-50 z-50 cursor-pointer"
-      >
-        <PencilSimple size={14} className="text-blue-600" />
-      </button>
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -67,6 +58,16 @@ const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete
         className="absolute cursor-pointer top-1 right-1 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
       >
         <Trash size={14} className="text-red-600" />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        className="absolute top-1 right-7 hidden group-hover:flex bg-white 
+             rounded-full p-1 shadow hover:bg-blue-50 z-50 cursor-pointer"
+      >
+        <PencilSimple size={14} className="text-blue-600" />
       </button>
       <div
         className={`flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed`}
@@ -87,15 +88,41 @@ const EventCard = ({ event, onDelete, onEdit }: { event: CalendarEvent, onDelete
       </div>
 
       <div
-        className={`flex-1 p-2 h-full overflow-y-auto`}
+        className="flex-1 p-2 h-full overflow-y-auto space-y-1"
         style={{ backgroundColor: style.lightBg }}
       >
         <p
-          className={`text-sm font-semibold leading-snug`}
+          className="text-sm font-semibold leading-snug"
           style={{ color: style.text }}
         >
           {event.title}
         </p>
+
+        <div
+          className="text-[11px] space-y-0.5"
+          style={{ color: style.text }}
+        >
+          {event.branch && (
+            <div className="flex gap-1">
+              <span className="font-medium">Branch:</span>
+              <span>{event.branch}</span>
+            </div>
+          )}
+
+          {event.section && (
+            <div className="flex gap-1">
+              <span className="font-medium">Section:</span>
+              <span>{event.section}</span>
+            </div>
+          )}
+
+          {event.year && (
+            <div className="flex gap-1">
+              <span className="font-medium">Year:</span>
+              <span>{event.year}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -149,7 +149,7 @@ async function getPendingAttendanceCorrections(
       students!inner(collegeId, collegeEducationId)
     `
         )
-        .not("reason", "is", null)
+        .eq("status", "LEAVE")
         .eq("students.collegeId", collegeId)
         .eq("students.collegeEducationId", collegeEducationId);
 
