@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "./context/UserContext";
 import { extractAcademicYearNumber } from "./academicYear";
+import { useFaculty } from "./context/faculty/useFaculty";
 
 type Props = {
   style?: string;
@@ -21,9 +22,9 @@ export default function CourseScheduleCard({
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
 
-  const { collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
-
+  const { collegeEducationType, collegeBranchCode, collegeAcademicYear, role } = useUser();
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
+  const { college_branch } = useFaculty();
 
   useEffect(() => {
     const updateTime = () => {
@@ -50,11 +51,18 @@ export default function CourseScheduleCard({
     >
       {isVisibile && (
         <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
-          <p className="text-[#EFEFEF] text-sm font-medium">
-            {collegeEducationType && collegeBranchCode
-              ? `${collegeEducationType} ${collegeBranchCode}`
-              : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
-          </p>
+          {role === "Student" && (
+            <p className="text-[#EFEFEF] text-sm font-medium">
+              {collegeEducationType && collegeBranchCode
+                ? `${collegeEducationType} ${collegeBranchCode}`
+                : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
+            </p>
+          )}
+          {role === "Faculty" && (
+            <p className="text-[#EFEFEF] text-sm font-medium">
+              {college_branch ? `${college_branch}` : "—"}
+            </p>
+          )}
         </div>
       )}
 
