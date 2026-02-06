@@ -200,6 +200,7 @@ export async function saveAttendance(
       status: dbStatus,
       reason: p.reason || null,
       markedAt: classDate,
+      createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
   });
