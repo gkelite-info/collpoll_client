@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "./components/ClientLayout";
 import { UserProvider } from "./utils/context/UserContext";
+import { AdminProvider } from "./utils/context/admin/useAdmin";
+import { FacultyProvider } from "./utils/context/faculty/useFaculty";
+import { StudentProvider } from "./utils/context/student/useStudent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +32,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden flex justify-between`}
       >
         <UserProvider>
-          <ClientLayout>
-            {children}
-          </ClientLayout>
+          <AdminProvider>
+            <FacultyProvider>
+              <StudentProvider>
+                <ClientLayout>
+                  {children}
+                </ClientLayout>
+              </StudentProvider>
+            </FacultyProvider>
+          </AdminProvider>
         </UserProvider>
       </body>
     </html>

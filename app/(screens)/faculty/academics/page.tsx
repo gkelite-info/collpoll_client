@@ -6,7 +6,7 @@ import SubjectCard, { CardProps } from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect, useRef } from "react";
 import { getFacultySubjects } from "./components/subjectDetails";
-import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
+import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 
 import { CircleNotch } from "@phosphor-icons/react";
 

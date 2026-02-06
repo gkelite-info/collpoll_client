@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
 import { CheckCircle, UserCircle } from "@phosphor-icons/react";

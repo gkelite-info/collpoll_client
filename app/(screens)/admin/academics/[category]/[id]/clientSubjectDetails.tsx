@@ -11,7 +11,7 @@ import {
   ArrowCounterClockwise,
 } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import {
   getAdminSubjectDetails,
   updateUnitProgress,

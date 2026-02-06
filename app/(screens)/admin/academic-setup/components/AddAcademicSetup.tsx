@@ -5,7 +5,7 @@ import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchDegreeAndDepartments } from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
 
 export type AcademicData = {

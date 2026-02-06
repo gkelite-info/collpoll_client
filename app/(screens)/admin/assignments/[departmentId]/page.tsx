@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import CourseCard from "../components/courseCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminSubjectDetails } from "@/lib/helpers/admin/assignments/fetchAdminSubjectDetails";
 
 const DepartmentSubjectPage = () => {

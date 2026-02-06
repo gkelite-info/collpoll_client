@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
-import { fetchStudentContext } from "./studentContextAPI";
+import { fetchStudentContext } from "./student/studentContextAPI";
 
 type UserContextType = {
   userId: number | null;

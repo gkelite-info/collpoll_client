@@ -12,7 +12,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { CustomMultiSelect } from "./userModalComponents";
 import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
 const AddUserModal: React.FC<{
   isOpen: boolean;

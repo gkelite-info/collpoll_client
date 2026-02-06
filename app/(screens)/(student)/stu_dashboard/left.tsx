@@ -10,7 +10,7 @@ import UserInfoCard from "@/app/utils/userInfoCardComp";
 import LectureCard from "@/app/utils/lectureCard";
 import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
-import { fetchStudentContext } from "@/app/utils/context/studentContextAPI";
+import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 

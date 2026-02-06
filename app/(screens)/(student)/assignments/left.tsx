@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import AssignmentCard from "./components/card";
 import { supabase } from "@/lib/supabaseClient";
 // import { fetchAssignments, fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
-import { fetchStudentContext } from "@/app/utils/context/studentContextAPI";
+import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 import { getSubmissionForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 

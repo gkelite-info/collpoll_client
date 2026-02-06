@@ -14,7 +14,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 // import { fetchFacultyContext } from "@/lib/helpers/faculty/fetchFacultyContext";
 import { upsertCollegeSubjectUnitWithTopics } from "@/lib/helpers/faculty/upsertCollegeSubjectUnitWithTopics";
 import toast from "react-hot-toast";
-import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
+import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
 import { getInternalUserId } from "@/lib/helpers/getInternalUserId";
 

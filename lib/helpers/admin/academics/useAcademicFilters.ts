@@ -7,7 +7,7 @@ import {
   fetchAcademicYears,
   fetchSections,
 } from "@/lib/helpers/admin/academics/academicDropdowns";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getSubjects } from "./getAdminAcademicsCards";
 
 export function useAcademicFilters(userId?: number) {

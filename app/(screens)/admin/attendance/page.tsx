@@ -20,7 +20,7 @@ import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 import { useRouter } from "next/navigation";
 import { fetchAttendanceStats } from "@/lib/helpers/admin/attendance/attendanceStats";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import toast from "react-hot-toast";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
@@ -386,8 +386,6 @@ const AttendancePage = () => {
   if (view === "subjectWise") {
     return <SubjectWiseAttendance onBack={handleBack} />;
   }
-
-  console.log("Rendering AttendancePage with filter cards:", filteredCards);
 
   return (
     <div className="flex flex-col m-4">
