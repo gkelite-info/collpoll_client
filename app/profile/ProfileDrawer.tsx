@@ -7,6 +7,8 @@ import ConfirmLogoutModal from "../components/modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { extractAcademicYearNumber } from "../utils/academicYear";
+import { useFaculty } from "../utils/context/faculty/useFaculty";
+import { useAdmin } from "../utils/context/admin/useAdmin";
 
 type Props = {
     open: boolean;
@@ -28,6 +30,8 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
     const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+    const { facultyId, college_branch, faculty_edu_type } = useFaculty();
+    const { adminId } = useAdmin();
 
     const academicYear = extractAcademicYearNumber(collegeAcademicYear);
 
@@ -86,7 +90,15 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         <div className="flex items-center justify-between">
                             <p className="font-semibold text-md text-[#282828]">{fullName}</p>
                             <div className="flex gap-2 items-center">
-                                <span className="text-xs text-[#282828]">ID - {studentId}</span>
+                                {role === "Student" && (
+                                    <span className="text-xs text-[#282828]">ID - {studentId}</span>
+                                )}
+                                {role === "Faculty" && (
+                                    <span className="text-xs text-[#282828]">ID - {facultyId}</span>
+                                )}
+                                {role === "Admin" && (
+                                    <span className="text-xs text-[#282828]">ID - {adminId}</span>
+                                )}
                                 <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                     e.stopPropagation();
                                     onOpenQuickMenu();
@@ -96,6 +108,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         {role === "Student" && (
                             <>
                                 <p className="text-xs text-[#282828] font-medium">{collegeEducationType ? `${collegeEducationType}` : "—"} {collegeBranchCode ? `${collegeBranchCode}` : "—"} - {academicYear ? `${academicYear}` : "—"}</p>
+                            </>
+                        )}
+                        {role === "Faculty" && (
+                            <>
+                                <p className="text-xs text-[#282828] font-medium">{faculty_edu_type ? `${faculty_edu_type}` : "—"} {college_branch ? `${college_branch}` : "—"}</p>
                             </>
                         )}
                         <div className="flex gap-3 flex-wrap">
