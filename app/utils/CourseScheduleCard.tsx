@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useUser } from "./context/UserContext";
+import { extractAcademicYearNumber } from "./academicYear";
 
 type Props = {
   style?: string;
@@ -14,14 +15,15 @@ type Props = {
 export default function CourseScheduleCard({
   style = "",
   isVisibile = true,
-  year = "2",
   fullWidth = false,
 }: Props) {
   const [time, setTime] = useState("");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
 
-  const { collegeEducationType, collegeBranchCode } = useUser()
+  const { collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+
+  const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
 
   useEffect(() => {
     const updateTime = () => {
@@ -51,7 +53,7 @@ export default function CourseScheduleCard({
           <p className="text-[#EFEFEF] text-sm font-medium">
             {collegeEducationType && collegeBranchCode
               ? `${collegeEducationType} ${collegeBranchCode}`
-              : "—"} – {year}
+              : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
           </p>
         </div>
       )}

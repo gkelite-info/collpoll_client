@@ -17,6 +17,17 @@ type StudentJoin = {
     };
 };
 
+type AcademicJoin = {
+    studentAcademicHistoryId: number;
+    collegeAcademicYearId: number;
+    collegeSemesterId: number;
+    collegeSectionsId: number;
+    college_academic_year: {
+        collegeAcademicYear: string;
+    };
+};
+
+
 export async function fetchStudentContext(userId: number) {
     const { data: student, error: studentErr } = await supabase
         .from("students")
@@ -40,22 +51,25 @@ export async function fetchStudentContext(userId: number) {
         .is("deletedAt", null)
         .single<StudentJoin>();
 
+
     if (studentErr) throw studentErr;
-
-    console.log("RAW STUDENT:", student);
-
 
     const { data: academic, error: academicErr } = await supabase
         .from("student_academic_history")
         .select(`
-      collegeAcademicYearId,
-      collegeSemesterId,
-      collegeSectionsId
-    `)
+    studentAcademicHistoryId,
+    collegeAcademicYearId,
+    collegeSemesterId,
+    collegeSectionsId,
+
+    college_academic_year:collegeAcademicYearId (
+      collegeAcademicYear
+    )
+  `)
         .eq("studentId", student.studentId)
         .eq("isCurrent", true)
         .is("deletedAt", null)
-        .single();
+        .single<AcademicJoin>();
 
     if (academicErr) throw academicErr;
 
@@ -71,11 +85,10 @@ export async function fetchStudentContext(userId: number) {
         collegeBranchCode:
             student.college_branch?.collegeBranchCode ?? null,
 
-
         collegeAcademicYearId: academic.collegeAcademicYearId,
-        collegeSemesterId: academic.collegeSemesterId,
-        collegeSectionsId: academic.collegeSectionsId,
-
+        collegeSemesterId: academic.collegeSemesterId ?? null,
+        collegeSectionsId: academic.collegeSectionsId ?? null,
+        collegeAcademicYear: academic.college_academic_year.collegeAcademicYear,
         entryType: student.entryType,
         status: student.status,
     };

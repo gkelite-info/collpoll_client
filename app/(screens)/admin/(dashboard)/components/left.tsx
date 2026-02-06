@@ -1,14 +1,8 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
-import {
-  ArrowsClockwise,
-  BookOpenIcon,
-  HourglassIcon,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { ArrowsClockwise, BookOpenIcon, HourglassIcon, UsersThree } from "@phosphor-icons/react";
 import { useState } from "react";
-
 import { AdminInfoCard } from "../../utils/adminInfoCard";
 import { dashboardData } from "../data";
 import { DashboardGrid } from "./dashboardGrid";
@@ -37,7 +31,6 @@ export default function AdminDashLeft({
   const router = useRouter();
   const {
     cards,
-    departments,
     loading: adminLoading,
     refresh,
   } = useAdminDashboard();
@@ -132,7 +125,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
       </div>
     );
   }

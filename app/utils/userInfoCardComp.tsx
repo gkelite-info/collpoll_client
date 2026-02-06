@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "./context/UserContext";
+import { extractAcademicYearNumber } from "./academicYear";
 
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
-    const { studentId, fullName, gender, loading, collegeEducationType, collegeBranchCode } = useUser();
+    const { studentId, fullName, gender, loading, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+
+    const academicYear = extractAcademicYearNumber(collegeAcademicYear);
 
     const studentImage =
         !loading && gender === "Female"
@@ -30,9 +33,7 @@ export default function UserInfoCard() {
             <div className="flex justify-between items-center rounded-lg h-[170px] bg-[#DAEEE3]">
                 <div className="flex flex-col justify-between w-[60%] p-3 gap-1 bg-yellow-00 rounded-l-lg h-[100%]">
                     <div className="flex items-center gap-3">
-                        <p className="text-[#714EF2] text-sm font-medium">{collegeEducationType && collegeBranchCode
-                            ? `${collegeEducationType} ${collegeBranchCode}`
-                            : "—"} - Year 2</p>
+                        <p className="text-[#714EF2] text-sm font-medium">{collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} - {academicYear ? `${academicYear}` : "—"}</p>
                         <p className="text-[#089144] text-sm font-medium">ID - <span className="text-[#282828] text-sm">{studentId}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
