@@ -12,7 +12,7 @@ import ConfirmConflictModal from "./ConfirmConflictModal";
 import { CaretLeft } from "@phosphor-icons/react"
 import ConfirmDeleteModal from "./ConfirmDeleteModal"
 import toast from "react-hot-toast";
-import { fetchCalendarEventById, fetchCalendarEventsByFaculty, updateCalendarEvent, upsertCalendarEventAdmin } from "@/lib/helpers/calendar/calendarEvent";
+// import { updateCalendarEvent, upsertCalendarEventAdmin } from "@/lib/helpers/calendar/calendarEvent";
 import { fetchCollegeDegrees } from "@/lib/helpers/admin/academicSetupAPI";
 import { fetchCalendarEvents } from "@/lib/helpers/calendar/calendarEventAPI";
 import { fetchCalendarEventSections } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
@@ -24,11 +24,11 @@ import {
     deleteCalendarEvent,
 } from "@/lib/helpers/calendar/calendarEventAPI";
 
-// 🔴 ADD
 import {
     deleteCalendarEventSections,
     saveCalendarEventSections,
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
+import EventDetailsModal from "@/app/(screens)/faculty/calendar/modal/EventDetailsModal"
 
 interface Props {
     faculty: {
@@ -55,6 +55,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
     const [formMode, setFormMode] = useState<"create" | "edit">("create");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+    const [showDetails, setShowDetails] = useState(false);
     const { collegeId } = useUser()
 
     const weekDays = getWeekDays(currentDate)
@@ -77,7 +79,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
         setIsLoadingEvents(true);
 
         try {
-            /* 🔹 1. FETCH ALL EVENTS FOR FACULTY */
             const rows = await fetchCalendarEvents({
                 facultyId: Number(faculty.id),
             });
@@ -87,7 +88,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 return;
             }
 
-            /* 🔹 2. GET ACADEMIC CONTEXT FROM FIRST EVENT */
             const firstEventSections = await fetchCalendarEventSections(
                 rows[0].calendarEventId
             );
@@ -101,10 +101,9 @@ export default function CalendarView({ faculty, onBack }: Props) {
             const branchId = firstEventSections[0].collegeBranchId;
             const academicYearId = firstEventSections[0].collegeAcademicYearId;
 
-            /* 🔹 3. FETCH LOOKUPS */
             const branches = await fetchAcademicDropdowns({
                 type: "branch",
-                collegeId: collegeId!, // admin context
+                collegeId: collegeId!,
                 educationId,
             });
 
@@ -145,7 +144,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 ])
             );
 
-            /* 🔹 5. FETCH SECTIONS PER EVENT */
             const sectionMap = new Map<number, number[]>();
 
             await Promise.all(
@@ -158,7 +156,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 })
             );
 
-            /* 🔹 6. EXPAND EVENTS (PER SECTION) */
             const expanded: CalendarEvent[] = [];
 
             rows.forEach((row: any) => {
@@ -169,8 +166,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
                 sectionIds.forEach((sectionId) => {
                     expanded.push({
-                        id: `${row.calendarEventId}-${sectionId}`, // 🔥 UI ID
-                        calendarEventId: row.calendarEventId,     // 🔥 DB ID
+                        id: `${row.calendarEventId}-${sectionId}`,
+                        calendarEventId: row.calendarEventId,
+
+                        subjectName: row.college_subjects?.subjectName ?? "-",
+                        subjectKey: row.college_subjects?.subjectKey ?? "",
 
                         title:
                             row.type === "meeting"
@@ -191,7 +191,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                         section: sectionMapName.get(sectionId) ?? "",
 
                         rawFormData: {
-                            subjectId: row.subjectId,
+                            //subjectId: row.subjectId,
+                            subjectId: row.college_subjects?.collegeSubjectId ?? null,
                             topicId: row.eventTopic,
                             roomNo: row.roomNo,
                         },
@@ -208,36 +209,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-
-    // const hasDbConflict = async (
-    //     date: string,
-    //     startTime: string,
-    //     endTime: string,
-    //     ignoreEventId?: number
-    // ): Promise<boolean> => {
-    //     const res = await fetchCalendarEventsByFaculty(Number(faculty.id));
-
-    //     if (!res.success || !res.events) return false;
-
-    //     return res.events.some((e: any) => {
-    //         if (ignoreEventId && e.calendarEventId === ignoreEventId) {
-    //             return false;
-    //         }
-
-    //         if (e.date !== date) return false;
-
-    //         const dbStart = combineDateAndTime(e.date, e.fromTime);
-    //         const dbEnd = combineDateAndTime(e.date, e.toTime);
-
-    //         return hasTimeConflict(
-    //             [{ startTime: dbStart, endTime: dbEnd } as CalendarEvent],
-    //             combineDateAndTime(date, startTime),
-    //             combineDateAndTime(date, endTime)
-    //         );
-    //     });
-    // };
-
-    // 🔴 FIXED: Admin conflict check uses SAME source as faculty
     const hasDbConflict = async (
         date: string,
         startTime: string,
@@ -273,119 +244,9 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-    // const handleSaveEvent = async (data: any) => {
-    //     try {
-    //         setIsSaving(true);
-    //         setEventForm(data);
-    //         const conflict = await hasDbConflict(
-    //             data.date,
-    //             data.startTime,
-    //             data.endTime,
-    //             editingEventId ? Number(editingEventId) : undefined
-    //         );
-
-    //         if (conflict) {
-    //             setPendingEvent(data);
-    //             setShowConflictModal(true);
-    //             setIsModalOpen(false);
-    //             return;
-    //         }
-
-    //         const safeYear =
-    //             ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(String(data.year))
-    //                 ? String(data.year)
-    //                 : "";
-
-    //         // const payload = {
-    //         //     facultyId: Number(faculty.id),
-    //         //     eventTitle: data.title,
-    //         //     eventTopic: data.topic?.trim(),
-    //         //     type: data.type,
-    //         //     date: data.date,
-    //         //     roomNo: data.roomNo?.trim(),
-    //         //     fromTime: data.startTime,
-    //         //     toTime: data.endTime,
-    //         //     degree: data.degree,
-    //         //     department: data.departments,
-    //         //     //year: data.year?.toString() ?? "",
-    //         //     // year: data.year ?? null,
-    //         //     year: safeYear,
-    //         //     semester: data.semester?.map((s: any) => ({
-    //         //         uuid: s.uuid ?? crypto.randomUUID(),
-    //         //         name: s.name,
-    //         //     })),
-    //         //     section: data.sections,
-    //         // };
-
-    //         const payload = {
-    //             calendarEventId: data.calendarEventId ?? undefined,
-
-    //             facultyId: data.facultyId,
-
-    //             // academic context
-    //             educationId: data.educationId,
-    //             branchId: data.branchId,
-    //             academicYearId: data.academicYearId,
-    //             semester: data.semester,
-
-    //             // event data
-    //             subjectId: data.subjectId,
-    //             eventTopicId: data.eventTopic,
-    //             type: data.type,
-    //             date: data.date,
-    //             roomNo: data.roomNo,
-    //             fromTime: data.fromTime,
-    //             toTime: data.toTime,
-    //             meetingLink: data.meetingLink,
-    //             meetingTitle: data.meetingTitle,
-
-    //             // sections
-    //             sections: data.sections, // [{ collegeSectionId }]
-    //         };
-
-    //         console.log("Payload to save:", payload);
-
-    //         // if (editingEventId) {
-    //         //     const updateres = await updateCalendarEvent(Number(editingEventId), payload);
-
-    //         //     if (!updateres.success) {
-    //         //         toast.error(updateres.error || "Failed to update event");
-    //         //         return;
-    //         //     }
-    //         //     await loadEvents();
-    //         //     setIsModalOpen(false);
-    //         //     setEventForm(null);
-    //         //     setEditingEventId(null);
-    //         //     toast.success("Event updated successfully.");
-    //         //     return;
-    //         // }
-
-    //         // const res = await upsertCalendarEventAdmin(payload);
-
-    //         // if (!res.success) {
-    //         //     toast.error(res.error || "Failed to save event");
-    //         //     return;
-    //         // }
-    //         // await loadEvents();
-    //         // setIsModalOpen(false);
-    //         // setEventForm(null);
-    //         // setPendingEvent(null);
-    //         // setEditingEventId(null);
-    //         toast.success("Event saved successfully.");
-    //     } catch (err) {
-    //         console.error(err);
-    //         toast.error("Something went wrong");
-    //     } finally {
-    //         setIsSaving(false);
-    //     }
-    // };
-    // 🔴 FIXED: Admin save uses SAME logic as Faculty
-
     const handleSaveEvent = async (data: any) => {
         try {
             setIsSaving(true);
-
-            // 🔹 1. Conflict check
             const conflict = await hasDbConflict(
                 data.date,
                 data.fromTime,
@@ -400,7 +261,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 return;
             }
 
-            // 🔹 2. SAVE / UPDATE EVENT (calendar_events)
             const eventRes = await saveCalendarEvent({
                 calendarEventId: editingEventId
                     ? Number(editingEventId)
@@ -426,13 +286,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
             }
 
             const calendarEventId = eventRes.calendarEventId;
-
-            // 🔹 3. IF EDIT → CLEAR OLD SECTIONS
             if (editingEventId) {
                 await deleteCalendarEventSections(Number(editingEventId));
             }
 
-            // 🔹 4. SAVE SECTIONS (calendar_event_section)
             await saveCalendarEventSections(calendarEventId, {
                 collegeEducationId: data.educationId,
                 collegeBranchId: data.branchId,
@@ -447,7 +304,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 editingEventId ? "Event updated successfully" : "Event created successfully"
             );
 
-            // 🔹 5. RESET UI
             setIsModalOpen(false);
             setEditingEventId(null);
             setEventForm(null);
@@ -462,60 +318,13 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-    // const handleEditEvent = async (event: CalendarEvent) => {
-    //     if (!event.calendarEventId) return;
-    //     const res = await fetchCalendarEventById(Number(event.id));
-
-    //     if (!res.success) {
-    //         toast.error("Failed to load event");
-    //         return;
-    //     }
-
-    //     const e = res.event;
-
-    //     setEditingEventId(e.calendarEventId);
-
-    //     setEventForm({
-    //         title: e.eventTitle,
-    //         topic: e.eventTopic,
-    //         roomNo: e.roomNo,
-    //         degree: e.degree,
-    //         departments: (e.department ?? []).map((d: any) => ({
-    //             uuid: d.uuid,
-    //             name: d.name,
-    //         })),
-    //         sections: (e.section ?? []).map((s: any) => ({
-    //             uuid: s.uuid,
-    //             name: s.name,
-    //         })),
-    //         //year: e.year,
-    //         year: String(e.year ?? ""),
-    //         semester: (e.semester ?? []).map((s: any) => ({
-    //             uuid: s.uuid,
-    //             name: s.name,
-    //         })),
-    //         type: e.type,
-    //         date: e.date,
-    //         startTime: e.fromTime,
-    //         endTime: e.toTime,
-    //     });
-    //     setFormMode("edit");
-    //     setIsModalOpen(true);
-    // };
-
-    // 🔴 FIXED: Admin edit auto-fill aligned with AddEventModal
-
-    // 🔴 FIXED: Admin edit auto-fill (FULLY ALIGNED WITH AddEventModal)
     const handleEditEvent = async (event: CalendarEvent) => {
         if (!event.calendarEventId) return;
-
         setEditingEventId(String(event.calendarEventId));
         setFormMode("edit");
 
-        // 🔹 Fetch section rows (IDs)
         const sectionRows = await fetchCalendarEventSections(event.calendarEventId);
 
-        // 🔹 Build section name map from current events
         const sectionNameMap = new Map<number, string>();
         events.forEach(ev => {
             if (ev.calendarEventId === event.calendarEventId && ev.section) {
@@ -524,12 +333,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
             }
         });
 
-        // 🔴 PASS EXACT SHAPE MODAL EXPECTS
         setEventForm({
             calendarEventId: event.calendarEventId,
             facultyId: faculty.id,
 
-            // 🔴 REQUIRED
             date: event.startTime.split("T")[0],
             startTime: event.startTime.split("T")[1].slice(0, 5),
             endTime: event.endTime.split("T")[1].slice(0, 5),
@@ -537,11 +344,9 @@ export default function CalendarView({ faculty, onBack }: Props) {
             type: event.type,
             roomNo: event.rawFormData?.roomNo ?? "",
 
-            // 🔴 REQUIRED FOR TOPIC AUTO-SELECT
             subjectId: event.rawFormData?.subjectId ?? null,
             topicId: event.rawFormData?.topicId ?? null,
 
-            // 🔴 REQUIRED FOR PILL LABELS
             sections: sectionRows.map((s: any) => ({
                 collegeSectionsId: s.collegeSectionId,
                 collegeSections: sectionNameMap.get(s.collegeSectionId) ?? "",
@@ -550,9 +355,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
         setIsModalOpen(true);
     };
-
-
-
 
     const handleNextWeek = () => {
         const next = new Date(currentDate)
@@ -590,22 +392,58 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 section: pendingEvent.sections,
             };
 
-            if (editingEventId) {
-                await updateCalendarEvent(Number(editingEventId), payload);
-                toast.success("Event updated despite conflict.");
-            } else {
-                await upsertCalendarEventAdmin(payload);
-                toast.success("Event created despite conflict.");
+            const eventRes = await saveCalendarEvent({
+                calendarEventId: editingEventId
+                    ? Number(editingEventId)
+                    : undefined,
+
+                facultyId: Number(faculty.id),
+
+                subjectId: pendingEvent.type === "meeting"
+                    ? null
+                    : pendingEvent.subjectId ?? null,
+
+                eventTopic: pendingEvent.type === "meeting"
+                    ? null
+                    : pendingEvent.eventTopic ?? null,
+
+                type: pendingEvent.type,
+                date: pendingEvent.date,
+                roomNo: pendingEvent.roomNo,
+                fromTime: pendingEvent.fromTime,
+                toTime: pendingEvent.toTime,
+                meetingLink: pendingEvent.meetingLink ?? null,
+            });
+
+            if (!eventRes.success) {
+                toast.error("Failed to save event");
+                return;
             }
 
-            await loadEvents();
+            const calendarEventId = eventRes.calendarEventId;
 
+            if (editingEventId) {
+                await deleteCalendarEventSections(Number(editingEventId));
+            }
+
+            await saveCalendarEventSections(calendarEventId, {
+                collegeEducationId: pendingEvent.educationId,
+                collegeBranchId: pendingEvent.branchId,
+                collegeAcademicYearId: pendingEvent.academicYearId,
+                collegeSemesterId: pendingEvent.semester,
+                sectionIds: pendingEvent.sections.map(
+                    (s: any) => s.collegeSectionId
+                ),
+            });
+
+            toast.success("Event saved despite conflict ⚠️");
+
+            await loadEvents();
             setEditingEventId(null);
             setEventForm(null);
             setFormMode("create");
             setIsModalOpen(false);
             setPendingEvent(null);
-
         } catch (err) {
             toast.error("Failed to save event");
         } finally {
@@ -613,26 +451,28 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-    const handleDeleteEvent = async (eventId: string) => {
+    const handleDeleteEvent = async (event: CalendarEvent) => {
+        if (!event.calendarEventId) return false;
         try {
             setIsDeleting(true);
-            const res = await deleteCalendarEvent(Number(eventId));
+            await deleteCalendarEventSections(event.calendarEventId);
+            const res = await deleteCalendarEvent(event.calendarEventId);
             if (!res.success) {
                 toast.error("Failed to delete event.");
                 return false;
             }
-
             await loadEvents();
             toast.success("Event deleted successfully.");
             return true;
-        } catch (error) {
+        } catch (err) {
+            console.error("ADMIN DELETE FAILED", err);
             toast.error("Failed to delete event.");
+            setIsDeleting(false);
             return false;
         } finally {
             setIsDeleting(false);
         }
     };
-
 
     const handleConflictCancel = () => {
         setShowConflictModal(false);
@@ -656,7 +496,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
                         Viewing Calendar for {faculty.name} ({faculty.branch}) – ID {faculty.id}
                     </p>
                 </div>
-
                 <CourseScheduleCard style="w-[320px]" department={faculty.branch} year={faculty.year} />
             </section>
 
@@ -684,6 +523,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
                     onNextWeek={handleNextWeek}
                     onDeleteRequest={setEventToDelete}
                     onEditRequest={handleEditEvent}
+                    onEventClick={(event) => {
+                        setSelectedEvent(event);
+                        setShowDetails(true);
+                    }}
                 />
             )}
 
@@ -713,13 +556,21 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 }}
                 onConfirm={async () => {
                     if (!eventToDelete) return;
-                    const success = await handleDeleteEvent(eventToDelete.id);
+                    const success = await handleDeleteEvent(eventToDelete);
                     if (success) {
                         setEventToDelete(null);
                     }
                 }}
             />
 
+            <EventDetailsModal
+                open={showDetails}
+                event={selectedEvent}
+                onClose={() => {
+                    setShowDetails(false);
+                    setSelectedEvent(null);
+                }}
+            />
         </main>
     )
 }

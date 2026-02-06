@@ -1,16 +1,40 @@
 import { CaretDown, UserCircle } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+// export interface Department {
+//   name: string;
+//   text: string;
+//   color: string;
+//   bgColor: string;
+//   totalStudents: number;
+//   avgAttendance: number;
+//   belowThresholdCount: number;
+//   year?: string;
+// }
+
+// ✅ UPDATED: Make some fields optional for now
 export interface Department {
   name: string;
   text: string;
   color: string;
   bgColor: string;
+
   totalStudents: number;
-  avgAttendance: number;
-  belowThresholdCount: number;
+
+  // ✅ OPTIONAL (can remove later)
+  avgAttendance?: number;
+  belowThresholdCount?: number;
+
   year?: string;
+
+  // ✅ NEW: dynamic faculties support
+  faculties?: {
+    facultyId: number;
+    fullName: string;
+    email: string;
+  }[];
 }
+
 
 const FacultyAttendanceCard = ({
   name,
@@ -21,6 +45,7 @@ const FacultyAttendanceCard = ({
   avgAttendance,
   belowThresholdCount,
   year = "2",
+  faculties = [],
 }: Department) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,31 +74,45 @@ const FacultyAttendanceCard = ({
           className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
           style={{ backgroundColor: bgColor, color: text }}
         >
-          Year <span className="ml-1">{year}</span>
-          <CaretDown size={12} weight="bold" />
+          <span className="ml-1">{year}</span>
+          {/* <CaretDown size={12} weight="bold" /> */}
         </div>
       </div>
 
+      {/* ✅ DYNAMIC FACULTIES */}
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-gray-400 text-[13px] font-medium">Faculty -</span>
-        <div className="flex -space-x-2.5">
-          {[10, 20, 30, 40, 50].map((seed, i) => (
-            <div
-              key={i}
-              className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
-            >
-              <img
-                src={`https://i.pravatar.cc/100?u=${name}${seed}`}
-                alt="faculty"
-                className="w-full h-full object-cover contrast-125"
-              />
-            </div>
-          ))}
-        </div>
-        <span className="text-gray-700 font-semibold text-base ml-0.5">
-          +10
+        <span className="text-[#282828] text-[13px] font-medium">
+          Faculty -
         </span>
+        <div className="flex -space-x-2.5">
+          {faculties && faculties.length > 0 ? (
+            <>
+              {faculties.slice(0, 5).map((f) => (
+                <div
+                  key={f.facultyId}
+                  title={f.fullName}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                >
+                  <img
+                    src={`https://i.pravatar.cc/100?u=${f.email}`}
+                    alt={f.fullName}
+                    className="w-full h-full object-cover contrast-125"
+                  />
+                </div>
+              ))}
+
+              {faculties.length > 5 && (
+                <span className="text-gray-700 font-semibold text-sm ml-1">
+                  +{faculties.length - 5}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-gray-400 text-xs">No Faculty</span>
+          )}
+        </div>
       </div>
+
 
       <div className="flex items-center gap-3 mb-6">
         <div className="flex items-center gap-1.5">
