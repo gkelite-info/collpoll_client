@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { CaretDown, Check, X, FilePdf } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
+import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
+import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
+import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
 
 type Status = "Evaluated" | "Pending";
 
@@ -45,26 +48,9 @@ export default function AssignmentTable({
   async function fetchDynamicData() {
     try {
       setLoading(true);
-      const { data: assign, error: assignErr } = await supabase
-        .from("assignments")
-        .select("collegeBranchId, marks")
-        .eq("assignmentId", assignmentId)
-        .single();
 
-      if (assignErr) throw assignErr;
-
-      const { data: students, error: studentError } = await supabase
-        .from("students")
-        .select(`studentId, users (fullName, email, userId)`)
-        .eq("collegeBranchId", assign.collegeBranchId)
-        .eq("isActive", true);
-
-      if (studentError) throw studentError;
-
-      const { data: submissions } = await supabase
-        .from("student_assignments_submission")
-        .select("*")
-        .eq("assignmentId", assignmentId);
+      const { students, submissions } =
+        await fetchAssignmentTableData(assignmentId);
 
       const mergedRows: Row[] = (students || []).map((student: any) => {
         const sub = submissions?.find((s) => s.studentId === student.studentId);
@@ -92,7 +78,7 @@ export default function AssignmentTable({
       });
 
       setRows(mergedRows);
-    } catch (err: any) {
+    } catch {
       toast.error("Error loading table data");
     } finally {
       setLoading(false);
@@ -100,29 +86,11 @@ export default function AssignmentTable({
   }
 
   const handleViewFile = async (filePath: string) => {
-    if (!filePath) {
-      toast.error("File path is missing");
-      return;
-    }
-
     try {
-      const BUCKET_NAME = "student_submissions";
-      const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .createSignedUrl(filePath, 3600);
-
-      if (error) {
-        console.error("Supabase Storage Error:", error);
-        toast.error(`Storage Error: ${error.message}`);
-        return;
-      }
-
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank");
-      }
-    } catch (err) {
-      console.error("Unexpected Error:", err);
-      toast.error("An unexpected error occurred while opening the file");
+      const signedUrl = await generateSubmissionSignedUrl(filePath);
+      if (signedUrl) window.open(signedUrl, "_blank");
+    } catch (err: any) {
+      toast.error("Failed to open file");
     }
   };
 
@@ -144,16 +112,13 @@ export default function AssignmentTable({
   const confirmSave = async () => {
     if (!editingId || !tempData) return;
     const row = rows.find((r) => r.id === editingId);
+    if (!row?.submissionId) return;
 
-    const { error } = await supabase
-      .from("student_assignments_submission")
-      .update({
-        marksScored: parseInt(tempData.marks) || 0,
-        feedback: tempData.feedback,
-        status: tempData.status,
-        updatedAt: new Date().toISOString(),
-      })
-      .eq("studentAssignmentSubmissionId", row?.submissionId);
+    const { error } = await updateSubmissionEvaluation(row.submissionId, {
+      marksScored: parseInt(tempData.marks) || 0,
+      feedback: tempData.feedback,
+      status: tempData.status,
+    });
 
     if (error) {
       toast.error("Update failed");

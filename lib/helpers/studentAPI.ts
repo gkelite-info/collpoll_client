@@ -15,7 +15,7 @@ export const getStudentId = async () => {
     return null;
   }
 
-  if (user.role === 'Student') {
+  if (user.role === "Student") {
     const { data: student, error: studentError } = await supabase
       .from("students")
       .select("studentId")
@@ -29,5 +29,4 @@ export const getStudentId = async () => {
 
     return student.studentId;
   }
-
 };

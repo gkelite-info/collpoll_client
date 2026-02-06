@@ -23,7 +23,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import {
   getUpcomingClasses,
   UpcomingLesson,
-} from "@/lib/helpers/faculty/getClasses";
+} from "@/lib/helpers/faculty/attendance/getClasses";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading } = useUser();
@@ -32,7 +32,7 @@ export default function FacultyDashLeft() {
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
 
   const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(
-    INITIAL_SCHEDULED_LESSONS
+    INITIAL_SCHEDULED_LESSONS,
   );
 
   const router = useRouter();
@@ -46,6 +46,7 @@ export default function FacultyDashLeft() {
 
         const data = await getUpcomingClasses(Number(userId));
         setUpcomingClasses(data);
+        console.log("Fetched Upcoming Classes:", data);
       } catch (error) {
         console.error("Failed to fetch classes:", error);
       } finally {
@@ -60,8 +61,8 @@ export default function FacultyDashLeft() {
     !loading && gender === "Female"
       ? "/faculty-f.png"
       : !loading && gender === "Male"
-      ? "/faculty-m.png"
-      : null;
+        ? "/faculty-m.png"
+        : null;
 
   const cardData = [
     {
@@ -103,7 +104,7 @@ export default function FacultyDashLeft() {
   ];
 
   const handleAddUpcomingClass = (
-    newLessonData: Omit<UpcomingLesson, "id">
+    newLessonData: Omit<UpcomingLesson, "id">,
   ) => {
     const newClass = {
       id: Math.random().toString(36).substr(2, 9),
@@ -113,7 +114,7 @@ export default function FacultyDashLeft() {
   };
 
   const handleAddScheduledLesson = (
-    newLessonData: Omit<ScheduledLesson, "id">
+    newLessonData: Omit<ScheduledLesson, "id">,
   ) => {
     const newLesson = {
       id: Math.random().toString(36).substr(2, 9),

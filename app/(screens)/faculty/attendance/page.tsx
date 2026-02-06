@@ -7,23 +7,28 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import {
   CaretLeft,
   ChartLineDown,
+  Check,
   Prohibit,
   UserCircle,
   UsersThree,
+  X,
 } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./components/stuAttendanceCard";
-import StuAttendanceTable, { UIStudent } from "./components/stuAttendanceTable";
+import StuAttendanceTable from "./components/stuAttendanceTable";
 
 import {
   getClassDetails,
   UpcomingLesson,
-} from "@/lib/helpers/faculty/getClasses";
+} from "@/lib/helpers/faculty/attendance/getClasses";
+
+import toast, { Toaster } from "react-hot-toast";
 import {
+  getAllStudents,
   getStudentsForClass,
   saveAttendance,
-  getAllStudents,
-} from "@/lib/helpers/attendance/attendanceActions";
-import toast, { Toaster } from "react-hot-toast";
+  UIStudent,
+} from "@/lib/helpers/faculty/attendance/attendanceActions";
+import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 
 function AttendanceContent() {
   const searchParams = useSearchParams();
@@ -34,15 +39,27 @@ function AttendanceContent() {
   const [loading, setLoading] = useState(false);
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const [isCancellingMode, setIsCancellingMode] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [percentage, setPercentage] = useState(0);
+
   const isTopicMode = !!classId;
 
-  const handleMarkClassCancelled = () => {
+  const confirmClassCancel = () => {
+    if (!cancelReason.trim()) {
+      toast.error("Please enter a reason for cancelling the class.");
+      return;
+    }
+
     const updatedList = studentsList.map((s) => ({
       ...s,
-      attendance: "Class Cancelled" as const, // Force type
+      attendance: "Class Cancel" as const,
+      reason: cancelReason,
     }));
-    setStudentsList(updatedList);
 
+    setStudentsList(updatedList);
+    setIsCancellingMode(false);
     toast("All students marked as 'Class Cancelled'. Click Save to confirm.", {
       icon: "⚠️",
     });
@@ -55,20 +72,15 @@ function AttendanceContent() {
         if (classId) {
           const cData = await getClassDetails(classId);
           setClassData(cData);
+          console.log("Fetched Class Details:", cData);
 
-          if (cData) {
-            const studentsData = await getStudentsForClass(
-              cData.department,
-              cData.year,
-              cData.section,
-              classId
-            );
-            setStudentsList(studentsData as UIStudent[]);
-          }
+          const studentsData = await getStudentsForClass(classId);
+          setStudentsList(studentsData);
+          console;
         } else {
-          // --- GENERAL MODE: Fetch All Students (Directory View) ---
           const allStudents = await getAllStudents();
-          setStudentsList(allStudents as UIStudent[]);
+          setStudentsList(allStudents);
+          console.log("Fetched All Students for Directory Mode:", allStudents);
         }
       } catch (err) {
         console.error(err);
@@ -85,12 +97,16 @@ function AttendanceContent() {
     ? `${classData.fromTime} - ${classData.toTime}`
     : "Loading...";
 
-  type AttendanceStatus = "Present" | "Absent" | "Leave";
+  type AttendanceStatus =
+    | "Present"
+    | "Absent"
+    | "Leave"
+    | "Late"
+    | "Class Cancel";
 
   const attendanceStats = studentsList.reduce(
     (acc, student) => {
       const status = student.attendance as AttendanceStatus;
-
       switch (status) {
         case "Present":
           acc.present++;
@@ -104,7 +120,7 @@ function AttendanceContent() {
       }
       return acc;
     },
-    { present: 0, absent: 0, leave: 0 }
+    { present: 0, absent: 0, leave: 0 },
   );
 
   const baseCardData: CardProps[] = [
@@ -144,11 +160,21 @@ function AttendanceContent() {
 
   const handleSaveAttendance = async () => {
     if (!classId) return;
+
+    const unmarked = studentsList.filter((s) => s.attendance === "Not Marked");
+    if (unmarked.length > 0) {
+      toast.error(
+        `Please mark attendance for ${unmarked.length} students before saving.`,
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = studentsList.map((s) => ({
         studentId: s.id,
         status: s.attendance,
+        reason: s.reason,
       }));
 
       const result = await saveAttendance(classId, payload);
@@ -170,17 +196,15 @@ function AttendanceContent() {
     }
   };
 
+  if (loading) {
+    return <AttendanceSkeleton />;
+  }
+
   const handleCancel = () => {
     router.push("/faculty");
   };
+  console.log("Rendering Attendance Content with students:", studentsList);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading Details...
-      </div>
-    );
-  }
   return (
     <main className="px-4 py-4 min-h-screen">
       <Toaster position="top-right" />
@@ -199,7 +223,6 @@ function AttendanceContent() {
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
             </div>
-
             <p className="text-sm text-gray-500 mt-1">
               Track, Verify, and Manage Attendance.
             </p>
@@ -211,7 +234,6 @@ function AttendanceContent() {
             <div className="bg-[#1E2952] text-white px-4 py-4 rounded-lg shadow-sm text-sm font-medium">
               Class Time : <span className="text-gray-200">{classTime}</span>
             </div>
-
             <CourseScheduleCard
               style="w-[320px]"
               department={`${classData.department
@@ -243,13 +265,44 @@ function AttendanceContent() {
             <span className="text-[#43C17A]">Topic : </span>
             {topicName}
           </div>
-          <button
-            onClick={handleMarkClassCancelled}
-            className="flex items-center gap-2 bg-[#FFBB70] text-white cursor-pointer hover:text-red-600 px-4 py-2 rounded-lg text-sm font-medium border border-red-100 transition-colors"
-          >
-            <Prohibit size={18} weight="bold" />
-            Mark Class Cancel
-          </button>
+
+          {!isCancellingMode ? (
+            <button
+              onClick={() => {
+                setCancelReason("");
+                setIsCancellingMode(true);
+              }}
+              className="flex items-center gap-2 bg-[#FFBB70] text-white cursor-pointer hover:bg-[#FFBB70]/90 px-4 py-2 rounded-lg text-sm font-medium border border-red-100 transition-colors"
+            >
+              <Prohibit size={18} weight="bold" />
+              Mark Class Cancel
+            </button>
+          ) : (
+            <div className="flex text-black items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+              <input
+                type="text"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Enter reason for cancellation..."
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+                autoFocus
+              />
+              <button
+                onClick={confirmClassCancel}
+                className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors"
+                title="Confirm Cancel"
+              >
+                <Check size={18} weight="bold" />
+              </button>
+              <button
+                onClick={() => setIsCancellingMode(false)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-600 p-2 rounded-lg transition-colors"
+                title="Dismiss"
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+          )}
         </section>
       )}
 

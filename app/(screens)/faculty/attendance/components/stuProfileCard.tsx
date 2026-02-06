@@ -129,7 +129,6 @@ export default function StudentProfileCard({
           />
         </div>
       ) : (
-        // --- OLD 3-TILE DEFAULT MODE ---
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <StatCard
             bg="bg-[#E8F5E9]"
