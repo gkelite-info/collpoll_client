@@ -13,6 +13,10 @@ type FacultyJoin = {
     gender: string;
     isActive: boolean;
 
+    faculty_edu_type: {
+        collegeEducationType: string;
+    }
+
     college_branch: {
         collegeBranchCode: string;
     };
@@ -35,7 +39,10 @@ export async function fetchFacultyContext(userId: number) {
       isActive,
       college_branch:collegeBranchId!inner (
       collegeBranchCode
-      )
+      ),
+    faculty_edu_type:collegeEducationId!inner (
+    collegeEducationType
+    )
     `)
         .eq("userId", userId)
         .is("deletedAt", null)
@@ -68,6 +75,7 @@ export async function fetchFacultyContext(userId: number) {
         collegeBranchId: faculty.collegeBranchId,
         collegeBranchCode: faculty.college_branch?.collegeBranchCode ?? null,
         college_branch: faculty.college_branch.collegeBranchCode,
+        faculty_edu_type: faculty.faculty_edu_type.collegeEducationType,
         gender: faculty.gender,
         isActive: faculty.isActive,
 

@@ -15,6 +15,7 @@ type FacultyContextType = {
     gender: string | null;
     collegeId: number | null;
     collegeEducationId: number | null;
+    faculty_edu_type: string | null;
     collegeBranchId: number | null;
     college_branch: string | null;
     isActive: boolean | null;
@@ -35,6 +36,7 @@ const FacultyContext = createContext<FacultyContextType>({
     gender: null,
     collegeId: null,
     collegeEducationId: null,
+    faculty_edu_type: null,
     collegeBranchId: null,
     college_branch: null,
     isActive: null,
@@ -58,6 +60,7 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         gender: null,
         collegeId: null,
         collegeEducationId: null,
+        faculty_edu_type: null,
         collegeBranchId: null,
         college_branch: null,
         isActive: null,
@@ -92,6 +95,7 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
                     collegeEducationId: faculty.collegeEducationId,
                     collegeBranchId: faculty.collegeBranchId,
                     college_branch: faculty.college_branch,
+                    faculty_edu_type: faculty.faculty_edu_type,
                     isActive: faculty.isActive,
                     sections: faculty.sections,
                     sectionIds: faculty.sectionIds,

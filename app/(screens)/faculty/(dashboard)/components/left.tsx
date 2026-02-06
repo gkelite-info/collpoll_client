@@ -46,7 +46,6 @@ export default function FacultyDashLeft() {
 
         const data = await getUpcomingClasses(Number(userId));
         setUpcomingClasses(data);
-        console.log("Fetched Upcoming Classes:", data);
       } catch (error) {
         console.error("Failed to fetch classes:", error);
       } finally {
