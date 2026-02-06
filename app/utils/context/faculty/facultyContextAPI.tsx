@@ -1,5 +1,23 @@
 import { supabase } from "@/lib/supabaseClient";
- 
+
+type FacultyJoin = {
+    facultyId: number;
+    userId: number;
+    fullName: string;
+    email: string;
+    mobile: string;
+    role: string;
+    collegeId: number;
+    collegeEducationId: number;
+    collegeBranchId: number;
+    gender: string;
+    isActive: boolean;
+
+    college_branch: {
+        collegeBranchCode: string;
+    };
+};
+
 export async function fetchFacultyContext(userId: number) {
     const { data: faculty, error: facultyError } = await supabase
         .from("faculty")
@@ -14,14 +32,17 @@ export async function fetchFacultyContext(userId: number) {
       collegeEducationId,
       collegeBranchId,
       gender,
-      isActive
+      isActive,
+      college_branch:collegeBranchId!inner (
+      collegeBranchCode
+      )
     `)
         .eq("userId", userId)
         .is("deletedAt", null)
-        .single();
- 
+        .single<FacultyJoin>();
+
     if (facultyError) throw facultyError;
- 
+
     const { data: facultySections, error: sectionsError } = await supabase
         .from("faculty_sections")
         .select(`
@@ -32,9 +53,9 @@ export async function fetchFacultyContext(userId: number) {
     `)
         .eq("facultyId", faculty.facultyId)
         .is("deletedAt", null);
- 
+
     if (sectionsError) throw sectionsError;
- 
+
     return {
         facultyId: faculty.facultyId,
         userId: faculty.userId,
@@ -45,11 +66,13 @@ export async function fetchFacultyContext(userId: number) {
         collegeId: faculty.collegeId,
         collegeEducationId: faculty.collegeEducationId,
         collegeBranchId: faculty.collegeBranchId,
+        collegeBranchCode: faculty.college_branch?.collegeBranchCode ?? null,
+        college_branch: faculty.college_branch.collegeBranchCode,
         gender: faculty.gender,
         isActive: faculty.isActive,
- 
+
         sections: facultySections,
- 
+
         sectionIds: [...new Set(facultySections.map(s => s.collegeSectionsId))],
         subjectIds: [...new Set(facultySections.map(s => s.collegeSubjectId))],
         academicYearIds: [...new Set(facultySections.map(s => s.collegeAcademicYearId))]
@@ -77,7 +100,6 @@ export async function fetchFacultyContextAdmin(params: {
     `)
         .is("deletedAt", null);
 
-    // 🔴 CHANGED: choose filter based on caller
     if (params.userId) {
         query = query.eq("userId", params.userId);
     }

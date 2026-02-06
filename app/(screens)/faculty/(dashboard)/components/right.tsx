@@ -26,12 +26,10 @@ export default function FacultyDashRight() {
   useEffect(() => {
     const loadTasks = async () => {
       try {
-        // 1️⃣ Get logged-in user
         const { data: authData } = await supabase.auth.getUser();
         const auth_id = authData?.user?.id;
         if (!auth_id) return;
 
-        // 2️⃣ Get facultyId from users table
         const { data: user, error: userError } = await supabase
           .from("users")
           .select("userId")
@@ -43,10 +41,8 @@ export default function FacultyDashRight() {
           return;
         }
 
-        // 3️⃣ Fetch faculty tasks
         const res = await fetchFacultyTasks(user.userId);
 
-        // ✅ IMPORTANT: guard for TypeScript + runtime safety
         if (!res.success || !res.tasks) {
           setTasks([]);
           return;
@@ -57,7 +53,7 @@ export default function FacultyDashRight() {
             title: t.facultytaskTitle,
             description: t.facultytaskDescription,
             time: t.facultytaskassignedTime,
-            facultytaskcreatedDate: t.facultytaskcreatedDate, // ✅ ADD THIS
+            facultytaskcreatedDate: t.facultytaskcreatedDate,
           }))
         );
 

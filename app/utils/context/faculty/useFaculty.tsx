@@ -6,22 +6,18 @@ import { fetchFacultyContext } from "./facultyContextAPI";
 
 type FacultyContextType = {
     loading: boolean;
-
     facultyId: number | null;
     userId: number | null;
-
     fullName: string | null;
     email: string | null;
     mobile: string | null;
     role: string | null;
     gender: string | null;
-
     collegeId: number | null;
     collegeEducationId: number | null;
     collegeBranchId: number | null;
-
+    college_branch: string | null;
     isActive: boolean | null;
-
     sections: any[];
     sectionIds: number[];
     subjectIds: number[];
@@ -30,22 +26,18 @@ type FacultyContextType = {
 
 const FacultyContext = createContext<FacultyContextType>({
     loading: true,
-
     facultyId: null,
     userId: null,
-
     fullName: null,
     email: null,
     mobile: null,
     role: null,
     gender: null,
-
     collegeId: null,
     collegeEducationId: null,
     collegeBranchId: null,
-
+    college_branch: null,
     isActive: null,
-
     sections: [],
     sectionIds: [],
     subjectIds: [],
@@ -57,22 +49,18 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
 
     const [state, setState] = useState<FacultyContextType>({
         loading: true,
-
         facultyId: null,
         userId: null,
-
         fullName: null,
         email: null,
         mobile: null,
         role: null,
         gender: null,
-
         collegeId: null,
         collegeEducationId: null,
         collegeBranchId: null,
-
+        college_branch: null,
         isActive: null,
-
         sections: [],
         sectionIds: [],
         subjectIds: [],
@@ -93,22 +81,18 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
 
                 setState({
                     loading: false,
-
                     facultyId: faculty.facultyId,
                     userId: faculty.userId,
-
                     fullName: faculty.fullName,
                     email: faculty.email,
                     mobile: faculty.mobile,
                     role: faculty.role,
                     gender: faculty.gender,
-
                     collegeId: faculty.collegeId,
                     collegeEducationId: faculty.collegeEducationId,
                     collegeBranchId: faculty.collegeBranchId,
-
+                    college_branch: faculty.college_branch,
                     isActive: faculty.isActive,
-
                     sections: faculty.sections,
                     sectionIds: faculty.sectionIds,
                     subjectIds: faculty.subjectIds,
