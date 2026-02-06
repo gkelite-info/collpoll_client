@@ -5,7 +5,7 @@ import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import {
   getAdminAcademicsCards,
   mapAcademicCards,

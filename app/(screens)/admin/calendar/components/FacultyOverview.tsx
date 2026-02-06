@@ -44,7 +44,6 @@ export default function FacultyOverview({ onSelect }: Props) {
         try {
             const res = await fetchEducations(collegeId);
             setEducations(res);
-            console.log("Education Types:", res);
         } catch (error) {
             toast.error("Failed to fetch education types.");
         }

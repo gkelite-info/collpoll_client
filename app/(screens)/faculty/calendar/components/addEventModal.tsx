@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchFacultyContext } from "@/app/utils/context/facultyContextAPI";
+import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { supabase } from "@/lib/supabaseClient";

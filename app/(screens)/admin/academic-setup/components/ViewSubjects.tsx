@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getAcademicSubjects } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useEffect, useState } from "react";

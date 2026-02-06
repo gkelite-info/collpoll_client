@@ -2,7 +2,7 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { getAdminSubjectsList } from "@/lib/helpers/admin/academics/getAdminSubjectsList";
 import { CaretLeft } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";

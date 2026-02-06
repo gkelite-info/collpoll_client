@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
 

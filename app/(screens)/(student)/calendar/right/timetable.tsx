@@ -1,5 +1,5 @@
 "use client";
-import { fetchStudentContext } from "@/app/utils/context/studentContextAPI";
+import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { fetchStudentTimetableByDate }
     from "@/lib/helpers/profile/calender/fetchStudentTimetable";
 import { supabase } from "@/lib/supabaseClient";

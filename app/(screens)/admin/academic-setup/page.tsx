@@ -19,7 +19,7 @@ import {
   resolveSubjectIds,
 } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
 type Tab = "view" | "add" | "view-subject" | "add-subject";
 

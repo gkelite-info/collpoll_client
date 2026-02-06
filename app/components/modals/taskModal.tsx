@@ -38,11 +38,8 @@ export default function TaskModal({
   defaultValues,
 }: TaskModalProps) {
 
-  console.log("DEFAULT VALUES:", defaultValues);
-
   if (!open) return null;
 
-  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");

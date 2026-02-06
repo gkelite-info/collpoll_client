@@ -4,7 +4,7 @@ import { X } from "@phosphor-icons/react";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { UiNamedItem } from "@/lib/helpers/calendar/types";
-import { fetchFacultyContextAdmin } from "@/app/utils/context/facultyContextAPI";
+import { fetchFacultyContextAdmin } from "@/app/utils/context/faculty/facultyContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
