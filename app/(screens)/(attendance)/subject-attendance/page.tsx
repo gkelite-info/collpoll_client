@@ -7,6 +7,11 @@ import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
 import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+// import { getStudentDashboardData } from "@/lib/helpers/attendance/studentAtendanceActions";
+import { useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 interface CardItem {
   id: number;
@@ -20,14 +25,60 @@ interface CardItem {
   totalPercentage?: string | number;
 }
 
+
+type DashboardData = Awaited<
+  ReturnType<typeof getStudentDashboardData>
+>;
+
+
 export default function SubjectAttendance() {
   const router = useRouter();
+
+
+  const { userId, loading: userLoading } = useUser();
+
+  const [dashboardData, setDashboardData] =
+    useState<DashboardData | null>(null);
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (userLoading) return;
+
+    // ✅ HARD GUARD
+    if (userId === null) {
+      console.warn("User not logged in");
+      return;
+    }
+
+    // ✅ freeze non-null userId for TS
+    const safeUserId = userId;
+
+    async function loadData() {
+      setLoading(true);
+
+      const today = new Date();
+      const dateStr = today.toISOString().split("T")[0];
+
+      // ✅ guaranteed number
+      const data = await getStudentDashboardData(safeUserId, dateStr);
+      setDashboardData(data);
+
+      setLoading(false);
+    }
+
+    loadData();
+  }, [userId, userLoading]);
+
+
 
   const cards: CardItem[] = [
     {
       id: 1,
       icon: <UsersThree size={32} />,
-      value: "8/10",
+      value: dashboardData
+        ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
+        : "0/0",
       label: "Total Classes",
       style: "bg-[#FFEDDA] w-44",
       iconBgColor: "#FFBB70",
@@ -36,14 +87,42 @@ export default function SubjectAttendance() {
     {
       id: 2,
       icon: <Chalkboard size={32} />,
-      value: "220/250",
+      value: dashboardData
+        ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
+        : "0/0",
       label: "Semester wise Classes",
       style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
-      totalPercentage: "85%",
+      totalPercentage: dashboardData
+        ? `${dashboardData.cards.percentage}%`
+        : "0%",
     },
   ];
+
+
+
+  // const cards: CardItem[] = [
+  //   {
+  //     id: 1,
+  //     icon: <UsersThree size={32} />,
+  //     value: "8/10",
+  //     label: "Total Classes",
+  //     style: "bg-[#FFEDDA] w-44",
+  //     iconBgColor: "#FFBB70",
+  //     iconColor: "#EFEFEF",
+  //   },
+  //   {
+  //     id: 2,
+  //     icon: <Chalkboard size={32} />,
+  //     value: "220/250",
+  //     label: "Semester wise Classes",
+  //     style: "bg-[#CEE6FF] w-44",
+  //     iconBgColor: "#7764FF",
+  //     iconColor: "#EFEFEF",
+  //     totalPercentage: "85%",
+  //   },
+  // ];
 
   const columns = [
     { title: "Subject", key: "subject" },
@@ -56,14 +135,14 @@ export default function SubjectAttendance() {
     { title: "Actions", key: "actions" },
   ];
 
-  const tableData = [
-    {
-      subject: "AI Lab",
-      total: 10,
-      attended: 8,
-      missed: 1,
-      leave: 1,
-      percentage: "80%",
+  const tableData =
+    dashboardData?.subjectWiseStats?.map((row: any) => ({
+      subject: row.subjectName,
+      total: row.total,
+      attended: row.attended,
+      missed: row.missed,
+      leave: row.leave,
+      percentage: `${row.percentage}%`,
       notes: (
         <div className="w-full flex justify-center">
           <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
@@ -75,145 +154,26 @@ export default function SubjectAttendance() {
         <span
           className="text-[#525252] cursor-pointer hover:underline underline"
           onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
+            router.push(
+              `/attendance?tab=subject-attendance-details&subjectId=${row.subjectId}`
+            )
           }
         >
           View Details
         </span>
       ),
-    },
-    {
-      subject: "Machine Learning",
-      total: 12,
-      attended: 10,
-      missed: 1,
-      leave: 1,
-      percentage: "83%",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-      actions: (
-        <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
-          onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
-          }
-        >
-          View Details
-        </span>
-      ),
-    },
-    {
-      subject: "Deep Learning Lab",
-      total: 14,
-      attended: 12,
-      missed: 2,
-      leave: 0,
-      percentage: "86%",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-      actions: (
-        <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
-          onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
-          }
-        >
-          View Details
-        </span>
-      ),
-    },
-    {
-      subject: "Database Lab",
-      total: 10,
-      attended: 9,
-      missed: 0,
-      leave: 1,
-      percentage: "90%",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-      actions: (
-        <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
-          onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
-          }
-        >
-          View Details
-        </span>
-      ),
-    },
-    {
-      subject: "Networking Lab",
-      total: 11,
-      attended: 8,
-      missed: 2,
-      leave: 1,
-      percentage: "72%",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-      actions: (
-        <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
-          onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
-          }
-        >
-          View Details
-        </span>
-      ),
-    },
-    {
-      subject: "Cyber Security Lab",
-      total: 9,
-      attended: 7,
-      missed: 1,
-      leave: 1,
-      percentage: "78%",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-      actions: (
-        <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
-          onClick={() =>
-            router.push(`/attendance?tab=subject-attendance-details`)
-          }
-        >
-          View Details
-        </span>
-      ),
-    },
-  ];
+    })) || [];
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 1) {
       router.push("/attendance");
     }
   };
+
+  if (loading || userLoading) {
+    return <div className="p-6 flext justify-center text-gray-500"><Loader/></div>;
+  }
+
 
   return (
     <>
@@ -250,11 +210,20 @@ export default function SubjectAttendance() {
           ))}
 
           <SemesterAttendanceCard
+            presentPercent={dashboardData?.semesterStats.present || 0}
+            absentPercent={dashboardData?.semesterStats.absent || 0}
+            latePercent={dashboardData?.semesterStats.late || 0}
+            overallPercent={dashboardData?.cards.percentage || 0}
+          />
+
+
+
+          {/* <SemesterAttendanceCard
             presentPercent={80}
             absentPercent={15}
             latePercent={5}
             overallPercent={85}
-          />
+          /> */}
           <WorkWeekCalendar style="w-[345px] mt-0" />
         </div>
 
