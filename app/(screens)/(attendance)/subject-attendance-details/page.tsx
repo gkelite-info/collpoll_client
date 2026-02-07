@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import CardComponent from "@/app/utils/card";
 import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
