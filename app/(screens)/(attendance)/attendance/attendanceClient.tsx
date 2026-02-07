@@ -19,6 +19,7 @@ import {
   TableSkeleton,
 } from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 interface TableRow {
   Subject: string;
@@ -222,17 +223,8 @@ export default function AttendanceClient() {
 
   if (!dashboardData) {
     return (
-      <div className="flex flex-col items-center justify-center p-10 text-center space-y-2">
-        <div className="text-red-500 text-lg font-bold">
-          Student Record Not Found
-        </div>
-        <p className="text-gray-500 text-sm">
-          We could not find a student profile linked to User ID:{" "}
-          <strong>{userId}</strong>.
-        </p>
-        <p className="text-gray-400 text-xs">
-          Please contact your administrator.
-        </p>
+      <div className="flex flex-col items-center justify-center h-screen p-10 text-center space-y-2">
+        <Loader />
       </div>
     );
   }
