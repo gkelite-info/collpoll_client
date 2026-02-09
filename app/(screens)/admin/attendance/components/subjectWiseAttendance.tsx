@@ -52,7 +52,7 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
   const [filters, setFilters] = useState({
     year: year ?? "",
     section: section ?? "",
-    subject : ""
+    subject: ""
     // date: "12 Aug 2025",
   });
 
@@ -96,7 +96,6 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
     setCurrentPage(1);
   }, [collegeSectionsId, collegeAcademicYearId, selectedSubjectId]);
 
-  // 🔴 MARKED CHANGE
   useEffect(() => {
     if (!collegeId || !collegeEducationId || !collegeBranchId || !collegeAcademicYearId) return;
 
@@ -233,7 +232,7 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
           </p>
         </div>
         <div className="w-80">
-          <CourseScheduleCard />
+          <CourseScheduleCard isVisibile={false} />
         </div>
       </div>
       <div className="flex mb-3 items-center gap-3 bg-gray-100 rounded-md">

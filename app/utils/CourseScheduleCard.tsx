@@ -59,7 +59,7 @@ export default function CourseScheduleCard({
             </p>
           )}
           {role === "Faculty" && (
-            <p className="text-[#EFEFEF] text-sm font-medium">
+            <p className="text-[#EFEFEF] text-md font-medium">
               {college_branch ? `${college_branch}` : "—"}
             </p>
           )}

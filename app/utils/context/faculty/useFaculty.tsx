@@ -4,7 +4,11 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useUser } from "../UserContext";
 import { fetchFacultyContext } from "./facultyContextAPI";
 
-type FacultyContextType = {
+export type FacultySubject = {
+    subjectName: string;
+}
+
+export type FacultyContextType = {
     loading: boolean;
     facultyId: number | null;
     userId: number | null;
@@ -23,28 +27,10 @@ type FacultyContextType = {
     sectionIds: number[];
     subjectIds: number[];
     academicYearIds: number[];
+    faculty_subject: FacultySubject[]
 };
 
-const FacultyContext = createContext<FacultyContextType>({
-    loading: true,
-    facultyId: null,
-    userId: null,
-    fullName: null,
-    email: null,
-    mobile: null,
-    role: null,
-    gender: null,
-    collegeId: null,
-    collegeEducationId: null,
-    faculty_edu_type: null,
-    collegeBranchId: null,
-    college_branch: null,
-    isActive: null,
-    sections: [],
-    sectionIds: [],
-    subjectIds: [],
-    academicYearIds: [],
-});
+const FacultyContext = createContext<FacultyContextType | null>(null);
 
 export const FacultyProvider = ({ children }: { children: React.ReactNode }) => {
     const { userId, role, loading: userLoading } = useUser();
@@ -68,6 +54,7 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         sectionIds: [],
         subjectIds: [],
         academicYearIds: [],
+        faculty_subject: []
     });
 
     useEffect(() => {
@@ -101,6 +88,7 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
                     sectionIds: faculty.sectionIds,
                     subjectIds: faculty.subjectIds,
                     academicYearIds: faculty.academicYearIds,
+                    faculty_subject: faculty.faculty_subject
                 });
             } catch (err) {
                 console.error("Failed to load faculty context", err);
@@ -118,4 +106,11 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
     );
 };
 
-export const useFaculty = () => useContext(FacultyContext);
+export function useFaculty() {
+    const context = useContext(FacultyContext);
+    if (!context) {
+        throw new Error("useFaculty must be used inside FacultyProvider");
+    }
+    return context;
+}
+

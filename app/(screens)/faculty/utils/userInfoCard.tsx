@@ -1,5 +1,6 @@
 "use client";
 
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useEffect, useState } from "react";
 
 export type UserInfoCardProps = {
@@ -16,13 +17,15 @@ export type UserInfoCardProps = {
   imageAlign?: "center" | "bottom";
 };
 
-
 type UserInfoProps = {
   cardProps: UserInfoCardProps[];
 };
 
+
 export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
+
+  const { faculty_subject } = useFaculty();
 
   useEffect(() => {
     const currentDate = new Date();
@@ -56,8 +59,8 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               <h1 className="text-lg font-semibold text-[#089144] leading-tight">
                 {!item.show && "Prof."} {item.user}
               </h1>
-              <span className="text-[#454545] text-sm font-medium">
-                {item.facultySubject}
+              <span className="text-[#454545] lg:ml-3 text-md font-medium">
+                {faculty_subject.map(s => s.subjectName).join(", ")}
               </span>
               <p className="text-[#454545] italic text-sm font-medium">
                 {item.show && "Parent of"}{" "}

@@ -67,13 +67,12 @@ export default function TaskPanel({
   return (
     <>
       
-      <div className="bg-white mt-5 rounded-md shadow-md p-4 h-[345px]">    
+      <div className="bg-white mt-5 rounded-md shadow-md p-4 h-[345px] overflow-y-auto">
       {role === "faculty" && (
         <h2 className="text-lg font-semibold text-[#16284F] mb-2">
           My Tasks
         </h2>
       )}
-        {/* HEADER */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-[#E7F7EE] rounded-full p-1">
@@ -108,16 +107,14 @@ export default function TaskPanel({
           </div>
           {onAddTask &&
             (
-              // ✅ faculty logic (UNCHANGED)
               role === "faculty" ||
 
-              // ✅ NEW: student logic (My Tasks only)
               (role === "student" && activeView === "student")
             ) && (
               <button
                 onClick={() => {
-                  setOpenModal(true);   // ✅ OPEN MODAL (NEW)
-                  onAddTask?.();       // ✅ KEEP EXISTING BEHAVIOR
+                  setOpenModal(true);
+                  onAddTask?.();
                 }}
                 className="flex items-center gap-2 px-3 py-1 rounded-full
    border border-[#43C17A] text-[#43C17A] text-xs font-medium
@@ -128,7 +125,6 @@ export default function TaskPanel({
 
             )}
         </div>
-        {/* TASK LIST */}
         {tasksToShow.length === 0 ? (
           <p className="text-xs text-gray-400 text-center mt-10">
             No tasks available
@@ -137,9 +133,7 @@ export default function TaskPanel({
           tasksToShow.map((task) => (
             <div
               key={task.facultytaskId}
-
-
-              className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between h-[80px]"
+              className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between"
             >
               <div className="w-[80%]">
                 <h5 className="text-sm font-semibold text-[#16284F]">

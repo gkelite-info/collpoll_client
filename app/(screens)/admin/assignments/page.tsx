@@ -64,7 +64,6 @@ const AssignmentPage = () => {
   const [dataList, setDataList] = useState<any[]>([]);
 
   const cardsPerPage = 15;
-  const router = useRouter();
 
   useEffect(() => {
     const loadData = async () => {
@@ -82,7 +81,6 @@ const AssignmentPage = () => {
 
         const adminCtx = await fetchAdminContext(userRecord.userId);
 
-        // 2. Fetch Aggregated Stats
         const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId);
         setDataList(data || []);
       } catch (err) {
@@ -94,7 +92,6 @@ const AssignmentPage = () => {
     loadData();
   }, []);
 
-  // Filtering Logic
   const filteredResults = useMemo(() => {
     return dataList.filter((item) => {
       const matchesSearch = item.name
@@ -106,7 +103,6 @@ const AssignmentPage = () => {
     });
   }, [search, deptFilter, yearFilter, dataList]);
 
-  // Pagination Logic
   const totalPages = Math.ceil(filteredResults.length / cardsPerPage);
   const currentCards = useMemo(() => {
     const start = (currentPage - 1) * cardsPerPage;
@@ -142,7 +138,7 @@ const AssignmentPage = () => {
           </p>
         </div>
         <div className="w-[30%]">
-          <CourseScheduleCard isVisibile={true} fullWidth={false} />
+          <CourseScheduleCard isVisibile={false} fullWidth={false} />
         </div>
       </div>
 
@@ -186,7 +182,6 @@ const AssignmentPage = () => {
           ))}
         </div>
 
-        {/* Pagination Controls (Hidden if 1 page) */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-8 mb-4">
             <button
