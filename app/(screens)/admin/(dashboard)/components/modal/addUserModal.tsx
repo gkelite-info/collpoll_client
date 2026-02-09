@@ -1,5 +1,4 @@
 "use client";
-<<<<<<< Updated upstream
 import {
   fetchModalInitialData,
   persistFaculty,
@@ -14,35 +13,12 @@ import { CustomMultiSelect } from "./userModalComponents";
 import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-=======
-import React, { useState, useEffect, useMemo } from "react";
-import { X, CaretDown, Eye, EyeSlash, Plus, Lock } from "@phosphor-icons/react";
-import toast, { Toaster } from "react-hot-toast";
-import { CustomMultiSelect, PillTag } from "./userModalComponents";
-import { persistUser, persistFaculty } from "@/lib/helpers/admin/upsertFaculty";
-
-import { useUser } from "@/app/utils/context/UserContext";
-import { supabase } from "@/lib/supabaseClient";
-import { generateUUID } from "@/lib/helpers/generateUUID";
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
-import { fetchEducationTypesForLoggedInAdmin } from "@/lib/helpers/admin/academicEducationAPI";
-import { fetchBranchOptionsForAdmin } from "@/lib/helpers/admin/collegeBranchAPI";
-import { fetchAcademicYearOptionsForAdmin } from "@/lib/helpers/admin/collegeAcademicYearAPI";
-import { fetchSectionOptionsForAdmin } from "@/lib/helpers/admin/collegeSectionsAPI";
-import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
-import { fetchSemesterOptionsForAdmin } from "@/lib/helpers/admin/collegeSemesterAPI";
-import { upsertStudentEntry } from "@/lib/helpers/profile/students";
-import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
-
-const ENTRY_TYPE_OPTIONS = ["Regular", "Lateral", "Transfer"];
->>>>>>> Stashed changes
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   user?: any;
 }> = ({ isOpen, onClose, user }) => {
-<<<<<<< Updated upstream
   const [dbData, setDbData] = useState<{
     educations: any[];
     branches: any[];
@@ -55,19 +31,6 @@ const AddUserModal: React.FC<{
     branches: [],
     years: [],
     sections: [],
-=======
-  const {
-    userId,
-    loading: userLoading,
-  } = useUser();
-
-  const [dbData, setDbData] = useState<any>({
-    educations: [],
-    departments: [],
-    academicYears: [],
-    sections: [],
-    semesters: [],
->>>>>>> Stashed changes
     subjects: [],
     semesters: [],
   });
@@ -86,10 +49,7 @@ const AddUserModal: React.FC<{
     confirmPassword: "",
     studentId: "",
     collegeId: "",
-<<<<<<< Updated upstream
     collegeCode: "",
-=======
->>>>>>> Stashed changes
     collegeIntId: 0,
     adminId: 0,
   };
@@ -110,184 +70,15 @@ const AddUserModal: React.FC<{
   const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-<<<<<<< Updated upstream
   const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
   const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
 
   const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
-=======
-  const [subjectInput, setSubjectInput] = useState("");
-  const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
-
-  const selectedSemesterLabel = selectedSemester[0];
-
-  const semesterObj = dbData.semesters.find(
-    (s: any) => s.label === selectedSemesterLabel
-  );
-
-  const semesterNumber = semesterObj?.value;
-
-
-  const [adminCtx, setAdminCtx] = useState<{
-    adminId: number;
-    collegeId: number;
-    collegePublicId: string;
-  } | null>(null);
-
-  const [ctxLoading, setCtxLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userId) return;
-
-    const loadAdminContext = async () => {
-      try {
-        setCtxLoading(true);
-        const ctx = await fetchAdminContext(userId);
-        setAdminCtx(ctx);
-      } catch (err) {
-        console.error("Failed to fetch admin context", err);
-        toast.error("Unable to load admin details");
-      } finally {
-        setCtxLoading(false);
-      }
-    };
-
-    loadAdminContext();
-  }, [userId]);
-
-  const handleSingleSelect = (
-    setList: React.Dispatch<React.SetStateAction<string[]>>,
-    value: string
-  ) => {
-    setList([value]);
-  };
-
-  useEffect(() => {
-    if (selectedDegrees.length === 0) {
-      setSelectedDepts([]);
-      setSelectedYears([]);
-      setSelectedSections([]);
-      setSelectedSubjects([]);
-
-      setDbData((prev: any) => ({
-        ...prev,
-        academicYears: [],
-        sections: [],
-      }));
-    }
-  }, [selectedDegrees]);
-
-
-  useEffect(() => {
-    if (!userId || selectedDepts.length !== 1) return;
-
-    const loadAcademicYears = async () => {
-      const education = dbData.educations.find(
-        (e: any) => e.name === selectedDegrees[0]
-      );
-
-      const branch = education?.rawDepts?.find(
-        (d: any) => d.code === selectedDepts[0]
-      );
-
-      if (!branch?.collegeBranchId) return;
-
-      const years = await fetchAcademicYearOptionsForAdmin(
-        userId,
-        branch.collegeBranchId
-      );
-
-      setDbData((prev: any) => ({
-        ...prev,
-        academicYears: years,
-      }));
-    };
-
-    loadAcademicYears();
-  }, [userId, selectedDepts]);
-
-  useEffect(() => {
-    setSelectedYears([]);
-    setSelectedSections([]);
-
-    setDbData((prev: any) => ({
-      ...prev,
-      sections: [],
-    }));
-  }, [selectedDepts]);
-
-  useEffect(() => {
-    if (
-      !userId ||
-      selectedYears.length !== 1 ||
-      selectedDepts.length !== 1 ||
-      selectedDegrees.length !== 1
-    ) return;
-
-    const loadSectionsAndSemesters = async () => {
-      const education = dbData.educations.find(
-        (e: any) => e.name === selectedDegrees[0]
-      );
-
-      const branch = education?.rawDepts?.find(
-        (d: any) => d.code === selectedDepts[0]
-      );
-
-      const year = dbData.academicYears.find(
-        (y: any) => y.label === selectedYears[0]
-      );
-
-      if (!education || !branch || !year) return;
-
-      const [sections, semesters] = await Promise.all([
-        fetchSectionOptionsForAdmin(
-          userId,
-          education.collegeEducationId,
-          branch.collegeBranchId,
-          year.id
-        ),
-        fetchSemesterOptionsForAdmin(
-          userId,
-          education.collegeEducationId,
-          year.id
-        ),
-      ]);
-
-      const normalizedSemesters = semesters.map((s: any) => ({
-        ...s,
-        label: s.name,
-        value: s.value,
-      }));
-
-      setDbData((prev: any) => ({
-        ...prev,
-        sections,
-        semesters: normalizedSemesters,
-      }));
-    };
-
-    loadSectionsAndSemesters();
-  }, [userId, selectedDegrees, selectedDepts, selectedYears]);
-
-
-  useEffect(() => {
-    if (!user && !userLoading && adminCtx) {
-      setBasicData((prev: any) => ({
-        ...prev,
-        collegeId: adminCtx.collegeId,
-        collegeIntId: adminCtx.collegeId,
-        adminId: adminCtx.adminId,
-      }));
-    }
-  }, [user, userLoading, adminCtx]);
->>>>>>> Stashed changes
 
   const resetForm = () => {
     setBasicData((prev: any) => ({
       ...initialBasicData,
-<<<<<<< Updated upstream
       collegeId: prev.collegeId,
       collegeIntId: prev.collegeIntId,
       adminId: prev.adminId,
@@ -298,12 +89,6 @@ const AddUserModal: React.FC<{
     setSelectedSubjectId(null);
     setSelectedSectionIds([]);
 
-=======
-      collegeId: adminCtx?.collegeId || "",
-      collegeIntId: adminCtx?.collegeId || 0,
-      adminId: adminCtx?.adminId || 0,
-    });
->>>>>>> Stashed changes
     setSelectedDegrees([]);
     setSelectedDepts([]);
     setSelectedYears([]);
@@ -324,40 +109,8 @@ const AddUserModal: React.FC<{
   };
 
   useEffect(() => {
-    if (!userId || selectedDegrees.length !== 1) return;
-
-    const loadBranches = async () => {
-      const education = dbData.educations.find(
-        (e: any) => e.name === selectedDegrees[0]
-      );
-
-      if (!education?.collegeEducationId) return;
-
-      const branches = await fetchBranchOptionsForAdmin(
-        userId,
-        education.collegeEducationId
-      );
-
-      setDbData((prev: any) => ({
-        ...prev,
-        educations: prev.educations.map((e: any) =>
-          e.collegeEducationId === education.collegeEducationId
-            ? { ...e, rawDepts: branches }
-            : e
-        ),
-      }));
-    };
-
-    loadBranches();
-  }, [userId, selectedDegrees]);
-
-
-  useEffect(() => {
-    if (!isOpen || !userId) return;
-
     if (isOpen) {
       const init = async () => {
-<<<<<<< Updated upstream
         try {
           const {
             data: { user: authUser },
@@ -394,18 +147,6 @@ const AddUserModal: React.FC<{
           console.error("Error initializing modal data:", error);
           toast.error("Failed to load college data");
         }
-=======
-        const educationTypes = await fetchEducationTypesForLoggedInAdmin(userId);
-
-        setDbData((prev: any) => ({
-          ...prev,
-          educations: educationTypes.map((e) => ({
-            name: e.value,
-            collegeEducationId: e.id,
-            rawDepts: [],
-          })),
-        }));
->>>>>>> Stashed changes
       };
 
       init();
@@ -426,7 +167,6 @@ const AddUserModal: React.FC<{
     }
   }, [isOpen, user]);
 
-<<<<<<< Updated upstream
   // const filteredBranches = useMemo(
   //   () =>
   //     dbData.branches.filter(
@@ -546,33 +286,6 @@ const AddUserModal: React.FC<{
         : [],
     [studentSelectedYear, dbData.sections],
   );
-=======
-  const degreeOptions = useMemo(
-    () => dbData.educations.map((e: any) => e.name),
-    [dbData.educations]
-  );
-  const availableDeptsGrouped = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
-    selectedDegrees.forEach((deg) => {
-      const edu = dbData.educations.find((e: any) => e.name === deg);
-      if (edu?.rawDepts) grouped[deg] = edu.rawDepts.map((d: any) => d.code);
-    });
-    return grouped;
-  }, [selectedDegrees, dbData.educations]);
-
-  const availableYearsGrouped = useMemo(() => {
-    const grouped: Record<string, string[]> = {};
-
-    selectedDepts.forEach((dept) => {
-      grouped[dept] = dbData.academicYears.map(
-        (y: any) => y.label
-      );
-    });
-
-    return grouped;
-  }, [selectedDepts, dbData.academicYears]);
-
->>>>>>> Stashed changes
 
   const handleBasicChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -625,7 +338,6 @@ const AddUserModal: React.FC<{
       return toast.error("Complete all academic fields for Faculty.");
 
     if (isStudent) {
-<<<<<<< Updated upstream
       if (
         !selectedDegrees.length ||
         !selectedDepts.length ||
@@ -636,26 +348,6 @@ const AddUserModal: React.FC<{
       ) {
         return toast.error("Complete all academic fields for Student.");
       }
-=======
-      if (selectedDegrees.length !== 1)
-        return toast.error("Students must have exactly one Degree.");
-      if (selectedDepts.length !== 1)
-        return toast.error("Students must have exactly one Department.");
-      if (selectedYears.length !== 1)
-        return toast.error("Students must have exactly one Year.");
-      if (selectedSections.length !== 1)
-        return toast.error("Students must have exactly one Section.");
-      if (selectedEntryType.length !== 1)
-        return toast.error("Students must have exactly one Entry Type.");
-      if (selectedSemester.length !== 1)
-        return toast.error("Students must have exactly one Semester.");
-    }
-    if (!user) {
-      if (!basicData.password)
-        return toast.error("Password is required for new users.");
-      if (basicData.password !== basicData.confirmPassword)
-        return toast.error("Passwords do not match.");
->>>>>>> Stashed changes
     }
 
     if (isParent && !basicData.studentId)
@@ -699,7 +391,6 @@ const AddUserModal: React.FC<{
         );
       }
 
-<<<<<<< Updated upstream
       if (isStudent) {
         const eduId = studentSelectedEducation?.collegeEducationId;
         const branchId = studentSelectedBranch?.collegeBranchId;
@@ -738,70 +429,6 @@ const AddUserModal: React.FC<{
           updatedAt: timestamp,
           isCurrent: true,
         });
-=======
-      if (isStudent && targetUserId) {
-
-        const education = dbData.educations.find(
-          (e: any) => e.name === selectedDegrees[0]
-        );
-
-        if (!education) {
-          throw new Error("Invalid education selected");
-        }
-
-        const branch = education.rawDepts?.find(
-          (d: any) => d.code === selectedDepts[0]
-        );
-
-        if (!branch) {
-          throw new Error("Invalid branch selected");
-        }
-
-        const studentPayload = {
-          userId: targetUserId,
-          collegeEducationId: education.collegeEducationId,
-          collegeBranchId: branch.collegeBranchId,
-          createdBy: basicData.adminId,
-          entryType: "Regular" as const,
-          status: "Active" as const,
-          collegeId: basicData.collegeId,
-        };
-
-        await createStudent(studentPayload, timestamp)
-
-        const academicYear = dbData.academicYears.find(
-          (y: any) => y.label === selectedYears[0]
-        );
-
-        if (!academicYear) {
-          throw new Error("Invalid academic year selected");
-        }
-
-        if (!semesterNumber) {
-          throw new Error("Please select a valid semester");
-        }
-
-        const semester = dbData.semesters.find(
-          (s: any) => s.value === semesterNumber
-        );
-
-        if (!semester) {
-          throw new Error("Invalid semester selected");
-        }
-
-        const section = dbData.sections.find(
-          (s: any) => s.label === selectedSections[0]
-        );
-
-        if (!section) {
-          throw new Error("Invalid section selected");
-        }
-
-        const result = await upsertStudentEntry(studentPayload);
-        if (!result.success)
-          throw new Error(result.error || "Failed to save student profile");
-        toast.success("Done");
->>>>>>> Stashed changes
       }
 
       if (isParent && targetUserId) {
@@ -817,7 +444,6 @@ const AddUserModal: React.FC<{
         });
       }
 
-<<<<<<< Updated upstream
       toast.success("User Created Successfully");
       setIsSuccess(true);
       setTimeout(() => {
@@ -826,11 +452,6 @@ const AddUserModal: React.FC<{
         setLoading(false);
         setIsSuccess(false);
       }, 2000);
-=======
-      toast.success("Saved Successfully");
-      // resetForm();
-      // onClose();
->>>>>>> Stashed changes
     } catch (e: any) {
       console.error(e);
       if (createdUserId && !user) {
@@ -842,7 +463,7 @@ const AddUserModal: React.FC<{
     }
   };
 
-  if (!isOpen || ctxLoading || !adminCtx) return null;
+  if (!isOpen) return null;
 
   return (
     <>
@@ -921,10 +542,6 @@ const AddUserModal: React.FC<{
                     onChange={handleBasicChange}
                     className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                     maxLength={10}
-<<<<<<< Updated upstream
-=======
-                    pattern="[0-9]*"
->>>>>>> Stashed changes
                   />
                 </div>
               </div>
@@ -994,7 +611,6 @@ const AddUserModal: React.FC<{
                   placeholder="Select Education"
                   options={degreeOptions}
                   selectedValues={selectedDegrees}
-<<<<<<< Updated upstream
                   onChange={(v) => {
                     handleSingleSelect(v, setSelectedDegrees);
                     setSelectedDepts([]);
@@ -1002,10 +618,6 @@ const AddUserModal: React.FC<{
                     setSelectedSemester([]);
                     setSelectedSections([]);
                   }}
-=======
-                  onChange={(v) => handleSingleSelect(setSelectedDegrees, v)
-                  }
->>>>>>> Stashed changes
                   onRemove={() => setSelectedDegrees([])}
                 />
               )}
@@ -1162,7 +774,6 @@ const AddUserModal: React.FC<{
                   <CustomMultiSelect
                     label="Branch Type"
                     placeholder="Select Branch"
-<<<<<<< Updated upstream
                     options={branchOptions}
                     selectedValues={selectedDepts}
                     disabled={selectedDegrees.length === 0}
@@ -1172,13 +783,6 @@ const AddUserModal: React.FC<{
                       setSelectedSemester([]);
                       setSelectedSections([]);
                     }}
-=======
-                    options={availableDeptsGrouped}
-                    selectedValues={selectedDepts}
-                    disabled={selectedDegrees.length === 0}
-                    isGrouped={true}
-                    onChange={(v) => handleSingleSelect(setSelectedDepts, v)}
->>>>>>> Stashed changes
                     onRemove={() => setSelectedDepts([])}
                   />
                   <CustomMultiSelect
@@ -1187,7 +791,6 @@ const AddUserModal: React.FC<{
                     options={yearOptions}
                     selectedValues={selectedYears}
                     disabled={selectedDepts.length === 0}
-<<<<<<< Updated upstream
                     onChange={(v) => {
                       handleSingleSelect(v, setSelectedYears);
                       setSelectedSemester([]);
@@ -1205,31 +808,10 @@ const AddUserModal: React.FC<{
                     disabled={selectedYears.length === 0}
                     onChange={(v) => handleSingleSelect(v, setSelectedSemester)}
                     onRemove={() => setSelectedSemester([])}
-=======
-                    isGrouped={true}
-                    onChange={(v) => handleSingleSelect(setSelectedYears, v)}
-                    onRemove={() => (setSelectedYears([]))}
->>>>>>> Stashed changes
                   />
-                  <CustomMultiSelect
-                    label="Semester"
-                    placeholder="Select Semester"
-                    // options={dbData.semesters?.map(
-                    //   (s: any) => `Semester ${s.collegeSemester}`
-                    // ) ?? []}
-                    options={dbData.semesters.map((s: any) => s.label)}
-                    selectedValues={selectedSemester}
-                    disabled={selectedYears.length === 0}
-                    isGrouped={false}
-                    onChange={(v) => handleSingleSelect(setSelectedSemester, v)}
-                    onRemove={() => setSelectedSemester([])}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
                     label="Section"
                     placeholder="Select Section"
-<<<<<<< Updated upstream
                     options={sectionOptions}
                     selectedValues={selectedSections}
                     disabled={selectedYears.length === 0}
@@ -1248,27 +830,7 @@ const AddUserModal: React.FC<{
                       handleSingleSelect(v, setSelectedEntryType)
                     }
                     onRemove={() => setSelectedEntryType([])}
-=======
-                    // options={availableYearsGrouped}
-                    options={dbData.sections?.map((s: any) => s.label) ?? []}
-                    selectedValues={selectedSections}
-                    disabled={selectedDepts.length === 0}
-                    isGrouped={false}
-                    onChange={(v) => handleSingleSelect(setSelectedSections, v)}
-                    onRemove={() => (setSelectedSections([]))}
->>>>>>> Stashed changes
                   />
-                  {isStudent && (
-                    <CustomMultiSelect
-                      label="Entry Type"
-                      placeholder="Select Entry Type"
-                      options={ENTRY_TYPE_OPTIONS}
-                      selectedValues={selectedEntryType}
-                      isGrouped={false}
-                      onChange={(v) => handleSingleSelect(setSelectedEntryType, v)}
-                      onRemove={() => setSelectedEntryType([])}
-                    />
-                  )}
                 </div>
               </>
             )}
@@ -1282,14 +844,7 @@ const AddUserModal: React.FC<{
                     className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
                   >
                     <div
-<<<<<<< Updated upstream
                       className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
-=======
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g
-                        ? "border-[#48C78E]"
-                        : "border-gray-300"
-                        }`}
->>>>>>> Stashed changes
                     >
                       {basicData.gender === g && (
                         <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
