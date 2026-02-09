@@ -109,34 +109,6 @@ export default function StuDashLeft() {
         }
     ];
 
-
-    // const lectures = [
-    //     {
-    //         time: "10:30 AM",
-    //         title: "Java Programming",
-    //         professor: "Prof. Ramesh Kumar",
-    //         description: "We’ll cover classes, objects, and inheritance with examples.",
-    //     },
-    //     {
-    //         time: "12:00 PM",
-    //         title: "Data Structures",
-    //         professor: "Prof. Anita Sharma",
-    //         description: "Introduction to arrays, linked lists, and stacks.",
-    //     },
-    //     {
-    //         time: "02:00 PM",
-    //         title: "Operating Systems",
-    //         professor: "Prof. Suresh Reddy",
-    //         description: "Processes, threads, and memory management explained.",
-    //     },
-    //     {
-    //         time: "03:30 PM",
-    //         title: "DBMS",
-    //         professor: "Prof. Rajesh Gupta",
-    //         description: "SQL queries, normalization, and transactions.",
-    //     },
-    // ];
-
     const subjects = [
         {
             title: "Data Structures and Algorithms",

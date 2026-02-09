@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 export type CollegeSemesterRow = {
@@ -12,6 +13,36 @@ export type CollegeSemesterRow = {
     updatedAt: string;
     deletedAt: string | null;
 };
+
+export async function upsertCollegeSemesters(
+    semesters: { semester: number; id?: number }[],
+    context: { collegeEducationId: number; collegeAcademicYearId: number; collegeId: number; adminId: number }
+) {
+    const now = new Date().toISOString();
+
+    const { data, error } = await supabase
+        .from("college_semester")
+        .upsert(
+            semesters.map((s) => ({
+                collegeSemester: s.semester,
+                collegeEducationId: context.collegeEducationId,
+                collegeAcademicYearId: context.collegeAcademicYearId,
+                collegeId: context.collegeId,
+                createdBy: context.adminId,
+                createdAt: now,
+                updatedAt: now,
+            })),
+            { onConflict: "collegeEducationId, collegeAcademicYearId, collegeSemester, collegeId" }
+        )
+        .select("collegeSemesterId");
+
+    if (error) {
+        console.error("upsertCollegeSemesters error:", error);
+        throw error;
+    }
+
+    return data;
+}
 
 export async function fetchCollegeSemesters(
     collegeId: number,
@@ -120,4 +151,32 @@ export async function deactivateCollegeSemester(
     }
 
     return { success: true };
+}
+
+export async function fetchCollegeSemestersForLoggedInAdmin(
+    userId: number,
+    collegeEducationId: number,
+    collegeAcademicYearId: number
+) {
+    const { collegeId } = await fetchAdminContext(userId);
+
+    return fetchCollegeSemesters(collegeId, collegeEducationId, collegeAcademicYearId);
+}
+
+export async function fetchSemesterOptionsForAdmin(
+    userId: number,
+    collegeEducationId: number,
+    collegeAcademicYearId: number
+) {
+    const semesters = await fetchCollegeSemestersForLoggedInAdmin(
+        userId,
+        collegeEducationId,
+        collegeAcademicYearId
+    );
+
+    return semesters.map((s) => ({
+        collegeSemesterId: s.collegeSemesterId,
+        name: `Semester ${s.collegeSemester}`,
+        value: s.collegeSemester,
+    }));
 }

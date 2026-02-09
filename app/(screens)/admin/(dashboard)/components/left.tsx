@@ -33,7 +33,6 @@ export default function AdminDashLeft({
   const {
     cards,
     loading: adminLoading,
-    refresh,
   } = useAdminDashboard();
   const isAutomationsView = searchParams.get("view") === "automations";
   const isPolicyView = searchParams.get("view") === "policy-setup";

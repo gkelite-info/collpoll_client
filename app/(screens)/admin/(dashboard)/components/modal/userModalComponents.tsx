@@ -65,18 +65,15 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       <div className="relative">
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`w-full border ${
-            isOpen
-              ? "border-[#48C78E] ring-1 ring-[#48C78E]"
-              : "border-gray-200"
-          } rounded-md px-3 py-1 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${
-            disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
-          }`}
+          className={`w-full border ${isOpen
+            ? "border-[#48C78E] ring-1 ring-[#48C78E]"
+            : "border-gray-200"
+            } rounded-md px-3 py-1 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
+            }`}
         >
           <span
-            className={`truncate mr-2 ${
-              selectedValues.length ? "text-gray-700" : "text-gray-400"
-            }`}
+            className={`truncate mr-2 ${selectedValues.length ? "text-gray-700" : "text-gray-400"
+              }`}
           >
             {selectedValues.length > 0
               ? `${selectedValues.length} ${label}(s) selected`
@@ -88,54 +85,56 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
         {isOpen && !disabled && (
           <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-100 rounded-md shadow-xl max-h-48 overflow-y-auto custom-scrollbar">
             {!isGrouped
-              ? (options as string[]).map((opt) => (
-                  <div
-                    key={opt}
-                    onClick={() => onChange(opt)}
-                    className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
-                  >
-                    <span>{opt}</span>
-                    {selectedValues.includes(opt) && (
-                      <Check
-                        size={14}
-                        weight="bold"
-                        className="text-[#48C78E]"
-                      />
-                    )}
-                  </div>
-                ))
+              ? (options as string[]).map((opt, idx) => (
+                <div key={`${label}-${opt}-${idx}`}
+                  onClick={() => onChange(opt)}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+                >
+                  <span>{opt}</span>
+                  {selectedValues.includes(opt) && (
+                    <Check
+                      size={14}
+                      weight="bold"
+                      className="text-[#48C78E]"
+                    />
+                  )}
+                </div>
+              ))
               : Object.entries(options as Record<string, string[]>).map(
-                  ([category, items]) => (
-                    <div key={category}>
-                      <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                        {category}
-                      </div>
-                      {items.map((opt) => (
-                        <div
-                          key={opt}
-                          onClick={() => onChange(opt)}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
-                        >
-                          <span>{opt}</span>
-                          {selectedValues.includes(opt) && (
-                            <Check
-                              size={14}
-                              weight="bold"
-                              className="text-[#48C78E]"
-                            />
-                          )}
-                        </div>
-                      ))}
+                ([category, items]) => (
+                  <div key={`${label}-${category}`}>
+                    <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                      {category}
                     </div>
-                  )
-                )}
+                    {items.map((opt) => (
+                      <div key={`${label}-${category}-${opt}`}
+                        onClick={() => onChange(opt)}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
+                      >
+                        <span>{opt}</span>
+                        {selectedValues.includes(opt) && (
+                          <Check
+                            size={14}
+                            weight="bold"
+                            className="text-[#48C78E]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
           </div>
         )}
       </div>
       {selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-2">
           {selectedValues.map((val) => (
-            <PillTag key={val} label={val} onRemove={() => onRemove(val)} />
+            <PillTag
+              key={`${label}-selected-${val}`}
+              label={val}
+              onRemove={() => onRemove(val)}
+            />
           ))}
         </div>
       )}

@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 export type CollegeEducationRow = {
@@ -42,11 +43,20 @@ export async function fetchCollegeEducations(collegeId: number) {
 export async function fetchEducationTypes(collegeId: number) {
   const data = await fetchCollegeEducations(collegeId);
 
+<<<<<<< Updated upstream
   return data.map((row) => ({
     id: row.collegeEducationId,
     label: row.collegeEducationType,
     value: row.collegeEducationType,
   }));
+=======
+    return data.map((row) => ({
+        id: row.collegeEducationId,
+        label: row.collegeEducationType,
+        value: row.collegeEducationType,
+    }));
+
+>>>>>>> Stashed changes
 }
 
 export async function fetchExistingEducation(
@@ -123,3 +133,19 @@ export async function deactivateCollegeEducation(collegeEducationId: number) {
 
   return { success: true };
 }
+<<<<<<< Updated upstream
+=======
+
+export async function fetchEducationTypesForLoggedInAdmin(userId: number) {
+
+    const { collegeId } = await fetchAdminContext(userId);
+
+    const rows = await fetchCollegeEducations(collegeId);
+
+    return rows.map((row) => ({
+        id: row.collegeEducationId,
+        label: row.collegeEducationType,
+        value: row.collegeEducationType,
+    }));
+}
+>>>>>>> Stashed changes

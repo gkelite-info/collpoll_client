@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 type BranchInput = {
@@ -42,5 +43,78 @@ export async function upsertCollegeBranches(
     }
 
     return data;
+}
+
+export async function fetchCollegeBranches(
+    collegeId: number,
+    collegeEducationId: number
+) {
+    const { data, error } = await supabase
+        .from("college_branch")
+        .select(`
+      collegeBranchId,
+      collegeBranchType,
+      collegeBranchCode,
+      collegeEducationId,
+      collegeId,
+      createdBy,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `)
+        .eq("collegeId", collegeId)
+        .eq("collegeEducationId", collegeEducationId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("collegeBranchCode", { ascending: true });
+
+    if (error) {
+        console.error("fetchCollegeBranches error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+
+export async function fetchCollegeBranchesForLoggedInAdmin(
+    userId: number,
+    collegeEducationId: number
+) {
+    const { collegeId } = await fetchAdminContext(userId);
+
+    return fetchCollegeBranches(collegeId, collegeEducationId);
+}
+
+export async function fetchBranchOptionsForAdmin(
+    userId: number,
+    collegeEducationId: number
+) {
+    const { collegeId } = await fetchAdminContext(userId);
+
+    const { data, error } = await supabase
+        .from("college_branch")
+        .select(`
+      collegeBranchId,
+      collegeBranchType,
+      collegeBranchCode
+    `)
+        .eq("collegeId", collegeId)
+        .eq("collegeEducationId", collegeEducationId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("collegeBranchCode", { ascending: true });
+
+    if (error) {
+        console.error("fetchBranchOptionsForAdmin error:", error);
+        throw error;
+    }
+
+    return (data ?? []).map((b) => ({
+        collegeBranchId: b.collegeBranchId,
+        name: b.collegeBranchType,
+        code: b.collegeBranchCode,
+    }));
 }
 
