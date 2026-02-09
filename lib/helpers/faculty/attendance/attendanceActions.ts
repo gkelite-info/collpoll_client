@@ -224,6 +224,7 @@ export async function saveAttendance(classId: string, payload: any[]) {
         status: dbStatus,
         reason: p.reason || null,
         markedAt: data?.date,
+        facultyMark: p.facultyId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

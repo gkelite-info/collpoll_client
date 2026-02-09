@@ -2,15 +2,9 @@
 
 import { createClient } from "@/app/utils/supabase/server";
 
-const safeGet = (
-  data: any,
-  key: string | null = null,
-  fallback: any = "N/A",
-) => {
-  if (!data) return fallback;
-  const item = Array.isArray(data) ? data[0] : data;
-  if (!item) return fallback;
-  return key ? (item[key] ?? fallback) : item;
+const safeGet = (data: any) => {
+  if (!data) return null;
+  return Array.isArray(data) ? data[0] : data;
 };
 
 export async function getStudentAttendanceDetails(studentIdStr: string) {
@@ -19,127 +13,143 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
 
   if (isNaN(studentId)) return null;
 
-  const { data: rawStudent, error } = await supabase
+  const { data: student, error: studentError } = await supabase
     .from("students")
     .select(
       `
       studentId,
-      userId,
-      collegeId,
-      user:users (
-        fullName,
-        email,
-        mobile,
-        gender
-      ),
-      branch:college_branch (collegeBranchType),
-      degree:college_education (collegeEducationType),
-      academic:student_academic_history (
-        isCurrent,
-        section:college_sections(collegeSections),
-        year:college_academic_year(collegeAcademicYear)
-      )
+      user:users (fullName, email, mobile, gender), 
+      education:college_education (collegeEducationType), 
+      branch:college_branch (collegeBranchCode) 
     `,
     )
     .eq("studentId", studentId)
-    .eq("academic.isCurrent", true)
     .single();
 
-  if (error || !rawStudent) {
-    console.error("Profile Fetch Error:", error);
+  if (studentError || !student) {
+    console.error("❌ Student Fetch Error:", studentError);
     return null;
   }
 
-  // 2. Fetch Attendance Records
+  const { data: history, error: historyError } = await supabase
+    .from("student_academic_history")
+    .select(
+      `
+       section:college_sections (collegeSections),
+       year:college_academic_year (collegeAcademicYear)
+    `,
+    )
+    .eq("studentId", studentId)
+    .eq("isCurrent", true)
+    .single();
+
+  const user = safeGet(student.user) || {};
+  const branch = safeGet(student.branch) || {};
+  const education = safeGet(student.education) || {};
+
+  const section = safeGet(history?.section) || {};
+  const yearData = safeGet(history?.year) || {};
+
   const { data: records, error: attendanceError } = await supabase
     .from("attendance_record")
     .select(
       `
       status,
       event:calendar_event (
-        subject:college_subjects (
-           subjectName,
-           subjectCode
-        )
+        subject,
+        college_subjects (subjectName, subjectCode)
       )
     `,
     )
     .eq("studentId", studentId);
 
-  if (attendanceError) {
-    console.error("Attendance Fetch Error:", attendanceError);
-    return null;
-  }
-
-  let present = 0;
-  let absent = 0;
-  let leave = 0;
-
   const subjectMap = new Map<
-    string,
-    { name: string; code: string; present: number; total: number }
+    number,
+    {
+      name: string;
+      code: string;
+      total: number;
+      present: number;
+      absent: number;
+      leave: number;
+    }
   >();
 
+  let totalClasses = 0;
+  let totalPresent = 0;
+  let totalAbsent = 0;
+  let totalLeave = 0;
+
   records?.forEach((r: any) => {
-    if (r.status === "PRESENT") present++;
-    if (r.status === "ABSENT") absent++;
-    if (r.status === "LEAVE") leave++;
+    const event = safeGet(r.event);
+    if (!event) return;
 
-    if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
-      const event = safeGet(r.event);
-      const subj = safeGet(event?.subject);
+    const subjId = event.subject;
+    const subjectData = safeGet(event.college_subjects);
 
-      if (subj && subj !== "N/A") {
-        const key = subj.subjectCode;
-        if (!subjectMap.has(key)) {
-          subjectMap.set(key, {
-            name: subj.subjectName,
-            code: subj.subjectCode,
-            present: 0,
-            total: 0,
-          });
-        }
+    const subjName = subjectData?.subjectName || "Unknown Subject";
+    const subjCode = subjectData?.subjectCode || "N/A";
 
-        const entry = subjectMap.get(key)!;
-        entry.total++;
-        if (r.status === "PRESENT") entry.present++;
-      }
+    if (!subjId) return;
+
+    if (!subjectMap.has(subjId)) {
+      subjectMap.set(subjId, {
+        name: subjName,
+        code: subjCode,
+        total: 0,
+        present: 0,
+        absent: 0,
+        leave: 0,
+      });
+    }
+
+    const stats = subjectMap.get(subjId)!;
+
+    if (["CLASS_CANCEL", "CANCELLED", "CANCEL_CLASS"].includes(r.status)) {
+      return;
+    }
+
+    stats.total++;
+    totalClasses++;
+
+    if (r.status === "PRESENT" || r.status === "LATE") {
+      stats.present++;
+      totalPresent++;
+    } else if (r.status === "LEAVE") {
+      stats.leave++;
+      totalLeave++;
+    } else {
+      stats.absent++;
+      totalAbsent++;
     }
   });
 
   const subjectAttendance = Array.from(subjectMap.values()).map((s) => ({
     subjectName: s.name,
     subjectCode: s.code,
-    present: s.present,
     total: s.total,
+    present: s.present,
+    absent: s.absent,
+    leave: s.leave,
     percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
   }));
 
-  const student = rawStudent as any;
-  const user = safeGet(student.user);
-  const branchObj = safeGet(student.branch);
-  const degreeObj = safeGet(student.degree);
-
-  const academic = safeGet(student.academic);
-  const sectionObj = safeGet(academic.section);
-  const yearObj = safeGet(academic.year);
-
   return {
-    studentsId: student.studentId,
     fullName: user.fullName || "Unknown",
-    email: user.email || "N/A",
+    studentsId: student.studentId,
+    department: branch.collegeBranchCode || "N/A",
+    year: yearData.collegeAcademicYear || "N/A",
+    section: section.collegeSections || "N/A",
+    degree: education.collegeEducationType || "N/A",
     mobile: user.mobile || "N/A",
-    address: "N/A",
+    email: user.email || "N/A",
+    address: "Not Available",
     photo: user.gender === "Female" ? "/student-f.png" : "/maleuser.png",
 
-    department: branchObj.collegeBranchType || "General",
-    year: parseInt(yearObj.collegeAcademicYear) || 1,
-    section: sectionObj.collegeSections || "N/A",
-    degree: degreeObj.collegeEducationType || "Degree",
+    attendanceDays: totalPresent,
+    absentDays: totalAbsent,
+    leaveDays: totalLeave,
 
-    attendanceDays: present,
-    absentDays: absent,
-    leaveDays: leave,
-    subjectAttendance: subjectAttendance,
+    subjectAttendance,
   };
 }

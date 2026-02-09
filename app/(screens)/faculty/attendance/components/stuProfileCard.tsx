@@ -12,12 +12,10 @@ interface Props {
   address: string;
   photo: string;
 
-  // Default Mode Stats
   attendanceDays?: number;
   absentDays?: number;
   leaveDays?: number;
 
-  // Subject Mode Props (Optional)
   isSubjectMode?: boolean;
   subjectSummary?: {
     total: number;
@@ -87,17 +85,15 @@ export default function StudentProfileCard({
             {email}
           </p>
         </div>
-        <div>
+        {/* <div>
           <p className="text-sm text-[#666666]">Address</p>
           <p className="mt-0.5 text-base font-semibold text-[#333333]">
             {address}
           </p>
-        </div>
+        </div> */}
       </div>
 
-      {/* Conditional Stats Section */}
       {isSubjectMode && subjectSummary && onFilterChange ? (
-        // --- NEW 4-TILE SUBJECT MODE ---
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <FilterTile
             label="Total Classes"
