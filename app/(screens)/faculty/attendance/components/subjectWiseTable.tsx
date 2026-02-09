@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
 export interface SubjectStat {
   subjectName: string;
   subjectCode: string;
@@ -39,7 +38,6 @@ export default function SubjectWiseAttendance({
         <table className="w-full text-left border-separate border-spacing-0">
           <thead>
             <tr className="bg-[#F5F5F5]">
-              {/* REMOVED Subject Code Header */}
               <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] whitespace-nowrap rounded-tl-lg">
                 Subject Name
               </th>
