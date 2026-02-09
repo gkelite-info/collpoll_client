@@ -25,6 +25,7 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
 import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 import { FilterDropdown } from "../academics/components/filterDropdown";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 interface ExtendedDepartment extends Department {
   id: string;
   section: string;
@@ -68,6 +69,9 @@ const getDynamicBranchStyle = (branchCode: string) => {
 
 interface AcademicCard {
   id: string;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSectionsId: number;
   branchName: string;
   branchCode: string;
   section: string;
@@ -101,6 +105,7 @@ const AttendancePage = () => {
   const [statsLoading, setStatsLoading] = useState(true);
   const showStatsLoader = adminLoading || statsLoading;
   const { userId } = useUser()
+  const { collegeEducationId } = useAdmin()
 
   const [stats, setStats] = useState({
     totalDepartments: 0,
@@ -496,7 +501,7 @@ const AttendancePage = () => {
           {/* {filteredCards.map((dept) => (
             <FacultyAttendanceCard key={dept.id} {...dept} />
           ))} */}
-          {loading ?
+          {(loading || adminLoading || collegeEducationId === null) ?
             <div className="flex items-center col-span-full justify-center w-full h-32">
               <Loader />
             </div>
@@ -508,7 +513,6 @@ const AttendancePage = () => {
               </div> :
               filteredCards.map((dept) => {
                 const style = getDynamicBranchStyle(dept.branchCode);
-
                 return (
                   <FacultyAttendanceCard
                     key={dept.id}
@@ -516,6 +520,11 @@ const AttendancePage = () => {
                     text={style.text}
                     color={style.color}
                     bgColor={style.bgColor}
+                    collegeId={adminContext!.collegeId}
+                    collegeEducationId={collegeEducationId}
+                    collegeBranchId={dept.collegeBranchId}
+                    collegeAcademicYearId={dept.collegeAcademicYearId}
+                    collegeSectionsId={dept.collegeSectionsId}
                     year={dept.year}
                     totalStudents={dept.totalStudents}
                     faculties={dept.faculties}

@@ -7,6 +7,11 @@ export interface Department {
   bgColor: string;
   branch: string;
   section: string;
+  collegeId: number;
+  collegeEducationId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSectionsId: number;
   totalStudents: number;
   totalSubjects: number;
   totalFaculties: number;
@@ -32,6 +37,11 @@ const FacultyAttendanceCard = ({
   totalFaculties,
   branch,
   section,
+  collegeId,
+  collegeEducationId,
+  collegeBranchId,
+  collegeAcademicYearId,
+  collegeSectionsId,
   belowThresholdCount,
   year,
   faculties = [],
@@ -49,6 +59,12 @@ const FacultyAttendanceCard = ({
     params.set("subjects", totalSubjects.toString());
     params.set("below75", (belowThresholdCount ?? 0).toString());
     params.set("faculties", totalFaculties.toString());
+    params.set("collegeId", collegeId.toString());
+    params.set("collegeEducationId", collegeEducationId.toString());
+    params.set("collegeBranchId", collegeBranchId.toString());
+    params.set("collegeAcademicYearId", collegeAcademicYearId.toString());
+    params.set("collegeSectionsId", collegeSectionsId.toString());
+    params.set("year", year ?? "");
     router.push(`${pathname}?${params.toString()}`);
   };
 
