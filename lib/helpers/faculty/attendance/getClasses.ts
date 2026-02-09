@@ -64,7 +64,6 @@ function formatDate(dateString: string): string {
   return `${day}${suffix(day)} ${month} ${year}`;
 }
 
-// Safe accessor for handling Supabase join arrays vs objects
 function safeGet(data: any, key: string, fallback: string = ""): string {
   if (!data) return fallback;
   if (Array.isArray(data)) {
@@ -73,15 +72,11 @@ function safeGet(data: any, key: string, fallback: string = ""): string {
   return data?.[key] || fallback;
 }
 
-// --- Main Functions ---
-
 export async function getUpcomingClasses(
   userId: number,
 ): Promise<UpcomingLesson[]> {
-  // 1. Initialize Server Client
   const supabase = await createClient();
 
-  // 2. Get Faculty ID
   const { data: faculty, error: facultyError } = await supabase
     .from("faculty")
     .select("facultyId")
@@ -95,7 +90,6 @@ export async function getUpcomingClasses(
 
   const today = new Date().toISOString().split("T")[0];
 
-  // 3. Fetch Events
   const { data: events, error: eventsError } = await supabase
     .from("calendar_event")
     .select(
@@ -140,7 +134,6 @@ export async function getUpcomingClasses(
     return [];
   }
 
-  // 4. Transform Data
   return events.map((event: any) => {
     const sectionsData = event.calendar_event_section || [];
 
@@ -187,7 +180,6 @@ export async function getUpcomingClasses(
       "Unknown Subject",
     );
 
-    // Topic Title Logic
     const topicTitle = safeGet(event.topicData, "topicTitle");
     const description = topicTitle || `Class for ${sectionNames}`;
 
@@ -243,7 +235,6 @@ export async function getClassDetails(
     return null;
   }
 
-  // 3. Transform Data
   const sectionsData = event.calendar_event_section || [];
 
   const departments = Array.from(

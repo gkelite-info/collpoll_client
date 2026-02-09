@@ -8,8 +8,6 @@ import SubjectWiseAttendance from "../components/subjectWiseTable";
 import AiBotCard from "../components/aiBotCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 
-// 1. UPDATE IMPORT to the new helper file
-
 export default function StudentAttendanceDetailsPage() {
   const params = useParams();
   const studentId = Array.isArray(params?.studentId)

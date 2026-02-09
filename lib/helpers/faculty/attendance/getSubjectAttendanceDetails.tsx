@@ -2,7 +2,6 @@
 
 import { createClient } from "@/app/utils/supabase/server";
 
-// Helper to handle Supabase "Array vs Object" returns
 const safeGet = (
   data: any,
   key: string | null = null,
@@ -21,12 +20,10 @@ export async function getSubjectAttendanceDetails(
   const supabase = await createClient();
   const studentId = parseInt(studentIdStr);
 
-  // Decode URL (e.g., "CS307PC" might come in clean, but good to be safe)
   const subjectCode = decodeURIComponent(subjectCodeStr);
 
   if (isNaN(studentId)) return null;
 
-  // 1. Find Subject ID & Name from Code
   const { data: subjectData, error: subjError } = await supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
@@ -40,7 +37,6 @@ export async function getSubjectAttendanceDetails(
 
   const subjectId = subjectData.collegeSubjectId;
 
-  // 2. Fetch Attendance Records for this Student + Subject
   const { data: records, error: attendanceError } = await supabase
     .from("attendance_record")
     .select(
@@ -60,25 +56,22 @@ export async function getSubjectAttendanceDetails(
     `,
     )
     .eq("studentId", studentId)
-    .eq("event.subject", subjectId) // Filter by Subject ID
-    .order("markedAt", { ascending: false }); // Newest first
+    .eq("event.subject", subjectId)
+    .order("markedAt", { ascending: false });
 
   if (attendanceError) {
     console.error("Attendance Fetch Error:", attendanceError);
     return null;
   }
 
-  // 3. Process Data
   let totalClasses = 0;
   let attended = 0;
   let absent = 0;
   let leave = 0;
 
-  // To find the main faculty for this subject
   const facultyNames = new Map<string, number>();
 
   const formattedRecords = records.map((r: any) => {
-    // Stats
     if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
       totalClasses++;
       if (r.status === "PRESENT") attended++;
@@ -86,14 +79,12 @@ export async function getSubjectAttendanceDetails(
       if (r.status === "LEAVE") leave++;
     }
 
-    // Faculty logic (Count occurrences to find the main one)
     const event = safeGet(r.event);
     const faculty = safeGet(event?.faculty);
     const fName = faculty?.fullName || "Unknown Faculty";
     facultyNames.set(fName, (facultyNames.get(fName) || 0) + 1);
 
-    // Date Formatting
-    const eventDate = r.date || event.date; // Prefer record date, fallback to event date
+    const eventDate = r.date || event.date;
     const dateObj = new Date(eventDate);
     const formattedDate = dateObj.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -101,12 +92,10 @@ export async function getSubjectAttendanceDetails(
       year: "numeric",
     });
 
-    // Time Formatting
     const timeStr = event.fromTime
       ? `${event.fromTime.slice(0, 5)} - ${event.toTime.slice(0, 5)}`
       : "N/A";
 
-    // Status UI Mapping
     let uiStatus = "Present";
     switch (r.status) {
       case "PRESENT":
@@ -132,13 +121,12 @@ export async function getSubjectAttendanceDetails(
       id: r.attendanceRecordId,
       date: formattedDate,
       time: timeStr,
-      topic: "General Session", // Schema has eventTopic ID, would need another join for name. Keeping simple.
+      topic: "General Session",
       status: uiStatus,
       reason: r.reason || "-",
     };
   });
 
-  // Determine Main Faculty (Most frequent)
   let mainFaculty = "Unknown Faculty";
   let maxCount = 0;
   facultyNames.forEach((count, name) => {

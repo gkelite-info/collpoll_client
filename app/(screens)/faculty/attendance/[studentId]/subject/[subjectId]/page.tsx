@@ -7,14 +7,12 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import AiBotCard from "../../../components/aiBotCard";
 import StudentProfileCard from "../../../components/stuProfileCard";
 
-// Import Helpers
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
 
 export default function SubjectDetailPage() {
   const params = useParams();
 
-  // Safe Parameter Extraction
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
     : params?.studentId;
@@ -40,9 +38,8 @@ export default function SubjectDetailPage() {
     const fetchData = async () => {
       setLoading(true);
 
-      // Fetch both Student Profile & Subject Specific Data
       const [attendanceRes, studentRes] = await Promise.allSettled([
-        getSubjectAttendanceDetails(studentId, subjectId), // Pass Code directly
+        getSubjectAttendanceDetails(studentId, subjectId),
         getStudentAttendanceDetails(studentId),
       ]);
 
@@ -89,8 +86,6 @@ export default function SubjectDetailPage() {
     );
   }
 
-  // --- UI Logic ---
-
   const leaveCount = data.summary.leave;
 
   const subjectSummary = {
@@ -107,7 +102,6 @@ export default function SubjectDetailPage() {
 
   return (
     <main className="px-4 py-4 min-h-screen space-y-6">
-      {/* Header */}
       <section className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
@@ -118,7 +112,6 @@ export default function SubjectDetailPage() {
         <CourseScheduleCard style="w-[320px]" />
       </section>
 
-      {/* Profile & Bot */}
       <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <StudentProfileCard
@@ -190,7 +183,6 @@ export default function SubjectDetailPage() {
         </div>
       </section>
 
-      {/* Table */}
       <section>
         <SubjectAttendanceTable records={filteredRecords} />
       </section>
