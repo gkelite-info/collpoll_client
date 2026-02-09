@@ -1,10 +1,10 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import PlacementFilters from "./components/PlacementFilters";
-import PlacementList from "./components/PlacementList";
+import PlacementFilters from "./compounents/PlacementFilters";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import Announcements from "./components/Announcements";
+import Announcements from "./compounents/Announcement";
+import PlacementList from "./compounents/PlacementList";
 
 
 export default function PlacementsPage() {
