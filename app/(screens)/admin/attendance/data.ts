@@ -53,7 +53,7 @@ export interface Student {
 
 export const students: Student[] = [
   {
-    id: "2345001",
+    id: "7",
     roll: "2345001",
     name: "Ananya Sharma",
     department: "CSE",

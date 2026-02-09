@@ -22,9 +22,9 @@ export default function StudentAttendanceDetailsPage({
 
   // const { studentId } = useParams<{ studentId: string }>();
 
-  const student = students.find((s) => s.id === studentId);
+   const student = students.find((s) => s.id === studentId);
 
-  if (!student) {
+  if (!studentId) {
     return <div className="p-6">Student not found</div>;
   }
 
@@ -32,10 +32,10 @@ export default function StudentAttendanceDetailsPage({
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Info label="Department" value={student.department} />
-          <Info label="Year" value={student.year} />
-          <Info label="Section" value={student.section} />
-          <Info label="Semester" value={student.semester} />
+          <Info label="Department" value={student?.department || ""} />
+          <Info label="Year" value={student?.year || ""} />
+          <Info label="Section" value={student?.section || ""} />
+          <Info label="Semester" value={student?.semester || ""} />
         </div>
 
         <CourseScheduleCard style="w-auto" />
@@ -44,26 +44,26 @@ export default function StudentAttendanceDetailsPage({
       <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <StudentProfileCard
-            name={student.name}
-            department={student.department}
-            studentId={student.id}
-            phone={student.phone}
-            email={student.email}
-            address={student.address}
-            photo={student.photo}
-            attendanceDays={student.attendanceDays}
-            absentDays={student.absentDays}
-            leaveDays={student.leaveDays}
+            name={student?.name || ""}
+            department={student?.department || ""}
+            studentId={student?.id || ""}
+            phone={student?.phone || ""}
+            email={student?.email || ""}
+            address={student?.address || ""}
+            photo={student?.photo || "https://i.pravatar.cc/100?img=1"}
+            attendanceDays={student?.attendanceDays || 0}
+            absentDays={student?.absentDays || 0}
+            leaveDays={student?.leaveDays || 0}
           />
         </div>
 
-        <div className="lg:col-span-1">
-          <ParentsList parents={student.parents} />
-        </div>
+        {/* <div className="lg:col-span-1">
+          <ParentsList parents={student?.parents} />
+        </div> */}
       </section>
 
       <section className="w-full">
-        <SubjectWiseAttendance studentId={student.id} />
+        <SubjectWiseAttendance studentId={studentId || ""} />
       </section>
     </main>
   );
