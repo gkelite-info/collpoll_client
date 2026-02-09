@@ -145,6 +145,7 @@ function AttendanceContent() {
     try {
       const payload = studentsList.map((s) => ({
         studentId: s.id,
+        facultyId: facultyId!,
         status: s.attendance,
         reason: s.reason,
       }));

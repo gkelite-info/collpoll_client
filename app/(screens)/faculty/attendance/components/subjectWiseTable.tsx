@@ -7,7 +7,8 @@ export interface SubjectStat {
   subjectCode: string;
   total: number;
   present: number;
-
+  absent: number;
+  leave: number;
   percentage: number;
 }
 
@@ -38,10 +39,8 @@ export default function SubjectWiseAttendance({
         <table className="w-full text-left border-separate border-spacing-0">
           <thead>
             <tr className="bg-[#F5F5F5]">
-              <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] rounded-tl-lg whitespace-nowrap">
-                Subject Code
-              </th>
-              <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] whitespace-nowrap">
+              {/* REMOVED Subject Code Header */}
+              <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] whitespace-nowrap rounded-tl-lg">
                 Subject Name
               </th>
               <th className="px-4 py-2.5 text-xs font-semibold text-[#333333]">
@@ -54,6 +53,9 @@ export default function SubjectWiseAttendance({
                 Missed
               </th>
               <th className="px-4 py-2.5 text-xs font-semibold text-[#333333]">
+                Leave
+              </th>
+              <th className="px-4 py-2.5 text-xs font-semibold text-[#333333]">
                 Percentage
               </th>
               <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] rounded-tr-lg">
@@ -64,30 +66,48 @@ export default function SubjectWiseAttendance({
 
           <tbody className="divide-y divide-[#EEEEEE]">
             {data.map((row, index) => {
-              const absentCount = row.total - row.present;
-
               return (
                 <tr key={index} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-[#333333] font-semibold whitespace-nowrap">
-                    {row.subjectCode}
-                  </td>
+                  {/* REMOVED Subject Code Data Cell */}
 
-                  <td className="px-4 py-3 text-sm text-[#666666] font-medium whitespace-nowrap">
+                  {/* Subject Name */}
+                  <td className="px-4 py-3 text-sm text-[#333333] font-semibold">
                     {row.subjectName}
+                    <div className="text-[10px] text-gray-400 font-normal">
+                      {row.subjectCode}
+                    </div>
                   </td>
 
+                  {/* Total */}
                   <td className="px-4 py-3 text-sm text-[#666666]">
-                    {row.total}
+                    {formatNum(row.total)}
                   </td>
+
+                  {/* Attended (Present + Late) */}
                   <td className="px-4 py-3 text-sm text-[#666666]">
-                    {row.present}
+                    {formatNum(row.present)}
                   </td>
+
+                  {/* Missed (Absent) */}
                   <td className="px-4 py-3 text-sm text-[#666666]">
-                    {formatNum(absentCount)}
+                    {formatNum(row.absent)}
                   </td>
+
+                  {/* Leave */}
                   <td className="px-4 py-3 text-sm text-[#666666]">
-                    {row.percentage}%
+                    {formatNum(row.leave)}
                   </td>
+
+                  {/* Percentage */}
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={`font-bold ${row.percentage < 75 ? "text-red-500" : "text-[#666666]"}`}
+                    >
+                      {row.percentage}%
+                    </span>
+                  </td>
+
+                  {/* Actions */}
                   <td className="px-4 py-3 text-sm">
                     <button
                       onClick={() =>
