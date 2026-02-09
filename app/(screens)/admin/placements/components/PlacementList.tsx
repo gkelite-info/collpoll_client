@@ -11,7 +11,7 @@ export default function PlacementList() {
         role="Software Engineer"
         skills={["Java", "Python", "Data Structures", "SQL"]}
         description="Work on designing, coding, and deploying enterprise-grade applications using modern frameworks. Collaborate with global teams to build scalable digital solutions and optimize performance."
-        tags={["Part Time", "Full Time", "12 Lpa"]}
+        tags={["Part Time", "Hyderabad", "12 Lpa"]}
       />
 
       <PlacementCard
@@ -20,7 +20,7 @@ export default function PlacementList() {
         role="Software Engineer"
         skills={["Java", "Python", "Data Structures", "SQL"]}
         description="Work on designing, coding, and deploying enterprise-grade applications using modern frameworks. Collaborate with global teams to build scalable digital solutions and optimize performance."
-        tags={["Full Time", "Hyderabad", "12 Lpa"]}
+        tags={["Chennai", "Part Time", "12 Lpa"]}
       />
 
       <PlacementCard
@@ -29,7 +29,7 @@ export default function PlacementList() {
         role="SDE Intern"
         skills={["Java", "Python", "Data Structures", "SQL"]}
         description="Work on designing, coding, and deploying enterprise-grade applications using modern frameworks. Collaborate with global teams to build scalable digital solutions and optimize performance."
-        tags={["Full Time", "12 Lpa"]}
+        tags={["Hyderabad","Full Time", "12 Lpa"]}
       />
     </div>
   );
