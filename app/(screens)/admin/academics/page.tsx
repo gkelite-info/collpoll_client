@@ -168,7 +168,6 @@ const AcademicPage = () => {
 
   return (
     <div className="flex flex-col m-4">
-      {/* Header */}
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div className="flex items-center gap-2 group w-fit cursor-pointer">
@@ -179,11 +178,10 @@ const AcademicPage = () => {
           </p>
         </div>
         <div className="w-[30%]">
-          <CourseScheduleCard isVisibile={true} fullWidth={false} />
+          <CourseScheduleCard isVisibile={false} fullWidth={false} />
         </div>
       </div>
 
-      {/* Search & Filters */}
       <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative w-full md:w-[32%]">
           <input

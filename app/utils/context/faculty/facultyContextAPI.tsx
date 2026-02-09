@@ -22,6 +22,25 @@ type FacultyJoin = {
     };
 };
 
+type FacultySectionRaw = {
+    facultySectionId: number;
+    collegeSectionsId: number;
+    collegeSubjectId: number;
+    collegeAcademicYearId: number;
+    faculty_subject: { subjectName: string }[] | null;
+};
+
+type FacultySectionJoin = {
+    facultySectionId: number;
+    collegeSectionsId: number;
+    collegeSubjectId: number;
+    collegeAcademicYearId: number;
+    faculty_subject: {
+        subjectName: string;
+    } | null;
+};
+
+
 export async function fetchFacultyContext(userId: number) {
     const { data: faculty, error: facultyError } = await supabase
         .from("faculty")
@@ -56,12 +75,38 @@ export async function fetchFacultyContext(userId: number) {
       facultySectionId,
       collegeSectionsId,
       collegeSubjectId,
-      collegeAcademicYearId
+      collegeAcademicYearId,
+      faculty_subject:college_subjects!collegeSubjectId (
+      subjectName
+      )
     `)
         .eq("facultyId", faculty.facultyId)
-        .is("deletedAt", null);
+        .is("deletedAt", null)
 
     if (sectionsError) throw sectionsError;
+
+    const rawSections = (facultySections ?? []) as FacultySectionRaw[];
+
+    const sections: FacultySectionJoin[] = rawSections.map(s => ({
+        ...s,
+        faculty_subject: Array.isArray(s.faculty_subject)
+            ? s.faculty_subject[0] ?? null
+            : s.faculty_subject ?? null,
+    }));
+
+    const faculty_subject = Array.from(
+        new Map(
+            sections
+                .filter(s => s.faculty_subject)
+                .map(s => [
+                    s.collegeSubjectId,
+                    {
+                        subjectId: s.collegeSubjectId,
+                        subjectName: s.faculty_subject!.subjectName,
+                    }
+                ])
+        ).values()
+    );
 
     return {
         facultyId: faculty.facultyId,
@@ -73,17 +118,16 @@ export async function fetchFacultyContext(userId: number) {
         collegeId: faculty.collegeId,
         collegeEducationId: faculty.collegeEducationId,
         collegeBranchId: faculty.collegeBranchId,
-        collegeBranchCode: faculty.college_branch?.collegeBranchCode ?? null,
         college_branch: faculty.college_branch.collegeBranchCode,
         faculty_edu_type: faculty.faculty_edu_type.collegeEducationType,
         gender: faculty.gender,
         isActive: faculty.isActive,
-
-        sections: facultySections,
-
-        sectionIds: [...new Set(facultySections.map(s => s.collegeSectionsId))],
-        subjectIds: [...new Set(facultySections.map(s => s.collegeSubjectId))],
-        academicYearIds: [...new Set(facultySections.map(s => s.collegeAcademicYearId))]
+        sections,
+        faculty_subject,
+        // sectionIds: [...new Set((facultySections ?? []).map(s => s.collegeSectionsId))],
+        sectionIds: [...new Set(sections.map(s => s.collegeSectionsId))],
+        subjectIds: [...new Set((facultySections ?? []).map(s => s.collegeSubjectId))],
+        academicYearIds: [...new Set((facultySections ?? []).map(s => s.collegeAcademicYearId))]
     };
 }
 

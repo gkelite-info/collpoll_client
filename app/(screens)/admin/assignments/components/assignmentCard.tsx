@@ -42,7 +42,6 @@ const AssignmentCard = ({
       className="bg-white rounded-[10px] p-4 shadow-[0_4px_20px_rgb(0,0,0,0.04)] border-l-[8px]"
       style={{ borderLeftColor: color }}
     >
-      {/* Header */}
       <div className="flex justify-between items-start mb-4">
         <h2
           className="text-md font-bold tracking-tight truncate block"
@@ -55,7 +54,7 @@ const AssignmentCard = ({
           style={{ backgroundColor: bgColor, color: text }}
         >
           <span className="ml-1">{year}</span>
-          <CaretDown size={12} weight="bold" />
+          {/* <CaretDown size={12} weight="bold" /> */}
         </div>
       </div>
 

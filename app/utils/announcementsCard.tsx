@@ -18,12 +18,11 @@ export default function AnnouncementsCard({
   return (
     <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-fit">
       <h4 className="text-[#282828] font-semibold mb-3 ml-1">Announcements</h4>
-
       <div className="flex flex-col gap-2 overflow-y-auto">
         {announceCard.map((card, index) => (
           <div
             key={index}
-            className={`h-[75px] flex items-center rounded-lg p-2 gap-1`}
+            className={`lg:h-[70.5px] flex items-center rounded-lg p-2 gap-1`}
             style={{ backgroundColor: card.cardBg || "#E8F8EF" }}
           >
             <div
