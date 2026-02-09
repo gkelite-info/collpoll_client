@@ -2,37 +2,114 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import {
-  BookOpenText,
-  Calendar,
-  CaretLeft,
-  User,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { BookOpenText, Calendar, CaretLeft, CaretRight, User, UsersThree, } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { ATTENDANCE_MOCK_DATA } from "../data";
+import { useEffect, useMemo, useState } from "react";
 import AttendanceTable from "../tables/attendanceTable";
 import CardComponent from "./cards";
 import StudentAttendanceDetailsPage from "./stuSubjectWise";
-
+import { fetchSectionStudents, fetchSubjectsByContext } from "@/lib/helpers/admin/attendance/fetchStudentsBySectionsAPI";
+import toast from "react-hot-toast";
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
 
-export const SubjectWiseAttendance = ({
-  onBack,
-}: SubjectWiseAttendanceProps) => {
+type SectionStudent = {
+  studentId: number;
+  fullName: string;
+  email: string;
+  attendance: "PRESENT" | "ABSENT" | "LATE" | "LEAVE" | "CLASS_CANCEL" | "NA";
+  reason: string;
+  percentage: number;
+  status: "Top" | "Good" | "Low";
+};
+
+export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
+  const STUDENTS_PER_PAGE = 10;
+  const [students, setStudents] = useState<SectionStudent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [subjects, setSubjects] = useState<{ collegeSubjectId: number; subjectName: string }[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
   const searchParams = useSearchParams();
   const branch = searchParams.get("branch");
   const section = searchParams.get("section");
+  const year = searchParams.get("year")
   const totalStudents = searchParams.get("students");
   const totalSubjects = searchParams.get("subjects");
   const below75 = searchParams.get("below75");
   const selectedStudentId = searchParams.get("studentId");
   const totalFaculties = searchParams.get("faculties");
+  const collegeId = Number(searchParams.get("collegeId"));
+  const collegeEducationId = Number(searchParams.get("collegeEducationId"));
+  const collegeBranchId = Number(searchParams.get("collegeBranchId"));
+  const collegeAcademicYearId = Number(searchParams.get("collegeAcademicYearId"));
+  const collegeSectionsId = Number(searchParams.get("collegeSectionsId"));
   const router = useRouter();
   const pathname = usePathname();
+
+  const [filters, setFilters] = useState({
+    year: year ?? "",
+    section: section ?? "",
+    subject : ""
+    // date: "12 Aug 2025",
+  });
+
+  useEffect(() => {
+    if (
+      !collegeId ||
+      !collegeEducationId ||
+      !collegeBranchId ||
+      !collegeAcademicYearId ||
+      !collegeSectionsId
+    )
+      return;
+    loadStudents();
+  }, [currentPage, selectedSubjectId]);
+
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const res = await fetchSectionStudents({
+        collegeId,
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId,
+        collegeSectionsId,
+        page: currentPage,
+        limit: STUDENTS_PER_PAGE,
+        collegeSubjectId: selectedSubjectId,
+      });
+      setStudents(res.data);
+      setTotalRecords(res.totalCount);
+    } catch (err: any) {
+      toast.error(err?.message || "Unable to load students. Please refresh and try again.");
+      setStudents([]);
+      setTotalRecords(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [collegeSectionsId, collegeAcademicYearId, selectedSubjectId]);
+
+  // 🔴 MARKED CHANGE
+  useEffect(() => {
+    if (!collegeId || !collegeEducationId || !collegeBranchId || !collegeAcademicYearId) return;
+
+    fetchSubjectsByContext({
+      collegeId,
+      collegeEducationId,
+      collegeBranchId,
+      collegeAcademicYearId,
+    })
+      .then(setSubjects)
+      .catch(() => toast.error("Unable to load subjects"));
+  }, [collegeAcademicYearId, collegeBranchId]);
+
 
   const closeStudentOverlay = () => {
     const params = new URLSearchParams(searchParams);
@@ -46,24 +123,16 @@ export const SubjectWiseAttendance = ({
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const [data, setData] = useState(ATTENDANCE_MOCK_DATA);
 
-  const [filters, setFilters] = useState({
-    year: "3rd Year",
-    section: "A",
-    sem: "Sem 5",
-    subject: "AI",
-    date: "12 Aug 2025",
-  });
 
   const handleAttendanceChange = (
     rollNo: string,
     status: "Present" | "Absent"
     // status: "Present" | "Absent" | "Leave" | "Cancel Class" | "Late"
   ) => {
-    setData((prev) =>
-      prev.map((s) => (s.rollNo === rollNo ? { ...s, attendance: status } : s))
-    );
+    // setData((prev) =>
+    //   prev.map((s) => (s.rollNo === rollNo ? { ...s, attendance: status } : s))
+    // );
   };
 
   const handleViewDetails = (rollNo: string) => {
@@ -71,8 +140,20 @@ export const SubjectWiseAttendance = ({
   };
 
   const filteredData = useMemo(() => {
-    return data; //placeholder for future filtering logic
-  }, [data, filters]);
+    if (!students.length) return [];
+    return students.map((s, index) => ({
+      sNo: String((currentPage - 1) * STUDENTS_PER_PAGE + index + 1),
+      rollNo: String(s.studentId),
+      photo: `https://i.pravatar.cc/100?u=${s.email}`,
+      name: s.fullName,
+      attendance:
+        s.attendance,
+      percentage: s.percentage,
+      reason: s.reason || "-",
+      status: s.status,
+    }));
+  }, [students, currentPage]);
+
 
   const currentFilters = {
     year: "1 st year",
@@ -113,7 +194,7 @@ export const SubjectWiseAttendance = ({
       style: "bg-[#FFE0E0] ",
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#FF2020",
-      value: below75 ||0 ,
+      value: below75 || 0,
       label: "Students below 75%",
     },
     {
@@ -125,6 +206,8 @@ export const SubjectWiseAttendance = ({
       label: "Total Faculties",
     },
   ];
+
+  const totalPages = Math.ceil(totalRecords / STUDENTS_PER_PAGE);
 
   return (
     <div className="flex flex-col m-4 relative">
@@ -186,7 +269,7 @@ export const SubjectWiseAttendance = ({
         </div>
       </div>
 
-      <div className="mt-3 overflow-hidden">
+      {/* <div className="mt-3 overflow-hidden">
         <AttendanceTable
           data={filteredData}
           onViewDetails={(rollNo) => {
@@ -195,6 +278,31 @@ export const SubjectWiseAttendance = ({
             router.push(`${pathname}?${params.toString()}`);
           }}
           filters={filters}
+          onAttendanceChange={handleAttendanceChange}
+        />
+      </div> */}
+      <div className="mt-3 overflow-hidden">
+        <AttendanceTable
+          data={filteredData}
+          loading={loading}
+          year={year}
+          section={section}
+          pagination={{
+            currentPage,
+            totalPages,
+            onPageChange: setCurrentPage,
+          }}
+          onViewDetails={(rollNo) => {
+            const params = new URLSearchParams(searchParams);
+            params.set("studentId", rollNo);
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+          filters={filters}
+          subjects={subjects}
+          selectedSubjectId={selectedSubjectId}
+          onSubjectChange={(id) => {
+            setSelectedSubjectId(id);
+          }}
           onAttendanceChange={handleAttendanceChange}
         />
       </div>
