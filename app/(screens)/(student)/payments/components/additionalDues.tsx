@@ -57,21 +57,23 @@ const AdditionalDues: React.FC<AdditionalDuesProps> = ({
           <button
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id as any)}
-            className={`pb-2 font-medium transition-colors ${
-              activeSubTab === tab.id
-                ? "text-emerald-500 border-b-2 border-emerald-500"
-                : "text-gray-500 hover:text-gray-700"
-            }`}
+            className={`pb-2 font-medium transition-colors ${activeSubTab === tab.id
+              ? "text-emerald-500 border-b-2 border-emerald-500"
+              : "text-gray-500 hover:text-gray-700"
+              }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
           {activeSubTab === "nonFinancial" && (
-            <table className="w-full text-sm text-center whitespace-nowrap">
+            // <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            //   <div className="overflow-x-auto">
+            <table className="min-w-[1200px] w-full text-sm text-center whitespace-nowrap">
+              {/* <table className="w-full text-sm text-center whitespace-nowrap"> */}
               <thead className="bg-gray-200/70 text-gray-600 font-semibold">
                 <tr>
                   <th className="px-6 py-4">Department</th>
@@ -95,10 +97,13 @@ const AdditionalDues: React.FC<AdditionalDuesProps> = ({
                 ))}
               </tbody>
             </table>
+            // </div>
+            // </div>
           )}
 
           {activeSubTab === "excess" && (
-            <table className="w-full text-sm text-center whitespace-nowrap">
+            <table className="min-w-[800px] w-full text-sm text-center whitespace-nowrap">
+              {/* <table className="w-full text-sm text-center whitespace-nowrap"> */}
               <thead className="bg-gray-200/70 text-gray-600 font-semibold">
                 <tr>
                   <th className="px-6 py-4">Departments</th>
@@ -123,7 +128,8 @@ const AdditionalDues: React.FC<AdditionalDuesProps> = ({
           )}
 
           {activeSubTab === "financial" && (
-            <table className="w-full text-sm text-center whitespace-nowrap">
+            <table className="min-w-[500px] w-full text-sm text-center whitespace-nowrap">
+              {/* <table className="w-full text-sm text-center whitespace-nowrap"> */}
               <thead className="bg-gray-200/70 text-gray-800 font-semibold">
                 <tr>
                   <th className="px-4 py-3">Amount</th>

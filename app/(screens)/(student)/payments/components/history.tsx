@@ -64,13 +64,12 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
                   <td className="px-6 py-4 text-gray-600">{trx.trxnId}</td>
                   <td className="px-6 py-4 text-gray-600">{trx.paidOn}</td>
                   <td
-                    className={`px-6 py-4 font-medium ${
-                      trx.status === "Success"
+                    className={`px-6 py-4 font-medium ${trx.status === "Success"
                         ? "text-emerald-500"
                         : trx.status === "Failure"
-                        ? "text-red-500"
-                        : "text-yellow-500"
-                    }`}
+                          ? "text-red-500"
+                          : "text-yellow-500"
+                      }`}
                   >
                     {trx.status}
                   </td>

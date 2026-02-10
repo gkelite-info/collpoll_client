@@ -35,11 +35,10 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative max-w-5xl mx-auto">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Active Fee Plan
         </h2>
-
         <div className="bg-emerald-50 rounded-lg p-4 mb-6 flex justify-between items-center">
           <div>
             <h3 className="font-bold text-gray-800 text-lg">
@@ -91,11 +90,12 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
           </div>
         </div>
 
-        <div className="absolute bottom-6 right-6">
+        <div className="flex justify-end mt-6">
           <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors">
             Pay <span className="text-xs">▼</span>
           </button>
         </div>
+
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
