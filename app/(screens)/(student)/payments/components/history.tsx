@@ -83,4 +83,6 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
   );
 };
 
+
+
 export default History;

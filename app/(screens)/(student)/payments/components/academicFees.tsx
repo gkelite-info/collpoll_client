@@ -10,6 +10,8 @@ export interface FeePlan {
   pendingAmount: number;
 }
 
+
+
 export interface FeeSummaryItem {
   id: string | number;
   paidAmount: number;

@@ -127,6 +127,8 @@ const AdditionalDues: React.FC<AdditionalDuesProps> = ({
             </table>
           )}
 
+          
+
           {activeSubTab === "financial" && (
             <table className="min-w-[500px] w-full text-sm text-center whitespace-nowrap">
               {/* <table className="w-full text-sm text-center whitespace-nowrap"> */}
