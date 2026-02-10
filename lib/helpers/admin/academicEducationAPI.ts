@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 export type CollegeEducationRow = {
@@ -122,4 +123,17 @@ export async function deactivateCollegeEducation(collegeEducationId: number) {
   }
 
   return { success: true };
+}
+
+export async function fetchEducationTypesForLoggedInAdmin(userId: number) {
+
+    const { collegeId } = await fetchAdminContext(userId);
+
+    const rows = await fetchCollegeEducations(collegeId);
+
+    return rows.map((row) => ({
+        id: row.collegeEducationId,
+        label: row.collegeEducationType,
+        value: row.collegeEducationType,
+    }));
 }

@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 
@@ -17,6 +18,7 @@ export type CollegeSectionsRow = {
 
 export async function fetchCollegeSections(
     collegeId: number,
+    collegeEducationId: number,
     collegeBranchId: number,
     collegeAcademicYearId: number
 ) {
@@ -36,6 +38,7 @@ export async function fetchCollegeSections(
       deletedAt
     `)
         .eq("collegeId", collegeId)
+        .eq("collegeEducationId", collegeEducationId)
         .eq("collegeBranchId", collegeBranchId)
         .eq("collegeAcademicYearId", collegeAcademicYearId)
         .eq("isActive", true)
@@ -65,7 +68,10 @@ export async function saveCollegeSections(
 
     await supabase
         .from("college_sections")
-        .delete()
+        .update({
+            isActive: false,
+            deletedAt: now,
+        })
         .eq("collegeId", payload.collegeId)
         .eq("collegeBranchId", payload.collegeBranchId)
         .eq("collegeAcademicYearId", payload.collegeAcademicYearId);
@@ -129,4 +135,41 @@ export async function deactivateCollegeSections(
     }
 
     return { success: true };
+}
+
+export async function fetchSectionOptions(
+    collegeId: number,
+    collegeEducationId: number,
+    collegeBranchId: number,
+    collegeAcademicYearId: number
+) {
+    const data = await fetchCollegeSections(
+        collegeId,
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId
+    );
+
+    return data.map((row) => ({
+        id: row.collegeSectionsId,
+        label: row.collegeSections,
+        value: row.collegeSections,
+        raw: row,
+    }));
+}
+
+export async function fetchSectionOptionsForAdmin(
+    userId: number,
+    collegeEducationId: number,
+    collegeBranchId: number,
+    collegeAcademicYearId: number
+) {
+    const { collegeId } = await fetchAdminContext(userId);
+
+    return fetchSectionOptions(
+        collegeId,
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId
+    );
 }

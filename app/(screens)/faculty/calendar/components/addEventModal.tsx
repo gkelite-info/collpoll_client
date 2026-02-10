@@ -184,8 +184,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return degreeOptions.find((d) => d.degreeType === degree);
   }, [degree, degreeOptions]);
 
-  console.log("degree options are", degreeOptions);
-
   const departmentOptions = useMemo(() => {
     if (!selectedDegreeObj?.departments) return [];
     return selectedDegreeObj.departments.map((d: string) => d.trim());

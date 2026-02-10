@@ -1,19 +1,16 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export const upsertStudentEntry = async (payload: {
+export type StudentUpsertPayload = {
   userId: number;
-  fullName: string;
-  email: string;
-  mobile: string;
-  role: string;
-  gender: "Male" | "Female";
-  collegeId: number;
+  collegeEducationId: number;
+  collegeBranchId: number;
+  entryType: "Regular" | "Lateral" | "Transfer";
+  status?: "Active" | "Inactive" | "Blocked";
+  collegeId?: number;
   createdBy: number;
-  department: string;
-  degree: string;
-  year: number;
-  section: string;
-}) => {
+};
+
+export const upsertStudentEntry = async (payload: StudentUpsertPayload) => {
   try {
     const now = new Date().toISOString();
 
@@ -22,22 +19,17 @@ export const upsertStudentEntry = async (payload: {
       .upsert(
         {
           userId: payload.userId,
-          fullName: payload.fullName,
-          email: payload.email,
-          mobile: payload.mobile,
-          role: payload.role,
-          gender: payload.gender,
-          collegeId: payload.collegeId,
+          collegeEducationId: payload.collegeEducationId,
+          collegeBranchId: payload.collegeBranchId,
+          entryType: payload.entryType,
+          status: payload.status ?? "Active",
+          collegeId: payload.collegeId ?? 1,
           createdBy: payload.createdBy,
-          department: payload.department,
-          degree: payload.degree,
-          year: payload.year,
-          section: payload.section,
           updatedAt: now,
           createdAt: now,
         },
         {
-          onConflict: "userId", 
+          onConflict: "userId",
         }
       )
       .select()
@@ -51,16 +43,12 @@ export const upsertStudentEntry = async (payload: {
       data,
     };
   } catch (err: any) {
-    console.error("STUDENT UPSERT ERROR:", err.message);
+    console.error("STUDENT UPSERT ERROR:", err);
 
     let message = "Something went wrong";
 
     if (err.code === "23505") {
-      if (err.message.includes("userId")) {
-        message = "Student already exists for this user";
-      } else {
-        message = "Duplicate student record";
-      }
+      message = "Student already exists for this user";
     }
 
     return {
@@ -70,26 +58,39 @@ export const upsertStudentEntry = async (payload: {
   }
 };
 
+
 export const fetchStudentDetails = async (userId: number) => {
   try {
     const { data, error } = await supabase
       .from("students")
-      .select(
-        `
-        studentsId,
+      .select(`
+        studentId,
         userId,
-        fullName,
-        email,
-        mobile,
-        role,
-        gender,
+        status,
+        entryType,
+        isActive,
         collegeId,
-        department,
-        degree,
-        year,
-        section
-        `
-      )
+        createdAt,
+        updatedAt,
+
+        users (
+          userId,
+          fullName,
+          email,
+          mobile,
+          gender
+        ),
+
+        college_education (
+          collegeEducationId,
+          educationName
+        ),
+
+        college_branch (
+          collegeBranchId,
+          branchName
+        )
+      `)
       .eq("userId", userId)
       .single();
 
@@ -97,10 +98,11 @@ export const fetchStudentDetails = async (userId: number) => {
 
     return {
       success: true,
-      student: data ?? null,
+      student: data,
     };
   } catch (err: any) {
     console.error("FETCH STUDENT DETAILS ERROR:", err.message);
+
     return {
       success: false,
       error: err.message,

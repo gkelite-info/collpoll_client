@@ -1,3 +1,4 @@
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 
@@ -146,4 +147,24 @@ export async function deactivateCollegeAcademicYear(
     }
 
     return { success: true };
+}
+
+
+export async function fetchAcademicYearOptionsForAdmin(
+    userId: number,
+    collegeBranchId: number
+) {
+    const { collegeId } = await fetchAdminContext(userId);
+
+    const data = await fetchCollegeAcademicYears(
+        collegeId,
+        collegeBranchId
+    );
+
+    return data.map((row) => ({
+        id: row.collegeAcademicYearId,
+        label: row.collegeAcademicYear,
+        value: row.collegeAcademicYearId,
+        raw: row.collegeAcademicYear,
+    }));
 }

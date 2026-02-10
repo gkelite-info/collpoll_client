@@ -8,32 +8,7 @@ import type { Task } from "@/app/utils/taskPanel";
 
 
 export default function AssignmentsRight() {
-  // 
-  // const myTasks = [
-  //   {
-  //     facultytaskId: 1,                   
-  //     title: "Complete Python Lab",
-  //     description: "Finish all 10 lab programs and upload to portal.",
-  //     time: "12:40 PM",
-  //     facultytaskcreatedDate: null,       
-  //   },
-  //   {
-  //     facultytaskId: 2,
-  //     title: "Group Discussion Prep",
-  //     description: "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-  //     time: "02:40 PM",
-  //     facultytaskcreatedDate: null,
-  //   },
-  //   {
-  //     facultytaskId: 3,
-  //     title: "Resume Update",
-  //     description: "Add latest internship experience to resume builder section.",
-  //     time: "03:40 PM",
-  //     facultytaskcreatedDate: null,
-  //   },
-  // ];
 
-  // ✅ Faculty tasks state
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([
     {
       facultytaskId: 1,
@@ -51,7 +26,6 @@ export default function AssignmentsRight() {
     },
   ]);
 
-  // ✅ Save / Update handler
   const handleSaveFacultyTask = (
     payload: {
       title: string;
@@ -62,7 +36,6 @@ export default function AssignmentsRight() {
     taskId?: number
   ) => {
     if (taskId) {
-      // ✏️ UPDATE
       setFacultyTasks((prev) =>
         prev.map((t) =>
           t.facultytaskId === taskId
@@ -76,10 +49,9 @@ export default function AssignmentsRight() {
         )
       );
     } else {
-      // ➕ ADD
       setFacultyTasks((prev) => [
         {
-          facultytaskId: Date.now(), // temp id
+          facultytaskId: Date.now(),
           title: payload.title,
           description: payload.description,
           time: payload.dueTime,
@@ -89,7 +61,6 @@ export default function AssignmentsRight() {
       ]);
     }
   };
-
 
   const card = [
     {
