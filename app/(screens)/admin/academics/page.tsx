@@ -15,7 +15,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import FacultyAcademicCard from "./components/facultyAcademicCard";
 import { FilterDropdown } from "./components/filterDropdown";
 import { AcademicSectionsSkeleton } from "./shimmer/academicSectionsSkeleton";
-import { SubjectWiseAttendance } from "../attendance/components/subjectWiseAttendance";
+import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 
 const COLOR_PALETTE = [
   { text: "#FF767D", color: "#FFB4B8", bgColor: "#FFF5F5" }, // CSE
