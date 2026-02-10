@@ -66,9 +66,6 @@ export default function SubjectWiseAttendance({
             {data.map((row, index) => {
               return (
                 <tr key={index} className="hover:bg-gray-50 transition-colors">
-                  {/* REMOVED Subject Code Data Cell */}
-
-                  {/* Subject Name */}
                   <td className="px-4 py-3 text-sm text-[#333333] font-semibold">
                     {row.subjectName}
                     <div className="text-[10px] text-gray-400 font-normal">

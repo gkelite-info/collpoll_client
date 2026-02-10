@@ -2,113 +2,151 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { BookOpenText, Calendar, CaretLeft, CaretRight, User, UsersThree, } from "@phosphor-icons/react";
+import {
+  BookOpenText,
+  CaretLeft,
+  Check,
+  Prohibit,
+  User,
+  UsersThree,
+  X,
+  ChalkboardTeacher,
+  CaretDown,
+} from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import AttendanceTable from "../tables/attendanceTable";
-import CardComponent from "./cards";
-import StudentAttendanceDetailsPage from "./stuSubjectWise";
-import { fetchSectionStudents, fetchSubjectsByContext } from "@/lib/helpers/admin/attendance/fetchStudentsBySectionsAPI";
-import toast from "react-hot-toast";
+import { useEffect, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+
+import {
+  getAdminClassesForSection,
+  getStudentsForClass,
+  saveAttendance,
+  UIStudent,
+} from "@/lib/helpers/admin/attendance/adminAttendanceActions";
+import AttendanceSkeleton from "@/app/(screens)/faculty/attendance/shimmer/attendanceSkeleton";
+import StuAttendanceTable from "../tables/stuAttendanceTable";
+import StudentAttendanceDetailsPage from "../components/stuSubjectWise";
+import CardComponent from "../components/cards";
+
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
 
-type SectionStudent = {
-  studentId: number;
-  fullName: string;
-  email: string;
-  attendance: "PRESENT" | "ABSENT" | "LATE" | "LEAVE" | "CLASS_CANCEL" | "NA";
-  reason: string;
-  percentage: number;
-  status: "Top" | "Good" | "Low";
-};
-
-export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
-  const STUDENTS_PER_PAGE = 10;
-  const [students, setStudents] = useState<SectionStudent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [subjects, setSubjects] = useState<{ collegeSubjectId: number; subjectName: string }[]>([]);
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // --- URL PARAMS ---
   const branch = searchParams.get("branch");
   const section = searchParams.get("section");
-  const year = searchParams.get("year")
+  const year = searchParams.get("year");
   const totalStudents = searchParams.get("students");
   const totalSubjects = searchParams.get("subjects");
   const below75 = searchParams.get("below75");
-  const selectedStudentId = searchParams.get("studentId");
   const totalFaculties = searchParams.get("faculties");
-  const collegeId = Number(searchParams.get("collegeId"));
-  const collegeEducationId = Number(searchParams.get("collegeEducationId"));
-  const collegeBranchId = Number(searchParams.get("collegeBranchId"));
-  const collegeAcademicYearId = Number(searchParams.get("collegeAcademicYearId"));
   const collegeSectionsId = Number(searchParams.get("collegeSectionsId"));
-  const router = useRouter();
-  const pathname = usePathname();
+  const selectedStudentId = searchParams.get("studentId");
 
-  const [filters, setFilters] = useState({
-    year: year ?? "",
-    section: section ?? "",
-    subject: ""
-    // date: "12 Aug 2025",
-  });
+  // --- STATE ---
+  const [loading, setLoading] = useState(true);
+  const [classOptions, setClassOptions] = useState<
+    { id: string; label: string }[]
+  >([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
+  const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
 
+  // --- ACTION STATE ---
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isCancellingMode, setIsCancellingMode] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  // --- 1. LOAD CLASSES FOR SECTION ---
   useEffect(() => {
-    if (
-      !collegeId ||
-      !collegeEducationId ||
-      !collegeBranchId ||
-      !collegeAcademicYearId ||
-      !collegeSectionsId
-    )
-      return;
-    loadStudents();
-  }, [currentPage, selectedSubjectId]);
+    if (!collegeSectionsId) return;
 
-  const loadStudents = async () => {
-    try {
+    const init = async () => {
       setLoading(true);
-      const res = await fetchSectionStudents({
-        collegeId,
-        collegeEducationId,
-        collegeBranchId,
-        collegeAcademicYearId,
-        collegeSectionsId,
-        page: currentPage,
-        limit: STUDENTS_PER_PAGE,
-        collegeSubjectId: selectedSubjectId,
-      });
-      setStudents(res.data);
-      setTotalRecords(res.totalCount);
-    } catch (err: any) {
-      toast.error(err?.message || "Unable to load students. Please refresh and try again.");
-      setStudents([]);
-      setTotalRecords(0);
+      try {
+        const classes = await getAdminClassesForSection(collegeSectionsId);
+        setClassOptions(classes);
+
+        if (classes.length > 0) {
+          const firstClass = classes[0];
+          setSelectedClassId(firstClass.id);
+          // Load students for the first class
+          const students = await getStudentsForClass(firstClass.id);
+          setStudentsList(students);
+        } else {
+          toast("No classes scheduled for today", { icon: "ℹ️" });
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load section data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, [collegeSectionsId]);
+
+  const handleClassChange = async (newClassId: string) => {
+    setSelectedClassId(newClassId);
+    setLoading(true);
+    setIsEditing(false);
+    try {
+      const students = await getStudentsForClass(newClassId);
+      setStudentsList(students);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load students");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [collegeSectionsId, collegeAcademicYearId, selectedSubjectId]);
+  const handleSaveAttendance = async () => {
+    if (!selectedClassId) return;
+    const unmarked = studentsList.filter((s) => s.attendance === "Not Marked");
+    if (unmarked.length > 0) {
+      toast.error(`Mark ${unmarked.length} students first.`);
+      return;
+    }
 
-  useEffect(() => {
-    if (!collegeId || !collegeEducationId || !collegeBranchId || !collegeAcademicYearId) return;
+    setSaving(true);
+    try {
+      const payload = studentsList.map((s) => ({
+        studentId: s.id,
+        status: s.attendance,
+        reason: s.reason,
+      }));
+      const result = await saveAttendance(selectedClassId, payload);
+      if (!result.success) throw new Error(result.error);
+      toast.success("Attendance Updated!");
+      setIsEditing(false);
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    fetchSubjectsByContext({
-      collegeId,
-      collegeEducationId,
-      collegeBranchId,
-      collegeAcademicYearId,
-    })
-      .then(setSubjects)
-      .catch(() => toast.error("Unable to load subjects"));
-  }, [collegeAcademicYearId, collegeBranchId]);
-
+  const confirmClassCancel = () => {
+    if (!cancelReason.trim()) {
+      toast.error("Enter a reason");
+      return;
+    }
+    const updatedList = studentsList.map((s) => ({
+      ...s,
+      attendance: "Class Cancel" as const,
+      reason: cancelReason,
+    }));
+    setStudentsList(updatedList);
+    setIsCancellingMode(false);
+    toast("Marked as Cancelled. Click Save.", { icon: "⚠️" });
+  };
 
   const closeStudentOverlay = () => {
     const params = new URLSearchParams(searchParams);
@@ -116,59 +154,8 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const openStudentDetail = (id: string) => {
-    const params = new URLSearchParams(searchParams);
-    params.set("studentId", id);
-    router.push(`${pathname}?${params.toString()}`);
-  };
-
-
-
-  const handleAttendanceChange = (
-    rollNo: string,
-    status: "Present" | "Absent"
-    // status: "Present" | "Absent" | "Leave" | "Cancel Class" | "Late"
-  ) => {
-    // setData((prev) =>
-    //   prev.map((s) => (s.rollNo === rollNo ? { ...s, attendance: status } : s))
-    // );
-  };
-
-  const handleViewDetails = (rollNo: string) => {
-    console.log("View details for:", rollNo);
-  };
-
-  const filteredData = useMemo(() => {
-    if (!students.length) return [];
-    return students.map((s, index) => ({
-      sNo: String((currentPage - 1) * STUDENTS_PER_PAGE + index + 1),
-      rollNo: String(s.studentId),
-      photo: `https://i.pravatar.cc/100?u=${s.email}`,
-      name: s.fullName,
-      attendance:
-        s.attendance,
-      percentage: s.percentage,
-      reason: s.reason || "-",
-      status: s.status,
-    }));
-  }, [students, currentPage]);
-
-
-  const currentFilters = {
-    year: "1 st year",
-    section: "A",
-    sem: "III",
-    subject: "Data Structures",
-    date: "12/10/2023",
-  };
-
   if (selectedStudentId) {
-    return (
-      <StudentAttendanceDetailsPage
-        manualId={selectedStudentId}
-        onBack={closeStudentOverlay}
-      />
-    );
+    return <StudentAttendanceDetailsPage onBack={closeStudentOverlay} />;
   }
 
   const cardData = [
@@ -206,16 +193,14 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
     },
   ];
 
-  const totalPages = Math.ceil(totalRecords / STUDENTS_PER_PAGE);
-
   return (
-    <div className="flex flex-col m-4 relative">
+    <div className="flex flex-col m-4 relative min-h-screen">
+      <Toaster position="top-right" />
+
       <div className="mb-3 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div className="flex items-center gap-2 group w-fit">
-            <div
-              className="flex items-center gap-2 group w-fit "
-            >
+            <div className="flex items-center gap-2 group w-fit ">
               <CaretLeft
                 size={20}
                 weight="bold"
@@ -228,13 +213,14 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
             </div>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            View attendance reports across the {branch} Branch.
+            Manage attendance for {year}, Section {section}.
           </p>
         </div>
         <div className="w-80">
-          <CourseScheduleCard isVisibile={false} />
+          <CourseScheduleCard />
         </div>
       </div>
+
       <div className="flex mb-3 items-center gap-3 bg-gray-100 rounded-md">
         <span
           onClick={onBack}
@@ -252,7 +238,8 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
         </span>
       </div>
 
-      <div className="flex gap-4 w-full h-full mb-3">
+      {/* STATS CARDS */}
+      <div className="flex gap-4 w-full mb-6">
         {cardData.map((item, index) => (
           <CardComponent
             key={index}
@@ -268,43 +255,96 @@ export const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) =>
         </div>
       </div>
 
-      {/* <div className="mt-3 overflow-hidden">
-        <AttendanceTable
-          data={filteredData}
-          onViewDetails={(rollNo) => {
-            const params = new URLSearchParams(searchParams);
-            params.set("studentId", rollNo);
-            router.push(`${pathname}?${params.toString()}`);
-          }}
-          filters={filters}
-          onAttendanceChange={handleAttendanceChange}
-        />
-      </div> */}
-      <div className="mt-3 overflow-hidden">
-        <AttendanceTable
-          data={filteredData}
-          loading={loading}
-          year={year}
-          section={section}
-          pagination={{
-            currentPage,
-            totalPages,
-            onPageChange: setCurrentPage,
-          }}
-          onViewDetails={(rollNo) => {
-            const params = new URLSearchParams(searchParams);
-            params.set("studentId", rollNo);
-            router.push(`${pathname}?${params.toString()}`);
-          }}
-          filters={filters}
-          subjects={subjects}
-          selectedSubjectId={selectedSubjectId}
-          onSubjectChange={(id) => {
-            setSelectedSubjectId(id);
-          }}
-          onAttendanceChange={handleAttendanceChange}
-        />
+      <div className=" flex-1">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3 justify-between">
+            <div className="relative">
+              <select
+                value={selectedClassId}
+                onChange={(e) => handleClassChange(e.target.value)}
+                className="appearance-none rounded-md bg-[#43C17A1C] pl-3 pr-8 py-1.5 text-[#43C17A] outline-none border-none font-medium cursor-pointer text-sm"
+              >
+                {classOptions.length > 0 ? (
+                  classOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No classes found</option>
+                )}
+              </select>
+              <CaretDown
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+                size={12}
+                weight="bold"
+              />
+            </div>
+
+            {isEditing && !isCancellingMode && selectedClassId && (
+              <button
+                onClick={() => {
+                  setCancelReason("");
+                  setIsCancellingMode(true);
+                }}
+                className="flex items-center gap-2 bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded-lg text-sm font-bold transition-colors"
+              >
+                <Prohibit size={18} weight="bold" /> Cancel Class
+              </button>
+            )}
+
+            {isCancellingMode && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-4">
+                <input
+                  type="text"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Reason..."
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-48 focus:outline-none focus:border-red-400"
+                  autoFocus
+                />
+                <button
+                  onClick={confirmClassCancel}
+                  className="bg-green-500 text-white p-2 rounded-lg"
+                >
+                  <Check size={18} weight="bold" />
+                </button>
+                <button
+                  onClick={() => setIsCancellingMode(false)}
+                  className="bg-gray-200 text-gray-600 p-2 rounded-lg"
+                >
+                  <X size={18} weight="bold" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TABLE AREA */}
+        {loading ? (
+          <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <p className="text-gray-400 font-medium">Loading...</p>
+          </div>
+        ) : studentsList.length > 0 ? (
+          <StuAttendanceTable
+            students={studentsList}
+            setStudents={setStudentsList}
+            handleSaveAttendance={handleSaveAttendance}
+            saving={saving}
+            isTopicMode={true}
+            isEditing={isEditing}
+            onEditClick={() => setIsEditing(true)}
+          />
+        ) : (
+          <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+            <p className="text-gray-400 font-medium">
+              No students found or no class selected.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default SubjectWiseAttendance;

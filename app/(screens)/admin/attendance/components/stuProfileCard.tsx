@@ -64,12 +64,12 @@ export default function StudentProfileCard({
             {email}
           </p>
         </div>
-        <div>
+        {/* <div>
           <p className="text-sm text-[#666666]">Address</p>
           <p className="mt-0.5 text-base font-semibold text-[#333333]">
             {address}
           </p>
-        </div>
+        </div> */}
       </div>
 
       {/* Stats Section */}
