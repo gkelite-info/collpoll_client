@@ -131,7 +131,7 @@ const Row = ({ s, onViewDetails, onAttendanceChange, }: { s: StudentRecord; onVi
       <td className="py-2.5 px-3 text-center">
         <button
           onClick={() => onViewDetails(s.rollNo)}
-          className="text-xs font-medium text-[#454545] hover:text-black hover:underline underline-offset-4"
+          className="text-xs cursor-pointer font-medium text-[#454545] hover:text-black hover:underline underline-offset-4"
         >
           View Details
         </button>
