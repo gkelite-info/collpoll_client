@@ -1,4 +1,4 @@
-import { fetchAdminContext } from "@/app/utils/context/adminContextAPI";
+import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 type BranchInput = {

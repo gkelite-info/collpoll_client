@@ -5,11 +5,7 @@ export const getFacultyIdByUserId = async (userId: number) => {
         .from("faculty")
         .select("facultyId")
         .eq("userId", userId)
-<<<<<<< Updated upstream
-        // .eq("is_deleted", false)
-=======
         .eq("isActive", true)
->>>>>>> Stashed changes
         .maybeSingle();
 
     if (error) throw error;
