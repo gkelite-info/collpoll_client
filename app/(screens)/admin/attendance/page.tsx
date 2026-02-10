@@ -18,7 +18,10 @@ import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import toast from "react-hot-toast";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
-import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/attendance/getAdminAttendanceCards";
+import {
+  getAdminAcademicsCards,
+  mapAcademicCards,
+} from "@/lib/helpers/admin/attendance/getAdminAttendanceCards";
 import { FilterDropdown } from "../academics/components/filterDropdown";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import SubjectWiseAttendance from "./components/subjectWiseAttendance";
