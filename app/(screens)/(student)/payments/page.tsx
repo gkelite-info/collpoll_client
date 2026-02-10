@@ -173,34 +173,18 @@ const Page = () => {
     mobile: string;
   } | null>(null);
 
-  // const [profileLoading, setProfileLoading] = useState(true);
-  // const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // useEffect(() => {
-  //   if (!userId) {
-  //     setProfileLoading(false);
-  //     return;
-  //   }
-
-  //   setProfileLoading(true);
-
-  //   fetchStudentProfileCardData(userId)
-  //     .then(setProfile)
-  //     .catch(console.error)
-  //     .finally(() => setProfileLoading(false));
-  // }, [userId]);
   useEffect(() => {
     if (userId === null) return;
 
-    const id = userId; // ✅ capture once, now it's `number`
-
+    const id = userId;
     let mounted = true;
 
     async function fetchData() {
       try {
         setLoading(true);
-        const data = await fetchStudentProfileCardData(id); // ✅ NO ERROR
+        const data = await fetchStudentProfileCardData(id);
         if (mounted) setProfile(data);
       } catch (err) {
         console.error(err);
@@ -216,171 +200,100 @@ const Page = () => {
     };
   }, [userId]);
 
-
-  // useEffect(() => {
-  //   if (!userId) return;
-
-  //   fetchStudentProfileCardData(userId)
-  //     .then(setProfile)
-  //     .catch(console.error);
-  // }, [userId]);
-
   if (loading) {
     return <PaymentsSkeleton />;
   }
 
   return (
     <div className=" p-4 lg:p-6 bg-[#F5F5F7]">
-      {/* <div className="bg-red-00"> */}
-        <div className="mb-6">
-          <h1 className="text-[#282828] font-bold text-[24px] mb-2">
-            Payments – {profile ? `${profile.branch} ${profile.year}` : ""}
-          </h1>
-          <div className="flex items-center justify-between">
-            <p className="text-[#282828] text-[16px] md:text-[18px] max-w-3xl">
-              Manage Fees, Track Transactions and Stay Updated Instantly.
-            </p>
+      <div className="mb-6">
+        <h1 className="text-[#282828] font-bold text-[24px] mb-2">
+          Payments – {profile ? `${profile.branch} ${profile.year}` : ""}
+        </h1>
+        <div className="flex items-center justify-between">
+          <p className="text-[#282828] text-[16px] md:text-[18px] max-w-3xl">
+            Manage Fees, Track Transactions and Stay Updated Instantly.
+          </p>
 
-            <div className="flex-shrink-0 ml-6 w-[320px]">
-              <CourseScheduleCard />
-            </div>
-
+          <div className="flex-shrink-0 ml-6 w-[320px]">
+            <CourseScheduleCard />
           </div>
+
         </div>
+      </div>
 
-        {/* <div className="flex items-start justify-between gap-4 mb-4">
-          <div className="max-w-3xl">
-            <h1 className="text-[#282828] font-bold text-[24px] mb-1">
-              Payments - CSE 2nd Year
-            </h1>
-            <p className="text-[#282828] text-[10px] md:text-[18px]">
-              Manage Fees, Track Transactions and Stay Updated Instantly.
-            </p>
-          </div>
-          <div className="flex-shrink-0 pb-8">
-            <div className="w-[320px]">
-              <CourseScheduleCard />
+
+
+      {profile && (
+        <ProfileCard
+          name={profile.name}
+          course={profile.course}
+          year={profile.year}
+          rollNo={profile.rollNo}
+          email={profile.email}
+          mobile={profile.mobile}
+          image="/rahul.png"
+        />
+      )}
+
+      <div className="bg-white shadow-sm rounded-xl p-8 font-sans min-h-[600px]">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-center mb-10">
+            <div className="relative flex items-center bg-gray-100/80 backdrop-blur-xl border border-white/50 p-1.5 rounded-full shadow-[inset_0_2px_6px_rgba(0,0,0,0.06)]">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`relative z-10 px-6 py-2 text-sm font-semibold transition-colors duration-300 ${activeTab === tab.id
+                    ? "text-white delay-100"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  <span className="relative z-10">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="active-pill"
+                      className="absolute inset-0 rounded-full -z-0"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 350,
+                        damping: 28,
+                      }}
+                    >
+                      <div className="absolute inset-0 rounded-full border-t border-white/30" />
+                      <div className="absolute inset-0 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.4)]" />
+                    </motion.div>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
-        </div> */}
 
-        {/* <div className="mb-6">
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-2">
-              <p className="text-[#525252]">Subject :</p>
-              <div className="rounded-full bg-[#DCEAE2] px-4 py-1 text-sm font-medium text-[#43C17A]">
-                All
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-[#525252]">Semester :</p>
-              <div className="relative">
-                <select className="rounded-full bg-[#DCEAE2] px-4 py-1 pr-8 text-sm font-medium text-[#43C17A] appearance-none focus:outline-none cursor-pointer">
-                  <option>III</option>
-                  <option>II</option>
-                </select>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#43C17A]">
-                  <FaChevronDown />
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-[#525252]">Year :</p>
-              <div className="relative">
-                <select className="rounded-full bg-[#DCEAE2] px-4 py-1 pr-8 text-sm font-medium text-[#43C17A] appearance-none focus:outline-none cursor-pointer">
-                  <option>2nd Year</option>
-                </select>
-                <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[#43C17A]">
-                  <FaChevronDown />
-                </span>
-              </div>
-            </div>
-          </div>
-        </div> */}
-
-        {profile && (
-          <ProfileCard
-            name={profile.name}
-            course={profile.course}
-            year={profile.year}
-            rollNo={profile.rollNo}
-            email={profile.email}
-            mobile={profile.mobile}
-            image="/rahul.png"
-          />
-        )}
-
-
-
-        {/* <ProfileCard
-            name="Shravani Reddy"
-            branch="B.Tech - Computer Science and Engineering"
-            year="2nd Year"
-            rollNo="CSE2K25-048"
-            email="shravanireddy@digicampus.edu.in"
-            mobile="9876543210"
-            image="https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=400&auto=format&fit=crop"
-          /> */}
-
-        <div className="bg-white shadow-sm rounded-xl p-8 font-sans min-h-[600px]">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-center mb-10">
-              <div className="relative flex items-center bg-gray-100/80 backdrop-blur-xl border border-white/50 p-1.5 rounded-full shadow-[inset_0_2px_6px_rgba(0,0,0,0.06)]">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`relative z-10 px-6 py-2 text-sm font-semibold transition-colors duration-300 ${activeTab === tab.id
-                      ? "text-white delay-100"
-                      : "text-gray-500 hover:text-gray-700"
-                      }`}
-                  >
-                    <span className="relative z-10">{tab.label}</span>
-                    {activeTab === tab.id && (
-                      <motion.div
-                        layoutId="active-pill"
-                        className="absolute inset-0 rounded-full -z-0"
-                        style={{
-                          background:
-                            "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
-                        }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 350,
-                          damping: 28,
-                        }}
-                      >
-                        <div className="absolute inset-0 rounded-full border-t border-white/30" />
-                        <div className="absolute inset-0 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.4)]" />
-                      </motion.div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="transition-opacity duration-300">
-              {activeTab === "academic" && (
-                <AcademicFees plan={mockFeePlan} summary={mockFeeSummary} />
-              )}
-              {activeTab === "additional" && (
-                <AdditionalDues
-                  financialDues={mockFinancialDues}
-                  nonFinancialDues={mockNonFinancialDues}
-                  excessDues={mockExcessDues}
-                />
-              )}
-              {activeTab === "history" && (
-                <History
-                  amountSpend={25000}
-                  transactions={mockTransactions}
-                />
-              )}
-            </div>
+          <div className="transition-opacity duration-300">
+            {activeTab === "academic" && (
+              <AcademicFees plan={mockFeePlan} summary={mockFeeSummary} />
+            )}
+            {activeTab === "additional" && (
+              <AdditionalDues
+                financialDues={mockFinancialDues}
+                nonFinancialDues={mockNonFinancialDues}
+                excessDues={mockExcessDues}
+              />
+            )}
+            {activeTab === "history" && (
+              <History
+                amountSpend={25000}
+                transactions={mockTransactions}
+              />
+            )}
           </div>
         </div>
       </div>
-    // </div>
+    </div>
   );
 };
 

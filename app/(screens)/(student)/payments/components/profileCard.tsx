@@ -10,6 +10,8 @@ type ProfileCardProps = {
   image: string;
 };
 
+
+
 export default function ProfileCard({
   name,
   course,
