@@ -17,6 +17,7 @@ import ProfileCard from "./components/profileCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStudentProfileCardData } from "@/lib/helpers/student/payments/fetchStudentProfileCardData";
 import PaymentsSkeleton from "./shimmer/PaymentsSkeleton";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 const mockFeePlan: FeePlan = {
   programName: "B.Tech CSE - 2nd Year",
@@ -175,9 +176,6 @@ const Page = () => {
   // const [profileLoading, setProfileLoading] = useState(true);
   // const [isRefreshing, setIsRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-
-
-
 
   // useEffect(() => {
   //   if (!userId) {
