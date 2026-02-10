@@ -2,11 +2,7 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Suspense } from "react";
-import {
-  MagnifyingGlass,
-  CaretLeft,
-  CaretRight,
-} from "@phosphor-icons/react";
+import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import FacultyAttendanceCard, {
   Department,
@@ -15,7 +11,6 @@ import FacultyAttendanceCard, {
 import { User, UsersThree } from "@phosphor-icons/react";
 import CardComponent from "./components/cards";
 import { useSearchParams } from "next/navigation";
-import { SubjectWiseAttendance } from "./components/subjectWiseAttendance";
 import { useRouter } from "next/navigation";
 import { fetchAttendanceStats } from "@/lib/helpers/admin/attendance/attendanceStats";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -23,9 +18,13 @@ import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import toast from "react-hot-toast";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
-import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
+import {
+  getAdminAcademicsCards,
+  mapAcademicCards,
+} from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 import { FilterDropdown } from "../academics/components/filterDropdown";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import SubjectWiseAttendance from "./components/subjectWiseAttendance";
 interface ExtendedDepartment extends Department {
   id: string;
   section: string;
@@ -86,7 +85,6 @@ interface AcademicCard {
   }[];
 }
 
-
 const AttendancePage = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,8 +102,8 @@ const AttendancePage = () => {
   const [adminLoading, setAdminLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const showStatsLoader = adminLoading || statsLoading;
-  const { userId } = useUser()
-  const { collegeEducationId } = useAdmin()
+  const { userId } = useUser();
+  const { collegeEducationId } = useAdmin();
 
   const [stats, setStats] = useState({
     totalDepartments: 0,
@@ -232,7 +230,7 @@ const AttendancePage = () => {
       } catch (err) {
         console.error("Failed to load attendance stats", err);
         toast.error(
-          "Unable to load attendance statistics. Please refresh or try again."
+          "Unable to load attendance statistics. Please refresh or try again.",
         );
       } finally {
         if (isMounted) {
@@ -246,7 +244,6 @@ const AttendancePage = () => {
       isMounted = false;
     };
   }, [adminContext]);
-
 
   const cardData = [
     {
@@ -345,7 +342,8 @@ const AttendancePage = () => {
               value={item.value}
               label={item.label}
             />
-          )))}
+          ))
+        )}
         <div>
           <WorkWeekCalendar style="h-full w-[350px]" />
         </div>
@@ -387,8 +385,8 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (educations.find(
-                  (e) => e.collegeEducationId.toString() === val,
-                )?.collegeEducationType ?? val)
+                    (e) => e.collegeEducationId.toString() === val,
+                  )?.collegeEducationType ?? val)
             }
           />
 
@@ -413,7 +411,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (branches.find((b) => b.collegeBranchId.toString() === val)
-                  ?.collegeBranchCode ?? val)
+                    ?.collegeBranchCode ?? val)
             }
           />
 
@@ -439,7 +437,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (years.find((y) => y.collegeAcademicYearId.toString() === val)
-                  ?.collegeAcademicYear ?? val)
+                    ?.collegeAcademicYear ?? val)
             }
           />
 
@@ -465,7 +463,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (sections.find((s) => s.collegeSectionsId.toString() === val)
-                  ?.collegeSections ?? val)
+                    ?.collegeSections ?? val)
             }
           />
 
@@ -490,7 +488,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (subjects.find((s) => s.collegeSubjectId.toString() === val)
-                  ?.subjectName ?? val)
+                    ?.subjectName ?? val)
             }
           />
         </div>
@@ -501,42 +499,44 @@ const AttendancePage = () => {
           {/* {filteredCards.map((dept) => (
             <FacultyAttendanceCard key={dept.id} {...dept} />
           ))} */}
-          {(loading || adminLoading || collegeEducationId === null) ?
+          {loading || adminLoading || collegeEducationId === null ? (
             <div className="flex items-center col-span-full justify-center w-full h-32">
               <Loader />
             </div>
-            : !loading && filteredCards.length === 0 ?
-              <div className="col-span-full flex justify-center py-20 text-gray-400">
-                {cards.length > 0
-                  ? "No matches found on this page."
-                  : "No academic records found."}
-              </div> :
-              filteredCards.map((dept) => {
-                const style = getDynamicBranchStyle(dept.branchCode);
-                return (
-                  <FacultyAttendanceCard
-                    key={dept.id}
-                    name={`${dept.branchCode} - ${dept.section}`}
-                    text={style.text}
-                    color={style.color}
-                    bgColor={style.bgColor}
-                    collegeId={adminContext!.collegeId}
-                    collegeEducationId={collegeEducationId}
-                    collegeBranchId={dept.collegeBranchId}
-                    collegeAcademicYearId={dept.collegeAcademicYearId}
-                    collegeSectionsId={dept.collegeSectionsId}
-                    year={dept.year}
-                    totalStudents={dept.totalStudents}
-                    faculties={dept.faculties}
-                    avgAttendance={0}
-                    belowThresholdCount={0}
-                    totalSubjects={dept.totalSubjects}
-                    branch={dept.branchCode}
-                    section={dept.section}
-                    totalFaculties={dept.totalFaculties}
-                  />
-                );
-              })}
+          ) : !loading && filteredCards.length === 0 ? (
+            <div className="col-span-full flex justify-center py-20 text-gray-400">
+              {cards.length > 0
+                ? "No matches found on this page."
+                : "No academic records found."}
+            </div>
+          ) : (
+            filteredCards.map((dept) => {
+              const style = getDynamicBranchStyle(dept.branchCode);
+              return (
+                <FacultyAttendanceCard
+                  key={dept.id}
+                  name={`${dept.branchCode} - ${dept.section}`}
+                  text={style.text}
+                  color={style.color}
+                  bgColor={style.bgColor}
+                  collegeId={adminContext!.collegeId}
+                  collegeEducationId={collegeEducationId}
+                  collegeBranchId={dept.collegeBranchId}
+                  collegeAcademicYearId={dept.collegeAcademicYearId}
+                  collegeSectionsId={dept.collegeSectionsId}
+                  year={dept.year}
+                  totalStudents={dept.totalStudents}
+                  faculties={dept.faculties}
+                  avgAttendance={0}
+                  belowThresholdCount={0}
+                  totalSubjects={dept.totalSubjects}
+                  branch={dept.branchCode}
+                  section={dept.section}
+                  totalFaculties={dept.totalFaculties}
+                />
+              );
+            })
+          )}
         </div>
 
         {filteredCards.length > 0 && totalPages > 1 && (
@@ -554,10 +554,11 @@ const AttendancePage = () => {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
-                    ? "bg-[#16284F] text-white"
-                    : "bg-white text-gray-600 border hover:border-gray-300"
-                    }`}
+                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "bg-white text-gray-600 border hover:border-gray-300"
+                  }`}
                 >
                   {i + 1}
                 </button>

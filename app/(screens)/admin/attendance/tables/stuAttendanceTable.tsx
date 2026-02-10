@@ -417,7 +417,7 @@ export default function StuAttendanceTable({
                   </td>
                   <td className="px-4 py-4">
                     <button
-                      onClick={() => router.push(`/faculty/attendance/${s.id}`)}
+                      onClick={() => router.push(`/admin/attendance/${s.id}`)}
                       className="text-gray-500 cursor-pointer hover:text-[#43C17A] font-medium text-xs transition-colors hover:underline underline-offset-2"
                     >
                       View Details

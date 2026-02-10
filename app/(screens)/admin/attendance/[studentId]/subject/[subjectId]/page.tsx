@@ -1,104 +1,182 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { students } from "../../../data";
-import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { useEffect, useState } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import SubjectAttendanceCards from "@/app/(screens)/faculty/attendance/components/subjectAttendanceCards";
+import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
+import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
+import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
+import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectAttendanceTable from "@/app/(screens)/faculty/attendance/components/subjectAttendanceTable";
 
 export default function SubjectDetailPage() {
-  const { studentId, subjectId } = useParams<{
-    studentId: string;
-    subjectId: string;
-  }>();
+  const params = useParams();
+
+  const studentId = Array.isArray(params?.studentId)
+    ? params.studentId[0]
+    : params?.studentId;
+  const subjectId = Array.isArray(params?.subjectId)
+    ? params.subjectId[0]
+    : params?.subjectId;
 
   const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(
-    "ALL"
+    "ALL",
   );
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [student, setStudent] = useState<any>(null);
 
-  const student = useMemo(
-    () => students.find((s) => s.id === studentId),
-    [studentId]
-  );
+  const response =
+    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
 
-  const subject = useMemo(
-    () => student?.subjects.find((s) => s.subjectId === subjectId),
-    [student, subjectId]
-  );
+  useEffect(() => {
+    if (!studentId || !subjectId) return;
 
-  if (!student || !subject) {
+    let isMounted = true;
+
+    const fetchData = async () => {
+      setLoading(true);
+
+      const [attendanceRes, studentRes] = await Promise.allSettled([
+        getSubjectAttendanceDetails(studentId, subjectId),
+        getStudentAttendanceDetails(studentId),
+      ]);
+
+      if (!isMounted) return;
+
+      if (attendanceRes.status === "fulfilled") {
+        setData(attendanceRes.value);
+      } else {
+        console.error(
+          "Error fetching subject attendance:",
+          attendanceRes.reason,
+        );
+      }
+
+      if (studentRes.status === "fulfilled") {
+        setStudent(studentRes.value);
+      } else {
+        console.error("Error fetching student details:", studentRes.reason);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentId, subjectId]);
+
+  if (loading) {
     return (
-      <div className="p-6 text-md text-red-500 font-medium">
-        Invalid student or subject
+      <div className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading Records...
       </div>
     );
   }
 
+  if (!data || !student) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500 font-medium">
+        Subject records not found.
+      </div>
+    );
+  }
+
+  const leaveCount = data.summary.leave;
+
+  const subjectSummary = {
+    total: data.summary.totalClasses,
+    present: data.summary.attended,
+    absent: data.summary.absent,
+    leave: leaveCount,
+  };
+
   const filteredRecords =
     filter === "ALL"
-      ? subject.records
-      : subject.records.filter((r) => r.status === filter);
+      ? data.records
+      : data.records.filter((r: any) => r.status === filter);
 
   return (
-    <main className="px-4 py-4">
-      <section className="mb-4 flex items-center justify-between">
+    <main className="px-4 py-4 min-h-screen space-y-6">
+      <section className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Track, Verify and Manage Attendance Records Across Departments and
-            Faculty.
+            Track, Verify and Manage Attendance Records.
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" />
       </section>
 
-      <section className="flex gap-4 mb-7 ">
-        <div className="flex-grow">
-          <SubjectAttendanceCards
-            summary={subject.summary}
-            active={filter}
-            onChange={setFilter}
+      <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <StudentProfileCard
+            name={student.fullName}
+            department={student.department}
+            studentId={student.studentsId.toString()}
+            phone={student.mobile}
+            email={student.email}
+            address={student.address}
+            photo={student.photo || ""}
+            isSubjectMode={true}
+            subjectSummary={subjectSummary}
+            activeFilter={filter}
+            onFilterChange={setFilter}
+            attendanceDays={0}
+            absentDays={0}
+            leaveDays={0}
           />
         </div>
-        <div className="">
-          <WorkWeekCalendar style="w-[345px]" />
+
+        <div className="lg:col-span-1">
+          <AiBotCard response={response} />
         </div>
       </section>
 
-      <section className="mb-8">
-        <h2 className="text-lg font-medium text-[#1A1C1E] mb-4">
+      <section className="">
+        <h2 className="text-lg font-bold text-[#1A1C1E] mb-4">
           Subject Detail View
         </h2>
 
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-5 text-[13px]">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-4 text-sm">
           <div className="flex items-center gap-3">
-            <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
+            <span className="text-[#64748B] font-medium uppercase tracking-wide text-xs">
               Subject :
             </span>
             <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              {subject.subjectName}
+              {data.subjectName}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
+            <span className="text-[#64748B] font-medium uppercase tracking-wide text-xs">
               Faculty :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              {subject.facultyName}
+            <span className="bg-[#E6F4FF] text-[#007AFF] px-4 py-1 rounded-full font-medium">
+              {data.facultyName}
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[#64748B] font-medium uppercase tracking-wider text-xs">
-              Sort :
+            <span className="text-[#64748B] font-medium uppercase tracking-wide text-xs">
+              Summary :
             </span>
-            <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-1 rounded-full font-medium">
-              Classes Held: {subject.summary.totalClasses} | Attended:{" "}
-              {subject.summary.attended} | Missed: {subject.summary.absent} |
-              Total: {subject.summary.percentage}%
+            <span className="text-gray-700 font-medium bg-gray-50 px-3 py-1 rounded-lg border border-gray-200">
+              Held:{" "}
+              <span className="font-medium">{data.summary.totalClasses}</span>
+              <span className="mx-2 text-gray-300">|</span>
+              Present:{" "}
+              <span className="text-green-600 font-medium">
+                {data.summary.attended}
+              </span>
+              <span className="mx-2 text-gray-300">|</span>
+              Percentage:{" "}
+              <span className="text-blue-600 font-medium">
+                {data.summary.percentage}%
+              </span>
             </span>
           </div>
         </div>
