@@ -6,7 +6,7 @@ export default function StudentLayout({
 }) {
   return (
     <div className="flex">
-      <div className="flex flex-col">
+      <div className="flex flex-col w-full">
         <div className="h-auto bg-[#F4F4F4] overflow-auto">
           {children}
         </div>

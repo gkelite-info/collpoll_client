@@ -17,7 +17,7 @@ export default function ProfileCard({
   rollNo,
   email,
   mobile,
-  image,
+   image,
 }: ProfileCardProps) {
   return (
     <div className="flex rounded-xl bg-white p-6 shadow-sm mb-8 items-center gap-6">
