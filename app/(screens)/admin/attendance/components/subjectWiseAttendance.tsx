@@ -462,7 +462,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     }
   };
 
-  // --- 4. CANCEL CLASS ---
   const confirmClassCancel = () => {
     if (!cancelReason.trim()) {
       toast.error("Enter a reason");
