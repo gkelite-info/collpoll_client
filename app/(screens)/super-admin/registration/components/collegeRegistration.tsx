@@ -17,6 +17,7 @@ const INITIAL_FORM_STATE = {
   city: "",
   zip: "",
   address: "",
+  educationType: [],
 };
 
 export const CollegeRegistration = () => {
@@ -114,6 +115,7 @@ export const CollegeRegistration = () => {
           state: formData.state,
           city: formData.city,
           pincode: formData.zip,
+           educationTypes: formData.educationType,
         },
         selectedFile
       );
