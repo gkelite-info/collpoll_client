@@ -52,6 +52,8 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
     onClose();
   };
 
+   
+
   return (
     <div className="fixed text-black inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-2">
       <div className="bg-white rounded-md shadow-lg w-full max-w-[520px] max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
@@ -178,9 +180,10 @@ const LessonCard: React.FC<{ lesson: UpcomingLesson }> = ({ lesson }) => (
           {`${lesson.title}`}
         </h3>
         <h3 className="text-[#1e2952] font-bold text-xs leading-tight">
-          {`${lesson.degree} ${lesson.department
-            .map((item) => item.name)
-            .join(", ")} - Year ${lesson.year}`}
+          {lesson.degree}{" "}
+          {lesson.department.map((item) => item.name).join(", ")} - Year{" "}
+          {lesson.year}
+          {lesson.section && ` - Section ${lesson.section}`}
         </h3>
         <p className="text-gray-600 text-[13px] mt-1 leading-snug line-clamp-2">
           {lesson.description}
@@ -220,9 +223,12 @@ export default function UpcomingClasses({
 
   const handleCancelClass = (id: string) => {
     console.log("Cancelled class ID:", id);
-    // Add API logic here
     setIsActionModalOpen(false);
   };
+
+  const handleAddUpcomingClass = () => {
+    router.push('/faculty/calendar');
+  }
 
   return (
     <>
@@ -233,10 +239,14 @@ export default function UpcomingClasses({
           <h2 className="text-lg font-bold text-gray-900">Upcoming Classes</h2>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsModalOpen(true)}
               className="w-8 h-8 rounded-full bg-[#ebeef5] flex items-center justify-center hover:bg-gray-200 transition-colors text-gray-700"
             >
-              <Plus weight="bold" size={18} />
+              <Plus
+                weight="bold"
+                size={18}
+                className="cursor-pointer"
+                onClick={handleAddUpcomingClass}
+              />
             </button>
             <button className="text-gray-800 hover:text-black">
               <DotsThreeVertical weight="bold" size={24} />

@@ -35,8 +35,6 @@ export default function FacultyDashLeft() {
     INITIAL_SCHEDULED_LESSONS,
   );
 
-  const router = useRouter();
-
   useEffect(() => {
     const fetchClasses = async () => {
       if (loading || !userId) return;

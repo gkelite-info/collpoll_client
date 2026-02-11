@@ -134,70 +134,131 @@ export async function getUpcomingClasses(
     return [];
   }
 
-  return events.map((event: any) => {
+  return events.flatMap((event: any) => {
     const sectionsData = event.calendar_event_section || [];
 
-    const departments = Array.from(
-      new Set(
-        sectionsData.map((s: any) =>
-          safeGet(s.branch, "collegeBranchCode", "Unknown Branch"),
-        ),
-      ),
-    ).map((name) => ({ name: name as string }));
+    return sectionsData.map((sectionRow: any) => {
+      const department = safeGet(
+        sectionRow.branch,
+        "collegeBranchCode",
+        "Unknown Branch"
+      );
 
-    const semesters = Array.from(
-      new Set(
-        sectionsData.map(
-          (s: any) => `Sem ${safeGet(s.semester, "collegeSemester", "?")}`,
-        ),
-      ),
-    );
+      const semester = `Sem ${safeGet(
+        sectionRow.semester,
+        "collegeSemester",
+        "?"
+      )}`;
 
-    const sectionNames = Array.from(
-      new Set(
-        sectionsData.map((s: any) =>
-          safeGet(s.section, "collegeSections", "Unknown"),
-        ),
-      ),
-    ).join(", ");
+      const degree = safeGet(
+        sectionRow.education,
+        "collegeEducationType",
+        "B.Tech"
+      );
 
-    const firstSection = sectionsData[0];
-    const degree = safeGet(
-      firstSection?.education,
-      "collegeEducationType",
-      "B.Tech",
-    );
-    const yearString = safeGet(
-      firstSection?.yearData,
-      "collegeAcademicYear",
-      "1",
-    );
-    const year = parseInt(yearString) || 1;
+      const yearString = safeGet(
+        sectionRow.yearData,
+        "collegeAcademicYear",
+        "1"
+      );
+      const year = parseInt(yearString) || 1;
 
-    const subjectName = safeGet(
-      event.subjectData,
-      "subjectName",
-      "Unknown Subject",
-    );
+      const subjectName = safeGet(
+        event.subjectData,
+        "subjectName",
+        "Unknown Subject"
+      );
 
-    const topicTitle = safeGet(event.topicData, "topicTitle");
-    const description = topicTitle || `Class for ${sectionNames}`;
+      const topicTitle = safeGet(event.topicData, "topicTitle");
 
-    return {
-      id: event.calendarEventId.toString(),
-      title: subjectName,
-      description: description,
-      fromTime: convertTo12HourFormat(event.fromTime),
-      toTime: convertTo12HourFormat(event.toTime),
-      date: formatDate(event.date),
-      roomNo: event.roomNo,
-      section: sectionNames,
-      semester: semesters as string[],
-      department: departments,
-      degree: degree,
-      year: year,
-    };
+      return {
+        // 🔑 UNIQUE PER SECTION
+        id: `${event.calendarEventId}-${sectionRow.section?.collegeSections}`,
+
+        title: subjectName,
+        description: topicTitle || "Class",
+
+        fromTime: convertTo12HourFormat(event.fromTime),
+        toTime: convertTo12HourFormat(event.toTime),
+        date: formatDate(event.date),
+        roomNo: event.roomNo,
+
+        // ✅ SINGLE SECTION ONLY
+        section: sectionRow.section?.collegeSections,
+
+        semester: [semester],
+        department: [{ name: department }],
+        degree,
+        year,
+      };
+    });
   });
+
+  // return events.map((event: any) => {
+  //   const sectionsData = event.calendar_event_section || [];
+
+  //   const departments = Array.from(
+  //     new Set(
+  //       sectionsData.map((s: any) =>
+  //         safeGet(s.branch, "collegeBranchCode", "Unknown Branch"),
+  //       ),
+  //     ),
+  //   ).map((name) => ({ name: name as string }));
+
+  //   const semesters = Array.from(
+  //     new Set(
+  //       sectionsData.map(
+  //         (s: any) => `Sem ${safeGet(s.semester, "collegeSemester", "?")}`,
+  //       ),
+  //     ),
+  //   );
+
+  //   const sectionNames = Array.from(
+  //     new Set(
+  //       sectionsData
+  //         .map((s: any) => s.section?.collegeSections)
+  //         .filter(Boolean)
+  //     )
+  //   ).join(", ");
+
+
+  //   const firstSection = sectionsData[0];
+  //   const degree = safeGet(
+  //     firstSection?.education,
+  //     "collegeEducationType",
+  //     "B.Tech",
+  //   );
+  //   const yearString = safeGet(
+  //     firstSection?.yearData,
+  //     "collegeAcademicYear",
+  //     "1",
+  //   );
+  //   const year = parseInt(yearString) || 1;
+
+  //   const subjectName = safeGet(
+  //     event.subjectData,
+  //     "subjectName",
+  //     "Unknown Subject",
+  //   );
+
+  //   const topicTitle = safeGet(event.topicData, "topicTitle");
+  //   const description = topicTitle || `Class for ${sectionNames}`;
+
+  //   return {
+  //     id: event.calendarEventId.toString(),
+  //     title: subjectName,
+  //     description: description,
+  //     fromTime: convertTo12HourFormat(event.fromTime),
+  //     toTime: convertTo12HourFormat(event.toTime),
+  //     date: formatDate(event.date),
+  //     roomNo: event.roomNo,
+  //     section: sectionNames,
+  //     semester: semesters as string[],
+  //     department: departments,
+  //     degree: degree,
+  //     year: year,
+  //   };
+  // });
 }
 
 export async function getClassDetails(

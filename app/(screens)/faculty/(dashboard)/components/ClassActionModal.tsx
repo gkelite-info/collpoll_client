@@ -1,6 +1,6 @@
 import { X } from "@phosphor-icons/react";
 import { UpcomingLesson } from "../../utils/upcomingClasses";
-
+ 
 interface ActionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,7 +8,7 @@ interface ActionModalProps {
   onAccept: (id: string) => void;
   onCancelClass: (id: string) => void;
 }
-
+ 
 export const ClassActionModal: React.FC<ActionModalProps> = ({
   isOpen,
   onClose,
@@ -17,7 +17,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
   onCancelClass,
 }) => {
   if (!isOpen || !lesson) return null;
-
+ 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 text-black">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-[500px] animate-in fade-in zoom-in duration-200">
@@ -32,17 +32,17 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             <X size={20} weight="bold" />
           </button>
         </div>
-
+ 
         <div className="px-5 py-4 space-y-3">
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               Class Title
             </label>
             <div className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-600 bg-gray-50">
-              {`${lesson.degree} - Year ${lesson.year} ${lesson.title}`}
+             {`${lesson.degree} - Year ${lesson.year} - Section ${lesson.section ?? "N/A"} ${lesson.title}`}
             </div>
           </div>
-
+ 
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               Topic
@@ -51,7 +51,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
               {lesson.description || "No topic specified"}
             </div>
           </div>
-
+ 
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               Class Date
@@ -60,7 +60,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
               {lesson.date || "NULL"}
             </div>
           </div>
-
+ 
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               Class Time
@@ -75,7 +75,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
               </div>
             </div>
           </div>
-
+ 
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               Classroom
@@ -85,7 +85,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
             </div>
           </div>
         </div>
-
+ 
         <div className="px-5 py-4 flex gap-3">
           <button
             onClick={() => onAccept(lesson.id)}
@@ -104,3 +104,5 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
     </div>
   );
 };
+ 
+ 
