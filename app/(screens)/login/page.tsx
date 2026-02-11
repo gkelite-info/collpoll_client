@@ -107,7 +107,8 @@ export default function LoginPage() {
         parent: "/parent",
         faculty: "/faculty",
         student: "/stu_dashboard",
-        superadmin: "/super-admin"
+        superadmin: "/super-admin",
+        finance: "/finance"
       };
 
       const redirectPath = roleRouteMap[role] || "/login";

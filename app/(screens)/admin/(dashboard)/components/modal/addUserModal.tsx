@@ -12,6 +12,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { CustomMultiSelect } from "./userModalComponents";
 import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
+import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
 const AddUserModal: React.FC<{
@@ -229,10 +230,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId ===
-              studentSelectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId ===
+            studentSelectedEducation.collegeEducationId,
+        )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -249,8 +250,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-          )
+          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+        )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -267,10 +268,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -279,10 +280,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -322,6 +323,8 @@ const AddUserModal: React.FC<{
   const isFaculty = basicData.role === "Faculty";
   const isStudent = basicData.role === "Student";
   const isParent = basicData.role === "Parent";
+  const isFinance = basicData.role === "Finance";
+
 
   const handleSave = async () => {
     if (!basicData.fullName || !basicData.email || !basicData.role)
@@ -353,6 +356,9 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student ID required.");
 
+    if (isFinance && !selectedEducationId)
+      return toast.error("Select Education Type for Finance.");
+
     if (
       !user &&
       (!basicData.password || basicData.password !== basicData.confirmPassword)
@@ -375,6 +381,18 @@ const AddUserModal: React.FC<{
 
       if (!targetUserId) throw new Error("User creation failed");
 
+      if (isFinance && !user) {
+        await createFinanceManager({
+          userId: targetUserId,
+          collegeId: basicData.collegeIntId,
+          collegeEducationId: selectedEducationId!,
+          createdBy: basicData.adminId,
+          isActive: true,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+      }
+
       if (isFaculty) {
         await persistFaculty(
           targetUserId,
@@ -390,6 +408,8 @@ const AddUserModal: React.FC<{
           !!user,
         );
       }
+
+      if (!targetUserId) throw new Error("User creation failed");
 
       if (isStudent) {
         const eduId = studentSelectedEducation?.collegeEducationId;
@@ -538,6 +558,7 @@ const AddUserModal: React.FC<{
                   <input
                     type="tel"
                     name="mobileNumber"
+                    placeholder="98765432XX"
                     value={basicData.mobileNumber}
                     onChange={handleBasicChange}
                     className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
@@ -563,6 +584,7 @@ const AddUserModal: React.FC<{
                     <option value="Faculty">Faculty</option>
                     <option value="Student">Student</option>
                     <option value="Parent">Parent</option>
+                    <option value="Finance">Finance</option>
                   </select>
                   <CaretDown
                     size={14}
@@ -571,7 +593,7 @@ const AddUserModal: React.FC<{
                 </div>
               </div>
 
-              {isFaculty && (
+              {(isFaculty || isFinance) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Education Type
@@ -915,11 +937,10 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
-                isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>
