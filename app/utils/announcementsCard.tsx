@@ -10,15 +10,17 @@ type AnnounceCard = {
 
 type AnnouncementsCardProps = {
   announceCard: AnnounceCard[];
+  height?: string;
 };
 
 export default function AnnouncementsCard({
   announceCard,
+  height,
 }: AnnouncementsCardProps) {
   return (
     <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-fit">
       <h4 className="text-[#282828] font-semibold mb-3 ml-1">Announcements</h4>
-      <div className="flex flex-col gap-2 overflow-y-auto">
+      <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
         {announceCard.map((card, index) => (
           <div
             key={index}
