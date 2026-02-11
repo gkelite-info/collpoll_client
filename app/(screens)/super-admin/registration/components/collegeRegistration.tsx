@@ -17,6 +17,7 @@ const INITIAL_FORM_STATE = {
   city: "",
   zip: "",
   address: "",
+  educationType: [],
 };
 
 export const CollegeRegistration = () => {
