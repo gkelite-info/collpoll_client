@@ -87,7 +87,7 @@ export async function saveCollegeAdmin(
                 createdAt: now,
             },
             {
-                onConflict: "userId,collegeId",
+                onConflict: "userId,collegeId,collegeAdminId",
             },
         )
         .select("collegeAdminId")

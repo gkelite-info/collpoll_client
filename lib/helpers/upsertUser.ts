@@ -10,7 +10,7 @@ export const upsertUser = async (payload: {
   currentCity?: string;
   workStatus?: string;
   role?: string;
-  collegeCode: string;
+  // collegeCode: string;
   collegePublicId?: string;
   gender?: "Male" | "Female";
 }) => {
@@ -25,7 +25,7 @@ export const upsertUser = async (payload: {
       currentCity,
       workStatus,
       role,
-      collegeCode,
+      // collegeCode,
       collegePublicId,
       gender
     } = payload;
@@ -45,7 +45,7 @@ export const upsertUser = async (payload: {
           currentCity,
           workStatus,
           role: role ?? null,
-          collegeCode,
+          // collegeCode,
           collegePublicId,
           gender,
           updatedAt: now,

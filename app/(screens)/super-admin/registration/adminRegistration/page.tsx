@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 
 import toast from "react-hot-toast";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { upsertUser, upsertAdminEntry } from "@/lib/helpers/upsertUser";
+import { upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
 import { InputField } from "../components/reusableComponents";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { saveCollegeAdmin } from "@/lib/helpers/collegeAdmin/collegeAdmin";
 
 type AdminForm = {
   fullName: string;
@@ -15,7 +16,7 @@ type AdminForm = {
   countryCode: string;
   mobile: string;
   collegeId: string;
-  collegeCode: string;
+  // collegeCode: string;
   password: string;
   confirmPassword: string;
   gender: "Male" | "Female" | "";
@@ -27,7 +28,7 @@ const initialFormState: AdminForm = {
   countryCode: "+91",
   mobile: "",
   collegeId: "",
-  collegeCode: "",
+  // collegeCode: "",
   password: "",
   confirmPassword: "",
   gender: "",
@@ -86,78 +87,132 @@ export default function AdminRegistration() {
     };
   };
 
-  const validateCollegeCode = async (collegeId: string, collegeCode: string,) => {
+  const validateCollegeId = async (collegeId: string) => {
     const { data, error } = await supabase
       .from("colleges")
-      .select("collegePublicId, collegeCode")
-      .eq("collegePublicId", collegeId.trim())
-      .eq("collegeCode", collegeCode.trim())
+      .select("collegeId")
+      .eq("collegeId", Number(collegeId))
       .single();
 
     if (error || !data) {
-      return false;
+      return { success: false };
     }
 
-    return true;
+    return {
+      success: true,
+      collegeId: data.collegeId,
+    };
   };
 
 
-
   const handleSubmit = async () => {
-    setIsLoading(true)
+    console.log("🚀 Submit clicked");
+    setIsLoading(true);
+
     try {
-
+      console.log("🔍 Checking SuperAdmin auth...");
       const superAdmin = await checkSuperAdminAuth();
-      if (!superAdmin) return;
-      if (!form.fullName.trim()) return toast.error("Full Name is required");
-      if (!form.email.trim()) return toast.error("Email Address is required");
+      console.log("SuperAdmin result:", superAdmin);
 
+      if (!superAdmin) {
+        console.log("❌ SuperAdmin validation failed");
+        return;
+      }
+
+      console.log("🔍 Validating Full Name...");
+      if (!form.fullName.trim()) {
+        console.log("❌ Full Name missing");
+        return toast.error("Full Name is required");
+      }
+
+      console.log("🔍 Validating Email...");
+      if (!form.email.trim()) {
+        console.log("❌ Email missing");
+        return toast.error("Email Address is required");
+      }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(normalizedEmail))
+      if (!emailRegex.test(normalizedEmail)) {
+        console.log("❌ Invalid email format:", normalizedEmail);
         return toast.error("Enter a valid email address");
+      }
 
-      if (!form.countryCode.trim())
+      console.log("🔍 Validating Country Code...");
+      if (!form.countryCode.trim()) {
+        console.log("❌ Country code missing");
         return toast.error("Country code is required");
+      }
 
-      if (!/^\+\d{1,4}$/.test(form.countryCode))
+      if (!/^\+\d{1,4}$/.test(form.countryCode)) {
+        console.log("❌ Invalid country code:", form.countryCode);
         return toast.error("Enter a valid country code (e.g. +91)");
+      }
 
-      if (!form.mobile.trim()) return toast.error("Mobile number is required");
-      if (form.mobile.length !== 10)
+      console.log("🔍 Validating Mobile...");
+      if (!form.mobile.trim()) {
+        console.log("❌ Mobile missing");
+        return toast.error("Mobile number is required");
+      }
+
+      if (form.mobile.length !== 10) {
+        console.log("❌ Mobile length invalid:", form.mobile);
         return toast.error("Mobile number must be 10 digits");
+      }
 
-      if (!form.collegeId.trim())
+      console.log("🔍 Validating College ID...");
+      if (!form.collegeId.trim()) {
+        console.log("❌ College ID missing");
         return toast.error("College ID is required");
+      }
 
-      if (!form.collegeCode.trim())
-        return toast.error("College Code is required");
+      // console.log("🔍 Validating College Code...");
+      // if (!form.collegeCode.trim()) {
+      //   console.log("❌ College Code missing");
+      //   return toast.error("College Code is required");
+      // }
 
+      console.log("🔍 Validating Gender...");
       if (!form.gender) {
+        console.log("❌ Gender not selected");
         return toast.error("Please select gender");
       }
 
-      if (!form.password)
+      console.log("🔍 Validating Password...");
+      if (!form.password) {
+        console.log("❌ Password missing");
         return toast.error("Password is required");
+      }
 
       if (!PASSWORD_REGEX.test(form.password)) {
+        console.log("❌ Password regex failed");
         return toast.error(
-          "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
+          "Password must include uppercase, lowercase, number, special character"
         );
       }
 
-      if (form.password !== form.confirmPassword)
+      if (form.password !== form.confirmPassword) {
+        console.log("❌ Password mismatch");
         return toast.error("Passwords do not match");
+      }
 
-      const fullMobileNumber = `${form.countryCode}${form.mobile}`;
+      console.log("🔍 Validating College from DB...");
+      const collegeValidation = await validateCollegeId(
+        form.collegeId
+      );
 
-      const isValidCollege = await validateCollegeCode(form.collegeId, form.collegeCode);
 
-      if (!isValidCollege) {
+      console.log("College validation result:", collegeValidation);
+
+      if (!collegeValidation.success) {
+        console.log("❌ College validation failed");
         toast.error("College ID and College Code do not match.");
         return;
       }
 
+      const actualCollegeId = collegeValidation.collegeId;
+      console.log("✅ Actual College ID:", actualCollegeId);
+
+      console.log("🔍 Creating Supabase Auth user...");
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -165,58 +220,70 @@ export default function AdminRegistration() {
           emailRedirectTo: "https://collpoll-client.vercel.app/login",
         },
       });
-      if (error) throw error;
 
-      const authUser = data.user;
+      if (error) {
+        console.log("❌ Supabase Auth error:", error);
+        throw error;
+      }
 
-      if (!authUser) {
+      console.log("Auth user created:", data.user);
+
+      if (!data.user) {
+        console.log("❌ Auth user is null");
         throw new Error("Auth user not created");
       }
 
+      console.log("🔍 Inserting into users table...");
       const userResult = await upsertUser({
-        auth_id: authUser.id,
+        auth_id: data.user.id,
         fullName: toPascalCase(form.fullName),
         email: form.email.toLowerCase(),
-        mobile: fullMobileNumber,
-        collegePublicId: form.collegeId.trim().toUpperCase(),
-        collegeCode: form.collegeCode.trim().toUpperCase(),
+        mobile: `${form.countryCode}${form.mobile}`,
+        collegeId: actualCollegeId,
+        // collegeCode: form.collegeCode.trim().toUpperCase(),
         role: "Admin",
         gender: form.gender,
       });
 
+      console.log("User insert result:", userResult);
+
       if (!userResult.success || !userResult.data) {
+        console.log("❌ Users table insert failed");
         toast.error(userResult.error || "Failed to create admin");
         return;
       }
 
-      const adminResult = await upsertAdminEntry({
+      console.log("🔍 Inserting into college_admin...");
+      const collegeAdminResult = await saveCollegeAdmin({
         userId: userResult.data.userId,
-        fullName: userResult.data.fullName,
-        email: userResult.data.email,
-        mobile: userResult.data.mobile,
-        gender: form.gender,
-        collegePublicId: form.collegeId.trim().toUpperCase(),
-        collegeCode: form.collegeCode.trim().toUpperCase(),
-        createdBy: superAdmin.userId,
+        collegeId: actualCollegeId,
       });
 
-      if (!adminResult.success) {
-        toast.error("User created, but admin creation failed");
+      console.log("College admin result:", collegeAdminResult);
+
+      if (!collegeAdminResult.success) {
+        console.log("❌ college_admin insert failed");
+        toast.error("User created, but college admin creation failed");
         return;
       }
 
+      console.log("🎉 SUCCESS: Admin registered");
       toast.success("Admin registered successfully");
+
       setForm(initialFormState);
       setIsCollegeCodeManual(false);
       setShowPassword(false);
       setShowConfirmPassword(false);
+
     } catch (error: any) {
-      console.log("error checking admin create", error)
+      console.log("🔥 CATCH BLOCK ERROR:", error);
       toast.error(error.message || "Failed to create admin");
     } finally {
-      setIsLoading(false)
+      console.log("🧹 Resetting loading state");
+      setIsLoading(false);
     }
   };
+
 
   return (
     <motion.div
@@ -284,20 +351,20 @@ export default function AdminRegistration() {
       <div className="grid grid-cols-2 gap-4">
         <InputField
           label="College ID"
-          placeholder='e.g., "MRCE001"'
+          placeholder='e.g., "Enter your college ID"'
           value={form.collegeId}
           // onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("collegeId", e.target.value.toUpperCase())}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             const value = e.target.value.toUpperCase();
             handleChange("collegeId", value);
 
-            if (!isCollegeCodeManual) {
-              const extractedCode = value.match(/^[A-Z]+/)?.[0] || "";
-              handleChange("collegeCode", extractedCode);
-            }
+            // if (!isCollegeCodeManual) {
+            //   const extractedCode = value.match(/^[A-Z]+/)?.[0] || "";
+            //   handleChange("collegeCode", extractedCode);
+            // }
           }}
         />
-        <InputField
+        {/* <InputField
           label="College Code"
           placeholder='e.g., "MRCE"'
           value={form.collegeCode}
@@ -308,7 +375,7 @@ export default function AdminRegistration() {
               handleChange("collegeCode", value.toUpperCase());
             }
           }}
-        />
+        /> */}
       </div>
 
       <div className="flex flex-col">
