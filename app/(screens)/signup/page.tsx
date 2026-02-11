@@ -222,7 +222,7 @@ export default function Signup() {
         mobile: formData.mobile,
         collegeId: formData.collegeId,
         role: formData.role,
-        collegeCode: formData.collegeCode,
+        // collegeCode: formData.collegeCode,
       });
 
       if (!res.success) throw new Error(res.error);

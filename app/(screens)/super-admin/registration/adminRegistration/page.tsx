@@ -106,113 +106,88 @@ export default function AdminRegistration() {
 
 
   const handleSubmit = async () => {
-    console.log("🚀 Submit clicked");
     setIsLoading(true);
 
     try {
       console.log("🔍 Checking SuperAdmin auth...");
       const superAdmin = await checkSuperAdminAuth();
-      console.log("SuperAdmin result:", superAdmin);
 
       if (!superAdmin) {
-        console.log("❌ SuperAdmin validation failed");
         return;
       }
 
       console.log("🔍 Validating Full Name...");
       if (!form.fullName.trim()) {
-        console.log("❌ Full Name missing");
         return toast.error("Full Name is required");
       }
 
       console.log("🔍 Validating Email...");
       if (!form.email.trim()) {
-        console.log("❌ Email missing");
         return toast.error("Email Address is required");
       }
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(normalizedEmail)) {
-        console.log("❌ Invalid email format:", normalizedEmail);
         return toast.error("Enter a valid email address");
       }
 
       console.log("🔍 Validating Country Code...");
       if (!form.countryCode.trim()) {
-        console.log("❌ Country code missing");
         return toast.error("Country code is required");
       }
 
       if (!/^\+\d{1,4}$/.test(form.countryCode)) {
-        console.log("❌ Invalid country code:", form.countryCode);
         return toast.error("Enter a valid country code (e.g. +91)");
       }
 
       console.log("🔍 Validating Mobile...");
       if (!form.mobile.trim()) {
-        console.log("❌ Mobile missing");
         return toast.error("Mobile number is required");
       }
 
       if (form.mobile.length !== 10) {
-        console.log("❌ Mobile length invalid:", form.mobile);
         return toast.error("Mobile number must be 10 digits");
       }
 
       console.log("🔍 Validating College ID...");
       if (!form.collegeId.trim()) {
-        console.log("❌ College ID missing");
         return toast.error("College ID is required");
       }
 
-      // console.log("🔍 Validating College Code...");
-      // if (!form.collegeCode.trim()) {
-      //   console.log("❌ College Code missing");
-      //   return toast.error("College Code is required");
-      // }
+    
 
       console.log("🔍 Validating Gender...");
       if (!form.gender) {
-        console.log("❌ Gender not selected");
         return toast.error("Please select gender");
       }
 
       console.log("🔍 Validating Password...");
       if (!form.password) {
-        console.log("❌ Password missing");
         return toast.error("Password is required");
       }
 
       if (!PASSWORD_REGEX.test(form.password)) {
-        console.log("❌ Password regex failed");
         return toast.error(
           "Password must include uppercase, lowercase, number, special character"
         );
       }
 
       if (form.password !== form.confirmPassword) {
-        console.log("❌ Password mismatch");
         return toast.error("Passwords do not match");
       }
 
-      console.log("🔍 Validating College from DB...");
       const collegeValidation = await validateCollegeId(
         form.collegeId
       );
 
 
-      console.log("College validation result:", collegeValidation);
-
       if (!collegeValidation.success) {
-        console.log("❌ College validation failed");
         toast.error("College ID and College Code do not match.");
         return;
       }
 
       const actualCollegeId = collegeValidation.collegeId;
-      console.log("✅ Actual College ID:", actualCollegeId);
 
-      console.log("🔍 Creating Supabase Auth user...");
       const { data, error } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -222,18 +197,15 @@ export default function AdminRegistration() {
       });
 
       if (error) {
-        console.log("❌ Supabase Auth error:", error);
         throw error;
       }
 
       console.log("Auth user created:", data.user);
 
       if (!data.user) {
-        console.log("❌ Auth user is null");
         throw new Error("Auth user not created");
       }
 
-      console.log("🔍 Inserting into users table...");
       const userResult = await upsertUser({
         auth_id: data.user.id,
         fullName: toPascalCase(form.fullName),
@@ -245,29 +217,24 @@ export default function AdminRegistration() {
         gender: form.gender,
       });
 
-      console.log("User insert result:", userResult);
 
       if (!userResult.success || !userResult.data) {
-        console.log("❌ Users table insert failed");
         toast.error(userResult.error || "Failed to create admin");
         return;
       }
 
-      console.log("🔍 Inserting into college_admin...");
       const collegeAdminResult = await saveCollegeAdmin({
         userId: userResult.data.userId,
         collegeId: actualCollegeId,
       });
 
-      console.log("College admin result:", collegeAdminResult);
 
       if (!collegeAdminResult.success) {
-        console.log("❌ college_admin insert failed");
         toast.error("User created, but college admin creation failed");
         return;
       }
 
-      console.log("🎉 SUCCESS: Admin registered");
+      console.log(" SUCCESS: Admin registered");
       toast.success("Admin registered successfully");
 
       setForm(initialFormState);
@@ -276,10 +243,8 @@ export default function AdminRegistration() {
       setShowConfirmPassword(false);
 
     } catch (error: any) {
-      console.log("🔥 CATCH BLOCK ERROR:", error);
       toast.error(error.message || "Failed to create admin");
     } finally {
-      console.log("🧹 Resetting loading state");
       setIsLoading(false);
     }
   };
