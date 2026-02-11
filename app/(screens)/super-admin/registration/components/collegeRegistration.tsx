@@ -114,6 +114,7 @@ export const CollegeRegistration = () => {
           state: formData.state,
           city: formData.city,
           pincode: formData.zip,
+           educationTypes: formData.educationType,
         },
         selectedFile
       );
