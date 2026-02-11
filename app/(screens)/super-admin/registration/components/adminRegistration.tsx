@@ -174,7 +174,7 @@ export const AdminRegistration = () => {
                 email: form.email.toLowerCase(),
                 mobile: fullPhoneNumber,
                 collegePublicId: form.collegeId.trim().toUpperCase(),
-                collegeCode: form.collegeCode.trim().toUpperCase(),
+                // collegeCode: form.collegeCode.trim().toUpperCase(),
                 role: "Admin",
                 gender: form.gender,
             });
