@@ -121,7 +121,7 @@ export default function Header() {
                 />
               </div>
               <div className="bg-red-00 flex items-center justify-between text-[#E5E5E5] w-full text-xs">
-                {["SuperAdmin", "Faculty", "Parent", "Admin", null].includes(role) && (
+                {["SuperAdmin", "Faculty", "Parent", "Admin", "Finance", null].includes(role) && (
                   <>
                     <p style={{ fontSize: 12, color: "#E5E5E5" }}>{role}</p>
                   </>
