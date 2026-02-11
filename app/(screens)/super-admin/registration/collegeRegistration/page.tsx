@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { InputField } from "../components/reusableComponents";
 import { motion } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
@@ -19,19 +19,42 @@ const INITIAL_FORM_STATE = {
   city: "",
   zip: "",
   address: "",
+  educationType: [] as string[],
 };
 
 export default function CollegeRegistration() {
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+  const [educationList, setEducationList] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
   const router = useRouter();
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+
+  useEffect(() => {
+    const fetchEducations = async () => {
+      const { data, error } = await supabase
+        .from("educations")
+        .select("educationCode")
+        .eq("is_deleted", false);
+
+      if (!error && data) {
+        setEducationList(data);
+      } else {
+        toast.error("Failed to load education types");
+      }
+    };
+
+    fetchEducations();
+  }, []);
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -104,6 +127,10 @@ export default function CollegeRegistration() {
       if (!selectedFile)
         return toast.error("Please upload a verification proof");
 
+      if (formData.educationType.length === 0)
+        return toast.error("Select at least one Education Type");
+
+
       const college = await createCollege(
         {
           collegeName: formData.collegeName,
@@ -116,6 +143,7 @@ export default function CollegeRegistration() {
           state: formData.state,
           city: formData.city,
           pincode: formData.zip,
+          educationTypes: formData.educationType,
         },
         selectedFile
       );
@@ -206,26 +234,101 @@ export default function CollegeRegistration() {
         <h4 className="text-[#333] font-bold text-base mb-3">
           Verification Details
         </h4>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[#333] font-semibold text-[14px]">Proof</label>
-          <div className="flex gap-4">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="bg-[#16284F] text-white px-12 py-2 rounded-md text-sm cursor-pointer flex-shrink-0 hover:bg-[#103271] transition-all"
-            >
-              Upload File
-            </button>
-            <div
-              className={`border border-dashed ${selectedFile
-                ? "border-[#49C77F] text-[#49C77F]"
-                : "border-gray-300 text-gray-500"
-                } rounded-lg flex-1 flex items-center px-4 text-xs`}
-            >
-              {selectedFile
-                ? `Ready: ${selectedFile.name}`
-                : "Upload any government/board affiliation proof (PDF, PNG, JPG)"}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Upload Section */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[#333] font-semibold text-[14px]">
+              Proof
+            </label>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-[#16284F] text-white px-6 py-2 rounded-md text-sm cursor-pointer flex-shrink-0 hover:bg-[#103271] transition-all"
+              >
+                Upload File
+              </button>
+
+              <div
+                className={`border border-dashed ${selectedFile
+                  ? "border-[#49C77F] text-[#49C77F]"
+                  : "border-gray-300 text-gray-500"
+                  } rounded-lg flex-1 flex items-center px-4 text-xs`}
+              >
+                {selectedFile
+                  ? `Ready: ${selectedFile.name}`
+                  : "Upload government/board affiliation proof"}
+              </div>
             </div>
           </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[#333] font-semibold text-[14px]">
+              Education Type
+            </label>
+
+            <div className="relative">
+              <div
+                className="border border-gray-300 rounded-lg px-4 h-[42px] flex items-center justify-between cursor-pointer focus-within:border-[#49C77F]"
+                onClick={() =>
+                  setShowDropdown((prev) => !prev)
+                }
+              >
+                <span className="text-sm text-gray-600 truncate">
+                  {formData.educationType.length > 0
+                    ? formData.educationType.join(", ")
+                    : "Select Education Type"}
+                </span>
+
+                <svg
+                  className="w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+
+              {showDropdown && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
+                  {educationList.map((edu: { educationCode: string }) => (
+                    <div
+                      key={edu.educationCode}
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          educationType: prev.educationType.includes(
+                            edu.educationCode
+                          )
+                            ? prev.educationType.filter(
+                              (v) => v !== edu.educationCode
+                            )
+                            : [...prev.educationType, edu.educationCode],
+                        }));
+                      }}
+                      className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                    >
+                      {edu.educationCode}
+
+                      {formData.educationType.includes(
+                        edu.educationCode
+                      ) && (
+                          <span className="text-[#49C77F] text-xs">
+                            ✓
+                          </span>
+                        )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+
         </div>
       </div>
 
