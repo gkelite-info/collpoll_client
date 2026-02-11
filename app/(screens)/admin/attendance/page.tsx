@@ -25,6 +25,7 @@ import {
 import { FilterDropdown } from "../academics/components/filterDropdown";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import SubjectWiseAttendance from "./components/subjectWiseAttendance";
+import { getBatchSectionStats } from "@/lib/helpers/admin/attendance/getBatchSectionStats";
 interface ExtendedDepartment extends Department {
   id: string;
   section: string;
@@ -78,6 +79,8 @@ interface AcademicCard {
   totalStudents: number;
   totalSubjects: number;
   totalFaculties: number;
+  avgAttendance?: number; // Add optional field
+  belowThresholdCount?: number; // Add optional field
   faculties: {
     facultyId: number;
     fullName: string;
@@ -149,6 +152,7 @@ const AttendancePage = () => {
       setLoading(true);
       const { collegeId } = await fetchAdminContext(userId!);
 
+      // 1. Fetch the Cards (Basic Info)
       const { data, totalCount } = await getAdminAcademicsCards(
         collegeId,
         currentPage,
@@ -157,10 +161,32 @@ const AttendancePage = () => {
         apiFilters,
       );
 
-      setCards(mapAcademicCards(data));
+      let mappedCards = mapAcademicCards(data);
+
+      // 2. Extract Section IDs
+      const sectionIds = mappedCards.map((c) => c.collegeSectionsId);
+
+      // 3. Batch Fetch Stats
+      if (sectionIds.length > 0) {
+        const stats = await getBatchSectionStats(sectionIds);
+
+        // 4. Merge Stats into Cards
+        mappedCards = mappedCards.map((card) => {
+          const stat = stats.find(
+            (s) => s.sectionId === card.collegeSectionsId,
+          );
+          return {
+            ...card,
+            avgAttendance: stat?.avgAttendance || 0,
+            belowThresholdCount: stat?.belowThresholdCount || 0,
+          };
+        });
+      }
+
+      setCards(mappedCards);
       setTotalRecords(totalCount);
     } catch (error: any) {
-      toast.error(error?.message || "Unable to load academic records.");
+      toast.error(error?.message || "Unable to load records.");
       setCards([]);
       setTotalRecords(0);
     } finally {
@@ -515,6 +541,8 @@ const AttendancePage = () => {
               return (
                 <FacultyAttendanceCard
                   key={dept.id}
+                  avgAttendance={dept.avgAttendance || 0}
+                  belowThresholdCount={dept.belowThresholdCount || 0}
                   name={`${dept.branchCode} - ${dept.section}`}
                   text={style.text}
                   color={style.color}
@@ -527,8 +555,6 @@ const AttendancePage = () => {
                   year={dept.year}
                   totalStudents={dept.totalStudents}
                   faculties={dept.faculties}
-                  avgAttendance={0}
-                  belowThresholdCount={0}
                   totalSubjects={dept.totalSubjects}
                   branch={dept.branchCode}
                   section={dept.section}
@@ -538,7 +564,6 @@ const AttendancePage = () => {
             })
           )}
         </div>
-
         {filteredCards.length > 0 && totalPages > 1 && (
           <div className="flex  justify-center items-center gap-2 mt-8 mb-4">
             <button

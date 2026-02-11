@@ -1,54 +1,9 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { create } from "domain";
 
-export async function getAdminClassesForSection(sectionId: number) {
-  const supabase = await createClient();
-  const today = new Date().toISOString().split("T")[0];
-
-  // Fetch events for this specific section for TODAY
-  const { data: events, error } = await supabase
-    .from("calendar_event")
-    .select(
-      `
-      calendarEventId,
-      date,
-      fromTime,
-      toTime,
-      subject:college_subjects (subjectName),
-      topic:college_subject_unit_topics (topicTitle),
-      faculty:faculty (
-         user:users (fullName)
-      ),
-      calendar_event_section!inner(collegeSectionId)
-    `,
-    )
-    .eq("calendar_event_section.collegeSectionId", sectionId)
-    .eq("is_deleted", false)
-    .eq("date", today)
-    .order("fromTime", { ascending: true });
-
-  if (error) {
-    console.error("❌ Admin Fetch Classes Error:", error);
-    return [];
-  }
-
-  return events.map((e: any) => {
-    const subj = Array.isArray(e.subject)
-      ? e.subject[0]?.subjectName
-      : e.subject?.subjectName || "No Subject";
-    const topicObj = Array.isArray(e.topic) ? e.topic[0] : e.topic;
-    const topic = topicObj?.topicTitle || "General Session";
-    const facultyName = e.faculty?.user?.fullName || "Unknown Faculty";
-    const time = e.fromTime ? e.fromTime.slice(0, 5) : "";
-
-    return {
-      id: String(e.calendarEventId),
-      label: `${time} • ${subj} • ${facultyName} (${topic})`,
-    };
-  });
-}
-
+// --- TYPES ---
 export interface ClassOption {
   id: string;
   label: string;
@@ -75,13 +30,15 @@ export interface UIStudent {
   reason: string;
 }
 
-// 1. Fetch Today's Classes for Faculty
-export async function getFacultyClasses(
-  facultyId: number,
-): Promise<ClassOption[]> {
-  const supabase = await createClient();
+interface AttendancePayload {
+  studentId: string;
+  status: string;
+  reason?: string;
+  adminId?: number;
+}
 
-  // Get Today's Date in YYYY-MM-DD format (Server Time)
+export async function getAdminClassesForSection(sectionId: number) {
+  const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
   const { data: events, error } = await supabase
@@ -93,13 +50,62 @@ export async function getFacultyClasses(
       fromTime,
       toTime,
       subject:college_subjects (subjectName),
+      topic:college_subject_unit_topics (topicTitle),
+      faculty:faculty ( user:users (fullName) ),
+      calendar_event_section!inner(collegeSectionId)
+    `,
+    )
+    .eq("calendar_event_section.collegeSectionId", sectionId)
+    .eq("is_deleted", false)
+    .eq("date", today)
+    .order("fromTime", { ascending: true });
+
+  if (error) {
+    console.error("❌ Admin Fetch Classes Error:", error);
+    return [];
+  }
+
+  const uniqueEvents = new Map();
+  events.forEach((e: any) => {
+    if (!uniqueEvents.has(e.calendarEventId))
+      uniqueEvents.set(e.calendarEventId, e);
+  });
+
+  return Array.from(uniqueEvents.values()).map((e: any) => {
+    const subj = Array.isArray(e.subject)
+      ? e.subject[0]?.subjectName
+      : e.subject?.subjectName || "No Subject";
+    const topicObj = Array.isArray(e.topic) ? e.topic[0] : e.topic;
+    const topic = topicObj?.topicTitle || "General Session";
+    const facultyName = e.faculty?.user?.fullName || "Unknown Faculty";
+    const time = e.fromTime ? e.fromTime.slice(0, 5) : "";
+
+    return {
+      id: String(e.calendarEventId),
+      label: `${time} • ${subj} • ${facultyName} (${topic})`,
+    };
+  });
+}
+
+export async function getFacultyClasses(
+  facultyId: number,
+): Promise<ClassOption[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: events, error } = await supabase
+    .from("calendar_event")
+    .select(
+      `
+      calendarEventId, date, fromTime, toTime,
+      subject:college_subjects (subjectName),
       topic:college_subject_unit_topics (topicTitle)
     `,
     )
     .eq("facultyId", facultyId)
     .eq("is_deleted", false)
-    .eq("date", today) // FILTER: TODAY ONLY
-    .order("fromTime", { ascending: true }); // Earliest first
+    .eq("date", today)
+    .order("fromTime", { ascending: true });
 
   if (error) {
     console.error("❌ getFacultyClasses Error:", error);
@@ -121,9 +127,6 @@ export async function getFacultyClasses(
   });
 }
 
-// ... (Keep getClassSections, getStudentsForClass, saveAttendance exactly as they were) ...
-// (Implicitly preserved to save space)
-
 export async function getClassSections(
   classId: string,
 ): Promise<SectionOption[]> {
@@ -132,7 +135,9 @@ export async function getClassSections(
     .from("calendar_event_section")
     .select(`collegeSectionId, section:college_sections (collegeSections)`)
     .eq("calendarEventId", classId);
+
   if (error) return [];
+
   const unique = new Map();
   sections.forEach((s: any) => {
     const name = Array.isArray(s.section)
@@ -152,23 +157,27 @@ export async function getStudentsForClass(
   sectionFilterId?: string,
 ): Promise<UIStudent[]> {
   const supabase = await createClient();
-  let sectionIds: number[] = [];
+
+  let targetSectionIds: number[] = [];
+
   if (sectionFilterId) {
-    sectionIds = [parseInt(sectionFilterId)];
+    targetSectionIds = [parseInt(sectionFilterId)];
   } else {
     const { data: eventSections } = await supabase
       .from("calendar_event_section")
       .select("collegeSectionId")
       .eq("calendarEventId", classId);
-    sectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+    targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
   }
-  if (sectionIds.length === 0) return [];
+
+  if (targetSectionIds.length === 0) return [];
 
   const { data: history } = await supabase
     .from("student_academic_history")
     .select("studentId")
-    .in("collegeSectionsId", sectionIds)
+    .in("collegeSectionsId", targetSectionIds)
     .eq("isCurrent", true);
+
   const ids = history?.map((h) => h.studentId) || [];
   if (ids.length === 0) return [];
 
@@ -177,6 +186,7 @@ export async function getStudentsForClass(
     .select("subject")
     .eq("calendarEventId", classId)
     .single();
+
   const subjectId = eventData?.subject;
   const statsMap = new Map<number, { present: number; total: number }>();
 
@@ -186,11 +196,12 @@ export async function getStudentsForClass(
       .select(`studentId, status, event:calendar_event!inner(subject)`)
       .in("studentId", ids)
       .eq("event.subject", subjectId);
+
     allRecords?.forEach((r: any) => {
       if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
         const s = statsMap.get(r.studentId) || { present: 0, total: 0 };
         s.total++;
-        if (r.status === "PRESENT") s.present++;
+        if (r.status === "PRESENT" || r.status === "LATE") s.present++;
         statsMap.set(r.studentId, s);
       }
     });
@@ -204,12 +215,14 @@ export async function getStudentsForClass(
     .in("studentId", ids)
     .eq("attendance_record.calendarEventId", classId)
     .order("studentId");
+
   if (error) return [];
 
   return students!.map((s: any) => {
     const record = s.attendance_record?.[0];
     let status = "Not Marked";
     let reason = "";
+
     if (record) {
       switch (record.status) {
         case "PRESENT":
@@ -234,10 +247,12 @@ export async function getStudentsForClass(
       }
       reason = record.reason || "";
     }
+
     const stats = statsMap.get(s.studentId) || { present: 0, total: 0 };
     const pct =
       stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
     const userGender = s.user?.gender || "Male";
+
     return {
       id: String(s.studentId),
       name: s.user?.fullName || `Student ${s.studentId}`,
@@ -250,13 +265,18 @@ export async function getStudentsForClass(
   });
 }
 
-export async function saveAttendance(classId: string, payload: any[]) {
+export async function saveAttendance(
+  classId: string,
+  payload: AttendancePayload[],
+) {
   const supabase = await createClient();
+
   const { data } = await supabase
     .from("calendar_event")
     .select("date")
     .eq("calendarEventId", classId)
     .single();
+
   const dbRecords = payload
     .filter((p) => p.status !== "Not Marked")
     .map((p) => {
@@ -265,20 +285,23 @@ export async function saveAttendance(classId: string, payload: any[]) {
       else if (p.status === "Leave") dbStatus = "LEAVE";
       else if (p.status === "Late") dbStatus = "LATE";
       else if (p.status === "Class Cancel") dbStatus = "CLASS_CANCEL";
+
       return {
         studentId: parseInt(p.studentId),
         calendarEventId: parseInt(classId),
         status: dbStatus,
         reason: p.reason || null,
         markedAt: data?.date,
-        facultyMark: p.facultyId,
+        adminMark: p.adminId ?? null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
     });
+
   const { error } = await supabase
     .from("attendance_record")
     .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
+
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
