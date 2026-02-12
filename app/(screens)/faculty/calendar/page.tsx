@@ -27,7 +27,7 @@ import {
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import EventDetailsModal from "./modal/EventDetailsModal";
-// import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 export type CalendarEventPayload = {
   facultyId: number;
@@ -103,14 +103,12 @@ export default function Page() {
     try {
       setLoading(true);
 
-      /* 🔹 1. FETCH EVENTS FIRST (rows was the root cause) */
       const rows = await fetchCalendarEvents({ facultyId });
       if (!rows || rows.length === 0) {
         setEvents([]);
         return;
       }
 
-      /* 🔹 2. FETCH SECTIONS FOR FIRST EVENT (SOURCE OF TRUTH) */
       const firstEventSections = await fetchCalendarEventSections(
         rows[0].calendarEventId
       );
@@ -120,12 +118,10 @@ export default function Page() {
         return;
       }
 
-      /* ✅ THESE IDs COME ONLY FROM calendar_event_sections */
       const educationId = firstEventSections[0].collegeEducationId;
       const branchId = firstEventSections[0].collegeBranchId;
       const academicYearId = firstEventSections[0].collegeAcademicYearId;
 
-      /* 🔹 3. FETCH LOOKUPS (UNCHANGED API, CORRECT TYPES) */
       const branches = await fetchAcademicDropdowns({
         type: "branch",
         collegeId: collegeId!,
@@ -147,7 +143,6 @@ export default function Page() {
         academicYearId,
       });
 
-      /* 🔹 4. BUILD MAPS (ONCE, NO DUPLICATES) */
       const branchMap = new Map<number, string>(
         branches.map((b: any) => [
           b.collegeBranchId,
@@ -169,7 +164,6 @@ export default function Page() {
         ])
       );
 
-      /* 🔹 5. FETCH SECTIONS PER EVENT (UNCHANGED) */
       const sectionMap = new Map<number, number[]>();
 
       await Promise.all(
@@ -182,7 +176,6 @@ export default function Page() {
         })
       );
 
-      /* 🔹 6. EXPAND EVENTS → DISPLAY BRANCH · YEAR · SECTION */
       const expandedEvents: CalendarEvent[] = [];
 
       rows.forEach((row: any) => {
@@ -203,8 +196,8 @@ export default function Page() {
                 "",
 
             type: row.type,
-             subjectName: row.college_subjects?.subjectName ?? "-",
-             subjectKey: row.college_subjects?.subjectKey ?? "",
+            subjectName: row.college_subjects?.subjectName ?? "-",
+            subjectKey: row.college_subjects?.subjectKey ?? "",
 
             day: new Date(row.date)
               .toLocaleDateString("en-US", { weekday: "short" })
@@ -213,7 +206,6 @@ export default function Page() {
             startTime,
             endTime,
 
-            /* ✅ THIS IS EXACTLY WHAT YOU ASKED */
             branch: branchMap.get(branchId) ?? "",
             year: yearMap.get(academicYearId) ?? "",
             section: sectionNameMap.get(sectionId) ?? "",
@@ -301,7 +293,6 @@ export default function Page() {
       return;
     }
 
-    // ✅ conflict check first (optional - you can remove if not needed)
     const conflict = await hasDbConflict(
       payload.date,
       payload.fromTime,
@@ -468,11 +459,9 @@ export default function Page() {
   };
 
   const handleEditEvent = async (event: CalendarEvent) => {
-    // 🔑 Always store DB event id for update
     setEditingEventId(String(event.calendarEventId));
     setFormMode("edit");
 
-    // 📅 Date & time parsing
     const startDate = event.startTime.split("T")[0];
     const start24 = event.startTime.split("T")[1].slice(0, 5);
     const end24 = event.endTime.split("T")[1].slice(0, 5);
@@ -480,7 +469,6 @@ export default function Page() {
     const start = parse24To12(start24);
     const end = parse24To12(end24);
 
-    // 🔥 Fetch ALL sections using DB calendarEventId (NOT event.id)
     let dbSectionIds: number[] = [];
     try {
       const rows = await fetchCalendarEventSections(event.calendarEventId);
@@ -491,7 +479,6 @@ export default function Page() {
       console.warn("⚠️ Sections fetch failed", err);
     }
 
-    // 🧠 Populate modal form
     setEventForm({
       title: event.title ?? "",
       topicId: event.rawFormData?.topicId ?? null,
@@ -507,7 +494,6 @@ export default function Page() {
       endMinute: end.minute,
       endPeriod: end.period,
 
-      // ✅ MULTI-SECTION AUTOFILL
       sectionIds: dbSectionIds,
 
       type: event.type,
@@ -515,13 +501,6 @@ export default function Page() {
 
     setIsModalOpen(true);
   };
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <main className="p-4">
@@ -547,57 +526,64 @@ export default function Page() {
           }}
         />
       </div>
+      {loading ? (
+        <Loader />
+      ) : (
+        <div className="w-full min-h-screen bg-[#f3f4f6] text-gray-800">
+          <CalendarGrid
+            events={events}
+            weekDays={weekDays}
+            activeTab={activeTab}
+            onPrevWeek={handlePrevWeek}
+            onNextWeek={handleNextWeek}
+            onDeleteRequest={setEventToDelete}
+            onEditRequest={handleEditEvent}
+            onEventClick={
+              (event) => {
+                setSelectedEvent(event);
+                setShowDetails(true);
+              }
+            }
+          />
 
-      <div className="w-full min-h-screen bg-[#f3f4f6] text-gray-800">
-        <CalendarGrid
-          events={events}
-          weekDays={weekDays}
-          activeTab={activeTab}
-          onPrevWeek={handlePrevWeek}
-          onNextWeek={handleNextWeek}
-          onDeleteRequest={setEventToDelete}
-          onEditRequest={handleEditEvent}
-          onEventClick={(event) => {
-            setSelectedEvent(event);
-            setShowDetails(true);
-          }}
-        />
+          <EventDetailsModal
+            open={showDetails}
+            event={selectedEvent}
+            onClose={() => {
+              setShowDetails(false);
+              setSelectedEvent(null);
+            }}
+          />
 
-        <EventDetailsModal
-          open={showDetails}
-          event={selectedEvent}
-          onClose={() => {
-            setShowDetails(false);
-            setSelectedEvent(null);
-          }}
-        />
+          <AddEventModal
+            isOpen={isModalOpen}
+            value={eventForm}
+            initialData={eventForm}
+            onClose={closeAddEventModal}
+            onSave={handleSaveEvent}
+            degreeOptions={degreeOptions}
+            isSaving={isSaving}
+            mode={formMode}
+          />
 
-        <AddEventModal
-          isOpen={isModalOpen}
-          value={eventForm}
-          initialData={eventForm}
-          onClose={closeAddEventModal}
-          onSave={handleSaveEvent}
-          degreeOptions={degreeOptions}
-          isSaving={isSaving}
-          mode={formMode}
-        />
+          <ConfirmConflictModal
+            open={showConflictModal}
+            onConfirm={confirmAddEvent}
+            onCancel={handleConflictCancel}
+          />
 
-        <ConfirmConflictModal
-          open={showConflictModal}
-          onConfirm={confirmAddEvent}
-          onCancel={handleConflictCancel}
-        />
+          <ConfirmDeleteModal
+            open={!!eventToDelete}
+            onCancel={() => setEventToDelete(null)}
+            onConfirm={() => {
+              if (eventToDelete) handleDeleteEvent(eventToDelete.id);
+              setEventToDelete(null);
+            }}
+          />
+        </div>
+      )
+      }
 
-        <ConfirmDeleteModal
-          open={!!eventToDelete}
-          onCancel={() => setEventToDelete(null)}
-          onConfirm={() => {
-            if (eventToDelete) handleDeleteEvent(eventToDelete.id);
-            setEventToDelete(null);
-          }}
-        />
-      </div>
-    </main>
+    </main >
   );
 }
