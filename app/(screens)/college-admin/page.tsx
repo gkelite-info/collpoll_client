@@ -1,4 +1,5 @@
 export default function CollegeAdminDashboard() {
+
     return (
         <>
             <div className="flex justify-center items-center">

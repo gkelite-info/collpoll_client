@@ -10,6 +10,7 @@ import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 
 
 export default function Header() {
@@ -24,6 +25,7 @@ export default function Header() {
 
   const { fullName, role, collegeEducationType, collegeBranchCode, studentId, facultyId, adminId } = useUser();
   const { financeManagerId } = useFinanceManager();
+  const { collegeAdminId } = useCollegeAdmin();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -157,7 +159,13 @@ export default function Header() {
                     <p>ID - <span>{adminId}</span></p>
                   </>
                 )}
-                {["SuperAdmin", "Parent", "CollegeAdmin"].includes(role as string) && (
+                {role === "CollegeAdmin" && (
+                  <>
+                    <p>{role}</p>
+                    <p>ID - <span>{collegeAdminId}</span></p>
+                  </>
+                )}
+                {["SuperAdmin", "Parent"].includes(role as string) && (
                   <p>{role}</p>
                 )}
               </div>
