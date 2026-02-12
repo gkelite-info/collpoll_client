@@ -116,10 +116,27 @@ export const upsertAdminEntry = async (payload: {
   gender?: "Male" | "Female";
   collegePublicId: string;
   collegeCode?: string;
-  createdBy: number;
 }) => {
   try {
     const now = new Date().toISOString();
+
+    // ✅ Get logged-in auth user
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("User not authenticated");
+
+    // ✅ Get internal userId
+    const { data: creator } = await supabase
+      .from("users")
+      .select("userId")
+      .eq("auth_id", user.id)
+      .single();
+
+    if (!creator) throw new Error("Creator not found");
+
+    const createdByUserId = creator.userId;
 
     const { error } = await supabase
       .from("admins")
@@ -132,7 +149,7 @@ export const upsertAdminEntry = async (payload: {
           gender: payload.gender ?? null,
           collegePublicId: payload.collegePublicId,
           collegeCode: payload.collegeCode ?? null,
-          createdBy: payload.createdBy,
+          createdBy: createdByUserId, // ✅ FIXED HERE
           updatedAt: now,
           createdAt: now,
         },

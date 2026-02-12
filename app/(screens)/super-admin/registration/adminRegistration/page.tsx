@@ -16,6 +16,7 @@ type AdminForm = {
   countryCode: string;
   mobile: string;
   collegeId: string;
+  role: string;
   // collegeCode: string;
   password: string;
   confirmPassword: string;
@@ -32,6 +33,7 @@ const initialFormState: AdminForm = {
   password: "",
   confirmPassword: "",
   gender: "",
+  role: "CollegeAdmin",
 };
 
 export default function AdminRegistration() {
@@ -154,7 +156,7 @@ export default function AdminRegistration() {
         return toast.error("College ID is required");
       }
 
-    
+
 
       console.log("🔍 Validating Gender...");
       if (!form.gender) {
@@ -213,7 +215,7 @@ export default function AdminRegistration() {
         mobile: `${form.countryCode}${form.mobile}`,
         collegeId: actualCollegeId,
         // collegeCode: form.collegeCode.trim().toUpperCase(),
-        role: "Admin",
+        role: "CollegeAdmin",
         gender: form.gender,
       });
 
@@ -329,6 +331,15 @@ export default function AdminRegistration() {
             // }
           }}
         />
+        <div className="flex flex-col">
+          <label className="text-[#333] font-semibold text-[15px] mb-1.5">
+            Role
+          </label>
+          <div className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-gray-100 text-gray-600">
+            CollegeAdmin
+          </div>
+        </div>
+
         {/* <InputField
           label="College Code"
           placeholder='e.g., "MRCE"'

@@ -14,6 +14,7 @@ import { createStudent } from "@/lib/helpers/admin/registrations/student/student
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
 import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
+import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -22,6 +23,7 @@ const AddUserModal: React.FC<{
 }> = ({ isOpen, onClose, user }) => {
   const [dbData, setDbData] = useState<{
     educations: any[];
+
     branches: any[];
     years: any[];
     sections: any[];
@@ -320,6 +322,7 @@ const AddUserModal: React.FC<{
     [studentAvailableSections],
   );
 
+  const isAdmin = basicData.role === "Admin";
   const isFaculty = basicData.role === "Faculty";
   const isStudent = basicData.role === "Student";
   const isParent = basicData.role === "Parent";
@@ -371,12 +374,66 @@ const AddUserModal: React.FC<{
     try {
       const timestamp = new Date().toISOString();
 
-      const targetUserId = await persistUser(
-        !user,
-        { ...basicData, collegePublicId: basicData.collegeId },
-        user ? user.userId : null,
-        timestamp,
-      );
+      let targetUserId: number | null = null;
+
+
+      if (isAdmin) {
+        // 1️⃣ Create Auth user first
+        const { data: authData, error: authError } =
+          await supabase.auth.signUp({
+            email: basicData.email,
+            password: basicData.password,
+          });
+
+        if (authError || !authData.user) {
+          throw new Error(authError?.message || "Auth user creation failed");
+        }
+
+        const authId = authData.user.id;
+
+        // 2️⃣ Insert into users table
+        const userRes = await upsertUser({
+          auth_id: authId, // ✅ VERY IMPORTANT
+          fullName: basicData.fullName,
+          email: basicData.email,
+          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
+          role: "Admin",
+          collegeId: basicData.collegeIntId,
+          collegePublicId: basicData.collegeId,
+          gender: basicData.gender,
+        });
+
+        if (!userRes.success || !userRes.data) {
+          throw new Error(userRes.error || "User creation failed");
+        }
+
+        targetUserId = userRes.data.userId;
+
+        // 3️⃣ Insert into admins table
+        const adminRes = await upsertAdminEntry({
+          userId: targetUserId!,
+          fullName: basicData.fullName,
+          email: basicData.email,
+          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
+          gender: basicData.gender,
+          collegePublicId: basicData.collegeId,
+          collegeCode: basicData.collegeCode,
+        });
+
+        if (!adminRes.success) {
+          throw new Error(adminRes.error || "Admin creation failed");
+        }
+      }
+      else {
+        // 🔵 All other roles remain EXACTLY SAME
+        targetUserId = await persistUser(
+          !user,
+          { ...basicData, collegePublicId: basicData.collegeId },
+          user ? user.userId : null,
+          timestamp,
+        );
+      }
+
       if (!user) createdUserId = targetUserId;
 
       if (!targetUserId) throw new Error("User creation failed");
@@ -581,6 +638,7 @@ const AddUserModal: React.FC<{
                     <option value="" disabled>
                       Select Role
                     </option>
+                    <option value="Admin">Admin</option>
                     <option value="Faculty">Faculty</option>
                     <option value="Student">Student</option>
                     <option value="Parent">Parent</option>
@@ -593,7 +651,7 @@ const AddUserModal: React.FC<{
                 </div>
               </div>
 
-              {(isFaculty || isFinance) && (
+              {(isFaculty || isFinance || isAdmin) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Education Type
@@ -626,7 +684,6 @@ const AddUserModal: React.FC<{
                   </div>
                 </div>
               )}
-
               {isStudent && (
                 <CustomMultiSelect
                   label="Education Type"
