@@ -19,6 +19,7 @@ type UserContextType = {
   collegeEducationType?: string | null;
   collegeBranchCode?: string | null;
   collegeAcademicYear?: string | null;
+  financeManagerId?: number | null;
 };
 
 const StudentContext = createContext<UserContextType>({
@@ -41,6 +42,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState<number | null>(null);
+  const [financeManagerId, setFinanceManagerId] = useState<number | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
   const [mobile, setMobile] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
@@ -71,6 +73,27 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     loadStudentContext();
   }, [userId, role]);
 
+
+  useEffect(() => {
+  async function loadFinanceId() {
+    if (!userId || role !== "Finance") return;
+
+    const { data, error } = await supabase
+      .from("finance_manager")
+      .select("financeManagerId")
+      .eq("userId", userId)
+      .eq("is_deleted", false)
+      .maybeSingle();
+
+    if (!error && data) {
+      setFinanceManagerId(data.financeManagerId);
+    }
+  }
+
+  loadFinanceId();
+}, [userId, role]);
+
+
   useEffect(() => {
     const resolveStudentId = async () => {
       const { data: auth } = await supabase.auth.getUser();
@@ -89,6 +112,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setCollegeEducationType(null);
         setCollegeBranchCode(null);
         setCollegeAcademicYear(null);
+        setFinanceManagerId(null);
         return;
       }
 
@@ -135,6 +159,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         userId,
         loading,
         studentId,
+        financeManagerId,
         fullName,
         mobile,
         email,

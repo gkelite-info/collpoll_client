@@ -29,7 +29,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear, financeManagerId, } = useUser();
     const { facultyId, college_branch, faculty_edu_type } = useFaculty();
     const { adminId } = useAdmin();
 
@@ -105,6 +105,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                         onOpenQuickMenu();
                                     }} />
                                 )}
+                                {role === "Finance" && (
+                                    <span className="text-xs text-[#282828]">
+                                        ID - {financeManagerId}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         {role === "Student" && (
@@ -116,6 +121,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                             <>
                                 <p className="text-xs text-[#282828] font-medium">{faculty_edu_type ? `${faculty_edu_type}` : "—"} {college_branch ? `${college_branch}` : "—"}</p>
                             </>
+                        )}
+                        {role === "Finance" && (
+                            <p className="text-xs text-[#282828] font-medium">
+                                Finance
+                            </p>
                         )}
                         <div className="flex gap-3 flex-wrap">
                             <div className="flex items-center gap-2 mt-2">

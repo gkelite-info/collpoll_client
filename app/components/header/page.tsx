@@ -21,7 +21,7 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { fullName, role, collegeEducationType, collegeBranchCode, studentId } = useUser();
+  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, financeManagerId } = useUser();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -121,28 +121,32 @@ export default function Header() {
                 />
               </div>
               <div className="bg-red-00 flex items-center justify-between text-[#E5E5E5] w-full text-xs">
-                {["SuperAdmin", "Faculty", "Parent", "Admin", "Finance", null].includes(role) && (
-                  <>
-                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>{role}</p>
-                  </>
-                )}
-
                 {role === "Student" && (
                   <>
-                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>
+                    <p>
                       {collegeEducationType && collegeBranchCode
                         ? `${collegeEducationType} ${collegeBranchCode}`
                         : "—"}
                     </p>
-                    <p style={{ fontSize: 12, color: "#E5E5E5" }}>
-                      ID -{" "}
-                      <span style={{ fontSize: 12, color: "#E5E5E5" }}>
-                        {studentId}
-                      </span>
+                    <p>
+                      ID - <span>{studentId}</span>
                     </p>
                   </>
                 )}
+                {role === "Finance" && (
+                  <>
+                    <p>{role}</p>
+                    <p>
+                      ID - <span>{financeManagerId}</span>
+                    </p>
+                  </>
+                )}
+                {["SuperAdmin", "Faculty", "Parent", "Admin"].includes(role as string) && (
+                  <p>{role}</p>
+                )}
+
               </div>
+
             </div>
           </div >
         </div >
