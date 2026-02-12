@@ -271,16 +271,42 @@ export default function CollegeRegistration() {
 
             <div className="relative">
               <div
-                className="border border-gray-300 rounded-lg px-4 h-[42px] flex items-center justify-between cursor-pointer focus-within:border-[#49C77F]"
+                className="border border-gray-300 rounded-lg px-4 py-2 min-h-[42px] flex items-center justify-between cursor-pointer focus-within:border-[#49C77F]"
+                // className="border border-gray-300 rounded-lg px-4 h-[42px] flex items-center justify-between cursor-pointer focus-within:border-[#49C77F]"
                 onClick={() =>
                   setShowDropdown((prev) => !prev)
                 }
               >
-                <span className="text-sm text-gray-600 truncate">
-                  {formData.educationType.length > 0
-                    ? formData.educationType.join(", ")
-                    : "Select Education Type"}
-                </span>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {formData.educationType.length === 0 && (
+                    <span className="text-sm text-gray-400">
+                      Select Education Type
+                    </span>
+                  )}
+
+                  {formData.educationType.map((type) => (
+                    <div
+                      key={type}
+                      className="flex items-center gap-2 bg-[#E6F7EF] text-[#43C17A] px-3 py-1 rounded-full text-xs font-medium"
+                    >
+                      {type}
+                      <span
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData((prev) => ({
+                            ...prev,
+                            educationType: prev.educationType.filter(
+                              (v) => v !== type
+                            ),
+                          }));
+                        }}
+                        className="cursor-pointer"
+                      >
+                        ×
+                      </span>
+                    </div>
+                  ))}
+                </div>
 
                 <svg
                   className="w-4 h-4 text-gray-400"
@@ -310,18 +336,21 @@ export default function CollegeRegistration() {
                             : [...prev.educationType, edu.educationCode],
                         }));
                       }}
-                      className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer flex justify-between items-center"
+                      className={`px-4 py-2 text-sm cursor-pointer flex justify-between items-center transition-all
+    ${formData.educationType.includes(edu.educationCode)
+                          ? "bg-[#E6F7EF] text-[#43C17A] font-medium"
+                          : "hover:bg-gray-100 text-gray-700"
+                        }`}
                     >
-                      {edu.educationCode}
+                      <span>{edu.educationCode}</span>
 
-                      {formData.educationType.includes(
-                        edu.educationCode
-                      ) && (
-                          <span className="text-[#49C77F] text-xs">
-                            ✓
-                          </span>
-                        )}
+                      {formData.educationType.includes(edu.educationCode) && (
+                        <span className="text-[#43C17A] text-xs font-bold">
+                          ✓
+                        </span>
+                      )}
                     </div>
+
                   ))}
                 </div>
               )}

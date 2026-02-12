@@ -21,7 +21,7 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, financeManagerId } = useUser();
+  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, financeManagerId, facultyId, adminId } = useUser();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -141,7 +141,21 @@ export default function Header() {
                     </p>
                   </>
                 )}
-                {["SuperAdmin", "Faculty", "Parent", "Admin"].includes(role as string) && (
+                {role === "Faculty" && (
+                  <>
+                    <p>{role}</p>
+                    <p>
+                      ID - <span>{facultyId}</span>
+                    </p>
+                  </>
+                )}
+                {role === "Admin" && (
+                  <>
+                    <p>{role}</p>
+                    <p>ID - <span>{adminId}</span></p>
+                  </>
+                )}
+                {["SuperAdmin", "Parent"].includes(role as string) && (
                   <p>{role}</p>
                 )}
 

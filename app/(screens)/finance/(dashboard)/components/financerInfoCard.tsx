@@ -1,11 +1,12 @@
 "use client";
 
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 
 export type UserInfoCardProps = {
   show?: boolean;
-  user: string;
+  // user: string;
   todayCollection: number;
   image?: string;
   top: string;
@@ -21,6 +22,8 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
 
   const { faculty_subject } = useFaculty();
+  const { fullName } = useUser();
+
 
   useEffect(() => {
     const currentDate = new Date();
@@ -43,7 +46,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <p className="text-lg text-[#282828] leading-tight mt-3">
               Welcome Back, {""}
               <span className="text-lg font-semibold text-[#089144] leading-tight">
-                {item.user}
+                {fullName || "User"}
               </span>
             </p>
 
