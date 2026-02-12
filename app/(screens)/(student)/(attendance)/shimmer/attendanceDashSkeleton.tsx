@@ -2,8 +2,8 @@ import Skeleton from "@/app/utils/skeleton";
 
 export function DashboardSkeleton() {
   return (
-    <div className="flex w-full h-fit p-2 gap-4">
-      <div className="w-[68%] flex flex-col gap-6">
+    <div className="bg-red-00 flex w-full h-fit p-2 gap-4">
+      <div className="w-[100%] flex flex-col gap-6">
         <div className="mb-2">
           <Skeleton variant="text" className="h-8 w-48 mb-2" />
           <Skeleton variant="text" className="h-4 w-96" />
@@ -25,19 +25,13 @@ export function DashboardSkeleton() {
         </div>
       </div>
 
-      {/* --- RIGHT SECTION (32%) --- */}
-      <div className="w-[32%] flex flex-col gap-4 p-2">
-        {/* Course Schedule Card */}
+      {/* <div className="w-[32%] flex flex-col gap-4 p-2">
         <Skeleton className="h-40 w-full rounded-xl" />
-
-        {/* Work Week Calendar */}
         <Skeleton className="h-[170px] w-full rounded-lg" />
-
-        {/* Chart Area */}
         <div className="mt-2">
           <Skeleton className="h-64 w-full rounded-xl" />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
@@ -56,11 +50,9 @@ export const TableSkeleton = () => {
           key={row}
           className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0"
         >
-          {/* Status Badge */}
           <Skeleton variant="text" className="h-4 w-32 mr-1" />
           <Skeleton variant="text" className="h-4 w-32 mr-1" />
           <Skeleton variant="text" className="h-4 w-12 mr-1" />
-          {/* Count */}
           <Skeleton variant="text" className="h-4 w-12 mr-2" />
           <Skeleton
             variant="circular"

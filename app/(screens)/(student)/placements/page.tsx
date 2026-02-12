@@ -171,11 +171,11 @@ export default function Page() {
   }, [jobs, activeTab, cycle, eligibility, sortBy]);
 
   return (
-    <main className="p-4">
+    <main className="p-2 bg-red-00">
       <section className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-2xl font-semibold">Placements</h1>
-          <p className="text-black">
+          <p className="text-black text-sm">
             Track, Manage, and Maintain Student Placement Status
           </p>
         </div>
@@ -185,8 +185,8 @@ export default function Page() {
         </article>
       </section>
 
-      <section className="flex">
-        <section>
+      <section className="bg-blue-00 flex justify-between">
+        <section className="bg-yellow-00 w-[68%]">
           <PlacementFilterBar
             cycle={cycle}
             eligibility={eligibility}
@@ -221,7 +221,7 @@ export default function Page() {
             </button>
           </div>
 
-          <section className="mt-4 grid gap-4">
+          <section className="mt-4 grid gap-4 bg-blue-00">
             {visibleJobs.length === 0 && activeTab === "applications" ? (
               <p className="text-sm text-gray-500">
                 You have not applied to any opportunities yet.

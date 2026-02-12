@@ -205,24 +205,22 @@ const Page = () => {
   }
 
   return (
-    <div className=" p-4 lg:p-6 bg-[#F5F5F7]">
-      <div className="mb-6">
-        <h1 className="text-[#282828] font-bold text-[24px] mb-2">
-          Payments – {profile ? `${profile.branch} ${profile.year}` : ""}
-        </h1>
-        <div className="flex items-center justify-between">
-          <p className="text-[#282828] text-[16px] md:text-[18px] max-w-3xl">
-            Manage Fees, Track Transactions and Stay Updated Instantly.
-          </p>
-
-          <div className="flex-shrink-0 ml-6 w-[320px]">
-            <CourseScheduleCard />
+    <div className="lg:p-2 bg-[#F5F5F7]">
+      <div className="bg-pink-00 mb-6 flex justify-between">
+        <div className="flex flex-col">
+          <h1 className="text-[#282828] font-bold text-2xl">
+            Payments – {profile ? `${profile.branch} ${profile.year}` : ""}
+          </h1>
+          <div className="flex items-center justify-between">
+            <p className="text-[#282828] text-sm">
+              Manage Fees, Track Transactions and Stay Updated Instantly.
+            </p>
           </div>
-
+        </div>
+        <div className="flex-shrink-0 ml-6 w-[320px]">
+          <CourseScheduleCard />
         </div>
       </div>
-
-
 
       {profile && (
         <ProfileCard

@@ -6,6 +6,7 @@ import { UserProvider } from "./utils/context/UserContext";
 import { AdminProvider } from "./utils/context/admin/useAdmin";
 import { FacultyProvider } from "./utils/context/faculty/useFaculty";
 import { StudentProvider } from "./utils/context/student/useStudent";
+import { FinanceManagerProvider } from "./utils/context/financeManager/useFinanceManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,9 +36,11 @@ export default function RootLayout({
           <AdminProvider>
             <FacultyProvider>
               <StudentProvider>
-                <ClientLayout>
-                  {children}
-                </ClientLayout>
+                <FinanceManagerProvider>
+                  <ClientLayout>
+                    {children}
+                  </ClientLayout>
+                </FinanceManagerProvider>
               </StudentProvider>
             </FacultyProvider>
           </AdminProvider>

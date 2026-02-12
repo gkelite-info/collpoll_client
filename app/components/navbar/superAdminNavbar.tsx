@@ -1,20 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import {
-  BookOpenText,
-  BuildingOffice,
-  Calendar,
-  CheckCircle,
-  ClipboardText,
-  CurrencyCircleDollar,
-  FolderOpen,
-  Gear,
-  GraduationCap,
-  House,
-  Note,
-  Student,
-} from "@phosphor-icons/react";
+import { Calendar, House } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
@@ -42,80 +29,7 @@ export default function SuperAdminNavbar() {
       ),
       label: "Registration",
       path: "/super-admin/registration",
-    },
-    // {
-    //   icon: (isActive) => (
-    //     <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Attendance",
-    //   path: "/attendance",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <Note size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Assignments",
-    //   path: "/assignments",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <GraduationCap size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Academics",
-    //   path: "/academics",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <Student size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Student Progress",
-    //   path: "/student-progress",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <ClipboardText size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Projects",
-    //   path: "/projects",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Academic Setup",
-    //   path: "/admin/academic-setup",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Placements",
-    //   path: "/placements",
-    // },
-    // {
-    //   icon: (isActive) => (
-    //     <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Drive",
-    //   path: "/drive",
-    // },
-    // // {
-    // //     icon: (isActive) => (
-    // //         <CurrencyCircleDollar
-    // //             size={18}
-    // //             weight={isActive ? "fill" : "regular"}
-    // //         />
-    // //     ),
-    // //     label: "Payments",
-    // //     path: "/payments",
-    // // },
-    // {
-    //   icon: (isActive) => (
-    //     <Gear size={18} weight={isActive ? "fill" : "regular"} />
-    //   ),
-    //   label: "Settings",
-    //   path: "/settings",
-    // },
+    }
   ];
 
   useEffect(() => {
@@ -143,10 +57,9 @@ export default function SuperAdminNavbar() {
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                    : "text-white hover:bg-[#50D689]/30"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                  : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -155,9 +68,8 @@ export default function SuperAdminNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>
