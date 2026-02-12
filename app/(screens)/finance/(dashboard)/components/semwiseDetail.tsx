@@ -10,6 +10,7 @@ import {
   Faders,
 } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
+import { useRouter } from "next/navigation";
 
 export default function SemwiseDetail({ semester }: { semester: string }) {
   const breadcrumb = `B-Tech → CSE - Year 1 - ${semester}`;
@@ -20,6 +21,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   );
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const router = useRouter();
 
   const filterOptions: { label: string; value: "all" | "paid" | "pending" }[] =
     [
@@ -203,7 +205,14 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           </div>
         ),
 
-        action: <span className="cursor-pointer">View</span>,
+        action: (
+          <span
+            className="cursor-pointer text-[#00A94A] font-medium"
+            onClick={() => router.push(`/finance/${item.studentId}`)}
+          >
+            View Details
+          </span>
+        ),
       };
     });
 

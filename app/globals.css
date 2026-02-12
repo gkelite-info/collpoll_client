@@ -70,7 +70,7 @@ body {
 
 .profile-active {
   position: relative;
-  background-color: #43C17A;
+  background-color: #43c17a;
   transition: all 0s ease;
 }
 
@@ -82,7 +82,7 @@ body {
   background: transparent;
   right: 0;
   top: -20px;
-  box-shadow: -5px 5px 0px 5px #43C17A;
+  box-shadow: -5px 5px 0px 5px #43c17a;
   border-bottom-right-radius: 25px;
   transition: all 0s ease;
 }
@@ -92,14 +92,13 @@ body {
   position: absolute;
   height: 10px;
   width: 15px;
-  background: #43C17A;
+  background: #43c17a;
   right: 0;
   bottom: -10px;
-  box-shadow: -5px 0px 0px 5px #43C17A;
+  box-shadow: -5px 0px 0px 5px #43c17a;
   border-radius: 9999px 0 0 9999px;
   transition: all 0s ease;
 }
-
 
 .activeNav {
   position: relative;
@@ -137,7 +136,6 @@ body {
   border: 1px solid red;
 } */
 
-
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -145,7 +143,7 @@ input::-webkit-inner-spin-button {
 }
 
 /* Firefox */
-input[type=number] {
+input[type="number"] {
   -moz-appearance: textfield;
 }
 
@@ -167,24 +165,29 @@ input[list]::-webkit-calendar-picker-indicator {
   display: none;
 }
 
-input[type=number] {
+input[type="number"] {
   -moz-appearance: textfield;
 }
- 
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
- 
+
 ::-webkit-scrollbar {
   display: none;
 }
- 
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
- 
+
 input[list]::-webkit-calendar-picker-indicator {
   opacity: 0;
   display: none;
+}
+
+.recharts-wrapper:focus,
+.recharts-surface:focus {
+  outline: none !important;
 }
