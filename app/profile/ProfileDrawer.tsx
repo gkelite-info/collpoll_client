@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { extractAcademicYearNumber } from "../utils/academicYear";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
 import { useAdmin } from "../utils/context/admin/useAdmin";
+import { useFinanceManager } from "../utils/context/financeManager/useFinanceManager";
 
 type Props = {
     open: boolean;
@@ -29,7 +30,8 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear, financeManagerId, } = useUser();
+    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+    const { financeManagerId } = useFinanceManager();
     const { facultyId, college_branch, faculty_edu_type } = useFaculty();
     const { adminId } = useAdmin();
 

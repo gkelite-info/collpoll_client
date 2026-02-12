@@ -21,9 +21,7 @@ type UserInfoProps = {
 export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
 
-  const { faculty_subject } = useFaculty();
   const { fullName } = useUser();
-
 
   useEffect(() => {
     const currentDate = new Date();
@@ -61,7 +59,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                   ? ` ₹${item.todayCollection.toLocaleString("en-IN")}`
                   : ""}
               </span>
-              {!item.show && "collected so far."}
+              {!item.show && " collected so far."}
             </p>
           </div>
 
