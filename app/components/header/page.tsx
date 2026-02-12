@@ -9,6 +9,7 @@ import AnnouncementModal from "../modals/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
 
 export default function Header() {
@@ -21,7 +22,8 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, financeManagerId, facultyId, adminId } = useUser();
+  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, facultyId, adminId } = useUser();
+  const { financeManagerId } = useFinanceManager();
 
   function openPDFModal() {
     setIsNewsOpen(false);
