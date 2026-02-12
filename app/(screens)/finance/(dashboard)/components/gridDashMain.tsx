@@ -2,10 +2,10 @@ import {
   Calendar,
   CalendarCheck,
   CaretDown,
+  CaretRight,
   CurrencyInr,
   UsersThree,
 } from "@phosphor-icons/react";
-import { useRouter, useSearchParams } from "next/navigation";
 import React, { useState } from "react";
 import {
   Bar,
@@ -19,6 +19,10 @@ import {
   YAxis,
 } from "recharts";
 import { SendFeeReminderModal } from "../modals/sendFeeReminderModal";
+import { useRouter, useSearchParams } from "next/navigation";
+import YearWiseFeeCollection from "./yearWiseFeeCollection";
+import BranchWiseCollection from "./branchWiseCollection";
+import { PaymentSuccessModal } from "../modals/paymentSuccessModal";
 
 // --- Types & Data ---
 
@@ -160,18 +164,21 @@ type YearData = {
 };
 
 const YearCard = ({ data }: { data: YearData }) => (
-  <Card className="h-full flex flex-col justify-between">
-    <div className="flex justify-between items-start mb-2">
+  <Card className="h-full flex flex-col justify-center gap-2">
+    <div className="flex justify-between items-center">
       <div className="font-medium text-gray-800 text-sm">{data.year}</div>
+
       <div className="text-right">
         <span className="text-[8px] text-[#282828] uppercase font-semibold mr-2">
           Total
         </span>
+
         <span className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-medium">
           ₹{data.total}
         </span>
       </div>
     </div>
+
     <div className="flex gap-2">
       <SemBox label="Sem 1" val={data.sem1} />
       <SemBox label="Sem 2" val={data.sem2} />
@@ -193,9 +200,9 @@ const SemBox = ({ label, val }: { label: string; val: string }) => {
   return (
     <div
       onClick={handleClick}
-      className="bg-[#E5F6EC] p-1.5 rounded flex-1 cursor-pointer"
+      className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1 cursor-pointer"
     >
-      <div className="text-xs text-[#282828]">{label}</div>
+      <div className="text-xs  text-[#282828]">{label}</div>
       <div className="text-xs font-bold text-[#43C17A]">₹ {val}</div>
     </div>
   );
@@ -203,6 +210,8 @@ const SemBox = ({ label, val }: { label: string; val: string }) => {
 
 export default function DashboardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   return (
     <div className="min-h-screenflex justify-center font-sans text-gray-900">
@@ -285,9 +294,21 @@ export default function DashboardPage() {
           {/* Trend Chart (Span 6) */}
           <div className="col-span-5">
             <Card className="h-[220px] flex flex-col">
-              <h3 className="text-xs font-bold text-gray-800 mb-2">
-                Collection Trend Overview
-              </h3>
+              <div className="flex justify-between">
+                <h3 className="text-xs font-bold text-gray-800 mb-2">
+                  Collection Trend Overview
+                </h3>
+                <CaretRight
+                  size={20}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("view", "branchWiseCollection");
+                    router.push(`?${params.toString()}`);
+                  }}
+                />
+              </div>
+
               <div className="flex-1 w-full text-[9px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -444,6 +465,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
       <SendFeeReminderModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
