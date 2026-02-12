@@ -155,12 +155,10 @@ export default function Header() {
                     <p>ID - <span>{adminId}</span></p>
                   </>
                 )}
-                {["SuperAdmin", "Parent"].includes(role as string) && (
+                {["SuperAdmin", "Parent", "CollegeAdmin"].includes(role as string) && (
                   <p>{role}</p>
                 )}
-
               </div>
-
             </div>
           </div >
         </div >

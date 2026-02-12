@@ -2,7 +2,7 @@
 
 export default function PaymentsSkeleton() {
   return (
-    <div className="p-4 lg:p-6 bg-[#F5F5F7] animate-pulse">
+    <div className="lg:p-2 bg-[#F5F5F7] animate-pulse">
       <div className="mb-6">
         <div className="h-6 w-72 bg-gray-300 rounded mb-3" />
         <div className="h-4 w-[520px] bg-gray-200 rounded" />

@@ -62,9 +62,9 @@ const STATUS_COLOR_CLASS: Record<string, string> = {
 
 function formatAttendanceStatus(status: string) {
   return status
-    .toLowerCase()              // class_cancel
-    .replace(/_/g, " ")         // class cancel
-    .replace(/\b\w/g, c => c.toUpperCase()); // Class Cancel
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 
@@ -79,7 +79,7 @@ export default function AttendanceClient() {
   const hideRightSection =
     showSubjectAttendanceTable || showSubjectAttendanceDetails;
 
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
 
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -92,16 +92,14 @@ export default function AttendanceClient() {
       viewDate,
     });
 
-    // 1️⃣ Wait until user context is ready
     if (userLoading) {
       console.log("⏳ User context still loading...");
       return;
     }
 
-    // 2️⃣ Guard: user not logged in
     if (!userId) {
       console.warn("❌ No User ID found: Student not logged in");
-      setLoading(false);
+      setDataLoading(false);
       return;
     }
 
@@ -109,35 +107,23 @@ export default function AttendanceClient() {
 
     async function fetchData() {
       try {
-        setLoading(true);
+        setDataLoading(true);
 
-        // 3️⃣ Convert selected date → YYYY-MM-DD (local date)
         const year = viewDate.getFullYear();
         const month = String(viewDate.getMonth() + 1).padStart(2, "0");
         const day = String(viewDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
 
-        console.log("📅 Fetching attendance dashboard for date:", dateStr);
-
-        // 4️⃣ Call helper (ALL business logic lives there)
         if (!userId) {
           console.warn("⚠️ User ID became null before helper call");
-          setLoading(false);
+          setDataLoading(false);
           return;
         }
 
         const safeUserId = userId;
-        console.log("👤 Using safeUserId for dashboard fetch:", safeUserId);
 
         const data = await getStudentDashboardData(safeUserId, dateStr);
 
-        console.log("✅ Dashboard data received:", {
-          cards: data?.cards,
-          semesterStats: data?.semesterStats,
-          tableDataLength: data?.tableData?.length,
-        });
-
-        // 5️⃣ Update state only if component is still mounted
         if (isMounted) {
           setDashboardData(data);
           console.log("🧠 Dashboard state updated");
@@ -146,7 +132,7 @@ export default function AttendanceClient() {
         console.error("🔥 Failed to fetch attendance dashboard", err);
       } finally {
         if (isMounted) {
-          setLoading(false);
+          setDataLoading(false);
           console.log("✅ Attendance dashboard loading finished");
         }
       }
@@ -154,7 +140,6 @@ export default function AttendanceClient() {
 
     fetchData();
 
-    // 6️⃣ Cleanup to avoid state update on unmounted component
     return () => {
       console.log("🧹 Attendance useEffect cleanup");
       isMounted = false;
@@ -166,8 +151,6 @@ export default function AttendanceClient() {
       router.push(`/attendance?tab=subject-attendance`);
     }
   };
-
-
 
   const tableRows: TableRow[] =
     dashboardData?.tableData?.map((row: any) => ({
@@ -207,41 +190,17 @@ export default function AttendanceClient() {
     },
   ];
 
-  if (userLoading) {
-    return (
-      //   <div className="p-10 text-center text-gray-500">Loading Dashboard...</div>
-      <DashboardSkeleton />
-    );
-  }
-
-  //   if (true) {
-  //     return (
-  //       //   <div className="p-10 text-center text-gray-500">Loading Dashboard...</div>
-  //       <DashboardSkeleton />
-  //     );
-  //   }
-
-  if (!dashboardData) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen p-10 text-center space-y-2">
-        <Loader />
-      </div>
-    );
-  }
-
-  // Helper to format title date
   const formattedDate = viewDate.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 
-  // Check if selected date is today
   const isToday = viewDate.toDateString() === new Date().toDateString();
 
   return (
     <>
-      <div className="bg-red-00 flex w-full h-fit p-2">
+      <div className="bg-red-00 flex w-full h-fit lg:pb-5 p-2">
         <div
           className={`flex flex-col gap-2 ${hideRightSection ? "w-full" : "w-[68%]"
             }`}
@@ -252,39 +211,42 @@ export default function AttendanceClient() {
                 <h1 className="text-[#282828] font-bold text-2xl mb-1">
                   Attendance
                 </h1>
-                <p className="text-[#282828]">
+                <p className="text-[#282828] text-sm">
                   Track, Manage, and Maintain Your Attendance Effortlessly
                 </p>
               </div>
 
-              <div className="flex gap-4 flex-wrap">
-                {dynamicCards.map((card, index) => (
-                  <div key={card.id}>
-                    <CardComponent
-                      key={index}
-                      style={card.style}
-                      icon={card.icon}
-                      value={card.value}
-                      label={card.label}
-                      iconBgColor={card.iconBgColor}
-                      iconColor={card.iconColor}
-                      underlineValue={card.underlineValue}
-                      totalPercentage={card.totalPercentage}
-                      onClick={() => handleCardClick(card.id)}
-                    />
-                  </div>
-                ))}
-                <SemesterAttendanceCard
-                  presentPercent={dashboardData?.semesterStats.present || 0}
-                  absentPercent={dashboardData?.semesterStats.absent || 0}
-                  latePercent={dashboardData?.semesterStats.late || 0}
-                  overallPercent={
-                    (dashboardData?.semesterStats.present || 0) +
-                    (dashboardData?.semesterStats.late || 0)
-                  }
-                />
-
-              </div>
+              {dataLoading ? (
+                <DashboardSkeleton />
+              ) : (
+                <div className="flex gap-4 flex-wrap">
+                  {dynamicCards.map((card, index) => (
+                    <div key={card.id}>
+                      <CardComponent
+                        key={index}
+                        style={card.style}
+                        icon={card.icon}
+                        value={card.value}
+                        label={card.label}
+                        iconBgColor={card.iconBgColor}
+                        iconColor={card.iconColor}
+                        underlineValue={card.underlineValue}
+                        totalPercentage={card.totalPercentage}
+                        onClick={() => handleCardClick(card.id)}
+                      />
+                    </div>
+                  ))}
+                  <SemesterAttendanceCard
+                    presentPercent={dashboardData?.semesterStats.present || 0}
+                    absentPercent={dashboardData?.semesterStats.absent || 0}
+                    latePercent={dashboardData?.semesterStats.late || 0}
+                    overallPercent={
+                      (dashboardData?.semesterStats.present || 0) +
+                      (dashboardData?.semesterStats.late || 0)
+                    }
+                  />
+                </div>
+              )}
 
               <div className="bg-red-00 flex flex-col">
                 <h5 className="text-[#282828] font-medium text-md">
@@ -295,7 +257,7 @@ export default function AttendanceClient() {
                 <p className="text-[#282828] text-sm">
                   Classes on {formattedDate}
                 </p>
-                {loading ? (
+                {dataLoading ? (
                   <div className=" mt-5">
                     <TableSkeleton />
                   </div>
@@ -319,7 +281,7 @@ export default function AttendanceClient() {
         </div>
 
         {!hideRightSection && (
-          <div className="w-[32%] flex flex-col gap-1.5 p-3">
+          <div className="bg-blue-00 w-[32%] flex flex-col gap-1.5 p-2 pr-0 pt-0">
             <CourseScheduleCard />
 
             <WorkWeekCalendar

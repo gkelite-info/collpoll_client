@@ -4,9 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
-import Link from "next/link";
 import { Icon } from "@iconify/react";
-import { debugTokens, checkAccessTokenValidity, testRefreshToken, testProtectedQuery } from "@/lib/helpers/authTokens";
 
 
 export default function LoginPage() {
@@ -17,9 +15,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [current, setCurrent] = useState(0);
-
-
-
 
   type Slide = {
     heading: string;
@@ -108,7 +103,8 @@ export default function LoginPage() {
         faculty: "/faculty",
         student: "/stu_dashboard",
         superadmin: "/super-admin",
-        finance: "/finance"
+        finance: "/finance",
+        collegeadmin: "/college-admin"
       };
 
       const redirectPath = roleRouteMap[role] || "/login";
@@ -120,7 +116,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
 
   const radius = 240;
 

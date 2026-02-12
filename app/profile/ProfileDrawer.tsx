@@ -99,16 +99,14 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                 {role === "Admin" && (
                                     <span className="text-xs text-[#282828]">ID - {adminId}</span>
                                 )}
+                                {role === "Finance" && (
+                                    <span className="text-xs text-[#282828]">ID - {financeManagerId}</span>
+                                )}
                                 {role === "Student" && (
                                     <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                         e.stopPropagation();
                                         onOpenQuickMenu();
                                     }} />
-                                )}
-                                {role === "Finance" && (
-                                    <span className="text-xs text-[#282828]">
-                                        ID - {financeManagerId}
-                                    </span>
                                 )}
                             </div>
                         </div>
