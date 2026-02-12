@@ -129,7 +129,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                         )}
                         {role === "Finance" && (
                             <p className="text-xs text-[#282828] font-medium">
-                                Finance
+                                {role}
                             </p>
                         )}
                         <div className="flex gap-3 flex-wrap">
