@@ -12,7 +12,7 @@ import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader } from "../../(student)/calendar/right/timetable";
+import { Loader } from "../../calendar/right/timetable";
 
 
 interface CardItem {

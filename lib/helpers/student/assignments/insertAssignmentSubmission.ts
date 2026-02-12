@@ -10,11 +10,9 @@ export async function insertAssignmentSubmission({
     filePath,
 }: InsertSubmissionParams) {
     try {
-        // 1️⃣ Auth
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("User not authenticated");
 
-        // 2️⃣ Internal user
         const { data: userRow, error: userErr } = await supabase
             .from("users")
             .select("userId")
@@ -25,7 +23,6 @@ export async function insertAssignmentSubmission({
             throw new Error("Internal user not found");
         }
 
-        // 3️⃣ Student
         const { data: student, error: studentErr } = await supabase
             .from("students")
             .select("studentId")
@@ -36,14 +33,13 @@ export async function insertAssignmentSubmission({
             throw new Error("Student not found");
         }
 
-        // 4️⃣ Check existing submission (may or may not exist)
         const { data: existing } = await supabase
             .from("student_assignments_submission")
             .select("studentAssignmentSubmissionId")
             .eq("studentId", student.studentId)
             .eq("assignmentId", assignmentId)
             .is("deletedAt", null)
-            .maybeSingle(); // ✅ IMPORTANT
+            .maybeSingle();
 
         const payload = {
             studentId: student.studentId,
@@ -54,7 +50,6 @@ export async function insertAssignmentSubmission({
             updatedAt: new Date().toISOString(),
         };
 
-        // 5️⃣ UPDATE if exists, else INSERT
         const query = existing
             ? supabase
                 .from("student_assignments_submission")
@@ -83,7 +78,6 @@ export async function insertAssignmentSubmission({
 
 export async function getSubmissionForAssignment(assignmentId: number) {
     const { data: { user } } = await supabase.auth.getUser();
-    console.log("AUTH USER:", user?.id);
 
     if (!user) return null;
 
@@ -93,8 +87,6 @@ export async function getSubmissionForAssignment(assignmentId: number) {
         .eq("auth_id", user.id)
         .single();
 
-    console.log("USER ROW:", userRow);
-
     if (!userRow) return null;
 
     const { data: student } = await supabase
@@ -103,14 +95,7 @@ export async function getSubmissionForAssignment(assignmentId: number) {
         .eq("userId", userRow.userId)
         .single();
 
-    console.log("STUDENT:", student);
-
     if (!student) return null;
-
-    console.log("QUERY PARAMS:", {
-        studentId: student.studentId,
-        assignmentId,
-    });
 
     const { data } = await supabase
         .from("student_assignments_submission")
@@ -119,8 +104,6 @@ export async function getSubmissionForAssignment(assignmentId: number) {
         .eq("assignmentId", assignmentId)
         .is("deletedAt", null)
         .maybeSingle();
-
-    console.log("SUBMISSION ROW:", data);
 
     return data?.file ?? null;
 }

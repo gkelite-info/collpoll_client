@@ -106,7 +106,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
     };
 
     const handleDeleteExistingFile = async () => {
-        console.log("🟥 DELETE CLICKED");
 
         if (!existingFilePath || !card) {
             console.log("⛔ Missing existingFilePath or card", {
@@ -117,9 +116,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
         }
 
         try {
-            /* ---------------- 1️⃣ STORAGE DELETE ---------------- */
-            console.log("🟡 [1] Deleting from storage:", existingFilePath);
-
             const { error: storageErr } = await supabase.storage
                 .from("student_submissions")
                 .remove([existingFilePath]);
@@ -129,11 +125,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                 throw storageErr;
             }
 
-            console.log("🟢 [1] Storage delete success");
-
-            /* ---------------- 2️⃣ AUTH USER ---------------- */
-            console.log("🟡 [2] Fetching auth user");
-
             const { data: authData, error: authErr } = await supabase.auth.getUser();
 
             if (authErr || !authData?.user) {
@@ -142,10 +133,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             }
 
             const user = authData.user;
-            console.log("🟢 [2] Auth user:", user.id);
-
-            /* ---------------- 3️⃣ INTERNAL USER ---------------- */
-            console.log("🟡 [3] Fetching internal user for auth_id:", user.id);
 
             const { data: userRow, error: userErr } = await supabase
                 .from("users")
@@ -153,14 +140,9 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                 .eq("auth_id", user.id)
                 .single();
 
-            console.log("🧪 [3] userRow:", userRow, "error:", userErr);
-
             if (userErr || !userRow) {
                 throw new Error("Internal user not found");
             }
-
-            /* ---------------- 4️⃣ STUDENT ---------------- */
-            console.log("🟡 [4] Fetching student for userId:", userRow.userId);
 
             const { data: student, error: studentErr } = await supabase
                 .from("students")
@@ -168,17 +150,9 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                 .eq("userId", userRow.userId)
                 .single();
 
-            console.log("🧪 [4] student:", student, "error:", studentErr);
-
             if (studentErr || !student) {
                 throw new Error("Student not found");
             }
-
-            /* ---------------- 5️⃣ DB UPDATE ---------------- */
-            console.log("🟡 [5] Updating DB row with params:", {
-                studentId: student.studentId,
-                assignmentId: card.assignmentId,
-            });
 
             const { data: updatedRow, error: dbErr } = await supabase
                 .from("student_assignments_submission")
@@ -189,9 +163,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                 .eq("studentId", student.studentId)
                 .eq("assignmentId", card.assignmentId)
                 .is("deletedAt", null)
-                .select(); // 👈 IMPORTANT for visibility
-
-            console.log("🧪 [5] DB update result:", updatedRow, "error:", dbErr);
+                .select();
 
             if (dbErr) {
                 throw dbErr;
@@ -202,9 +174,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             } else {
                 console.log("🟢 [5] DB row updated successfully");
             }
-
-            /* ---------------- 6️⃣ UI SYNC ---------------- */
-            console.log("🟡 [6] Syncing UI state");
 
             setSelectedFiles([]);
             onUpload("", index!);
@@ -249,17 +218,14 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                             <p className="text-sm text-[#282828]">Faculty :</p>
                         </div>
                         <div className="lg:w-auto h-auto flex flex-col justify-start">
-                            {/* Subject */}
                             <p className="text-sm text-[#282828]">
                                 {card?.subjectName}
                             </p>
 
-                            {/* Topic = Topic Name */}
                             <p className="text-sm text-[#282828]">
                                 {card?.topicName}
                             </p>
 
-                            {/* Faculty */}
                             <p className="text-sm text-[#282828]">
                                 {card?.professor}
                             </p>

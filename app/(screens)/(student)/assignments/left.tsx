@@ -4,9 +4,9 @@ import { useState, useEffect } from "react"
 import AssignmentCard from "./components/card";
 import { supabase } from "@/lib/supabaseClient";
 // import { fetchAssignments, fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
-import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 import { getSubmissionForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
+import { Loader } from "../calendar/right/timetable";
 
 
 export default function AssignmentsLeft() {
@@ -19,12 +19,10 @@ export default function AssignmentsLeft() {
 
     useEffect(() => {
         loadAssignments();
-    }, []);
+    }, [activeView]);
 
     async function loadAssignments() {
         try {
-            console.log("🟡 Step 1: Get auth user");
-
             const {
                 data: { user },
                 error: authError,
@@ -34,9 +32,6 @@ export default function AssignmentsLeft() {
                 throw new Error("User not authenticated");
             }
 
-            console.log("🟢 Auth UUID:", user.id);
-
-            /* ---------------- Step 2: internal user ---------------- */
             const { data: userRow, error: userErr } = await supabase
                 .from("users")
                 .select("userId, role")
@@ -48,7 +43,6 @@ export default function AssignmentsLeft() {
                 throw new Error("Invalid student user");
             }
 
-            /* ---------------- Step 3: student context ---------------- */
             const { data: student } = await supabase
                 .from("students")
                 .select("studentId, collegeBranchId")
@@ -72,7 +66,6 @@ export default function AssignmentsLeft() {
                 throw new Error("Academic context not found");
             }
 
-            /* ---------------- Step 4: helper call ✅ ---------------- */
             const res = await fetchAssignmentsForStudent({
                 collegeBranchId: student.collegeBranchId,
                 collegeAcademicYearId: academic.collegeAcademicYearId,
@@ -83,9 +76,6 @@ export default function AssignmentsLeft() {
                 throw new Error(res.error);
             }
 
-            console.log("🟢 Raw assignments:", res.assignments);
-
-            /* ---------------- Step 5: format ---------------- */
             const todayInt = Number(formatDateToInt(new Date()));
 
             const formatted = await Promise.all(
@@ -110,12 +100,10 @@ export default function AssignmentsLeft() {
                         toDate: convertIntToShow(a.submissionDeadlineInt),
                         toDateInt: a.submissionDeadlineInt,
 
-                        existingFilePath, // ✅ now defined
+                        existingFilePath,
                     };
                 })
             );
-
-            console.log("🧪 Formatted card:", formatted[0]);
 
             setActiveAssignments(formatted.filter(a => a.toDateInt >= todayInt));
             setPreviousAssignments(formatted.filter(a => a.toDateInt < todayInt));
@@ -129,15 +117,14 @@ export default function AssignmentsLeft() {
 
     function convertIntToShow(intVal: number) {
         if (!intVal) return "";
-        const s = intVal.toString();  // 20250301
+        const s = intVal.toString();
 
         const year = s.slice(0, 4);
         const month = s.slice(4, 6);
         const day = s.slice(6, 8);
 
-        return `${day}/${month}/${year}`; // DD/MM/YYYY
+        return `${day}/${month}/${year}`;
     }
-
 
     function formatDateToInt(date: Date) {
         return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
@@ -182,20 +169,34 @@ export default function AssignmentsLeft() {
                     </div>
 
                     <div className="mt-4">
-                        {activeView === "active" && (
-                            <AssignmentCard
-                                cardProp={activeAssignments}
-                                activeView={activeView}
-                            />
-                        )}
+                        {loading ? (
+                            <Loader />
+                        ) : (
+                            <>
+                                {activeView === "active" && (
+                                    activeAssignments.length > 0 ? (
+                                        <AssignmentCard
+                                            cardProp={activeAssignments}
+                                            activeView={activeView}
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-gray-500 mt-4">No active assignments available</p>
+                                    )
+                                )}
 
-                        {activeView === "previous" && (
-                            <div className="text-sm text-[#282828]">
-                                <AssignmentCard
-                                    cardProp={previousAssignments}
-                                    activeView="previous"
-                                />
-                            </div>
+                                {activeView === "previous" && (
+                                    previousAssignments.length > 0 ? (
+                                        <div className="text-sm text-[#282828]">
+                                            <AssignmentCard
+                                                cardProp={previousAssignments}
+                                                activeView="previous"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 mt-4">No assignments available</p>
+                                    )
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -203,11 +204,3 @@ export default function AssignmentsLeft() {
         </>
     )
 }
-
-// function fetchAssignments(arg0: { collegeBranchId: any; collegeAcademicYearId: any; collegeSectionsId: any; }) {
-//     throw new Error("Function not implemented.");
-// }
-// function fetchAssignments(arg0: { collegeBranchId: any; collegeAcademicYearId: any; collegeSectionsId: any; }) {
-//     throw new Error("Function not implemented.");
-// }
-

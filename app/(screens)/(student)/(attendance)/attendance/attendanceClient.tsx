@@ -19,7 +19,7 @@ import {
   TableSkeleton,
 } from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
-import { Loader } from "../../(student)/calendar/right/timetable";
+import { Loader } from "../../calendar/right/timetable";
 
 interface TableRow {
   Subject: string;
