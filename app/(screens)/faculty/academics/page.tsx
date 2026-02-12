@@ -9,13 +9,13 @@ import { getFacultySubjects } from "./components/subjectDetails";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 
 import { CircleNotch } from "@phosphor-icons/react";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 export default function Academics() {
   const { userId, collegeId, loading: userLoading } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [subjects, setSubjects] = useState<CardProps[]>([]);
 
-  // ✅ Track first (cold) load only
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
@@ -26,14 +26,12 @@ export default function Academics() {
       return;
     }
 
-    // ✅ Show full loader ONLY on first load
     if (!hasLoadedOnce.current) {
       setPageLoading(true);
     }
 
     async function loadSubjects() {
       try {
-        // ✅ Type guard (TS-safe)
         if (userId === null || collegeId === null) return;
 
         const facultyCtx = await fetchFacultyContext(userId);
@@ -48,31 +46,12 @@ export default function Academics() {
         console.error("❌ Failed to load faculty subjects", err);
       } finally {
         setPageLoading(false);
-        hasLoadedOnce.current = true; // 🔥 mark page as loaded
+        hasLoadedOnce.current = true;
       }
     }
 
     loadSubjects();
   }, [userId, collegeId, userLoading]);
-
-  // ✅ Full-screen loader ONLY for first load / refresh
-  if (userLoading || pageLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-3">
-          <CircleNotch
-            size={48}
-            weight="bold"
-            className="animate-spin text-indigo-600"
-            style={{color:"blue"}}
-          />
-          <p className="text-sm font-medium text-indigo-600" style={{color:"red"}}>
-            Loading classes...
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-2 flex flex-col lg:pb-5">
@@ -91,15 +70,21 @@ export default function Academics() {
         </div>
       </div>
 
-      <div className="mt-4">
-        {subjects.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center mt-10">
-            No classes assigned
-          </p>
-        ) : (
-          <SubjectCard subjectProps={subjects} />
-        )}
-      </div>
+      {userLoading || pageLoading ? (
+          <Loader />
+      ) : (
+        <>
+          <div className="mt-4">
+            {subjects.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center mt-10">
+                No classes assigned
+              </p>
+            ) : (
+              <SubjectCard subjectProps={subjects} />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
