@@ -11,7 +11,7 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
-import { Loader } from "../../(student)/calendar/right/timetable";
+import { Loader } from "../../calendar/right/timetable";
 
 interface CardItem {
   id: number;
@@ -171,7 +171,7 @@ export default function SubjectAttendance() {
   };
 
   if (loading || userLoading) {
-    return <div className="p-6 flext justify-center text-gray-500"><Loader/></div>;
+    return <div className="p-6 flext justify-center text-gray-500"><Loader /></div>;
   }
 
 

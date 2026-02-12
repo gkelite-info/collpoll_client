@@ -3,10 +3,7 @@
 import { Suspense } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SubjectCard from "./components/subjectCard";
-import {
-  StudentProvider,
-  useStudent,
-} from "@/lib/helpers/student/academics/studentFetchAcademics";
+import { StudentProvider, useStudent } from "@/lib/helpers/student/academics/studentFetchAcademics";
 import SubjectSkeleton from "./shimmer/subjectSkeleton";
 
 function AcademicsContent() {
