@@ -119,15 +119,11 @@ export const upsertAdminEntry = async (payload: {
 }) => {
   try {
     const now = new Date().toISOString();
-
-    // ✅ Get logged-in auth user
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) throw new Error("User not authenticated");
-
-    // ✅ Get internal userId
+    if (!user) throw new Error("User not authenticated"); 
     const { data: creator } = await supabase
       .from("users")
       .select("userId")
@@ -149,7 +145,7 @@ export const upsertAdminEntry = async (payload: {
           gender: payload.gender ?? null,
           collegePublicId: payload.collegePublicId,
           collegeCode: payload.collegeCode ?? null,
-          createdBy: createdByUserId, // ✅ FIXED HERE
+          createdBy: createdByUserId, 
           updatedAt: now,
           createdAt: now,
         },
