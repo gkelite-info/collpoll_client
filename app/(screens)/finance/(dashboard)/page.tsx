@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import BranchWiseCollection from "./components/branchWiseCollection";
 import YearWiseFeeCollection from "./components/yearWiseFeeCollection";
 import { Suspense } from "react";
+import PaymentReminder from "./components/paymentReminderPage";
 
 export function DashboardContent() {
   const searchParams = useSearchParams();
@@ -21,6 +22,10 @@ export function DashboardContent() {
 
   if (view === "yearWiseCollection") {
     return <YearWiseFeeCollection />;
+  }
+
+  if (view === "PaymentReminder") {
+    return <PaymentReminder />;
   }
 
   return (

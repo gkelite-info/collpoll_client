@@ -209,7 +209,6 @@ const SemBox = ({ label, val }: { label: string; val: string }) => {
 };
 
 export default function DashboardPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -402,11 +401,11 @@ export default function DashboardPage() {
                       <div className="w-5 h-5 rounded-full bg-[#609872] flex items-center justify-center text-white">
                         <d.icon weight="fill" size={10} />
                       </div>
-                      <span className="font-semibold text-gray-700 text-[10px]">
+                      <span className="font-semibold text-gray-700 text-xs">
                         {d.label}
                       </span>
                     </div>
-                    <span className="font-bold text-[#15803d] text-[10px]">
+                    <span className="font-bold text-[#43C17A] text-xs">
                       ₹ {d.val}
                     </span>
                   </div>
@@ -456,7 +455,11 @@ export default function DashboardPage() {
                 Send automated payment alerts to pending students & parents
               </p>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set("view", "PaymentReminder");
+                  router.push(`?${params.toString()}`);
+                }}
                 className="bg-[#1e293b] cursor-pointer text-white px-5 py-2 rounded-full font-bold text-[10px] hover:bg-[#334155] transition-colors shadow-sm"
               >
                 Send Reminder
@@ -465,11 +468,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      <SendFeeReminderModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
     </div>
   );
 }
