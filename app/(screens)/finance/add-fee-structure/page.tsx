@@ -1,25 +1,36 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import FeeStructureCard from "./components/FeeStructureCard";
+import AddFeeHeader from "./components/Header";
+import CreateFee from "./create-fee";
+import FeePageSkeleton from "./FeePageSkeleton";
 
-import FeeStructureCard from "./compounents/FeeStructureCard";
-import AddFeeHeader from "./compounents/Header";
+function FeeContent() {
+  const searchParams = useSearchParams();
+  const fee = searchParams.get("fee");
 
+  if (fee === "create-fee") {
+    return <CreateFee />;
+  }
+
+  return (
+    <>
+      <AddFeeHeader button={true} />
+      <FeeStructureCard />
+    </>
+  );
+}
 
 export default function AddFeeStructurePage() {
   return (
     <main className="flex w-full min-h-screen pb-4">
-      
-          {/* Right Content Area */}
-      <div className="flex-1 p-6 space-y-6">
-        
-        {/* Header */}
-        <AddFeeHeader />
-
-        {/* Fee Summary Card */}
-        <FeeStructureCard />
-
+      <div className="flex-1 p-2 pr-0 space-y-6">
+        <Suspense fallback={<FeePageSkeleton />}>
+          <FeeContent />
+        </Suspense>
       </div>
-
     </main>
   );
 }
