@@ -13,7 +13,6 @@ interface ProfileData {
 const ProfileDetails = ({ data }: { data: ProfileData }) => {
   return (
     <div className="bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100 flex flex-col md:flex-row items-center justify-center gap-6 h-full">
-      {/* Avatar Section */}
       <div className="flex flex-col items-center justify-center gap-2 min-w-[110px]">
         <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-100">
           <img

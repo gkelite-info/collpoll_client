@@ -186,8 +186,3 @@ input[list]::-webkit-calendar-picker-indicator {
   opacity: 0;
   display: none;
 }
-
-.recharts-wrapper:focus,
-.recharts-surface:focus {
-  outline: none !important;
-}

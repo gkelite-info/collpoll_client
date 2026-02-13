@@ -37,14 +37,12 @@ const RecordPayment = () => {
 
   return (
     <div className="space-y-4 font-sans text-gray-800">
-      {/* --- SECTION 1: Offline Payment Form (Full Width) --- */}
       <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100">
         <h2 className="text-gray-800 font-bold text-base mb-4">
           Offline Payment
         </h2>
 
         <div className="space-y-4">
-          {/* Row 1: Amount & Balance */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-gray-500 font-semibold text-xs">
@@ -69,7 +67,6 @@ const RecordPayment = () => {
             </div>
           </div>
 
-          {/* Row 2: Payment Method */}
           <div className="flex flex-col gap-1.5">
             <label className="text-gray-500 font-semibold text-xs">
               Payment Method
@@ -100,7 +97,6 @@ const RecordPayment = () => {
             </div>
           </div>
 
-          {/* Row 3: Date & Collected By */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-gray-500 font-semibold text-xs">
@@ -117,7 +113,6 @@ const RecordPayment = () => {
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full border border-gray-300 rounded px-3 py-2 text-gray-700 text-sm focus:outline-none focus:border-green-500"
                 />
-                {/* Custom Calendar Icon Overlay if browser hides it, or just relying on native picker */}
               </div>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -140,7 +135,6 @@ const RecordPayment = () => {
             </div>
           </div>
 
-          {/* Row 4: Proof & Notes */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-gray-500 font-semibold text-xs">
@@ -194,9 +188,7 @@ const RecordPayment = () => {
         </div>
       </div>
 
-      {/* --- SECTION 2: Summary & QR (Side by Side) --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Payment Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2    gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 flex flex-col justify-between h-[220px]">
           <div>
             <h3 className="text-gray-800 font-bold text-base mb-4">
@@ -260,7 +252,6 @@ const RecordPayment = () => {
         </div>
       </div>
 
-      {/* --- SECTION 3: Recent Offline Payments Table --- */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-50">
           <h3 className="text-gray-800 font-bold text-base">
@@ -321,8 +312,6 @@ const RecordPayment = () => {
     </div>
   );
 };
-
-// --- Simple Icons ---
 
 const CloseIcon = ({ size = 14 }: { size?: number }) => (
   <svg

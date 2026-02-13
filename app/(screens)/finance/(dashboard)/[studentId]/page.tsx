@@ -22,7 +22,11 @@ import RecordPayment from "./components/recordPayment";
 import FeeStats from "./components/feeStats";
 import QuickActions from "./components/quickActions";
 import ProfileDetails from "./components/profileCard";
-import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import {
+  CaretLeftIcon,
+  CaretRightIcon,
+  CurrencyInrIcon,
+} from "@phosphor-icons/react";
 
 const mockFeePlan: FeePlan = {
   programName: "B.Tech CSE - 2nd Year",
@@ -116,6 +120,37 @@ const mockFinancialDues: FinancialDue[] = [
   },
 ];
 
+const stats = [
+  {
+    label: "Total Fee",
+    value: "₹5,24,000",
+    bg: "bg-[#E2DAFF]", // Light Purple
+    iconColor: "text-[#6C20CA]",
+    icon: CurrencyInrIcon,
+  },
+  {
+    label: "Paid Till Now",
+    value: "₹24,000",
+    bg: "bg-[#E6FBEA]", // Light Green
+    iconColor: "text-[#43C17A]",
+    icon: CurrencyInrIcon,
+  },
+  {
+    label: "Pending Amount",
+    value: "₹4,95,630",
+    bg: "bg-[#FFEDDA]", // Light Orange
+    iconColor: "text-[#FFBB70]",
+    icon: CurrencyInrIcon,
+  },
+  {
+    label: "Due Date",
+    value: "15 Feb 2026",
+    bg: "bg-[#CEE6FF]", // Light Blue
+    iconColor: "text-[#60AEFF]",
+    icon: CurrencyInrIcon,
+  },
+];
+
 const mockTransactions: Transaction[] = [
   {
     id: 6698,
@@ -156,12 +191,10 @@ const mockTransactions: Transaction[] = [
 ];
 
 const Page = () => {
-  // Added "record" to the union type and set it as default
   const [activeTab, setActiveTab] = useState<
     "record" | "academic" | "additional" | "history"
   >("record");
 
-  // Added Record Payment as the first tab
   const tabs = [
     { id: "record", label: "Record Payment" },
     { id: "academic", label: "Academic Fees" },
@@ -229,21 +262,17 @@ const Page = () => {
         <p className="text-[#282828] font-bold text-[24px] mb-2"></p>
       </div>
       <div className="w-full font-sans">
-        {/* Top Row: Profile + Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Profile Card (Takes up 8 columns) */}
           <div className="lg:col-span-8">
             <ProfileDetails data={mockProfileData} />
           </div>
 
-          {/* Quick Actions (Takes up 4 columns) */}
           <div className="lg:col-span-4">
             <QuickActions />
           </div>
         </div>
 
-        {/* Bottom Row: Fee Stats */}
-        <FeeStats />
+        <FeeStats stats={stats} />
       </div>
       <div className="bg-white shadow-sm rounded-xl p-8 font-sans min-h-[600px] mt-6">
         <div className="max-w-7xl mx-auto">
