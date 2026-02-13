@@ -1,16 +1,9 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import {
-    Calendar,
-    CheckCircle,
-    FolderOpen,
-    Gear,
-    GraduationCap,
-    House,
-    Note,
-} from "@phosphor-icons/react";
+import { Calendar, FolderOpen, Gear, House, Note } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
+import { CurrencyCircleDollar } from "@phosphor-icons/react/dist/ssr";
 
 type NavItem = {
     icon: (isActive: boolean) => ReactNode;
@@ -38,7 +31,7 @@ export default function FinanceNavbar() {
             label: "Finance / Analytics",
             path: "/finance/finance-analytics",
         },
-        
+
         {
             icon: (isActive) => (
                 <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
@@ -52,6 +45,13 @@ export default function FinanceNavbar() {
             ),
             label: "Meetings / Calendar",
             path: "/finance/meetings-calendar",
+        },
+        {
+            icon: (isActive) => (
+                <CurrencyCircleDollar size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Add Fee Structure",
+            path: "/finance/add-fee-structure",
         },
         {
             icon: (isActive) => (
