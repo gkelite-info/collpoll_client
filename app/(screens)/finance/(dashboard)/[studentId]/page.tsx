@@ -27,6 +27,7 @@ import {
   CaretRightIcon,
   CurrencyInrIcon,
 } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
 
 const mockFeePlan: FeePlan = {
   programName: "B.Tech CSE - 2nd Year",
@@ -213,7 +214,7 @@ const Page = () => {
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter();
   //   useEffect(() => {
   //     if (userId === null) return;
 
@@ -255,7 +256,10 @@ const Page = () => {
   return (
     <div className="p-4 lg:p-6 bg-[#F5F5F7]">
       <div className="flex items-center gap-1 text-black">
-        <CaretLeftIcon />
+        <CaretLeftIcon
+          onClick={() => router.back()}
+          className="cursor-pointer"
+        />
         <p>Back to Semester List</p>
       </div>
       <div className="mb-2">

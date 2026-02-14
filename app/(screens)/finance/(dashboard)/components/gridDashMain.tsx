@@ -124,19 +124,29 @@ const TopStat = ({
   val,
   label,
   theme,
+  onClick,
 }: {
   icon: any;
   val: string;
   label: string;
   theme: "purple" | "blue";
+  onClick?: () => void;
 }) => {
   const isP = theme === "purple";
+
   return (
     <div
-      className={`${isP ? "bg-[#6d28d9] text-white" : "bg-[#dbeafe] text-[#1e40af]"} p-3 rounded-lg flex flex-col justify-between h-full min-h-[90px]`}
+      onClick={onClick}
+      className={`
+        ${isP ? "bg-[#6d28d9] text-white" : "bg-[#dbeafe] text-[#1e40af]"}
+        p-3 rounded-lg flex flex-col justify-between h-full min-h-[90px]
+        ${onClick ? "cursor-pointer hover:opacity-90 transition" : ""}
+      `}
     >
       <div
-        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"} flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${
+          isP ? "bg-white/20" : "bg-white"
+        } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -144,10 +154,13 @@ const TopStat = ({
           className={isP ? "text-white" : "text-[#2563eb]"}
         />
       </div>
+
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"}`}
+          className={`text-[10px] font-medium ${
+            isP ? "text-purple-200" : "text-blue-800/70"
+          }`}
         >
           {label}
         </div>
@@ -225,6 +238,9 @@ export default function DashboardPage() {
                 val="2,450"
                 label="Overall Students"
                 theme="purple"
+                onClick={() =>
+                  router.push("/finance/finance-analytics/students")
+                }
               />
             </div>
             <div className="h-[95px]">
@@ -300,11 +316,7 @@ export default function DashboardPage() {
                 <CaretRight
                   size={20}
                   className="cursor-pointer"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set("view", "branchWiseCollection");
-                    router.push(`?${params.toString()}`);
-                  }}
+                  onClick={() => router.push("/finance/finance-analytics")}
                 />
               </div>
 
