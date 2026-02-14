@@ -1,86 +1,74 @@
 "use client";
 
 import {
-    PencilSimple,
+    Pencil,
     DownloadSimple,
     CaretDown,
+    PencilSimpleLine,
 } from "@phosphor-icons/react";
+
 
 export default function FeeStructureCard() {
     return (
-        <div className="w-full border-2 border-[#2F80ED] rounded-lg bg-white overflow-hidden">
-
+        <div className="w-full border-2 rounded-lg bg-white overflow-hidden">
             <div className="flex items-start justify-between">
-
-                {/* Column 1 - Institute */}
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-
-                        <div className="w-[43px] h-[43px] rounded-full overflow-hidden bg-white flex items-center justify-center">
-                            <img
-                                src="/logo.png"
-                                alt="Institute Logo"
-                                className="w-[43px] h-[43px] object-contain"
-                            />
+                <div className="bg-[#EBFFF4] px-8 pt-4 pb-5 rounded-t-lg h-[100px] w-full">
+                    <div className="flex justify-between ">
+                        <div className="flex flex-col justify-between flex-1">
+                            <div className="flex items-start">
+                                <div className="w-[13%]">
+                                    <div className="w-[40px] h-[40px] rounded-full overflow-hidden bg-white flex items-center justify-center">
+                                        <img
+                                            src="/logo.png"
+                                            alt="Institute Logo"
+                                            className="w-[40px] h-[40px] object-contain"
+                                        />
+                                    </div>
+                                </div>
+                                <h2 className="text-lg font-semibold text-[#282828]">
+                                    ABC Institute of Technology
+                                </h2>
+                            </div>
+                            <p className="text-lg ml-[13%] justify-content-end text-[#282828]">
+                                Duration: 4 Years (8 Semesters)
+                            </p>
                         </div>
-
-                        <h2 className="text-[18px] font-semibold text-[#282828]">
-                            ABC Institute of Technology
-                        </h2>
-
+                        <div className="flex flex-col justify-between flex-1 ">
+                            <div className="flex flex-col justify-between h-full">
+                                <h3 className="text-lg font-semibold text-[#282828]">
+                                    Academic Year: 2025–2029
+                                </h3>
+                                <p className="text-lg text-[#282828]">
+                                    Branch : Computer Science (CSE)
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-2 justify-between items-end ">
+                            <button className="flex items-center gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md">
+                                Year 1
+                                <CaretDown size={14} />
+                            </button>
+                            <div className="flex gap-2">
+                                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
+                                    <Pencil size={16} />
+                                </button>
+                                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
+                                    <DownloadSimple size={16} weight="bold" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-
-                    <p className="text-[14px] text-[#4B5563]">
-                        Duration: 4 Years (8 Semesters)
-                    </p>
                 </div>
-
-                {/* Column 2 - Academic Year */}
-                <div className="flex flex-col gap-2">
-                    <h3 className="text-[16px] font-semibold text-[#282828]">
-                        Academic Year: 2025–2029
-                    </h3>
-
-                    <p className="text-[14px] text-[#4B5563]">
-                        Branch : Computer Science (CSE)
-                    </p>
-                </div>
-
-                {/* Column 3 - Year + Icons */}
-                <div className="flex flex-col items-end gap-2">
-
-                    <button className="flex items-center gap-1 bg-[#1F2F56] text-white text-[14px] px-3 py-1.5 rounded-md">
-                        year 1
-                        <CaretDown size={14} />
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                        <button className="w-9 h-9 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
-                            <PencilSimple size={18} weight="bold" />
-                        </button>
-
-                        <button className="w-9 h-9 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
-                            <DownloadSimple size={18} weight="bold" />
-                        </button>
-                    </div>
-
-                </div>
-
             </div>
 
-
-            {/* Bottom White Section */}
             <div className="px-6 py-5">
-
-                <h4 className="text-[16px] font-semibold text-[#1F2F56] mb-4">
+                <h4 className="text-lg font-semibold text-[#1F2F56] mb-4">
                     Year 1 – (1 & 2 Semesters)
                 </h4>
-
-                {/* Fee Rows */}
-                <div className="space-y-3 text-[14px] text-[#282828]">
+                <div className="space-y-3 text-base text-[#282828]">
 
                     {[
-                        ["Tuition Fee", "₹ 85,000"],
+                        ["Tution Fee", "₹ 85,000"],
                         ["Laboratory Fee", "₹ 5,000"],
                         ["Library Fee", "₹ 3,000"],
                         ["Examination Fee", "₹ 2,000"],
@@ -89,37 +77,32 @@ export default function FeeStructureCard() {
                         ["GST", "% 18"],
                     ].map((item, index) => (
                         <div key={index} className="flex justify-between">
-                            <span>• {item[0]}</span>
+
+                            <span className="flex items-center gap-2">
+                                <span className="text-[18px] text-[#1F2F56] leading-none">•</span>
+                                {item[0]}
+                            </span>
+
                             <span>{item[1]}</span>
+
                         </div>
                     ))}
-
                 </div>
 
-                {/* Divider */}
                 <div className="border-t my-4"></div>
-
-                {/* Footer Details */}
                 <div className="space-y-2 text-[14px]">
-
-                    <p className="font-semibold text-[#1F2F56]">
+                    <div className="font-semibold text-[#1F2F56]">
                         Total Fee : ₹ 1,01,000
-                    </p>
-
-                    <p className="text-[#4B5563]">
-                        Due Date : 15/08/2026
-                    </p>
-
-                    <p className="text-[#4B5563]">
-                        Late Fee : ₹100 / Day after due date
-                    </p>
-
-                    <div className="text-right text-[#4B5563]">
-                        Finance Office - ABC Institute of Technology
                     </div>
 
+                    <div className="text-base text-[#282828]">
+                        Due Date : 15/08/2026
+                    </div>
+                    <div className="flex justify-between items-center text-base text-[#282828]">
+                        <span>Late Fee : ₹100 / Day after due date</span>
+                        <span>Finance Office - ABC Institute of Technology</span>
+                    </div>
                 </div>
-
             </div>
         </div>
     );
