@@ -11,7 +11,6 @@ const tabs = [
 ];
 
 export default function Tabs({ activeTab }: { activeTab: string }) {
-    console.log("checking tab", activeTab)
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
