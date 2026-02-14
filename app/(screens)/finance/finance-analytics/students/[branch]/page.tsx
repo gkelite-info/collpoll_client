@@ -42,12 +42,48 @@ const cardsData = [
 ];
 
 const initialData = [
-  { branch: "CSE", expected: "₹ 15.0 Cr", collected: "₹ 13.0 Cr", pending: "₹ 2.0 Cr", percent: "86%" },
-  { branch: "EEE", expected: "₹ 12.0 Cr", collected: "₹ 10.0 Cr", pending: "₹ 2.0 Cr", percent: "83%" },
-  { branch: "IT", expected: "₹ 9.0 Cr", collected: "₹ 7.0 Cr", pending: "₹ 2.0 Cr", percent: "78%" },
-  { branch: "ME", expected: "₹ 13.0 Cr", collected: "₹ 10.0 Cr", pending: "₹ 3.0 Cr", percent: "77%" },
-  { branch: "CIVIL", expected: "₹ 6.0 Cr", collected: "₹ 5.0 Cr", pending: "₹ 1.0 Cr", percent: "83%" },
-  { branch: "ECE", expected: "₹ 11.0 Cr", collected: "₹ 9.0 Cr", pending: "₹ 2.0 Cr", percent: "82%" },
+  {
+    branch: "CSE",
+    expected: "₹ 15.0 Cr",
+    collected: "₹ 13.0 Cr",
+    pending: "₹ 2.0 Cr",
+    percent: "86%",
+  },
+  {
+    branch: "EEE",
+    expected: "₹ 12.0 Cr",
+    collected: "₹ 10.0 Cr",
+    pending: "₹ 2.0 Cr",
+    percent: "83%",
+  },
+  {
+    branch: "IT",
+    expected: "₹ 9.0 Cr",
+    collected: "₹ 7.0 Cr",
+    pending: "₹ 2.0 Cr",
+    percent: "78%",
+  },
+  {
+    branch: "ME",
+    expected: "₹ 13.0 Cr",
+    collected: "₹ 10.0 Cr",
+    pending: "₹ 3.0 Cr",
+    percent: "77%",
+  },
+  {
+    branch: "CIVIL",
+    expected: "₹ 6.0 Cr",
+    collected: "₹ 5.0 Cr",
+    pending: "₹ 1.0 Cr",
+    percent: "83%",
+  },
+  {
+    branch: "ECE",
+    expected: "₹ 11.0 Cr",
+    collected: "₹ 9.0 Cr",
+    pending: "₹ 2.0 Cr",
+    percent: "82%",
+  },
 ];
 
 export default function BranchFinanceSummary() {
@@ -61,14 +97,23 @@ export default function BranchFinanceSummary() {
   const [statusFilter, setStatusFilter] = useState("All");
   const branchOptions = ["All", "CSE", "EEE", "IT", "ME", "CIVIL", "ECE"];
   const yearOptions = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"];
-  const semesterOptions = ["All", "Sem 1", "Sem 2", "Sem 3", "Sem 4", "Sem 5", "Sem 6", "Sem 7", "Sem 8"];
+  const semesterOptions = [
+    "All",
+    "Sem 1",
+    "Sem 2",
+    "Sem 3",
+    "Sem 4",
+    "Sem 5",
+    "Sem 6",
+    "Sem 7",
+    "Sem 8",
+  ];
   const statusOptions = ["All", "paid", "pending", "partial"];
-
 
   const filteredData = useMemo(() => {
     return initialData
       .filter((item) =>
-        item.branch.toLowerCase().includes(search.toLowerCase())
+        item.branch.toLowerCase().includes(search.toLowerCase()),
       )
       .map((item) => ({
         ...item,
@@ -76,7 +121,9 @@ export default function BranchFinanceSummary() {
           <span
             className="text-[#22A55D] cursor-pointer hover:underline text-sm font-medium"
             onClick={() =>
-              router.push(`/finance/students/${branchParam}/${item.branch}`)
+              router.push(
+                `/finance/finance-analytics/students/${branchParam}/${item.branch}`,
+              )
             }
           >
             View
@@ -145,11 +192,20 @@ export default function BranchFinanceSummary() {
         <div className="overflow-x-auto w-full">
           <div className="flex items-center gap-6 min-w-max">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[#282828] font-semibold">Education Type</span>
-              <input value="B-Tech" disabled onChange={(e) => setBranchFilter(e.target.value)} className="bg-[#43C17A26] text-center text-[#43C17A] outline-none w-[80px] cursor-not-allowed px-3 py-1 rounded-full text-sm" />
+              <span className="text-sm text-[#282828] font-semibold">
+                Education Type
+              </span>
+              <input
+                value="B-Tech"
+                disabled
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="bg-[#43C17A26] text-center text-[#43C17A] outline-none w-[80px] cursor-not-allowed px-3 py-1 rounded-full text-sm"
+              />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[#282828] font-semibold">Branch</span>
+              <span className="text-sm text-[#282828] font-semibold">
+                Branch
+              </span>
 
               <div className="relative">
                 <select
@@ -173,7 +229,9 @@ export default function BranchFinanceSummary() {
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[#282828] font-semibold">Year</span>
+                <span className="text-sm text-[#282828] font-semibold">
+                  Year
+                </span>
                 <div className="relative">
                   <select
                     value={yearFilter}
@@ -197,7 +255,9 @@ export default function BranchFinanceSummary() {
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[#282828] font-semibold">Sem</span>
+                <span className="text-sm text-[#282828] font-semibold">
+                  Sem
+                </span>
                 <div className="relative">
                   <select
                     value={semesterFilter}
@@ -220,7 +280,9 @@ export default function BranchFinanceSummary() {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[#282828] font-semibold">Status</span>
+              <span className="text-sm text-[#282828] font-semibold">
+                Status
+              </span>
               <div className="relative">
                 <select
                   value={statusFilter}

@@ -11,7 +11,11 @@ import {
   Tooltip,
 } from "recharts";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlass, FunnelSimple } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  FunnelSimple,
+  CaretLeftIcon,
+} from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 
 const RightAlignedLabel = (props: any) => {
@@ -170,8 +174,12 @@ export default function YearWiseFeeCollection() {
   }, [search, sortOrder]);
 
   return (
-    <div className="p-6 space-y-6 overflow-x-hidden">
-      <h2 className="text-lg font-semibold text-[#43C17A] mb-2">
+    <div className="p-2 space-y-6 overflow-x-hidden">
+      <h2 className="text-lg font-semibold flex items-center gap-1 text-[#43C17A] mb-2">
+        <CaretLeftIcon
+          onClick={() => router.back()}
+          className="cursor-pointer"
+        />
         {breadcrumb}
       </h2>
 
