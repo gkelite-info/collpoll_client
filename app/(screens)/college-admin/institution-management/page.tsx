@@ -1,45 +1,42 @@
+"use client"
 import { Suspense } from "react";
-// import EducationTypes from "./components/education-types/EducationTypes";
-// import Branches from "./components/branches/Branches";
-// import UsersOverview from "./components/users-overview/UsersOverview";
 import Tabs from "../components/Tabs";
 import CollegeAdminRight from "../components/collegeAdminRight";
 import SupportAdmins from "../components/SupportAdmins";
+import UsersOverview from "../components/users-overview/UsersOverview";
+import Branches from "../components/Branches";
+import EducationTypes from "../components/EducationTypes";
+import { useSearchParams } from "next/navigation";
 
-interface Props {
-  searchParams: {
-    tab?: string;
-  };
-}
+export default function InstitutionManagement() {
+    const searchParams = useSearchParams();
+    const activeTab = searchParams.get("tab") ?? "support-admins";
+    const renderTab = () => {
+        switch (activeTab) {
+            case "education-types":
+                return <EducationTypes />;
+            case "branches":
+                return <Branches />;
+            case "users-overview":
+                return <UsersOverview />;
+            default:
+                return <SupportAdmins />;
+        }
+    };
 
-export default function InstitutionManagement({ searchParams }: Props) {
-  const tab = searchParams?.tab || "support-admins";
-
-  const renderTab = () => {
-    switch (tab) {
-    //   case "education-types":
-    //     return <EducationTypes />;
-    //   case "branches":
-    //     return <Branches />;
-    //   case "users-overview":
-    //     return <UsersOverview />;
-      default:
-        return <SupportAdmins />;
-    }
-  };
-
-  return (
-    <div className="flex p-2">
-      {/* LEFT SIDE */}
-      <div className="w-[68%] space-y-4">
-        <Tabs activeTab={tab} />
-        <Suspense fallback={<div>Loading...</div>}>
-          {renderTab()}
-        </Suspense>
-      </div>
-
-      {/* RIGHT SIDE */}
-      <CollegeAdminRight />
-    </div>
-  );
+    return (
+        <div className="flex h-screen overflow-hidden mb-2">
+            <div className="w-[68%] flex flex-col p-2 pb-1">
+                <Tabs activeTab={activeTab} />
+                <Suspense fallback={<div>Loading...</div>}>
+                    <div className="flex-1 overflow-y-auto mt-4 pb-1">
+                        {renderTab()}
+                    </div>
+                </Suspense>
+            </div>
+            <div className="w-[32%] h-full overflow-y-auto p-2">
+                <CollegeAdminRight />
+            </div>
+        </div>
+    );
 }

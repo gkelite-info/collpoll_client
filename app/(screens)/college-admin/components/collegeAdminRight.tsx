@@ -133,7 +133,7 @@ const card = [
 
 export default function CollegeAdminRight() {
   return (
-    <div className="w-[32%] p-2 flex flex-col">
+    <div className="flex flex-col">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
       <AnnouncementsCard announceCard={card} height="80vh" />
