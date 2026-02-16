@@ -26,10 +26,16 @@ function FeeContent() {
 export default function AddFeeStructurePage() {
   return (
     <main className="flex w-full min-h-screen pb-4">
+<<<<<<< Updated upstream
       <div className="flex-1 p-2 pr-0 space-y-6">
         <Suspense fallback={<FeePageSkeleton />}>
           <FeeContent />
         </Suspense>
+=======
+      <div className="flex-1 p-6 space-y-6">
+        <AddFeeHeader />
+        <FeeStructureCard />
+>>>>>>> Stashed changes
       </div>
     </main>
   );
