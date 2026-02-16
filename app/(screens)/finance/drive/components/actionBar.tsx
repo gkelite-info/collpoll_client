@@ -7,9 +7,10 @@ type Props = {
   onSort: (val: string) => void;
   onNew: () => void;
   onFilters: () => void;
+  isVisible?: boolean
 };
 
-export default function ActionBar({ sortBy, onSort, onNew, onFilters }: Props) {
+export default function ActionBar({ sortBy, onSort, onNew, onFilters, isVisible = true }: Props) {
   return (
     <div className="flex items-center gap-3">
       <button
@@ -20,13 +21,15 @@ export default function ActionBar({ sortBy, onSort, onNew, onFilters }: Props) {
         <span>New</span>
       </button>
 
-      <button
-        onClick={onFilters}
-        className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A14] px-2 text-sm font-medium text-[#43C17A]"
-      >
-        <FunnelSimple size={18} weight="bold" />
-        <span>Filters</span>
-      </button>
+      {isVisible && (
+        <button
+          onClick={onFilters}
+          className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A14] px-2 text-sm font-medium text-[#43C17A]"
+        >
+          <FunnelSimple size={18} weight="bold" />
+          <span>Filters</span>
+        </button>
+      )}
 
       <div className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A14] px-2 text-sm font-medium text-[#43C17A]">
         <SortDescending size={18} weight="bold" />
