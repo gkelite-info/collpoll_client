@@ -78,8 +78,19 @@ const adminProfiles = [
   {
     name: "Deeksha",
     email: "deeksha@college.in",
-    status: "",
-    eduType: "",
+    status: "Active",
+    eduType: "MCA",
+    branches: null,
+    faculty: 210,
+    students: null,
+    createdOn: "1/13/2026",
+    isEmpty: false,
+  },
+  {
+    name: "John Doe",
+    email: "johndoe@college.in",
+    status: "Active",
+    eduType: "MCA",
     branches: null,
     faculty: 210,
     students: null,
@@ -102,22 +113,22 @@ const StatCard = ({
   iconColor: string;
 }) => (
   <div
-    className={`${color} rounded-xl p-5 flex flex-col justify-between h-[120px] shadow-sm`}
+    className={`${color} rounded-md p-5 flex flex-col justify-between h-[120px] shadow-xs`}
   >
-    <div className="bg-white w-10 h-10 p-0.5 rounded-lg flex items-center justify-center mb-2">
-      <Icon size={24} weight="fill" className={iconColor} />
+    <div className="bg-white w-8 h-8 aspect-square rounded-sm flex items-center justify-center mb-1">
+      <Icon size={20} weight="fill" className={iconColor} />
     </div>
     <div>
-      <h3 className="text-2xl font-bold text-[#1F2937]">{value}</h3>
+      <h3 className="text-lg font-bold text-[#1F2937]">{value}</h3>
       <p className="text-sm font-medium text-gray-600">{label}</p>
     </div>
   </div>
 );
 
 const QuickLinkCard = ({ title }: { title: string }) => (
-  <div className="bg-[#E4F2E7] hover:bg-[#d4eadd] transition-colors rounded-lg p-4 flex flex-col justify-between h-[75px] cursor-pointer shadow-sm">
-    <span className="font-bold text-[#1F2937] text-[15px]">{title}</span>
-    <span className="text-xs font-semibold text-[#1F2937] underline decoration-1 underline-offset-2">
+  <div className="bg-[#E4F2E7] hover:bg-[#d4eadd] transition-colors rounded-lg p-4 flex flex-col justify-between h-16 cursor-pointer shadow-xs">
+    <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
+    <span className="text-xs font-medium text-[#1F2937] underline decoration-1 underline-offset-2">
       View
     </span>
   </div>
@@ -125,7 +136,6 @@ const QuickLinkCard = ({ title }: { title: string }) => (
 
 const AdminProfileCard = ({ data }: { data: any }) => (
   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col h-full">
-    {/* Header */}
     <div className="flex justify-between items-start mb-1">
       <h3 className="font-bold text-[#1F2937] text-lg">{data.name}</h3>
       {data.status === "Active" && (
@@ -180,7 +190,7 @@ export default function AdminDashboard() {
   return (
     <div className=" min-h-screen">
       {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {statsData.map((stat) => (
           <StatCard key={stat.id} {...stat} />
         ))}

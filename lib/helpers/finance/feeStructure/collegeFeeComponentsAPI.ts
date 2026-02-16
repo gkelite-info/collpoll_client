@@ -1,20 +1,21 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export type CollegeFeeComponentRow = {
-    feeComponentId: number;
-    feeStructureId: number;
-    feeTypeId: number;
-    amount: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt: string | null;
+  feeComponentId: number;
+  feeStructureId: number;
+  feeTypeId: number;
+  amount: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 };
 
 export async function fetchFeeComponents(feeStructureId: number) {
-    const { data, error } = await supabase
-        .from("college_fee_components")
-        .select(`
+  const { data, error } = await supabase
+    .from("college_fee_components")
+    .select(
+      `
       feeComponentId,
       feeStructureId,
       feeTypeId,
@@ -23,59 +24,72 @@ export async function fetchFeeComponents(feeStructureId: number) {
       createdAt,
       updatedAt,
       deletedAt
-    `)
-        .eq("feeStructureId", feeStructureId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("feeComponentId", { ascending: true });
+    `,
+    )
+    .eq("feeStructureId", feeStructureId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("feeComponentId", { ascending: true });
 
-    if (error) {
-        console.error("fetchFeeComponents error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchFeeComponents error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return data ?? [];
 }
 
 export async function saveFeeComponent(payload: {
-    feeStructureId: number;
-    feeTypeId: number;
-    amount: number;
+  feeStructureId: number;
+  feeTypeId: number;
+  amount: number;
 }) {
+  const now = new Date().toISOString();
 
-    const { data, error } = await supabase
-        .from("college_fee_components")
-        .upsert(
-            {
-                ...payload,
-                updatedAt: new Date().toISOString(),
-            },
-            { onConflict: "feeStructureId,feeTypeId" },
-        )
-        .select("feeComponentId")
-        .single();
+  const { data: existing } = await supabase
+    .from("college_fee_components")
+    .select("createdAt")
+    .match({
+      feeStructureId: payload.feeStructureId,
+      feeTypeId: payload.feeTypeId,
+    })
+    .maybeSingle();
 
-    if (error) {
-        console.error("saveFeeComponent error:", error);
-        return { success: false, error };
-    }
+  const { data, error } = await supabase
+    .from("college_fee_components")
+    .upsert(
+      {
+        ...payload,
+        updatedAt: now,
+        createdAt: existing?.createdAt || now,
+        isActive: true,
+      },
+      { onConflict: "feeStructureId,feeTypeId" },
+    )
+    .select("feeComponentId")
+    .single();
 
-    return { success: true, feeComponentId: data.feeComponentId };
+  if (error) {
+    console.error("saveFeeComponent error:", error);
+    return { success: false, error };
+  }
+
+  return { success: true, feeComponentId: data.feeComponentId };
 }
 
 export async function deactivateFeeComponent(feeComponentId: number) {
-    const { error } = await supabase
-        .from("college_fee_components")
-        .update({
-            isActive: false,
-            deletedAt: new Date().toISOString(),
-        })
-        .eq("feeComponentId", feeComponentId);
+  const { error } = await supabase
+    .from("college_fee_components")
+    .update({
+      isActive: false,
+      deletedAt: new Date().toISOString(),
+    })
+    .eq("feeComponentId", feeComponentId);
 
-    if (error) {
-        console.error("deactivateFeeComponent error:", error);
-        return { success: false };
-    }
+  if (error) {
+    console.error("deactivateFeeComponent error:", error);
+    return { success: false };
+  }
 
-    return { success: true };
+  return { success: true };
 }

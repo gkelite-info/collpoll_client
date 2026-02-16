@@ -103,6 +103,5 @@ export async function getBatchSectionStats(
     });
   });
 
-  console.log("✅ Batch Stats Calculated:", results);
   return results;
 }
