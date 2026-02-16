@@ -17,17 +17,11 @@ export default function CreateMeetingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-base"
         onClick={onClose}
       />
-
-      {/* Modal */}
       <div className="relative w-[720px] max-h-[90vh] bg-[#FFFFFF] rounded-2xl shadow-2xl overflow-y-auto px-10 py-8">
-
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-[#282828]">
             Create Meeting
@@ -37,8 +31,6 @@ export default function CreateMeetingModal({
           </button>
 
         </div>
-
-        {/* Title */}
         <div className="mb-4">
           <label className="block text-lg font-regular text-[#282828] mb-1">
             Title
@@ -49,8 +41,6 @@ export default function CreateMeetingModal({
             className="w-full text-[#282828] border border-[#CCCCCC] rounded-md px-4 py-2 text-sm placeholder:text-[#BDBDBD] focus:ring-1 focus:ring-[#43C17A] outline-none"
           />
         </div>
-
-        {/* Description */}
         <div className="mb-6">
           <label className="block text-lg font-regular text-[#282828] mb-2">
             Description
@@ -61,11 +51,7 @@ export default function CreateMeetingModal({
             className="w-full bg-white border border-[#CCCCCC] text-[#282828] rounded-md px-4 py-0 text-sm placeholder:text-[#BDBDBD] focus:ring-1 focus:ring-[#43C17A] outline-none"
           />
         </div>
-
-        {/* Date & Time */}
         <div className="grid grid-cols-2 gap-8 mb-4">
-
-          {/* Date */}
           <div>
             <label className="block text-lg font-regular text-[#282828] mb-2">
               Date
@@ -76,8 +62,6 @@ export default function CreateMeetingModal({
               className="w-full border border-[#CCCCCC] text-[#282828] rounded-md px-4 py-2 text-sm text-center placeholder:text-[#BDBDBD] focus:ring-1 focus:ring-[#43C17A] outline-none"
             />
           </div>
-
-          {/* Time */}
           <div>
             <label className="block text-lg font-regular text-[#282828] mb-2">
               Time
@@ -118,9 +102,7 @@ export default function CreateMeetingModal({
           </div>
         </div>
 
-        {/* Education & Admin */}
         <div className="grid grid-cols-2 gap-8 mb-6">
-
           <div>
             <label className="block text-lg font-regular text-[#282828] mb-2">
               Education Type
@@ -187,7 +169,6 @@ export default function CreateMeetingModal({
           </div>
         </div>
 
-        {/* Footer Buttons */}
         <div className="flex gap-6">
           <button
             onClick={onClose}

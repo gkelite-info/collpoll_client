@@ -23,16 +23,11 @@ export default function SelectAdminModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
-
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
         onClick={onClose}
       />
-
-      {/* Modal */}
       <div className="relative w-[500px] max-h-[80vh] bg-white rounded-2xl shadow-xl overflow-y-auto p-6">
-
         <h2 className="text-xl font-semibold text-[#282828] mb-6">
           Select Admin
         </h2>
@@ -44,8 +39,6 @@ export default function SelectAdminModal({
               className="flex items-center justify-between"
             >
               <div className="flex items-center gap-4">
-
-                {/* Profile Image */}
                 <img
                   src={admin.image}
                   alt={admin.name}
@@ -70,7 +63,6 @@ export default function SelectAdminModal({
           ))}
         </div>
 
-        {/* Footer */}
         <div className="flex gap-4 mt-8">
           <button
             onClick={onClose}

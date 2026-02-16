@@ -44,8 +44,6 @@ export default function PreviousMeetingsGrid() {
             key={index}
             className="bg-white rounded-xl shadow-sm overflow-hidden"
           >
-
-            {/* Top Time Section */}
             <div className="bg-[#E6F4EC] px-5 py-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[#43C17A] flex items-center justify-center">
                 <Laptop size={20} color="white" weight="fill" />
@@ -54,11 +52,7 @@ export default function PreviousMeetingsGrid() {
                 {item.time}
               </span>
             </div>
-
-            {/* Dotted Divider */}
             <div className="border-t-2 border-dashed border-[#43C17A]" />
-
-            {/* Content */}
             <div className="p-5">
 
               <h3 className="text-[#43C17A] text-xl font-semibold mb-4">
@@ -94,8 +88,6 @@ export default function PreviousMeetingsGrid() {
                       {item.date}
                     </span>
                   </div>
-
-                  {/* Completed Badge */}
                   <span className="bg-[#E5E5E5] text-[#5C5C5C] px-4 py-1 rounded-full text-sm font-semibold">
                     Completed
                   </span>
