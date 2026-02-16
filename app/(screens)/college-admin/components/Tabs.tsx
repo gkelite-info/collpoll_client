@@ -7,7 +7,7 @@ const tabs = [
   { label: "Education Types", value: "education-types" },
   { label: "Branches", value: "branches" },
   { label: "Users Overview", value: "users-overview" },
-  { label: "Finance", value: "finance" },
+  { label: "Finance Overview", value: "finance" },
 ];
 
 export default function Tabs({ activeTab }: { activeTab: string }) {
@@ -22,22 +22,22 @@ export default function Tabs({ activeTab }: { activeTab: string }) {
   };
 
   return (
-    <div className="bg-white rounded-full p-2 shadow-sm overflow-x-auto">
+    <div className="bg-[#E6E6E6] rounded-full p-2 shadow-sm overflow-x-auto">
       <div className="flex gap-3 min-w-max">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.value;
-
           return (
             <button
               key={tab.value}
               onClick={() => handleTabClick(tab.value)}
-              className={`px-6 py-2 cursor-pointer rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
+              className={`px-4 py-1.5 cursor-pointer rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
                 ${
                   isActive
                     ? "bg-[#43C17A] text-white shadow-sm"
-                    : "bg-[#EAEAEA] text-[#282828] hover:bg-[#DCDCDC]"
+                    : "bg-[#D8D8D8] text-[#16284F]"
                 }
               `}
+              style={{ backgroundColor: !isActive ? "#D8D8D8" : undefined }}
             >
               {tab.label}
             </button>
