@@ -7,7 +7,10 @@ import { AdminProvider } from "./utils/context/admin/useAdmin";
 import { FacultyProvider } from "./utils/context/faculty/useFaculty";
 import { StudentProvider } from "./utils/context/student/useStudent";
 import { FinanceManagerProvider } from "./utils/context/financeManager/useFinanceManager";
+<<<<<<< Updated upstream
 import { CollegeAdminProvider } from "./utils/context/college-admin/useCollegeAdmin";
+=======
+>>>>>>> Stashed changes
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +40,7 @@ export default function RootLayout({
           <AdminProvider>
             <FacultyProvider>
               <StudentProvider>
+<<<<<<< Updated upstream
                 <CollegeAdminProvider>
                   <FinanceManagerProvider>
                     <ClientLayout>
@@ -44,6 +48,13 @@ export default function RootLayout({
                     </ClientLayout>
                   </FinanceManagerProvider>
                 </CollegeAdminProvider>
+=======
+                <FinanceManagerProvider>
+                  <ClientLayout>
+                    {children}
+                  </ClientLayout>
+                </FinanceManagerProvider>
+>>>>>>> Stashed changes
               </StudentProvider>
             </FacultyProvider>
           </AdminProvider>

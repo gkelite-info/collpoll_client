@@ -145,6 +145,7 @@ export default function Header() {
                     </p>
                   </>
                 )}
+<<<<<<< Updated upstream
                 {role === "Faculty" && (
                   <>
                     <p>{role}</p>
@@ -166,6 +167,9 @@ export default function Header() {
                   </>
                 )}
                 {["SuperAdmin", "Parent"].includes(role as string) && (
+=======
+                {["SuperAdmin", "Faculty", "Parent", "Admin", "CollegeAdmin"].includes(role as string) && (
+>>>>>>> Stashed changes
                   <p>{role}</p>
                 )}
               </div>
