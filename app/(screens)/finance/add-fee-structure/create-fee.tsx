@@ -1,494 +1,729 @@
-'use client'
-import { CaretDown, CaretDownIcon, MinusCircleIcon } from "@phosphor-icons/react";
+"use client";
+import { CaretDown, MinusCircleIcon, X, Check } from "@phosphor-icons/react";
 import AddFeeHeader from "./components/Header";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
-
-
+import { supabase } from "@/lib/supabaseClient";
+import { saveCollegeFeeStructure } from "@/lib/helpers/finance/feeStructure/collegeFeeStructureAPI";
+import { saveFeeType } from "@/lib/helpers/finance/feeStructure/feeTypeMasterAPI";
+import { saveFeeComponent } from "@/lib/helpers/finance/feeStructure/collegeFeeComponentsAPI";
+import toast from "react-hot-toast";
 
 export default function CreateFee() {
-    const { userId } = useUser();
+  const { userId } = useUser();
 
-    const [collegeName, setCollegeName] = useState("");
-    const [educationType, setEducationType] = useState("");
-    const [branches, setBranches] = useState<any[]>([]);
-    const [academicYears, setAcademicYears] = useState<any[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-    const [selectedAcademicYear, setSelectedAcademicYear] = useState<number | null>(null);
-    const [selectedExtraFee, setSelectedExtraFee] = useState("");
-    const [showHostelFee, setShowHostelFee] = useState(false);
-    const [showMiscFee, setShowMiscFee] = useState(false);
-    const [showCreateBox, setShowCreateBox] = useState(false);
-    const [newFeeName, setNewFeeName] = useState("");
-    const [customFees, setCustomFees] = useState<
-        { id: string; label: string }[]
-    >([]);
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [collegeName, setCollegeName] = useState("");
+  const [educationType, setEducationType] = useState("");
 
-    const handleIntegerInput = (e: any) => {
-        const value = e.target.value;
-        if (value === "") return;
-        e.target.value = value.replace(/\D/g, "");
+  const [collegeId, setCollegeId] = useState<number | null>(null);
+  const [collegeEducationId, setCollegeEducationId] = useState<number | null>(
+    null,
+  );
+
+  const [branches, setBranches] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [financeManagerId, setFinanceManagerId] = useState<number | null>(null);
+
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState<
+    number | null
+  >(null);
+
+  const [showHostelFee, setShowHostelFee] = useState(false);
+  const [showMiscFee, setShowMiscFee] = useState(false);
+  const [showCreateBox, setShowCreateBox] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const [feeValues, setFeeValues] = useState<Record<string, string>>({});
+  const [gstValue, setGstValue] = useState("");
+  const [metaData, setMetaData] = useState({
+    dueDate: "",
+    lateFee: "",
+    remarks: "",
+  });
+
+  const [customFees, setCustomFees] = useState<{ id: string; label: string }[]>(
+    [],
+  );
+  const [createdFeeOptions, setCreatedFeeOptions] = useState<
+    { id: string; label: string }[]
+  >([]);
+  const [newFeeName, setNewFeeName] = useState("");
+  const [totalFee, setTotalFee] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleFeeChange = (key: string, value: string) => {
+    const cleanValue = value.replace(/\D/g, "");
+    setFeeValues((prev) => ({ ...prev, [key]: cleanValue }));
+  };
+
+  const handleMetaChange = (key: string, value: string) => {
+    setMetaData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleIntegerInput = (e: any) => {
+    const value = e.target.value;
+    if (value === "") return;
+    e.target.value = value.replace(/\D/g, "");
+  };
+
+  useEffect(() => {
+    let total = 0;
+
+    if (feeValues["TUITION"]) total += Number(feeValues["TUITION"]);
+    if (feeValues["LAB"]) total += Number(feeValues["LAB"]);
+    if (feeValues["LIBRARY"]) total += Number(feeValues["LIBRARY"]);
+    if (feeValues["EXAM"]) total += Number(feeValues["EXAM"]);
+
+    if (showHostelFee && feeValues["HOSTEL"])
+      total += Number(feeValues["HOSTEL"]);
+    if (showMiscFee && feeValues["MISC"]) total += Number(feeValues["MISC"]);
+
+    customFees.forEach((fee) => {
+      if (feeValues[fee.id]) total += Number(feeValues[fee.id]);
+    });
+
+    if (gstValue) {
+      const gstPercent = Number(gstValue.replace(/\D/g, ""));
+      if (gstPercent > 0) {
+        total = total + total * (gstPercent / 100);
+      }
+    }
+
+    setTotalFee(Math.round(total));
+  }, [feeValues, showHostelFee, showMiscFee, customFees, gstValue]);
+
+  useEffect(() => {
+    const loadFinanceStructure = async () => {
+      if (!userId) return;
+      try {
+        const data = await getFinanceCollegeStructure(userId);
+
+        setCollegeName(data.collegeName);
+        setEducationType(data.educationType);
+
+        setCollegeId(data.collegeId);
+        setCollegeEducationId(data.collegeEducationId);
+
+        setBranches(data.branches);
+        setAcademicYears(data.academicYears);
+
+        const { data: fmData } = await supabase
+          .from("finance_manager")
+          .select("financeManagerId")
+          .eq("userId", userId)
+          .single();
+
+        if (fmData) setFinanceManagerId(fmData.financeManagerId);
+      } catch (err) {
+        console.error("Error loading structure:", err);
+        toast.error("Failed to load college data");
+      }
     };
+    loadFinanceStructure();
+  }, [userId]);
 
-    useEffect(() => {
-        const loadFinanceStructure = async () => {
-            if (!userId) {
-                return;
-            }
+  const handleAddCustomFeeOption = () => {
+    if (newFeeName.trim()) {
+      const newId = newFeeName.toUpperCase().replace(/\s+/g, "_");
+      const newLabel = newFeeName.trim();
 
-            try {
-                const data = await getFinanceCollegeStructure(userId);
-                setCollegeName(data.collegeName);
-                setEducationType(data.educationType);
-                setBranches(data.branches);
-                setAcademicYears(data.academicYears);
-            } catch (err) {
-            }
-        };
+      if (!createdFeeOptions.find((f) => f.id === newId)) {
+        setCreatedFeeOptions((prev) => [
+          ...prev,
+          { id: newId, label: newLabel },
+        ]);
+      }
+      if (!customFees.find((f) => f.id === newId)) {
+        setCustomFees((prev) => [...prev, { id: newId, label: newLabel }]);
+      }
+      setNewFeeName("");
+      setShowCreateBox(false);
+    }
+  };
 
-        loadFinanceStructure();
-    }, [userId]);
+  const handleDropdownChange = (value: string) => {
+    if (value === "") return;
+    if (value === "__CREATE__") {
+      setShowCreateBox(true);
+      return;
+    }
+    if (value === "HOSTEL") {
+      setShowHostelFee((prev) => !prev);
+    } else if (value === "MISC") {
+      setShowMiscFee((prev) => !prev);
+    } else {
+      const option = createdFeeOptions.find((f) => f.id === value);
+      if (option) {
+        const isVisible = customFees.find((f) => f.id === value);
+        if (isVisible) {
+          setCustomFees((prev) => prev.filter((f) => f.id !== value));
+          setFeeValues((prev) => {
+            const n = { ...prev };
+            delete n[value];
+            return n;
+          });
+        } else {
+          setCustomFees((prev) => [...prev, option]);
+        }
+      }
+    }
+  };
 
+  const handleSaveFeeStructure = async () => {
+    if (
+      !selectedBranch ||
+      !selectedAcademicYear ||
+      !financeManagerId ||
+      !collegeId ||
+      !collegeEducationId
+    ) {
+      toast.error("Missing required fields (Branch, Year, or College ID)");
+      return;
+    }
 
+    let formattedDueDate = new Date().toISOString();
+    if (metaData.dueDate && metaData.dueDate.includes("/")) {
+      const [day, month, year] = metaData.dueDate.split("/");
+      const dateObj = new Date(`${year}-${month}-${day}`);
+      if (!isNaN(dateObj.getTime())) {
+        formattedDueDate = dateObj.toISOString();
+      }
+    }
 
-    return (
-        <>
-            <div className="bg-red-00 flex flex-col">
-                <div className="bg-red-00 flex">
-                    <AddFeeHeader
-                        button={false}
-                    />
-                </div>
-                <div className="bg-white mt-1 rounded-md p-6 flex flex-wrap justify-between gap-2 shadow-sm">
-                    <div className="flex flex-wrap justify-between w-[100%] gap-4">
-                        <div className="flex flex-col w-[49%]">
-                            <label
-                                className="text-[#282828] font-medium"
-                            >
-                                College Name
-                            </label>
-                            <input
-                                type="text"
-                                value={collegeName}
-                                readOnly
-                                className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none cursor-not-allowed"
-                            />
+    const lateFeeAmount = metaData.lateFee
+      ? Number(metaData.lateFee.replace(/\D/g, ""))
+      : 0;
 
-                        </div>
-                        <div className="flex flex-col w-[49%]">
-                            <label
-                                className="text-[#282828] font-medium"
-                            >
-                                Education Type
-                            </label>
-                            <input
-                                type="text"
-                                value={educationType}
-                                readOnly
-                                className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none cursor-not-allowed"
-                            />
+    setIsSaving(true);
 
-                        </div>
-                        <div className="flex flex-col w-[49%]">
-                            <label className="font-medium text-[#282828]">
-                                Branch
-                            </label>
+    try {
+      const {
+        success: structSuccess,
+        feeStructureId,
+        error: structError,
+      } = await saveCollegeFeeStructure(
+        {
+          collegeId: collegeId,
+          collegeEducationId: collegeEducationId,
+          collegeBranchId: selectedBranch,
+          collegeAcademicYearId: selectedAcademicYear,
+          dueDate: formattedDueDate,
+          lateFeePerDay: lateFeeAmount,
+          remarks: metaData.remarks,
+        },
+        financeManagerId,
+      );
 
-                            <select
-                                value={selectedBranch ?? ""}
-                                onChange={(e) => {
-                                    const branchId = Number(e.target.value);
-                                    setSelectedBranch(branchId);
-                                    setSelectedAcademicYear(null);
-                                }}
-                                className="border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989]"
-                            >
-                                <option value="">Select</option>
+      if (!structSuccess || !feeStructureId) {
+        throw new Error(
+          "Failed to save fee structure: " + structError?.message,
+        );
+      }
 
-                                {branches.map((branch) => (
-                                    <option
-                                        key={branch.collegeBranchId}
-                                        value={branch.collegeBranchId}
-                                    >
-                                        {branch.collegeBranchCode}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+      const componentsToSave: { label: string; amount: number }[] = [];
+      let runningTotalForGst = 0; // To calculate GST base
 
-                        <div className="flex flex-col w-[49%]">
-                            <label
-                                className="font-medium text-[#282828]"
-                            >
-                                Academic Year
-                            </label>
-                            <select
-                                value={selectedAcademicYear ?? ""}
-                                onChange={(e) => setSelectedAcademicYear(Number(e.target.value))}
-                                disabled={!selectedBranch}   // 🔥 THIS LINE
-                                className={`border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 
-    ${!selectedBranch ? "bg-gray-100 cursor-not-allowed text-gray-400" : "text-[#898989]"}
+      const pushFee = (label: string, valueKey: string) => {
+        const rawVal = feeValues[valueKey];
+        const val = Number(rawVal);
+        if (val > 0) {
+          componentsToSave.push({ label, amount: val });
+          runningTotalForGst += val;
+        }
+      };
+
+      // Standard Fees
+      pushFee("Tuition Fee", "TUITION");
+      pushFee("Laboratory Fee", "LAB");
+      pushFee("Library Fee", "LIBRARY");
+      pushFee("Examination Fee", "EXAM");
+
+      // Toggleable Fees
+      if (showHostelFee) pushFee("Hostel Accommodation Fee", "HOSTEL");
+      if (showMiscFee) pushFee("Miscellaneous Fee", "MISC");
+
+      // Custom Fees
+      customFees.forEach((fee) => {
+        pushFee(fee.label, fee.id);
+      });
+
+      // GST CALCULATION
+      if (gstValue) {
+        const gstPercent = Number(gstValue.replace(/\D/g, ""));
+        if (gstPercent > 0 && runningTotalForGst > 0) {
+          const gstAmount = Math.round(runningTotalForGst * (gstPercent / 100));
+          componentsToSave.push({ label: "GST", amount: gstAmount });
+        }
+      }
+
+      if (componentsToSave.length === 0) {
+        toast("No fee amounts entered", { icon: "⚠️" });
+        setIsSaving(false);
+        return;
+      }
+
+      for (const comp of componentsToSave) {
+        const { success: typeSuccess, feeTypeId } = await saveFeeType(
+          comp.label,
+        );
+
+        if (typeSuccess && feeTypeId) {
+          await saveFeeComponent({
+            feeStructureId: feeStructureId,
+            feeTypeId: feeTypeId,
+            amount: comp.amount,
+          });
+        }
+      }
+
+      toast.success("Fee Structure Saved Successfully!");
+
+      setFeeValues({});
+      setTotalFee(0);
+      setGstValue("");
+      setMetaData({ dueDate: "", lateFee: "", remarks: "" });
+      setSelectedBranch(null);
+      setSelectedAcademicYear(null);
+      setShowHostelFee(false);
+      setShowMiscFee(false);
+      setCustomFees([]);
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Error: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-red-00 flex flex-col">
+        <div className="bg-red-00 flex">
+          <AddFeeHeader button={false} />
+        </div>
+        <div className="bg-white mt-1 rounded-md p-6 flex flex-wrap justify-between gap-2 shadow-sm">
+          {/* Header Inputs */}
+          <div className="flex flex-wrap justify-between w-[100%] gap-4">
+            <div className="flex flex-col w-[49%]">
+              <label className="text-[#282828] font-medium">College Name</label>
+              <input
+                type="text"
+                value={collegeName}
+                readOnly
+                className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none cursor-not-allowed"
+              />
+            </div>
+            <div className="flex flex-col w-[49%]">
+              <label className="text-[#282828] font-medium">
+                Education Type
+              </label>
+              <input
+                type="text"
+                value={educationType}
+                readOnly
+                className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none cursor-not-allowed"
+              />
+            </div>
+            <div className="flex flex-col w-[49%]">
+              <label className="font-medium text-[#282828]">Branch</label>
+
+              <select
+                value={selectedBranch ?? ""}
+                onChange={(e) => {
+                  const branchId = Number(e.target.value);
+                  setSelectedBranch(branchId);
+                  setSelectedAcademicYear(null);
+                }}
+                className="border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989]"
+              >
+                <option value="">Select</option>
+
+                {branches.map((branch) => (
+                  <option
+                    key={branch.collegeBranchId}
+                    value={branch.collegeBranchId}
+                  >
+                    {branch.collegeBranchCode}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col w-[49%]">
+              <label className="font-medium text-[#282828]">
+                Academic Year
+              </label>
+              <select
+                value={selectedAcademicYear ?? ""}
+                onChange={(e) =>
+                  setSelectedAcademicYear(Number(e.target.value))
+                }
+                disabled={!selectedBranch}
+                className={`border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 
+    ${
+      !selectedBranch
+        ? "bg-gray-100 cursor-not-allowed text-gray-400"
+        : "text-[#898989]"
+    }
   `}
-                            >
-                                <option value="">Select</option>
+              >
+                <option value="">Select</option>
 
-                                {academicYears
-                                    .filter((year) =>
-                                        selectedBranch
-                                            ? year.collegeBranchId === selectedBranch
-                                            : false
-                                    )
-                                    .map((year) => (
-                                        <option
-                                            key={year.collegeAcademicYearId}
-                                            value={year.collegeAcademicYearId}
-                                        >
-                                            {year.collegeAcademicYear}
-                                        </option>
-                                    ))}
-                            </select>
+                {academicYears
+                  .filter((year) =>
+                    selectedBranch
+                      ? year.collegeBranchId === selectedBranch
+                      : false,
+                  )
+                  .map((year) => (
+                    <option
+                      key={year.collegeAcademicYearId}
+                      value={year.collegeAcademicYearId}
+                    >
+                      {year.collegeAcademicYear}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
 
-                        </div>
+          <div className="mt-4 flex flex-col w-full">
+            <div className="bg-blue-00 flex justify-between items-center w-full">
+              <h4 className="text-[#282828] font-medium text-lg">
+                Fee Components
+              </h4>
+              <div className="bg-blue-00 flex items-center justify-end gap-2 w-1/2">
+                {!showCreateBox ? (
+                  // --- VIEW 1: DROPDOWN SELECTOR ---
+                  <div className="relative ">
+                    <div
+                      className="relative w-50 bg-[#16284F] pl-5 pr-12 py-2 rounded-lg text-white text-lg overflow-hidden cursor-pointer flex items-center h-[46px]"
+                      onClick={() => setIsDropdownOpen((prev) => !prev)}
+                    >
+                      <span className="whitespace-nowrap">Choose More</span>
+                      <CaretDown
+                        size={22}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-white pointer-events-none"
+                      />
                     </div>
-                    <div className="mt-4 flex flex-col w-full">
-                        <div className="bg-blue-00 flex justify-between items-center w-full">
-                            <h4 className="text-[#282828] font-medium text-lg">Fee Components</h4>
-                            <div className="bg-blue-00 flex items-center justify-end gap-2">
-                                <div className="relative lg:w-[85%]">
-                                    <div
-                                        className="relative w-full bg-[#16284F] pl-5 pr-12 py-2 rounded-lg text-white text-lg overflow-hidden cursor-pointer"
-                                        onClick={() => setIsDropdownOpen(prev => !prev)}
-                                    >
-                                        <div className="overflow-hidden whitespace-nowrap">
-                                            <div
-                                                className={`inline-block ${selectedExtraFee.length > 10 ? "animate-marquee" : ""
-                                                    }`}
-                                            >
-                                                {selectedExtraFee === "HOSTEL"
-                                                    ? "Hostel Accommodation Fee"
-                                                    : selectedExtraFee === "MISC"
-                                                        ? "Miscellaneous Fee"
-                                                        : "Choose More"}
-                                            </div>
-                                        </div>
-                                        <CaretDown
-                                            size={22}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white pointer-events-none"
-                                        />
-                                    </div>
-                                    <select
-                                        value={selectedExtraFee}
-                                        onChange={(e) => {
-                                            if (e.target.value === "__CREATE__") {
-                                                setShowCreateBox(true);
-                                                setSelectedExtraFee("");
-                                                return;
-                                            }
-                                            setSelectedExtraFee(e.target.value);
-                                        }}
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                    >
-                                        <option
-                                            value=""
-                                            style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
-                                        >
-                                            Choose More
-                                        </option>
+                    <select
+                      value=""
+                      onChange={(e) => handleDropdownChange(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer h-full"
+                    >
+                      <option
+                        value=""
+                        disabled
+                        style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
+                      >
+                        Choose More
+                      </option>
 
-                                        {!showHostelFee && (
-                                            <option
-                                                value="HOSTEL"
-                                                style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
-                                            >
-                                                Hostel Accommodation Fee
-                                            </option>
-                                        )}
+                      <option
+                        value="HOSTEL"
+                        style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
+                      >
+                        {showHostelFee ? "✓ " : ""} Hostel Accommodation Fee
+                      </option>
 
-                                        {!showMiscFee && (
-                                            <option
-                                                value="MISC"
-                                                style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
-                                            >
-                                                Miscellaneous Fee
-                                            </option>
-                                        )}
-                                        {customFees.map((fee) => (
-                                            <option
-                                                key={fee.id}
-                                                value={fee.id}
-                                                style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
-                                            >
-                                                {fee.label}
-                                            </option>
-                                        ))}
+                      <option
+                        value="MISC"
+                        style={{ backgroundColor: "#FFFFFF", color: "#16284F" }}
+                      >
+                        {showMiscFee ? "✓ " : ""} Miscellaneous Fee
+                      </option>
 
+                      {createdFeeOptions.map((fee) => {
+                        const isActive = customFees.find(
+                          (f) => f.id === fee.id,
+                        );
+                        return (
+                          <option
+                            key={fee.id}
+                            value={fee.id}
+                            style={{
+                              backgroundColor: "#FFFFFF",
+                              color: "#16284F",
+                            }}
+                          >
+                            {isActive ? "✓ " : ""} {fee.label}
+                          </option>
+                        );
+                      })}
 
-                                        <option
-                                            value="__CREATE__"
-                                            style={{ backgroundColor: "#FFFFFF", color: "#16284F", fontWeight: "600" }}
-                                        >
-                                            + Create New Fee
-                                        </option>
-                                    </select>
-                                    <style jsx>{`
-    @keyframes marquee {
-      0% { transform: translateX(0%); }
-      100% { transform: translateX(-50%); }
-    }
-    .animate-marquee {
-      animation: marquee 6s linear infinite;
-    }
-  `}</style>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (showCreateBox && newFeeName.trim()) {
-
-                                            const newId = newFeeName
-                                                .toUpperCase()
-                                                .replace(/\s+/g, "_");
-                                            if (!customFees.find(f => f.id === newId)) {
-                                                setCustomFees(prev => [
-                                                    ...prev,
-                                                    { id: newId, label: newFeeName }
-                                                ]);
-                                            }
-                                            setSelectedExtraFee(newId);
-
-                                            setShowCreateBox(false);
-                                            setNewFeeName("");
-                                            return;
-                                        }
-                                        if (selectedExtraFee === "HOSTEL") {
-                                            setShowHostelFee(true);
-                                        }
-
-                                        if (selectedExtraFee === "MISC") {
-                                            setShowMiscFee(true);
-                                        }
-                                        const custom = customFees.find(f => f.id === selectedExtraFee);
-                                        if (custom) {
-                                        }
-
-                                        setSelectedExtraFee("");
-                                    }}
-
-
-                                    className="px-3 py-1 bg-[#58AE77] text-white rounded-md"
-                                >
-                                    Add
-                                </button>
-                            </div>
-
-                        </div>
-                        <div className="bg-red-00 flex flex-wrap justify-between mt-3 gap-4">
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Tution Fee
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="Ex: 85000"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Laboratory Fee
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="Ex: 5000"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Library Fee
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="Ex: 100"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Examination Fee
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="Ex: 2000"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            {showHostelFee && (
-                                <div className="flex flex-col w-[49%]">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[#282828] font-medium">
-                                            Hostel Accomodation Fee
-                                        </label>
-                                        <MinusCircleIcon
-                                            size={18}
-                                            weight="fill"
-                                            className="text-[#FF3131] cursor-pointer"
-                                            onClick={() => setShowHostelFee(false)}
-                                        />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Ex: 5000"
-                                        className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                    />
-                                </div>
-                            )}
-
-                            {showMiscFee && (
-                                <div className="flex flex-col w-[49%]">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[#282828] font-medium">
-                                            Miscellaneous Fee
-                                        </label>
-                                        <MinusCircleIcon
-                                            size={18}
-                                            weight="fill"
-                                            className="text-[#FF3131] cursor-pointer"
-                                            onClick={() => setShowMiscFee(false)}
-                                        />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Ex: 1000"
-                                        className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                    />
-                                </div>
-                            )}
-
-                            {customFees.map((fee) => (
-                                <div key={fee.id} className="flex flex-col w-[49%]">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[#282828] font-medium">
-                                            {fee.label}
-                                        </label>
-                                        <MinusCircleIcon
-                                            size={18}
-                                            weight="fill"
-                                            className="text-[#FF3131] cursor-pointer"
-                                            onClick={() =>
-                                                setCustomFees((prev) =>
-                                                    prev.filter((f) => f.id !== fee.id)
-                                                )
-                                            }
-                                        />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter amount"
-                                        className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                    />
-                                </div>
-                            ))}
-
-
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        GST
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="Ex: 18%"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                        </div>
+                      <option
+                        value="__CREATE__"
+                        style={{
+                          backgroundColor: "#FFFFFF",
+                          color: "#16284F",
+                          fontWeight: "600",
+                          borderTop: "1px solid #eee",
+                        }}
+                      >
+                        + Create New Fee
+                      </option>
+                    </select>
+                  </div>
+                ) : (
+                  // --- VIEW 2: CREATE NEW FEE INPUT ---
+                  <div className="relative lg:w-[85%] flex gap-2 h-[46px]">
+                    <div className="flex-1 relative h-full">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={newFeeName}
+                        onChange={(e) => setNewFeeName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddCustomFeeOption();
+                        }}
+                        placeholder="Enter Fee Name"
+                        className="w-full h-full border border-[#16284F] bg-[#F5F7FA] pl-3 pr-2 rounded-lg text-[#16284F] focus:outline-none placeholder:text-gray-400"
+                      />
                     </div>
-                    <div className="bg-pink-00 w-full mt-4 flex flex-col items-start">
-                        <h4 className="font-medium text-[#282828]">
-                            Due & Late Fee Details
-                        </h4>
-                        <div className="bg-yellow-00 w-full flex flex-wrap justify-between mt-3">
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Due Date
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    placeholder="DD/MM/YYYY"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="flex flex-col w-[49%]">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Late Fee Rule
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    onChange={handleIntegerInput}
-                                    placeholder="₹___ /day after due date"
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="flex flex-col w-[100%] mt-3">
-                                <div className="flex items-center justify-between">
-                                    <label
-                                        className="text-[#282828] font-medium"
-                                    >
-                                        Remarks (Optional)
-                                    </label>
-                                </div>
-                                <input type="text"
-                                    placeholder={`Ex “Applicable for all students of ${new Date().getFullYear()} batch.”`}
-                                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
-                                />
-                            </div>
-                            <div className="bg-red-00 w-full mt-5">
-                                <div className="flex items-center gap-3">
-                                    <h4 className="text-[#16284F] font-bold">Total Fee:</h4>
-                                    <div className="p-1 px-4 border border-[#919191] rounded-md">
+                    <button
+                      type="button"
+                      onClick={handleAddCustomFeeOption}
+                      className="h-full px-4 bg-[#58AE77] text-white rounded-md hover:bg-[#469160] transition-colors flex items-center gap-1 font-medium"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateBox(false)}
+                      className="h-full px-3 border border-[#FF3131] text-[#FF3131] rounded-md hover:bg-red-50 transition-colors flex items-center justify-center"
+                    >
+                      <X size={20} weight="bold" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                                        <p className="text-[#23B362] font-bold text-md">₹ 10,000</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full flex items-center justify-center mt-5">
-                                <button className="px-5 py-2 bg-[#58AE77] font-medium text-[#EFEFEF] rounded-md cursor-pointer">
-                                    Save Fee Structure
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            <div className="bg-red-00 flex flex-wrap justify-between mt-3 gap-4">
+              {/* Standard Fixed Fees */}
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Tution Fee
+                  </label>
                 </div>
-            </div >
-        </>
-    )
+                <input
+                  type="text"
+                  value={feeValues["TUITION"] || ""}
+                  onChange={(e) => handleFeeChange("TUITION", e.target.value)}
+                  placeholder="Ex: 85000"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Laboratory Fee
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={feeValues["LAB"] || ""}
+                  onChange={(e) => handleFeeChange("LAB", e.target.value)}
+                  placeholder="Ex: 5000"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Library Fee
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={feeValues["LIBRARY"] || ""}
+                  onChange={(e) => handleFeeChange("LIBRARY", e.target.value)}
+                  placeholder="Ex: 100"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Examination Fee
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={feeValues["EXAM"] || ""}
+                  onChange={(e) => handleFeeChange("EXAM", e.target.value)}
+                  placeholder="Ex: 2000"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+
+              {/* Toggleable Fees */}
+              {showHostelFee && (
+                <div className="flex flex-col w-[49%]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[#282828] font-medium">
+                      Hostel Accomodation Fee
+                    </label>
+                    <MinusCircleIcon
+                      size={18}
+                      weight="fill"
+                      className="text-[#FF3131] cursor-pointer"
+                      onClick={() => setShowHostelFee(false)}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={feeValues["HOSTEL"] || ""}
+                    onChange={(e) => handleFeeChange("HOSTEL", e.target.value)}
+                    placeholder="Ex: 5000"
+                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                  />
+                </div>
+              )}
+
+              {showMiscFee && (
+                <div className="flex flex-col w-[49%]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[#282828] font-medium">
+                      Miscellaneous Fee
+                    </label>
+                    <MinusCircleIcon
+                      size={18}
+                      weight="fill"
+                      className="text-[#FF3131] cursor-pointer"
+                      onClick={() => setShowMiscFee(false)}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={feeValues["MISC"] || ""}
+                    onChange={(e) => handleFeeChange("MISC", e.target.value)}
+                    placeholder="Ex: 1000"
+                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                  />
+                </div>
+              )}
+
+              {customFees.map((fee) => (
+                <div key={fee.id} className="flex flex-col w-[49%]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[#282828] font-medium">
+                      {fee.label}
+                    </label>
+                    <MinusCircleIcon
+                      size={18}
+                      weight="fill"
+                      className="text-[#FF3131] cursor-pointer"
+                      onClick={() => {
+                        setCustomFees((prev) =>
+                          prev.filter((f) => f.id !== fee.id),
+                        );
+                        setFeeValues((prev) => {
+                          const n = { ...prev };
+                          delete n[fee.id];
+                          return n;
+                        });
+                      }}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={feeValues[fee.id] || ""}
+                    onChange={(e) => handleFeeChange(fee.id, e.target.value)}
+                    placeholder="Enter amount"
+                    className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                  />
+                </div>
+              ))}
+
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">GST</label>
+                </div>
+                <input
+                  type="text"
+                  value={gstValue}
+                  onChange={(e) => setGstValue(e.target.value)}
+                  placeholder="Ex: 18%"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="bg-pink-00 w-full mt-4 flex flex-col items-start">
+            <h4 className="font-medium text-[#282828]">
+              Due & Late Fee Details
+            </h4>
+            <div className="bg-yellow-00 w-full flex flex-wrap justify-between mt-3">
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">Due Date</label>
+                </div>
+                <input
+                  type="date"
+                  value={metaData.dueDate}
+                  onChange={(e) => handleMetaChange("dueDate", e.target.value)}
+                  placeholder="DD/MM/YYYY"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="flex flex-col w-[49%]">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Late Fee Rule
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={metaData.lateFee}
+                  onChange={(e) => handleMetaChange("lateFee", e.target.value)}
+                  onChangeCapture={handleIntegerInput}
+                  placeholder="₹___ /day after due date"
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="flex flex-col w-[100%] mt-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[#282828] font-medium">
+                    Remarks (Optional)
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  value={metaData.remarks}
+                  onChange={(e) => handleMetaChange("remarks", e.target.value)}
+                  placeholder={`Ex “Applicable for all students of ${new Date().getFullYear()} batch.”`}
+                  className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
+                />
+              </div>
+              <div className="bg-red-00 w-full mt-5">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-[#16284F] font-bold">Total Fee:</h4>
+                  <div className="p-1 px-4 border border-[#919191] rounded-md">
+                    <p className="text-[#23B362] font-bold text-md">
+                      ₹ {totalFee.toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="w-full flex items-center justify-center mt-5">
+                <button
+                  onClick={handleSaveFeeStructure}
+                  disabled={isSaving}
+                  className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors
+                    ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-[#58AE77] hover:bg-[#469160]"}
+                  `}
+                >
+                  {isSaving ? "Saving..." : "Save Fee Structure"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }
