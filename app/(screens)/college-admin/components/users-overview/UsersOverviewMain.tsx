@@ -87,6 +87,8 @@ function UsersOverview() {
       label: "Admins",
       value: "12",
       light: "bg-[#DED5FF]",
+      inlineStyle : {backgroundColor : "#DED5FF"},
+      inlineActiveStyle : {backgroundColor : "#7557E3"},
       dark: "bg-[#7557E3]",
       iconColor: "#7557E3",
     },
@@ -96,6 +98,8 @@ function UsersOverview() {
       value: "4,620",
       light: "bg-[#FFEDDA]",
       dark: "bg-[#FFCB92]",
+      inlineStyle : {backgroundColor : "#FFEDDA"},
+      inlineActiveStyle : {backgroundColor : "#FFCB92"},
       iconColor: "#FFCB92",
     },
     {
@@ -104,6 +108,8 @@ function UsersOverview() {
       value: "480",
       light: "bg-[#E6FBEA]",
       dark: "bg-[#66CC93]",
+      inlineStyle : {backgroundColor : "#E6FBEA"},
+      inlineActiveStyle : {backgroundColor : "#66CC93"},
       iconColor: "#43C17A",
     },
     {
@@ -112,6 +118,8 @@ function UsersOverview() {
       value: "320",
       light: "bg-[#CEE6FF]",
       dark: "bg-[#60AEFF]",
+      inlineStyle : {backgroundColor : "#CEE6FF"},
+      inlineActiveStyle : {backgroundColor : "#60AEFF"},
       iconColor: "#60AEFF",
     },
     {
@@ -120,6 +128,8 @@ function UsersOverview() {
       value: "48",
       light: "bg-[#FFF0E1]",
       dark: "bg-[#FF7D00]",
+      inlineStyle : {backgroundColor : "#FFF0E1"},
+      inlineActiveStyle : {backgroundColor : "#FF7D00"},
       iconColor: "#FF7D00",
     },
     {
@@ -128,6 +138,8 @@ function UsersOverview() {
       value: "48",
       light: "bg-[#FBE1FF]",
       dark: "bg-[#E646FF]",
+      inlineStyle : {backgroundColor : "#FBE1FF"},
+      inlineActiveStyle : {backgroundColor : "#E646FF"},
       iconColor: "#E646FF",
     },
   ];
@@ -164,6 +176,8 @@ function UsersOverview() {
             >
               <CardComponent
                 key={index}
+                inlineStyle={isActive ? card.inlineActiveStyle : card.inlineStyle}
+                isActive={isActive}
                 icon={
                   <UsersThree
                     size={20}
@@ -171,7 +185,8 @@ function UsersOverview() {
                     weight="fill"
                   />
                 }
-                style={isActive ? card.dark : card.light}
+                style={""}
+                textSize="text-sm"
                 value={card.value}
                 label={card.label}
               />

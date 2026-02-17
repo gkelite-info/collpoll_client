@@ -5,6 +5,9 @@ import { ReactNode } from "react";
 
 type CardProps = {
   style?: string;
+  inlineStyle?: object;
+  isActive?:boolean;
+  textSize?: string;
   icon: ReactNode;
   value: string | number;
   label: string;
@@ -18,6 +21,9 @@ type CardProps = {
 
 export default function CardComponent({
   style = "bg-white h-32 w-44",
+  inlineStyle,
+  isActive,
+  textSize,
   icon,
   value,
   label,
@@ -41,6 +47,7 @@ export default function CardComponent({
   return (
     <div
       onClick={handleClick}
+      style={{...inlineStyle}}
       className={`rounded-lg p-3 h-32 ${style} flex flex-col justify-between shadow-sm 
         ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
@@ -64,11 +71,11 @@ export default function CardComponent({
         )}
       </div>
 
-      <p className="text-[#282828] text-lg font-semibold">
+      <p className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}>
         {value}
       </p>
 
-      <span className="text-[#282828]">{label}</span>
+      <span className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}>{label}</span>
     </div>
   );
 }
