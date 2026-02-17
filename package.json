@@ -15,6 +15,8 @@
     "@phosphor-icons/react": "^2.1.10",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
+    "ag-charts-community": "^13.1.0",
+    "ag-charts-react": "^13.1.0",
     "ai": "^6.0.44",
     "framer-motion": "^12.23.26",
     "groq-sdk": "^0.37.0",
