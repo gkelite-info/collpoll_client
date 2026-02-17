@@ -6,8 +6,10 @@ import {
   CaretDown,
 } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
+import { Suspense } from "react";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-export default function FeePaymentsPage() {
+ function FeePaymentsPage() {
   const searchParams = useSearchParams();
   const range = searchParams.get("range") || "this-week";
 
@@ -111,4 +113,10 @@ function FilterPill({
       </div>
     </div>
   );
+}
+
+export default function Page() {
+  <Suspense fallback={<div className="p-6"><Loader/></div>}>
+    <FeePaymentsPage />
+  </Suspense>
 }

@@ -1,13 +1,15 @@
 "use client";
 
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import FeeYearDonut from "./components/FeeYearDonut";
 import { CaretDown } from "@phosphor-icons/react";
-import { useSearchParams } from "next/navigation";   
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function FeeCollectionPage() {
-  const searchParams = useSearchParams();  
-  const range = searchParams.get("range"); 
-  
+function FeeCollectionPage() {
+  const searchParams = useSearchParams();
+  const range = searchParams.get("range");
+
 
   return (
     <div className="p-6 bg-[#F3F4F6] min-h-screen">
@@ -56,4 +58,10 @@ function SummaryCard({
       </p>
     </div>
   );
+}
+
+export default function Page() {
+  <Suspense fallback={<div className="p-6"><Loader/></div>}>
+    <FeeCollectionPage />
+  </Suspense>
 }

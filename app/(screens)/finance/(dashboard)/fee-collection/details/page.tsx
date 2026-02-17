@@ -2,8 +2,6 @@
 
 import { useSearchParams } from "next/navigation";
 import {
-  Users,
-  CurrencyInr,
   CurrencyDollarSimpleIcon,
   UsersThreeIcon,
   MagnifyingGlass,
@@ -11,8 +9,10 @@ import {
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
+import { Suspense } from "react";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-export default function FeeCollectionDetailsPage() {
+function FeeCollectionDetailsPage() {
   const searchParams = useSearchParams();
   const year = searchParams.get("year") || "1st Year";
   const columns = [
@@ -206,6 +206,7 @@ export default function FeeCollectionDetailsPage() {
     </div>
   );
 }
+
 function FilterPill({
   title,
   value,
@@ -225,4 +226,10 @@ function FilterPill({
       </div>
     </div>
   );
+}
+ 
+export default function Page() {
+  <Suspense fallback={<div className="p-6"><Loader/></div>}>
+    <FeeCollectionDetailsPage />
+  </Suspense>
 }
