@@ -9,10 +9,15 @@ import EducationTypes from "../components/EducationTypes";
 import { Suspense } from "react";
 import UsersOverview from "../components/users-overview/UsersOverviewMain";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import FinanceOverview from "../components/finance/FinanceOverview";
+import FinanceEntry from "../components/finance/FinanceEntry";
+import FinanceEducationView from "../components/finance/FinanceEducationView";
+import FinanceStudentsView from "../components/finance/FinanceStudentsView";
 
 function InstitutionManagementClient() {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") ?? "support-admins";
+  const view = searchParams.get("view") ?? "overview";
 
   const renderTab = () => {
     switch (activeTab) {
@@ -22,6 +27,17 @@ function InstitutionManagementClient() {
         return <Branches />;
       case "users-overview":
         return <UsersOverview />;
+      case "finance":
+        switch (view) {
+          case "education":
+            return <FinanceEducationView />;
+          case "students":
+            return <FinanceStudentsView />;
+          case "entry":
+            return <FinanceEntry />;
+          default:
+            return <FinanceOverview />;
+        }
       default:
         return <SupportAdmins />;
     }
