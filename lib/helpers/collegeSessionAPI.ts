@@ -94,7 +94,6 @@ export async function saveCollegeSession(
                 startYear: payload.startYear,
                 endYear: payload.endYear,
                 is_deleted: false,
-                createdAt: now,
                 updatedAt: now,
             },
             {
