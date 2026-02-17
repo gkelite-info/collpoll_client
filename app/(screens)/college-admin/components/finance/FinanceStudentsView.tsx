@@ -89,19 +89,13 @@ export default function FinanceStudentsView() {
 
     return (
         <div className="flex flex-col">
-
-            {/* ================= FILTERS (STATIC - NO CARET) ================= */}
             <div className="flex items-center gap-6 mb-6 text-sm text-[#6B7280]">
                 <FilterLabel title="Education Type" value={educationType} />
                 <FilterLabel title="Branch" value={branch} />
                 <FilterLabel title="Year" value={year} />
                 <FilterLabel title="Academic Year" value={academicYear} />
             </div>
-
-            {/* ================= TABLE ================= */}
             <div className="bg-white rounded-[16px] overflow-hidden">
-
-                {/* Header */}
                 <div className="grid grid-cols-6 px-6 py-4 bg-[#F3F4F6] text-sm font-semibold text-[#374151]">
                     <div>Student Name</div>
                     <div>Student ID</div>
@@ -110,8 +104,6 @@ export default function FinanceStudentsView() {
                     <div>Pending</div>
                     <div>Last Payment</div>
                 </div>
-
-                {/* Rows */}
                 {students.map((student, index) => (
                     <div
                         key={index}
@@ -124,8 +116,6 @@ export default function FinanceStudentsView() {
                         <div>{student.id}</div>
                         <div>{student.expected}</div>
                         <div>{student.paid}</div>
-
-                        {/* Pending Column - Exact Figma Colors */}
                         <div className="text-[#1F2937]">
                             {student.pending}
                         </div>
@@ -138,9 +128,6 @@ export default function FinanceStudentsView() {
         </div>
     );
 }
-
-/* ================= STATIC FILTER LABEL ================= */
-
 function FilterLabel({ title, value }: any) {
     return (
         <div className="flex items-center gap-2">

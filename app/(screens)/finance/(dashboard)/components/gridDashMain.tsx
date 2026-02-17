@@ -424,9 +424,31 @@ export default function DashboardPage() {
                         {d.label}
                       </span>
                     </div>
-                    <span className="font-bold text-[#43C17A] text-xs">
-                      ₹ {d.val}
-                    </span>
+
+                    {/* Right Side */}
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#43C17A] text-xs">
+                        ₹ {d.val}
+                      </span>
+
+                      <CaretRight
+                        size={16}
+                        weight="bold"
+                        className="cursor-pointer text-[#282828]"
+                        onClick={() => {
+                          const params = new URLSearchParams(searchParams.toString());
+
+                          // convert label to router value
+                          const range = d.label
+                            .toLowerCase()
+                            .replace(/\s+/g, "-"); // this-week, last-week, this-month, this-year
+
+                          params.set("range", range);
+
+                          router.push(`/finance/fee-collection/payments?range=${range}`);
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
