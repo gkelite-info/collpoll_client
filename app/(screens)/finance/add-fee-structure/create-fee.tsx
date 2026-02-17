@@ -9,6 +9,8 @@ import { saveCollegeFeeStructure } from "@/lib/helpers/finance/feeStructure/coll
 import { saveFeeType } from "@/lib/helpers/finance/feeStructure/feeTypeMasterAPI";
 import { saveFeeComponent } from "@/lib/helpers/finance/feeStructure/collegeFeeComponentsAPI";
 import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
+import CreateFeeSkeleton from "./shimmer/createFeeSkeleton";
 
 export default function CreateFee() {
   const { userId } = useUser();
@@ -53,6 +55,13 @@ export default function CreateFee() {
   const [totalFee, setTotalFee] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
+  const searchParams = useSearchParams();
+  const editMode = searchParams.get("edit") === "true";
+  const editId = searchParams.get("id");
+
+  // 🔥 NEW: Loading State
+  const [isLoadingEditData, setIsLoadingEditData] = useState(editMode);
+
   const handleFeeChange = (key: string, value: string) => {
     const cleanValue = value.replace(/\D/g, "");
     setFeeValues((prev) => ({ ...prev, [key]: cleanValue }));
@@ -67,6 +76,98 @@ export default function CreateFee() {
     if (value === "") return;
     e.target.value = value.replace(/\D/g, "");
   };
+
+  useEffect(() => {
+    const loadEditData = async () => {
+      if (!editMode || !editId || !financeManagerId) return;
+
+      setIsLoadingEditData(true);
+
+      try {
+        // 1. Fetch Structure
+        const { data: struct, error } = await supabase
+          .from("college_fee_structure")
+          .select("*")
+          .eq("feeStructureId", editId)
+          .single();
+
+        if (error || !struct) return;
+
+        // 2. Set Basic Fields
+        setSelectedBranch(struct.collegeBranchId);
+        setSelectedAcademicYear(struct.collegeAcademicYearId);
+
+        // 🔥 FIX DATE: Convert DB Timestamp (ISO) -> YYYY-MM-DD for input[type='date']
+        let formattedForInput = "";
+        if (struct.dueDate) {
+          const dateObj = new Date(struct.dueDate);
+          const yyyy = dateObj.getFullYear();
+          const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+          const dd = String(dateObj.getDate()).padStart(2, "0");
+          formattedForInput = `${yyyy}-${mm}-${dd}`; // Browser requires this format
+        }
+
+        // 🔥 FIX GST: Append '%' so it looks right in the input
+        if (struct.gstPercentage > 0) {
+          setGstValue(`${struct.gstPercentage}%`);
+        }
+
+        setMetaData({
+          dueDate: formattedForInput, // Set YYYY-MM-DD
+          lateFee: String(struct.lateFeePerDay),
+          remarks: struct.remarks || "",
+        });
+
+        // 3. Fetch Components (Existing logic...)
+        const { data: comps } = await supabase
+          .from("college_fee_components")
+          .select(`*, fee_type_master ( feeTypeName )`)
+          .eq("feeStructureId", editId)
+          .eq("isActive", true);
+
+        if (comps) {
+          const newFeeValues: Record<string, string> = {};
+          const newCustomFees: { id: string; label: string }[] = [];
+
+          comps.forEach((c) => {
+            const name = c.fee_type_master?.feeTypeName;
+            const amount = String(c.amount);
+
+            // Map standard fees...
+            if (name === "Tuition Fee") newFeeValues["TUITION"] = amount;
+            else if (name === "Laboratory Fee") newFeeValues["LAB"] = amount;
+            else if (name === "Library Fee") newFeeValues["LIBRARY"] = amount;
+            else if (name === "Examination Fee") newFeeValues["EXAM"] = amount;
+            else if (name === "Hostel Accommodation Fee") {
+              newFeeValues["HOSTEL"] = amount;
+              setShowHostelFee(true);
+            } else if (name === "Miscellaneous Fee") {
+              newFeeValues["MISC"] = amount;
+              setShowMiscFee(true);
+            } else if (name !== "GST") {
+              // It's a Custom Fee (Ignore GST row as we use struct.gstPercentage)
+              const customId = name.toUpperCase().replace(/\s+/g, "_");
+              newCustomFees.push({ id: customId, label: name });
+              newFeeValues[customId] = amount;
+            }
+          });
+
+          setFeeValues(newFeeValues);
+          setCustomFees(newCustomFees);
+          setCreatedFeeOptions((prev) => [...prev, ...newCustomFees]);
+        }
+      } catch (err) {
+        console.error("Error loading edit data", err);
+        toast.error("Failed to load details for editing");
+      } finally {
+        setIsLoadingEditData(false);
+      }
+    };
+
+    if (financeManagerId) {
+      loadEditData();
+    }
+  }, [editMode, editId, financeManagerId]);
 
   useEffect(() => {
     let total = 0;
@@ -184,11 +285,19 @@ export default function CreateFee() {
     }
 
     let formattedDueDate = new Date().toISOString();
-    if (metaData.dueDate && metaData.dueDate.includes("/")) {
-      const [day, month, year] = metaData.dueDate.split("/");
-      const dateObj = new Date(`${year}-${month}-${day}`);
-      if (!isNaN(dateObj.getTime())) {
-        formattedDueDate = dateObj.toISOString();
+
+    if (metaData.dueDate) {
+      // Check if it's already YYYY-MM-DD (standard HTML date input format)
+      if (metaData.dueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        formattedDueDate = new Date(metaData.dueDate).toISOString();
+      }
+      // Fallback for manual DD/MM/YYYY text input
+      else if (metaData.dueDate.includes("/")) {
+        const [day, month, year] = metaData.dueDate.split("/");
+        const dateObj = new Date(`${year}-${month}-${day}`);
+        if (!isNaN(dateObj.getTime())) {
+          formattedDueDate = dateObj.toISOString();
+        }
       }
     }
 
@@ -296,6 +405,17 @@ export default function CreateFee() {
       setIsSaving(false);
     }
   };
+
+  if (isLoadingEditData) {
+    return (
+      <>
+        <div className="bg-red-00 flex">
+          <AddFeeHeader button={false} />
+        </div>
+        <CreateFeeSkeleton />
+      </>
+    );
+  }
 
   return (
     <>

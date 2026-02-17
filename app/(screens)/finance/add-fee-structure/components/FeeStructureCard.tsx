@@ -1,109 +1,217 @@
 "use client";
 
-import {
-    Pencil,
-    DownloadSimple,
-    CaretDown,
-    PencilSimpleLine,
-} from "@phosphor-icons/react";
+import { downloadFeePdf } from "@/lib/helpers/finance/downloadFeePdf";
+import { Pencil, DownloadSimple, CaretDown } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
 
+interface FeeStructureCardProps {
+  structures: any[];
+  collegeName?: string;
+}
 
-export default function FeeStructureCard() {
-    return (
-        <div className="w-full border-2 rounded-lg bg-white overflow-hidden">
-            <div className="flex items-start justify-between">
-                <div className="bg-[#EBFFF4] px-8 pt-4 pb-5 rounded-t-lg h-[100px] w-full">
-                    <div className="flex justify-between ">
-                        <div className="flex flex-col justify-between flex-1">
-                            <div className="flex items-start">
-                                <div className="w-[13%]">
-                                    <div className="w-[40px] h-[40px] rounded-full overflow-hidden bg-white flex items-center justify-center">
-                                        <img
-                                            src="/logo.png"
-                                            alt="Institute Logo"
-                                            className="w-[40px] h-[40px] object-contain"
-                                        />
-                                    </div>
-                                </div>
-                                <h2 className="text-lg font-semibold text-[#282828]">
-                                    ABC Institute of Technology
-                                </h2>
-                            </div>
-                            <p className="text-lg ml-[13%] justify-content-end text-[#282828]">
-                                Duration: 4 Years (8 Semesters)
-                            </p>
-                        </div>
-                        <div className="flex flex-col justify-between flex-1 ">
-                            <div className="flex flex-col justify-between h-full">
-                                <h3 className="text-lg font-semibold text-[#282828]">
-                                    Academic Year: 2025–2029
-                                </h3>
-                                <p className="text-lg text-[#282828]">
-                                    Branch : Computer Science (CSE)
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-2 justify-between items-end ">
-                            <button className="flex items-center gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md">
-                                Year 1
-                                <CaretDown size={14} />
-                            </button>
-                            <div className="flex gap-2">
-                                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
-                                    <Pencil size={16} />
-                                </button>
-                                <button className="w-8 h-8 flex items-center justify-center rounded-full bg-[#43C17A] text-white">
-                                    <DownloadSimple size={16} weight="bold" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+export default function FeeStructureCard({
+  structures,
+  collegeName = "ABC Institute",
+}: FeeStructureCardProps) {
+  const router = useRouter();
 
-            <div className="px-6 py-5">
-                <h4 className="text-lg font-semibold text-[#1F2F56] mb-4">
-                    Year 1 – (1 & 2 Semesters)
-                </h4>
-                <div className="space-y-3 text-base text-[#282828]">
+  const [selectedId, setSelectedId] = useState(structures[0]?.feeStructureId);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
 
-                    {[
-                        ["Tution Fee", "₹ 85,000"],
-                        ["Laboratory Fee", "₹ 5,000"],
-                        ["Library Fee", "₹ 3,000"],
-                        ["Examination Fee", "₹ 2,000"],
-                        ["Development Fee", "₹ 5,000"],
-                        ["Miscellaneous", "₹ 1,000"],
-                        ["GST", "% 18"],
-                    ].map((item, index) => (
-                        <div key={index} className="flex justify-between">
+  const currentData = useMemo(
+    () =>
+      structures.find((s) => s.feeStructureId === selectedId) || structures[0],
+    [structures, selectedId],
+  );
 
-                            <span className="flex items-center gap-2">
-                                <span className="text-[18px] text-[#1F2F56] leading-none">•</span>
-                                {item[0]}
-                            </span>
-
-                            <span>{item[1]}</span>
-
-                        </div>
-                    ))}
-                </div>
-
-                <div className="border-t my-4"></div>
-                <div className="space-y-2 text-[14px]">
-                    <div className="font-semibold text-[#1F2F56]">
-                        Total Fee : ₹ 1,01,000
-                    </div>
-
-                    <div className="text-base text-[#282828]">
-                        Due Date : 15/08/2026
-                    </div>
-                    <div className="flex justify-between items-center text-base text-[#282828]">
-                        <span>Late Fee : ₹100 / Day after due date</span>
-                        <span>Finance Office - ABC Institute of Technology</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+  const sortedYears = useMemo(() => {
+    return [...structures].sort((a, b) =>
+      a.academicYear.localeCompare(b.academicYear),
     );
+  }, [structures]);
+
+  const handleEdit = () => {
+    const params = new URLSearchParams();
+    params.set("fee", "create-fee");
+    params.set("edit", "true");
+    params.set("id", currentData.feeStructureId);
+    params.set("branchId", currentData.collegeBranchId);
+    params.set("yearId", currentData.collegeAcademicYearId);
+    router.push(`?${params.toString()}`);
+  };
+
+  const formatCurrency = (amount: any) =>
+    "₹ " + Number(amount).toLocaleString("en-IN");
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    const d = new Date(dateString);
+    return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
+  };
+
+  const handleDownload = () => {
+    downloadFeePdf(currentData, collegeName);
+  };
+
+  return (
+    <div className="w-full border-2 rounded-lg bg-white overflow-hidden mb-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="bg-[#EBFFF4] px-8 pt-4 pb-5 rounded-t-lg h-[100px] w-full">
+          <div className="flex justify-between ">
+            <div className="flex flex-col justify-between flex-1">
+              <div className="flex items-start">
+                <div className="w-[13%]">
+                  <div className="w-[40px] h-[40px] rounded-full overflow-hidden bg-white flex items-center justify-center shadow-sm">
+                    <img
+                      src="/logo.png"
+                      alt="Logo"
+                      className="w-[30px] h-[30px] object-contain"
+                    />
+                  </div>
+                </div>
+                <h2 className="text-lg font-semibold text-[#282828]">
+                  {collegeName}
+                </h2>
+              </div>
+              <p className="text-sm font-medium ml-[13%] text-[#555]">
+                Duration: 4 Years (8 Semesters)
+              </p>
+            </div>
+
+            <div className="flex flex-col justify-between flex-1">
+              <div className="flex flex-col justify-between h-full">
+                <h3 className="text-lg font-semibold text-[#282828]">
+                  Academic Year: {currentData.academicYear}
+                </h3>
+                <p className="text-lg text-[#282828]">
+                  Branch : {currentData.branchName}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 justify-between items-end relative">
+              <div className="relative">
+                <button
+                  onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
+                  className="flex items-center gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md hover:bg-[#2a3f70] transition-colors"
+                >
+                  {currentData.academicYear}
+                  <CaretDown size={14} />
+                </button>
+
+                {isYearDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setIsYearDropdownOpen(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20 overflow-hidden">
+                      {sortedYears.map((struct) => (
+                        <button
+                          key={struct.feeStructureId}
+                          onClick={() => {
+                            setSelectedId(struct.feeStructureId);
+                            setIsYearDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 
+                                        ${selectedId === struct.feeStructureId ? "font-bold text-[#43C17A] bg-green-50" : "text-gray-700"}
+                                    `}
+                        >
+                          {struct.academicYear}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleEdit}
+                  className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
+                  title="Edit Fee Structure"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
+                >
+                  <DownloadSimple size={16} weight="bold" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-6 py-5">
+        <h4 className="text-lg font-semibold text-[#1F2F56] mb-4">
+          {currentData.academicYear} Fee Breakdown
+        </h4>
+
+        <div className="space-y-3 text-base text-[#282828]">
+          {currentData.components.length > 0 ? (
+            currentData.components.map((comp: any, index: number) => (
+              <div
+                key={index}
+                className="flex justify-between border-b border-gray-50 pb-1 last:border-0"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="text-[18px] text-[#1F2F56] leading-none">
+                    •
+                  </span>
+                  {comp.label}
+                </span>
+                <span className="font-medium">
+                  {formatCurrency(comp.amount)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-400 italic text-sm">
+              No fee components added.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t my-4 border-gray-200"></div>
+
+        <div className="space-y-2 text-[14px]">
+          <div className="flex justify-between items-center">
+            <div className="font-bold text-[#1F2F56] text-lg">
+              Total Fee : {formatCurrency(currentData.totalAmount)}
+            </div>
+            {currentData.gstPercentage > 0 && (
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                Includes {currentData.gstPercentage}% GST
+              </span>
+            )}
+          </div>
+
+          <div className="text-base text-[#282828] mt-2">
+            <span className="font-medium">Due Date:</span>{" "}
+            {formatDate(currentData.dueDate)}
+          </div>
+
+          <div className="flex justify-between items-center text-base text-[#282828] mt-1">
+            <span>
+              <span className="font-medium">Late Fee:</span> ₹
+              {currentData.lateFeePerDay} / Day
+            </span>
+            <span className="text-gray-500 text-sm">
+              Finance Office - {collegeName}
+            </span>
+          </div>
+
+          {currentData.remarks && (
+            <div className="mt-2 text-sm text-gray-500 italic bg-gray-50 p-2 rounded">
+              Remarks: "{currentData.remarks}"
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
