@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   CaretDown,
   CaretRight,
+  CaretRightIcon,
   CurrencyInr,
   UsersThree,
 } from "@phosphor-icons/react";
@@ -144,9 +145,8 @@ const TopStat = ({
       `}
     >
       <div
-        className={`w-7 h-7 rounded ${
-          isP ? "bg-white/20" : "bg-white"
-        } flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"
+          } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -158,9 +158,8 @@ const TopStat = ({
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${
-            isP ? "text-purple-200" : "text-blue-800/70"
-          }`}
+          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"
+            }`}
         >
           {label}
         </div>
@@ -225,6 +224,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const handleFeeCollection = () => {
+    router.push('/finance/fee-collection');
+    return
+  }
+
   return (
     <div className="min-h-screenflex justify-center font-sans text-gray-900">
       <div className="w-full">
@@ -274,9 +278,12 @@ export default function DashboardPage() {
 
           <div className="col-span-3">
             <Card className="h-[220px] flex flex-col">
-              <h3 className="text-xs font-bold text-gray-800 mb-3">
-                Fee Collection by year
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 style={{ fontSize: 11, fontWeight: "700", color: "#282828" }}>
+                  Fee Collection by year
+                </h3>
+                <CaretRightIcon size={16} weight="bold" className="cursor-pointer" onClick={handleFeeCollection} />
+              </div>
               <div className="flex-1 space-y-2">
                 {data.collection.map((d, i) => (
                   <div
