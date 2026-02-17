@@ -116,7 +116,9 @@ function FilterPill({
 }
 
 export default function Page() {
+  return (
   <Suspense fallback={<div className="p-6"><Loader/></div>}>
     <FeePaymentsPage />
   </Suspense>
+  );
 }

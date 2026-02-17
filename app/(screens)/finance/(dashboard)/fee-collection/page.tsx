@@ -9,6 +9,7 @@ import { Suspense } from "react";
 function FeeCollectionPage() {
   const searchParams = useSearchParams();
   const range = searchParams.get("range");
+  console.log("page rendering.")
 
 
   return (
@@ -61,7 +62,9 @@ function SummaryCard({
 }
 
 export default function Page() {
-  <Suspense fallback={<div className="p-6"><Loader/></div>}>
-    <FeeCollectionPage />
-  </Suspense>
+  return (
+    <Suspense fallback={<div className="p-6"><Loader /></div>}>
+      <FeeCollectionPage />
+    </Suspense>
+  );
 }
