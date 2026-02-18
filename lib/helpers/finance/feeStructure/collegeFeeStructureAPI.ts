@@ -5,7 +5,7 @@ export type CollegeFeeStructureRow = {
   collegeId: number;
   collegeEducationId: number;
   collegeBranchId: number;
-  collegeAcademicYearId: number;
+  collegeSessionId: number;
   createdBy: number;
   isActive: boolean;
   createdAt: string;
@@ -13,60 +13,78 @@ export type CollegeFeeStructureRow = {
   deletedAt: string | null;
 };
 
-export async function fetchCollegeFeeStructures(collegeId: number) {
-  const { data, error } = await supabase
-    .from("college_fee_structure")
-    .select(
-      `
-      feeStructureId,
-      collegeId,
-      collegeEducationId,
-      collegeBranchId,
-      collegeAcademicYearId,
-      createdBy,
-      isActive,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `,
-    )
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .order("feeStructureId", { ascending: true });
+export async function fetchAllFeeStructures(collegeId: number) {
+  try {
+    // 1. Fetch structures
+    const { data: structures, error: structError } = await supabase
+      .from("college_fee_structure")
+      .select(
+        `
+        *,
+        college_branch ( collegeBranchId, collegeBranchCode, collegeBranchType ),
+        college_session ( collegeSessionId, sessionName )
+      `,
+      )
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .order("createdAt", { ascending: false });
 
-  if (error) {
-    console.error("fetchCollegeFeeStructures error:", error);
-    throw error;
+    if (structError) throw structError;
+    if (!structures || structures.length === 0) return [];
+
+    // 2. Fetch components
+    const structureIds = structures.map((s) => s.feeStructureId);
+    const { data: components, error: compError } = await supabase
+      .from("college_fee_components")
+      .select(`*, fee_type_master ( feeTypeId, feeTypeName )`)
+      .in("feeStructureId", structureIds)
+      .eq("isActive", true);
+
+    if (compError) throw compError;
+
+    // 3. Merge
+    return structures.map((struct) => {
+      const myComps =
+        components?.filter((c) => c.feeStructureId === struct.feeStructureId) ||
+        [];
+
+      const totalAmount = myComps.reduce(
+        (sum, item) => sum + Number(item.amount),
+        0,
+      );
+
+      // 🔥 FIX: Helper to safely get object from Array or Object
+      const getJoinedData = (data: any) =>
+        Array.isArray(data) ? data[0] : data;
+
+      const branchData = getJoinedData(struct.college_branch);
+      const sessionData = getJoinedData(struct.college_session);
+
+      return {
+        ...struct,
+        branchName: branchData?.collegeBranchCode || "Unknown Branch",
+        branchId: branchData?.collegeBranchId,
+
+        // 🔥 FIX: Use the extracted object to get sessionName
+        sessionName: sessionData?.sessionName || "Unknown Session",
+        sessionId: sessionData?.collegeSessionId,
+
+        components: myComps.map((c) => {
+          // Handle joined fee type master safely too
+          const typeData = getJoinedData(c.fee_type_master);
+          return {
+            label: typeData?.feeTypeName,
+            amount: c.amount,
+            typeId: c.feeTypeId,
+          };
+        }),
+        totalAmount,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching fee structures:", error);
+    return [];
   }
-
-  return data ?? [];
-}
-
-export async function fetchExistingFeeStructure(params: {
-  collegeId: number;
-  collegeEducationId: number;
-  collegeBranchId: number;
-  collegeAcademicYearId: number;
-}) {
-  const { data, error } = await supabase
-    .from("college_fee_structure")
-    .select("feeStructureId")
-    .eq("collegeId", params.collegeId)
-    .eq("collegeEducationId", params.collegeEducationId)
-    .eq("collegeBranchId", params.collegeBranchId)
-    .eq("collegeAcademicYearId", params.collegeAcademicYearId)
-    .is("deletedAt", null)
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") {
-      return { success: true, data: null };
-    }
-    throw error;
-  }
-
-  return { success: true, data };
 }
 
 export async function saveCollegeFeeStructure(
@@ -74,7 +92,7 @@ export async function saveCollegeFeeStructure(
     collegeId: number;
     collegeEducationId: number;
     collegeBranchId: number;
-    collegeAcademicYearId: number;
+    collegeSessionId: number; // Changed from AcademicYearId
     dueDate: string;
     lateFeePerDay: number;
     remarks?: string;
@@ -83,6 +101,7 @@ export async function saveCollegeFeeStructure(
 ) {
   const now = new Date().toISOString();
 
+  // Check existing using Session Match
   const { data: existing } = await supabase
     .from("college_fee_structure")
     .select("createdAt")
@@ -90,7 +109,7 @@ export async function saveCollegeFeeStructure(
       collegeId: payload.collegeId,
       collegeEducationId: payload.collegeEducationId,
       collegeBranchId: payload.collegeBranchId,
-      collegeAcademicYearId: payload.collegeAcademicYearId,
+      collegeSessionId: payload.collegeSessionId,
     })
     .maybeSingle();
 
@@ -101,7 +120,7 @@ export async function saveCollegeFeeStructure(
         collegeId: payload.collegeId,
         collegeEducationId: payload.collegeEducationId,
         collegeBranchId: payload.collegeBranchId,
-        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSessionId: payload.collegeSessionId,
 
         dueDate: payload.dueDate,
         lateFeePerDay: payload.lateFeePerDay,
@@ -113,8 +132,9 @@ export async function saveCollegeFeeStructure(
         createdAt: existing?.createdAt || now,
       },
       {
+        // Ensure your DB unique index covers these 4 columns
         onConflict:
-          "collegeId,collegeEducationId,collegeBranchId,collegeAcademicYearId",
+          "collegeId,collegeEducationId,collegeBranchId,collegeSessionId",
       },
     )
     .select("feeStructureId")
@@ -126,21 +146,4 @@ export async function saveCollegeFeeStructure(
   }
 
   return { success: true, feeStructureId: data?.feeStructureId };
-}
-
-export async function deactivateCollegeFeeStructure(feeStructureId: number) {
-  const { error } = await supabase
-    .from("college_fee_structure")
-    .update({
-      isActive: false,
-      deletedAt: new Date().toISOString(),
-    })
-    .eq("feeStructureId", feeStructureId);
-
-  if (error) {
-    console.error("deactivateCollegeFeeStructure error:", error);
-    return { success: false };
-  }
-
-  return { success: true };
 }

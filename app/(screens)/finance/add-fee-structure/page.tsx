@@ -9,8 +9,8 @@ import CreateFee from "./create-fee";
 import FeePageSkeleton from "./FeePageSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
-import { fetchAllFeeStructures } from "@/lib/helpers/finance/feeStructure/collegeFeeComponentsAPI";
 import toast from "react-hot-toast";
+import { fetchAllFeeStructures } from "@/lib/helpers/finance/feeStructure/collegeFeeStructureAPI";
 
 function FeeContent() {
   const searchParams = useSearchParams();
@@ -21,9 +21,6 @@ function FeeContent() {
   const [feeStructures, setFeeStructures] = useState<any[]>([]);
   const [collegeDetails, setCollegeDetails] = useState<any>(null);
 
-  // Filtering State
-
-  // Group structures by Branch ID
   const groupedStructures = useMemo(() => {
     const groups: Record<number, any[]> = {};
 
@@ -35,11 +32,9 @@ function FeeContent() {
       groups[bId].push(struct);
     });
 
-    // Convert to array for mapping
     return Object.values(groups);
   }, [feeStructures]);
 
-  // 1. Load Data
   useEffect(() => {
     const loadData = async () => {
       if (!userId) return;
@@ -62,13 +57,10 @@ function FeeContent() {
     loadData();
   }, [userId, fee]);
 
-  // 2. Extract Unique Years for Dropdown
   const availableYears = useMemo(() => {
     const years = new Set(feeStructures.map((f) => f.academicYear));
     return ["All", ...Array.from(years)];
   }, [feeStructures]);
-
-  // --- RENDER ---
 
   if (fee === "create-fee") {
     return <CreateFee />;
@@ -80,17 +72,13 @@ function FeeContent() {
     <>
       <AddFeeHeader button={true} />
 
-      {/* FILTER BAR */}
       {feeStructures.length > 0 && (
         <div className="flex justify-end mb-4">
           <div className="relative group">
-            {/* Dropdown Menu */}
             <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10"></div>
           </div>
         </div>
       )}
-
-      {/* CARDS LIST */}
 
       <div className="space-y-6">
         {groupedStructures.map((group) => (

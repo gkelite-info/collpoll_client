@@ -1,4 +1,3 @@
-// lib/helpers/downloadFeePdf.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -14,32 +13,29 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
   doc.setTextColor(100);
   doc.text("Fee Structure Document", 14, 28);
 
-  // 2. Info Block (Branch, Year, etc.)
   doc.setFontSize(11);
   doc.setTextColor(0);
 
   const infoX = 14;
   let infoY = 40;
 
-  doc.text(`Academic Year: ${data.academicYear}`, infoX, infoY);
+  const sessionLabel =
+    data.sessionName || data.academicYear || "Unknown Session";
+  doc.text(`Academic Session: ${sessionLabel}`, infoX, infoY);
   doc.text(`Branch: ${data.branchName}`, infoX, infoY + 6);
 
   if (data.dueDate) {
     const d = new Date(data.dueDate);
-    const dateStr = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    const dateStr = `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getFullYear()}`;
     doc.text(`Due Date: ${dateStr}`, 140, infoY);
   }
 
   doc.text(`Late Fee Rule: Rs. ${data.lateFeePerDay}/day`, 140, infoY + 6);
 
-  // 3. Table of Components
   const tableBody = data.components.map((comp: any) => [
     comp.label,
     `Rs. ${Number(comp.amount).toLocaleString("en-IN")}`,
   ]);
-
-  // Add GST row if it exists separately or as part of logic
-  // (Your components array already has GST if it was saved as a row)
 
   autoTable(doc, {
     startY: 55,
@@ -55,7 +51,7 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
   });
 
   // 4. Total & Footer
-  // @ts-ignore (autoTable adds lastAutoTable property)
+  // @ts-ignore
   const finalY = doc.lastAutoTable.finalY + 10;
 
   doc.setFontSize(12);
@@ -66,11 +62,12 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
     finalY,
   );
 
-  if (data.gstPercentage > 0) {
+  // Calculated percent passed from the Card component
+  if (data.calculatedGstPercent > 0) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100);
-    doc.text(`(Includes ${data.gstPercentage}% GST)`, 14, finalY + 6);
+    doc.text(`(Includes ${data.calculatedGstPercent}% GST)`, 14, finalY + 6);
   }
 
   if (data.remarks) {
@@ -80,5 +77,5 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
   }
 
   // 5. Save
-  doc.save(`${collegeName}_Fee_Structure_${data.academicYear}.pdf`);
+  doc.save(`${collegeName}_Fee_Structure_${sessionLabel}.pdf`);
 };
