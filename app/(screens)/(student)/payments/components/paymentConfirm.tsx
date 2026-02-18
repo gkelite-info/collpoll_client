@@ -52,11 +52,25 @@ const PaymentConfirm = ({ plan, onBack }: PaymentConfirmProps) => {
     onBack();
   };
 
-  const handlePayment = () => {
-    toast.success(
-      `Processing payment of ${formatCurrency(plan.pendingAmount)} via ${selectedMethod.toUpperCase()}...`,
-    );
-    // Here you would integrate Razorpay/Stripe/etc.
+  const handlePayment = async () => {
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: plan.pendingAmount,
+          studentId: 123, // replace with real studentId later
+        }),
+      });
+
+      const data = await res.json();
+
+      window.location.href = data.url;
+    } catch (err) {
+      toast.error("Payment initialization failed");
+    }
   };
 
   return (
