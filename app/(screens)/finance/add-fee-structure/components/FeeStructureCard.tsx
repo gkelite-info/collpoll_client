@@ -17,7 +17,15 @@ export default function FeeStructureCard({
   const router = useRouter();
 
   const [selectedId, setSelectedId] = useState(structures[0]?.feeStructureId);
-  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const getSessionLabel = (struct: any) => {
+    return (
+      struct.sessionName ||
+      struct.college_session?.sessionName ||
+      "Unknown Session"
+    );
+  };
 
   const currentData = useMemo(
     () =>
@@ -25,11 +33,29 @@ export default function FeeStructureCard({
     [structures, selectedId],
   );
 
-  const sortedYears = useMemo(() => {
+  const sortedSessions = useMemo(() => {
     return [...structures].sort((a, b) =>
-      a.academicYear.localeCompare(b.academicYear),
+      getSessionLabel(a).localeCompare(getSessionLabel(b)),
     );
   }, [structures]);
+
+  // 🔥 NEW: Calculate GST and Subtotal
+  const { gstPercent, displayTotal } = useMemo(() => {
+    if (!currentData || !currentData.components)
+      return { gstPercent: 0, displayTotal: 0 };
+
+    const gstComp = currentData.components.find(
+      (c: any) => c.label.toUpperCase() === "GST",
+    );
+    const gstAmount = gstComp ? Number(gstComp.amount) : 0;
+    const total = Number(currentData.totalAmount);
+    const subTotal = total - gstAmount;
+
+    // Calculate %: (GST / Subtotal) * 100
+    const percent = subTotal > 0 ? Math.round((gstAmount / subTotal) * 100) : 0;
+
+    return { gstPercent: percent, displayTotal: total };
+  }, [currentData]);
 
   const handleEdit = () => {
     const params = new URLSearchParams();
@@ -37,7 +63,12 @@ export default function FeeStructureCard({
     params.set("edit", "true");
     params.set("id", currentData.feeStructureId);
     params.set("branchId", currentData.collegeBranchId);
-    params.set("yearId", currentData.collegeAcademicYearId);
+    if (currentData.sessionId || currentData.collegeSessionId) {
+      params.set(
+        "sessionId",
+        currentData.sessionId || currentData.collegeSessionId,
+      );
+    }
     router.push(`?${params.toString()}`);
   };
 
@@ -51,14 +82,21 @@ export default function FeeStructureCard({
   };
 
   const handleDownload = () => {
-    downloadFeePdf(currentData, collegeName);
+    // Pass the calculated percentage to the PDF helper
+    downloadFeePdf(
+      { ...currentData, calculatedGstPercent: gstPercent },
+      collegeName,
+    );
   };
+
+  if (!currentData) return null;
 
   return (
     <div className="w-full border-2 rounded-lg bg-white overflow-hidden mb-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="bg-[#EBFFF4] px-8 pt-4 pb-5 rounded-t-lg h-[100px] w-full">
           <div className="flex justify-between ">
+            {/* Header Info */}
             <div className="flex flex-col justify-between flex-1">
               <div className="flex items-start">
                 <div className="w-[13%]">
@@ -82,7 +120,7 @@ export default function FeeStructureCard({
             <div className="flex flex-col justify-between flex-1">
               <div className="flex flex-col justify-between h-full">
                 <h3 className="text-lg font-semibold text-[#282828]">
-                  Academic Year: {currentData.academicYear}
+                  Academic Session: {getSessionLabel(currentData)}
                 </h3>
                 <p className="text-lg text-[#282828]">
                   Branch : {currentData.branchName}
@@ -93,32 +131,36 @@ export default function FeeStructureCard({
             <div className="flex flex-col gap-2 justify-between items-end relative">
               <div className="relative">
                 <button
-                  onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md hover:bg-[#2a3f70] transition-colors"
                 >
-                  {currentData.academicYear}
+                  {getSessionLabel(currentData)}
                   <CaretDown size={14} />
                 </button>
 
-                {isYearDropdownOpen && (
+                {isDropdownOpen && (
                   <>
                     <div
                       className="fixed inset-0 z-10"
-                      onClick={() => setIsYearDropdownOpen(false)}
+                      onClick={() => setIsDropdownOpen(false)}
                     />
                     <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-gray-200 rounded-md shadow-lg z-20 overflow-hidden">
-                      {sortedYears.map((struct) => (
+                      {sortedSessions.map((struct) => (
                         <button
                           key={struct.feeStructureId}
                           onClick={() => {
                             setSelectedId(struct.feeStructureId);
-                            setIsYearDropdownOpen(false);
+                            setIsDropdownOpen(false);
                           }}
                           className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 
-                                        ${selectedId === struct.feeStructureId ? "font-bold text-[#43C17A] bg-green-50" : "text-gray-700"}
-                                    `}
+                              ${
+                                selectedId === struct.feeStructureId
+                                  ? "font-bold text-[#43C17A] bg-green-50"
+                                  : "text-gray-700"
+                              }
+                          `}
                         >
-                          {struct.academicYear}
+                          {getSessionLabel(struct)}
                         </button>
                       ))}
                     </div>
@@ -130,7 +172,6 @@ export default function FeeStructureCard({
                 <button
                   onClick={handleEdit}
                   className="w-8 h-8 flex cursor-pointer items-center justify-center rounded-full bg-[#43C17A] text-white hover:bg-[#36a165] transition-colors"
-                  title="Edit Fee Structure"
                 >
                   <Pencil size={16} />
                 </button>
@@ -148,7 +189,7 @@ export default function FeeStructureCard({
 
       <div className="px-6 py-5">
         <h4 className="text-lg font-semibold text-[#1F2F56] mb-4">
-          {currentData.academicYear} Fee Breakdown
+          {getSessionLabel(currentData)} Fee Breakdown
         </h4>
 
         <div className="space-y-3 text-base text-[#282828]">
@@ -181,11 +222,12 @@ export default function FeeStructureCard({
         <div className="space-y-2 text-[14px]">
           <div className="flex justify-between items-center">
             <div className="font-bold text-[#1F2F56] text-lg">
-              Total Fee : {formatCurrency(currentData.totalAmount)}
+              Total Fee : {formatCurrency(displayTotal)}
             </div>
-            {currentData.gstPercentage > 0 && (
+            {/* 🔥 SHOW CALCULATED GST */}
+            {gstPercent > 0 && (
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                Includes {currentData.gstPercentage}% GST
+                Includes {gstPercent}% GST
               </span>
             )}
           </div>

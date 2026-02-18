@@ -1,39 +1,28 @@
-export interface FeePlan {
-  programName: string;
-  type: string;
-  academicYear: string;
-  openingBalance: number;
-  applicableFees: number;
-  scholarship: number;
-  totalPayable: number;
-  paidTillNow: number;
-  pendingAmount: number;
-}
+"use client";
 
-
-
-export interface FeeSummaryItem {
-  id: string | number;
-  paidAmount: number;
-  paymentMode: string;
-  entity: string;
-  paidOn: string;
-  status: "Success" | "Pending" | "Failure";
-  comments: string;
-}
+import { FeeSummaryItem } from "@/app/(screens)/finance/(dashboard)/[studentId]/components/academicFees";
+import { FeePlan } from "./paymentConfirm";
 
 interface AcademicFeesProps {
-  plan: FeePlan;
+  plan: FeePlan | null;
   summary: FeeSummaryItem[];
+  onPay: () => void;
 }
 
-const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
+const AcademicFees: React.FC<AcademicFeesProps> = ({
+  plan,
+  summary,
+  onPay,
+}) => {
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
     }).format(val);
+
+  if (!plan)
+    return <div className="p-6 text-center text-gray-500">Loading...</div>;
 
   return (
     <div className="space-y-6">
@@ -51,8 +40,8 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
           <span className="text-gray-500 font-medium">{plan.academicYear}</span>
         </div>
 
-        <div className="space-y-3 max-w-2xl">
-          <div className="flex justify-between items-center">
+        <div className="space-y-3 w-full py-2 px-4">
+          <div className="flex justify-between items-center pb-2 border-b border-dashed border-gray-200">
             <span className="text-gray-700 font-medium">
               Opening Balance Due
             </span>
@@ -60,19 +49,34 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               {formatCurrency(plan.openingBalance)}
             </span>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-700 font-medium">Applicable Fees</span>
-            <span className="text-gray-600">
-              {formatCurrency(plan.applicableFees)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-700 font-medium">Scholarship</span>
-            <span className="text-gray-600">
-              {formatCurrency(plan.scholarship)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center border-t border-dashed pt-2">
+
+          {plan.components.length > 0 ? (
+            plan.components.map((comp, idx) => (
+              <div key={idx} className="flex justify-between items-center">
+                <span className="text-gray-700 font-medium">{comp.label}</span>
+                <span className="text-gray-600">
+                  {formatCurrency(comp.amount)}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-gray-400 italic text-sm py-1">
+              No fee details found
+            </div>
+          )}
+
+          {plan.gstAmount > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-gray-700 font-medium">
+                GST {plan.gstPercent > 0 ? `(${plan.gstPercent}%)` : ""}
+              </span>
+              <span className="text-gray-600">
+                {formatCurrency(plan.gstAmount)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center border-t border-dashed pt-2 mt-2">
             <span className="text-gray-800 font-bold">Total Payable</span>
             <span className="text-emerald-500 font-bold">
               {formatCurrency(plan.totalPayable)}
@@ -81,23 +85,33 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
           <div className="flex justify-between items-center">
             <span className="text-gray-700 font-medium">Paid Till Now</span>
             <span className="text-emerald-500 font-medium">
-              {formatCurrency(plan.paidTillNow)}
+              - {formatCurrency(plan.paidTillNow)}
             </span>
           </div>
-          <div className="flex justify-between items-center pt-2">
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-2">
             <span className="text-gray-800 font-bold">Pending Amount</span>
-            <span className="text-emerald-500 font-bold">
+            <span className="text-red-500 font-bold text-lg">
               {formatCurrency(plan.pendingAmount)}
             </span>
           </div>
         </div>
 
         <div className="flex justify-end mt-6">
-          <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 shadow-sm transition-colors">
-            Pay <span className="text-xs">▼</span>
+          <button
+            onClick={onPay}
+            disabled={plan.pendingAmount <= 0}
+            className={`
+                px-8 py-1 text-lg rounded-md font-medium shadow-sm transition-colors flex items-center gap-2
+                ${
+                  plan.pendingAmount > 0
+                    ? "bg-emerald-500 hover:bg-emerald-600 text-white cursor-pointer"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }
+            `}
+          >
+            {plan.pendingAmount > 0 ? "Pay Now" : "Fully Paid"}
           </button>
         </div>
-
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -109,7 +123,6 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
             Fee Summary
           </span>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left whitespace-nowrap">
             <thead className="text-gray-700 bg-gray-200/70 font-semibold">
