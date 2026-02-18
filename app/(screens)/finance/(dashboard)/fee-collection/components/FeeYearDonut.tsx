@@ -69,7 +69,7 @@ export default function FeeYearDonut({
   const router = useRouter();
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 w-full max-w-lg">
+    <div className="bg-white rounded-2xl p-6 border border-gray-100 w-full max-w-lg">
 
     
       <div className="flex justify-between items-center">

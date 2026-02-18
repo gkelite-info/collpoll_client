@@ -7,7 +7,7 @@ import {
   CurrencyInr,
   UsersThree,
 } from "@phosphor-icons/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -24,6 +24,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import YearWiseFeeCollection from "./yearWiseFeeCollection";
 import BranchWiseCollection from "./branchWiseCollection";
 import { PaymentSuccessModal } from "../modals/paymentSuccessModal";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { getOverallStudents } from "@/lib/helpers/finance/dashboard/getOverallStudents";
 
 // --- Types & Data ---
 
@@ -224,8 +226,31 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const { collegeId, collegeEducationId, loading } = useFinanceManager();
+
+  const [overallStudents, setOverallStudents] = useState<number>(0);
+
+  useEffect(() => {
+    const loadDashboardStats = async () => {
+      if (!loading && collegeId && collegeEducationId) {
+        try {
+          const stats = await getOverallStudents(
+            collegeId,
+            collegeEducationId
+          );
+          setOverallStudents(stats);
+        } catch (err) {
+          console.error("Dashboard stats error:", err);
+        }
+      }
+    };
+
+    loadDashboardStats();
+  }, [loading, collegeId, collegeEducationId]);
+
+
   const handleFeeCollection = () => {
-    router.push('/finance/fee-collection');
+    router.push('/finance?feeCollection');
     return
   }
 
@@ -239,7 +264,7 @@ export default function DashboardPage() {
             <div className="h-[95px]">
               <TopStat
                 icon={UsersThree}
-                val="2,450"
+                val={overallStudents.toLocaleString()}
                 label="Overall Students"
                 theme="purple"
                 onClick={() =>

@@ -171,7 +171,7 @@ export default function AdminRegistration() {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="bg-white rounded-2xl shadow-sm p-8 max-w-4xl mx-auto"
+            className="bg-white rounded-2xl shadow-sm p-8 mx-auto"
         >
             <h2 className="text-2xl font-bold text-[#333] mb-2">
                 Admin Registration
