@@ -15,6 +15,7 @@ import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/
 import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
+import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -75,6 +76,11 @@ const AddUserModal: React.FC<{
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
   const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
+  const [selectedSessionType, setSelectedSessionType] = useState<string[]>([]);
+  const [sessionOptions, setSessionOptions] = useState<
+    { id: number; label: string; value: number }[]
+  >([]);
+
   const [isSuccess, setIsSuccess] = useState(false);
 
   const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
@@ -137,6 +143,9 @@ const AddUserModal: React.FC<{
             adminId: adminContext.adminId,
           }));
 
+          const sessions = await fetchSessionOptions(adminContext.collegeId);
+          setSessionOptions(sessions);
+
           const data = await fetchModalInitialData(adminContext.collegeId);
 
           const { data: semesterData } = await supabase
@@ -169,31 +178,6 @@ const AddUserModal: React.FC<{
       }
     }
   }, [isOpen, user]);
-
-  // const filteredBranches = useMemo(
-  //   () =>
-  //     dbData.branches.filter(
-  //       (b) => b.collegeEducationId === selectedEducationId,
-  //     ),
-  //   [dbData.branches, selectedEducationId],
-  // );
-
-  // const filteredYears = useMemo(
-  //   () => dbData.years.filter((y) => y.collegeBranchId === selectedBranchId),
-  //   [dbData.years, selectedBranchId],
-  // );
-
-  // const filteredSubjects = useMemo(
-  //   () =>
-  //     dbData.subjects.filter((s) => s.collegeAcademicYearId === selectedYearId),
-  //   [dbData.subjects, selectedYearId],
-  // );
-
-  // const filteredSections = useMemo(
-  //   () =>
-  //     dbData.sections.filter((s) => s.collegeAcademicYearId === selectedYearId),
-  //   [dbData.sections, selectedYearId],
-  // );
 
   const filteredBranches = useMemo(
     () =>
@@ -320,6 +304,14 @@ const AddUserModal: React.FC<{
   const sectionOptions = useMemo(
     () => studentAvailableSections.map((s) => s.collegeSections),
     [studentAvailableSections],
+  );
+
+  const selectedSessionId = useMemo(
+    () =>
+      sessionOptions.find(
+        (s) => s.label === selectedSessionType[0],
+      )?.id ?? null,
+    [selectedSessionType, sessionOptions],
   );
 
   const isAdmin = basicData.role === "Admin";
@@ -489,6 +481,7 @@ const AddUserModal: React.FC<{
             collegeEducationId: eduId,
             collegeBranchId: branchId,
             collegeId: basicData.collegeIntId,
+            collegeSessionId: selectedSessionId,
             createdBy: basicData.adminId,
             entryType: selectedEntryType[0] as any,
             status: "Active",
@@ -909,6 +902,17 @@ const AddUserModal: React.FC<{
                       handleSingleSelect(v, setSelectedEntryType)
                     }
                     onRemove={() => setSelectedEntryType([])}
+                  />
+                  <CustomMultiSelect
+                    label="Academic Session"
+                    placeholder="Select Session Period"
+                    options={sessionOptions.map((s) => s.label)}
+                    selectedValues={selectedSessionType}
+                    disabled={selectedEntryType.length === 0}
+                    onChange={(v) =>
+                      handleSingleSelect(v, setSelectedSessionType)
+                    }
+                    onRemove={() => setSelectedSessionType([])}
                   />
                 </div>
               </>
