@@ -31,20 +31,19 @@ export default function FinanceNavbar() {
       label: "Finance / Analytics",
       path: "/finance/finance-analytics",
     },
-
     {
       icon: (isActive) => (
-        <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+        <Note size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Drive",
-      path: "/finance/drive",
+      label: "Meetings",
+      path: "/finance/meetings",
     },
     {
       icon: (isActive) => (
         <Note size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Meetings / Calendar",
-      path: "/finance/meetings-calendar",
+      label: "Calendar",
+      path: "/finance/calendar",
     },
     {
       icon: (isActive) => (
@@ -55,6 +54,13 @@ export default function FinanceNavbar() {
       ),
       label: "Add Fee Structure",
       path: "/finance/add-fee-structure",
+    },
+    {
+      icon: (isActive) => (
+        <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Drive",
+      path: "/finance/drive",
     },
     {
       icon: (isActive) => (

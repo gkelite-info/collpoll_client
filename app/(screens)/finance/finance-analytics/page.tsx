@@ -14,6 +14,7 @@ import {
 import TableComponent from "@/app/utils/table/table";
 import { useRouter, useSearchParams } from "next/navigation";
 import YearWiseFeeCollection from "../(dashboard)/components/yearWiseFeeCollection";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 // ✅ ADDED: Custom bar shape
 const CustomBar = (props: any) => {
@@ -212,7 +213,7 @@ function FinanceAnalyticsContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div><Loader/></div>}>
       <FinanceAnalyticsContent />
     </Suspense>
   );

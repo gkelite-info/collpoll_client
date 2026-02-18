@@ -1,12 +1,14 @@
 'use client'
 import { useState } from "react";
 import NewFolderModal from "../../finance/drive/components/modal/newFolderModal";
-import { FolderItemProps } from "../../finance/drive/page";
+// import { FolderItemProps } from "../../finance/drive/page";
+
 import { foldersMock } from "../../finance/drive/mockData";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import ActionBar from "../../finance/drive/components/actionBar";
 import Table from "@/app/utils/table";
 import { ArrowDownIcon } from "@phosphor-icons/react";
+import { FolderItemProps } from "../../(student)/drive/page";
 
 type SortOption = "latest" | "name" | "size";
 

@@ -1,192 +1,231 @@
-"use client";
-
+'use client'
+import { useState } from "react";
+import NewFolderModal from "../../finance/drive/components/modal/newFolderModal";
+import { foldersMock } from "../../finance/drive/mockData";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { useMemo, useState } from "react";
-import ActionBar from "./components/actionBar";
-import FilesTable from "./components/allFilesTable";
-import { FolderCard } from "./components/folderCard";
-import RecentFileCard from "./components/recentFileCard";
-import RenameFolderModal from "./components/modal/renameFolderModal";
-import DeleteFolderModal from "./components/modal/deleteFolderModal";
-import NewFolderModal from "./components/modal/newFolderModal";
-
-import { allFilesMock, foldersMock, recentFilesMock } from "./mockData";
+import ActionBar from "../../finance/drive/components/actionBar";
+import Table from "@/app/utils/table";
+import { ArrowDownIcon } from "@phosphor-icons/react";
+import { FolderItemProps } from "../../(student)/drive/page";
 
 type SortOption = "latest" | "name" | "size";
 
-export type FolderItemProps = {
-  id: number;
-  name: string;
-  filesCount: number;
-  sizeLabel: string;
-  color: string;
-};
+type AdminDriveProps = {
+    education: string
+    totalFiles: number;
+    totalSize: number;
+}
 
-export type FileItemProps = {
-  id: number;
-  name: string;
-  type: "PDF" | "PPTX" | "ZIP" | "DOCX" | "PNG" | "TXT";
-  sizeLabel: string;
-  sizeMb: number;
-  uploadedOnLabel: string;
-  uploadedOn: string;
-};
+export default function Drive({ education, totalFiles, totalSize }: AdminDriveProps) {
 
-const Page = () => {
-  const [files, setFiles] = useState<FileItemProps[]>(
-    allFilesMock as FileItemProps[]
-  );
+    const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+    const [folders, setFolders] = useState<FolderItemProps[]>(foldersMock);
+    const [sortBy, setSortBy] = useState<SortOption>("latest");
 
-  const [folders, setFolders] = useState<FolderItemProps[]>(foldersMock);
-  const [sortBy, setSortBy] = useState<SortOption>("latest");
+    const handleCreateFolder = (data: { name: string; color: string }) => {
+        setFolders((prev) => {
+            const maxId = prev.reduce((m, f) => Math.max(m, f.id), 0);
+            const newFolder: FolderItemProps = {
+                id: maxId + 1,
+                name: data.name,
+                color: data.color,
+                filesCount: 0,
+                sizeLabel: "0 MB",
+            };
+            return [...prev, newFolder];
+        });
+        setIsNewFolderOpen(false);
+    };
 
-  const [folderToRename, setFolderToRename] = useState<FolderItemProps | null>(
-    null
-  );
-  const [folderToDelete, setFolderToDelete] = useState<FolderItemProps | null>(
-    null
-  );
-  const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
+    const driveCard = [
+        {
+            education: "B.Tech",
+            totalFiles: 23,
+            totalSize: 137
+        },
+        {
+            education: "M.Tech",
+            totalFiles: 18,
+            totalSize: 92,
+        },
+        {
+            education: "MBA",
+            totalFiles: 31,
+            totalSize: 215,
+        },
+        {
+            education: "B.Sc",
+            totalFiles: 12,
+            totalSize: 64,
+        },
+        {
+            education: "M.Sc",
+            totalFiles: 20,
+            totalSize: 148,
+        },
+        {
+            education: "B.Com",
+            totalFiles: 27,
+            totalSize: 176,
+        },
+        {
+            education: "M.Com",
+            totalFiles: 14,
+            totalSize: 88,
+        },
+        {
+            education: "BA",
+            totalFiles: 9,
+            totalSize: 42,
+        },
+        {
+            education: "MA",
+            totalFiles: 16,
+            totalSize: 103,
+        },
+        {
+            education: "PhD",
+            totalFiles: 7,
+            totalSize: 56,
+        },
+        {
+            education: "Inter",
+            totalFiles: 7,
+            totalSize: 96,
+        },
+    ];
 
-  const sortedFiles = useMemo(() => {
-    const cloned = [...files];
-    if (sortBy === "latest") {
-      return cloned.sort(
-        (a, b) =>
-          new Date(b.uploadedOn).getTime() - new Date(a.uploadedOn).getTime()
-      );
-    }
-    if (sortBy === "name") {
-      return cloned.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    if (sortBy === "size") {
-      return cloned.sort((a, b) => b.sizeMb - a.sizeMb);
-    }
-    return cloned;
-  }, [files, sortBy]);
+    const tableColumns = [
+        "File Name",
+        "Type",
+        "Size",
+        "Uploaded on",
+        "Actions"
+    ];
 
-  const handleDeleteFile = (id: number) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  };
+    const tableData = [
+        {
+            "File Name": "Semester 1 Syllabus.pdf",
+            "Type": "PDF",
+            "Size": "2.3 MB",
+            "Uploaded on": "12 Jan 2024",
+            "Actions": <>
+                <div className="bg-pink-00 flex items-center justify-center">
+                    <div className="p-1 rounded-full bg-[#DCEBE3] flex items-center justify-center cursor-pointer self-start">
+                        <ArrowDownIcon size={17} color="#43C17A" />
+                    </div>
+                </div>
+            </>,
+        },
+        {
+            "File Name": "Time Table.xlsx",
+            "Type": "Excel",
+            "Size": "1.1 MB",
+            "Uploaded on": "18 Jan 2024",
+            "Actions": <>
+                <div className="bg-pink-00 flex items-center justify-center">
+                    <div className="p-1 rounded-full bg-[#DCEBE3] flex items-center justify-center cursor-pointer self-start">
+                        <ArrowDownIcon size={17} color="#43C17A" />
+                    </div>
+                </div>
+            </>,
+        },
+        {
+            "File Name": "Internal Marks.docx",
+            "Type": "Word",
+            "Size": "860 KB",
+            "Uploaded on": "02 Feb 2024",
+            "Actions": <>
+                <div className="bg-pink-00 flex items-center justify-center">
+                    <div className="p-1 rounded-full bg-[#DCEBE3] flex items-center justify-center cursor-pointer self-start">
+                        <ArrowDownIcon size={17} color="#43C17A" />
+                    </div>
+                </div>
+            </>,
+        },
+        {
+            "File Name": "Project Guidelines.pdf",
+            "Type": "PDF",
+            "Size": "3.8 MB",
+            "Uploaded on": "10 Feb 2024",
+            "Actions": <>
+                <div className="bg-pink-00 flex items-center justify-center">
+                    <div className="p-1 rounded-full bg-[#DCEBE3] flex items-center justify-center cursor-pointer self-start">
+                        <ArrowDownIcon size={17} color="#43C17A" />
+                    </div>
+                </div>
+            </>,
+        },
+        {
+            "File Name": "Attendance Sheet.xlsx",
+            "Type": "Excel",
+            "Size": "980 KB",
+            "Uploaded on": "20 Feb 2024",
+            "Actions": <>
+                <div className="bg-pink-00 flex items-center justify-center">
+                    <div className="p-1 rounded-full bg-[#DCEBE3] flex items-center justify-center cursor-pointer self-start">
+                        <ArrowDownIcon size={17} color="#43C17A" />
+                    </div>
+                </div>
+            </>,
+        },
+    ];
 
-  const handleDownloadFile = (file: FileItemProps) => {
-    console.log("Download", file.name);
-  };
 
-  const handleSaveFolderName = (newName: string) => {
-    if (!folderToRename) return;
-    setFolders((prev) =>
-      prev.map((f) =>
-        f.id === folderToRename.id ? { ...f, name: newName } : f
-      )
-    );
-    setFolderToRename(null);
-  };
-
-  const handleConfirmDeleteFolder = () => {
-    if (!folderToDelete) return;
-    setFolders((prev) => prev.filter((f) => f.id !== folderToDelete.id));
-    setFolderToDelete(null);
-  };
-
-  const handleCreateFolder = (data: { name: string; color: string }) => {
-    setFolders((prev) => {
-      const maxId = prev.reduce((m, f) => Math.max(m, f.id), 0);
-      const newFolder: FolderItemProps = {
-        id: maxId + 1,
-        name: data.name,
-        color: data.color,
-        filesCount: 0,
-        sizeLabel: "0 MB",
-      };
-      return [...prev, newFolder];
-    });
-    setIsNewFolderOpen(false);
-  };
-
-  return (
-    <main className="p-4">
-      <NewFolderModal
-        open={isNewFolderOpen}
-        onCancel={() => setIsNewFolderOpen(false)}
-        onSave={handleCreateFolder}
-      />
-
-      <section className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#282828]">Drive</h1>
-          <p className="text-[#282828]">Manage and share materials</p>
-        </div>
-
-        <article className="flex w-[32%] justify-end">
-          <CourseScheduleCard style="w-[320px]" />
-        </article>
-      </section>
-
-      <div className="min-h-screen">
-        <div className="mx-auto max-w-6xl">
-          <ActionBar
-            sortBy={sortBy}
-            onSort={(val) => setSortBy(val as SortOption)}
-            onNew={() => setIsNewFolderOpen(true)}
-            onFilters={() => console.log("Filters")}
-          />
-
-          <section className="mt-6">
-            <h2 className="text-md font-semibold text-[#282828]">Folders</h2>
-            <div className="mt-2 flex gap-4 overflow-x-auto">
-              {folders.map((f) => (
-                <FolderCard
-                  key={f.id}
-                  {...f}
-                  onRename={() => setFolderToRename(f)}
-                  onDelete={() => setFolderToDelete(f)}
+    return (
+        <>
+            <div className="bg-red-00 flex flex-col pb-5 p-2">
+                <NewFolderModal
+                    open={isNewFolderOpen}
+                    onCancel={() => setIsNewFolderOpen(false)}
+                    onSave={handleCreateFolder}
                 />
-              ))}
+                <div className="w-full mb-4 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-[#282828]">Drive</h1>
+                        <p className="text-[#282828]">Manage, organize & monitor all academic and administrative files</p>
+                    </div>
+                    <div className="flex w-[32%] justify-end">
+                        <CourseScheduleCard
+                            style="w-[320px]"
+                            isVisibile={false}
+                        />
+                    </div>
+                </div>
+                <div className="bg-yellow-00">
+                    <ActionBar
+                        sortBy={sortBy}
+                        onSort={(val) => setSortBy(val as SortOption)}
+                        onNew={() => setIsNewFolderOpen(true)}
+                        onFilters={() => console.log("Filters")}
+                        isVisible={false}
+                    />
+                </div>
+                <div className="bg-green-00 mt-5 flex flex-col">
+                    <h3 className="text-[#282828] text-lg font-medium">Folders</h3>
+                    <div className="bg-red-00 lg:h-[50vh] grid grid-rows-2 grid-flow-col auto-cols-max overflow-x-auto lg:gap-6 py-2">
+                        {driveCard.map((item, index) => (
+                            <div className="bg-white rounded-md p-3 gap-2 flex flex-col w-[220px] shrink-0" key={index}>
+                                <img
+                                    src="/drive.jpg"
+                                    alt="drive"
+                                    height={60}
+                                    width={60}
+                                    className="cursor-pointer"
+                                />
+                                <p className="text-[#282828] font-medium">{item.education}</p>
+                                <p className="text-[#5D5D5D] text-sm">{item.totalFiles} Files <span className="text-[#5D5D5D] text-sm">.</span> <span className="text-[#5D5D5D] text-sm">{item.totalSize} MB</span></p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="bg-red-00">
+                        <Table
+                            columns={tableColumns}
+                            data={tableData}
+                        />
+                    </div>
+                </div>
             </div>
-          </section>
-
-          <section className="mt-6">
-            <h2 className="text-md font-semibold text-[#282828]">Recent</h2>
-            <div className="mt-2 flex gap-4 overflow-x-scroll pb-1">
-              {recentFilesMock.map((file) => (
-                <RecentFileCard
-                  key={file.id}
-                  name={file.name}
-                  type={file.type}
-                  sizeLabel={file.sizeLabel}
-                  date={file.uploadedOnLabel}
-                />
-              ))}
-            </div>
-          </section>
-
-          <section className="mt-6">
-            <h2 className="text-md font-semibold text-[#282828]">All Files</h2>
-            <FilesTable
-              files={sortedFiles}
-              onDelete={handleDeleteFile}
-              onDownload={handleDownloadFile}
-            />
-          </section>
-        </div>
-      </div>
-
-      <RenameFolderModal
-        open={!!folderToRename}
-        currentName={folderToRename?.name || ""}
-        onCancel={() => setFolderToRename(null)}
-        onSave={handleSaveFolderName}
-      />
-
-      <DeleteFolderModal
-        open={!!folderToDelete}
-        folderName={folderToDelete?.name || ""}
-        onCancel={() => setFolderToDelete(null)}
-        onConfirm={handleConfirmDeleteFolder}
-      />
-    </main>
-  );
-};
-
-export default Page;
+        </>
+    )
+}
