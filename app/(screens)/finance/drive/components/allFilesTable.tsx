@@ -4,7 +4,7 @@ import {
   TrashSimple,
 } from "@phosphor-icons/react";
 import FileIcon from "./fileIcon";
-import { FileItemProps } from "../page";
+import { FileItemProps } from "@/app/(screens)/(student)/drive/page";
 
 type Props = {
   files: FileItemProps[];

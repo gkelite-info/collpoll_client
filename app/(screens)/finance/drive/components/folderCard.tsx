@@ -6,7 +6,7 @@ import {
   DotsThreeOutlineVertical,
   Folder,
 } from "@phosphor-icons/react";
-import { FolderItemProps } from "../page";
+import { FolderItemProps } from "@/app/(screens)/(student)/drive/page";
 
 type Props = FolderItemProps & {
   onRename: () => void;
