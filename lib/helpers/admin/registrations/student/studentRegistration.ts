@@ -17,6 +17,7 @@ export async function createStudent(
         userId: number;
         collegeEducationId: number;
         collegeBranchId: number;
+        collegeSessionId: number | null;
         createdBy: number;
         entryType: "Regular" | "Lateral" | "Transfer";
         status?: "Active" | "Inactive";
