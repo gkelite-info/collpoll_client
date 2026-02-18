@@ -13,11 +13,11 @@ function FeeCollectionPage() {
 
 
   return (
-    <div className="p-6 bg-[#F3F4F6] min-h-screen">
-      <h1 className="text-xl font-semibold text-[#282828] mb-6">
+    <div className="p-1 bg-[#F3F4F6] min-h-screen">
+      <h1 className="text-xl font-semibold text-[#282828] mb-3">
         Fee Collection By Year
       </h1>
-      <div className="flex flex-wrap gap-2 items-stretch">
+      <div className="flex flex-wrap gap-1 items-stretch">
         <div className="bg-white rounded-lg shadow-sm p-2 flex items-center">
           <div className="bg-[#1F2F56] text-white w-[130px] px-2 h-full rounded-md flex items-center justify-between text-2xl font-semibold">
             CSE
@@ -31,7 +31,7 @@ function FeeCollectionPage() {
           <SummaryCard value="95%" label="Collection %" />
         </div>
       </div>
-      <div className="grid md:grid-cols-2 gap-4 mt-6">
+      <div className="grid md:grid-cols-2 gap-3 mt-4">
         <FeeYearDonut title="CSE - 1st Year" percentage={97} />
         <FeeYearDonut title="CSE - 2nd Year" percentage={75} />
         <FeeYearDonut title="CSE - 3rd Year" percentage={87} />
@@ -63,7 +63,7 @@ function SummaryCard({
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-6"><Loader /></div>}>
+    <Suspense fallback={<div className="p-2"><Loader /></div>}>
       <FeeCollectionPage />
     </Suspense>
   );
