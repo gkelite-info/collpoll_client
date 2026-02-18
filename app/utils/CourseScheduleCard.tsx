@@ -63,6 +63,12 @@ export default function CourseScheduleCard({
               {college_branch ? `${college_branch}` : "—"}
             </p>
           )}
+
+          {role === "Finance" && (
+            <p className="text-[#EFEFEF] text-md font-medium">
+              {college_branch ? `${college_branch}` : "B Tech"}
+            </p>
+          )}
         </div>
       )}
 
