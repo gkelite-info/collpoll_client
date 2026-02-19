@@ -106,12 +106,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                 {role === "Finance" && (
                                     <span className="text-xs text-[#282828]">ID - {financeManagerId}</span>
                                 )}
-<<<<<<< Updated upstream
                                 {role === "CollegeAdmin" && (
                                     <span className="text-xs text-[#282828]">ID - {collegeAdminId}</span>
                                 )}
-=======
->>>>>>> Stashed changes
                                 {role === "Student" && (
                                     <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                         e.stopPropagation();
