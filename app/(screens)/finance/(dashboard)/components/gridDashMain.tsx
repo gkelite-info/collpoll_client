@@ -268,7 +268,7 @@ export default function DashboardPage() {
                 label="Overall Students"
                 theme="purple"
                 onClick={() =>
-                  router.push("/finance/finance-analytics/students")
+                  router.push(`/finance/finance-analytics/students?studentsCount=${overallStudents}`)
                 }
               />
             </div>
