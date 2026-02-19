@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MagnifyingGlass,
@@ -125,7 +125,7 @@ import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 // ];
 
 
-export default function OverallStudentsOverview() {
+function OverallStudentsOverview() {
   const router = useRouter();
 
   const {
@@ -609,5 +609,12 @@ export default function OverallStudentsOverview() {
         </div>
       )}
     </div>
+  );
+}
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading students overview...</div>}>
+      <OverallStudentsOverview />
+    </Suspense>
   );
 }
