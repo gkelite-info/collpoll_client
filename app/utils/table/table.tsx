@@ -40,12 +40,14 @@ type TableComponentProps = {
   columns: Column[];
   tableData: Record<string, any>[];
   height?: string;
+  isLoading?: boolean;
 };
 
 export default function TableComponent({
   columns,
   tableData,
   height,
+  isLoading=false,
 }: TableComponentProps) {
   return (
     <div className="mt-2 w-full">
@@ -53,7 +55,7 @@ export default function TableComponent({
         <div className={`max-h-[${height || "55vh"}] overflow-auto`}>
           <table className="w-full border-collapse">
             <TableHead columns={columns} />
-            <TableBody columns={columns} tableData={tableData} />
+            <TableBody columns={columns} tableData={tableData} isLoading={isLoading}/>
           </table>
         </div>
       </div>
