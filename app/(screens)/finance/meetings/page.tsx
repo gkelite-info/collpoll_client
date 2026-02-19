@@ -1,11 +1,13 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Loader } from '../../(student)/calendar/right/timetable';
-import DateBadge from './components/DateBadge';
 import MeetingCard from './components/MeetingCard';
+import CourseScheduleCard from '@/app/utils/CourseScheduleCard';
+import { MOCK_MEETINGS } from './components/mockMeetings'
+import CreateMeetingModal from './components/CreateMeetingModal';
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'parent' | 'student' | 'faculty' | 'admin';
@@ -19,101 +21,14 @@ export interface Meeting {
     participants: number;
     year: string;
     section: string;
-    tags?: string[];
+    tags: string;
     category: MeetingCategory;
     type: MeetingType;
 }
 
-const MOCK_MEETINGS: Meeting[] = [
-    {
-        id: '1',
-        title: 'Fee Structure Discussion',
-        timeRange: '8:00 AM - 9:00 AM',
-        educationType: 'B.Tech',
-        date: '20 Feb 2026',
-        participants: 20,
-        year: '2nd Year',
-        section: 'A',
-        tags: ['CSE'],
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '2',
-        title: 'Digital Payment Process Awareness',
-        timeRange: '8:00 AM - 9:00 AM',
-        educationType: 'B.Tech',
-        date: '20 Feb 2026',
-        participants: 20,
-        year: '2nd Year',
-        section: 'A',
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '3',
-        title: 'Tuition & Exam Fee Clarification',
-        timeRange: '8:00 AM - 9:00 AM',
-        educationType: 'B.Tech',
-        date: '20 Feb 2026',
-        participants: 20,
-        year: '2nd Year',
-        section: 'A',
-        tags: ['CSE'],
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '4',
-        title: 'Upcoming Academic Year Planning',
-        timeRange: '8:00 AM - 9:00 AM',
-        educationType: 'B.Tech',
-        date: '20 Feb 2026',
-        participants: 20,
-        year: '2nd Year',
-        section: 'A',
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '5',
-        title: 'Hostel Administration Review',
-        timeRange: '10:00 AM - 11:00 AM',
-        educationType: 'B.Tech',
-        date: '21 Feb 2026',
-        participants: 15,
-        year: '3rd Year',
-        section: 'B',
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '6',
-        title: 'Placement Cell Orientation',
-        timeRange: '11:00 AM - 12:00 PM',
-        educationType: 'B.Tech',
-        date: '22 Feb 2026',
-        participants: 120,
-        year: '4th Year',
-        section: 'All',
-        category: 'parent',
-        type: 'upcoming',
-    },
-    {
-        id: '7',
-        title: 'Library Digital Access',
-        timeRange: '02:00 PM - 03:00 PM',
-        educationType: 'B.Tech',
-        date: '22 Feb 2026',
-        participants: 40,
-        year: '1st Year',
-        section: 'A',
-        category: 'parent',
-        type: 'upcoming',
-    },
-];
-
 const MeetingListContent = () => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -121,6 +36,7 @@ const MeetingListContent = () => {
     const currentCategory = (searchParams.get('category') as MeetingCategory) || 'parent';
 
     const updateFilter = (key: string, value: string) => {
+        setIsLoading(true);
         const params = new URLSearchParams(searchParams.toString());
         params.set(key, value);
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
@@ -142,80 +58,116 @@ const MeetingListContent = () => {
         { id: 'admin', label: 'Admin Meetings' },
     ];
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [currentType, currentCategory]);
+
     return (
-        <div className="h-screen flex flex-col overflow-hidden bg-[#e8eaed] font-sans text-slate-800">
-            <div className="shrink-0 p-6 pb-2 z-10">
+        <div className="h-screen flex flex-col overflow-hidden font-sans text-slate-800">
+            <div className="shrink-0 p-2 z-10">
                 <div className="flex justify-between items-start mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Meetings</h1>
-                        <p className="text-gray-600 mt-1">
+                        <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
+                        <p className="text-[#282828] text-sm mt-1">
                             View and join meetings or schedule meetings
                         </p>
                     </div>
-                    <div className="flex flex-col items-end gap-4">
-                        <DateBadge />
-                        <button className="bg-[#4ade80] hover:bg-green-400 text-white px-6 py-2 rounded-md font-medium shadow-sm transition-colors flex items-center gap-2">
-                            Create Meeting
-                        </button>
+                    <div className='w-[320px]'>
+                        <CourseScheduleCard isVisibile={false} />
                     </div>
                 </div>
 
-                <div className="flex justify-center mb-6">
-                    <div className="bg-gray-200 p-1 rounded-full inline-flex relative">
-                        {typeTabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => updateFilter('type', tab.id)}
-                                className={`relative z-10 px-6 py-2 rounded-full text-sm font-medium transition-colors ${currentType === tab.id ? 'text-white' : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                            >
-                                {tab.label}
-                                {currentType === tab.id && (
-                                    <motion.div
-                                        layoutId="type-pill"
-                                        className="absolute inset-0 rounded-full bg-[#4ade80] shadow-sm -z-10"
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                    />
-                                )}
-                            </button>
-                        ))}
+                <div className="flex mb-4 relative">
+                    <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
+                        {typeTabs.map((tab) => {
+                            const isActive = currentType === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => updateFilter('type', tab.id)}
+                                    className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
+                                        ? 'text-[#E9E9E9]'
+                                        : 'text-[#414141]'
+                                        }`}
+                                >
+                                    {tab.label}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="type-pill"
+                                            className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+
+                                    {!isActive && (
+                                        <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                                    )}
+                                </button>
+                            )
+                        })}
                     </div>
+
+                    <button onClick={() => setIsModalOpen(true)} className="absolute cursor-pointer -right-1 bg-[#43C17A] text-[#E9E9E9] text-sm px-4 py-2 rounded-md font-medium flex items-center gap-2">
+                        Create Meeting
+                    </button>
                 </div>
 
-                <div className="flex justify-center gap-3 mb-4 flex-wrap">
-                    {categoryTabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => updateFilter('category', tab.id)}
-                            className={`relative px-6 py-2 rounded-full text-sm font-semibold transition-colors z-10 ${currentCategory === tab.id ? 'text-white' : 'text-gray-600 hover:bg-gray-200/50'
-                                }`}
-                        >
-                            {tab.label}
-                            {currentCategory === tab.id && (
-                                <motion.div
-                                    layoutId="category-pill"
-                                    className="absolute inset-0 rounded-full bg-[#1e293b] shadow-sm -z-10"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                        </button>
-                    ))}
+                <div className="flex justify-center gap-3 mb-2 flex-wrap">
+                    <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 relative">
+                        {categoryTabs.map((tab) => {
+                            const isActive = currentCategory === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => updateFilter('category', tab.id)}
+                                    className={`relative px-6 py-1 cursor-pointer rounded-full text-sm font-semibold transition-colors z-10 ${isActive ? 'text-[#E9E9E9]' : 'text-[#414141]'}`}
+                                >
+                                    {tab.label}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="category-pill"
+                                            className="absolute inset-0 rounded-full bg-[#16284F] shadow-sm -z-10"
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+                                    {!isActive && (
+                                        <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6 pb-20">
-                    {filteredMeetings.length > 0 ? (
+            <div className="flex-1 overflow-y-auto p-2 pt-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+                    {isLoading ? (
+                        <div className="col-span-full flex justify-center items-center h-[400px]">
+                            <Loader /> {/* ✅ centered loader */}
+                        </div>
+                    ) : filteredMeetings.length > 0 ? (
                         filteredMeetings.map((meeting) => (
                             <MeetingCard key={meeting.id} data={meeting} />
                         ))
                     ) : (
-                        <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
-                            <p className="text-lg">No meetings found for {currentCategory} in {currentType}.</p>
+                        <div className="col-span-full py-30 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                            <p className="text-lg">
+                                No meetings found for {currentCategory} in {currentType}.
+                            </p>
                         </div>
                     )}
                 </div>
             </div>
+
+            <CreateMeetingModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
 
         </div>
     );
