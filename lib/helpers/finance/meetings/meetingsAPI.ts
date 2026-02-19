@@ -8,11 +8,9 @@ export type FinanceMeetingRow = {
     date: string;
     fromTime: string;
     toTime: string;
-    collegeBranchId: number | null;
-    collegeAcademicYearId: number | null;
-    collegeSectionsId: number | null;
     meetingLink: string;
-    notificationType: string;
+    inAppNotification: boolean;
+    emailNotification: boolean;
     createdBy: number;
     isActive: boolean;
     createdAt: string;
@@ -20,13 +18,8 @@ export type FinanceMeetingRow = {
     deletedAt: string | null;
 };
 
-
-export async function fetchFinanceMeetings(filters?: {
-    collegeBranchId?: number;
-    collegeAcademicYearId?: number;
-    collegeSectionsId?: number;
-}) {
-    let query = supabase
+export async function fetchFinanceMeetings(createdBy: number) {
+    const { data, error } = await supabase
         .from("finance_meetings")
         .select(
             `
@@ -37,11 +30,9 @@ export async function fetchFinanceMeetings(filters?: {
       date,
       fromTime,
       toTime,
-      collegeBranchId,
-      collegeAcademicYearId,
-      collegeSectionsId,
       meetingLink,
-      notificationType,
+      inAppNotification,
+      emailNotification,
       createdBy,
       isActive,
       createdAt,
@@ -49,27 +40,11 @@ export async function fetchFinanceMeetings(filters?: {
       deletedAt
     `,
         )
+        .eq("createdBy", createdBy)
         .eq("isActive", true)
         .is("deletedAt", null)
         .order("date", { ascending: true })
         .order("fromTime", { ascending: true });
-
-    if (filters?.collegeBranchId) {
-        query = query.eq("collegeBranchId", filters.collegeBranchId);
-    }
-
-    if (filters?.collegeAcademicYearId) {
-        query = query.eq(
-            "collegeAcademicYearId",
-            filters.collegeAcademicYearId,
-        );
-    }
-
-    if (filters?.collegeSectionsId) {
-        query = query.eq("collegeSectionsId", filters.collegeSectionsId);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
         console.error("fetchFinanceMeetings error:", error);
@@ -78,7 +53,6 @@ export async function fetchFinanceMeetings(filters?: {
 
     return data ?? [];
 }
-
 
 export async function fetchFinanceMeetingById(
     financeMeetingId: number,
@@ -107,11 +81,9 @@ export async function saveFinanceMeeting(
         date: string;
         fromTime: string;
         toTime: string;
-        collegeBranchId?: number | null;
-        collegeAcademicYearId?: number | null;
-        collegeSectionsId?: number | null;
         meetingLink: string;
-        notificationType: string;
+        inAppNotification?: boolean;
+        emailNotification?: boolean;
     },
     financeManagerId: number,
 ) {
@@ -128,12 +100,9 @@ export async function saveFinanceMeeting(
                 date: payload.date,
                 fromTime: payload.fromTime,
                 toTime: payload.toTime,
-                collegeBranchId: payload.collegeBranchId ?? null,
-                collegeAcademicYearId:
-                    payload.collegeAcademicYearId ?? null,
-                collegeSectionsId: payload.collegeSectionsId ?? null,
                 meetingLink: payload.meetingLink.trim(),
-                notificationType: payload.notificationType,
+                inAppNotification: payload.inAppNotification ?? false,
+                emailNotification: payload.emailNotification ?? false,
                 createdBy: financeManagerId,
                 updatedAt: now,
             },
