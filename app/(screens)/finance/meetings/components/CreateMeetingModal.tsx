@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useFinanceManager } from '@/app/utils/context/financeManager/useFinanceManager';
+import { fetchBranches, fetchAcademicYears, fetchSections } from '@/lib/helpers/admin/academics/academicDropdowns';
 
 interface CreateMeetingModalProps {
     isOpen: boolean;
@@ -14,20 +16,69 @@ const getTodayDateString = () => {
     return d.toISOString().split("T")[0];
 };
 
-// 🔴 ADDED
 const convertTo24Hour = (
     hour: string,
     minute: string,
     period: "AM" | "PM"
 ) => {
     let h = parseInt(hour);
-
     if (period === "PM" && h !== 12) h += 12;
     if (period === "AM" && h === 12) h = 0;
-
     return h * 60 + parseInt(minute);
 };
 
+const MIN_TIME = 8 * 60;
+const MAX_TIME = 22 * 60;
+
+const validateTimeRange = (
+    sHour: string,
+    sMinute: string,
+    sPeriod: "AM" | "PM",
+    eHour: string,
+    eMinute: string,
+    ePeriod: "AM" | "PM"
+) => {
+    const start = convertTo24Hour(sHour, sMinute, sPeriod);
+    const end = convertTo24Hour(eHour, eMinute, ePeriod);
+    const startInvalid = start < MIN_TIME || start > MAX_TIME;
+    const endInvalid = end < MIN_TIME || end > MAX_TIME;
+    if (startInvalid && endInvalid) {
+        toast.error(
+            "Start and End time must be between 8:00 AM and 10:00 PM",
+            { id: "time-error" }
+        );
+        return false;
+    }
+    if (startInvalid) {
+        toast.error(
+            "Start time must be between 8:00 AM and 10:00 PM",
+            { id: "time-error" }
+        );
+        return false;
+    }
+    if (endInvalid) {
+        toast.error(
+            "End time must be between 8:00 AM and 10:00 PM",
+            { id: "time-error" }
+        );
+        return false;
+    }
+    if (start === end) {
+        toast.error(
+            "Start and End time cannot be the same",
+            { id: "time-error" }
+        );
+        return false;
+    }
+    if (end < start) {
+        toast.error(
+            "End time must be greater than start time",
+            { id: "time-error" }
+        );
+        return false;
+    }
+    return true;
+};
 
 const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
     const [title, setTitle] = useState("");
@@ -40,12 +91,91 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
     const [endHour, setEndHour] = useState("10");
     const [endMinute, setEndMinute] = useState("00");
     const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
-    const [branch, setBranch] = useState("CSE");
-    const [year, setYear] = useState("Select Year");
-    const [section, setSection] = useState("Select Section");
+    const [branch, setBranch] = useState<number | null>(null);
+    const [year, setYear] = useState<number | null>(null);
+    const [sectionsSelected, setSectionsSelected] = useState<number[]>([]);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [years, setYears] = useState<any[]>([]);
+    const [sections, setSections] = useState<any[]>([]);
     const [meetingLink, setMeetingLink] = useState("");
     const [inAppNotification, setInAppNotification] = useState(false);
     const [emailNotification, setEmailNotification] = useState(false);
+    const { collegeId, collegeEducationId } = useFinanceManager()
+    const [isSectionOpen, setIsSectionOpen] = useState(false);
+    const sectionDropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleDropdownClose = (e: MouseEvent) => {
+            if (isSectionOpen && sectionDropdownRef.current && !sectionDropdownRef.current.contains(e.target as Node)) {
+                setIsSectionOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleDropdownClose);
+        return () => document.removeEventListener("mousedown", handleDropdownClose);
+    }, [isOpen, isSectionOpen]);
+
+    useEffect(() => {
+        if (!isOpen || !collegeId || !collegeEducationId) return;
+        const loadInitialData = async () => {
+            try {
+                const branchData = await fetchBranches(
+                    collegeId,
+                    collegeEducationId
+                );
+                setBranches(branchData);
+            } catch (error) {
+                toast.error("Failed to load branches")
+            }
+        };
+        loadInitialData();
+    }, [isOpen, collegeId, collegeEducationId]);
+
+    const handleBranchChange = async (value: number) => {
+        if (!collegeId || !collegeEducationId) return
+        setBranch(value);
+        setYear(null);
+        setSectionsSelected([]);
+        setYears([]);
+        setSections([]);
+        try {
+            const yearData = await fetchAcademicYears(
+                collegeId,
+                collegeEducationId,
+                value
+            );
+            setYears(yearData);
+        } catch (error) {
+            toast.error("Failed to load years")
+        }
+    };
+
+    const handleYearChange = async (value: number) => {
+        setYear(value);
+        setSectionsSelected([]);
+        setSections([]);
+        if (!collegeId || !collegeEducationId) return
+        try {
+            const sectionData = await fetchSections(
+                collegeId,
+                collegeEducationId,
+                branch!,
+                value
+            );
+            setSections(sectionData);
+        } catch (error) {
+            toast.error("Failed to load sections")
+        }
+    };
+
+    const handleSectionToggle = (id: number) => {
+        setSectionsSelected((prev) =>
+            prev.includes(id)
+                ? prev.filter((item) => item !== id)
+                : [...prev, id]
+        );
+    };
+
     useEffect(() => {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
@@ -61,9 +191,11 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
             setEndHour("10");
             setEndMinute("00");
             setEndPeriod("AM");
-            setBranch("CSE");
-            setYear("Select Year");
-            setSection("Select Section");
+            setBranch(null);
+            setYear(null);
+            setSections([]);
+            setSectionsSelected([]);
+            setIsSectionOpen(false);
             setMeetingLink("");
             setInAppNotification(false);
             setEmailNotification(false);
@@ -91,20 +223,31 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                 toast.error("Please select meeting date");
                 return;
             }
+            if (!validateTimeRange(
+                startHour,
+                startMinute,
+                startPeriod,
+                endHour,
+                endMinute,
+                endPeriod
+            )) {
+                return;
+            }
+            if (!inAppNotification && !emailNotification) {
+                toast.error("Please select at least one notification type");
+                return;
+            }
             if (role !== "Admin") {
-
                 if (!branch) {
                     toast.error("Please select branch");
                     return;
                 }
-
-                if (!year || year === "Select Year") {
+                if (!year) {
                     toast.error("Please select year");
                     return;
                 }
-
-                if (!section || section === "Select Section") {
-                    toast.error("Please select section");
+                if (sectionsSelected.length === 0) {
+                    toast.error("Please select at least one section");
                     return;
                 }
             }
@@ -118,42 +261,27 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                 toast.error("Please enter a valid meeting link");
                 return;
             }
-            const startTime = convertTo24Hour(startHour, startMinute, startPeriod);
-            const endTime = convertTo24Hour(endHour, endMinute, endPeriod);
 
-            if (startTime >= endTime) {
-                toast.error("End time must be greater than start time");
-                return;
-            }
-            if (!inAppNotification && !emailNotification) {
-                toast.error("Please select at least one notification type");
-                return;
-            }
             toast.success("Meeting scheduled successfully");
-
             console.log("Saving Meeting...", {
                 title,
                 description,
                 role,
                 branch,
                 year,
-                section,
+                sectionsSelected,
                 date,
                 meetingLink,
                 inAppNotification,
                 emailNotification
             });
-
             onClose();
-
         } catch (error) {
-            console.error("Meeting submission failed:", error);
             toast.error("Something went wrong. Please try again.");
         }
     };
 
     if (!isOpen) return null;
-
     return (
         <AnimatePresence>
             <motion.div
@@ -242,7 +370,6 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                                 return <option key={h} value={h}>{h}</option>;
                                             })}
                                         </select>
-
                                         <select
                                             value={startMinute}
                                             onChange={(e) => setStartMinute(e.target.value)}
@@ -253,7 +380,6 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                                 return <option key={m} value={m}>{m}</option>;
                                             })}
                                         </select>
-
                                         <select
                                             value={startPeriod}
                                             onChange={(e) => setStartPeriod(e.target.value as "AM" | "PM")}
@@ -270,6 +396,7 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                         <select
                                             value={endHour}
                                             onChange={(e) => setEndHour(e.target.value)}
+                                            onBlur={() => validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)}
                                             className="flex-1 px-2 py-2 border border-[#CCCCCC] rounded-md text-sm bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#43C17A]"
                                         >
                                             {Array.from({ length: 12 }, (_, i) => {
@@ -280,6 +407,7 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                         <select
                                             value={endMinute}
                                             onChange={(e) => setEndMinute(e.target.value)}
+                                            onBlur={() => validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)}
                                             className="flex-1 px-2 py-2 border border-[#CCCCCC] rounded-md text-sm bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#43C17A]"
                                         >
                                             {Array.from({ length: 12 }, (_, i) => {
@@ -287,10 +415,10 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                                 return <option key={m} value={m}>{m}</option>;
                                             })}
                                         </select>
-
                                         <select
                                             value={endPeriod}
                                             onChange={(e) => setEndPeriod(e.target.value as "AM" | "PM")}
+                                            onBlur={() => validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)}
                                             className="flex-1 px-2 py-2 border border-[#CCCCCC] rounded-md text-sm bg-white cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#43C17A]"
                                         >
                                             <option value="AM">AM</option>
@@ -298,7 +426,6 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                         </select>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                         {role !== "Admin" &&
@@ -307,13 +434,16 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                     <label className="text-sm text-[#282828]">Branch</label>
                                     <div className="relative">
                                         <select
-                                            value={branch}
-                                            onChange={(e) => setBranch(e.target.value)}
+                                            value={branch ?? ""}
+                                            onChange={(e) => handleBranchChange(Number(e.target.value))}
                                             className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white cursor-pointer"
                                         >
-                                            <option value="CSE">CSE</option>
-                                            <option value="ECE">ECE</option>
-                                            <option value="MECH">MECH</option>
+                                            <option value="">Select Branch</option>
+                                            {branches.map((item) => (
+                                                <option key={item.collegeBranchId} value={item.collegeBranchId}>
+                                                    {item.collegeBranchCode}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -324,15 +454,17 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                     <label className="text-sm text-[#282828]">Year</label>
                                     <div className="relative">
                                         <select
-                                            value={year}
-                                            onChange={(e) => setYear(e.target.value)}
-                                            className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer"
+                                            value={year ?? ""}
+                                            disabled={!branch}
+                                            onChange={(e) => handleYearChange(Number(e.target.value))}
+                                            className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer disabled:cursor-not-allowed"
                                         >
-                                            <option disabled>Select Year</option>
-                                            <option value="1st Year">1st Year</option>
-                                            <option value="2nd Year">2nd Year</option>
-                                            <option value="3rd Year">3rd Year</option>
-                                            <option value="4th Year">4th Year</option>
+                                            <option value="">Select Academic Year</option>
+                                            {years.map((item) => (
+                                                <option key={item.collegeAcademicYearId} value={item.collegeAcademicYearId}>
+                                                    {item.collegeAcademicYear}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -344,22 +476,54 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {role !== "Admin" &&
-                                <div className="space-y-1">
+                                <div className="space-y-1" ref={sectionDropdownRef}>
                                     <label className="text-sm text-[#282828]">Section</label>
                                     <div className="relative">
-                                        <select
-                                            value={section}
-                                            onChange={(e) => setSection(e.target.value)}
-                                            className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer"
+                                        <div
+                                            onClick={() => {
+                                                if (year) setIsSectionOpen((prev) => !prev);
+                                            }}
+                                            className={`w-full px-3 py-2 border border-[#CCCCCC] rounded-md text-sm bg-white flex items-center justify-between ${!year ? 'opacity-75 bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A]'}`}
                                         >
-                                            <option disabled>Select Section</option>
-                                            <option value="A">A</option>
-                                            <option value="B">B</option>
-                                            <option value="C">C</option>
-                                        </select>
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            <span className={`truncate ${sectionsSelected.length ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                {sectionsSelected.length === 0
+                                                    ? "Select Section"
+                                                    : sections
+                                                        .filter((s) => sectionsSelected.includes(s.collegeSectionsId))
+                                                        .map((s) => s.collegeSections)
+                                                        .join(", ")}
+                                            </span>
+                                            <span className="text-gray-400 pointer-events-none">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                            </span>
                                         </div>
+                                        {isSectionOpen && (
+                                            <div className="absolute z-20 mt-1 w-full bg-white border border-[#CCCCCC] rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                                {sections.length === 0 ? (
+                                                    <div className="px-3 py-2 text-sm text-gray-500">No sections available</div>
+                                                ) : (
+                                                    sections.map((item) => {
+                                                        const checked = sectionsSelected.includes(item.collegeSectionsId);
+                                                        return (
+                                                            <label
+                                                                key={item.collegeSectionsId}
+                                                                className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={checked}
+                                                                    onChange={() => handleSectionToggle(item.collegeSectionsId)}
+                                                                    className="w-4 h-4 text-[#43C17A] rounded focus:ring-[#43C17A] border-[#CCCCCC] accent-[#43C17A]"
+                                                                />
+                                                                <span className="text-sm text-[#282828]">
+                                                                    {item.collegeSections}
+                                                                </span>
+                                                            </label>
+                                                        );
+                                                    })
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             }
@@ -382,7 +546,7 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                         type="checkbox"
                                         checked={inAppNotification}
                                         onChange={(e) => setInAppNotification(e.target.checked)}
-                                        className="w-4 h-4 text-[#43C17A] rounded focus:ring-[#43C17A] border-[#CCCCCC]"
+                                        className="w-4 h-4 text-[#43C17A] rounded focus:ring-[#43C17A] border-[#CCCCCC] accent-[#43C17A]"
                                     />
                                     <span className="text-sm text-[#282828]">In-app notification</span>
                                 </label>
@@ -391,31 +555,30 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                                         type="checkbox"
                                         checked={emailNotification}
                                         onChange={(e) => setEmailNotification(e.target.checked)}
-                                        className="w-4 h-4 text-[#43C17A] rounded focus:ring-[#43C17A] border-[#CCCCCC]"
+                                        className="w-4 h-4 text-[#43C17A] rounded focus:ring-[#43C17A] border-[#CCCCCC] accent-[#43C17A]"
                                     />
                                     <span className="text-sm text-[#282828]">Email notification</span>
                                 </label>
                             </div>
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 px-6 pb-6 -mt-1">
+                    <div className="grid grid-cols-2 gap-4 px-6 pb-6 mt-1">
                         <button
                             onClick={onClose}
-                            className="px-8 rounded-md bg-[#E3E3E3] text-[#282828] font-medium w-full md:w-auto cursor-pointer"
+                            className="px-8 py-2 rounded-md bg-[#E3E3E3] text-[#282828] font-medium w-full md:w-auto cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSubmit}
-                            className="px-8 py-1.5 rounded-md bg-[#43C17A] text-white font-medium  w-full md:w-auto shadow-sm cursor-pointer"
+                            className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer"
                         >
                             Schedule
                         </button>
                     </div>
                 </motion.div>
             </motion.div>
-        </AnimatePresence>
+        </AnimatePresence >
     );
 };
 
