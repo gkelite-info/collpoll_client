@@ -24,7 +24,7 @@ export const PillTag = ({
 );
 
 interface MultiSelectProps {
-  label: string;
+  label?: string;
   placeholder: string;
   options: string[] | Record<string, string[]>;
   selectedValues: string[];
@@ -32,6 +32,9 @@ interface MultiSelectProps {
   onRemove: (val: string) => void;
   disabled?: boolean;
   isGrouped?: boolean;
+  paddingY?: string;
+  closedBorder?: string;
+  placeholderColorActive?: string;
 }
 
 export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -43,6 +46,9 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   onRemove,
   disabled = false,
   isGrouped = false,
+  paddingY = "py-1",
+  closedBorder = "border-gray-200",
+  placeholderColorActive = "text-gray-400"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -67,12 +73,12 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={`w-full border ${isOpen
             ? "border-[#48C78E] ring-1 ring-[#48C78E]"
-            : "border-gray-200"
-            } rounded-md px-3 py-1 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
+            : `${closedBorder}`
+            } rounded-md px-3 ${paddingY} text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
             }`}
         >
           <span
-            className={`truncate mr-2 ${selectedValues.length ? "text-gray-700" : "text-gray-400"
+            className={`truncate mr-2 ${selectedValues.length ? "text-gray-700" : `${placeholderColorActive}`
               }`}
           >
             {selectedValues.length > 0

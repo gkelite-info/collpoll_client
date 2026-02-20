@@ -9,7 +9,6 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 
-/* ---------------- STATIC STYLE MAP ---------------- */
 
 const EVENT_STYLES = {
   meeting: {
