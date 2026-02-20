@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import CalendarToolbar from "./components/calenderToolbar";
@@ -11,8 +10,6 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import { fetchFinanceCalendarEvents } from "@/lib/helpers/finance/calendar/financeCalendarAPI";
 import { fetchFinanceCalendarSectionsWithDetails } from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
 
-// 1. Import your custom hook (adjust the path to match your folder structure)
-
 export default function FinanceCalendarPage() {
   const [activeTab, setActiveTab] = useState("All Scheduled");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -21,14 +18,12 @@ export default function FinanceCalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. Destructure the ID and loading state from your context
   const { financeManagerId, loading: fmLoading } = useFinanceManager();
 
   const weekDays = getWeekDays(currentDate);
 
   useEffect(() => {
     const loadEvents = async () => {
-      // 3. Prevent fetching if the context is still loading or if no user is found
       if (fmLoading) return;
 
       if (!financeManagerId) {
@@ -39,7 +34,6 @@ export default function FinanceCalendarPage() {
 
       setIsLoading(true);
       try {
-        // 4. Use the dynamic ID from the logged-in user
         const createdBy = financeManagerId;
         const fetchedEvents = await fetchFinanceCalendarEvents(createdBy);
 
@@ -95,7 +89,7 @@ export default function FinanceCalendarPage() {
     };
 
     loadEvents();
-  }, [currentDate, financeManagerId, fmLoading]); // 5. Add context variables to the dependency array
+  }, [currentDate, financeManagerId, fmLoading]);
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);
