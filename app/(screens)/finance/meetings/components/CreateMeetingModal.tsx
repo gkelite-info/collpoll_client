@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useFinanceManager } from '@/app/utils/context/financeManager/useFinanceManager';
 import { fetchBranches, fetchAcademicYears, fetchSections } from '@/lib/helpers/admin/academics/academicDropdowns';
-
+import { saveFinanceMeetingSection } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
+import { saveFinanceMeeting } from '@/lib/helpers/finance/meetings/meetingsAPI';
 interface CreateMeetingModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -100,9 +101,17 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
     const [meetingLink, setMeetingLink] = useState("");
     const [inAppNotification, setInAppNotification] = useState(false);
     const [emailNotification, setEmailNotification] = useState(false);
-    const { collegeId, collegeEducationId } = useFinanceManager()
     const [isSectionOpen, setIsSectionOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false)
     const sectionDropdownRef = useRef<HTMLDivElement>(null);
+    const { collegeId, collegeEducationId, financeManagerId } = useFinanceManager()
+
+    const formatTimeForDB = (hour: string, minute: string, period: "AM" | "PM") => {
+        let h = parseInt(hour, 10);
+        if (period === "PM" && h !== 12) h += 12;
+        if (period === "AM" && h === 12) h = 0;
+        return `${String(h).padStart(2, "0")}:${minute.padStart(2, "0")}:00`;
+    };
 
     useEffect(() => {
         if (!isOpen) return;
@@ -261,23 +270,64 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                 toast.error("Please enter a valid meeting link");
                 return;
             }
+            if (!financeManagerId) {
+                toast.error("User context missing. Please log in again.");
+                return;
+            }
 
-            toast.success("Meeting scheduled successfully");
-            console.log("Saving Meeting...", {
+            setIsLoading(true);
+
+            const dbFromTime = formatTimeForDB(startHour, startMinute, startPeriod);
+            const dbToTime = formatTimeForDB(endHour, endMinute, endPeriod);
+
+            const meetingRes = await saveFinanceMeeting({
                 title,
                 description,
                 role,
-                branch,
-                year,
-                sectionsSelected,
                 date,
+                fromTime: dbFromTime,
+                toTime: dbToTime,
                 meetingLink,
                 inAppNotification,
                 emailNotification
-            });
+            }, financeManagerId);
+
+            if (!meetingRes.success || !meetingRes.financeMeetingId) {
+                toast.error("Failed to schedule meeting");
+                return;
+            }
+
+            if (role === "admin") {
+                toast.success("Meeting created successfully.");
+                setIsLoading(false);
+                return;
+            }
+
+            if (role !== "Admin" && collegeEducationId) {
+                try {
+                    await Promise.all(
+                        sectionsSelected.map((sectionId) =>
+                            saveFinanceMeetingSection({
+                                financeMeetingId: meetingRes.financeMeetingId,
+                                collegeEducationId: collegeEducationId,
+                                collegeBranchId: branch,
+                                collegeAcademicYearId: year,
+                                collegeSectionsId: sectionId
+                            }, financeManagerId)
+                        )
+                    );
+                } catch (sectionErr) {
+                    console.error("Failed to map sections", sectionErr);
+                    toast.error("Meeting created, but failed to link sections.");
+                }
+            }
+
+            toast.success("Meeting scheduled successfully");
             onClose();
         } catch (error) {
             toast.error("Something went wrong. Please try again.");
+        } finally {
+            setIsLoading(false)
         }
     };
 
@@ -571,9 +621,10 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                         </button>
                         <button
                             onClick={handleSubmit}
+                            disabled={isLoading}
                             className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer"
                         >
-                            Schedule
+                            {isLoading ? "Scheduling..." : "Schedule"}
                         </button>
                     </div>
                 </motion.div>

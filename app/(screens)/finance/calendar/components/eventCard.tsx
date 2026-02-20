@@ -9,7 +9,6 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 
-/* ---------------- STATIC STYLE MAP ---------------- */
 
 const EVENT_STYLES = {
   meeting: {
@@ -51,15 +50,20 @@ const EventCard = ({
   onEdit?: () => void;
   onClick?: () => void;
 }) => {
-  const eventType =
-    (event.type?.toLowerCase() as keyof typeof EVENT_STYLES) || "meeting";
+  // 1. Grab the raw type from the database
+  const rawType = event.type?.toLowerCase();
 
+  // 2. Safely check if it exists in our EVENT_STYLES. If not, fallback to "meeting"
+  const eventType = (
+    rawType in EVENT_STYLES ? rawType : "meeting"
+  ) as keyof typeof EVENT_STYLES;
+
+  // 3. Now this is guaranteed to find a valid style
   const style = EVENT_STYLES[eventType];
   const Icon = style.Icon;
 
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-
   const timeStr = `${start.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
@@ -115,9 +119,7 @@ const EventCard = ({
           <Icon size={14} weight="fill" color="#ffffff" />
         </div>
 
-        <span className="tracking-wide uppercase">
-          {timeStr}
-        </span>
+        <span className="tracking-wide uppercase">{timeStr}</span>
       </div>
 
       {/* BODY (Scrollable) */}
@@ -136,17 +138,11 @@ const EventCard = ({
         </div>
 
         {/* FULL WIDTH LINE */}
-        <div
-          className="w-full border-t"
-          style={{ borderColor: style.text }}
-        />
+        <div className="w-full border-t" style={{ borderColor: style.text }} />
 
         {/* FOOTER SECTION */}
         <div className="px-3 py-2">
-          <p
-            className="text-sm font-medium"
-            style={{ color: style.text }}
-          >
+          <p className="text-sm font-medium" style={{ color: style.text }}>
             {event.branch} - {event.year} - {event.section}
           </p>
         </div>
