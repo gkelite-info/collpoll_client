@@ -1,6 +1,7 @@
 import {
   Calendar,
   CalendarCheck,
+  CalendarIcon,
   CaretDown,
   CaretRight,
   CaretRightIcon,
@@ -26,6 +27,14 @@ import BranchWiseCollection from "./branchWiseCollection";
 import { PaymentSuccessModal } from "../modals/paymentSuccessModal";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getOverallStudents } from "@/lib/helpers/finance/dashboard/getOverallStudents";
+import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { StaticDatePicker } from "@mui/x-date-pickers/StaticDatePicker";
+import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/dashboard/getFinanceYearSemesterCollectionSummary";
+import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOverallFinanceTotal";
+
 
 // --- Types & Data ---
 
@@ -102,25 +111,313 @@ const Card = ({
   </div>
 );
 
-const Header = () => (
-  <div className="flex justify-between items-center mb-3 px-1">
-    <h1 className="text-[#1e293b] text-base font-bold">B Tech - CSE - 2026</h1>
-    <div className="flex gap-3 text-[10px] font-semibold text-gray-500">
-      <Dropdown label="Education Type" value="B Tech" />
-      <Dropdown label="Branch" value="CSE" />
-      <Dropdown label="Year" value="2026" />
-    </div>
-  </div>
-);
+// const Header = ({
+//   educationType,
+//   branch,
+//   branches,
+//   onBranchChange,
+//   year,
+//   onYearClick,
+// }: {
+//   educationType: string;
+//   branch: string;
+//   branches: any[];
+//   onBranchChange: (val: string) => void;
+//   year: string;
+//   onYearClick: () => void;
+// }) => (
 
-const Dropdown = ({ label, value }: { label: string; value: string }) => (
-  <div className="flex items-center gap-1.5">
-    <span className="text-xs">{label}</span>
-    <div className="bg-green-50 text-[#43C17A] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-green-100">
-      {value} <CaretDown weight="bold" />
+//   <div className="flex justify-between items-center mb-3 px-1">
+//     <h1 className="text-[#1e293b] text-base font-bold">
+//       {educationType} - {branch} - {year}
+//     </h1>
+
+//     <div className="flex gap-3 text-[10px] font-semibold text-gray-500">
+
+//       {/* Education Type (Auto Fetched - Not Editable) */}
+//       <div className="flex items-center gap-1.5">
+//         <span className="text-xs">Education Type</span>
+//         <div className="bg-[#E5F6EC] text-[#43C17A] px-2 py-1 rounded-full text-xs cursor-not-allowed">
+//           {educationType}
+//         </div>
+//       </div>
+
+//       {/* Branch (Selectable) */}
+//       <div className="flex items-center gap-1.5">
+//         <span className="text-xs">Branch</span>
+
+//         <div className="relative">
+//           <select
+//             value={branch}
+//             onChange={(e) => onBranchChange(e.target.value)}
+//             className="appearance-none bg-[#E5F6EC] text-[#43C17A] px-2 py-1 pr-8 rounded-full text-xs cursor-pointer outline-none"
+//           >
+//             {branches.map((b) => (
+//               <option
+//                 key={b.collegeBranchId}
+//                 value={b.collegeBranchCode}
+//               >
+//                 {b.collegeBranchCode}
+//               </option>
+//             ))}
+//           </select>
+//           <CaretDown
+//             size={12}
+//             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+//           />
+//         </div>
+//       </div>
+
+//       {/* Year (Untouched) */}
+//       <Dropdown label="Year" value={year} onClick={onYearClick} />
+//     </div>
+//   </div>
+// );
+
+const Header = ({
+  educationType,
+  branch,
+  branches,
+  onBranchChange,
+  year,
+  onYearClick,
+}: {
+  educationType: string;
+  branch: string;
+  branches: any[];
+  onBranchChange: (val: string) => void;
+  year: string;
+  onYearClick: () => void;
+}) => {
+  const branchOptions = [
+    { label: "All", value: "ALL" },
+    ...(branches?.map((b) => ({
+      label: b.collegeBranchCode,
+      value: b.collegeBranchCode,
+    })) || []),
+  ];
+
+  return (
+    <div className="flex justify-between items-center mb-3 px-1">
+      <h1 className="text-[#1e293b] text-base font-bold">
+        {educationType} - {branch} - {year}
+      </h1>
+
+      <div className="flex gap-4 text-[10px] font-semibold text-gray-500">
+
+        {/* Education Type */}
+        <Dropdown
+          label="Education Type"
+          value={educationType}
+          disabled
+        />
+
+        {/* Branch */}
+        <Dropdown
+          label="Branch"
+          value={branch}
+          options={branchOptions}
+          onChange={onBranchChange}
+        />
+
+        {/* Year */}
+        <Dropdown
+          label="Year"
+          value={year}
+          onClick={onYearClick}
+          isYear
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+interface DropdownOption {
+  label: string;
+  value: string;
+}
+
+
+const Dropdown = ({
+  label,
+  value,
+  options,
+  onChange,
+  onClick,
+  disabled = false,
+  isYear = false,
+}: {
+  label: string;
+  value: string;
+  options?: DropdownOption[];
+  onChange?: (val: string) => void;
+  onClick?: () => void;
+  disabled?: boolean;
+  isYear?: boolean;
+}) => {
+  const isSelectable = options && options.length > 0;
+
+  return (
+    <div className="flex items-center gap-1.5 relative">
+      <span className="text-xs">{label}</span>
+
+      <div className="relative">
+        {isSelectable ? (
+          <select
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            disabled={disabled}
+            className="appearance-none bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold outline-none cursor-pointer"
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div
+            onClick={disabled ? undefined : onClick}
+            className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
+              ${disabled
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-green-100"
+              }
+            `}
+          >
+            {value}
+          </div>
+        )}
+
+        {!disabled &&
+          (isYear ? (
+            <CalendarIcon
+              size={14}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+            />
+          ) : (
+            <CaretDown
+              size={12}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+            />
+          ))}
+      </div>
+    </div>
+  );
+};
+// interface DropdownOption {
+//   label: string;
+//   value: string;
+// }
+
+// const Dropdown = ({
+//   label,
+//   value,
+//   options,
+//   onChange,
+//   onClick,
+//   disabled = false,
+// }: {
+//   label: string;
+//   value: string;
+//   options?: DropdownOption[];
+//   onChange?: (val: string) => void;
+//   onClick?: () => void;
+//   disabled?: boolean;
+// }) => {
+//   const isSelectable = options && options.length > 0;
+
+//   return (
+//     <div className="flex items-center gap-1.5">
+//       <span className="text-xs">{label}</span>
+
+//       <div className="relative">
+//         {isSelectable ? (
+//           <select
+//             value={value}
+//             onChange={(e) => onChange?.(e.target.value)}
+//             disabled={disabled}
+//             className="appearance-none bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold outline-none cursor-pointer"
+//           >
+//             {options.map((opt) => (
+//               <option key={opt.value} value={opt.value}>
+//                 {opt.label}
+//               </option>
+//             ))}
+//           </select>
+//         ) : (
+//           <div
+//             onClick={disabled ? undefined : onClick}
+//             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
+//     ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-green-100"}
+//   `}
+//           >
+//             {value}
+
+//             {!disabled && (
+//               <CaretDown
+//                 size={12}
+//                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+//               />
+//             )}
+//           </div>
+//         )}
+
+//         {/* {!disabled && (
+//           <CaretDown
+//             size={12}
+//             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+//           />
+//         )} */}
+//       </div>
+//     </div>
+//   );
+// };
+
+
+// const Dropdown = ({
+//   label,
+//   value,
+//   onClick,
+// }: {
+//   label: string;
+//   value: string;
+//   onClick?: () => void;
+// }) => (
+//   <div className="flex items-center gap-1.5">
+//     <span className="text-xs">{label}</span>
+
+//     <div
+//       onClick={onClick}
+//       className="bg-green-50 text-[#43C17A] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-green-100"
+//     >
+//       {value}
+//       <CaretDown weight="bold" />
+//     </div>
+//   </div>
+// );
+
+
+
+// const Header = () => (
+//   <div className="flex justify-between items-center mb-3 px-1">
+//     <h1 className="text-[#1e293b] text-base font-bold">B Tech - CSE - 2026</h1>
+//     <div className="flex gap-3 text-[10px] font-semibold text-gray-500">
+//       <Dropdown label="Education Type" value="B Tech" />
+//       <Dropdown label="Branch" value="CSE" />
+//       <Dropdown label="Year" value="2026" />
+//     </div>
+//   </div>
+// );
+
+// const Dropdown = ({ label, value }: { label: string; value: string }) => (
+//   <div className="flex items-center gap-1.5">
+//     <span className="text-xs">{label}</span>
+//     <div className="bg-green-50 text-[#43C17A] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-green-100">
+//       {value} <CaretDown weight="bold" />
+//     </div>
+//   </div>
+// );
 
 const TopStat = ({
   icon: Icon,
@@ -222,13 +519,87 @@ const SemBox = ({ label, val }: { label: string; val: string }) => {
   );
 };
 
+const defaultYearWiseData = [1, 2, 3, 4].map((year) => ({
+  year:
+    year === 1
+      ? "1st Year"
+      : year === 2
+        ? "2nd Year"
+        : year === 3
+          ? "3rd Year"
+          : "4th Year",
+  sem1: 0,
+  sem2: 0,
+  total: 0,
+}));
+
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { collegeId, collegeEducationId, loading } = useFinanceManager();
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    loading,
+  } = useFinanceManager();
+
+  console.log("🏫 Finance Context:", {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    loading,
+  });
+
 
   const [overallStudents, setOverallStudents] = useState<number>(0);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [years, setYears] = useState<any[]>([]);
+  const [yearModalOpen, setYearModalOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<string>("ALL");
+  const currentYear = new Date().getFullYear().toString();
+  const [selectedYear, setSelectedYear] = useState<string>(currentYear);
+  const yearRef = React.useRef<HTMLDivElement>(null);
+  const [financeSummary, setFinanceSummary] = useState({
+    academicYearTotal: 0,
+    yearWiseData: defaultYearWiseData,
+  });
+  const [overallFinanceTotal, setOverallFinanceTotal] = useState<number>(0);
+
+
+  const selectedBranchId =
+    selectedBranch === "ALL"
+      ? undefined
+      : branches.find(
+        (b) => b.collegeBranchCode === selectedBranch
+      )?.collegeBranchId;
+
+
+  const selectedAcademicYearId =
+    selectedYear !== "Year"
+      ? years.find(
+        (y) => y.collegeAcademicYear === selectedYear
+      )?.collegeAcademicYearId
+      : undefined;
+
+  console.log("🎯 Selected Filters:", {
+    selectedBranch,
+    selectedBranchId,
+    selectedYear,
+    selectedAcademicYearId,
+  });
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (yearRef.current && !yearRef.current.contains(e.target as Node)) {
+        setYearModalOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
 
   useEffect(() => {
     const loadDashboardStats = async () => {
@@ -249,15 +620,176 @@ export default function DashboardPage() {
   }, [loading, collegeId, collegeEducationId]);
 
 
+  useEffect(() => {
+    const loadFilters = async () => {
+      if (!loading && collegeId && collegeEducationId) {
+        try {
+          const filterData = await getFinanceFilterOptions(
+            collegeId,
+            collegeEducationId
+          );
+
+          setBranches(filterData.branches || []);
+          setYears(filterData.years || []);
+
+          console.log("📂 Filter Data Loaded:", filterData);
+
+          // Auto select first branch + year
+          // if (filterData.branches?.length > 0) {
+          //   setSelectedBranch(filterData.branches[0].collegeBranchCode);
+          // }
+
+          // if (filterData.years?.length > 0) {
+          //   setSelectedYear(filterData.years[0].collegeAcademicYear);
+          // }
+        } catch (err) {
+          console.error("Filter load error:", err);
+        }
+      }
+    };
+
+    loadFilters();
+  }, [loading, collegeId, collegeEducationId]);
+
+  useEffect(() => {
+    const loadOverallFinance = async () => {
+      if (!collegeId || !collegeEducationId) return;
+
+      try {
+        const total = await getOverallFinanceTotal({
+          collegeId,
+          collegeEducationId,
+        });
+
+        setOverallFinanceTotal(total ?? 0);
+      } catch (err) {
+        console.error("Overall finance error:", err);
+      }
+    };
+
+    loadOverallFinance();
+  }, [collegeId, collegeEducationId]);
+
+  useEffect(() => {
+    const loadFinanceSummary = async () => {
+      if (
+        !collegeId ||
+        !collegeEducationId ||
+        selectedBranch === "ALL" ||
+        !selectedYear
+      ) {
+        setFinanceSummary({
+          academicYearTotal: 0,
+          yearWiseData: defaultYearWiseData,
+        });
+        return;
+      }
+
+      try {
+        const summary =
+          await getFinanceYearSemesterCollectionSummary({
+            collegeId,
+            collegeEducationId,
+            collegeBranchId: selectedBranchId,
+            selectedYear,
+          });
+
+        setFinanceSummary({
+          academicYearTotal: summary.academicYearTotal ?? 0,
+          yearWiseData:
+            summary.yearWiseData?.length > 0
+              ? summary.yearWiseData
+              : defaultYearWiseData,
+        });
+      } catch (err) {
+        console.error("Finance summary error:", err);
+      }
+    };
+
+    loadFinanceSummary();
+  }, [
+    loading,              // ✅ keep this
+    collegeId,
+    collegeEducationId,
+    selectedBranch,       // ✅ use branch string instead of derived id
+    selectedYear,
+  ]);
+
   const handleFeeCollection = () => {
     router.push('/finance?feeCollection');
     return
   }
 
+  const BASE_YEAR = 2026;
+  const CURRENT_YEAR = new Date().getFullYear();
+
   return (
     <div className="min-h-screenflex justify-center font-sans text-gray-900">
       <div className="w-full">
-        <Header />
+        <div className="relative">
+          <Header
+            educationType={collegeEducationType ?? "B.Tech"}
+            branch={selectedBranch}
+            year={selectedYear ?? "Year"}
+            branches={branches}
+            onBranchChange={(val: string) => {
+              console.log("🌿 Branch Changed:", val);
+              setSelectedBranch(val);
+            }}
+            onYearClick={() => {
+              console.log("📅 Opening Year Picker");
+              setYearModalOpen((prev) => !prev);
+            }}
+          />
+          {yearModalOpen && (
+            <div className="absolute top-full right-0 mt-2 z-50 bg-white rounded-xl shadow-xl p-4">
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <StaticDatePicker
+                  views={["year"]}
+                  displayStaticWrapperAs="desktop"
+                  value={
+                    selectedYear !== "Year"
+                      ? new Date(`${selectedYear}-01-01`)
+                      : null
+                  }
+                  onChange={(newValue) => {
+                    if (newValue) {
+                      const selected = newValue.getFullYear().toString();
+                      console.log("📅 Year Selected:", selected);
+                      setSelectedYear(selected);
+                    }
+                    setYearModalOpen(false);
+                  }}
+                  shouldDisableYear={(date) => {
+                    const year = date.getFullYear();
+
+                    // ❌ Disable before 2026
+                    if (year < BASE_YEAR) return true;
+
+                    // ❌ Disable future years
+                    if (year > CURRENT_YEAR) return true;
+
+                    return false; // ✅ Enable only valid range
+                  }}
+                  slotProps={{
+                    actionBar: { actions: [] },
+                  }}
+                  sx={{
+                    width: 280,
+                    "& .MuiPickersCalendarHeader-root": {
+                      minHeight: 32,
+                    },
+                    "& .MuiPickersYear-yearButton": {
+                      fontSize: "12px",
+                      width: 50,
+                      height: 32,
+                    },
+                  }}
+                />
+              </LocalizationProvider>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-12 gap-3">
           <div className="col-span-3 flex flex-col gap-3">
@@ -275,7 +807,7 @@ export default function DashboardPage() {
             <div className="h-[95px]">
               <TopStat
                 icon={CurrencyInr}
-                val="24,00,000"
+                val={`₹ ${overallFinanceTotal.toLocaleString()}`}
                 label="Overall Finance"
                 theme="blue"
               />
@@ -283,6 +815,28 @@ export default function DashboardPage() {
           </div>
 
           <div className="col-span-9 grid grid-cols-2 gap-3">
+            {(financeSummary.yearWiseData?.length
+              ? financeSummary.yearWiseData
+              : defaultYearWiseData
+            ).map((yearData: any, index: number) => {
+              console.log("🎓 Rendering YearCard:", yearData);
+
+              return (
+                <div key={index} className="h-[95px]">
+                  <YearCard
+                    data={{
+                      year: yearData.year,
+                      total: yearData.total.toLocaleString(),
+                      sem1: yearData.sem1.toLocaleString(),
+                      sem2: yearData.sem2.toLocaleString(),
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* <div className="col-span-9 grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-3">
               <div className="h-[95px]">
                 <YearCard data={data.years[0]} />
@@ -299,7 +853,7 @@ export default function DashboardPage() {
                 <YearCard data={data.years[3]} />
               </div>
             </div>
-          </div>
+          </div> */}
 
           <div className="col-span-3">
             <Card className="h-[220px] flex flex-col">
@@ -310,7 +864,23 @@ export default function DashboardPage() {
                 <CaretRightIcon size={16} weight="bold" className="cursor-pointer" onClick={handleFeeCollection} />
               </div>
               <div className="flex-1 space-y-2">
-                {data.collection.map((d, i) => (
+                {financeSummary.yearWiseData.map((yearData: any, i: number) => (
+                  <div
+                    key={i}
+                    className="flex justify-between items-center text-[10px]"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      <span className="font-medium text-gray-600">
+                        {yearData.year}
+                      </span>
+                    </div>
+                    <span className="font-bold text-green-600 font-mono">
+                      ₹ {yearData.total.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+                {/* {data.collection.map((d, i) => (
                   <div
                     key={i}
                     className="flex justify-between items-center text-[10px]"
@@ -322,17 +892,17 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <span className="font-bold text-green-600 font-mono">
-                      ₹{d.val}
+                      ₹ {financeSummary.academicYearTotal.toLocaleString()}
                     </span>
                   </div>
-                ))}
+                ))} */}
               </div>
               <div className="bg-[#E5F6EC] px-2 py-1.5 rounded mt-2 flex justify-between items-center">
                 <span className="font-bold text-gray-700 text-[10px]">
-                  Total
+                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
                 </span>
                 <p className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-bold">
-                  ₹ 24,20,000
+                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
                 </p>
               </div>
             </Card>
