@@ -18,8 +18,67 @@ export type FinanceMeetingRow = {
     deletedAt: string | null;
 };
 
-export async function fetchFinanceMeetings(createdBy: number) {
-    const { data, error } = await supabase
+// export async function fetchFinanceMeetings(createdBy: number) {
+//     const { data, error } = await supabase
+//         .from("finance_meetings")
+//         .select(
+//             `
+//       financeMeetingId,
+//       title,
+//       description,
+//       role,
+//       date,
+//       fromTime,
+//       toTime,
+//       meetingLink,
+//       inAppNotification,
+//       emailNotification,
+//       createdBy,
+//       isActive,
+//       createdAt,
+//       updatedAt,
+//       deletedAt
+//     `,
+//         )
+//         .eq("createdBy", createdBy)
+//         .eq("isActive", true)
+//         .is("deletedAt", null)
+//         .order("date", { ascending: true })
+//         .order("fromTime", { ascending: true });
+
+//     if (error) {
+//         console.error("fetchFinanceMeetings error:", error);
+//         throw error;
+//     }
+
+//     return data ?? [];
+// }
+
+// 🔴 MARKED CHANGE — FULL PRODUCTION FETCH
+
+export async function fetchFinanceMeetings(params: {
+    createdBy: number;
+    role?: string;
+    type?: "upcoming" | "previous";
+    page?: number;
+    limit?: number;
+}) {
+    const {
+        createdBy,
+        role,
+        type = "upcoming",
+        page = 1,
+        limit = 6,
+    } = params;
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const currentTime = now.toTimeString().split(" ")[0];
+
+    let query = supabase
         .from("finance_meetings")
         .select(
             `
@@ -39,20 +98,45 @@ export async function fetchFinanceMeetings(createdBy: number) {
       updatedAt,
       deletedAt
     `,
+            { count: "exact" }
         )
         .eq("createdBy", createdBy)
         .eq("isActive", true)
-        .is("deletedAt", null)
+        .is("deletedAt", null);
+
+    // 🔴 MARKED CHANGE — Role filter (case insensitive safe)
+    if (role) {
+        query = query.eq("role", role);
+    }
+
+    // 🔴 MARKED CHANGE — Correct upcoming / previous logic
+    if (type === "upcoming") {
+        query = query.or(
+            `date.gt.${today},and(date.eq.${today},fromTime.gte.${currentTime})`
+        );
+    } else {
+        query = query.or(
+            `date.lt.${today},and(date.eq.${today},toTime.lt.${currentTime})`
+        );
+    }
+
+    const { data, error, count } = await query
         .order("date", { ascending: true })
-        .order("fromTime", { ascending: true });
+        .order("fromTime", { ascending: true })
+        .range(from, to);
 
     if (error) {
         console.error("fetchFinanceMeetings error:", error);
         throw error;
     }
 
-    return data ?? [];
+    return {
+        data: data ?? [],
+        total: count ?? 0,
+        totalPages: Math.ceil((count ?? 0) / limit),
+    };
 }
+
 
 export async function fetchFinanceMeetingById(
     financeMeetingId: number,
@@ -104,6 +188,7 @@ export async function saveFinanceMeeting(
                 inAppNotification: payload.inAppNotification ?? false,
                 emailNotification: payload.emailNotification ?? false,
                 createdBy: financeManagerId,
+                createdAt: payload.id ? undefined : now,
                 updatedAt: now,
             },
             {

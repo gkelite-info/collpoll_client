@@ -14,31 +14,83 @@ export type FinanceMeetingSectionRow = {
 };
 
 
-export async function fetchFinanceMeetingSections(
-    financeMeetingId: number,
+// export async function fetchFinanceMeetingSections(
+//     financeMeetingId: number,
+// ) {
+//     const { data, error } = await supabase
+//         .from("finance_meetings_sections")
+//         .select(
+//             `
+//       financeMeetingSectionsId,
+//       financeMeetingId,
+//       collegeEducationId,
+//       collegeBranchId,
+//       collegeAcademicYearId,
+//       collegeSectionsId,
+//       createdBy,
+//       createdAt,
+//       updatedAt,
+//       deletedAt
+//     `,
+//         )
+//         .eq("financeMeetingId", financeMeetingId)
+//         .is("deletedAt", null)
+//         .order("financeMeetingSectionsId", { ascending: true });
+
+//     if (error) {
+//         console.error("fetchFinanceMeetingSections error:", error);
+//         throw error;
+//     }
+
+//     return data ?? [];
+// }
+
+// 🔴 MARKED CHANGE — BULK SECTION FETCH
+
+
+
+
+
+// 🔴 MARKED CHANGE — FULL JOIN WITH NAMES
+
+
+
+export async function fetchSectionsForMeetings(
+    meetingIds: number[]
 ) {
+    if (!meetingIds.length) return [];
+
     const { data, error } = await supabase
         .from("finance_meetings_sections")
-        .select(
-            `
-      financeMeetingSectionsId,
+        .select(`
       financeMeetingId,
-      collegeEducationId,
-      collegeBranchId,
-      collegeAcademicYearId,
-      collegeSectionsId,
-      createdBy,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `,
-        )
-        .eq("financeMeetingId", financeMeetingId)
-        .is("deletedAt", null)
-        .order("financeMeetingSectionsId", { ascending: true });
+
+      college_education (
+        collegeEducationId,
+        collegeEducationType
+      ),
+
+      college_branch (
+        collegeBranchId,
+        collegeBranchType,
+        collegeBranchCode
+      ),
+
+      college_academic_year (
+        collegeAcademicYearId,
+        collegeAcademicYear
+      ),
+
+      college_sections (
+        collegeSectionsId,
+        collegeSections
+      )
+    `)
+        .in("financeMeetingId", meetingIds)
+        .is("deletedAt", null);
 
     if (error) {
-        console.error("fetchFinanceMeetingSections error:", error);
+        console.error("fetchSectionsForMeetings error:", error);
         throw error;
     }
 
@@ -70,11 +122,12 @@ export async function saveFinanceMeetingSection(
                 collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
                 collegeSectionsId: payload.collegeSectionsId ?? null,
                 createdBy: financeManagerId,
+                createdAt: payload.id ? undefined : now,
                 updatedAt: now,
             },
             {
                 onConflict:
-                    "financeMeetingId, collegeBranchId, collegeAcademicYearId, collegeSectionsId",
+                    "financeMeetingId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSectionsId",
             },
         )
         .select("financeMeetingSectionsId")
