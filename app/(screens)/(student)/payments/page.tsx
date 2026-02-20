@@ -12,6 +12,10 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStudentProfileCardData } from "@/lib/helpers/student/payments/fetchStudentProfileCardData";
 import PaymentsSkeleton from "./shimmer/PaymentsSkeleton";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
+import {
+  FeeSummaryItem,
+  fetchStudentPaymentHistory,
+} from "@/lib/helpers/student/payments/fetchStudentPaymentHistory";
 
 const Page = () => {
   const [activeTab, setActiveTab] = useState<
@@ -24,6 +28,7 @@ const Page = () => {
   const [loading, setLoading] = useState(true);
 
   const [isPaymentMode, setIsPaymentMode] = useState(false);
+  const [paymentSummary, setPaymentSummary] = useState<FeeSummaryItem[]>([]);
 
   const tabs = [
     { id: "academic", label: "Academic Fees" },
@@ -64,14 +69,33 @@ const Page = () => {
     return <PaymentsSkeleton />;
   }
 
+  // const displayPlan: FeePlan = feePlan || {
+  //   programName: "No Active Plan",
+  //   type: "Academic Fees",
+  //   academicYear: "-",
+  //   openingBalance: 0,
+  //   components: [],
+  //   gstAmount: 0,
+  //   gstPercent: 0,
+  //   applicableFees: 0,
+  //   scholarship: 0,
+  //   totalPayable: 0,
+  //   paidTillNow: 0,
+  //   pendingAmount: 0,
+  // };
   const displayPlan: FeePlan = feePlan || {
+    studentFeeObligationId: 0,
+    collegeSemesterId: 0,
+
     programName: "No Active Plan",
     type: "Academic Fees",
     academicYear: "-",
+
     openingBalance: 0,
     components: [],
     gstAmount: 0,
     gstPercent: 0,
+
     applicableFees: 0,
     scholarship: 0,
     totalPayable: 0,

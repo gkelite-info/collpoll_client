@@ -28,6 +28,9 @@ export interface FeePlan {
   scholarship: number;
   totalPayable: number;
   paidTillNow: number;
+  studentFeeObligationId: number;
+  collegeSemesterId: number;
+
   pendingAmount: number;
 }
 
@@ -52,25 +55,47 @@ const PaymentConfirm = ({ plan, onBack }: PaymentConfirmProps) => {
     onBack();
   };
 
+  // const handlePayment = async () => {
+  //   try {
+  //     const res = await fetch("/api/stripe/create-checkout-session", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         amount: plan.pendingAmount,
+  //         studentId: 123, // replace with real studentId later
+  //       }),
+  //     });
+
+  //     const data = await res.json();
+
+  //     window.location.href = data.url;
+  //   } catch (err) {
+  //     toast.error("Payment initialization failed");
+  //   }
+  // };
+
   const handlePayment = async () => {
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: plan.pendingAmount,
-          studentId: 123, // replace with real studentId later
-        }),
-      });
+    const res = await fetch("/api/stripe/create-checkout-session", {
+      method: "POST",
 
-      const data = await res.json();
+      headers: {
+        "Content-Type": "application/json",
+      },
 
-      window.location.href = data.url;
-    } catch (err) {
-      toast.error("Payment initialization failed");
-    }
+      body: JSON.stringify({
+        amount: plan.pendingAmount,
+
+        studentFeeObligationId: plan.studentFeeObligationId,
+
+        collegeSemesterId: plan.collegeSemesterId,
+      }),
+    });
+
+    const data = await res.json();
+
+    window.location.href = data.url;
   };
 
   return (

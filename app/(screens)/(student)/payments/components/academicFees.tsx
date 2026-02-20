@@ -1,7 +1,28 @@
 "use client";
 
-import { FeeSummaryItem } from "@/app/(screens)/finance/(dashboard)/[studentId]/components/academicFees";
 import { FeePlan } from "./paymentConfirm";
+
+export type StripePaymentStatus =
+  | "succeeded"
+  | "processing"
+  | "requires_payment_method"
+  | "requires_confirmation"
+  | "requires_action"
+  | "canceled"
+  | "failed"
+  | "refunded"
+  | "partially_refunded"
+  | "disputed";
+
+export interface FeeSummaryItem {
+  id: number;
+  paidAmount: number;
+  paymentMode: string;
+  entity: string;
+  paidOn: string;
+  status: StripePaymentStatus;
+  comments: string;
+}
 
 interface AcademicFeesProps {
   plan: FeePlan | null;
