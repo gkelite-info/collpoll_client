@@ -25,6 +25,7 @@ export default function ClientLayout({
     "/verify-email",
     "/forgot-password",
     "/reset-password",
+    "/construction"
   ];
 
   const shouldHideLayout = hideLayoutRoutes.some((route) =>
