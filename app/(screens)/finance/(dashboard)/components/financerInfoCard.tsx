@@ -1,7 +1,9 @@
 "use client";
 
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
+import { getTodayCollectionSummary } from "@/lib/helpers/finance/dashboard/getTodayCollectionSummary";
 import { useEffect, useState } from "react";
 
 export type UserInfoCardProps = {
@@ -20,6 +22,9 @@ type UserInfoProps = {
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
+  const [dynamicTodayCollection, setDynamicTodayCollection] = useState(0);
+  const { collegeId, collegeEducationId, loading } = useFinanceManager();
+
 
   const { fullName } = useUser();
 
@@ -32,6 +37,31 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
     setToday(`${day}/${month}/${year}`);
   }, []);
+
+  useEffect(() => {
+    const fetchTodayCollection = async () => {
+      if (loading || !collegeId || !collegeEducationId) return;
+
+      console.log("🏫 Using Finance Context:", {
+        collegeId,
+        collegeEducationId,
+      });
+
+      try {
+        const { todayTotal } = await getTodayCollectionSummary({
+          collegeId,
+          collegeEducationId,
+        });
+
+        console.log("💰 Today Collection:", todayTotal);
+        setDynamicTodayCollection(todayTotal);
+      } catch (error) {
+        console.error("❌ Error fetching today collection:", error);
+      }
+    };
+
+    fetchTodayCollection();
+  }, [loading, collegeId, collegeEducationId]);
 
   return (
     <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
@@ -55,9 +85,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <p className="text-md text-[#454545] mt-0 font-medium">
               Today’s Collections,
               <span className="text-[#089144] font-bold">
-                {item.todayCollection
-                  ? ` ₹${item.todayCollection.toLocaleString("en-IN")}`
-                  : ""}
+                {` ₹${dynamicTodayCollection.toLocaleString("en-IN")}`}
               </span>
               {!item.show && " collected so far."}
             </p>
