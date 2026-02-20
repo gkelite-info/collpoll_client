@@ -8,15 +8,12 @@ import { addStudentTask, getStudentTasks, updateStudentTask, } from "@/lib/helpe
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
 
-
-
 export default function StuDashRight() {
 
   const [studentTasks, setStudentTasks] = useState<any[]>([]);
   const [studentId, setStudentId] = useState<number | null>(null);
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
   const [collegeId, setCollegeId] = useState<number | null>(null);
-
 
   useEffect(() => {
     async function fetchStudentId() {
@@ -51,7 +48,6 @@ export default function StuDashRight() {
 
   useEffect(() => {
     if (studentId === null) return;
-
 
     async function fetchStudentTasks() {
       try {
