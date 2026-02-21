@@ -77,6 +77,53 @@ export async function fetchExistingFinanceCalendarSection(payload: {
   return { success: true, data };
 }
 
+// export async function saveFinanceCalendarSection(
+//   payload: {
+//     financeCalendarSectionId?: number;
+//     financeCalendarId: number;
+//     collegeEducationId: number;
+//     collegeBranchId: number;
+//     collegeAcademicYearId: number;
+//     collegeSemesterId: number;
+//     collegeSectionsId: number;
+//   },
+//   createdBy: number,
+// ) {
+//   const now = new Date().toISOString();
+
+//   const { data, error } = await supabase
+//     .from("finance_calendar_sections")
+//     .upsert(
+//       {
+//         financeCalendarSectionId: payload.financeCalendarSectionId,
+//         financeCalendarId: payload.financeCalendarId,
+//         collegeEducationId: payload.collegeEducationId,
+//         collegeBranchId: payload.collegeBranchId,
+//         collegeAcademicYearId: payload.collegeAcademicYearId,
+//         collegeSemesterId: payload.collegeSemesterId,
+//         collegeSectionsId: payload.collegeSectionsId,
+//         createdBy,
+//         updatedAt: now,
+//       },
+//       {
+//         onConflict:
+//           "financeCalendarId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSemesterId, collegeSectionsId",
+//       },
+//     )
+//     .select("financeCalendarSectionId")
+//     .single();
+
+//   if (error) {
+//     console.error("saveFinanceCalendarSection error:", error);
+//     return { success: false, error };
+//   }
+
+//   return {
+//     success: true,
+//     financeCalendarSectionId: data.financeCalendarSectionId,
+//   };
+// }
+
 export async function saveFinanceCalendarSection(
   payload: {
     financeCalendarSectionId?: number;
@@ -91,11 +138,10 @@ export async function saveFinanceCalendarSection(
 ) {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("finance_calendar_sections")
-    .upsert(
-      {
-        financeCalendarSectionId: payload.financeCalendarSectionId,
+  if (payload.financeCalendarSectionId) {
+    const { data, error } = await supabase
+      .from("finance_calendar_sections")
+      .update({
         financeCalendarId: payload.financeCalendarId,
         collegeEducationId: payload.collegeEducationId,
         collegeBranchId: payload.collegeBranchId,
@@ -104,24 +150,47 @@ export async function saveFinanceCalendarSection(
         collegeSectionsId: payload.collegeSectionsId,
         createdBy,
         updatedAt: now,
-      },
-      {
-        onConflict:
-          "financeCalendarId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSemesterId, collegeSectionsId",
-      },
-    )
-    .select("financeCalendarSectionId")
-    .single();
+      })
+      .eq("financeCalendarSectionId", payload.financeCalendarSectionId)
+      .select("financeCalendarSectionId")
+      .single();
 
-  if (error) {
-    console.error("saveFinanceCalendarSection error:", error);
-    return { success: false, error };
+    if (error) {
+      console.error("Update Section error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      financeCalendarSectionId: data.financeCalendarSectionId,
+    };
+  } else {
+    const { data, error } = await supabase
+      .from("finance_calendar_sections")
+      .insert({
+        financeCalendarId: payload.financeCalendarId,
+        collegeEducationId: payload.collegeEducationId,
+        collegeBranchId: payload.collegeBranchId,
+        collegeAcademicYearId: payload.collegeAcademicYearId,
+        collegeSemesterId: payload.collegeSemesterId,
+        collegeSectionsId: payload.collegeSectionsId,
+        createdBy,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .select("financeCalendarSectionId")
+      .single();
+
+    if (error) {
+      console.error("Insert Section error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      financeCalendarSectionId: data.financeCalendarSectionId,
+    };
   }
-
-  return {
-    success: true,
-    financeCalendarSectionId: data.financeCalendarSectionId,
-  };
 }
 
 export async function deactivateFinanceCalendarSection(
@@ -172,7 +241,7 @@ export async function fetchFinanceCalendarSectionsWithDetails(
             financeCalendarSectionId,
             college_branch ( collegeBranchCode ),
             college_academic_year ( collegeAcademicYear ),
-            college_sections ( collegeSections ) /* <-- UPDATED THIS LINE */
+            college_sections ( collegeSections ) 
         `,
     )
     .eq("financeCalendarId", financeCalendarId)
