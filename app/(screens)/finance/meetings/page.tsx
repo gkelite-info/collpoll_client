@@ -13,6 +13,7 @@ import { useFinanceManager } from '@/app/utils/context/financeManager/useFinance
 import toast from 'react-hot-toast';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import ConfirmDeleteModal from '../../admin/calendar/components/ConfirmDeleteModal';
+import { useUser } from '@/app/utils/context/UserContext';
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Parent' | 'Student' | 'Faculty' | 'Admin';
@@ -51,13 +52,15 @@ const MeetingListContent = () => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [editingMeetingId, setEditingMeetingId] = useState<number | null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
     const currentCategory = (searchParams.get('category') as MeetingCategory) || 'Parent';
     const { financeManagerId } = useFinanceManager()
-
+    const itemsPerPage = 10;
+        
     const updateFilter = (key: string, value: string) => {
         setPage(1)
         const params = new URLSearchParams(searchParams.toString());
@@ -95,7 +98,7 @@ const MeetingListContent = () => {
                 role: currentCategory,
                 type: currentType,
                 page,
-                limit: 10,
+                limit: itemsPerPage,
             });
 
             const finalMeetings = res.data.map((meeting) => ({
@@ -137,6 +140,11 @@ const MeetingListContent = () => {
         } finally {
             setIsDeleting(false);
         }
+    };
+
+    const handleEditClick = (financeMeetingId: number) => {
+        setEditingMeetingId(financeMeetingId);
+        setIsModalOpen(true);
     };
 
     return (
@@ -225,7 +233,7 @@ const MeetingListContent = () => {
                         </div>
                     ) : meetings.length > 0 ? (
                         meetings.map((meeting) => (
-                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} />
+                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} role={currentCategory} onEdit={handleEditClick} />
                         ))
                     ) : (
                         <div className="col-span-full py-30 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
@@ -276,10 +284,15 @@ const MeetingListContent = () => {
                 </div>
             )}
 
-            <CreateMeetingModal
+            {/* <CreateMeetingModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-            />
+                onClose={() => {
+                    setIsModalOpen(false);
+                    setEditingMeetingId(null);
+                }}
+                onSuccess={loadMeetings}
+                editingMeetingId={editingMeetingId}
+            /> */}
 
             <ConfirmDeleteModal
                 open={deleteModalOpen}

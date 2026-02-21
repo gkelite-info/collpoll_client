@@ -11,6 +11,7 @@ import {
   Gear,
   GraduationCap,
   House,
+  Laptop,
   Note,
   Student,
 } from "@phosphor-icons/react";
@@ -83,6 +84,13 @@ export default function Navbar() {
       ),
       label: "Placements",
       path: "/placements",
+    },
+    {
+      icon: (isActive) => (
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Meetings",
+      path: "/meetings",
     },
     {
       icon: (isActive) => (
