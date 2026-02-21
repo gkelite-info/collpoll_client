@@ -20,111 +20,6 @@ import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 
 
-
-// const initialData = [
-//   {
-//     studentName: "Priya Sharma",
-//     rollNo: "22CSE101",
-//     educationType: "B.Tech",
-//     branch: "CSE",
-//     year: "3rd Year",
-//     semester: "Sem 5",
-//     paid: 214000,
-//     pending: 0,
-//   },
-//   {
-//     studentName: "Rahul Mehta",
-//     rollNo: "22EEE099",
-//     educationType: "B.Tech",
-//     branch: "EEE",
-//     year: "3rd Year",
-//     semester: "Sem 5",
-//     paid: 214000,
-//     pending: 30000,
-//   },
-//   {
-//     studentName: "Neha Patel",
-//     rollNo: "22MECH051",
-//     educationType: "B.Tech",
-//     branch: "MECH",
-//     year: "2nd Year",
-//     semester: "Sem 4",
-//     paid: 0,
-//     pending: 55000,
-//   },
-//   {
-//     studentName: "Arjun Kumar",
-//     rollNo: "23CSE045",
-//     educationType: "B.Tech",
-//     branch: "CSE",
-//     year: "2nd Year",
-//     semester: "Sem 3",
-//     paid: 50000,
-//     pending: 0,
-//   },
-//   {
-//     studentName: "Sneha Reddy",
-//     rollNo: "21ECE078",
-//     educationType: "B.Tech",
-//     branch: "ECE",
-//     year: "4th Year",
-//     semester: "Sem 7",
-//     paid: 30000,
-//     pending: 35000,
-//   },
-//   {
-//     studentName: "Vikram Singh",
-//     rollNo: "22CIVIL032",
-//     educationType: "B.Tech",
-//     branch: "CIVIL",
-//     year: "3rd Year",
-//     semester: "Sem 5",
-//     paid: 58000,
-//     pending: 0,
-//   },
-//   {
-//     studentName: "Anjali Verma",
-//     rollNo: "23EEE012",
-//     educationType: "B.Tech",
-//     branch: "EEE",
-//     year: "2nd Year",
-//     semester: "Sem 4",
-//     paid: 25000,
-//     pending: 30000,
-//   },
-//   {
-//     studentName: "Karthik Nair",
-//     rollNo: "21CSE089",
-//     educationType: "B.Tech",
-//     branch: "CSE",
-//     year: "4th Year",
-//     semester: "Sem 8",
-//     paid: 70000,
-//     pending: 0,
-//   },
-//   {
-//     studentName: "Deepika Rao",
-//     rollNo: "22ECE056",
-//     educationType: "B.Tech",
-//     branch: "ECE",
-//     year: "3rd Year",
-//     semester: "Sem 6",
-//     paid: 0,
-//     pending: 60000,
-//   },
-//   {
-//     studentName: "Aditya Joshi",
-//     rollNo: "23MECH021",
-//     educationType: "B.Tech",
-//     branch: "MECH",
-//     year: "2nd Year",
-//     semester: "Sem 3",
-//     paid: 52000,
-//     pending: 0,
-//   },
-// ];
-
-
 function OverallStudentsOverview() {
   const router = useRouter();
 
@@ -160,7 +55,7 @@ function OverallStudentsOverview() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const rowsPerPage = 10; // 👈 change to 2 if you want like academics example
+  const rowsPerPage = 10; 
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const statusOptions = ["All", "Paid", "Pending", "Partial"];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -15,39 +15,15 @@ import {
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
+import { getYearWiseFinanceSummary } from "@/lib/helpers/finance/dashboard/getYearWiseFinanceSummary";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-const cardsData = [
-  {
-    style: "bg-[#E2DAFF]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#6C20CA" weight="fill" />,
-    value: "12.5 Cr",
-    label: "Total Fee Expected",
-  },
-  {
-    style: "bg-[#E6FBEA]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#43C17A" weight="fill" />,
-    value: "10.8 Cr",
-    label: "Total Collected",
-  },
-  {
-    style: "bg-[#FFE2E2]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#FF0000" weight="fill" />,
-    value: "1.2 Cr",
-    label: "Pending Students",
-  },
-  {
-    style: "bg-[#CEE6FF]",
-    icon: <BuildingApartmentIcon size={24} color="#60AEFF" weight="fill" />,
-    value: "86.4%",
-    label: "Collection Rate",
-  },
-];
 
 export default function YearFinanceBreakdown() {
   const router = useRouter();
   const params = useParams();
 
-  const branch = (params?.branch as string)?.toUpperCase();
+  const branch = (params?.year as string)?.toUpperCase();
   const yearParam = (params?.year as string)?.replace(/-/g, " ");
 
   const [search, setSearch] = useState("");
@@ -56,6 +32,80 @@ export default function YearFinanceBreakdown() {
   const [yearFilter, setYearFilter] = useState("All");
   const [semesterFilter, setSemesterFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [yearData, setYearData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+
+  const formatCurrency = (amount: number) =>
+    `₹ ${amount.toLocaleString("en-IN")}`;
+  const totalExpected = yearData.reduce(
+    (sum: number, y: any) => sum + y.expected,
+    0
+  );
+
+  const totalCollected = yearData.reduce(
+    (sum: number, y: any) => sum + y.collected,
+    0
+  );
+
+  const totalPending = totalExpected - totalCollected;
+
+  const overallPercent =
+    totalExpected === 0
+      ? 0
+      : Number(
+        ((totalCollected / totalExpected) * 100).toFixed(2)
+      );
+  const cardsData = [
+    {
+      style: "bg-[#E2DAFF]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#6C20CA"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalExpected),
+      label: "Total Fee Expected",
+    },
+    {
+      style: "bg-[#E6FBEA]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#43C17A"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalCollected),
+      label: "Total Collected",
+    },
+    {
+      style: "bg-[#FFE2E2]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#FF0000"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalPending),
+      label: "Total Pending",
+    },
+    {
+      style: "bg-[#CEE6FF]",
+      icon: (
+        <BuildingApartmentIcon
+          size={24}
+          color="#60AEFF"
+          weight="fill"
+        />
+      ),
+      value: `${overallPercent}%`,
+      label: "Collection Rate",
+    },
+  ];
 
   const educationOptions = ["All", "B.Tech"];
   const branchOptions = ["All", "CSE", "EEE", "IT", "ME", "CIVIL", "ECE"];
@@ -63,50 +113,44 @@ export default function YearFinanceBreakdown() {
   const semesterOptions = ["All", "Sem 1", "Sem 2", "Sem 3", "Sem 4"];
   const statusOptions = ["All", "paid", "pending", "partial"];
 
-  const initialData = [
-    {
-      year: "Year 1",
-      expected: "₹ 3.0 Cr",
-      collected: "₹ 2.5 Cr",
-      pending: "₹ 0.5 Cr",
-      percent: "83%",
-    },
-    {
-      year: "Year 2",
-      expected: "₹ 3.2 Cr",
-      collected: "₹ 2.9 Cr",
-      pending: "₹ 0.3 Cr",
-      percent: "91%",
-    },
-    {
-      year: "Year 3",
-      expected: "₹ 3.5 Cr",
-      collected: "₹ 3.2 Cr",
-      pending: "₹ 0.3 Cr",
-      percent: "91%",
-    },
-    {
-      year: "Year 4",
-      expected: "₹ 2.8 Cr",
-      collected: "₹ 2.2 Cr",
-      pending: "₹ 0.6 Cr",
-      percent: "82%",
-    },
-  ];
+  useEffect(() => {
+    if (!branch) return;
+    async function loadYearFinance() {
+      setLoading(true);
+      try {
+        const data = await getYearWiseFinanceSummary({
+          collegeId: 1,
+          collegeEducationId: 1,
+          branchCode: branch,
+        });
+        setYearData(data);
+      } catch (err) {
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadYearFinance();
+  }, [branch]);
 
   const filteredData = useMemo(() => {
-    return initialData
-      .filter((item) => item.year.toLowerCase().includes(search.toLowerCase()))
+    return yearData
+      .filter((item) =>
+        item.year
+          .toLowerCase()
+          .includes(search.toLowerCase())
+      )
       .map((item) => ({
-        ...item,
+        year: item.year,
+        expected: formatCurrency(item.expected),
+        collected: formatCurrency(item.collected),
+        pending: formatCurrency(item.pending),
+        percent: `${item.collectionPercentage}%`,
         action: (
           <span
             className="text-[#22A55D] cursor-pointer hover:underline text-sm font-medium"
             onClick={() =>
               router.push(
-                `/finance/finance-analytics/students/${branch}/${params.year}/${item.year
-                  .toLowerCase()
-                  .replace(/\s+/g, "-")}`,
+                `/finance/finance-analytics/students/${branch}/${item.yearId}`
               )
             }
           >
@@ -114,10 +158,10 @@ export default function YearFinanceBreakdown() {
           </span>
         ),
       }));
-  }, [search]);
+  }, [yearData, search, router]);
 
   const handleDownload = () => {
-    downloadCSV(initialData, `${branch}-${yearParam}-year-breakdown`);
+    downloadCSV(yearData, `${branch}-year-breakdown`);
   };
 
   const columns = [
@@ -132,7 +176,7 @@ export default function YearFinanceBreakdown() {
   return (
     <div className="p-2 min-h-screen space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center text-black gap-2">
           <CaretLeftIcon
             size={24}
             className="cursor-pointer"
@@ -164,16 +208,18 @@ export default function YearFinanceBreakdown() {
         ))}
       </div>
       <div className="flex items-center gap-6">
+
         <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[250px] lg:w-[300px] flex-shrink-0">
           <input
-            placeholder="Search by Student Name / Roll No."
-            className="bg-transparent outline-none text-sm w-full"
+            placeholder="Search by Year"
+            className="bg-transparent outline-none text-sm w-full text-[#282828] placeholder:text-[#9CA3AF]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <MagnifyingGlass size={24} className="text-[#22A55D]" />
         </div>
-        <div className="overflow-x-auto w-full">
+
+        {/* <div className="overflow-x-auto w-full">
           <div className="flex items-center gap-6 min-w-max">
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#282828] font-semibold">
@@ -287,17 +333,24 @@ export default function YearFinanceBreakdown() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       <h1 className="text-[#282828] text-lg font-semibold -mt-3 mb-3">
         Year Breakdown Table
       </h1>
-      <TableComponent
-        columns={columns}
-        tableData={filteredData}
-        height="55vh"
-      />
+
+      {loading ? (
+        <div className="flex justify-center items-center h-[200px]">
+          <Loader />
+        </div>
+      ) : (
+        <TableComponent
+          columns={columns}
+          tableData={filteredData}
+          height="55vh"
+        />
+      )}
     </div>
   );
 }
