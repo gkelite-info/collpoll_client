@@ -7,17 +7,20 @@ import { Loader } from '../../(student)/calendar/right/timetable';
 import MeetingCard from './components/MeetingCard';
 import CourseScheduleCard from '@/app/utils/CourseScheduleCard';
 import CreateMeetingModal from './components/CreateMeetingModal';
-import { fetchFinanceMeetings } from '@/lib/helpers/finance/meetings/meetingsAPI';
-import { fetchSectionsForMeetings } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
+import { deactivateFinanceMeeting, fetchFinanceMeetings } from '@/lib/helpers/finance/meetings/meetingsAPI';
+import { deleteFinanceMeetingSection } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
 import { useFinanceManager } from '@/app/utils/context/financeManager/useFinanceManager';
 import toast from 'react-hot-toast';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import ConfirmDeleteModal from '../../admin/calendar/components/ConfirmDeleteModal';
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Parent' | 'Student' | 'Faculty' | 'Admin';
 
 export interface Meeting {
     id: string;
+    financeMeetingId: number;
+    financeMeetingSectionsId: number | null;
     title: string;
     timeRange: string;
     educationType: string;
@@ -30,7 +33,6 @@ export interface Meeting {
     category: MeetingCategory;
     type: MeetingType;
     meetingLink: string;
-    sections?: any[];
 }
 
 const formatMeetingDate = (dateStr: string) => {
@@ -46,6 +48,9 @@ const MeetingListContent = () => {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -54,7 +59,6 @@ const MeetingListContent = () => {
     const { financeManagerId } = useFinanceManager()
 
     const updateFilter = (key: string, value: string) => {
-        setIsLoading(true);
         setPage(1)
         const params = new URLSearchParams(searchParams.toString());
         params.set(key, value);
@@ -77,80 +81,63 @@ const MeetingListContent = () => {
         setPage(1);
     }, [currentType, currentCategory]);
 
+
     useEffect(() => {
-        if (!financeManagerId) return
-        const loadMeetings = async () => {
-            try {
-                setIsLoading(true);
-                const res = await fetchFinanceMeetings({
-                    createdBy: financeManagerId,
-                    role: currentCategory,
-                    type: currentType,
-                    page,
-                    limit: 6,
-                });
-
-                const meetingIds = res.data.map((m) => m.financeMeetingId);
-                const sections = await fetchSectionsForMeetings(meetingIds);
-                const expandedMeetings: Meeting[] = [];
-
-                res.data.forEach((meeting: any) => {
-                    const meetingSections = sections.filter(
-                        (s: any) => s.financeMeetingId === meeting.financeMeetingId
-                    );
-
-                    const formattedDate = formatMeetingDate(meeting.date);
-
-                    if (meetingSections.length === 0) {
-                        expandedMeetings.push({
-                            id: String(meeting.financeMeetingId),
-                            title: meeting.title ?? '',
-                            timeRange: `${meeting.fromTime ?? ''} - ${meeting.toTime ?? ''}`,
-                            educationType: '',
-                            branch: '',
-                            date: formattedDate ?? '',
-                            participants: 0,
-                            year: '',
-                            section: '',
-                            tags: '',
-                            category: currentCategory,
-                            type: currentType,
-                            meetingLink: meeting.meetingLink ?? '',
-                            sections: [],
-                        });
-                    } else {
-                        meetingSections.forEach((s: any) => {
-                            expandedMeetings.push({
-                                id: `${meeting.financeMeetingId}-${s.college_sections?.collegeSectionsId ?? 'none'}`,
-                                title: meeting.title ?? '',
-                                timeRange: `${meeting.fromTime ?? ''} - ${meeting.toTime ?? ''}`,
-                                educationType: s.college_education?.collegeEducationType ?? '',
-                                branch: s.college_branch?.collegeBranchCode ?? s.college_branch?.collegeBranchType ?? '',
-                                date: formattedDate ?? '',
-                                participants: 0,
-                                year: s.college_academic_year?.collegeAcademicYear ?? '',
-                                section: s.college_sections?.collegeSections ?? '',
-                                tags: '',
-                                category: currentCategory,
-                                type: currentType,
-                                meetingLink: meeting.meetingLink ?? '',
-                                sections: [s],
-                            });
-                        });
-                    }
-                });
-
-                setMeetings(expandedMeetings);
-                setTotalPages(res.totalPages || 1);
-            } catch (err) {
-                toast.error(`Failed to fetch ${currentCategory} in ${currentType}.`)
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         loadMeetings();
     }, [currentType, currentCategory, page, financeManagerId]);
+
+    const loadMeetings = async () => {
+        if (!financeManagerId) return;
+        try {
+            setIsLoading(true);
+            const res = await fetchFinanceMeetings({
+                createdBy: financeManagerId,
+                role: currentCategory,
+                type: currentType,
+                page,
+                limit: 10,
+            });
+
+            const finalMeetings = res.data.map((meeting) => ({
+                ...meeting,
+                date: formatMeetingDate(meeting.date)
+            }));
+
+            setMeetings(finalMeetings);
+            setTotalPages(res.totalPages || 1);
+        } catch (err) {
+            toast.error(`Failed to fetch ${currentCategory} in ${currentType}.`);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleDeleteClick = (meeting: Meeting) => {
+        setMeetingToDelete(meeting);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!meetingToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            if (meetingToDelete.financeMeetingSectionsId) {
+                await deleteFinanceMeetingSection(meetingToDelete.financeMeetingSectionsId);
+            } else {
+                await deactivateFinanceMeeting(meetingToDelete.financeMeetingId);
+            }
+
+            toast.success("Meeting deleted successfully");
+            setDeleteModalOpen(false);
+            setMeetingToDelete(null);
+            await loadMeetings();
+        } catch (error) {
+            toast.error("Failed to delete meeting");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div className="h-screen flex flex-col overflow-hidden font-sans text-slate-800">
@@ -238,7 +225,7 @@ const MeetingListContent = () => {
                         </div>
                     ) : meetings.length > 0 ? (
                         meetings.map((meeting) => (
-                            <MeetingCard key={meeting.id} data={meeting} />
+                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} />
                         ))
                     ) : (
                         <div className="col-span-full py-30 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
@@ -292,6 +279,17 @@ const MeetingListContent = () => {
             <CreateMeetingModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
+            />
+
+            <ConfirmDeleteModal
+                open={deleteModalOpen}
+                isDeleting={isDeleting}
+                onCancel={() => {
+                    setDeleteModalOpen(false);
+                    setMeetingToDelete(null);
+                }}
+                onConfirm={handleConfirmDelete}
+                name="meeting"
             />
 
         </div>
