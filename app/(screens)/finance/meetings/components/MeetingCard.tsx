@@ -2,7 +2,8 @@ import { Laptop, PencilSimple, Trash } from "@phosphor-icons/react";
 import PillTag from "./PillTag";
 import { Meeting } from "../page";
 
-export default function MeetingCard({ data }: { data: Meeting }) {
+export default function MeetingCard({ data, onDelete }: { data: Meeting, onDelete: (meeting: Meeting) => void; }) {
+    console.log("data checking", data)
     return (
         <div className="bg-white rounded-t-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
             <div className="bg-[#43C17A26] px-4 py-2 flex items-center justify-between gap-3 border-b-2 border-dotted border-[#43C17A]">
@@ -12,21 +13,23 @@ export default function MeetingCard({ data }: { data: Meeting }) {
                     </div>
                     <span className="text-[#11934A] font-medium text-base">{data.timeRange}</span>
                 </div>
-                <div className="flex gap-2 items-center justify-center">
-                    <button
-                        className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white"
-                        onClick={() => console.log("Edit", data.id)}
-                    >
-                        <PencilSimple size={16} weight="fill" className="text-[#43C17A]" />
-                    </button>
+                {data.type !== "previous" &&
+                    <div className="flex gap-2 items-center justify-center">
+                        <button
+                            className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white"
+                            onClick={() => console.log("Edit", data.financeMeetingSectionsId)}
+                        >
+                            <PencilSimple size={16} weight="fill" className="text-[#43C17A]" />
+                        </button>
 
-                    <button
-                        className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white"
-                        onClick={() => console.log("Delete", data.id)}
-                    >
-                        <Trash size={16} weight="fill" className="text-[#FF0000]" />
-                    </button>
-                </div>
+                        <button
+                            className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white"
+                            onClick={() => onDelete(data)}
+                        >
+                            <Trash size={16} weight="fill" className="text-[#FF0000]" />
+                        </button>
+                    </div>
+                }
             </div>
 
             <div className="p-4 flex-1 flex flex-col gap-3">
@@ -37,7 +40,7 @@ export default function MeetingCard({ data }: { data: Meeting }) {
                         </h2>
                     </div>
                     <span className="bg-[#22c55e] text-[#ffffff] px-3 py-1 rounded-full text-xs whitespace-nowrap">
-                        {data.branch}
+                        {data.branch} - {data.section}
                     </span>
                 </div>
 

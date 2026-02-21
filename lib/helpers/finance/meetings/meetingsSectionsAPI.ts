@@ -14,83 +14,31 @@ export type FinanceMeetingSectionRow = {
 };
 
 
-// export async function fetchFinanceMeetingSections(
-//     financeMeetingId: number,
-// ) {
-//     const { data, error } = await supabase
-//         .from("finance_meetings_sections")
-//         .select(
-//             `
-//       financeMeetingSectionsId,
-//       financeMeetingId,
-//       collegeEducationId,
-//       collegeBranchId,
-//       collegeAcademicYearId,
-//       collegeSectionsId,
-//       createdBy,
-//       createdAt,
-//       updatedAt,
-//       deletedAt
-//     `,
-//         )
-//         .eq("financeMeetingId", financeMeetingId)
-//         .is("deletedAt", null)
-//         .order("financeMeetingSectionsId", { ascending: true });
-
-//     if (error) {
-//         console.error("fetchFinanceMeetingSections error:", error);
-//         throw error;
-//     }
-
-//     return data ?? [];
-// }
-
-// 🔴 MARKED CHANGE — BULK SECTION FETCH
-
-
-
-
-
-// 🔴 MARKED CHANGE — FULL JOIN WITH NAMES
-
-
-
-export async function fetchSectionsForMeetings(
-    meetingIds: number[]
+export async function fetchFinanceMeetingSections(
+    financeMeetingId: number,
 ) {
-    if (!meetingIds.length) return [];
-
     const { data, error } = await supabase
         .from("finance_meetings_sections")
-        .select(`
+        .select(
+            `
+      financeMeetingSectionsId,
       financeMeetingId,
-
-      college_education (
-        collegeEducationId,
-        collegeEducationType
-      ),
-
-      college_branch (
-        collegeBranchId,
-        collegeBranchType,
-        collegeBranchCode
-      ),
-
-      college_academic_year (
-        collegeAcademicYearId,
-        collegeAcademicYear
-      ),
-
-      college_sections (
-        collegeSectionsId,
-        collegeSections
-      )
-    `)
-        .in("financeMeetingId", meetingIds)
-        .is("deletedAt", null);
+      collegeEducationId,
+      collegeBranchId,
+      collegeAcademicYearId,
+      collegeSectionsId,
+      createdBy,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `,
+        )
+        .eq("financeMeetingId", financeMeetingId)
+        .is("deletedAt", null)
+        .order("financeMeetingSectionsId", { ascending: true });
 
     if (error) {
-        console.error("fetchSectionsForMeetings error:", error);
+        console.error("fetchFinanceMeetingSections error:", error);
         throw error;
     }
 

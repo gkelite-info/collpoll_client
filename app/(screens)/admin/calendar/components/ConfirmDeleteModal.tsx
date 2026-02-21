@@ -5,6 +5,7 @@ interface Props {
   onConfirm: () => void;
   onCancel: () => void;
   isDeleting?: boolean;
+  name?:string;
 }
 
 export default function ConfirmDeleteModal({
@@ -12,6 +13,7 @@ export default function ConfirmDeleteModal({
   onConfirm,
   onCancel,
   isDeleting = false,
+  name="event"
 }: Props) {
   if (!open) return null;
 
@@ -22,7 +24,7 @@ export default function ConfirmDeleteModal({
           Delete Event?
         </h3>
         <p className="text-sm text-gray-600 mb-6">
-          Are you sure you want to delete this event? This action cannot be undone.
+          Are you sure you want to delete this {name}? This action cannot be undone.
         </p>
 
         <div className="flex justify-end gap-3">
