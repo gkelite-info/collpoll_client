@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   DownloadSimple,
@@ -13,116 +13,126 @@ import {
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
+import getBranchWiseFinanceSummary from "@/lib/helpers/finance/dashboard/getBranchWiseFinanceSummary";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import toast from "react-hot-toast";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-const cardsData = [
-  {
-    style: "bg-[#E2DAFF]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#6C20CA" weight="fill" />,
-    value: "12.5 Cr",
-    label: "Total Fee Expected",
-  },
-  {
-    style: "bg-[#E6FBEA]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#43C17A" weight="fill" />,
-    value: "10.8 Cr",
-    label: "Total Collected",
-  },
-  {
-    style: "bg-[#FFE2E2]",
-    icon: <CurrencyDollarSimpleIcon size={24} color="#FF0000" weight="fill" />,
-    value: "1.2 Cr",
-    label: "Pending Students",
-  },
-  {
-    style: "bg-[#CEE6FF]",
-    icon: <BuildingApartmentIcon size={24} color="#60AEFF" weight="fill" />,
-    value: "86.4%",
-    label: "Pending Students",
-  },
-];
-
-const initialData = [
-  {
-    branch: "CSE",
-    expected: "₹ 15.0 Cr",
-    collected: "₹ 13.0 Cr",
-    pending: "₹ 2.0 Cr",
-    percent: "86%",
-  },
-  {
-    branch: "EEE",
-    expected: "₹ 12.0 Cr",
-    collected: "₹ 10.0 Cr",
-    pending: "₹ 2.0 Cr",
-    percent: "83%",
-  },
-  {
-    branch: "IT",
-    expected: "₹ 9.0 Cr",
-    collected: "₹ 7.0 Cr",
-    pending: "₹ 2.0 Cr",
-    percent: "78%",
-  },
-  {
-    branch: "ME",
-    expected: "₹ 13.0 Cr",
-    collected: "₹ 10.0 Cr",
-    pending: "₹ 3.0 Cr",
-    percent: "77%",
-  },
-  {
-    branch: "CIVIL",
-    expected: "₹ 6.0 Cr",
-    collected: "₹ 5.0 Cr",
-    pending: "₹ 1.0 Cr",
-    percent: "83%",
-  },
-  {
-    branch: "ECE",
-    expected: "₹ 11.0 Cr",
-    collected: "₹ 9.0 Cr",
-    pending: "₹ 2.0 Cr",
-    percent: "82%",
-  },
-];
-
-export default function BranchFinanceSummary() {
+ export default function BranchFinanceSummary() {
   const router = useRouter();
   const params = useParams();
   const branchParam = (params?.branch as string)?.toUpperCase();
   const [search, setSearch] = useState("");
-  const [branchFilter, setBranchFilter] = useState("All");
-  const [yearFilter, setYearFilter] = useState("All");
-  const [semesterFilter, setSemesterFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const branchOptions = ["All", "CSE", "EEE", "IT", "ME", "CIVIL", "ECE"];
-  const yearOptions = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"];
-  const semesterOptions = [
-    "All",
-    "Sem 1",
-    "Sem 2",
-    "Sem 3",
-    "Sem 4",
-    "Sem 5",
-    "Sem 6",
-    "Sem 7",
-    "Sem 8",
+  // const [branchFilter, setBranchFilter] = useState("All");
+  // const [yearFilter, setYearFilter] = useState("All");
+  // const [semesterFilter, setSemesterFilter] = useState("All");
+  // const [statusFilter, setStatusFilter] = useState("All");
+  const [financeData, setFinanceData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { collegeId, collegeEducationId } = useFinanceManager()
+
+  const formatCurrency = (amount: number) =>
+    `₹ ${amount.toLocaleString("en-IN")}`;
+  const totalExpected = financeData.reduce(
+    (sum: number, b: any) => sum + b.expected,
+    0
+  );
+
+  const totalCollected = financeData.reduce(
+    (sum: number, b: any) => sum + b.collected,
+    0
+  );
+  const totalPending = totalExpected - totalCollected;
+  const overallPercent =
+    totalExpected === 0
+      ? 0
+      : Number(
+        ((totalCollected / totalExpected) * 100).toFixed(2)
+      );
+  const cardsData = [
+    {
+      style: "bg-[#E2DAFF]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#6C20CA"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalExpected),
+      label: "Total Fee Expected",
+    },
+    {
+      style: "bg-[#E6FBEA]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#43C17A"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalCollected),
+      label: "Total Collected",
+    },
+    {
+      style: "bg-[#FFE2E2]",
+      icon: (
+        <CurrencyDollarSimpleIcon
+          size={24}
+          color="#FF0000"
+          weight="fill"
+        />
+      ),
+      value: formatCurrency(totalPending),
+      label: "Total Pending",
+    },
+    {
+      style: "bg-[#CEE6FF]",
+      icon: (
+        <BuildingApartmentIcon
+          size={24}
+          color="#60AEFF"
+          weight="fill"
+        />
+      ),
+      value: `${overallPercent}%`,
+      label: "Collection Rate",
+    },
   ];
-  const statusOptions = ["All", "paid", "pending", "partial"];
+  // const branchOptions = ["All", "CSE", "EEE", "IT", "ME", "CIVIL", "ECE"];
+  // const yearOptions = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"];
+  // const semesterOptions = [
+  //   "All",
+  //   "Sem 1",
+  //   "Sem 2",
+  //   "Sem 3",
+  //   "Sem 4",
+  //   "Sem 5",
+  //   "Sem 6",
+  //   "Sem 7",
+  //   "Sem 8",
+  // ];
+  // const statusOptions = ["All", "paid", "pending", "partial"];
 
   const filteredData = useMemo(() => {
-    return initialData
+    return financeData
       .filter((item) =>
-        item.branch.toLowerCase().includes(search.toLowerCase()),
+        item.branchCode
+          .toLowerCase()
+          .includes(search.toLowerCase())
       )
       .map((item) => ({
-        ...item,
+        branch: item.branchCode,
+        expected: formatCurrency(item.expected),
+        collected: formatCurrency(item.collected),
+        pending: formatCurrency(item.pending),
+        percent: `${item.collectionPercentage}%`,
         action: (
           <span
             className="text-[#22A55D] cursor-pointer hover:underline text-sm font-medium"
             onClick={() =>
               router.push(
-                `/finance/finance-analytics/students/${branchParam}/${item.branch}`,
+                `/finance/finance-analytics/students/${branchParam}/${item.branchCode}`
               )
             }
           >
@@ -130,10 +140,40 @@ export default function BranchFinanceSummary() {
           </span>
         ),
       }));
-  }, [search, branchParam, router]);
+  }, [financeData, search, router]);
+
+  useEffect(() => {
+
+    async function loadFinance() {
+      if (!collegeId || !collegeEducationId) return;
+      setLoading(true);
+
+      try {
+        const data = await getBranchWiseFinanceSummary({
+          collegeId: collegeId,             
+          collegeEducationId: collegeEducationId,    
+        });
+        setFinanceData(data);
+      } catch (err) {
+        toast.error("Failed to load finance data")
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadFinance();
+  }, []);
 
   const handleDownload = () => {
-    downloadCSV(initialData, `${branchParam}-finance-summary`);
+    const exportData = financeData.map((item) => ({
+      Branch: item.branchCode,
+      Expected: item.expected,
+      Collected: item.collected,
+      Pending: item.pending,
+      "Collection %": `${item.collectionPercentage}%`,
+    }));
+
+    downloadCSV(exportData, `${branchParam || "finance"}-summary`);
   };
 
   const columns = [
@@ -148,17 +188,16 @@ export default function BranchFinanceSummary() {
   return (
     <div className="p-2 min-h-screen space-y-6">
       <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-black">
           <CaretLeftIcon
             size={24}
             className="cursor-pointer"
             onClick={() => router.back()}
           />
-          <h2 className="text-2xl font-semibold text-[#282828]">
+          <h2 className="text-2xl font-semibold">
             Total Finance
           </h2>
         </div>
-
         <button
           onClick={handleDownload}
           className="bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
@@ -179,7 +218,21 @@ export default function BranchFinanceSummary() {
         ))}
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[350px] mb-4">
+        <input
+          type="text"
+          placeholder="Search by Branch"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 bg-transparent outline-none text-sm text-[#282828] placeholder:text-[#9CA3AF]"
+        />
+        <MagnifyingGlass
+          size={22}
+          className="text-[#22A55D] ml-2 pointer-events-none"
+        />
+      </div>
+
+      {/* <div className="flex items-center gap-6">
         <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[300px] flex-shrink-0">
           <input
             placeholder="Search by Student Name / Roll No."
@@ -304,19 +357,26 @@ export default function BranchFinanceSummary() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className="-mt-2">
         <h3 className="font-semibold text-lg text-[#282828] mb-4">
           Branch-Wise Finance Summary
         </h3>
 
-        <TableComponent
-          columns={columns}
-          tableData={filteredData}
-          height="55vh"
-        />
+        {loading ? (
+          <div className="flex justify-center items-center h-[200px]">
+            <Loader />
+          </div>
+        ) : (
+          <TableComponent
+            columns={columns}
+            tableData={filteredData}
+            height="55vh"
+          />
+        )}
       </div>
     </div>
   );
 }
+
