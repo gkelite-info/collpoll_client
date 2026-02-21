@@ -25,6 +25,9 @@ type AcademicJoin = {
     college_academic_year: {
         collegeAcademicYear: string;
     };
+    college_sections: {
+        collegeSections: string;
+    }
 };
 
 
@@ -64,7 +67,12 @@ export async function fetchStudentContext(userId: number) {
 
     college_academic_year:collegeAcademicYearId (
       collegeAcademicYear
+    ),
+
+    college_sections:collegeSectionsId (
+    collegeSections
     )
+
   `)
         .eq("studentId", student.studentId)
         .eq("isCurrent", true)
@@ -88,6 +96,9 @@ export async function fetchStudentContext(userId: number) {
         collegeAcademicYearId: academic.collegeAcademicYearId,
         collegeSemesterId: academic.collegeSemesterId ?? null,
         collegeSectionsId: academic.collegeSectionsId ?? null,
+
+        collegeSections: academic.college_sections?.collegeSections ?? null,
+
         collegeAcademicYear: academic.college_academic_year.collegeAcademicYear,
         entryType: student.entryType,
         status: student.status,
