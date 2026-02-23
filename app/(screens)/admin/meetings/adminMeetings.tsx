@@ -1,18 +1,17 @@
 'use client'
 import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { fetchStudentFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
+import { fetchAdminFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import { motion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { Loader } from "../calendar/right/timetable";
 import MeetingCard from "../../finance/meetings/components/MeetingCard";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { useStudent } from "@/app/utils/context/student/useStudent";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 type MeetingType = 'upcoming' | 'previous';
-type MeetingCategory = 'Student';
+type MeetingCategory = 'Admin';
 
 export interface Meeting {
     id: string;
@@ -33,7 +32,7 @@ export interface Meeting {
     sections?: any[];
 }
 
-export default function StudentMeetingsPage() {
+export default function AdminMeetingsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [page, setPage] = useState(1);
     const searchParams = useSearchParams();
@@ -41,11 +40,10 @@ export default function StudentMeetingsPage() {
     const pathname = usePathname();
     const [totalPages, setTotalPages] = useState(1);
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
-    const currentCategory = 'Student';
+    const currentCategory = 'Admin';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-    const { studentId, collegeBranchCode, role } = useUser();
-    const { collegeSectionsId, college_sections } = useStudent();
+    const { adminId, role } = useUser();
 
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
@@ -68,23 +66,22 @@ export default function StudentMeetingsPage() {
     ];
 
     useEffect(() => {
-        if (!studentId || !collegeBranchCode || !collegeSectionsId) {
+        if (!adminId) {
             setMeetings([]);
             return;
         }
-
         loadMeetings();
-    }, [currentType, page, studentId, collegeBranchCode, collegeSectionsId]);
+
+    }, [currentType, page, adminId]);
 
     const loadMeetings = async () => {
         try {
+
             setIsLoading(true);
             setMeetings([]);
 
-            const res = await fetchStudentFinanceMeetings({
+            const res = await fetchAdminFinanceMeetings({
                 role: currentCategory,
-                collegeBranchCode: collegeBranchCode!,
-                collegeSectionsId: Number(collegeSectionsId),
                 type: currentType,
                 page,
                 limit: 10,
@@ -92,7 +89,7 @@ export default function StudentMeetingsPage() {
 
             const finalMeetings: Meeting[] = res.data.map((meeting: any) => ({
                 ...meeting,
-                section: meeting.section || college_sections || "N/A",
+                section: meeting.section || "N/A",
                 date: formatMeetingDate(meeting.date),
             }));
 

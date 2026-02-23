@@ -217,6 +217,89 @@ export async function fetchStudentFinanceMeetings(params: {
     return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
 }
 
+export async function fetchAdminFinanceMeetings(params: {
+    role?: string;
+    type?: "upcoming" | "previous";
+    page?: number;
+    limit?: number;
+}) {
+    const {
+        role = "Admin",
+        type = "upcoming",
+        page = 1,
+        limit = 10,
+    } = params;
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0];
+
+    let query = supabase
+        .from("finance_meetings")
+        .select(`
+            financeMeetingId, 
+            title, 
+            role, 
+            date, 
+            fromTime, 
+            toTime, 
+            meetingLink, 
+            isActive, 
+            deletedAt,
+            finance_meetings_sections (
+                college_education ( collegeEducationType ),
+                college_branch ( collegeBranchCode ),
+                college_sections ( collegeSections )
+            )
+        `, { count: "exact" })
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .eq("role", role);
+
+    if (type === "upcoming") {
+        query = query.or(`date.gt.${today},and(date.eq.${today},toTime.gte.${currentTime})`);
+    } else {
+        query = query.or(`date.lt.${today},and(date.eq.${today},toTime.lt.${currentTime})`);
+    }
+
+    const { data, error, count } = await query
+        .order("date", { ascending: type === "upcoming" })
+        .order("fromTime", { ascending: true })
+        .range(from, to);
+
+    if (error) {
+        console.error("Supabase Error:", error);
+        throw error;
+    }
+
+    const formattedData = (data as any[]).map((row) => {
+        const sectionNames = row.finance_meetings_sections
+            ?.map((s: any) => s.college_sections?.collegeSections)
+            .filter(Boolean)
+            .join(", ") || "All Sections";
+
+        return {
+            id: row.financeMeetingId.toString(),
+            financeMeetingId: row.financeMeetingId,
+            title: row.title,
+            timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
+            educationType: row.finance_meetings_sections?.[0]?.college_education?.collegeEducationType ?? 'N/A',
+            branch: row.finance_meetings_sections?.[0]?.college_branch?.collegeBranchCode ?? 'N/A',
+            date: row.date,
+            participants: 0,
+            section: sectionNames,
+            category: role,
+            type: type,
+            meetingLink: row.meetingLink ?? '',
+        };
+    });
+
+    return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
+}
+
 export async function fetchFinanceMeetingById(
     financeMeetingId: number,
 ) {

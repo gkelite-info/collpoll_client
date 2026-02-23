@@ -35,9 +35,7 @@ export default function PersonalDetails() {
                 setFullName(u.fullName || "");
                 setMobile(u.mobile || "");
                 setEmail(u.email || "");
-                setLinkedIn(u.linkedIn || "");
                 setCollegeId(u.collegeId || null);
-                setCurrentCity(u.currentCity || "")
                 setWorkStatus(u.role === "experienced" ? "experienced" : "fresher");
                 setCollegeCode(u.collegeCode || "");
             }

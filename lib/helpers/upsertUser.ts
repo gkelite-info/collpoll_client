@@ -89,7 +89,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, linkedIn, collegeId, role, currentCity, workStatus, collegeCode, gender")
+      .select("fullName, mobile, email, collegeId, role, collegeCode, gender")
       .eq("auth_id", auth_id)
       .single();
 
@@ -123,7 +123,7 @@ export const upsertAdminEntry = async (payload: {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) throw new Error("User not authenticated"); 
+    if (!user) throw new Error("User not authenticated");
     const { data: creator } = await supabase
       .from("users")
       .select("userId")
@@ -145,7 +145,7 @@ export const upsertAdminEntry = async (payload: {
           gender: payload.gender ?? null,
           collegePublicId: payload.collegePublicId,
           collegeCode: payload.collegeCode ?? null,
-          createdBy: createdByUserId, 
+          createdBy: createdByUserId,
           updatedAt: now,
           createdAt: now,
         },
