@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, ReactNode, useEffect } from "react";
 import {
   BookOpenText,
@@ -12,6 +11,7 @@ import {
   Gear,
   GraduationCap,
   House,
+  Laptop,
   Note,
   Student,
 } from "@phosphor-icons/react";
@@ -104,6 +104,13 @@ export default function AdminNavbar() {
     },
     {
       icon: (isActive) => (
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Meetings",
+      path: "/admin/meetings",
+    },
+    {
+      icon: (isActive) => (
         <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Academic Setup",
@@ -124,7 +131,7 @@ export default function AdminNavbar() {
   }, [pathname]);
 
   return (
-    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
+    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md overflow-y-auto lg:pt-5">
       <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
         Logo
       </div>
