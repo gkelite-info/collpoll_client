@@ -5,23 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useFinanceManager } from '@/app/utils/context/financeManager/useFinanceManager';
 import { fetchBranches, fetchAcademicYears, fetchSections } from '@/lib/helpers/admin/academics/academicDropdowns';
-import { saveFinanceMeetingSection } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
-import { saveFinanceMeeting } from '@/lib/helpers/finance/meetings/meetingsAPI';
+import { fetchFinanceMeetingSections, saveFinanceMeetingSection } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
+import { fetchFinanceMeetingById, saveFinanceMeeting } from '@/lib/helpers/finance/meetings/meetingsAPI';
 interface CreateMeetingModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onSuccess: () => void;
+    editingMeetingId?: number | null;
+    editingSectionId?: number | null;
 }
 
 const getTodayDateString = () => {
     const d = new Date();
-    return d.toISOString().split("T")[0];
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 };
 
-const convertTo24Hour = (
-    hour: string,
-    minute: string,
-    period: "AM" | "PM"
-) => {
+const convertTo24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
     let h = parseInt(hour);
     if (period === "PM" && h !== 12) h += 12;
     if (period === "AM" && h === 12) h = 0;
@@ -32,56 +34,23 @@ const MIN_TIME = 8 * 60;
 const MAX_TIME = 22 * 60;
 
 const validateTimeRange = (
-    sHour: string,
-    sMinute: string,
-    sPeriod: "AM" | "PM",
-    eHour: string,
-    eMinute: string,
-    ePeriod: "AM" | "PM"
+    sHour: string, sMinute: string, sPeriod: "AM" | "PM",
+    eHour: string, eMinute: string, ePeriod: "AM" | "PM"
 ) => {
     const start = convertTo24Hour(sHour, sMinute, sPeriod);
     const end = convertTo24Hour(eHour, eMinute, ePeriod);
     const startInvalid = start < MIN_TIME || start > MAX_TIME;
     const endInvalid = end < MIN_TIME || end > MAX_TIME;
-    if (startInvalid && endInvalid) {
-        toast.error(
-            "Start and End time must be between 8:00 AM and 10:00 PM",
-            { id: "time-error" }
-        );
-        return false;
-    }
-    if (startInvalid) {
-        toast.error(
-            "Start time must be between 8:00 AM and 10:00 PM",
-            { id: "time-error" }
-        );
-        return false;
-    }
-    if (endInvalid) {
-        toast.error(
-            "End time must be between 8:00 AM and 10:00 PM",
-            { id: "time-error" }
-        );
-        return false;
-    }
-    if (start === end) {
-        toast.error(
-            "Start and End time cannot be the same",
-            { id: "time-error" }
-        );
-        return false;
-    }
-    if (end < start) {
-        toast.error(
-            "End time must be greater than start time",
-            { id: "time-error" }
-        );
-        return false;
-    }
+    
+    if (startInvalid && endInvalid) { toast.error("Start and End time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
+    if (startInvalid) { toast.error("Start time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
+    if (endInvalid) { toast.error("End time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
+    if (start === end) { toast.error("Start and End time cannot be the same", { id: "time-error" }); return false; }
+    if (end < start) { toast.error("End time must be greater than start time", { id: "time-error" }); return false; }
     return true;
 };
 
-const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
+const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, editingSectionId }: CreateMeetingModalProps) => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [role, setRole] = useState("Select Role");
@@ -102,9 +71,10 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
     const [inAppNotification, setInAppNotification] = useState(false);
     const [emailNotification, setEmailNotification] = useState(false);
     const [isSectionOpen, setIsSectionOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const sectionDropdownRef = useRef<HTMLDivElement>(null);
-    const { collegeId, collegeEducationId, financeManagerId } = useFinanceManager()
+    const { collegeId, collegeEducationId, financeManagerId } = useFinanceManager();
+    const isEditMode = !!editingMeetingId;
 
     const formatTimeForDB = (hour: string, minute: string, period: "AM" | "PM") => {
         let h = parseInt(hour, 10);
@@ -128,34 +98,80 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
         if (!isOpen || !collegeId || !collegeEducationId) return;
         const loadInitialData = async () => {
             try {
-                const branchData = await fetchBranches(
-                    collegeId,
-                    collegeEducationId
-                );
+                const branchData = await fetchBranches(collegeId, collegeEducationId);
                 setBranches(branchData);
             } catch (error) {
-                toast.error("Failed to load branches")
+                toast.error("Failed to load branches");
             }
         };
         loadInitialData();
     }, [isOpen, collegeId, collegeEducationId]);
 
+    useEffect(() => {
+        if (!isOpen || !editingMeetingId || !collegeId || !collegeEducationId) return;
+
+        const loadEditData = async () => {
+            try {
+                setIsLoading(true);
+                const meeting = await fetchFinanceMeetingById(editingMeetingId);
+                setTitle(meeting.title);
+                setDescription(meeting.description);
+                setRole(meeting.role);
+                setDate(meeting.date);
+                setMeetingLink(meeting.meetingLink);
+                setInAppNotification(meeting.inAppNotification);
+                setEmailNotification(meeting.emailNotification);
+                const fromHour = parseInt(meeting.fromTime.slice(0, 2));
+                const fromMinute = meeting.fromTime.slice(3, 5);
+                const toHour = parseInt(meeting.toTime.slice(0, 2));
+                const toMinute = meeting.toTime.slice(3, 5);
+                setStartHour(String(fromHour % 12 || 12).padStart(2, "0"));
+                setStartMinute(fromMinute);
+                setStartPeriod(fromHour >= 12 ? "PM" : "AM");
+                setEndHour(String(toHour % 12 || 12).padStart(2, "0"));
+                setEndMinute(toMinute);
+                setEndPeriod(toHour >= 12 ? "PM" : "AM");
+                if (meeting.role !== "Admin" && editingSectionId) {
+                    const existingSections = await fetchFinanceMeetingSections(editingMeetingId);
+                    const specificSection = existingSections.find(s => s.financeMeetingSectionsId === editingSectionId);
+
+                    if (specificSection) {
+                        setBranch(specificSection.collegeBranchId);
+                        setYear(specificSection.collegeAcademicYearId);
+                        if (specificSection.collegeSectionsId) {
+                            setSectionsSelected([specificSection.collegeSectionsId]);
+                        }
+                        if (specificSection.collegeBranchId) {
+                            const yearData = await fetchAcademicYears(collegeId, collegeEducationId, specificSection.collegeBranchId);
+                            setYears(yearData);
+                            if (specificSection.collegeAcademicYearId) {
+                                const sectionData = await fetchSections(collegeId, collegeEducationId, specificSection.collegeBranchId, specificSection.collegeAcademicYearId);
+                                setSections(sectionData);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                toast.error("Failed to load meeting data");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadEditData();
+    }, [isOpen, editingMeetingId, editingSectionId, collegeId, collegeEducationId]);
+
     const handleBranchChange = async (value: number) => {
-        if (!collegeId || !collegeEducationId) return
+        if (!collegeId || !collegeEducationId) return;
         setBranch(value);
         setYear(null);
         setSectionsSelected([]);
         setYears([]);
         setSections([]);
         try {
-            const yearData = await fetchAcademicYears(
-                collegeId,
-                collegeEducationId,
-                value
-            );
+            const yearData = await fetchAcademicYears(collegeId, collegeEducationId, value);
             setYears(yearData);
         } catch (error) {
-            toast.error("Failed to load years")
+            toast.error("Failed to load years");
         }
     };
 
@@ -163,25 +179,18 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
         setYear(value);
         setSectionsSelected([]);
         setSections([]);
-        if (!collegeId || !collegeEducationId) return
+        if (!collegeId || !collegeEducationId) return;
         try {
-            const sectionData = await fetchSections(
-                collegeId,
-                collegeEducationId,
-                branch!,
-                value
-            );
+            const sectionData = await fetchSections(collegeId, collegeEducationId, branch!, value);
             setSections(sectionData);
         } catch (error) {
-            toast.error("Failed to load sections")
+            toast.error("Failed to load sections");
         }
     };
 
     const handleSectionToggle = (id: number) => {
         setSectionsSelected((prev) =>
-            prev.includes(id)
-                ? prev.filter((item) => item !== id)
-                : [...prev, id]
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
         );
     };
 
@@ -216,80 +225,29 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
 
     const handleSubmit = async () => {
         try {
-            if (!title.trim()) {
-                toast.error("Meeting title is required");
-                return;
-            }
-            if (!description.trim()) {
-                toast.error("Meeting description is required");
-                return;
-            }
-            if (!role || role === "Select Role") {
-                toast.error("Please select a role");
-                return;
-            }
-            if (!date) {
-                toast.error("Please select meeting date");
-                return;
-            }
-            if (!validateTimeRange(
-                startHour,
-                startMinute,
-                startPeriod,
-                endHour,
-                endMinute,
-                endPeriod
-            )) {
-                return;
-            }
-            if (!inAppNotification && !emailNotification) {
-                toast.error("Please select at least one notification type");
-                return;
-            }
+            if (!title.trim()) { toast.error("Meeting title is required"); return; }
+            if (!description.trim()) { toast.error("Meeting description is required"); return; }
+            if (!role || role === "Select Role") { toast.error("Please select a role"); return; }
+            if (!date) { toast.error("Please select meeting date"); return; }
+            if (!validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)) { return; }
+            if (!inAppNotification && !emailNotification) { toast.error("Please select at least one notification type"); return; }
+            
             if (role !== "Admin") {
-                if (!branch) {
-                    toast.error("Please select branch");
-                    return;
-                }
-                if (!year) {
-                    toast.error("Please select year");
-                    return;
-                }
-                if (sectionsSelected.length === 0) {
-                    toast.error("Please select at least one section");
-                    return;
-                }
-            }
-            if (!meetingLink.trim()) {
-                toast.error("Meeting link is required");
-                return;
-            }
-            try {
-                new URL(meetingLink);
-            } catch {
-                toast.error("Please enter a valid meeting link");
-                return;
-            }
-            if (!financeManagerId) {
-                toast.error("User context missing. Please log in again.");
-                return;
+                if (!branch) { toast.error("Please select branch"); return; }
+                if (!year) { toast.error("Please select year"); return; }
+                if (sectionsSelected.length === 0) { toast.error("Please select at least one section"); return; }
             }
 
+            if (!meetingLink.trim()) { toast.error("Meeting link is required"); return; }
+            try { new URL(meetingLink); } catch { toast.error("Please enter a valid meeting link"); return; }
+            if (!financeManagerId) { toast.error("User context missing. Please log in again."); return; }
+            
             setIsLoading(true);
-
             const dbFromTime = formatTimeForDB(startHour, startMinute, startPeriod);
             const dbToTime = formatTimeForDB(endHour, endMinute, endPeriod);
-
             const meetingRes = await saveFinanceMeeting({
-                title,
-                description,
-                role,
-                date,
-                fromTime: dbFromTime,
-                toTime: dbToTime,
-                meetingLink,
-                inAppNotification,
-                emailNotification
+                id: isEditMode ? editingMeetingId! : undefined,
+                title, description, role, date, fromTime: dbFromTime, toTime: dbToTime, meetingLink, inAppNotification, emailNotification
             }, financeManagerId);
 
             if (!meetingRes.success || !meetingRes.financeMeetingId) {
@@ -297,37 +255,68 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                 return;
             }
 
-            if (role === "admin") {
-                toast.success("Meeting created successfully.");
+            if (role === "Admin") {
+                toast.success(isEditMode ? "Meeting updated successfully." : "Meeting created successfully.");
                 setIsLoading(false);
+                onSuccess();
+                onClose();
                 return;
             }
 
             if (role !== "Admin" && collegeEducationId) {
                 try {
-                    await Promise.all(
-                        sectionsSelected.map((sectionId) =>
-                            saveFinanceMeetingSection({
+                    if (isEditMode && editingSectionId) {
+                        await saveFinanceMeetingSection(
+                            {
+                                id: editingSectionId,
                                 financeMeetingId: meetingRes.financeMeetingId,
-                                collegeEducationId: collegeEducationId,
+                                collegeEducationId,
                                 collegeBranchId: branch,
                                 collegeAcademicYearId: year,
-                                collegeSectionsId: sectionId
-                            }, financeManagerId)
-                        )
-                    );
+                                collegeSectionsId: sectionsSelected[0],
+                            },
+                            financeManagerId
+                        );
+
+                        if (sectionsSelected.length > 1) {
+                            const additionalSections = sectionsSelected.slice(1);
+                            await Promise.all(
+                                additionalSections.map((sectionId) =>
+                                    saveFinanceMeetingSection({
+                                        financeMeetingId: meetingRes.financeMeetingId,
+                                        collegeEducationId,
+                                        collegeBranchId: branch,
+                                        collegeAcademicYearId: year,
+                                        collegeSectionsId: sectionId,
+                                    }, financeManagerId)
+                                )
+                            );
+                        }
+                    } else {
+                        await Promise.all(
+                            sectionsSelected.map((sectionId) =>
+                                saveFinanceMeetingSection({
+                                    financeMeetingId: meetingRes.financeMeetingId,
+                                    collegeEducationId,
+                                    collegeBranchId: branch,
+                                    collegeAcademicYearId: year,
+                                    collegeSectionsId: sectionId,
+                                }, financeManagerId)
+                            )
+                        );
+                    }
                 } catch (sectionErr) {
-                    console.error("Failed to map sections", sectionErr);
-                    toast.error("Meeting created, but failed to link sections.");
+                    toast.error("Meeting saved, but failed to link section.");
                 }
             }
 
-            toast.success("Meeting scheduled successfully");
+            toast.success(isEditMode ? "Meeting updated successfully" : "Meeting scheduled successfully");
+            onSuccess();
             onClose();
         } catch (error) {
             toast.error("Something went wrong. Please try again.");
         } finally {
-            setIsLoading(false)
+            setIsLoading(false);
         }
     };
 
@@ -350,7 +339,9 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                     className="bg-white rounded-lg shadow-xl w-full max-w-112.5 max-h-[90vh] overflow-y-auto flex flex-col"
                 >
                     <div className="p-6 pb-0">
-                        <h2 className="text-2xl font-bold text-[#282828]">Create Meeting</h2>
+                        <h2 className="text-2xl font-bold text-[#282828]">
+                            {isEditMode ? "Edit Meeting" : "Create Meeting"}
+                        </h2>
                     </div>
                     <div className="p-6 space-y-2 pt-0 mt-3">
                         <div className="space-y-1">
@@ -624,7 +615,9 @@ const CreateMeetingModal = ({ isOpen, onClose }: CreateMeetingModalProps) => {
                             disabled={isLoading}
                             className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer"
                         >
-                            {isLoading ? "Scheduling..." : "Schedule"}
+                            {isLoading
+                                ? (isEditMode ? "Updating..." : "Scheduling...")
+                                : (isEditMode ? "Update" : "Schedule")}
                         </button>
                     </div>
                 </motion.div>

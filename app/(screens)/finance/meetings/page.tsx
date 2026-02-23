@@ -17,7 +17,6 @@ import { useUser } from '@/app/utils/context/UserContext';
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Parent' | 'Student' | 'Faculty' | 'Admin';
-
 export interface Meeting {
     id: string;
     financeMeetingId: number;
@@ -27,6 +26,7 @@ export interface Meeting {
     educationType: string;
     branch: string;
     date: string;
+    description: string;
     participants: number;
     year: string;
     section: string;
@@ -53,14 +53,16 @@ const MeetingListContent = () => {
     const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [editingMeetingId, setEditingMeetingId] = useState<number | null>(null);
+    const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
     const currentCategory = (searchParams.get('category') as MeetingCategory) || 'Parent';
     const { financeManagerId } = useFinanceManager()
+    const {role} = useUser()
     const itemsPerPage = 10;
-        
+
     const updateFilter = (key: string, value: string) => {
         setPage(1)
         const params = new URLSearchParams(searchParams.toString());
@@ -93,12 +95,25 @@ const MeetingListContent = () => {
         if (!financeManagerId) return;
         try {
             setIsLoading(true);
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const currentDate = `${year}-${month}-${day}`;
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const currentTime = `${hours}:${minutes}:${seconds}`;
+
             const res = await fetchFinanceMeetings({
                 createdBy: financeManagerId,
                 role: currentCategory,
                 type: currentType,
                 page,
                 limit: itemsPerPage,
+                currentDate,
+                currentTime,
             });
 
             const finalMeetings = res.data.map((meeting) => ({
@@ -122,7 +137,6 @@ const MeetingListContent = () => {
 
     const handleConfirmDelete = async () => {
         if (!meetingToDelete) return;
-
         setIsDeleting(true);
         try {
             if (meetingToDelete.financeMeetingSectionsId) {
@@ -142,8 +156,9 @@ const MeetingListContent = () => {
         }
     };
 
-    const handleEditClick = (financeMeetingId: number) => {
+    const handleEditClick = (financeMeetingId: number, financeMeetingSectionsId: number | null) => {
         setEditingMeetingId(financeMeetingId);
+        setEditingSectionId(financeMeetingSectionsId);
         setIsModalOpen(true);
     };
 
@@ -226,14 +241,14 @@ const MeetingListContent = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 pt-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-6">
                     {isLoading ? (
-                        <div className="col-span-full flex justify-center items-center h-[400px]">
+                        <div className="col-span-full flex justify-center items-center h-[200px]">
                             <Loader />
                         </div>
                     ) : meetings.length > 0 ? (
                         meetings.map((meeting) => (
-                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} role={currentCategory} onEdit={handleEditClick} />
+                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} role={role} category={currentCategory} onEdit={handleEditClick} />
                         ))
                     ) : (
                         <div className="col-span-full py-30 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
@@ -246,7 +261,7 @@ const MeetingListContent = () => {
             </div>
 
             {totalPages > 1 && (
-                <div className="flex justify-center mt-6 overflow-x-auto pb-4">
+                <div className="flex justify-center mt-4 overflow-x-auto pb-4">
                     <div className="flex items-center gap-2 min-w-max px-2">
                         <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -284,15 +299,17 @@ const MeetingListContent = () => {
                 </div>
             )}
 
-            {/* <CreateMeetingModal
+             <CreateMeetingModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
                     setEditingMeetingId(null);
+                    setEditingSectionId(null);
                 }}
                 onSuccess={loadMeetings}
                 editingMeetingId={editingMeetingId}
-            /> */}
+                editingSectionId={editingSectionId}
+            />
 
             <ConfirmDeleteModal
                 open={deleteModalOpen}
