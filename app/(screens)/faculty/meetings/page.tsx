@@ -1,7 +1,7 @@
 'use client'
 import { Suspense } from "react";
 import { Loader } from "../../(student)/calendar/right/timetable";
-import AdminMeetingsPage from "./adminMeetings";
+import FacultyMeetingsPage from "./facultyMeetings";
 
 export default function FacultyMeetings() {
     return (
@@ -10,7 +10,7 @@ export default function FacultyMeetings() {
                 <Loader />
             </div>
         }>
-            <AdminMeetingsPage />
+            <FacultyMeetingsPage />
         </Suspense>
     );
 }

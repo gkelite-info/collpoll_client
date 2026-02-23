@@ -159,7 +159,6 @@ export async function saveFinanceCalendarEvent(
   const now = new Date().toISOString();
 
   if (payload.financeCalendarId) {
-    // 1. UPDATE EXISTING (Leave out createdAt so Postgres doesn't complain)
     const { data, error } = await supabase
       .from("finance_calendar")
       .update({
@@ -185,7 +184,6 @@ export async function saveFinanceCalendarEvent(
       financeCalendarId: data.financeCalendarId,
     };
   } else {
-    // 2. INSERT NEW (Explicitly pass createdAt for new records)
     const { data, error } = await supabase
       .from("finance_calendar")
       .insert({

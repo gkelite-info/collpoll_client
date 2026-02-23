@@ -15,20 +15,19 @@ import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
-import { getOverallStudentsOverview, getOverallStudentsSummary } from "@/lib/helpers/finance/getOverallStudentsOverview";
+import {
+  getOverallStudentsOverview,
+  getOverallStudentsSummary,
+} from "@/lib/helpers/finance/getOverallStudentsOverview";
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-
+import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
 
 function OverallStudentsOverview() {
   const router = useRouter();
 
-  const {
-    collegeId,
-    collegeEducationId,
-    collegeEducationType,
-    loading,
-  } = useFinanceManager();
+  const { collegeId, collegeEducationId, collegeEducationType, loading } =
+    useFinanceManager();
   const [search, setSearch] = useState("");
   const [educationFilter, setEducationFilter] = useState("All");
   const [branchFilter, setBranchFilter] = useState("All");
@@ -50,17 +49,22 @@ function OverallStudentsOverview() {
   const [tableLoading, setTableLoading] = useState(false);
   const [cardsLoading, setCardsLoading] = useState(false);
 
-
-
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [quickInsights, setQuickInsights] = useState({
+    thisWeek: 0,
+    lastWeek: 0,
+    thisMonth: 0,
+    thisYear: 0,
+  });
+
+  const [overallPending, setOverallPending] = useState<number>(0);
+  const [pendingStudentsCount, setPendingStudentsCount] = useState<number>(0);
 
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const statusOptions = ["All", "Paid", "Pending", "Partial"];
-
-
 
   const cardsData = [
     {
@@ -94,13 +98,11 @@ function OverallStudentsOverview() {
 
     const summary = await getOverallStudentsSummary(
       collegeId,
-      collegeEducationId
+      collegeEducationId,
     );
 
     setSummaryCounts(summary);
-
   };
-
 
   const loadStudents = async () => {
     if (!collegeId || !collegeEducationId || loading) return;
@@ -115,9 +117,7 @@ function OverallStudentsOverview() {
           collegeAcademicYearId:
             yearFilter !== "All" ? Number(yearFilter) : undefined,
           collegeSemesterId:
-            semesterFilter !== "All"
-              ? Number(semesterFilter)
-              : undefined,
+            semesterFilter !== "All" ? Number(semesterFilter) : undefined,
           status:
             statusFilter !== "All"
               ? (statusFilter as "Paid" | "Pending" | "Partial")
@@ -125,9 +125,8 @@ function OverallStudentsOverview() {
         },
         currentPage,
         rowsPerPage,
-        search
+        search,
       );
-
 
       setStudentsData(data.students);
       // setCounts(data.counts);
@@ -146,7 +145,6 @@ function OverallStudentsOverview() {
   useEffect(() => {
     loadCardsSummary();
   }, [collegeId, collegeEducationId]);
-
 
   useEffect(() => {
     loadStudents();
@@ -188,9 +186,6 @@ function OverallStudentsOverview() {
     );
   };
 
-
-
-
   const tableData = useMemo(() => {
     return studentsData.map((item) => ({
       studentName: item.studentName,
@@ -204,11 +199,7 @@ function OverallStudentsOverview() {
       status: renderStatus(item.status),
       action: (
         <span
-          onClick={() =>
-            router.push(
-              `/finance/finance-analytics/students/${item.studentId}`
-            )
-          }
+          onClick={() => router.push(`/finance/${item.studentId}`)}
           className="text-[#22A55D] cursor-pointer hover:underline text-sm font-medium"
         >
           View
@@ -217,11 +208,9 @@ function OverallStudentsOverview() {
     }));
   }, [studentsData]);
 
-
   const handleDownload = () => {
     downloadCSV(studentsData, "students-report");
   };
-
 
   const columns = [
     { title: "Student Name", key: "studentName" },
@@ -240,10 +229,7 @@ function OverallStudentsOverview() {
     if (!collegeId || !collegeEducationId || loading) return;
 
     const loadFilters = async () => {
-      const data = await getFinanceFilterOptions(
-        collegeId,
-        collegeEducationId
-      );
+      const data = await getFinanceFilterOptions(collegeId, collegeEducationId);
 
       setBranches(data.branches);
       setYears(data.years);
@@ -364,7 +350,7 @@ function OverallStudentsOverview() {
                       .filter(
                         (y) =>
                           branchFilter === "All" ||
-                          y.collegeBranchId == branchFilter
+                          y.collegeBranchId == branchFilter,
                       )
                       .map((y) => (
                         <option
@@ -400,7 +386,7 @@ function OverallStudentsOverview() {
                       .filter(
                         (s) =>
                           yearFilter === "All" ||
-                          s.collegeAcademicYearId == yearFilter
+                          s.collegeAcademicYearId == yearFilter,
                       )
                       .map((s) => (
                         <option
@@ -457,7 +443,6 @@ function OverallStudentsOverview() {
       />
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-3 mt-8 mb-4">
-
           {/* Prev Button */}
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -488,9 +473,7 @@ function OverallStudentsOverview() {
 
           {/* Next Button */}
           <button
-            onClick={() =>
-              setCurrentPage((p) => Math.min(totalPages, p + 1))
-            }
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
         ${currentPage === totalPages
@@ -500,7 +483,6 @@ function OverallStudentsOverview() {
           >
             <CaretRight size={18} weight="bold" />
           </button>
-
         </div>
       )}
     </div>
