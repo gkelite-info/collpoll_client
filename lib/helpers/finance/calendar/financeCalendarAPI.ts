@@ -97,54 +97,6 @@ export async function fetchExistingFinanceCalendarEvent(payload: {
   return { success: true, data };
 }
 
-// export async function saveFinanceCalendarEvent(
-//   payload: {
-//     financeCalendarId?: number;
-//     eventTitle: string;
-//     eventTopic: string;
-//     date: string;
-//     fromTime: string;
-//     toTime: string;
-//   },
-//   createdBy: number,
-// ) {
-//   const now = new Date().toISOString();
-
-//   const insertData: any = {
-//     eventTitle: payload.eventTitle.trim(),
-//     eventTopic: payload.eventTopic.trim(),
-//     date: payload.date,
-//     fromTime: payload.fromTime,
-//     toTime: payload.toTime,
-//     createdBy,
-//     updatedAt: now,
-//   };
-
-//   if (payload.financeCalendarId) {
-//     insertData.financeCalendarId = payload.financeCalendarId;
-//   } else {
-//     insertData.createdAt = now;
-//   }
-
-//   const { data, error } = await supabase
-//     .from("finance_calendar")
-//     .upsert(insertData, {
-//       onConflict: "date, fromTime, toTime, createdBy",
-//     })
-//     .select("financeCalendarId")
-//     .single();
-
-//   if (error) {
-//     console.error("saveFinanceCalendarEvent error:", error);
-//     return { success: false, error };
-//   }
-
-//   return {
-//     success: true,
-//     financeCalendarId: data.financeCalendarId,
-//   };
-// }
-
 export async function saveFinanceCalendarEvent(
   payload: {
     financeCalendarId?: number;
@@ -225,7 +177,6 @@ export async function saveFinanceCalendarSection(
 ) {
   const now = new Date().toISOString();
 
-  // Dynamically build the payload
   const insertData: any = {
     financeCalendarId: payload.financeCalendarId,
     collegeEducationId: payload.collegeEducationId,
@@ -237,11 +188,10 @@ export async function saveFinanceCalendarSection(
     updatedAt: now,
   };
 
-  // If we have an ID, we are updating. If not, we are inserting, so add createdAt.
   if (payload.financeCalendarSectionId) {
     insertData.financeCalendarSectionId = payload.financeCalendarSectionId;
   } else {
-    insertData.createdAt = now; // <-- Crucial for new inserts!
+    insertData.createdAt = now;
   }
 
   const { data, error } = await supabase

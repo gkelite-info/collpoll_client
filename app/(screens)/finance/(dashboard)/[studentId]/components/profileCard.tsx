@@ -27,7 +27,6 @@ const ProfileDetails = ({ data }: { data: ProfileData }) => {
         </h2>
       </div>
 
-      {/* Details Grid */}
       <div className="flex-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-[13px] items-center">
         <span className="text-gray-600 font-semibold">Course :</span>
         <span className="text-gray-600">{data.course}</span>

@@ -6,6 +6,8 @@ export interface FeePlan {
   applicableFees: number;
   scholarship: number;
   totalPayable: number;
+  components?: { name: string; amount: number }[];
+  gstAmount?: number;
   paidTillNow: number;
   pendingAmount: number;
 }
@@ -58,19 +60,51 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               {formatCurrency(plan.openingBalance)}
             </span>
           </div>
+
           <div className="flex justify-between items-center">
-            <span className="text-gray-700 font-medium">Applicable Fees</span>
-            <span className="text-gray-600">
+            <span className="text-gray-700 font-medium">
+              Base Applicable Fees
+            </span>
+            <span className="text-gray-600 font-semibold">
               {formatCurrency(plan.applicableFees)}
             </span>
           </div>
-          <div className="flex justify-between items-center">
+
+          {plan.components && plan.components.length > 0 && (
+            <div className="pl-5 border-l-4 border-emerald-200 bg-gray-50/50 py-3 pr-4 rounded-r-md space-y-2 my-2">
+              {plan.components.map((comp, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between items-center text-sm"
+                >
+                  <span className="text-gray-600 font-medium">
+                    • {comp.name}
+                  </span>
+                  <span className="text-gray-600">
+                    {formatCurrency(comp.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {plan.gstAmount !== undefined && (
+            <div className="flex justify-between items-center border-t border-gray-100 pt-3 text-[15px]">
+              <span className="text-gray-600 font-medium">GST (18%)</span>
+              <span className="text-gray-600">
+                {formatCurrency(plan.gstAmount)}
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-2">
             <span className="text-gray-700 font-medium">Scholarship</span>
             <span className="text-gray-600">
               {formatCurrency(plan.scholarship)}
             </span>
           </div>
-          <div className="flex justify-between items-center border-t border-dashed pt-2">
+
+          <div className="flex justify-between items-center border-t border-dashed pt-3">
             <span className="text-gray-800 font-bold">Total Payable</span>
             <span className="text-emerald-500 font-bold">
               {formatCurrency(plan.totalPayable)}
@@ -83,8 +117,10 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
             </span>
           </div>
           <div className="flex justify-between items-center pt-2">
-            <span className="text-gray-800 font-bold">Pending Amount</span>
-            <span className="text-emerald-500 font-bold">
+            <span className="text-gray-800 font-bold text-lg">
+              Pending Amount
+            </span>
+            <span className="text-red-500 font-bold text-lg">
               {formatCurrency(plan.pendingAmount)}
             </span>
           </div>
