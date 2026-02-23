@@ -35,7 +35,6 @@ import { StaticDatePicker } from "@mui/x-date-pickers/StaticDatePicker";
 import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/dashboard/getFinanceYearSemesterCollectionSummary";
 import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOverallFinanceTotal";
 
-
 // --- Types & Data ---
 
 interface Data {
@@ -204,13 +203,8 @@ const Header = ({
       </h1>
 
       <div className="flex gap-4 text-[10px] font-semibold text-gray-500">
-
         {/* Education Type */}
-        <Dropdown
-          label="Education Type"
-          value={educationType}
-          disabled
-        />
+        <Dropdown label="Education Type" value={educationType} disabled />
 
         {/* Branch */}
         <Dropdown
@@ -221,12 +215,7 @@ const Header = ({
         />
 
         {/* Year */}
-        <Dropdown
-          label="Year"
-          value={year}
-          onClick={onYearClick}
-          isYear
-        />
+        <Dropdown label="Year" value={year} onClick={onYearClick} isYear />
       </div>
     </div>
   );
@@ -236,7 +225,6 @@ interface DropdownOption {
   label: string;
   value: string;
 }
-
 
 const Dropdown = ({
   label,
@@ -279,9 +267,10 @@ const Dropdown = ({
           <div
             onClick={disabled ? undefined : onClick}
             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
-              ${disabled
-                ? "cursor-not-allowed opacity-70"
-                : "cursor-pointer hover:bg-green-100"
+              ${
+                disabled
+                  ? "cursor-not-allowed opacity-70"
+                  : "cursor-pointer hover:bg-green-100"
               }
             `}
           >
@@ -374,7 +363,6 @@ const Dropdown = ({
 //   );
 // };
 
-
 // const Dropdown = ({
 //   label,
 //   value,
@@ -396,8 +384,6 @@ const Dropdown = ({
 //     </div>
 //   </div>
 // );
-
-
 
 // const Header = () => (
 //   <div className="flex justify-between items-center mb-3 px-1">
@@ -444,8 +430,9 @@ const TopStat = ({
       `}
     >
       <div
-        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"
-          } flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${
+          isP ? "bg-white/20" : "bg-white"
+        } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -457,8 +444,9 @@ const TopStat = ({
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"
-            }`}
+          className={`text-[10px] font-medium ${
+            isP ? "text-purple-200" : "text-blue-800/70"
+          }`}
         >
           {label}
         </div>
@@ -537,12 +525,8 @@ export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const {
-    collegeId,
-    collegeEducationId,
-    collegeEducationType,
-    loading,
-  } = useFinanceManager();
+  const { collegeId, collegeEducationId, collegeEducationType, loading } =
+    useFinanceManager();
 
   console.log("🏫 Finance Context:", {
     collegeId,
@@ -550,7 +534,6 @@ export default function DashboardPage() {
     collegeEducationType,
     loading,
   });
-
 
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
@@ -566,20 +549,16 @@ export default function DashboardPage() {
   });
   const [overallFinanceTotal, setOverallFinanceTotal] = useState<number>(0);
 
-
   const selectedBranchId =
     selectedBranch === "ALL"
       ? undefined
-      : branches.find(
-        (b) => b.collegeBranchCode === selectedBranch
-      )?.collegeBranchId;
-
+      : branches.find((b) => b.collegeBranchCode === selectedBranch)
+          ?.collegeBranchId;
 
   const selectedAcademicYearId =
     selectedYear !== "Year"
-      ? years.find(
-        (y) => y.collegeAcademicYear === selectedYear
-      )?.collegeAcademicYearId
+      ? years.find((y) => y.collegeAcademicYear === selectedYear)
+          ?.collegeAcademicYearId
       : undefined;
 
   console.log("🎯 Selected Filters:", {
@@ -600,15 +579,11 @@ export default function DashboardPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-
   useEffect(() => {
     const loadDashboardStats = async () => {
       if (!loading && collegeId && collegeEducationId) {
         try {
-          const stats = await getOverallStudents(
-            collegeId,
-            collegeEducationId
-          );
+          const stats = await getOverallStudents(collegeId, collegeEducationId);
           setOverallStudents(stats);
         } catch (err) {
           console.error("Dashboard stats error:", err);
@@ -619,14 +594,13 @@ export default function DashboardPage() {
     loadDashboardStats();
   }, [loading, collegeId, collegeEducationId]);
 
-
   useEffect(() => {
     const loadFilters = async () => {
       if (!loading && collegeId && collegeEducationId) {
         try {
           const filterData = await getFinanceFilterOptions(
             collegeId,
-            collegeEducationId
+            collegeEducationId,
           );
 
           setBranches(filterData.branches || []);
@@ -686,13 +660,12 @@ export default function DashboardPage() {
       }
 
       try {
-        const summary =
-          await getFinanceYearSemesterCollectionSummary({
-            collegeId,
-            collegeEducationId,
-            collegeBranchId: selectedBranchId,
-            selectedYear,
-          });
+        const summary = await getFinanceYearSemesterCollectionSummary({
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: selectedBranchId,
+          selectedYear,
+        });
 
         setFinanceSummary({
           academicYearTotal: summary.academicYearTotal ?? 0,
@@ -708,17 +681,22 @@ export default function DashboardPage() {
 
     loadFinanceSummary();
   }, [
-    loading,              // ✅ keep this
+    loading, // ✅ keep this
     collegeId,
     collegeEducationId,
-    selectedBranch,       // ✅ use branch string instead of derived id
+    selectedBranch, // ✅ use branch string instead of derived id
     selectedYear,
   ]);
 
   const handleFeeCollection = () => {
-    router.push('/finance?feeCollection');
-    return
-  }
+    router.push("/finance?feeCollection");
+    return;
+  };
+
+  const handleOverallFinance = () => {
+    router.push("/finance/finance-analytics/students/1");
+    return;
+  };
 
   const BASE_YEAR = 2026;
   const CURRENT_YEAR = new Date().getFullYear();
@@ -800,7 +778,9 @@ export default function DashboardPage() {
                 label="Overall Students"
                 theme="purple"
                 onClick={() =>
-                  router.push(`/finance/finance-analytics/students?studentsCount=${overallStudents}`)
+                  router.push(
+                    `/finance/finance-analytics/students?studentsCount=${overallStudents}`,
+                  )
                 }
               />
             </div>
@@ -810,6 +790,7 @@ export default function DashboardPage() {
                 val={`₹ ${overallFinanceTotal.toLocaleString()}`}
                 label="Overall Finance"
                 theme="blue"
+                onClick={handleOverallFinance}
               />
             </div>
           </div>
@@ -858,10 +839,17 @@ export default function DashboardPage() {
           <div className="col-span-3">
             <Card className="h-[220px] flex flex-col">
               <div className="flex items-center justify-between mb-3">
-                <h3 style={{ fontSize: 11, fontWeight: "700", color: "#282828" }}>
+                <h3
+                  style={{ fontSize: 11, fontWeight: "700", color: "#282828" }}
+                >
                   Fee Collection by year
                 </h3>
-                <CaretRightIcon size={16} weight="bold" className="cursor-pointer" onClick={handleFeeCollection} />
+                <CaretRightIcon
+                  size={16}
+                  weight="bold"
+                  className="cursor-pointer"
+                  onClick={handleFeeCollection}
+                />
               </div>
               <div className="flex-1 space-y-2">
                 {financeSummary.yearWiseData.map((yearData: any, i: number) => (
@@ -1031,7 +1019,9 @@ export default function DashboardPage() {
                         weight="bold"
                         className="cursor-pointer text-[#282828]"
                         onClick={() => {
-                          const params = new URLSearchParams(searchParams.toString());
+                          const params = new URLSearchParams(
+                            searchParams.toString(),
+                          );
 
                           // convert label to router value
                           const range = d.label
@@ -1040,7 +1030,9 @@ export default function DashboardPage() {
 
                           params.set("range", range);
 
-                          router.push(`/finance/fee-collection/payments?range=${range}`);
+                          router.push(
+                            `/finance/fee-collection/payments?range=${range}`,
+                          );
                         }}
                       />
                     </div>
