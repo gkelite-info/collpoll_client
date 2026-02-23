@@ -24,6 +24,8 @@ export async function fetchFinanceMeetings(params: {
     type?: "upcoming" | "previous";
     page?: number;
     limit?: number;
+    currentDate: string;
+    currentTime: string;
 }) {
     const {
         createdBy,
@@ -31,22 +33,13 @@ export async function fetchFinanceMeetings(params: {
         type = "upcoming",
         page = 1,
         limit = 10,
+        currentDate,
+        currentTime
     } = params;
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
-
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const currentTime = `${hours}:${minutes}:${seconds}`;
     const isSectionedRole = role === "Parent" || role === "Student" || role === "Faculty";
-
     if (isSectionedRole) {
         let query = supabase
             .from("finance_meetings_sections")
@@ -67,19 +60,17 @@ export async function fetchFinanceMeetings(params: {
             .eq("finance_meetings.role", role);
 
         if (type === "upcoming") {
-            query = query.or(`date.gt.${today},and(date.eq.${today},toTime.gte."${currentTime}")`, { foreignTable: "finance_meetings" });
+            query = query.or(`date.gt.${currentDate},and(date.eq.${currentDate},toTime.gte.${currentTime})`, { foreignTable: "finance_meetings" });
         } else {
-            query = query.or(`date.lt.${today},and(date.eq.${today},toTime.lt."${currentTime}")`, { foreignTable: "finance_meetings" });
+            query = query.or(`date.lt.${currentDate},and(date.eq.${currentDate},toTime.lt.${currentTime})`, { foreignTable: "finance_meetings" });
         }
-
-
+        const isAscending = type === "upcoming";
         const { data, error, count } = await query
-            .order("date", { foreignTable: "finance_meetings", ascending: type === "upcoming" })
-            .order("fromTime", { foreignTable: "finance_meetings", ascending: true })
+            .order("date", { foreignTable: "finance_meetings", ascending: isAscending })
+            .order("fromTime", { foreignTable: "finance_meetings", ascending: isAscending })
             .range(from, to);
 
         if (error) throw error;
-
         const formattedData = (data as any[]).map((row) => ({
             id: `${row.finance_meetings.financeMeetingId}-${row.financeMeetingSectionsId}`,
             financeMeetingId: row.finance_meetings.financeMeetingId,
@@ -89,6 +80,7 @@ export async function fetchFinanceMeetings(params: {
             educationType: row.college_education?.collegeEducationType ?? '',
             branch: row.college_branch?.collegeBranchCode ?? row.college_branch?.collegeBranchType ?? '',
             date: row.finance_meetings.date,
+            description : row.finance_meetings.description,
             participants: 0,
             year: row.college_academic_year?.collegeAcademicYear ?? '',
             section: row.college_sections?.collegeSections ?? '',
@@ -97,7 +89,6 @@ export async function fetchFinanceMeetings(params: {
             type: type as any,
             meetingLink: row.finance_meetings.meetingLink ?? '',
         }));
-
         return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
 
     } else {
@@ -110,18 +101,17 @@ export async function fetchFinanceMeetings(params: {
             .eq("role", role);
 
         if (type === "upcoming") {
-            query = query.or(`date.gt.${today},and(date.eq.${today},toTime.gte."${currentTime}")`);
+            query = query.or(`date.gt.${currentDate},and(date.eq.${currentDate},toTime.gte.${currentTime})`);
         } else {
-            query = query.or(`date.lt.${today},and(date.eq.${today},toTime.lt."${currentTime}")`);
+            query = query.or(`date.lt.${currentDate},and(date.eq.${currentDate},toTime.lt.${currentTime})`);
         }
-
+        const isAscending = type === "upcoming";
         const { data, error, count } = await query
-            .order("date", { ascending: type === "upcoming" })
-            .order("fromTime", { ascending: true })
+            .order("date", { ascending: isAscending })
+            .order("fromTime", { ascending: isAscending })
             .range(from, to);
 
         if (error) throw error;
-
         const formattedData = (data as any[]).map((row) => ({
             id: String(row.financeMeetingId),
             financeMeetingId: row.financeMeetingId,
@@ -131,6 +121,7 @@ export async function fetchFinanceMeetings(params: {
             educationType: '',
             branch: '',
             date: row.date,
+            description: row.description,
             participants: 0,
             year: '',
             section: '',
@@ -139,7 +130,6 @@ export async function fetchFinanceMeetings(params: {
             type: type as any,
             meetingLink: row.meetingLink ?? '',
         }));
-
         return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
     }
 }
@@ -206,6 +196,7 @@ export async function fetchStudentFinanceMeetings(params: {
         timeRange: `${row.finance_meetings.fromTime.slice(0, 5)} - ${row.finance_meetings.toTime.slice(0, 5)}`,
         educationType: row.college_education?.collegeEducationType ?? '',
         branch: row.college_branch?.collegeBranchCode ?? '',
+        description : row.finance_meetings.description,
         date: row.finance_meetings.date,
         participants: 0,
         section: row.college_sections?.collegeSections ?? '',
@@ -288,6 +279,7 @@ export async function fetchAdminFinanceMeetings(params: {
             timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
             educationType: row.finance_meetings_sections?.[0]?.college_education?.collegeEducationType ?? 'N/A',
             branch: row.finance_meetings_sections?.[0]?.college_branch?.collegeBranchCode ?? 'N/A',
+            description : row.finance_meetings.description,
             date: row.date,
             participants: 0,
             section: sectionNames,
@@ -357,18 +349,17 @@ export async function fetchFacultyFinanceMeetings(params: {
 
     if (error) throw error;
 
-    // Now 'row' represents a specific SECTION linked to a meeting
     const formattedData = (data as any[]).map((row) => ({
-        // Unique ID for each card (MeetingID + SectionID)
         id: `${row.finance_meetings.financeMeetingId}-${row.financeMeetingSectionsId}`,
         financeMeetingId: row.finance_meetings.financeMeetingId,
         title: row.finance_meetings.title,
         timeRange: `${row.finance_meetings.fromTime.slice(0, 5)} - ${row.finance_meetings.toTime.slice(0, 5)}`,
         educationType: row.college_education?.collegeEducationType ?? 'N/A',
         branch: row.college_branch?.collegeBranchCode ?? 'N/A',
+        description : row.finance_meetings.description,
         date: row.finance_meetings.date,
         participants: 0,
-        section: row.college_sections?.collegeSections ?? 'N/A', // Single section name
+        section: row.college_sections?.collegeSections ?? 'N/A',
         category: role,
         type: type,
         meetingLink: row.finance_meetings.meetingLink ?? '',
@@ -394,7 +385,6 @@ export async function fetchFinanceMeetingById(
     return data as FinanceMeetingRow;
 }
 
-
 export async function saveFinanceMeeting(
     payload: {
         id?: number;
@@ -411,12 +401,34 @@ export async function saveFinanceMeeting(
     financeManagerId: number,
 ) {
     const now = new Date().toISOString();
+    if (payload.id) {
+        const { data, error } = await supabase
+            .from("finance_meetings")
+            .update({
+                title: payload.title.trim(),
+                description: payload.description.trim(),
+                role: payload.role,
+                date: payload.date,
+                fromTime: payload.fromTime,
+                toTime: payload.toTime,
+                meetingLink: payload.meetingLink.trim(),
+                inAppNotification: payload.inAppNotification ?? false,
+                emailNotification: payload.emailNotification ?? false,
+                updatedAt: now,
+            })
+            .eq("financeMeetingId", payload.id)
+            .select("financeMeetingId")
+            .single();
 
-    const { data, error } = await supabase
-        .from("finance_meetings")
-        .upsert(
-            {
-                financeMeetingId: payload.id,
+        if (error) {
+            console.error("updateFinanceMeeting error:", error);
+            return { success: false, error };
+        }
+        return { success: true, financeMeetingId: data.financeMeetingId };
+    } else {
+        const { data, error } = await supabase
+            .from("finance_meetings")
+            .insert({
                 title: payload.title.trim(),
                 description: payload.description.trim(),
                 role: payload.role,
@@ -427,25 +439,18 @@ export async function saveFinanceMeeting(
                 inAppNotification: payload.inAppNotification ?? false,
                 emailNotification: payload.emailNotification ?? false,
                 createdBy: financeManagerId,
-                createdAt: payload.id ? undefined : now,
+                createdAt: now,
                 updatedAt: now,
-            },
-            {
-                onConflict: "date, fromTime, toTime, createdBy",
-            },
-        )
-        .select("financeMeetingId")
-        .single();
+            })
+            .select("financeMeetingId")
+            .single();
 
-    if (error) {
-        console.error("saveFinanceMeeting error:", error);
-        return { success: false, error };
+        if (error) {
+            console.error("insertFinanceMeeting error:", error);
+            return { success: false, error };
+        }
+        return { success: true, financeMeetingId: data.financeMeetingId };
     }
-
-    return {
-        success: true,
-        financeMeetingId: data.financeMeetingId,
-    };
 }
 
 
@@ -464,6 +469,5 @@ export async function deactivateFinanceMeeting(
         console.error("deactivateFinanceMeeting error:", error);
         return { success: false };
     }
-
     return { success: true };
 }
