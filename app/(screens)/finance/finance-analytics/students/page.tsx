@@ -55,7 +55,7 @@ function OverallStudentsOverview() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const rowsPerPage = 10; 
+  const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const statusOptions = ["All", "Paid", "Pending", "Partial"];
@@ -134,9 +134,9 @@ function OverallStudentsOverview() {
       setTotalRecords(data.totalCount ?? 0);
 
 
-    } catch (error) {
-      console.error("Error loading students data:", error);
-      toast.error("vamshi.");
+    } catch (error: any) {
+      console.error(" Error loading students data:", error?.message || error);
+      toast.error(error?.message || "Failed to load students");
     }
     finally {
       setTableLoading(false);
@@ -194,7 +194,7 @@ function OverallStudentsOverview() {
   const tableData = useMemo(() => {
     return studentsData.map((item) => ({
       studentName: item.studentName,
-      rollNo: item.rollNo,
+      rollNo: item.studentId,   // ✅ changed here
       educationType: collegeEducationType,
       branch: item.branchCode,
       year: item.yearName,
@@ -225,7 +225,7 @@ function OverallStudentsOverview() {
 
   const columns = [
     { title: "Student Name", key: "studentName" },
-    { title: "Roll No.", key: "rollNo" },
+    { title: "Student ID", key: "rollNo" },
     { title: "Education Type", key: "educationType" },
     { title: "Branch", key: "branch" },
     { title: "Year", key: "year" },

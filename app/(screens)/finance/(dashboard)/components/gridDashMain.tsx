@@ -189,13 +189,11 @@ const Header = ({
   year: string;
   onYearClick: () => void;
 }) => {
-  const branchOptions = [
-    { label: "All", value: "ALL" },
-    ...(branches?.map((b) => ({
+  const branchOptions =
+    branches?.map((b) => ({
       label: b.collegeBranchCode,
       value: b.collegeBranchCode,
-    })) || []),
-  ];
+    })) || [];
 
   return (
     <div className="flex justify-between items-center mb-3 px-1">
@@ -556,7 +554,7 @@ export default function DashboardPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [years, setYears] = useState<any[]>([]);
   const [yearModalOpen, setYearModalOpen] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<string>("ALL");
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear);
   const yearRef = React.useRef<HTMLDivElement>(null);
@@ -629,19 +627,16 @@ export default function DashboardPage() {
             collegeEducationId
           );
 
-          setBranches(filterData.branches || []);
+          const branchList = filterData.branches || [];
+
+          setBranches(branchList);
           setYears(filterData.years || []);
 
-          console.log("📂 Filter Data Loaded:", filterData);
+          // ✅ Set default branch only once
+          if (branchList.length > 0) {
+            setSelectedBranch(branchList[0].collegeBranchCode);
+          }
 
-          // Auto select first branch + year
-          // if (filterData.branches?.length > 0) {
-          //   setSelectedBranch(filterData.branches[0].collegeBranchCode);
-          // }
-
-          // if (filterData.years?.length > 0) {
-          //   setSelectedYear(filterData.years[0].collegeAcademicYear);
-          // }
         } catch (err) {
           console.error("Filter load error:", err);
         }
@@ -650,7 +645,7 @@ export default function DashboardPage() {
 
     loadFilters();
   }, [loading, collegeId, collegeEducationId]);
-
+  
   useEffect(() => {
     const loadOverallFinance = async () => {
       if (!collegeId || !collegeEducationId) return;
@@ -673,16 +668,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFinanceSummary = async () => {
       if (
+        loading ||                      // ⬅ wait for context
         !collegeId ||
         !collegeEducationId ||
-        selectedBranch === "ALL" ||
+        !selectedBranchId ||            // ⬅ VERY IMPORTANT
         !selectedYear
       ) {
-        setFinanceSummary({
-          academicYearTotal: 0,
-          yearWiseData: defaultYearWiseData,
-        });
-        return;
+        return;                         // ⬅ DO NOT reset to 0
       }
 
       try {
@@ -708,10 +700,10 @@ export default function DashboardPage() {
 
     loadFinanceSummary();
   }, [
-    loading,              // ✅ keep this
+    loading,
     collegeId,
     collegeEducationId,
-    selectedBranch,       // ✅ use branch string instead of derived id
+    selectedBranchId,   // ⬅ make sure this is here
     selectedYear,
   ]);
 
@@ -722,6 +714,11 @@ export default function DashboardPage() {
 
   const BASE_YEAR = 2026;
   const CURRENT_YEAR = new Date().getFullYear();
+
+  const trendData = financeSummary.yearWiseData.map((item) => ({
+    name: item.year,
+    value: Number((item.total / 100000).toFixed(1)),
+  }));
 
   return (
     <div className="min-h-screenflex justify-center font-sans text-gray-900">
@@ -897,12 +894,13 @@ export default function DashboardPage() {
                   </div>
                 ))} */}
               </div>
-              <div className="bg-[#E5F6EC] px-2 py-1.5 rounded mt-2 flex justify-between items-center">
-                <span className="font-bold text-gray-700 text-[10px]">
-                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
+              <div className="bg-[#E5F6EC] px-3 py-2 rounded-md mt-3 flex justify-between items-center">
+                <span className="font-semibold text-gray-700 text-[12px]">
+                  Total
                 </span>
-                <p className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-bold">
-                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
+
+                <p className="bg-[#1e293b] text-white px-3 py-1 rounded-full text-[11px] font-bold font-mono">
+                  ₹ {financeSummary.academicYearTotal?.toLocaleString() || "0"}
                 </p>
               </div>
             </Card>
@@ -925,7 +923,7 @@ export default function DashboardPage() {
               <div className="flex-1 w-full text-[9px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={data.trend}
+                    data={trendData}
                     margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
                     barSize={28}
                   >

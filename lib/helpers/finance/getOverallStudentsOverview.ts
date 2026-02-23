@@ -86,6 +86,21 @@ export async function getOverallStudentsOverview(
         );
     }
 
+    /* -----------------------------
+   🔍 SEARCH LOGIC
+------------------------------ */
+    if (search && search.trim() !== "") {
+        const searchValue = search.trim();
+
+        // If numeric → search by studentId
+        if (!isNaN(Number(searchValue))) {
+            query = query.eq("studentId", Number(searchValue));
+        } else {
+            // Search by student name
+            query = query.ilike("users.fullName", `%${searchValue}%`);
+        }
+    }
+
     const { data: students, error, count } = await query.range(from, to);
 
 
@@ -217,9 +232,9 @@ export async function getOverallStudentsOverview(
 
     console.log("🎯 FILTERED RESULT:", filtered);
 
-    if (search && search.trim() !== "") {
-        query = query.ilike("users.fullName", `%${search.trim()}%`);
-    }
+    // if (search && search.trim() !== "") {
+    //     query = query.ilike("users.fullName", `%${search.trim()}%`);
+    // }
 
 
     return {
