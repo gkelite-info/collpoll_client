@@ -15,7 +15,7 @@ const formatToAMPM = (timeStr: string) => {
     return `${String(hour).padStart(2, '0')}:${minuteStr} ${ampm}`;
 };
 
-export default function MeetingCard({ data, onDelete, role, category, onEdit, }: { data: Meeting, onDelete: (meeting: Meeting) => void; role: string | null, category?: string | null, onEdit?: (meeting: number, sectionId: number | null) => void; },) {
+export default function MeetingCard({ data, onDelete, role, category, onEdit, }: { data: Meeting, onDelete?: (meeting: Meeting) => void; role: string | null, category?: string | null, onEdit?: (meeting: number, sectionId: number | null) => void; },) {
     const [fromTime, toTime] = data.timeRange.split(" - ");
     const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,7 +48,7 @@ export default function MeetingCard({ data, onDelete, role, category, onEdit, }:
                                 className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white"
                                 onClick={(e: any) => {
                                     e.stopPropagation();
-                                    onDelete(data)
+                                    onDelete?.(data)
                                 }
                                 }
                             >
