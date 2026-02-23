@@ -1,16 +1,15 @@
 "use client";
-
 import { useState, ReactNode, useEffect } from "react";
 import {
     BuildingOffice,
     Calendar,
     CheckCircle,
     ClipboardText,
-    CurrencyCircleDollar,
     FolderOpen,
     Gear,
     GraduationCap,
     House,
+    Laptop,
     Note,
     Student,
 } from "@phosphor-icons/react";
@@ -90,6 +89,13 @@ export default function FacultyNavbar() {
             ),
             label: "Drive",
             path: "/faculty/drive",
+        },
+        {
+            icon: (isActive) => (
+                <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Meetings",
+            path: "/faculty/meetings",
         },
         // {
         //     icon: (isActive) => (
