@@ -21,7 +21,6 @@ import {
 } from "@/lib/helpers/finance/getOverallStudentsOverview";
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
 
 function OverallStudentsOverview() {
   const router = useRouter();
@@ -57,9 +56,6 @@ function OverallStudentsOverview() {
     thisMonth: 0,
     thisYear: 0,
   });
-
-  const [overallPending, setOverallPending] = useState<number>(0);
-  const [pendingStudentsCount, setPendingStudentsCount] = useState<number>(0);
 
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);

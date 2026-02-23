@@ -13,7 +13,6 @@ export type FinanceMeetingSectionRow = {
     deletedAt: string | null;
 };
 
-
 export async function fetchFinanceMeetingSections(
     financeMeetingId: number,
 ) {
@@ -45,7 +44,6 @@ export async function fetchFinanceMeetingSections(
     return data ?? [];
 }
 
-
 export async function saveFinanceMeetingSection(
     payload: {
         id?: number;
@@ -58,38 +56,47 @@ export async function saveFinanceMeetingSection(
     financeManagerId: number,
 ) {
     const now = new Date().toISOString();
+    if (payload.id) {
+        const { data, error } = await supabase
+            .from("finance_meetings_sections")
+            .update({
+                collegeEducationId: payload.collegeEducationId,
+                collegeBranchId: payload.collegeBranchId ?? null,
+                collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
+                collegeSectionsId: payload.collegeSectionsId ?? null,
+                updatedAt: now,
+            })
+            .eq("financeMeetingSectionsId", payload.id)
+            .select("financeMeetingSectionsId")
+            .single();
 
-    const { data, error } = await supabase
-        .from("finance_meetings_sections")
-        .upsert(
-            {
-                financeMeetingSectionsId: payload.id,
+        if (error) {
+            console.error("updateFinanceMeetingSection error:", error);
+            return { success: false, error };
+        }
+
+        return { success: true, financeMeetingSectionsId: data.financeMeetingSectionsId };
+    } else {
+        const { data, error } = await supabase
+            .from("finance_meetings_sections")
+            .insert({
                 financeMeetingId: payload.financeMeetingId,
                 collegeEducationId: payload.collegeEducationId,
                 collegeBranchId: payload.collegeBranchId ?? null,
                 collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
                 collegeSectionsId: payload.collegeSectionsId ?? null,
                 createdBy: financeManagerId,
-                createdAt: payload.id ? undefined : now,
+                createdAt: now,
                 updatedAt: now,
-            },
-            {
-                onConflict:
-                    "financeMeetingId, collegeEducationId, collegeBranchId, collegeAcademicYearId, collegeSectionsId",
-            },
-        )
-        .select("financeMeetingSectionsId")
-        .single();
-
-    if (error) {
-        console.error("saveFinanceMeetingSection error:", error);
-        return { success: false, error };
+            })
+            .select("financeMeetingSectionsId")
+            .single();
+        if (error) {
+            console.error("insertFinanceMeetingSection error:", error);
+            return { success: false, error };
+        }
+        return { success: true, financeMeetingSectionsId: data.financeMeetingSectionsId };
     }
-
-    return {
-        success: true,
-        financeMeetingSectionsId: data.financeMeetingSectionsId,
-    };
 }
 
 export async function deleteFinanceMeetingSection(
@@ -110,7 +117,6 @@ export async function deleteFinanceMeetingSection(
     return { success: true };
 }
 
-
 export async function deleteAllFinanceMeetingSections(
     financeMeetingId: number,
 ) {
@@ -126,6 +132,5 @@ export async function deleteAllFinanceMeetingSections(
         console.error("deleteAllFinanceMeetingSections error:", error);
         return { success: false };
     }
-
     return { success: true };
 }

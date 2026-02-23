@@ -22,6 +22,7 @@ export interface Meeting {
     timeRange: string;
     educationType: string;
     branch: string;
+    description: string;
     date: string;
     participants: number;
     year: string;
