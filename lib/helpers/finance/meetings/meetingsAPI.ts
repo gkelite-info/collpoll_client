@@ -80,7 +80,7 @@ export async function fetchFinanceMeetings(params: {
             educationType: row.college_education?.collegeEducationType ?? '',
             branch: row.college_branch?.collegeBranchCode ?? row.college_branch?.collegeBranchType ?? '',
             date: row.finance_meetings.date,
-            description : row.finance_meetings.description,
+            description: row.finance_meetings.description,
             participants: 0,
             year: row.college_academic_year?.collegeAcademicYear ?? '',
             section: row.college_sections?.collegeSections ?? '',
@@ -196,7 +196,7 @@ export async function fetchStudentFinanceMeetings(params: {
         timeRange: `${row.finance_meetings.fromTime.slice(0, 5)} - ${row.finance_meetings.toTime.slice(0, 5)}`,
         educationType: row.college_education?.collegeEducationType ?? '',
         branch: row.college_branch?.collegeBranchCode ?? '',
-        description : row.finance_meetings.description,
+        description: row.finance_meetings.description,
         date: row.finance_meetings.date,
         participants: 0,
         section: row.college_sections?.collegeSections ?? '',
@@ -231,14 +231,14 @@ export async function fetchAdminFinanceMeetings(params: {
     let query = supabase
         .from("finance_meetings")
         .select(`
-            financeMeetingId, 
-            title, 
-            role, 
-            date, 
-            fromTime, 
-            toTime, 
-            meetingLink, 
-            isActive, 
+            financeMeetingId,
+            title,
+            role,
+            date,
+            fromTime,
+            toTime,
+            meetingLink,
+            isActive,
             deletedAt,
             finance_meetings_sections (
                 college_education ( collegeEducationType ),
@@ -279,7 +279,7 @@ export async function fetchAdminFinanceMeetings(params: {
             timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
             educationType: row.finance_meetings_sections?.[0]?.college_education?.collegeEducationType ?? 'N/A',
             branch: row.finance_meetings_sections?.[0]?.college_branch?.collegeBranchCode ?? 'N/A',
-            description : row.finance_meetings.description,
+            description: row.finance_meetings.description,
             date: row.date,
             participants: 0,
             section: sectionNames,
@@ -320,14 +320,14 @@ export async function fetchFacultyFinanceMeetings(params: {
             college_branch ( collegeBranchCode ),
             college_sections ( collegeSections ),
             finance_meetings!inner (
-                financeMeetingId, 
-                title, 
-                role, 
-                date, 
-                fromTime, 
-                toTime, 
-                meetingLink, 
-                isActive, 
+                financeMeetingId,
+                title,
+                role,
+                date,
+                fromTime,
+                toTime,
+                meetingLink,
+                isActive,
                 deletedAt
             )
         `, { count: "exact" })
@@ -349,29 +349,17 @@ export async function fetchFacultyFinanceMeetings(params: {
 
     if (error) throw error;
 
-<<<<<<< HEAD
-    // Now 'row' represents a specific SECTION linked to a meeting
     const formattedData = (data as any[]).map((row) => ({
-        // Unique ID for each card (MeetingID + SectionID)
-=======
-    const formattedData = (data as any[]).map((row) => ({
->>>>>>> b7763c785000f226ff8ebbd8668b8e28b49c9a57
         id: `${row.finance_meetings.financeMeetingId}-${row.financeMeetingSectionsId}`,
         financeMeetingId: row.finance_meetings.financeMeetingId,
         title: row.finance_meetings.title,
         timeRange: `${row.finance_meetings.fromTime.slice(0, 5)} - ${row.finance_meetings.toTime.slice(0, 5)}`,
         educationType: row.college_education?.collegeEducationType ?? 'N/A',
         branch: row.college_branch?.collegeBranchCode ?? 'N/A',
-<<<<<<< HEAD
-        date: row.finance_meetings.date,
-        participants: 0,
-        section: row.college_sections?.collegeSections ?? 'N/A', // Single section name
-=======
-        description : row.finance_meetings.description,
+        description: row.finance_meetings.description,
         date: row.finance_meetings.date,
         participants: 0,
         section: row.college_sections?.collegeSections ?? 'N/A',
->>>>>>> b7763c785000f226ff8ebbd8668b8e28b49c9a57
         category: role,
         type: type,
         meetingLink: row.finance_meetings.meetingLink ?? '',

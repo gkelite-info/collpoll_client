@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { Calendar, FolderOpen, Gear, House, Note } from "@phosphor-icons/react";
+import { CalendarIcon, ChartLineIcon, FolderOpen, Gear, House, Laptop } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 import { CurrencyCircleDollar } from "@phosphor-icons/react/dist/ssr";
 
@@ -26,21 +26,21 @@ export default function FinanceNavbar() {
     },
     {
       icon: (isActive) => (
-        <Calendar size={18} weight={isActive ? "fill" : "regular"} />
+        <ChartLineIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Finance / Analytics",
       path: "/finance/finance-analytics",
     },
     {
       icon: (isActive) => (
-        <Note size={18} weight={isActive ? "fill" : "regular"} />
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Meetings",
       path: "/finance/meetings",
     },
     {
       icon: (isActive) => (
-        <Note size={18} weight={isActive ? "fill" : "regular"} />
+        <CalendarIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Calendar",
       path: "/finance/calendar",
@@ -77,13 +77,11 @@ export default function FinanceNavbar() {
       return;
     }
 
-    // Keep Home active for this specific route
     if (pathname === "/finance/finance-analytics/students") {
       setActive("Home");
       return;
     }
 
-    // Activate Finance / Analytics for deeper nested routes
     if (
       pathname.startsWith("/finance/finance-analytics") &&
       pathname !== "/finance/finance-analytics/students"
@@ -92,7 +90,6 @@ export default function FinanceNavbar() {
       return;
     }
 
-    // Fallback: exact match
     const current = items.find((item) => item.path === pathname);
     if (current) {
       setActive(current.label);
@@ -119,10 +116,9 @@ export default function FinanceNavbar() {
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                    : "text-white hover:bg-[#50D689]/30"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                  : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -131,9 +127,8 @@ export default function FinanceNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>
