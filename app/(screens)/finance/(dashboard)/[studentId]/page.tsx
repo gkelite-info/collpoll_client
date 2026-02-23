@@ -1,7 +1,10 @@
 "use client";
 
+import { getStudentFinanceDetails } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { CaretLeftIcon, CurrencyInrIcon } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import AcademicFees, {
   FeePlan,
   FeeSummaryItem,
@@ -11,47 +14,11 @@ import AdditionalDues, {
   FinancialDue,
   NonFinancialDue,
 } from "./components/additionalDues";
-import History, { Transaction } from "./components/history";
-import { useEffect, useState } from "react";
-import ProfileCard from "./components/profileCard";
-import { useUser } from "@/app/utils/context/UserContext";
-import { fetchStudentProfileCardData } from "@/lib/helpers/student/payments/fetchStudentProfileCardData";
-import PaymentsSkeleton from "./shimmer/PaymentsSkeleton";
-import { useStudent } from "@/app/utils/context/student/useStudent";
-import RecordPayment from "./components/recordPayment";
 import FeeStats from "./components/feeStats";
-import QuickActions from "./components/quickActions";
+import History, { Transaction } from "./components/history";
 import ProfileDetails from "./components/profileCard";
-import {
-  CaretLeftIcon,
-  CaretRightIcon,
-  CurrencyInrIcon,
-} from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
-
-const mockFeePlan: FeePlan = {
-  programName: "B.Tech CSE - 2nd Year",
-  type: "Academic Fees",
-  academicYear: "2025-2026",
-  openingBalance: 0,
-  applicableFees: 524000,
-  scholarship: 0,
-  totalPayable: 524000,
-  paidTillNow: 24000,
-  pendingAmount: 495630,
-};
-
-const mockFeeSummary: FeeSummaryItem[] = [
-  {
-    id: 1,
-    paidAmount: 524000,
-    paymentMode: "Online",
-    entity: "Academic fee Payment",
-    paidOn: "11/03/2025",
-    status: "Success",
-    comments: "-",
-  },
-];
+import QuickActions from "./components/quickActions";
+import RecordPayment from "./components/recordPayment";
 
 const mockNonFinancialDues: NonFinancialDue[] = [
   {
@@ -121,77 +88,13 @@ const mockFinancialDues: FinancialDue[] = [
   },
 ];
 
-const stats = [
-  {
-    label: "Total Fee",
-    value: "₹5,24,000",
-    bg: "bg-[#E2DAFF]", // Light Purple
-    iconColor: "text-[#6C20CA]",
-    icon: CurrencyInrIcon,
-  },
-  {
-    label: "Paid Till Now",
-    value: "₹24,000",
-    bg: "bg-[#E6FBEA]", // Light Green
-    iconColor: "text-[#43C17A]",
-    icon: CurrencyInrIcon,
-  },
-  {
-    label: "Pending Amount",
-    value: "₹4,95,630",
-    bg: "bg-[#FFEDDA]", // Light Orange
-    iconColor: "text-[#FFBB70]",
-    icon: CurrencyInrIcon,
-  },
-  {
-    label: "Due Date",
-    value: "15 Feb 2026",
-    bg: "bg-[#CEE6FF]", // Light Blue
-    iconColor: "text-[#60AEFF]",
-    icon: CurrencyInrIcon,
-  },
-];
-
-const mockTransactions: Transaction[] = [
-  {
-    id: 6698,
-    items: "Academic Fees",
-    qty: 1,
-    costCenter: "Finance Department",
-    amount: 25640,
-    message: "-",
-    gateway: "PayPal",
-    trxnId: "1.123456789E11",
-    paidOn: "10 Sep 25 05:24 pm",
-    status: "Success",
-  },
-  {
-    id: 6697,
-    items: "Academic Fees",
-    qty: 1,
-    costCenter: "Finance Department",
-    amount: 25640,
-    message: "-",
-    gateway: "PayPal",
-    trxnId: "1.123456789E11",
-    paidOn: "10 Sep 25 05:24 pm",
-    status: "Failure",
-  },
-  {
-    id: 6699,
-    items: "Academic Fees",
-    qty: 1,
-    costCenter: "Finance Department",
-    amount: 203640,
-    message: "-",
-    gateway: "PayPal",
-    trxnId: "1.123456789E11",
-    paidOn: "10 Sep 25 05:24 pm",
-    status: "Failure",
-  },
-];
-
 const Page = () => {
+  const router = useRouter();
+  const params = useParams();
+  const studentIdStr = Array.isArray(params.studentId)
+    ? params.studentId[0]
+    : params.studentId;
+
   const [activeTab, setActiveTab] = useState<
     "record" | "academic" | "additional" | "history"
   >("record");
@@ -203,55 +106,59 @@ const Page = () => {
     { id: "history", label: "History" },
   ];
 
-  const [profile, setProfile] = useState<{
-    name: string;
-    course: string;
-    branch: string;
-    year: string;
-    rollNo: string;
-    email: string;
-    mobile: string;
-  } | null>(null);
-
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  //   useEffect(() => {
-  //     if (userId === null) return;
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState<any[]>([]);
+  const [feePlan, setFeePlan] = useState<FeePlan | null>(null);
+  const [feeSummary, setFeeSummary] = useState<FeeSummaryItem[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
-  //     const id = userId;
-  //     let mounted = true;
+  useEffect(() => {
+    let mounted = true;
 
-  //     async function fetchData() {
-  //       try {
-  //         setLoading(true);
-  //         const data = await fetchStudentProfileCardData(id);
-  //         if (mounted) setProfile(data);
-  //       } catch (err) {
-  //         console.error(err);
-  //       } finally {
-  //         if (mounted) setLoading(false);
-  //       }
-  //     }
+    async function fetchData() {
+      const targetId = studentIdStr || "2";
 
-  //     fetchData();
+      try {
+        setLoading(true);
+        const data = await getStudentFinanceDetails(targetId);
 
-  //     return () => {
-  //       mounted = false;
-  //     };
-  //   }, [userId]);
+        if (mounted && data) {
+          setProfile(data.profile);
 
-  const mockProfileData = {
-    name: "Shravani Reddy",
-    course: "B.Tech – Computer Science and Engineering",
-    year: "2nd Year",
-    rollNo: "CSE2K25-048",
-    email: "shravanireddy@digicampus.edu.in",
-    mobile: "9876543210",
-    imageUrl: "/adityamenon.png",
-  };
-  //   if (loading) {
-  //     return <PaymentsSkeleton />;
-  //   }
+          const enrichedStats = data.stats.map((s) => ({
+            ...s,
+            icon: CurrencyInrIcon,
+          }));
+          setStats(enrichedStats);
+
+          setFeePlan(data.feePlan);
+          setFeeSummary(data.feeSummary);
+          setTransactions(data.transactions);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [studentIdStr]);
+
+  if (loading || !profile) {
+    return (
+      <div className="p-4 lg:p-6 bg-[#F5F5F7] h-screen flex justify-center items-center">
+        <div className="text-gray-500 animate-pulse font-semibold">
+          Loading Student Financials...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6 bg-[#F5F5F7]">
@@ -268,7 +175,7 @@ const Page = () => {
       <div className="w-full font-sans">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8">
-            <ProfileDetails data={mockProfileData} />
+            <ProfileDetails data={profile} />
           </div>
 
           <div className="lg:col-span-4">
@@ -278,6 +185,7 @@ const Page = () => {
 
         <FeeStats stats={stats} />
       </div>
+
       <div className="bg-white shadow-sm rounded-xl p-8 font-sans min-h-[600px] mt-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-center mb-10">
@@ -317,12 +225,12 @@ const Page = () => {
           </div>
 
           <div className="transition-opacity duration-300">
-            {/* Added RecordPayment Component */}
             {activeTab === "record" && <RecordPayment />}
 
-            {activeTab === "academic" && (
-              <AcademicFees plan={mockFeePlan} summary={mockFeeSummary} />
+            {activeTab === "academic" && feePlan && (
+              <AcademicFees plan={feePlan} summary={feeSummary} />
             )}
+
             {activeTab === "additional" && (
               <AdditionalDues
                 financialDues={mockFinancialDues}
@@ -330,8 +238,12 @@ const Page = () => {
                 excessDues={mockExcessDues}
               />
             )}
+
             {activeTab === "history" && (
-              <History amountSpend={25000} transactions={mockTransactions} />
+              <History
+                amountSpend={feePlan?.paidTillNow || 0}
+                transactions={transactions}
+              />
             )}
           </div>
         </div>

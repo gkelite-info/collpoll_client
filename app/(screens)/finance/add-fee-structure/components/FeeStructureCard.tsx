@@ -1,9 +1,9 @@
 "use client";
 
 import { downloadFeePdf } from "@/lib/helpers/finance/downloadFeePdf";
-import { Pencil, DownloadSimple, CaretDown } from "@phosphor-icons/react";
+import { CaretDown, DownloadSimple, Pencil } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 
 interface FeeStructureCardProps {
   structures: any[];
@@ -39,7 +39,6 @@ export default function FeeStructureCard({
     );
   }, [structures]);
 
-  // 🔥 NEW: Calculate GST and Subtotal
   const { gstPercent, displayTotal } = useMemo(() => {
     if (!currentData || !currentData.components)
       return { gstPercent: 0, displayTotal: 0 };
@@ -51,7 +50,6 @@ export default function FeeStructureCard({
     const total = Number(currentData.totalAmount);
     const subTotal = total - gstAmount;
 
-    // Calculate %: (GST / Subtotal) * 100
     const percent = subTotal > 0 ? Math.round((gstAmount / subTotal) * 100) : 0;
 
     return { gstPercent: percent, displayTotal: total };
@@ -82,7 +80,6 @@ export default function FeeStructureCard({
   };
 
   const handleDownload = () => {
-    // Pass the calculated percentage to the PDF helper
     downloadFeePdf(
       { ...currentData, calculatedGstPercent: gstPercent },
       collegeName,
@@ -96,7 +93,6 @@ export default function FeeStructureCard({
       <div className="flex items-start justify-between">
         <div className="bg-[#EBFFF4] px-8 pt-4 pb-5 rounded-t-lg h-[100px] w-full">
           <div className="flex justify-between ">
-            {/* Header Info */}
             <div className="flex flex-col justify-between flex-1">
               <div className="flex items-start">
                 <div className="w-[13%]">
@@ -224,7 +220,6 @@ export default function FeeStructureCard({
             <div className="font-bold text-[#1F2F56] text-lg">
               Total Fee : {formatCurrency(displayTotal)}
             </div>
-            {/* 🔥 SHOW CALCULATED GST */}
             {gstPercent > 0 && (
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 Includes {gstPercent}% GST

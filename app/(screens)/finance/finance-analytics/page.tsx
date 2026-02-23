@@ -51,6 +51,9 @@ const CustomBar = (props: any) => {
 
 function FinanceAnalyticsContent() {
   const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [availableYears, setAvailableYears] = useState<string[]>([
+    new Date().getFullYear().toString(),
+  ]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -82,12 +85,13 @@ function FinanceAnalyticsContent() {
         setChartData(result.chartData);
         setGridData(result.gridData);
         setRawTableData(result.tableData);
+        setAvailableYears(result.availableYears!);
       }
       setIsLoading(false);
     }
 
     fetchData();
-  }, [year, collegeId, collegeEducationId, fmLoading]); // Added context vars to dependency array
+  }, [year, collegeId, collegeEducationId, fmLoading]);
 
   if (view === "yearWiseCollection") {
     return <YearWiseFeeCollection />;
@@ -109,8 +113,9 @@ function FinanceAnalyticsContent() {
         onClick={() => {
           const params = new URLSearchParams(searchParams.toString());
           params.set("view", "yearWiseCollection");
-          // Optionally pass the branch to the next view
-          // params.set("branchCode", row.branch);
+
+          params.set("branchCode", row.branch);
+
           router.push(`?${params.toString()}`);
         }}
       >
@@ -146,23 +151,23 @@ function FinanceAnalyticsContent() {
               Fee Collection Trends
             </h3>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-[#282828] font-bold text-md">
-                  Academic Year
-                </span>
-                <select
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  className="bg-[#EDE7F6] text-[#6C20CA] font-medium px-1.5 py-0.5 rounded-full outline-none"
-                >
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                </select>
-              </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-[#282828] font-bold text-md">
+                Academic Year
+              </span>
+              <select
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                className="bg-[#EDE7F6] text-[#6C20CA] font-medium px-1.5 py-0.5 rounded-full outline-none cursor-pointer"
+              >
+                {availableYears.map((yearOption) => (
+                  <option key={yearOption} value={yearOption}>
+                    {yearOption}
+                  </option>
+                ))}
+              </select>
 
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-4 ml-4 text-sm">
                 <div className="flex items-center gap-2 text-[#282828]">
                   <span className="w-3 h-3 bg-[#43C17A] rounded-xs" />
                   Collected
