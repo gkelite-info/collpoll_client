@@ -34,6 +34,9 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { StaticDatePicker } from "@mui/x-date-pickers/StaticDatePicker";
 import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/dashboard/getFinanceYearSemesterCollectionSummary";
 import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOverallFinanceTotal";
+import { getOverallPending } from "@/lib/helpers/finance/dashboard/getOverallPending";
+import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
+import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
 
 // --- Types & Data ---
 
@@ -188,13 +191,11 @@ const Header = ({
   year: string;
   onYearClick: () => void;
 }) => {
-  const branchOptions = [
-    { label: "All", value: "ALL" },
-    ...(branches?.map((b) => ({
+  const branchOptions =
+    branches?.map((b) => ({
       label: b.collegeBranchCode,
       value: b.collegeBranchCode,
-    })) || []),
-  ];
+    })) || [];
 
   return (
     <div className="flex justify-between items-center mb-3 px-1">
@@ -267,10 +268,9 @@ const Dropdown = ({
           <div
             onClick={disabled ? undefined : onClick}
             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
-              ${
-                disabled
-                  ? "cursor-not-allowed opacity-70"
-                  : "cursor-pointer hover:bg-green-100"
+              ${disabled
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-green-100"
               }
             `}
           >
@@ -430,9 +430,8 @@ const TopStat = ({
       `}
     >
       <div
-        className={`w-7 h-7 rounded ${
-          isP ? "bg-white/20" : "bg-white"
-        } flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"
+          } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -444,9 +443,8 @@ const TopStat = ({
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${
-            isP ? "text-purple-200" : "text-blue-800/70"
-          }`}
+          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"
+            }`}
         >
           {label}
         </div>
@@ -539,7 +537,7 @@ export default function DashboardPage() {
   const [branches, setBranches] = useState<any[]>([]);
   const [years, setYears] = useState<any[]>([]);
   const [yearModalOpen, setYearModalOpen] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<string>("ALL");
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear);
   const yearRef = React.useRef<HTMLDivElement>(null);
@@ -549,16 +547,26 @@ export default function DashboardPage() {
   });
   const [overallFinanceTotal, setOverallFinanceTotal] = useState<number>(0);
 
+  const [quickInsights, setQuickInsights] = useState({
+    thisWeek: 0,
+    lastWeek: 0,
+    thisMonth: 0,
+    thisYear: 0,
+  });
+
+  const [overallPending, setOverallPending] = useState<number>(0);
+  const [pendingStudentsCount, setPendingStudentsCount] = useState<number>(0);
+
   const selectedBranchId =
     selectedBranch === "ALL"
       ? undefined
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
-          ?.collegeBranchId;
+        ?.collegeBranchId;
 
   const selectedAcademicYearId =
     selectedYear !== "Year"
       ? years.find((y) => y.collegeAcademicYear === selectedYear)
-          ?.collegeAcademicYearId
+        ?.collegeAcademicYearId
       : undefined;
 
   console.log("🎯 Selected Filters:", {
@@ -603,19 +611,16 @@ export default function DashboardPage() {
             collegeEducationId,
           );
 
-          setBranches(filterData.branches || []);
+          const branchList = filterData.branches || [];
+
+          setBranches(branchList);
           setYears(filterData.years || []);
 
-          console.log("📂 Filter Data Loaded:", filterData);
+          // ✅ Set default branch only once
+          if (branchList.length > 0) {
+            setSelectedBranch(branchList[0].collegeBranchCode);
+          }
 
-          // Auto select first branch + year
-          // if (filterData.branches?.length > 0) {
-          //   setSelectedBranch(filterData.branches[0].collegeBranchCode);
-          // }
-
-          // if (filterData.years?.length > 0) {
-          //   setSelectedYear(filterData.years[0].collegeAcademicYear);
-          // }
         } catch (err) {
           console.error("Filter load error:", err);
         }
@@ -647,16 +652,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFinanceSummary = async () => {
       if (
+        loading ||                      // ⬅ wait for context
         !collegeId ||
         !collegeEducationId ||
-        selectedBranch === "ALL" ||
+        !selectedBranchId ||            // ⬅ VERY IMPORTANT
         !selectedYear
       ) {
-        setFinanceSummary({
-          academicYearTotal: 0,
-          yearWiseData: defaultYearWiseData,
-        });
-        return;
+        return;                         // ⬅ DO NOT reset to 0
       }
 
       try {
@@ -681,11 +683,147 @@ export default function DashboardPage() {
 
     loadFinanceSummary();
   }, [
-    loading, // ✅ keep this
+    loading,
     collegeId,
     collegeEducationId,
-    selectedBranch, // ✅ use branch string instead of derived id
+    selectedBranchId,   // ⬅ make sure this is here
     selectedYear,
+  ]);
+
+  useEffect(() => {
+    const loadInsights = async () => {
+
+      console.log("🟢 [QuickInsights] Triggered");
+      console.log("Filters:", {
+        loading,
+        collegeId,
+        collegeEducationId,
+        selectedBranchId,
+        selectedYear,
+      });
+
+      if (
+        loading ||
+        !collegeId ||
+        !collegeEducationId ||
+        !selectedBranchId ||
+        !selectedYear
+      ) {
+        console.log("⛔ [QuickInsights] Skipped due to missing data");
+        return;
+      }
+
+      try {
+        const result = await getQuickInsights({
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: selectedBranchId,
+          selectedYear,
+        });
+
+        console.log("✅ [QuickInsights] Result:", result);
+        setQuickInsights(result);
+      } catch (err) {
+        console.error("❌ Quick insights error:", err);
+      }
+    };
+
+    loadInsights();
+  }, [
+    loading,
+    collegeId,
+    collegeEducationId,
+    selectedBranchId,
+    selectedYear,
+  ]);
+
+  useEffect(() => {
+    const loadOverallPending = async () => {
+
+      console.log("🟢 [OverallPending] Triggered");
+      console.log("Filters:", {
+        loading,
+        collegeId,
+        collegeEducationId,
+        selectedBranchId,
+        selectedYear,
+      });
+
+      if (
+        loading ||
+        !collegeId ||
+        !collegeEducationId ||
+        !selectedBranchId ||
+        !selectedYear
+      ) {
+        console.log("⛔ [OverallPending] Skipped due to missing data");
+        return;
+      }
+
+      try {
+        const pending = await getOverallPending({
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: selectedBranchId,
+          selectedYear,
+        });
+
+        console.log("✅ [OverallPending] Amount:", pending);
+        setOverallPending(pending ?? 0);
+      } catch (err) {
+        console.error("❌ Overall pending error:", err);
+      }
+    };
+
+    loadOverallPending();
+  }, [
+    loading,
+    collegeId,
+    collegeEducationId,
+    selectedBranchId,
+    selectedYear,
+  ]);
+
+  useEffect(() => {
+    const loadPendingStudents = async () => {
+
+      console.log("🟢 [PendingStudents] Triggered");
+      console.log("Filters:", {
+        loading,
+        collegeId,
+        collegeEducationId,
+        selectedBranchId,
+      });
+
+      if (
+        loading ||
+        !collegeId ||
+        !collegeEducationId
+      ) {
+        console.log("⛔ [PendingStudents] Skipped due to missing data");
+        return;
+      }
+
+      try {
+        const count = await getCurrentSemesterPendingStudents({
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: selectedBranchId,
+        });
+
+        console.log("✅ [PendingStudents] Count:", count);
+        setPendingStudentsCount(count ?? 0);
+      } catch (err) {
+        console.error("❌ Pending students error:", err);
+      }
+    };
+
+    loadPendingStudents();
+  }, [
+    loading,
+    collegeId,
+    collegeEducationId,
+    selectedBranchId,
   ]);
 
   const handleFeeCollection = () => {
@@ -698,8 +836,26 @@ export default function DashboardPage() {
     return;
   };
 
+  const formatAmount = (amount: number) => {
+    if (amount >= 10000000)
+      return (amount / 10000000).toFixed(2) + " Cr";
+
+    if (amount >= 100000)
+      return (amount / 100000).toFixed(1) + " L";
+
+    if (amount >= 1000)
+      return (amount / 1000).toFixed(1) + " K";
+
+    return amount.toString();
+  };
+
   const BASE_YEAR = 2026;
   const CURRENT_YEAR = new Date().getFullYear();
+
+  const trendData = financeSummary.yearWiseData.map((item) => ({
+    name: item.year,
+    value: Number((item.total / 100000).toFixed(1)),
+  }));
 
   return (
     <div className="min-h-screenflex justify-center font-sans text-gray-900">
@@ -885,12 +1041,13 @@ export default function DashboardPage() {
                   </div>
                 ))} */}
               </div>
-              <div className="bg-[#E5F6EC] px-2 py-1.5 rounded mt-2 flex justify-between items-center">
-                <span className="font-bold text-gray-700 text-[10px]">
-                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
+              <div className="bg-[#E5F6EC] px-3 py-2 rounded-md mt-3 flex justify-between items-center">
+                <span className="font-semibold text-gray-700 text-[12px]">
+                  Total
                 </span>
-                <p className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-bold">
-                  ₹ {financeSummary.academicYearTotal.toLocaleString()}
+
+                <p className="bg-[#1e293b] text-white px-3 py-1 rounded-full text-[11px] font-bold font-mono">
+                  ₹ {financeSummary.academicYearTotal?.toLocaleString() || "0"}
                 </p>
               </div>
             </Card>
@@ -913,7 +1070,7 @@ export default function DashboardPage() {
               <div className="flex-1 w-full text-[9px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={data.trend}
+                    data={trendData}
                     margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
                     barSize={28}
                   >
@@ -994,7 +1151,12 @@ export default function DashboardPage() {
                 Quick Insights
               </h3>
               <div className="space-y-2">
-                {data.insights.map((d, i) => (
+                {[
+                  { label: "This Week", val: quickInsights.thisWeek, icon: CalendarCheck },
+                  { label: "Last Week", val: quickInsights.lastWeek, icon: Calendar },
+                  { label: "This Month", val: quickInsights.thisMonth, icon: Calendar },
+                  { label: "This Year", val: quickInsights.thisYear, icon: Calendar },
+                ].map((d, i) => (
                   <div
                     key={i}
                     className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center"
@@ -1052,7 +1214,9 @@ export default function DashboardPage() {
               </p>
               <div className="flex items-baseline gap-1">
                 <span className="text-lg font-bold text-[#43C17A]">₹</span>
-                <span className="text-2xl font-bold text-[#43C17A]">8.2 L</span>
+                <span className="text-2xl font-bold text-[#43C17A]">
+                  {formatAmount(overallPending)}
+                </span>
               </div>
             </div>
           </div>
@@ -1066,7 +1230,9 @@ export default function DashboardPage() {
                 Students yet to complete payment
               </p>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[#43C17A]">320</span>
+                <span className="text-3xl font-bold text-[#43C17A]">
+                  {pendingStudentsCount}
+                </span>
                 <span className="text-[10px] font-bold text-[#43C17A]">
                   Students
                 </span>

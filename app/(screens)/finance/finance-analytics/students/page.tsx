@@ -50,6 +50,12 @@ function OverallStudentsOverview() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [quickInsights, setQuickInsights] = useState({
+    thisWeek: 0,
+    lastWeek: 0,
+    thisMonth: 0,
+    thisYear: 0,
+  });
 
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
@@ -121,10 +127,13 @@ function OverallStudentsOverview() {
       setStudentsData(data.students);
       // setCounts(data.counts);
       setTotalRecords(data.totalCount ?? 0);
-    } catch (error) {
-      console.error("Error loading students data:", error);
-      toast.error("vamshi.");
-    } finally {
+
+
+    } catch (error: any) {
+      console.error(" Error loading students data:", error?.message || error);
+      toast.error(error?.message || "Failed to load students");
+    }
+    finally {
       setTableLoading(false);
     }
   };
@@ -176,7 +185,7 @@ function OverallStudentsOverview() {
   const tableData = useMemo(() => {
     return studentsData.map((item) => ({
       studentName: item.studentName,
-      rollNo: item.rollNo,
+      rollNo: item.studentId,   // ✅ changed here
       educationType: collegeEducationType,
       branch: item.branchCode,
       year: item.yearName,
@@ -201,7 +210,7 @@ function OverallStudentsOverview() {
 
   const columns = [
     { title: "Student Name", key: "studentName" },
-    { title: "Roll No.", key: "rollNo" },
+    { title: "Student ID", key: "rollNo" },
     { title: "Education Type", key: "educationType" },
     { title: "Branch", key: "branch" },
     { title: "Year", key: "year" },
@@ -435,11 +444,10 @@ function OverallStudentsOverview() {
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${
-          currentPage === 1
-            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-            : "border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === 1
+                ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <CaretLeft size={18} weight="bold" />
           </button>
@@ -450,11 +458,10 @@ function OverallStudentsOverview() {
               key={i}
               onClick={() => setCurrentPage(i + 1)}
               className={`w-10 h-10 rounded-lg font-semibold transition-all
-          ${
-            currentPage === i + 1
-              ? "bg-[#16284F] text-white shadow-md"
-              : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
+          ${currentPage === i + 1
+                  ? "bg-[#16284F] text-white shadow-md"
+                  : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
             >
               {i + 1}
             </button>
@@ -465,11 +472,10 @@ function OverallStudentsOverview() {
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${
-          currentPage === totalPages
-            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-            : "border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === totalPages
+                ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <CaretRight size={18} weight="bold" />
           </button>
