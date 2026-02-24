@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import CardComponent from "@/app/utils/card";
 import {
   BookOpen,
@@ -8,12 +7,8 @@ import {
   ClockAfternoon,
   UsersThree,
 } from "@phosphor-icons/react";
-
 import { useEffect, useState } from "react";
-
-import ScheduledLessonsStrip, {
-  ScheduledLesson,
-} from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses from "../../utils/upcomingClasses";
 import { INITIAL_SCHEDULED_LESSONS, STUDENT_DATA } from "./data";
@@ -54,12 +49,8 @@ export default function FacultyDashLeft() {
     fetchClasses();
   }, [userId, loading]);
 
-  const facultyImage =
-    !loading && gender === "Female"
-      ? "/faculty-f.png"
-      : !loading && gender === "Male"
-        ? "/faculty-m.png"
-        : null;
+  const facultyImage = gender
+    && (gender === "Female" ? "/faculty-f.png" : "/faculty-male.png")
 
   const cardData = [
     {
@@ -95,8 +86,9 @@ export default function FacultyDashLeft() {
       studentsTaskPercentage: 85,
       facultySubject: "(Data Structures and Algorithms)",
       image: facultyImage ?? undefined,
-      top: "lg:top-[-173px]",
-      imageHeight: 170,
+      top: "lg:top-[-5px]",
+      imageHeight: "h-45",
+      right: "right-[-25]"
     },
   ];
 

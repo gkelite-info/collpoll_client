@@ -1,6 +1,5 @@
 "use client";
 
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getTodayCollectionSummary } from "@/lib/helpers/finance/dashboard/getTodayCollectionSummary";
@@ -12,8 +11,9 @@ export type UserInfoCardProps = {
   todayCollection: number;
   image?: string;
   top: string;
-  imageHeight?: number;
+  imageHeight?: string;
   imageAlign?: "center" | "bottom";
+  right?: string;
 };
 
 type UserInfoProps = {
@@ -24,7 +24,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
   const [dynamicTodayCollection, setDynamicTodayCollection] = useState(0);
   const { collegeId, collegeEducationId, loading } = useFinanceManager();
-
 
   const { fullName } = useUser();
 
@@ -42,18 +41,12 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
     const fetchTodayCollection = async () => {
       if (loading || !collegeId || !collegeEducationId) return;
 
-      console.log("🏫 Using Finance Context:", {
-        collegeId,
-        collegeEducationId,
-      });
-
       try {
         const { todayTotal } = await getTodayCollectionSummary({
           collegeId,
           collegeEducationId,
         });
 
-        console.log("💰 Today Collection:", todayTotal);
         setDynamicTodayCollection(todayTotal);
       } catch (error) {
         console.error("❌ Error fetching today collection:", error);
@@ -96,7 +89,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               src={item.image}
               alt="User"
               //   style={{ height: `${item.imageHeight ?? 150}px` }}
-              className="absolute right-28 h-47.5 bottom-0 z-10"
+              className={`absolute ${item.right} ${item.imageHeight} bottom-0 z-10`}
             />
           )}
         </div>

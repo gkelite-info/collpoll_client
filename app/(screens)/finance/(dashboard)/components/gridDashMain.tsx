@@ -20,16 +20,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { SendFeeReminderModal } from "../modals/sendFeeReminderModal";
 import { useRouter, useSearchParams } from "next/navigation";
-import YearWiseFeeCollection from "./yearWiseFeeCollection";
-import BranchWiseCollection from "./branchWiseCollection";
-import { PaymentSuccessModal } from "../modals/paymentSuccessModal";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getOverallStudents } from "@/lib/helpers/finance/dashboard/getOverallStudents";
 import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { StaticDatePicker } from "@mui/x-date-pickers/StaticDatePicker";
 import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/dashboard/getFinanceYearSemesterCollectionSummary";
@@ -37,8 +32,6 @@ import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOvera
 import { getOverallPending } from "@/lib/helpers/finance/dashboard/getOverallPending";
 import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
 import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
-
-// --- Types & Data ---
 
 interface Data {
   years: {
@@ -526,13 +519,6 @@ export default function DashboardPage() {
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
 
-  console.log("🏫 Finance Context:", {
-    collegeId,
-    collegeEducationId,
-    collegeEducationType,
-    loading,
-  });
-
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
   const [years, setYears] = useState<any[]>([]);
@@ -568,13 +554,6 @@ export default function DashboardPage() {
       ? years.find((y) => y.collegeAcademicYear === selectedYear)
         ?.collegeAcademicYearId
       : undefined;
-
-  console.log("🎯 Selected Filters:", {
-    selectedBranch,
-    selectedBranchId,
-    selectedYear,
-    selectedAcademicYearId,
-  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -616,7 +595,6 @@ export default function DashboardPage() {
           setBranches(branchList);
           setYears(filterData.years || []);
 
-          // ✅ Set default branch only once
           if (branchList.length > 0) {
             setSelectedBranch(branchList[0].collegeBranchCode);
           }
@@ -686,7 +664,7 @@ export default function DashboardPage() {
     loading,
     collegeId,
     collegeEducationId,
-    selectedBranchId,   // ⬅ make sure this is here
+    selectedBranchId,
     selectedYear,
   ]);
 
@@ -858,7 +836,7 @@ export default function DashboardPage() {
   }));
 
   return (
-    <div className="min-h-screenflex justify-center font-sans text-gray-900">
+    <div className="min-h-screen flex justify-center text-gray-900">
       <div className="w-full">
         <div className="relative">
           <Header
@@ -867,11 +845,9 @@ export default function DashboardPage() {
             year={selectedYear ?? "Year"}
             branches={branches}
             onBranchChange={(val: string) => {
-              console.log("🌿 Branch Changed:", val);
               setSelectedBranch(val);
             }}
             onYearClick={() => {
-              console.log("📅 Opening Year Picker");
               setYearModalOpen((prev) => !prev);
             }}
           />
@@ -889,7 +865,6 @@ export default function DashboardPage() {
                   onChange={(newValue) => {
                     if (newValue) {
                       const selected = newValue.getFullYear().toString();
-                      console.log("📅 Year Selected:", selected);
                       setSelectedYear(selected);
                     }
                     setYearModalOpen(false);
@@ -897,13 +872,11 @@ export default function DashboardPage() {
                   shouldDisableYear={(date) => {
                     const year = date.getFullYear();
 
-                    // ❌ Disable before 2026
                     if (year < BASE_YEAR) return true;
 
-                    // ❌ Disable future years
                     if (year > CURRENT_YEAR) return true;
 
-                    return false; // ✅ Enable only valid range
+                    return false;
                   }}
                   slotProps={{
                     actionBar: { actions: [] },
@@ -1185,10 +1158,9 @@ export default function DashboardPage() {
                             searchParams.toString(),
                           );
 
-                          // convert label to router value
                           const range = d.label
                             .toLowerCase()
-                            .replace(/\s+/g, "-"); // this-week, last-week, this-month, this-year
+                            .replace(/\s+/g, "-");
 
                           params.set("range", range);
 
