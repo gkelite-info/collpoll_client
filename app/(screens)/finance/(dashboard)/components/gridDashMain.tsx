@@ -929,7 +929,6 @@ export default function DashboardPage() {
               ? financeSummary.yearWiseData
               : defaultYearWiseData
             ).map((yearData: any, index: number) => {
-              console.log("🎓 Rendering YearCard:", yearData);
 
               return (
                 <div key={index} className="h-[95px]">
