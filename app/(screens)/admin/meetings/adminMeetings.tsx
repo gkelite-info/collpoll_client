@@ -74,8 +74,9 @@ export default function AdminMeetingsPage() {
         loadMeetings();
 
     }, [currentType, page, adminId]);
-
+    
     const loadMeetings = async () => {
+        
         try {
 
             setIsLoading(true);

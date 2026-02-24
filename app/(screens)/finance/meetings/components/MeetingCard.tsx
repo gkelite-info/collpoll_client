@@ -19,6 +19,7 @@ export default function MeetingCard({ data, onDelete, role, category, onEdit, }:
     const [fromTime, toTime] = data.timeRange.split(" - ");
     const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
     const [isModalOpen, setIsModalOpen] = useState(false);
+
     return (
         <>
             <div
@@ -65,7 +66,8 @@ export default function MeetingCard({ data, onDelete, role, category, onEdit, }:
                                 {data.title}
                             </h2>
                         </div>
-                        {category !== "Admin" &&
+
+                        {((category && category !== "Admin") || (role && (!["Admin", "Finance"].includes(role)))) &&
                             <span className="bg-[#22c55e] text-[#ffffff] px-3 py-1 rounded-full text-xs whitespace-nowrap">
                                 {data.branch} - {data.section}
                             </span>
@@ -149,7 +151,7 @@ export default function MeetingCard({ data, onDelete, role, category, onEdit, }:
                                         <PillTag label={formattedTimeRange} />
                                     </div>
                                 </div>
-                                {category !== "Admin" &&
+                                {((category && category !== "Admin") || (role && (!["Admin", "Finance"].includes(role)))) &&
                                     <div className="flex gap-y-3 flex-col">
                                         <div className="flex items-center justify-between">
                                             <span className="text-[#303030] font-medium text-sm">Branch :</span>

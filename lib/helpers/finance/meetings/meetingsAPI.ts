@@ -233,6 +233,7 @@ export async function fetchAdminFinanceMeetings(params: {
         .select(`
             financeMeetingId,
             title,
+            description,
             role,
             date,
             fromTime,
@@ -279,7 +280,7 @@ export async function fetchAdminFinanceMeetings(params: {
             timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
             educationType: row.finance_meetings_sections?.[0]?.college_education?.collegeEducationType ?? 'N/A',
             branch: row.finance_meetings_sections?.[0]?.college_branch?.collegeBranchCode ?? 'N/A',
-            description: row.finance_meetings.description,
+            description: row.description || '',
             date: row.date,
             participants: 0,
             section: sectionNames,
