@@ -1,6 +1,5 @@
 "use client";
 import { BellSimple, CaretDown, EnvelopeSimple, MagnifyingGlass, Megaphone, Newspaper } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
 import NewsModal from "../modals/NewsModal";
@@ -11,6 +10,7 @@ import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
+import { useParent } from "@/app/utils/context/parent/useParent";
 
 
 export default function Header() {
@@ -26,6 +26,7 @@ export default function Header() {
   const { fullName, role, collegeEducationType, collegeBranchCode, studentId, facultyId, adminId } = useUser();
   const { financeManagerId } = useFinanceManager();
   const { collegeAdminId } = useCollegeAdmin();
+  const { parentId } = useParent();
 
   function openPDFModal() {
     setIsNewsOpen(false);
@@ -165,7 +166,13 @@ export default function Header() {
                     <p>ID - <span>{collegeAdminId}</span></p>
                   </>
                 )}
-                {["SuperAdmin", "Parent"].includes(role as string) && (
+                {role === "Parent" && (
+                  <>
+                    <p>{role}</p>
+                    <p>ID - <span>{parentId}</span></p>
+                  </>
+                )}
+                {["SuperAdmin"].includes(role as string) && (
                   <p>{role}</p>
                 )}
               </div>

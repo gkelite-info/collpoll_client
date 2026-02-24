@@ -3,7 +3,6 @@
 import CardComponent from "@/app/utils/card";
 import { ArrowsClockwise, BookOpenIcon, HourglassIcon, UsersThree } from "@phosphor-icons/react";
 import { useState } from "react";
-
 import { AdminInfoCard } from "../../utils/adminInfoCard";
 import { dashboardData } from "../data";
 import { DashboardGrid } from "./dashboardGrid";
@@ -63,12 +62,8 @@ export default function AdminDashLeft({
 
   const { fullName, gender, loading } = useUser();
 
-  const adminImage =
-    !loading && gender === "Female"
-      ? "/admin-f.png"
-      : !loading && gender === "Male"
-        ? "/admin-m.png"
-        : null;
+  const adminImage = gender
+    && (gender === "Female" ? "/admin-f.png" : "/admin-male.png");
 
   const cardData = [
     {

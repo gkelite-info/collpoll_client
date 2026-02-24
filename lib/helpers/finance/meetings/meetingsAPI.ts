@@ -368,6 +368,83 @@ export async function fetchFacultyFinanceMeetings(params: {
     return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
 }
 
+export async function fetchParentFinanceMeetings(params: {
+    role?: string;
+    type?: "upcoming" | "previous";
+    page?: number;
+    limit?: number;
+}) {
+    const {
+        role = "Parent",
+        type = "upcoming",
+        page = 1,
+        limit = 10,
+    } = params;
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentTime = now.toTimeString().split(' ')[0];
+
+    let query = supabase
+        .from("finance_meetings_sections")
+        .select(`
+            financeMeetingSectionsId,
+            college_education ( collegeEducationType ),
+            college_branch ( collegeBranchCode ),
+            college_sections ( collegeSections ),
+            finance_meetings!inner (
+                financeMeetingId, 
+                title, 
+                role, 
+                date, 
+                fromTime, 
+                description,
+                toTime, 
+                meetingLink, 
+                isActive, 
+                deletedAt
+            )
+        `, { count: "exact" })
+        .eq("finance_meetings.isActive", true)
+        .is("finance_meetings.deletedAt", null)
+        .is("deletedAt", null)
+        .eq("finance_meetings.role", role);
+
+    if (type === "upcoming") {
+        query = query.or(`date.gt.${today},and(date.eq.${today},toTime.gte.${currentTime})`, { foreignTable: "finance_meetings" });
+    } else {
+        query = query.or(`date.lt.${today},and(date.eq.${today},toTime.lt.${currentTime})`, { foreignTable: "finance_meetings" });
+    }
+
+    const { data, error, count } = await query
+        .order("date", { foreignTable: "finance_meetings", ascending: type === "upcoming" })
+        .order("fromTime", { foreignTable: "finance_meetings", ascending: true })
+        .range(from, to);
+
+    if (error) throw error;
+
+    const formattedData = (data as any[]).map((row) => ({
+        id: `${row.finance_meetings.financeMeetingId}-${row.financeMeetingSectionsId}`,
+        financeMeetingId: row.finance_meetings.financeMeetingId,
+        title: row.finance_meetings.title,
+        timeRange: `${row.finance_meetings.fromTime.slice(0, 5)} - ${row.finance_meetings.toTime.slice(0, 5)}`,
+        description: row.finance_meetings.description,
+        educationType: row.college_education?.collegeEducationType ?? 'N/A',
+        branch: row.college_branch?.collegeBranchCode ?? 'N/A',
+        date: row.finance_meetings.date,
+        participants: 0,
+        section: row.college_sections?.collegeSections ?? 'N/A',
+        category: role,
+        type: type,
+        meetingLink: row.finance_meetings.meetingLink ?? '',
+    }));
+
+    return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
+}
+
 export async function fetchFinanceMeetingById(
     financeMeetingId: number,
 ) {

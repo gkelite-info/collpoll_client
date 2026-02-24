@@ -11,15 +11,10 @@ import { useUser } from "@/app/utils/context/UserContext";
 
 
 export default function ParentLeft() {
-    const { fullName, gender, loading } = useUser();
+    const { fullName, gender } = useUser();
 
-    const parentImage =
-        !loading && gender === "Female"
-            ? "/parent-m.png"
-            : !loading && gender === "Male"
-                ? "/parent-d.png"
-                : null;
-
+    const parentImage = gender
+        && (gender === "Male" ? "/parent-male.png" : "/parent-female.png");
 
     const card: UserInfoCardProps[] = [
         {
@@ -31,8 +26,10 @@ export default function ParentLeft() {
             childPerformance:
                 "Your child’s academic performance and attendance summary are available below.",
             image: parentImage ?? undefined,
-            imageHeight: 170,
+            imageHeight: "lg:h-[175px]",
             imageAlign: "center",
+            top: "lg:top-[-2.5px]",
+            right: "right-5"
         },
     ];
     const data = [

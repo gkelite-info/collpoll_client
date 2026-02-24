@@ -9,6 +9,13 @@ export interface FeeSummaryItem {
   paidOn: string;
   status: string;
   comments: string;
+  paymentType: string | null;
+  proof: string | null;
+  notes: string | null;
+  collectedBy: number | null;
+  initiatedBy: string | null;
+  gatewayTransactionId: string;
+  gatewayOrderId: string;
 }
 
 export async function fetchStudentPaymentHistory(
@@ -19,11 +26,21 @@ export async function fetchStudentPaymentHistory(
     .select(
       `
     studentPaymentTransactionId,
+    studentFeeObligationId,
+    gatewayTransactionId,
+    gatewayOrderId,
     paidAmount,
     paymentMode,
     paymentStatus,
+    paymentType,
     gatewayResponse,
-    createdAt
+    proof,
+    notes,
+    collectedBy,
+    paymentDate,
+    initiatedBy,
+    createdAt,
+    updatedAt
   `,
     )
     .eq("studentFeeObligationId", studentFeeObligationId)
@@ -37,14 +54,10 @@ export async function fetchStudentPaymentHistory(
   return (
     data?.map((txn) => ({
       id: txn.studentPaymentTransactionId,
-
       paidAmount: Number(txn.paidAmount),
-
-      paymentMode: extractPaymentMode(txn.gatewayResponse),
-
-      entity: "Stripe",
-
-      paidOn: new Date(txn.createdAt).toLocaleDateString("en-IN", {
+      paymentMode: txn.paymentMode || extractPaymentMode(txn.gatewayResponse),
+      entity: txn.collectedBy ? `Staff (ID: ${txn.collectedBy})` : "Stripe",
+      paidOn: new Date(txn.paymentDate || txn.createdAt).toLocaleDateString("en-IN", {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -53,13 +66,22 @@ export async function fetchStudentPaymentHistory(
       status: txn.paymentStatus as StripePaymentStatus,
 
       comments:
-        txn.paymentStatus === "success"
+        txn.notes ||
+        (txn.paymentStatus === "success"
           ? "Payment successful"
           : txn.paymentStatus === "refunded"
             ? "Payment refunded"
             : txn.paymentStatus === "failed"
               ? "Payment failed"
-              : txn.paymentStatus,
+              : txn.paymentStatus),
+
+      paymentType: txn.paymentType,
+      proof: txn.proof,
+      notes: txn.notes,
+      collectedBy: txn.collectedBy,
+      initiatedBy: txn.initiatedBy,
+      gatewayTransactionId: txn.gatewayTransactionId,
+      gatewayOrderId: txn.gatewayOrderId,
     })) ?? []
   );
 }

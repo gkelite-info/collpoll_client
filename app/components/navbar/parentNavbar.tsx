@@ -1,19 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import {
-    BuildingOffice,
-    Calendar,
-    CheckCircle,
-    ClipboardText,
-    CurrencyCircleDollar,
-    FolderOpen,
-    Gear,
-    GraduationCap,
-    House,
-    Note,
-    Student,
-} from "@phosphor-icons/react";
+import { CheckCircle, Gear, House, Laptop, Student } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
@@ -48,6 +36,13 @@ export default function ParentNavbar() {
             ),
             label: "Student Progress",
             path: "/parent/student-progress",
+        },
+        {
+            icon: (isActive) => (
+                <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Meetings",
+            path: "/parent/meetings",
         },
         // {
         //     icon: (isActive) => (

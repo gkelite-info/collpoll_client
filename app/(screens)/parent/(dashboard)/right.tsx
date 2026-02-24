@@ -54,7 +54,7 @@ export default function ParentRight() {
   return (
     <>
       <div className="bg-indigo-00 w-[32%] px-1 flex flex-col">
-        <CourseScheduleCard />
+        <CourseScheduleCard isVisibile={false} />
         <WorkWeekCalendar />
         <AnnouncementsCard announceCard={card} />
       </div>

@@ -11,6 +11,7 @@ import { useFaculty } from "../utils/context/faculty/useFaculty";
 import { useAdmin } from "../utils/context/admin/useAdmin";
 import { useFinanceManager } from "../utils/context/financeManager/useFinanceManager";
 import { useCollegeAdmin } from "../utils/context/college-admin/useCollegeAdmin";
+import { useParent } from "../utils/context/parent/useParent";
 
 type Props = {
     open: boolean;
@@ -36,6 +37,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const { facultyId, college_branch, faculty_edu_type } = useFaculty();
     const { adminId } = useAdmin();
     const { collegeAdminId } = useCollegeAdmin();
+    const { parentId } = useParent();
 
     const academicYear = extractAcademicYearNumber(collegeAcademicYear);
 
@@ -108,6 +110,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                 )}
                                 {role === "CollegeAdmin" && (
                                     <span className="text-xs text-[#282828]">ID - {collegeAdminId}</span>
+                                )}
+                                {role === "Parent" && (
+                                    <span className="text-xs text-[#282828]">ID - {parentId}</span>
                                 )}
                                 {role === "Student" && (
                                     <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {

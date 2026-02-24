@@ -13,8 +13,10 @@ export type UserInfoCardProps = {
   studentsTaskPercentage?: number;
   childPerformance?: string;
   image?: string;
-  imageHeight?: number;
+  imageHeight?: string;
   imageAlign?: "center" | "bottom";
+  top?: string;
+  right?: string;
 };
 
 type UserInfoProps = {
@@ -87,8 +89,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <img
               src={item.image}
               alt="User"
-              style={{ height: `${item.imageHeight ?? 110}px` }}
-              className=""
+              className={`${item.imageHeight ?? "110px"} ${item.top} relative ${item.right}`}
             />
           )}
 
