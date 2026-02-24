@@ -247,8 +247,8 @@ const MeetingListContent = () => {
                             <Loader />
                         </div>
                     ) : meetings.length > 0 ? (
-                        meetings.map((meeting) => (
-                            <MeetingCard key={meeting.id} data={meeting} onDelete={handleDeleteClick} role={role} category={currentCategory} onEdit={handleEditClick} />
+                        meetings.map((meeting, index) => (
+                            <MeetingCard key={meeting.id || `meeting-card-${index}`} data={meeting} onDelete={handleDeleteClick} role={role} category={currentCategory} onEdit={handleEditClick} />
                         ))
                     ) : (
                         <div className="col-span-full py-30 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">

@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 import { useFinanceManager } from '@/app/utils/context/financeManager/useFinanceManager';
 import { fetchBranches, fetchAcademicYears, fetchSections } from '@/lib/helpers/admin/academics/academicDropdowns';
 import { fetchFinanceMeetingSections, saveFinanceMeetingSection } from '@/lib/helpers/finance/meetings/meetingsSectionsAPI';
-import { fetchFinanceMeetingById, saveFinanceMeeting } from '@/lib/helpers/finance/meetings/meetingsAPI';
+import { checkFinanceMeetingConflict, fetchFinanceMeetingById, saveFinanceMeeting } from '@/lib/helpers/finance/meetings/meetingsAPI';
+import ConflictErrorModal from './ConflictErrorModal';
 interface CreateMeetingModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -41,7 +42,7 @@ const validateTimeRange = (
     const end = convertTo24Hour(eHour, eMinute, ePeriod);
     const startInvalid = start < MIN_TIME || start > MAX_TIME;
     const endInvalid = end < MIN_TIME || end > MAX_TIME;
-    
+
     if (startInvalid && endInvalid) { toast.error("Start and End time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
     if (startInvalid) { toast.error("Start time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
     if (endInvalid) { toast.error("End time must be between 8:00 AM and 10:00 PM", { id: "time-error" }); return false; }
@@ -72,6 +73,8 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
     const [emailNotification, setEmailNotification] = useState(false);
     const [isSectionOpen, setIsSectionOpen] = useState(false);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [showConflictModal, setShowConflictModal] = useState(false);
+    const [conflictData, setConflictData] = useState<{ title: string; role: string } | null>(null);
     const sectionDropdownRef = useRef<HTMLDivElement>(null);
     const { collegeId, collegeEducationId, financeManagerId } = useFinanceManager();
     const isEditMode = !!editingMeetingId;
@@ -231,7 +234,7 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
             if (!date) { toast.error("Please select meeting date"); return; }
             if (!validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)) { return; }
             if (!inAppNotification && !emailNotification) { toast.error("Please select at least one notification type"); return; }
-            
+
             if (role !== "Admin") {
                 if (!branch) { toast.error("Please select branch"); return; }
                 if (!year) { toast.error("Please select year"); return; }
@@ -241,10 +244,26 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
             if (!meetingLink.trim()) { toast.error("Meeting link is required"); return; }
             try { new URL(meetingLink); } catch { toast.error("Please enter a valid meeting link"); return; }
             if (!financeManagerId) { toast.error("User context missing. Please log in again."); return; }
-            
+
             setIsLoading(true);
             const dbFromTime = formatTimeForDB(startHour, startMinute, startPeriod);
             const dbToTime = formatTimeForDB(endHour, endMinute, endPeriod);
+
+            const { hasConflict, conflictData: existingMeetingInfo } = await checkFinanceMeetingConflict(
+                financeManagerId,
+                date,
+                dbFromTime,
+                dbToTime,
+                isEditMode ? editingMeetingId! : undefined
+            );
+
+            if (hasConflict) {
+                setIsLoading(false);
+                setConflictData(existingMeetingInfo);
+                setShowConflictModal(true);
+                return;
+            }
+
             const meetingRes = await saveFinanceMeeting({
                 id: isEditMode ? editingMeetingId! : undefined,
                 title, description, role, date, fromTime: dbFromTime, toTime: dbToTime, meetingLink, inAppNotification, emailNotification
@@ -323,6 +342,12 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
     if (!isOpen) return null;
     return (
         <AnimatePresence>
+            <ConflictErrorModal
+                key="conflict-modal"
+                open={showConflictModal}
+                conflictDetails={conflictData}
+                onClose={() => setShowConflictModal(false)}
+            />
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -480,8 +505,8 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
                                             className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white cursor-pointer"
                                         >
                                             <option value="">Select Branch</option>
-                                            {branches.map((item) => (
-                                                <option key={item.collegeBranchId} value={item.collegeBranchId}>
+                                            {branches.map((item, index) => (
+                                                <option key={item.collegeBranchId || `branch-${index}`} value={item.collegeBranchId}>
                                                     {item.collegeBranchCode}
                                                 </option>
                                             ))}
@@ -501,8 +526,8 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
                                             className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer disabled:cursor-not-allowed"
                                         >
                                             <option value="">Select Academic Year</option>
-                                            {years.map((item) => (
-                                                <option key={item.collegeAcademicYearId} value={item.collegeAcademicYearId}>
+                                            {years.map((item, index) => (
+                                                <option key={item.collegeAcademicYearId || `year-${index}`} value={item.collegeAcademicYearId}>
                                                     {item.collegeAcademicYear}
                                                 </option>
                                             ))}
@@ -543,11 +568,12 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
                                                 {sections.length === 0 ? (
                                                     <div className="px-3 py-2 text-sm text-gray-500">No sections available</div>
                                                 ) : (
-                                                    sections.map((item) => {
+                                                    sections.map((item, index) => {
+                                                        const sectionId = item.collegeSectionsId;
                                                         const checked = sectionsSelected.includes(item.collegeSectionsId);
                                                         return (
                                                             <label
-                                                                key={item.collegeSectionsId}
+                                                                key={sectionId || `section-${index}`}
                                                                 className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
                                                             >
                                                                 <input
