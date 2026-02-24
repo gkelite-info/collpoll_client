@@ -549,3 +549,40 @@ export async function deactivateFinanceMeeting(
     }
     return { success: true };
 }
+
+export async function checkFinanceMeetingConflict(
+    financeManagerId: number,
+    date: string,
+    fromTime: string,
+    toTime: string,
+    excludeMeetingId?: number
+) {
+    let query = supabase
+        .from("finance_meetings")
+        .select("financeMeetingId, title, role, fromTime, toTime")
+        .eq("createdBy", financeManagerId)
+        .eq("date", date)
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+    if (excludeMeetingId) {
+        query = query.neq("financeMeetingId", excludeMeetingId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        return { hasConflict: false, conflictData: null };
+    }
+
+    for (const meeting of data) {
+        if (fromTime < meeting.toTime && toTime > meeting.fromTime) {
+            return {
+                hasConflict: true,
+                conflictData: { title: meeting.title, role: meeting.role }
+            };
+        }
+    }
+
+    return { hasConflict: false, conflictData: null };
+}
