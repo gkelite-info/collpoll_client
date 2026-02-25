@@ -1004,7 +1004,7 @@ export default function DashboardPage() {
                           params.set("range", range);
 
                           router.push(
-                            `/finance/fee-collection/payments?range=${range}`,
+                            `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
                           );
                         }}
                       />
