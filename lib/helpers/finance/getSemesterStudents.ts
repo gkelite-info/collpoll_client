@@ -118,8 +118,27 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
     .in("studentPaymentTransactionId", transactionIds)
     .eq("collegeSemesterId", collegeSemesterId);
 
+  const semesterTransactionIds = new Set(
+    (collections || []).map((c: any) => c.studentPaymentTransactionId)
+  );
+
   if (collError) {
     console.error("❌ Collection Fetch Error:", collError);
+    return null;
+  }
+
+  const { data: ledgers, error: ledgerError } = await supabase
+    .from("student_fee_ledger")
+    .select(`
+    amount,
+    studentFeeObligationId,
+    studentPaymentTransactionId,
+    createdAt
+  `)
+    .in("studentPaymentTransactionId", Array.from(semesterTransactionIds));
+
+  if (ledgerError) {
+    console.error("Ledger Fetch Error:", ledgerError);
     return null;
   }
 
@@ -132,21 +151,18 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
   const paidMap = new Map<number, number>(); // obligationId -> paidAmount
   const lastPayMap = new Map<number, string>(); // studentId -> last payment date
 
-  (collections || []).forEach((c: any) => {
-    const txnId = c.studentPaymentTransactionId;
-    const obligationId = txnToObligation.get(txnId);
-    if (!obligationId) return;
+  (ledgers || []).forEach((l: any) => {
+    const obligationId = l.studentFeeObligationId;
+    const amt = Number(l.amount) || 0;
 
-    const amt = Number(c.collectedAmount) || 0;
-    paidMap.set(obligationId, (paidMap.get(obligationId) || 0) + amt);
+    paidMap.set(
+      obligationId,
+      (paidMap.get(obligationId) || 0) + amt
+    );
 
-    // Optional: set lastPaymentDate per student (take max by createdAt)
-    const ob = obligations.find((o: any) => o.studentFeeObligationId === obligationId);
-    if (ob?.studentId && c.createdAt) {
-      const prev = lastPayMap.get(ob.studentId);
-      if (!prev || new Date(c.createdAt) > new Date(prev)) {
-        lastPayMap.set(ob.studentId, c.createdAt);
-      }
+    const prev = lastPayMap.get(obligationId);
+    if (!prev || new Date(l.createdAt) > new Date(prev)) {
+      lastPayMap.set(obligationId, l.createdAt);
     }
   });
 
@@ -189,7 +205,9 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
       paidAmount,
       balanceAmount: balance,
       paymentStatus: status,
-      lastPaymentDate: lastPayMap.get(student.studentId) || null,
+      lastPaymentDate: obligation
+        ? lastPayMap.get(obligation.studentFeeObligationId) || null
+        : null,
     };
   });
 
