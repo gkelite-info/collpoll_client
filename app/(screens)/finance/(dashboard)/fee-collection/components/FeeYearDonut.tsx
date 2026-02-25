@@ -19,6 +19,11 @@ interface Props {
   expected?: string;
   collected?: string;
   pending?: string;
+  branchId: number;
+  branchType: string;
+  academicYearId: number;
+  academicYear: string;
+  selectedYear: string;
 }
 
 export default function FeeYearDonut({
@@ -26,7 +31,12 @@ export default function FeeYearDonut({
   percentage,
   expected = "24.2 L",
   collected = "24.2 L",
-  pending = "24.2 L"
+  pending = "24.2 L",
+  branchId,
+  branchType,
+  academicYear,
+  academicYearId,
+  selectedYear
 }: Props) {
 
   const options = useMemo<AgPolarChartOptions>(() => ({
@@ -43,7 +53,7 @@ export default function FeeYearDonut({
         angleKey: "value",
         innerRadiusRatio: 0.6,
         outerRadiusRatio: 0.8,
-        fills: [ "#A78BFA", "#EF4444"],
+        fills: ["#A78BFA", "#EF4444"],
         strokeWidth: 0,
         rotation: -30,
         innerLabels: [
@@ -77,7 +87,13 @@ export default function FeeYearDonut({
           size={18}
           className="text-gray-400 cursor-pointer"
           onClick={() =>
-            router.push(`/finance/fee-collection/details?year=${title}`)
+            router.push(
+              `/finance/fee-collection/details?branchId=${branchId}
+    &branchType=${branchType}
+    &academicYearId=${academicYearId}
+    &academicYear=${academicYear}
+    &selectedYear=${selectedYear}&TotalExpected=${expected}&TotalCollected=${collected}&TotalPending=${pending}`
+            )
           }
         />
       </div>
