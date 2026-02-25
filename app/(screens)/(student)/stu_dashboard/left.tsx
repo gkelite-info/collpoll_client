@@ -12,6 +12,7 @@ import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 
 
