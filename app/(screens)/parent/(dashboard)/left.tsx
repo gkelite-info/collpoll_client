@@ -68,7 +68,7 @@ export default function ParentLeft() {
     const nextExam =
     {
         date: "21/Dec/2025",
-        subject: "Cumputer Networks"
+        subject: "Computer Networks"
     }
 
     const feeDue = {

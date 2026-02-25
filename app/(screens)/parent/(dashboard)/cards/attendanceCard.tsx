@@ -31,7 +31,11 @@ export default function AttendanceCard({ percentage, data }: attendanceProp) {
                         <BarChart data={data}>
                             <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                             <YAxis hide domain={[0, 100]} />
-                            <Tooltip />
+                            <Tooltip
+                                labelStyle={{ color: "black", fontWeight:"600" }}
+                                itemStyle={{ color: "#282828" }}
+                                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                            />
                             <Bar
                                 dataKey="value"
                                 barSize={18}
