@@ -10,7 +10,7 @@ import FeePageSkeleton from "./FeePageSkeleton";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
 import toast from "react-hot-toast";
-import { fetchAllFeeStructures } from "@/lib/helpers/finance/feeStructure/collegeFeeStructureAPI";
+import { fetchAllFeeStructures } from "@/lib/helpers/finance/feeStructure/academicFee/collegeFeeStructureAPI";
 
 function FeeContent() {
   const searchParams = useSearchParams();
