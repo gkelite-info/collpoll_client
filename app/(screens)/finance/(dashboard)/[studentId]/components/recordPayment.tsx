@@ -1,39 +1,56 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { motion } from "framer-motion";
-import QuickActions from "./quickActions";
-import FeeStats from "./feeStats";
-import ProfileDetails from "./profileCard";
-import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
+import React from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
+import { useRecordPayment } from "../useRecordPayment";
 
-const RecordPayment = () => {
-  // --- State ---
-  const [paymentMethod, setPaymentMethod] = useState("Manual UPI");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+interface RecordPaymentProps {
+  studentFeeObligationId: number;
+  collegeSemesterId: number;
+}
 
-  // --- Refs ---
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
+const RecordPayment: React.FC<RecordPaymentProps> = ({
+  studentFeeObligationId,
+  collegeSemesterId,
+}) => {
+  const {
+    studentName,
+    remainingBalance,
+    recentPayments,
+    isLoadingData,
+    paymentMethod,
+    setPaymentMethod,
+    selectedDate,
+    setSelectedDate,
+    attachedFile,
+    amountReceived,
+    setAmountReceived,
+    notes,
+    setNotes,
+    isSuccessModalOpen,
+    setIsSuccessModalOpen,
+    isSubmitting,
+    numericInputAmount,
+    newPendingAmount,
+    financeManagerId,
+    financeManagerName,
+    fileInputRef,
+    dateInputRef,
+    handleUploadClick,
+    handleFileChange,
+    removeFile,
+    handleRecordPayment,
+    modalData,
+  } = useRecordPayment({ studentFeeObligationId, collegeSemesterId });
 
-  // --- Handlers ---
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAttachedFile(e.target.files[0]);
-    }
-  };
-
-  const removeFile = () => {
-    setAttachedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  if (isLoadingData) {
+    return (
+      <div className="p-5 text-sm text-gray-500 animate-pulse">
+        Loading payment interface...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 font-sans text-gray-800">
@@ -50,7 +67,9 @@ const RecordPayment = () => {
               </label>
               <input
                 type="text"
-                defaultValue="20,000"
+                value={amountReceived}
+                onChange={(e) => setAmountReceived(e.target.value)}
+                placeholder="Enter amount"
                 className="border border-gray-300 rounded px-3 py-2 text-green-600 font-bold text-sm focus:outline-none focus:border-green-500"
               />
             </div>
@@ -61,7 +80,7 @@ const RecordPayment = () => {
               <input
                 type="text"
                 readOnly
-                defaultValue="4,75,630"
+                value={`₹ ${remainingBalance.toLocaleString("en-IN")}`}
                 className="border border-gray-300 rounded px-3 py-2 text-green-600 font-bold text-sm bg-gray-50 focus:outline-none"
               />
             </div>
@@ -85,7 +104,11 @@ const RecordPayment = () => {
                   >
                     <div className="relative flex items-center justify-center">
                       <div
-                        className={`w-3.5 h-3.5 rounded-full border ${paymentMethod === method ? "border-green-500 border-[4px]" : "border-gray-400"}`}
+                        className={`w-3.5 h-3.5 rounded-full border ${
+                          paymentMethod === method
+                            ? "border-green-500 border-[4px]"
+                            : "border-gray-400"
+                        }`}
                       />
                     </div>
                     <span className="text-gray-600 text-xs font-medium whitespace-nowrap">
@@ -119,7 +142,7 @@ const RecordPayment = () => {
               <label className="text-gray-500 font-semibold text-xs">
                 Collected By
               </label>
-              <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 h-[38px]">
+              <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 h-[38px] bg-gray-50">
                 <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden shrink-0">
                   <img
                     src="/rahul.png"
@@ -129,7 +152,7 @@ const RecordPayment = () => {
                   />
                 </div>
                 <span className="text-gray-700 font-medium text-xs">
-                  Stephen Jones
+                  {financeManagerName} (ID: {financeManagerId})
                 </span>
               </div>
             </div>
@@ -181,14 +204,16 @@ const RecordPayment = () => {
               </label>
               <input
                 className="border border-gray-300 rounded px-3 py-2 text-xs text-gray-600 h-[38px] focus:outline-none focus:border-green-500"
-                defaultValue="Parent discussed fee reduction. partial amount collected today."
+                value={notes}
+                placeholder="Optional remarks"
+                onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2    gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-100 flex flex-col justify-between h-[220px]">
           <div>
             <h3 className="text-gray-800 font-bold text-base mb-4">
@@ -199,7 +224,9 @@ const RecordPayment = () => {
                 <span className="text-gray-600 font-medium">
                   Amount Received
                 </span>
-                <span className="text-gray-900 font-bold">₹ 20,000</span>
+                <span className="text-gray-900 font-bold">
+                  ₹ {numericInputAmount.toLocaleString("en-IN")}
+                </span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-600 font-medium">Payment Mode</span>
@@ -211,15 +238,18 @@ const RecordPayment = () => {
                 <span className="text-gray-600 font-medium">
                   New Pending Amount
                 </span>
-                <span className="text-green-600 font-bold">₹ 4,75,630</span>
+                <span className="text-green-600 font-bold">
+                  ₹ {newPendingAmount.toLocaleString("en-IN")}
+                </span>
               </div>
             </div>
           </div>
           <button
-            onClick={() => setIsSuccessModalOpen(true)}
-            className="w-full bg-[#34D399] hover:bg-[#10B981] text-white py-2.5 rounded font-bold text-sm transition-colors shadow-sm mt-auto"
+            onClick={handleRecordPayment}
+            disabled={isSubmitting}
+            className="w-full bg-[#34D399] hover:bg-[#10B981] disabled:bg-gray-400 text-white py-2.5 rounded font-bold text-sm transition-colors shadow-sm mt-auto"
           >
-            Record Offline Payment
+            {isSubmitting ? "Processing..." : "Record Offline Payment"}
           </button>
         </div>
 
@@ -263,38 +293,33 @@ const RecordPayment = () => {
             <thead>
               <tr className="bg-[#f8f9fa] text-gray-500 text-xs uppercase tracking-wider font-bold">
                 <th className="py-3 px-5">Amount Received</th>
-                <th className="py-3 px-5">Remaining Balance</th>
                 <th className="py-3 px-5">Payment Method</th>
                 <th className="py-3 px-5">Payment Date</th>
-                <th className="py-3 px-5">Collected By</th>
               </tr>
             </thead>
             <tbody className="text-gray-600 text-xs font-medium">
-              {[
-                {
-                  amt: "900",
-                  bal: "4,75,630",
-                  method: "UPI",
-                  date: "09/08/2025",
-                },
-                {
-                  amt: "23,145",
-                  bal: "4,75,630",
-                  method: "UPI",
-                  date: "09/08/2025",
-                },
-              ].map((row, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-gray-50 last:border-0 hover:bg-gray-50"
-                >
-                  <td className="py-3 px-5">₹ {row.amt}</td>
-                  <td className="py-3 px-5">₹ {row.bal}</td>
-                  <td className="py-3 px-5">{row.method}</td>
-                  <td className="py-3 px-5">{row.date}</td>
-                  <td className="py-3 px-5">Stephen Jones</td>
+              {recentPayments.length > 0 ? (
+                recentPayments.map((row, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50"
+                  >
+                    <td className="py-3 px-5">
+                      ₹ {Number(row.paidAmount).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-3 px-5">{row.paymentMode}</td>
+                    <td className="py-3 px-5">
+                      {new Date(row.paymentDate).toLocaleDateString("en-IN")}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={3} className="py-6 text-center text-gray-400">
+                    No recent offline payments found.
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
@@ -304,9 +329,9 @@ const RecordPayment = () => {
         isOpen={isSuccessModalOpen}
         onClose={() => setIsSuccessModalOpen(false)}
         data={{
-          amount: "20,000",
-          payerName: "Shravani Reddy",
-          newPending: "4,75,630",
+          amount: modalData.amount,
+          payerName: modalData.payerName,
+          newPending: modalData.newPending,
         }}
       />
     </div>
