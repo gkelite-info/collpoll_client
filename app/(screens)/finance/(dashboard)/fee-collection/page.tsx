@@ -193,6 +193,11 @@ function FeeCollectionPage() {
               <FeeYearDonut
                 key={year.academicYearId}
                 title={`${selectedBranch} - ${year.academicYear}`}
+                branchId={Number(branchId)}
+                branchType={selectedBranch}
+                academicYearId={year.academicYearId}
+                academicYear={year.academicYear}
+                selectedYear={searchParams.get("selectedYear") || ""}
                 percentage={year.collectionPercentage}
                 expected={formatCurrency(year.expected)}
                 collected={formatCurrency(year.collected)}
