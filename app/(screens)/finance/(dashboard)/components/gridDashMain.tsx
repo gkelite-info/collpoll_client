@@ -614,8 +614,26 @@ export default function DashboardPage() {
   ]);
 
   const handleFeeCollection = () => {
-    router.push("?view=feeCollection");
-    return;
+    if (!collegeEducationId || !selectedBranchId || !selectedYear) {
+      console.log("⛔ Missing required params", {
+        collegeEducationId,
+        selectedBranchId,
+        selectedYear,
+      });
+      return;
+    }
+
+    console.log("🚀 Navigating to Fee Collection with:", {
+      educationType: collegeEducationType,
+      educationId: collegeEducationId,
+      branchType: selectedBranch,
+      branchId: selectedBranchId,
+      selectedYear,
+    });
+
+    router.push(
+      `/finance?view=feeCollection&educationType=${collegeEducationType}&educationId=${collegeEducationId}&branchType=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
+    );
   };
 
   const handleOverallFinance = () => {
