@@ -30,10 +30,9 @@ export default function FeeYearDonut({
 }: Props) {
 
   const options = useMemo<AgPolarChartOptions>(() => ({
-    autoSize: true,
     data: [
-      { type: "Collected_Dark", value: percentage * 0.6 },
-      { type: "Collected_Light", value: percentage * 0.4 },
+      // { type: "Collected_Dark", value: percentage * 0.6 },
+      { type: "Collected_Light", value: percentage },
       { type: "Pending", value: 100 - percentage },
     ],
     background: { fill: "transparent" },
@@ -42,9 +41,9 @@ export default function FeeYearDonut({
       {
         type: "donut",
         angleKey: "value",
-        innerRadiusRatio: 0.5,
-        outerRadiusRatio: 0.7,
-        fills: ["#6D28D9", "#A78BFA", "#EF4444"],
+        innerRadiusRatio: 0.6,
+        outerRadiusRatio: 0.8,
+        fills: [ "#A78BFA", "#EF4444"],
         strokeWidth: 0,
         rotation: -30,
         innerLabels: [
@@ -53,7 +52,6 @@ export default function FeeYearDonut({
             fontSize: 32,
             fontWeight: "bold",
             color: "#1F2937",
-            margin: 4,
           },
           {
             text: "Fee Collected",
@@ -69,7 +67,7 @@ export default function FeeYearDonut({
   const router = useRouter();
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-100 w-full max-w-lg">
+    <div className="bg-white rounded-2xl p-6 border border-gray-100 w-full">
       <div className="flex justify-between items-center">
         <h3 className="text-base font-semibold text-[#6D28D9]">
           {title}
@@ -82,14 +80,14 @@ export default function FeeYearDonut({
             router.push(`/finance/fee-collection/details?year=${title}`)
           }
         />
-      </div>   
+      </div>
       <div className="h-[220px] w-full flex items-center justify-center relative">
         <AgCharts options={options} />
       </div>
       <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-50">
         <div className="flex items-center gap-1">
           <span className="text-gray-600 text-sm font-medium">Expected :</span>
-          <span className="text-[#6D28D9] text-sm font-bold">{expected}</span>
+          <span className="text-[#000000] text-sm font-bold">{expected}</span>
         </div>
 
         <div className="flex items-center gap-1">
