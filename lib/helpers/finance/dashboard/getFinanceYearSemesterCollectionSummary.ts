@@ -87,7 +87,11 @@ export async function getFinanceYearSemesterCollectionSummary(
 
   const { data: semesters } = await supabase
     .from("college_semester")
-    .select("collegeSemesterId, collegeSemester");
+    .select("collegeSemesterId, collegeSemester")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
 
   const semesterMap = new Map(
     semesters?.map((s) => [
@@ -111,6 +115,8 @@ export async function getFinanceYearSemesterCollectionSummary(
 
   /* 7️⃣ Group by Study Year */
 
+  /* 7️⃣ Group by Study Year */
+
   let academicYearTotal = 0;
 
   const yearMap = new Map<
@@ -125,9 +131,25 @@ export async function getFinanceYearSemesterCollectionSummary(
     const semesterId = c.collegeSemesterId;
     if (!semesterId) return;
 
-    const semesterNumber = semesterMap.get(semesterId);
-    if (!semesterNumber) return;
+    const semesterLabelRaw = semesterMap.get(semesterId);
+    if (semesterLabelRaw == null) return;
 
+    // Convert to string so match() never crashes
+    const semesterLabel = String(semesterLabelRaw);
+
+    if (typeof semesterLabelRaw !== "string") {
+      console.log("⚠️ semesterLabel not string:", {
+        semesterId,
+        semesterLabelRaw,
+        type: typeof semesterLabelRaw,
+      });
+    }
+
+    // Extract semester number (works for "Sem 1", "1", "Semester-1", etc.)
+    const semesterNumber = parseInt(semesterLabel.replace(/\D/g, ""), 10);
+    if (!semesterNumber || Number.isNaN(semesterNumber)) return;
+
+    // Study year: Sem 1 & 2 → Year 1, 3 & 4 → Year 2 etc
     const studyYear = Math.ceil(semesterNumber / 2);
 
     if (!yearMap.has(studyYear)) {
@@ -148,6 +170,44 @@ export async function getFinanceYearSemesterCollectionSummary(
 
     entry.total += amount;
   });
+
+  // let academicYearTotal = 0;
+
+  // const yearMap = new Map<
+  //   number,
+  //   { sem1: number; sem2: number; total: number }
+  // >();
+
+  // filteredCollections.forEach((c: any) => {
+  //   const amount = Number(c.collectedAmount) || 0;
+  //   academicYearTotal += amount;
+
+  //   const semesterId = c.collegeSemesterId;
+  //   if (!semesterId) return;
+
+  //   const semesterNumber = semesterMap.get(semesterId);
+  //   if (!semesterNumber) return;
+
+  //   const studyYear = Math.ceil(semesterNumber / 2);
+
+  //   if (!yearMap.has(studyYear)) {
+  //     yearMap.set(studyYear, {
+  //       sem1: 0,
+  //       sem2: 0,
+  //       total: 0,
+  //     });
+  //   }
+
+  //   const entry = yearMap.get(studyYear)!;
+
+  //   if (semesterNumber % 2 === 1) {
+  //     entry.sem1 += amount;
+  //   } else {
+  //     entry.sem2 += amount;
+  //   }
+
+  //   entry.total += amount;
+  // });
 
   const yearWiseData = [1, 2, 3, 4].map((year) => {
     const data = yearMap.get(year) || {

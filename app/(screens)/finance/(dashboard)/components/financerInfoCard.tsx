@@ -49,7 +49,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
         setDynamicTodayCollection(todayTotal);
       } catch (error) {
-        console.error("❌ Error fetching today collection:", error);
+        // optionally handle error
       }
     };
 
