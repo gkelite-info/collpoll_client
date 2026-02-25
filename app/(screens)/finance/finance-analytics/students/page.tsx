@@ -15,12 +15,10 @@ import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
-import {
-  getOverallStudentsOverview,
-  getOverallStudentsSummary,
-} from "@/lib/helpers/finance/getOverallStudentsOverview";
+
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { getOverallStudentsOverview } from "@/lib/helpers/finance/getOverallStudentsOverview";
 
 function OverallStudentsOverview() {
   const router = useRouter();
@@ -28,6 +26,7 @@ function OverallStudentsOverview() {
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
   const [search, setSearch] = useState("");
+   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [educationFilter, setEducationFilter] = useState("All");
   const [branchFilter, setBranchFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
@@ -89,16 +88,16 @@ function OverallStudentsOverview() {
     },
   ];
 
-  const loadCardsSummary = async () => {
-    if (!collegeId || !collegeEducationId) return;
+  // const loadCardsSummary = async () => {
+  //   if (!collegeId || !collegeEducationId) return;
 
-    const summary = await getOverallStudentsSummary(
-      collegeId,
-      collegeEducationId,
-    );
+  //   const summary = await getOverallStudentsSummary(
+  //     collegeId,
+  //     collegeEducationId,
+  //   );
 
-    setSummaryCounts(summary);
-  };
+  //   setSummaryCounts(summary);
+  // };
 
   const loadStudents = async () => {
     if (!collegeId || !collegeEducationId || loading) return;
@@ -130,7 +129,6 @@ function OverallStudentsOverview() {
 
 
     } catch (error: any) {
-      console.error(" Error loading students data:", error?.message || error);
       toast.error(error?.message || "Failed to load students");
     }
     finally {
@@ -138,9 +136,9 @@ function OverallStudentsOverview() {
     }
   };
 
-  useEffect(() => {
-    loadCardsSummary();
-  }, [collegeId, collegeEducationId]);
+  // useEffect(() => {
+  //   loadCardsSummary();
+  // }, [collegeId, collegeEducationId]);
 
   useEffect(() => {
     loadStudents();
@@ -222,18 +220,25 @@ function OverallStudentsOverview() {
   ];
 
   useEffect(() => {
-    if (!collegeId || !collegeEducationId || loading) return;
-
     const loadFilters = async () => {
-      const data = await getFinanceFilterOptions(collegeId, collegeEducationId);
+      if (!loading && collegeId && collegeEducationId) {
+        const filterData = await getFinanceFilterOptions(
+          collegeId,
+          collegeEducationId
+        );
 
-      setBranches(data.branches);
-      setYears(data.years);
-      setSemesters(data.semesters);
+        const branchList = filterData.branches || [];
+
+        setBranches(branchList);
+
+        if (branchList.length > 0) {
+          setSelectedBranch(branchList[0].collegeBranchCode);
+        }
+      }
     };
 
     loadFilters();
-  }, [collegeId, collegeEducationId]);
+  }, [loading, collegeId, collegeEducationId]);
 
   return (
     <div className="p-2 min-h-screen space-y-6">
@@ -491,3 +496,4 @@ export default function Page() {
     </Suspense>
   );
 }
+

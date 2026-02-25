@@ -32,6 +32,7 @@ import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOvera
 import { getOverallPending } from "@/lib/helpers/finance/dashboard/getOverallPending";
 import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
 import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
+<<<<<<< Updated upstream
 
 interface Data {
   years: {
@@ -91,6 +92,9 @@ const data: Data = {
     { label: "This Year", val: "1.03 Cr", icon: Calendar },
   ],
 };
+=======
+// import { fetchSemesters } from "@/lib/helpers/admin/academics/academicDropdowns";
+>>>>>>> Stashed changes
 
 const Card = ({
   children,
@@ -105,69 +109,6 @@ const Card = ({
     {children}
   </div>
 );
-
-// const Header = ({
-//   educationType,
-//   branch,
-//   branches,
-//   onBranchChange,
-//   year,
-//   onYearClick,
-// }: {
-//   educationType: string;
-//   branch: string;
-//   branches: any[];
-//   onBranchChange: (val: string) => void;
-//   year: string;
-//   onYearClick: () => void;
-// }) => (
-
-//   <div className="flex justify-between items-center mb-3 px-1">
-//     <h1 className="text-[#1e293b] text-base font-bold">
-//       {educationType} - {branch} - {year}
-//     </h1>
-
-//     <div className="flex gap-3 text-[10px] font-semibold text-gray-500">
-
-//       {/* Education Type (Auto Fetched - Not Editable) */}
-//       <div className="flex items-center gap-1.5">
-//         <span className="text-xs">Education Type</span>
-//         <div className="bg-[#E5F6EC] text-[#43C17A] px-2 py-1 rounded-full text-xs cursor-not-allowed">
-//           {educationType}
-//         </div>
-//       </div>
-
-//       {/* Branch (Selectable) */}
-//       <div className="flex items-center gap-1.5">
-//         <span className="text-xs">Branch</span>
-
-//         <div className="relative">
-//           <select
-//             value={branch}
-//             onChange={(e) => onBranchChange(e.target.value)}
-//             className="appearance-none bg-[#E5F6EC] text-[#43C17A] px-2 py-1 pr-8 rounded-full text-xs cursor-pointer outline-none"
-//           >
-//             {branches.map((b) => (
-//               <option
-//                 key={b.collegeBranchId}
-//                 value={b.collegeBranchCode}
-//               >
-//                 {b.collegeBranchCode}
-//               </option>
-//             ))}
-//           </select>
-//           <CaretDown
-//             size={12}
-//             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-//           />
-//         </div>
-//       </div>
-
-//       {/* Year (Untouched) */}
-//       <Dropdown label="Year" value={year} onClick={onYearClick} />
-//     </div>
-//   </div>
-// );
 
 const Header = ({
   educationType,
@@ -287,116 +228,6 @@ const Dropdown = ({
     </div>
   );
 };
-// interface DropdownOption {
-//   label: string;
-//   value: string;
-// }
-
-// const Dropdown = ({
-//   label,
-//   value,
-//   options,
-//   onChange,
-//   onClick,
-//   disabled = false,
-// }: {
-//   label: string;
-//   value: string;
-//   options?: DropdownOption[];
-//   onChange?: (val: string) => void;
-//   onClick?: () => void;
-//   disabled?: boolean;
-// }) => {
-//   const isSelectable = options && options.length > 0;
-
-//   return (
-//     <div className="flex items-center gap-1.5">
-//       <span className="text-xs">{label}</span>
-
-//       <div className="relative">
-//         {isSelectable ? (
-//           <select
-//             value={value}
-//             onChange={(e) => onChange?.(e.target.value)}
-//             disabled={disabled}
-//             className="appearance-none bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold outline-none cursor-pointer"
-//           >
-//             {options.map((opt) => (
-//               <option key={opt.value} value={opt.value}>
-//                 {opt.label}
-//               </option>
-//             ))}
-//           </select>
-//         ) : (
-//           <div
-//             onClick={disabled ? undefined : onClick}
-//             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
-//     ${disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer hover:bg-green-100"}
-//   `}
-//           >
-//             {value}
-
-//             {!disabled && (
-//               <CaretDown
-//                 size={12}
-//                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-//               />
-//             )}
-//           </div>
-//         )}
-
-//         {/* {!disabled && (
-//           <CaretDown
-//             size={12}
-//             className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-//           />
-//         )} */}
-//       </div>
-//     </div>
-//   );
-// };
-
-// const Dropdown = ({
-//   label,
-//   value,
-//   onClick,
-// }: {
-//   label: string;
-//   value: string;
-//   onClick?: () => void;
-// }) => (
-//   <div className="flex items-center gap-1.5">
-//     <span className="text-xs">{label}</span>
-
-//     <div
-//       onClick={onClick}
-//       className="bg-green-50 text-[#43C17A] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-green-100"
-//     >
-//       {value}
-//       <CaretDown weight="bold" />
-//     </div>
-//   </div>
-// );
-
-// const Header = () => (
-//   <div className="flex justify-between items-center mb-3 px-1">
-//     <h1 className="text-[#1e293b] text-base font-bold">B Tech - CSE - 2026</h1>
-//     <div className="flex gap-3 text-[10px] font-semibold text-gray-500">
-//       <Dropdown label="Education Type" value="B Tech" />
-//       <Dropdown label="Branch" value="CSE" />
-//       <Dropdown label="Year" value="2026" />
-//     </div>
-//   </div>
-// );
-
-// const Dropdown = ({ label, value }: { label: string; value: string }) => (
-//   <div className="flex items-center gap-1.5">
-//     <span className="text-xs">{label}</span>
-//     <div className="bg-green-50 text-[#43C17A] px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:bg-green-100">
-//       {value} <CaretDown weight="bold" />
-//     </div>
-//   </div>
-// );
 
 const TopStat = ({
   icon: Icon,
@@ -453,46 +284,134 @@ type YearData = {
   sem2: string;
 };
 
-const YearCard = ({ data }: { data: YearData }) => (
-  <Card className="h-full flex flex-col justify-center gap-2">
-    <div className="flex justify-between items-center">
-      <div className="font-medium text-gray-800 text-sm">{data.year}</div>
+const YearCard = ({
+  data,
+  branchId,
+  academicYearId,
+  academicYear,
+  branchName,
+  year,
+  educationTypeId,
+  collegeId,
+  collegeEducationId,
+  semesterList
+}: {
+  data: YearData;
+  branchId?: number;
+  academicYearId?: number;
+  academicYear?: string;
+  branchName?: string;
+  year?: string;
+  educationTypeId?: number;
+  collegeId?: number;
+  collegeEducationId?: number;
+  semesterList?: any[];
+}) => {
+  const sem1Id = semesterList?.[0]?.collegeSemesterId;
+  const sem2Id = semesterList?.[1]?.collegeSemesterId;
+  return (
+    <Card className="h-full flex flex-col justify-center gap-2">
+      <div className="flex justify-between items-center">
+        <div className="font-medium text-gray-800 text-sm">{data.year}</div>
 
-      <div className="text-right">
-        <span className="text-[8px] text-[#282828] uppercase font-semibold mr-2">
-          Total
-        </span>
+        <div className="text-right">
+          <span className="text-[8px] text-[#282828] uppercase font-semibold mr-2">
+            Total
+          </span>
 
-        <span className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-medium">
-          ₹{data.total}
-        </span>
+          <span className="bg-[#1e293b] text-white px-1.5 py-0.5 rounded-full text-[9px] font-medium">
+            ₹{data.total}
+          </span>
+        </div>
       </div>
-    </div>
 
-    <div className="flex gap-2">
-      <SemBox label="Sem 1" val={data.sem1} />
-      <SemBox label="Sem 2" val={data.sem2} />
-    </div>
-  </Card>
-);
+      <div className="flex gap-2">
+        <SemBox
+          label="Sem 1"
+          val={data.sem1}
+          branchId={branchId}
+          academicYearId={academicYearId}
+          academicYear={academicYear}
+          branchName={branchName}
+          year={year}
+          educationTypeId={educationTypeId}
+          collegeId={collegeId}
+          collegeEducationId={collegeEducationId}
+          semesterId={sem1Id}
+        />
+        <SemBox
+          label="Sem 2"
+          val={data.sem2}
+          branchId={branchId}
+          academicYearId={academicYearId}
+          academicYear={academicYear}
+          branchName={branchName}
+          year={year}
+          educationTypeId={educationTypeId}
+          collegeId={collegeId}
+          collegeEducationId={collegeEducationId}
+          semesterId={sem2Id}
+        />
+      </div>
+    </Card>
+  )
+};
 
-const SemBox = ({ label, val }: { label: string; val: string }) => {
+const SemBox = ({
+  label,
+  val,
+  branchId,
+  academicYearId,
+  academicYear,
+  branchName,
+  year,
+  educationTypeId,
+  collegeId,
+  collegeEducationId,
+  semesterId
+}: {
+  label: string;
+  val: string;
+  branchId?: number;
+  academicYearId?: number;
+  academicYear?: string;
+  branchName?: string;
+  year?: string;
+  educationTypeId?: number;
+  collegeId?: number;
+  collegeEducationId?: number;
+  semesterId?: number;
+}) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const handleClick = () => {
-    const params = new URLSearchParams(searchParams.toString());
+    if (!branchId || !academicYearId) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+
     params.set("view", "semwise");
     params.set("semester", label);
-    router.push(`?${params.toString()}`);
+    params.set("branchId", String(branchId));
+    params.set("academicYearId", String(academicYearId));
+    params.set("academicYear", String(academicYear));
+    params.set("semesterId", String(semesterId));
+    params.set("branchName", branchName ?? "");
+    params.set("year", year ?? "");
+    params.set("educationTypeId", String(educationTypeId));
+
+    router.push(`/finance?${params.toString()}`);
   };
+
+
 
   return (
     <div
       onClick={handleClick}
       className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1 cursor-pointer"
     >
-      <div className="text-xs  text-[#282828]">{label}</div>
+      <div className="text-xs text-[#282828]">{label}</div>
       <div className="text-xs font-bold text-[#43C17A]">₹ {val}</div>
     </div>
   );
@@ -512,16 +431,25 @@ const defaultYearWiseData = [1, 2, 3, 4].map((year) => ({
   total: 0,
 }));
 
+interface AcademicYearData {
+  collegeAcademicYear: string;
+  collegeAcademicYearId: number;
+  collegeBranchId: number;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
-  const [years, setYears] = useState<any[]>([]);
+  // const [years, setYears] = useState<AcademicYearData[]>([]);
   const [yearModalOpen, setYearModalOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const currentYear = new Date().getFullYear().toString();
@@ -549,12 +477,15 @@ export default function DashboardPage() {
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
         ?.collegeBranchId;
 
+<<<<<<< Updated upstream
   const selectedAcademicYearId =
     selectedYear !== "Year"
       ? years.find((y) => y.collegeAcademicYear === selectedYear)
         ?.collegeAcademicYearId
       : undefined;
 
+=======
+>>>>>>> Stashed changes
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (yearRef.current && !yearRef.current.contains(e.target as Node)) {
@@ -584,23 +515,26 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFilters = async () => {
       if (!loading && collegeId && collegeEducationId) {
-        try {
-          const filterData = await getFinanceFilterOptions(
-            collegeId,
-            collegeEducationId,
-          );
+        const filterData = await getFinanceFilterOptions(
+          collegeId,
+          collegeEducationId
+        );
 
-          const branchList = filterData.branches || [];
+        const branchList = filterData.branches || [];
 
-          setBranches(branchList);
-          setYears(filterData.years || []);
+        setBranches(branchList);
 
+<<<<<<< Updated upstream
           if (branchList.length > 0) {
             setSelectedBranch(branchList[0].collegeBranchCode);
           }
 
         } catch (err) {
           console.error("Filter load error:", err);
+=======
+        if (branchList.length > 0) {
+          setSelectedBranch(branchList[0].collegeBranchCode);
+>>>>>>> Stashed changes
         }
       }
     };
@@ -670,16 +604,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadInsights = async () => {
-
-      console.log("🟢 [QuickInsights] Triggered");
-      console.log("Filters:", {
-        loading,
-        collegeId,
-        collegeEducationId,
-        selectedBranchId,
-        selectedYear,
-      });
-
       if (
         loading ||
         !collegeId ||
@@ -687,7 +611,6 @@ export default function DashboardPage() {
         !selectedBranchId ||
         !selectedYear
       ) {
-        console.log("⛔ [QuickInsights] Skipped due to missing data");
         return;
       }
 
@@ -698,11 +621,8 @@ export default function DashboardPage() {
           collegeBranchId: selectedBranchId,
           selectedYear,
         });
-
-        console.log("✅ [QuickInsights] Result:", result);
         setQuickInsights(result);
       } catch (err) {
-        console.error("❌ Quick insights error:", err);
       }
     };
 
@@ -717,16 +637,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadOverallPending = async () => {
-
-      console.log("🟢 [OverallPending] Triggered");
-      console.log("Filters:", {
-        loading,
-        collegeId,
-        collegeEducationId,
-        selectedBranchId,
-        selectedYear,
-      });
-
       if (
         loading ||
         !collegeId ||
@@ -734,7 +644,6 @@ export default function DashboardPage() {
         !selectedBranchId ||
         !selectedYear
       ) {
-        console.log("⛔ [OverallPending] Skipped due to missing data");
         return;
       }
 
@@ -745,11 +654,8 @@ export default function DashboardPage() {
           collegeBranchId: selectedBranchId,
           selectedYear,
         });
-
-        console.log("✅ [OverallPending] Amount:", pending);
         setOverallPending(pending ?? 0);
       } catch (err) {
-        console.error("❌ Overall pending error:", err);
       }
     };
 
@@ -764,21 +670,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const loadPendingStudents = async () => {
-
-      console.log("🟢 [PendingStudents] Triggered");
-      console.log("Filters:", {
-        loading,
-        collegeId,
-        collegeEducationId,
-        selectedBranchId,
-      });
-
       if (
         loading ||
         !collegeId ||
         !collegeEducationId
       ) {
-        console.log("⛔ [PendingStudents] Skipped due to missing data");
         return;
       }
 
@@ -788,11 +684,8 @@ export default function DashboardPage() {
           collegeEducationId,
           collegeBranchId: selectedBranchId,
         });
-
-        console.log("✅ [PendingStudents] Count:", count);
         setPendingStudentsCount(count ?? 0);
       } catch (err) {
-        console.error("❌ Pending students error:", err);
       }
     };
 
@@ -835,6 +728,9 @@ export default function DashboardPage() {
     value: Number((item.total / 100000).toFixed(1)),
   }));
 
+  if (!collegeEducationId) return
+
+
   return (
     <div className="min-h-screen flex justify-center text-gray-900">
       <div className="w-full">
@@ -845,7 +741,11 @@ export default function DashboardPage() {
             year={selectedYear ?? "Year"}
             branches={branches}
             onBranchChange={(val: string) => {
+<<<<<<< Updated upstream
               setSelectedBranch(val);
+=======
+            setSelectedBranch(val);
+>>>>>>> Stashed changes
             }}
             onYearClick={() => {
               setYearModalOpen((prev) => !prev);
@@ -871,12 +771,18 @@ export default function DashboardPage() {
                   }}
                   shouldDisableYear={(date) => {
                     const year = date.getFullYear();
+<<<<<<< Updated upstream
 
                     if (year < BASE_YEAR) return true;
 
                     if (year > CURRENT_YEAR) return true;
 
                     return false;
+=======
+                    if (year < BASE_YEAR) return true;
+                    if (year > CURRENT_YEAR) return true;
+                    return false; 
+>>>>>>> Stashed changes
                   }}
                   slotProps={{
                     actionBar: { actions: [] },
@@ -924,6 +830,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+<<<<<<< Updated upstream
           <div className="col-span-9 grid grid-cols-2 gap-3">
             {(financeSummary.yearWiseData?.length
               ? financeSummary.yearWiseData
@@ -941,8 +848,55 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
+=======
+          <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
+            {(() => {
+              const selectedBranchData = branches.find(
+                (b) => b.collegeBranchCode === selectedBranch
+>>>>>>> Stashed changes
               );
-            })}
+
+              const branchYears = selectedBranchData?.years || [];
+
+              // const testBranchYears = [...branchYears, ...branchYears];
+
+              const enableScroll = branchYears.length >= 5;
+
+              if (branchYears.length === 0) return null;
+
+              return <div
+                className={`col-span-9 grid grid-cols-2 gap-3 ${enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
+                  }`}
+              >
+                {branchYears.map((yearObj: any, index: number) => {
+                  const summaryYear = financeSummary.yearWiseData.find(
+                    (y: any) => y.year === yearObj.collegeAcademicYear
+                  )
+
+                  return (
+                    <div key={index} className="h-[95px]">
+                      <YearCard
+                        data={{
+                          year: yearObj.collegeAcademicYear,
+                          total: (summaryYear?.total ?? 0).toLocaleString(),
+                          sem1: (summaryYear?.sem1 ?? 0).toLocaleString(),
+                          sem2: (summaryYear?.sem2 ?? 0).toLocaleString(),
+                        }}
+                        branchId={selectedBranchId}
+                        academicYearId={yearObj.collegeAcademicYearId}
+                        academicYear={yearObj.collegeAcademicYear}
+                        branchName={selectedBranch}
+                        year={selectedYear}
+                        educationTypeId={collegeEducationId ?? undefined}
+                        collegeId={collegeId ?? undefined}
+                        collegeEducationId={collegeEducationId ?? undefined}
+                        semesterList={yearObj.semesters}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            })()}
           </div>
 
           {/* <div className="col-span-9 grid grid-cols-2 gap-3">

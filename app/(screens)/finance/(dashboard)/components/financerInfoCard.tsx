@@ -40,16 +40,21 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   useEffect(() => {
     const fetchTodayCollection = async () => {
       if (loading || !collegeId || !collegeEducationId) return;
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
       try {
         const { todayTotal } = await getTodayCollectionSummary({
           collegeId,
           collegeEducationId,
         });
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes
         setDynamicTodayCollection(todayTotal);
       } catch (error) {
-        console.error("❌ Error fetching today collection:", error);
       }
     };
 

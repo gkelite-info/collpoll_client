@@ -23,9 +23,6 @@ export async function getOverallStudentsOverview(
         collegeSemesterId,
         status,
     } = filters;
-
-    console.log("🔥 FILTERS:", filters);
-
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -91,25 +88,22 @@ export async function getOverallStudentsOverview(
 ------------------------------ */
     if (search && search.trim() !== "") {
         const searchValue = search.trim();
+        const isNumber = !isNaN(Number(searchValue));
 
-        // If numeric → search by studentId
-        if (!isNaN(Number(searchValue))) {
-            query = query.eq("studentId", Number(searchValue));
-        } else {
-            // Search by student name
-            query = query.ilike("users.fullName", `%${searchValue}%`);
+        let searchQuery = `users.fullName.ilike.%${searchValue}%`;
+
+        if (isNumber) {
+            searchQuery += `,studentId.eq.${Number(searchValue)}`;
         }
+
+        query = query.or(searchQuery);
     }
 
     const { data: students, error, count } = await query.range(from, to);
 
 
     if (error) throw error;
-
-    console.log("📚 STUDENTS:", students);
-
     if (!students || students.length === 0) {
-        console.log("❌ No students found");
         return {
             students: [],
             counts: { total: 0, paid: 0, pending: 0, partial: 0 },
@@ -117,7 +111,6 @@ export async function getOverallStudentsOverview(
     }
 
     const studentIds = students.map((s) => s.studentId);
-    console.log("🆔 STUDENT IDS:", studentIds);
 
     /* --------------------------------------------------
        2️⃣ Fetch Obligations
@@ -130,9 +123,6 @@ export async function getOverallStudentsOverview(
         .eq("collegeEducationId", collegeEducationId)
         .eq("isActive", true)
         .is("deletedAt", null);
-
-    console.log("💰 OBLIGATIONS:", obligations);
-
     const obligationMap = new Map<number, any>();
     obligations?.forEach((o) => {
         obligationMap.set(o.studentId, o);
@@ -140,8 +130,6 @@ export async function getOverallStudentsOverview(
 
     const obligationIds =
         obligations?.map((o) => o.studentFeeObligationId) || [];
-
-    console.log("🧾 OBLIGATION IDS:", obligationIds);
 
     /* --------------------------------------------------
        3️⃣ Fetch Payments
@@ -151,9 +139,6 @@ export async function getOverallStudentsOverview(
         .from("student_payment_transaction")
         .select("studentFeeObligationId, paidAmount, paymentStatus")
         .in("studentFeeObligationId", obligationIds);
-
-    console.log("💳 PAYMENTS:", payments);
-
     const paymentMap = new Map<
         number,
         { paidAmount: number; paymentStatus: string }
@@ -166,8 +151,6 @@ export async function getOverallStudentsOverview(
         });
     });
 
-    console.log("🗂 PAYMENT MAP:", paymentMap);
-
     /* --------------------------------------------------
        4️⃣ Build Result
     --------------------------------------------------- */
@@ -178,16 +161,10 @@ export async function getOverallStudentsOverview(
 
     const result = students.map((student: any) => {
         const obligation = obligationMap.get(student.studentId);
-
-        console.log("➡ Student:", student.studentId);
-        console.log("   Obligation:", obligation);
-
         const totalAmount = obligation?.totalAmount || 0;
 
         const paymentInfo =
             paymentMap.get(obligation?.studentFeeObligationId);
-
-        console.log("   Payment Info:", paymentInfo);
 
         const paidAmount = paymentInfo?.paidAmount || 0;
 
@@ -205,9 +182,6 @@ export async function getOverallStudentsOverview(
             uiStatus = "Partial";
             partialCount++;
         }
-
-        console.log("   FINAL STATUS:", uiStatus);
-
         return {
             studentId: student.studentId,
             studentName: student.users?.fullName || "",
@@ -224,19 +198,9 @@ export async function getOverallStudentsOverview(
         };
     });
 
-    console.log("📊 FINAL RESULT:", result);
-
     const filtered = status
         ? result.filter((r) => r.status === status)
         : result;
-
-    console.log("🎯 FILTERED RESULT:", filtered);
-
-    // if (search && search.trim() !== "") {
-    //     query = query.ilike("users.fullName", `%${search.trim()}%`);
-    // }
-
-
     return {
         students: filtered,
         totalCount: count ?? 0,
@@ -260,7 +224,7 @@ export async function getOverallStudentsSummary(
     collegeId: number,
     collegeEducationId: number
 ) {
-    console.log("📊 Loading Overall Students Summary...");
+
 
     /* --------------------------------------------------
        1️⃣ Fetch ALL active students for education
