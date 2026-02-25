@@ -67,7 +67,6 @@ export async function getBranchWiseCollection(
     return { chartData: [], gridData: [], tableData: [], availableYears: [] };
   }
 
-  // 🟢 ADDED: Set to track every unique transaction year
   const availableYearsSet = new Set<string>();
 
   obligations?.forEach((ob: any) => {
@@ -79,7 +78,6 @@ export async function getBranchWiseCollection(
     ob.student_fee_collection?.forEach((coll: any) => {
       const collYear = new Date(coll.createdAt).getFullYear().toString();
 
-      // 🟢 ADDED: Store the year
       availableYearsSet.add(collYear);
 
       const amt = Number(coll.collectedAmount) || 0;
@@ -126,7 +124,6 @@ export async function getBranchWiseCollection(
     availableYears.push(new Date().getFullYear().toString());
   }
 
-  // 🟢 CHANGED: Return availableYears
   return { chartData, gridData, tableData, availableYears };
 }
 
@@ -374,7 +371,7 @@ export async function getStudentFinanceDetails(studentId: string) {
 
   const { data: structure } = await supabase
     .from("college_fee_structure")
-    .select("feeStructureId")
+    .select("feeStructureId, dueDate")
     .eq("collegeId", studentData.collegeId)
     .eq("collegeEducationId", studentData.collegeEducationId)
     .eq("collegeBranchId", studentData.collegeBranchId)
@@ -490,7 +487,7 @@ export async function getStudentFinanceDetails(studentId: string) {
     gstAmount = baseApplicableFees * 0.18;
   }
 
-  const finalTotalPayable = baseApplicableFees + gstAmount;
+  const finalTotalPayable = totalObligationAmount;
   const pendingAmount = Math.max(finalTotalPayable - totalPaidTillNow, 0);
 
   const feePlan = {
@@ -508,6 +505,14 @@ export async function getStudentFinanceDetails(studentId: string) {
   };
 
   const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
+  const dynamicDueDate = structure?.dueDate
+    ? new Date(structure.dueDate).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "Not Set";
+
   const stats = [
     {
       label: "Total Fee",
@@ -529,7 +534,7 @@ export async function getStudentFinanceDetails(studentId: string) {
     },
     {
       label: "Due Date",
-      value: "15 Feb 2026",
+      value: dynamicDueDate,
       bg: "bg-[#CEE6FF]",
       iconColor: "text-[#60AEFF]",
     },

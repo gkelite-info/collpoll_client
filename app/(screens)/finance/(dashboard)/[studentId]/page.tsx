@@ -19,6 +19,7 @@ import History, { Transaction } from "./components/history";
 import ProfileDetails from "./components/profileCard";
 import QuickActions from "./components/quickActions";
 import RecordPayment from "./components/recordPayment";
+import { fetchActiveObligationByStudent } from "@/lib/helpers/finance/analytics/studentPaymentHelpers";
 
 const mockNonFinancialDues: NonFinancialDue[] = [
   {
@@ -113,6 +114,9 @@ const Page = () => {
   const [feeSummary, setFeeSummary] = useState<FeeSummaryItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
+  const [obligationId, setObligationId] = useState<number>(0);
+  const [semesterId, setSemesterId] = useState<number>(0);
+
   useEffect(() => {
     let mounted = true;
 
@@ -121,7 +125,11 @@ const Page = () => {
 
       try {
         setLoading(true);
-        const data = await getStudentFinanceDetails(targetId);
+
+        const [data, obligationData] = await Promise.all([
+          getStudentFinanceDetails(targetId),
+          fetchActiveObligationByStudent(Number(targetId)),
+        ]);
 
         if (mounted && data) {
           setProfile(data.profile);
@@ -135,6 +143,11 @@ const Page = () => {
           setFeePlan(data.feePlan);
           setFeeSummary(data.feeSummary);
           setTransactions(data.transactions);
+        }
+
+        if (mounted && obligationData.success && obligationData.obligationId) {
+          setObligationId(obligationData.obligationId);
+          setSemesterId(obligationData.semesterId || 1);
         }
       } catch (err) {
         console.error(err);
@@ -225,7 +238,12 @@ const Page = () => {
           </div>
 
           <div className="transition-opacity duration-300">
-            {activeTab === "record" && <RecordPayment />}
+            {activeTab === "record" && (
+              <RecordPayment
+                studentFeeObligationId={obligationId}
+                collegeSemesterId={semesterId}
+              />
+            )}
 
             {activeTab === "academic" && feePlan && (
               <AcademicFees plan={feePlan} summary={feeSummary} />
