@@ -32,69 +32,7 @@ import { getOverallFinanceTotal } from "@/lib/helpers/finance/dashboard/getOvera
 import { getOverallPending } from "@/lib/helpers/finance/dashboard/getOverallPending";
 import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsights";
 import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
-<<<<<<< Updated upstream
-
-interface Data {
-  years: {
-    year: string;
-    total: string;
-    sem1: string;
-    sem2: string;
-  }[];
-  collection: { label: string; val: string }[];
-  trend: { name: string; value: number }[];
-  insights: { label: string; val: string; icon: any }[];
-}
-
-const data: Data = {
-  years: [
-    {
-      year: "1st Year",
-      total: "24,20,000",
-      sem1: "12,40,0000",
-      sem2: "11,80,0000",
-    },
-    {
-      year: "2nd Year",
-      total: "24,20,000",
-      sem1: "12,40,0000",
-      sem2: "11,80,0000",
-    },
-    {
-      year: "3rd Year",
-      total: "24,20,000",
-      sem1: "12,40,0000",
-      sem2: "11,80,0000",
-    },
-    {
-      year: "4th Year",
-      total: "24,20,000",
-      sem1: "12,40,0000",
-      sem2: "11,80,0000",
-    },
-  ],
-  collection: [
-    { label: "1st Year", val: "24.2 L" },
-    { label: "2nd Year", val: "26.8 L" },
-    { label: "3rd Year", val: "25.4 L" },
-    { label: "4th Year", val: "25.4 L" },
-  ],
-  trend: [
-    { name: "1st Year", value: 25.2 },
-    { name: "2nd Year", value: 30.2 },
-    { name: "3rd Year", value: 25.0 },
-    { name: "4th Year", value: 25.0 },
-  ],
-  insights: [
-    { label: "This Week", val: "3.2L", icon: CalendarCheck },
-    { label: "last Week", val: "4.8L", icon: Calendar },
-    { label: "This Month", val: "14.6L", icon: Calendar },
-    { label: "This Year", val: "1.03 Cr", icon: Calendar },
-  ],
-};
-=======
 // import { fetchSemesters } from "@/lib/helpers/admin/academics/academicDropdowns";
->>>>>>> Stashed changes
 
 const Card = ({
   children,
@@ -443,10 +381,6 @@ export default function DashboardPage() {
 
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
   // const [years, setYears] = useState<AcademicYearData[]>([]);
@@ -477,15 +411,6 @@ export default function DashboardPage() {
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
         ?.collegeBranchId;
 
-<<<<<<< Updated upstream
-  const selectedAcademicYearId =
-    selectedYear !== "Year"
-      ? years.find((y) => y.collegeAcademicYear === selectedYear)
-        ?.collegeAcademicYearId
-      : undefined;
-
-=======
->>>>>>> Stashed changes
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (yearRef.current && !yearRef.current.contains(e.target as Node)) {
@@ -524,17 +449,8 @@ export default function DashboardPage() {
 
         setBranches(branchList);
 
-<<<<<<< Updated upstream
-          if (branchList.length > 0) {
-            setSelectedBranch(branchList[0].collegeBranchCode);
-          }
-
-        } catch (err) {
-          console.error("Filter load error:", err);
-=======
         if (branchList.length > 0) {
           setSelectedBranch(branchList[0].collegeBranchCode);
->>>>>>> Stashed changes
         }
       }
     };
@@ -741,11 +657,7 @@ export default function DashboardPage() {
             year={selectedYear ?? "Year"}
             branches={branches}
             onBranchChange={(val: string) => {
-<<<<<<< Updated upstream
               setSelectedBranch(val);
-=======
-            setSelectedBranch(val);
->>>>>>> Stashed changes
             }}
             onYearClick={() => {
               setYearModalOpen((prev) => !prev);
@@ -771,18 +683,12 @@ export default function DashboardPage() {
                   }}
                   shouldDisableYear={(date) => {
                     const year = date.getFullYear();
-<<<<<<< Updated upstream
 
                     if (year < BASE_YEAR) return true;
 
                     if (year > CURRENT_YEAR) return true;
 
                     return false;
-=======
-                    if (year < BASE_YEAR) return true;
-                    if (year > CURRENT_YEAR) return true;
-                    return false; 
->>>>>>> Stashed changes
                   }}
                   slotProps={{
                     actionBar: { actions: [] },
@@ -830,30 +736,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-<<<<<<< Updated upstream
-          <div className="col-span-9 grid grid-cols-2 gap-3">
-            {(financeSummary.yearWiseData?.length
-              ? financeSummary.yearWiseData
-              : defaultYearWiseData
-            ).map((yearData: any, index: number) => {
-
-              return (
-                <div key={index} className="h-[95px]">
-                  <YearCard
-                    data={{
-                      year: yearData.year,
-                      total: yearData.total.toLocaleString(),
-                      sem1: yearData.sem1.toLocaleString(),
-                      sem2: yearData.sem2.toLocaleString(),
-                    }}
-                  />
-                </div>
-=======
           <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
             {(() => {
               const selectedBranchData = branches.find(
                 (b) => b.collegeBranchCode === selectedBranch
->>>>>>> Stashed changes
               );
 
               const branchYears = selectedBranchData?.years || [];
