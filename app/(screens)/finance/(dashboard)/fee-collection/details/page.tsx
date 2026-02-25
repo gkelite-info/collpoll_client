@@ -1,11 +1,12 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CurrencyDollarSimpleIcon,
   UsersThreeIcon,
   MagnifyingGlass,
   CaretDown,
+  CaretLeftIcon,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -14,6 +15,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function FeeCollectionDetailsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const year = searchParams.get("year") || "1st Year";
   const columns = [
     { title: "Student Name", key: "name" },
@@ -145,10 +147,13 @@ function FeeCollectionDetailsPage() {
   ];
 
   return (
-    <div className=" bg-[#F3F4F6] min-h-screen">
-      <h1 className="text-xl font-semibold text-[#282828] mb-6">
-        {year} Fee Collection Details
-      </h1>
+    <div className="p-2 bg-[#F3F4F6] min-h-screen">
+      <div className="flex items-center gap-2 mb-6">
+        <CaretLeftIcon size={20} weight="bold" className="text-black cursor-pointer active:scale-90" onClick={router.back} />
+        <h1 className="text-xl font-semibold text-[#282828]">
+          {year} Fee Collection Details
+        </h1>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
         <CardComponent
           icon={<UsersThreeIcon size={22} weight="fill" />}
@@ -227,11 +232,11 @@ function FilterPill({
     </div>
   );
 }
- 
+
 export default function Page() {
   return (
-  <Suspense fallback={<div className="p-6"><Loader/></div>}>
-    <FeeCollectionDetailsPage />
-  </Suspense>
+    <Suspense fallback={<div className="p-6"><Loader /></div>}>
+      <FeeCollectionDetailsPage />
+    </Suspense>
   );
 }

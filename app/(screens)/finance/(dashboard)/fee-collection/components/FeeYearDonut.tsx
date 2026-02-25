@@ -70,8 +70,6 @@ export default function FeeYearDonut({
 
   return (
     <div className="bg-white rounded-2xl p-6 border border-gray-100 w-full max-w-lg">
-
-    
       <div className="flex justify-between items-center">
         <h3 className="text-base font-semibold text-[#6D28D9]">
           {title}

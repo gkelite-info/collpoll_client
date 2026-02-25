@@ -7,6 +7,7 @@ import BranchWiseCollection from "./components/branchWiseCollection";
 import YearWiseFeeCollection from "./components/yearWiseFeeCollection";
 import { Suspense } from "react";
 import PaymentReminder from "./components/paymentReminderPage";
+import FeeCollection from "./fee-collection/page";
 
 export function DashboardContent() {
   const searchParams = useSearchParams();
@@ -28,12 +29,16 @@ export function DashboardContent() {
     return <PaymentReminder />;
   }
 
-  return (
-    <main className="flex w-full min-h-screen pb-4">
-      <FinanceDashLeft />
-      <FinanceDashRight />
-    </main>
-  );
+  if (view === "feeCollection"){
+    return <FeeCollection/>
+  }
+
+    return (
+      <main className="flex w-full min-h-screen pb-4">
+        <FinanceDashLeft />
+        <FinanceDashRight />
+      </main>
+    );
 }
 
 export default function DashboardPage() {

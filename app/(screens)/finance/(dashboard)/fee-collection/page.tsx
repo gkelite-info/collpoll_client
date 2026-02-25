@@ -1,26 +1,67 @@
 "use client";
-
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import FeeYearDonut from "./components/FeeYearDonut";
-import { CaretDown } from "@phosphor-icons/react";
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { CaretDown, CaretLeftIcon } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { fetchCollegeBranches } from "@/lib/helpers/admin/collegeBranchAPI";
 
 function FeeCollectionPage() {
+  const router = useRouter();
+  const { collegeId, collegeEducationId, loading: contextLoading } = useFinanceManager();
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string>("CSE");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getBranches = async () => {
+      if (!contextLoading && collegeId && collegeEducationId) {
+        try {
+          const data = await fetchCollegeBranches(collegeId, collegeEducationId);
+          setBranches(data);
+          if (data.length > 0) {
+            setSelectedBranch(data[0].collegeBranchCode);
+          }
+        } catch (err) {
+          console.error("Failed to fetch branches:", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    getBranches();
+  }, [collegeId, collegeEducationId, contextLoading]);
+
   const searchParams = useSearchParams();
   const range = searchParams.get("range");
-  console.log("page rendering.")
 
+  if (loading || contextLoading) return <div className="h-screen flex items-center justify-center"><Loader /></div>;
 
   return (
-    <div className="p-1 bg-[#F3F4F6] min-h-screen">
-      <h1 className="text-xl font-semibold text-[#282828] mb-3">
-        Fee Collection By Year
-      </h1>
+    <div className="p-2 bg-[#F3F4F6] min-h-screen">
+      <div className="flex items-center gap-2 lg:mb-3">
+        <CaretLeftIcon size={20} weight="bold" className="cursor-pointer text-black active:scale-90" onClick={router.back} />
+        <h1 className="text-xl font-semibold text-[#282828] mb-0">
+          Fee Collection by Year
+        </h1>
+      </div>
       <div className="flex flex-wrap gap-1 items-stretch">
         <div className="bg-white rounded-lg shadow-sm p-2 flex items-center">
-          <div className="bg-[#1F2F56] text-white w-[130px] px-2 h-full rounded-md flex items-center justify-between text-2xl font-semibold">
-            CSE
+          <div className="relative bg-[#1F2F56] text-white min-w-[130px] px-3 py-2 rounded-md flex items-center justify-between text-2xl font-semibold">
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            >
+              {branches.map((b) => (
+                <option key={b.collegeBranchId} value={b.collegeBranchCode} className="text-black text-base">
+                  {b.collegeBranchCode}
+                </option>
+              ))}
+            </select>
+            <span>{selectedBranch}</span>
             <CaretDown size={20} weight="bold" />
           </div>
         </div>
@@ -61,7 +102,7 @@ function SummaryCard({
   );
 }
 
-export default function Page() {
+export default function FeeCollection() {
   return (
     <Suspense fallback={<div className="p-2"><Loader /></div>}>
       <FeeCollectionPage />

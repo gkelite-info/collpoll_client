@@ -614,7 +614,7 @@ export default function DashboardPage() {
   ]);
 
   const handleFeeCollection = () => {
-    router.push("/finance?feeCollection");
+    router.push("?view=feeCollection");
     return;
   };
 
