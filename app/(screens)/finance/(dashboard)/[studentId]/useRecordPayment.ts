@@ -61,7 +61,6 @@ export function useRecordPayment({
     fetchFmName();
   }, [userId]);
 
-  // --- Fetch Initial Data ---
   const fetchData = async () => {
     setIsLoadingData(true);
 
