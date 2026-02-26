@@ -16,6 +16,7 @@ export type Task = {
 export type TaskPanelProps = {
   role?: "faculty" | "student";
   tasks?: Task[];
+  style?: boolean;
   facultyTasks?: Task[];
   studentTasks?: Task[];
   onEditTask?: (task: Task) => void;
@@ -35,6 +36,7 @@ export type TaskPanelProps = {
 export default function TaskPanel({
   role = "student",
   tasks,
+  style=false,
   facultyTasks = [],
   studentTasks = [],
   onEditTask,
@@ -67,7 +69,7 @@ export default function TaskPanel({
   return (
     <>
       
-      <div className="bg-white mt-5 rounded-md shadow-md p-4 h-[345px] overflow-y-auto">
+      <div className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px] overflow-y-auto`}>
       {role === "faculty" && (
         <h2 className="text-lg font-semibold text-[#16284F] mb-2">
           My Tasks

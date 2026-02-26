@@ -1,0 +1,122 @@
+"use client";
+
+import { ReactNode } from "react";
+import {
+    BuildingOffice,
+    Calendar,
+    CheckCircle,
+    FolderOpen,
+    Gear,
+    House,
+    Laptop,
+} from "@phosphor-icons/react";
+import { useRouter, usePathname } from "next/navigation";
+
+type NavItem = {
+    icon: (isActive: boolean) => ReactNode;
+    label: string;
+    path: string;
+};
+
+export default function PlacementNavbar() {
+    const router = useRouter();
+    const pathname = usePathname();
+
+
+    const BASE = "/placement";
+
+    const items: NavItem[] = [
+        {
+            icon: (isActive) => (
+                <House size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Home",
+            path: `${BASE}`,
+        },
+        {
+            icon: (isActive) => (
+                <Calendar size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Calendar",
+            path: `${BASE}/calendar`,
+        },
+        {
+            icon: (isActive) => (
+                <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Attendance",
+            path: `${BASE}/attendance`,
+        },
+        {
+            icon: (isActive) => (
+                <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Placements",
+            path: `${BASE}/placements`,
+        },
+        {
+            icon: (isActive) => (
+                <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Meetings",
+            path: `${BASE}/meetings`,
+        },
+        {
+            icon: (isActive) => (
+                <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Drive",
+            path: `${BASE}/drive`,
+        },
+        {
+            icon: (isActive) => (
+                <Gear size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Settings",
+            path: `${BASE}/settings`,
+        },
+    ];
+
+    const isActivePath = (itemPath: string) => {
+        if (itemPath === BASE) return pathname === BASE;
+        return pathname.startsWith(itemPath);
+    };
+
+    return (
+        <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md overflow-y-auto lg:pt-5">
+            <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
+                Logo
+            </div>
+
+            <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
+                {items.map((item) => {
+                    const active = isActivePath(item.path);
+
+                    return (
+                        <div
+                            key={item.path}
+                            onClick={() => router.push(item.path)}
+                            className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
+                ${active
+                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                                    : "text-white hover:bg-[#50D689]/30"
+                                }
+              `}
+                        >
+                            <div className={active ? "text-[#43C17A]" : "text-white"}>
+                                {item.icon(active)}
+                            </div>
+
+                            <p
+                                className={`text-sm font-medium ${active ? "text-[#43C17A]" : "text-white"
+                                    }`}
+                            >
+                                {item.label}
+                            </p>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
