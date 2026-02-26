@@ -1,5 +1,5 @@
 "use client";
-
+ 
 import { useEffect, useMemo, useState } from "react";
 import CardComponent from "@/app/utils/card";
 import {
@@ -12,14 +12,14 @@ import {
 import TableComponent from "@/app/utils/table/table";
 import { useRouter } from "next/navigation";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-
+ 
 import { useSearchParams } from "next/navigation";
 import { getSemesterFinanceSummary } from "@/lib/helpers/finance/getSemesterStudents";
 // import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
 // import { getSemesterStudents } from "@/lib/helpers/finance/getSemesterStudents";
 // import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/getSemesterStudents";
 // import { getSemesterStudents } from "@/lib/helpers/finance/getSemesterStudents";
-
+ 
 type StudentRow = {
   studentId: number;
   fullName: string;
@@ -30,7 +30,7 @@ type StudentRow = {
   paymentStatus: "Paid" | "Pending" | "Partial";
   lastPaymentDate: string | null;
 };
-
+ 
 export default function SemwiseDetail({ semester }: { semester: string }) {
   const [sortKey, setSortKey] = useState<string>("studentName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -48,21 +48,21 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   });
   const { collegeId, collegeEducationId, loading } = useFinanceManager();
   const router = useRouter();
-
+ 
   const searchParams = useSearchParams();
-
+ 
   const branchIdParam = searchParams.get("branchId");
   const academicYearParam = searchParams.get("academicYearId");
   const academicYear = searchParams.get("academicYear");
   const semesterParam = searchParams.get("semesterId");
-
+ 
   const branchId = branchIdParam ? Number(branchIdParam) : null;
   const academicYearId = academicYearParam ? Number(academicYearParam) : null;
   const semesterId = semesterParam ? Number(semesterParam) : null;
   const branchName = searchParams.get("branchName");
   const year = searchParams.get("year");
   const breadcrumb = `B-Tech → ${branchName} - ${academicYear} - ${semester}`;
-
+ 
   const filterOptions: { label: string; value: "all" | "paid" | "pending" | "partial" }[] =
     [
       { label: "All", value: "all" },
@@ -70,8 +70,8 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       { label: "Pending", value: "pending" },
       { label: "Partial", value: "partial" },
     ];
-
-
+ 
+ 
   // const initialData = [
   //   {
   //     studentName: "Aarav Reddy",
@@ -194,7 +194,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //     lastPaymentDate: "15 Jan 2026",
   //   },
   // ];
-
+ 
   const columns = [
     { title: "Student Name", key: "fullName" },
     { title: "Student ID", key: "studentId" },
@@ -206,22 +206,22 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     { title: "Last Payment Date", key: "lastPaymentDate" },
     { title: "Action", key: "action" },
   ];
-
+ 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
-
+ 
     const date = new Date(dateString);
-
+ 
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
-
+ 
   const processedData = useMemo(() => {
     let data = [...students];
-
+ 
     if (search) {
       data = data.filter(
         (item) =>
@@ -229,35 +229,35 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           String(item.studentId).toLowerCase().includes(search.toLowerCase())
       );
     }
-
+ 
     data.sort((a: any, b: any) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
-
+ 
       if (typeof aVal === "number") {
         return sortDirection === "asc"
           ? aVal - bVal
           : bVal - aVal;
       }
-
+ 
       return sortDirection === "asc"
         ? String(aVal).localeCompare(String(bVal))
         : String(bVal).localeCompare(String(aVal));
     });
-
+ 
     return data.map((item) => ({
       ...item,
-
+ 
       totalAmount: item.totalAmount,   // keep number
       paidAmount: item.paidAmount,
       balanceAmount: item.balanceAmount,
-
+ 
       totalAmountFormatted: `₹ ${item.totalAmount.toLocaleString("en-IN")}`,
       paidAmountFormatted: `₹ ${item.paidAmount.toLocaleString("en-IN")}`,
       balanceAmountFormatted: `₹ ${item.balanceAmount.toLocaleString("en-IN")}`,
-
+ 
       lastPaymentDate: formatDate(item.lastPaymentDate),
-
+ 
       paymentStatusElement: (
         <div className="flex items-center justify-center gap-2">
           <span
@@ -268,7 +268,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                 : "bg-red-600"
               }`}
           />
-
+ 
           <span
             className={`${item.paymentStatus === "Paid"
               ? "text-green-600"
@@ -281,7 +281,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           </span>
         </div>
       ),
-
+ 
       action: (
         <span
           className="cursor-pointer text-[#00A94A] font-medium"
@@ -292,13 +292,13 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       ),
     }));
   }, [students, search]);
-
-
-
-
+ 
+ 
+ 
+ 
   // const processedData = useMemo(() => {
   //   let data = [...initialData];
-
+ 
   //   if (search) {
   //     data = data.filter(
   //       (item) =>
@@ -306,23 +306,23 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //         item.studentId.toLowerCase().includes(search.toLowerCase()),
   //     );
   //   }
-
+ 
   //   if (statusFilter === "paid") {
   //     data = data.filter((item) => item.paidAmount === item.totalFee);
   //   }
-
+ 
   //   if (statusFilter === "pending") {
   //     data = data.filter((item) => item.paidAmount < item.totalFee);
   //   }
-
+ 
   //   data = data.map((item) => {
   //     const balance = item.totalFee - item.paidAmount;
   //     const isPaid = balance === 0;
-
+ 
   //     return {
   //       ...item,
   //       balance,
-
+ 
   //       paymentStatus: (
   //         <div className="flex items-center justify-center gap-2">
   //           <span
@@ -334,7 +334,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //           </span>
   //         </div>
   //       ),
-
+ 
   //       action: (
   //         <span
   //           className="cursor-pointer text-[#00A94A] font-medium"
@@ -345,7 +345,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //       ),
   //     };
   //   });
-
+ 
   //   data.sort((a: any, b: any) => {
   //     if (typeof a[sortKey] === "number") {
   //       return sortDirection === "asc"
@@ -356,10 +356,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //       ? String(a[sortKey]).localeCompare(String(b[sortKey]))
   //       : String(b[sortKey]).localeCompare(String(a[sortKey]));
   //   });
-
+ 
   //   return data;
   // }, [search, statusFilter, sortKey, sortDirection]);
-
+ 
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -368,7 +368,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       setSortDirection("asc");
     }
   };
-
+ 
   useEffect(() => {
     const loadData = async () => {
       if (
@@ -379,7 +379,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         academicYearId === null ||
         semesterId === null
       ) return;
-
+ 
       try {
         const response = await getSemesterFinanceSummary({
           collegeId,
@@ -388,29 +388,29 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           collegeAcademicYearId: academicYearId,
           collegeSemesterId: semesterId,
         });
-
+ 
         if (!response) return;
-
+ 
         let studentData: StudentRow[] = response.students || [];
-
+ 
         if (statusFilter === "paid") {
           studentData = studentData.filter((s) => s.paymentStatus === "Paid");
         }
-
+ 
         if (statusFilter === "pending") {
           studentData = studentData.filter((s) => s.paymentStatus === "Pending");
         }
-
+ 
         if (statusFilter === "partial") {
           studentData = studentData.filter((s) => s.paymentStatus === "Partial");
         }
-
+ 
         setStudents(studentData);
         setSummary(response.summary);
       } catch (error) {
       }
     };
-
+ 
     loadData();
   }, [
     loading,
@@ -421,7 +421,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     semesterId,
     statusFilter,
   ]);
-
+ 
   return (
     <div className="flex flex-col h-screen">
       <h2 className="text-lg font-semibold text-[#2E7D32] mb-3">
@@ -453,7 +453,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           <p className="text-[#282828] text-sm">Pending</p>
         </div>
       </div>
-
+ 
       <div className="flex gap-4 mt-6">
         <CardComponent
           style="bg-[#CEE6FF] h-[120px] w-[220px]"
@@ -473,7 +473,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           value={summary.paidStudents.toString()}
           label="Paid Students"
         />
-
+ 
         <CardComponent
           style="bg-[#FFEDDA] h-[120px] w-[220px]"
           icon={<UsersThree size={28} weight="fill" color="#FFBB70" />}
@@ -481,7 +481,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           label="Pending Students"
         />
       </div>
-
+ 
       <div className="flex justify-between items-center mt-6 mb-3 ">
         <div className="w-[55%] bg-[#EAEAEA] px-2 rounded-2xl flex items-center justify-center">
           <input
@@ -493,7 +493,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           />
           <MagnifyingGlass size={20} className="text-[#43C17A] left-3 top-3" />
         </div>
-
+ 
         <div className="flex gap-2">
           <div
             onClick={() => handleSort("fullName")}
@@ -501,7 +501,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           >
             <FunnelSimple size={20} className="text-[#00A94A]" />
           </div>
-
+ 
           <div
             onClick={() => setShowFilter(!showFilter)}
             className="relative bg-[#43C17A1F] cursor-pointer rounded-full p-2 flex items-center justify-center"
@@ -516,14 +516,14 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                     if (option.value === "partial") return "text-orange-500";
                     return "text-gray-700"; // all
                   };
-
+ 
                   const getDotColor = () => {
                     if (option.value === "paid") return "bg-green-600";
                     if (option.value === "pending") return "bg-red-600";
                     if (option.value === "partial") return "bg-orange-500";
                     return "bg-gray-400";
                   };
-
+ 
                   return (
                     <div
                       key={option.value}
@@ -548,7 +548,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           </div>
         </div>
       </div>
-
+ 
       <div className="flex-1">
         <TableComponent
           columns={columns}
@@ -559,3 +559,5 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     </div>
   );
 }
+ 
+ 

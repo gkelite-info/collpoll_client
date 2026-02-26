@@ -11,6 +11,7 @@ import FacultyNavbar from "./navbar/facultyNavbar";
 import SuperAdminNavbar from "./navbar/superAdminNavbar";
 import FinanceNavbar from "./navbar/financeNavbar";
 import CollegeAdminNavbar from "./navbar/collegeAdminNavbar";
+import PlacementNavbar from "./navbar/placementNav";
 
 export default function ClientLayout({
   children,
@@ -40,6 +41,7 @@ export default function ClientLayout({
     if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
     if (pathname.startsWith('/college-admin')) return <CollegeAdminNavbar />
+    if (pathname.startsWith('/placement')) return <PlacementNavbar />
     return <StudentNavbar />
   };
 

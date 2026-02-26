@@ -2,7 +2,7 @@ import PlacementCard from "./PlacementCard";
 
 export default function PlacementList() {
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
             <PlacementCard
                 logo="/tcs.png"
                 company="TCS (Tata Consultancy Services)"

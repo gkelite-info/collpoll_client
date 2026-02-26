@@ -83,7 +83,7 @@ export default function Announcements() {
         rounded-xl
         shadow-sm
         w-full
-        h-187.75
+        h-full
         flex
         flex-col
       "
