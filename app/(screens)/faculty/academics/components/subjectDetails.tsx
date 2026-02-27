@@ -581,18 +581,59 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
               className="flex items-center gap-2"
             >
               <button
-                onClick={() => {
-                  // ✅ UI-only toggle
-                  setLocalTopics(prev =>
-                    prev.map(t =>
-                      t.id === topic.id
-                        ? { ...t, isCompleted: !t.isCompleted }
-                        : t
-                    )
-                  );
+                onClick={async () => {
+                  try {
+                    setIsMarkAsLoading(true);
 
-                  // ✅ mark draft state
-                  setHasChanges(true);
+                    const updatedValue = !topic.isCompleted;
+
+                    // 1️⃣ Update topic immediately
+                    const { error: topicError } = await supabase
+                      .from("college_subject_unit_topics")
+                      .update({
+                        isCompleted: updatedValue,
+                        updatedAt: new Date().toISOString(),
+                      })
+                      .eq("collegeSubjectUnitTopicId", topic.id);
+
+                    if (topicError) throw topicError;
+
+                    // 2️⃣ Update local state
+                    const updatedTopics = localTopics.map(t =>
+                      t.id === topic.id
+                        ? { ...t, isCompleted: updatedValue }
+                        : t
+                    );
+
+                    setLocalTopics(updatedTopics);
+
+                    // 3️⃣ Calculate new percentage
+                    const completedCount =
+                      updatedTopics.filter(t => t.isCompleted).length;
+
+                    const newPercentage =
+                      updatedTopics.length === 0
+                        ? 0
+                        : Math.round((completedCount / updatedTopics.length) * 100);
+
+                    // 4️⃣ Update unit percentage in DB
+                    const { error: unitError } = await supabase
+                      .from("college_subject_units")
+                      .update({
+                        completionPercentage: newPercentage,
+                        updatedAt: new Date().toISOString(),
+                      })
+                      .eq("collegeSubjectUnitId", unit.id);
+
+                    if (unitError) throw unitError;
+
+                    toast.success("Updated");
+
+                  } catch (err: any) {
+                    toast.error(err.message || "Update failed");
+                  } finally {
+                    setIsMarkAsLoading(false);
+                  }
                 }}
               >
                 <CheckCircleIcon
@@ -635,12 +676,9 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
         {/* ✅ MARK AS COMPLETE */}
         <div className="mt-4 flex justify-end">
           <button
-            disabled={percentage === 0}
-            onClick={() =>
-              onMarkComplete(unit.id, localTopics, percentage)
-            }
+            disabled={isMarkAsLoading}
             className={`border px-4 py-1.5 rounded-lg text-sm transition
-    ${percentage === 0
+    ${isMarkAsLoading
                 ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
                 : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
               }`}
@@ -671,7 +709,7 @@ export function SubjectDetailsCard({
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
-  const [hasChanges, setHasChanges] = useState(false);
+   const [hasChanges, setHasChanges] = useState(false);
   const [loadingUnitId, setLoadingUnitId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -724,7 +762,7 @@ export function SubjectDetailsCard({
     percentage: number
   ) => {
     try {
-     setLoadingUnitId(unitId);
+      setLoadingUnitId(unitId);
       /* -----------------------------
        * 1️⃣ Save topics
        * ----------------------------- */
