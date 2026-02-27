@@ -142,6 +142,10 @@ export default function AddNewCardModal({
 
   const { userId, collegeId, loading } = useUser();
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
+  const [autoBranch, setAutoBranch] = useState<{
+    collegeBranchId: number;
+    collegeBranchCode: string;
+  } | null>(null);
 
 
   // const [subjectId, setSubjectId] = useState<number | null>(
@@ -164,6 +168,29 @@ export default function AddNewCardModal({
     return true;
   });
 
+  useEffect(() => {
+    if (!userId || loading) return;
+    fetchFacultyContext(userId)
+      .then(ctx => {
+        setFacultyId(ctx.facultyId);
+        setFacultyCtx(ctx);
+
+        setAutoBranch({
+          collegeBranchId: ctx.collegeBranchId,
+          collegeBranchCode: ctx.college_branch,
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          educationId: ctx.collegeEducationId,
+          branchId: ctx.collegeBranchId,
+        }));
+      })
+      .catch(err => {
+        console.error(err);
+        toast.error("Faculty profile not found");
+      });
+  }, [userId, loading]);
 
   useEffect(() => {
     if (!userId || loading) return;
@@ -173,7 +200,6 @@ export default function AddNewCardModal({
         setFacultyId(ctx.facultyId);
         setFacultyCtx(ctx);
 
-        // ✅ AUTO-FILL EDUCATION + BRANCH
         setFormData(prev => ({
           ...prev,
           educationId: ctx.collegeEducationId,
@@ -294,50 +320,25 @@ export default function AddNewCardModal({
   }, [isOpen, collegeId, loading]);
 
 
-
-
-
   useEffect(() => {
     if (!collegeId || !formData.educationId) return;
-
-    console.log("📘 Fetching branches for:", {
-      collegeId,
-      educationId: formData.educationId,
-    });
 
     fetchAcademicDropdowns({
       type: "branch",
       collegeId,
       educationId: formData.educationId,
     }).then((data) => {
-      const branchesData = (data ?? []) as Branch[];
-
-      console.log("🌿 Branch list:", branchesData);
-
-      branchesData.forEach((branch) => {
-        console.log(
-          "🏷️ Branch →",
-          "ID:", branch.collegeBranchId,
-          "| Code:", branch.collegeBranchCode,
-          "| Type:", branch.collegeBranchType
-        );
-      });
-
-      setBranches(branchesData);
+      setBranches(data ?? []);
     });
 
-    // reset children
+    // ✅ DO NOT reset branchId here
     setFormData((prev) => ({
       ...prev,
-      branchId: undefined,
       academicYearId: undefined,
       semester: undefined,
       subjectName: "",
     }));
   }, [collegeId, formData.educationId]);
-
-
-
 
 
   useEffect(() => {
@@ -497,7 +498,9 @@ export default function AddNewCardModal({
   //   nextLesson: "",
   // });
 
-  if (!isOpen) return null;
+  if (!isOpen || loading || !facultyId || branches.length === 0) {
+    return null;
+  }
 
   // function suggestTopics(subject: string, unitName: string): string[] {
   //   if (!subject || !unitName) return [];
@@ -726,9 +729,10 @@ export default function AddNewCardModal({
               <input
                 type="text"
                 value={
-                  branches.find(
-                    b => b.collegeBranchId === formData.branchId
-                  )?.collegeBranchCode || ""
+                  branches.find(b => b.collegeBranchId === formData.branchId)
+                    ?.collegeBranchCode
+                  || autoBranch?.collegeBranchCode
+                  || ""
                 }
                 readOnly
                 placeholder="Branch"
