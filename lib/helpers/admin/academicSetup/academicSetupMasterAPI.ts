@@ -1,9 +1,9 @@
-import { saveCollegeEducation } from "../academicEducationAPI";
 import { upsertCollegeBranches } from "../collegeBranchAPI";
 import { saveCollegeAcademicYear } from "../collegeAcademicYearAPI";
 import { saveCollegeSections } from "../collegeSectionsAPI";
 import { deriveSemesters } from "../deriveSemesters";
 import { saveCollegeSemesters } from "../collegeSemesterAPI";
+import { supabase } from "@/lib/supabaseClient";
 
 export async function saveAcademicSetupMaster(
     input: {
@@ -22,20 +22,23 @@ export async function saveAcademicSetupMaster(
         collegeId: number;
     }
 ) {
-    const eduResult = await saveCollegeEducation(
-        {
-            id: input.educationId,
-            collegeEducationType: input.educationType,
-            collegeId: context.collegeId,
-        },
-        context.adminId
-    );
 
-    if (!eduResult.success || !eduResult.collegeEducationId) {
-        throw new Error("Failed to save college education");
+    const { data: education, error: eduError } = await supabase
+        .from("college_education")
+        .select("collegeEducationId")
+        .eq("collegeId", context.collegeId)
+        .eq("collegeEducationType", input.educationType)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .single();
+
+    if (eduError || !education) {
+        throw new Error("Education not found for this college");
     }
 
-    const collegeEducationId = eduResult.collegeEducationId;
+    const collegeEducationId = education.collegeEducationId;
+
+    console.log("what is collegeEducaitonId", collegeEducationId);
 
     const branchResult = await upsertCollegeBranches(
         [
@@ -51,19 +54,21 @@ export async function saveAcademicSetupMaster(
         }
     );
 
+    console.log("what is brenah length", branchResult);
+
+
     if (!branchResult?.length) {
         throw new Error("Failed to save college branch");
     }
 
     const collegeBranchId = branchResult[0].collegeBranchId;
 
-    const yearResult = await saveCollegeAcademicYear(
-        {
-            collegeAcademicYear: input.branch.academicYear.trim(),
-            collegeEducationId,
-            collegeBranchId,
-            collegeId: context.collegeId,
-        },
+    const yearResult = await saveCollegeAcademicYear({
+        collegeAcademicYear: input.branch.academicYear.trim(),
+        collegeEducationId,
+        collegeBranchId,
+        collegeId: context.collegeId,
+    },
         context.adminId
     );
 
@@ -80,13 +85,12 @@ export async function saveAcademicSetupMaster(
         );
 
         if (semesters.length) {
-            await saveCollegeSemesters(
-                {
-                    collegeSemesters: semesters,
-                    collegeEducationId,
-                    collegeAcademicYearId,
-                    collegeId: context.collegeId,
-                },
+            await saveCollegeSemesters({
+                collegeSemesters: semesters,
+                collegeEducationId,
+                collegeAcademicYearId,
+                collegeId: context.collegeId,
+            },
                 context.adminId
             );
         }
@@ -94,14 +98,13 @@ export async function saveAcademicSetupMaster(
 
     if (input.branch.sections?.length) {
 
-        await saveCollegeSections(
-            {
-                collegeSections: input.branch.sections,
-                collegeEducationId,
-                collegeBranchId,
-                collegeAcademicYearId,
-                collegeId: context.collegeId,
-            },
+        await saveCollegeSections({
+            collegeSections: input.branch.sections,
+            collegeEducationId,
+            collegeBranchId,
+            collegeAcademicYearId,
+            collegeId: context.collegeId,
+        },
             context.adminId
         );
     }

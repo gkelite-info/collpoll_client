@@ -42,7 +42,7 @@ export default function AdminRegistration() {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    
+
     useEffect(() => {
         const fetchLoggedInCollege = async () => {
 
@@ -58,7 +58,7 @@ export default function AdminRegistration() {
                 .single();
 
             if (data?.collegeId) {
-               setForm((prev) => ({
+                setForm((prev) => ({
                     ...prev,
                     collegeId: String(data.collegeId),
                 }));
@@ -141,6 +141,7 @@ export default function AdminRegistration() {
                 email: form.email,
                 mobile: `+91${form.phone}`,
                 gender: form.gender,
+                collegeId: Number(form.collegeId),
                 collegePublicId: form.collegeId,
                 collegeCode: form.collegeId.replace(/\d+/g, ""),
             });
@@ -220,7 +221,7 @@ export default function AdminRegistration() {
                             maxLength={10}
                             value={form.phone}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const value = e.target.value.replace(/\D/g, ""); 
+                                const value = e.target.value.replace(/\D/g, "");
                                 if (value.length <= 10) {
                                     handleChange("phone", value);
                                 }
@@ -348,7 +349,7 @@ export default function AdminRegistration() {
                 </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mt-5">             
+            <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div className="flex flex-col w-full">
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
                         Password

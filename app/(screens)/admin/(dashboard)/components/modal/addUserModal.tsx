@@ -16,6 +16,7 @@ import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
+import { number } from "framer-motion";
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -52,7 +53,7 @@ const AddUserModal: React.FC<{
     password: "",
     confirmPassword: "",
     studentId: "",
-    collegeId: "",
+    collegeId: null,
     collegeCode: "",
     collegeIntId: 0,
     adminId: 0,
@@ -216,10 +217,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId ===
-              studentSelectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId ===
+            studentSelectedEducation.collegeEducationId,
+        )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -236,8 +237,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-          )
+          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+        )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -254,10 +255,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -266,10 +267,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -367,13 +368,12 @@ const AddUserModal: React.FC<{
       let targetUserId: number | null = null;
 
       if (isAdmin) {
-        // 1️⃣ Create Auth user first
-        const { data: authData, error: authError } = await supabase.auth.signUp(
-          {
+        const { data: authData, error: authError } =
+          await supabase.auth.signUp({
             email: basicData.email,
             password: basicData.password,
           },
-        );
+          );
 
         if (authError || !authData.user) {
           throw new Error(authError?.message || "Auth user creation failed");
@@ -381,9 +381,8 @@ const AddUserModal: React.FC<{
 
         const authId = authData.user.id;
 
-        // 2️⃣ Insert into users table
         const userRes = await upsertUser({
-          auth_id: authId, // ✅ VERY IMPORTANT
+          auth_id: authId,
           fullName: basicData.fullName,
           email: basicData.email,
           mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
@@ -399,13 +398,13 @@ const AddUserModal: React.FC<{
 
         targetUserId = userRes.data.userId;
 
-        // 3️⃣ Insert into admins table
         const adminRes = await upsertAdminEntry({
           userId: targetUserId!,
           fullName: basicData.fullName,
           email: basicData.email,
           mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
           gender: basicData.gender,
+          collegeId: basicData.collegeId,
           collegePublicId: basicData.collegeId,
           collegeCode: basicData.collegeCode,
         });
@@ -413,8 +412,8 @@ const AddUserModal: React.FC<{
         if (!adminRes.success) {
           throw new Error(adminRes.error || "Admin creation failed");
         }
-      } else {
-        // 🔵 All other roles remain EXACTLY SAME
+      }
+      else {
         targetUserId = await persistUser(
           !user,
           { ...basicData, collegePublicId: basicData.collegeId },
@@ -995,11 +994,10 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
-                isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

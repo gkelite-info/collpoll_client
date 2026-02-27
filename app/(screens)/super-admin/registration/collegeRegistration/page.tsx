@@ -7,6 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { createCollege } from "@/lib/helpers/admin/createCollege";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const INITIAL_FORM_STATE = {
   collegeName: "",
@@ -32,6 +33,10 @@ export default function CollegeRegistration() {
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [educationList, setEducationList] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const { userId } = useUser();
+
+  console.log("what is userId", userId);
+
 
   const router = useRouter();
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,20 +136,20 @@ export default function CollegeRegistration() {
         return toast.error("Select at least one Education Type");
 
 
-      const college = await createCollege(
-        {
-          collegeName: formData.collegeName,
-          collegeEmail: formData.email,
-          collegeCode: formData.collegeCode,
-          address: formData.address,
-          countryCode: formData.countryCode,
-          phoneNumber: formData.phone,
-          country: formData.country,
-          state: formData.state,
-          city: formData.city,
-          pincode: formData.zip,
-          educationTypes: formData.educationType,
-        },
+      await createCollege({
+        collegeName: formData.collegeName,
+        collegeEmail: formData.email,
+        collegeCode: formData.collegeCode,
+        address: formData.address,
+        countryCode: formData.countryCode,
+        phoneNumber: formData.phone,
+        country: formData.country,
+        state: formData.state,
+        city: formData.city,
+        pincode: formData.zip,
+        educationTypes: formData.educationType,
+        createdBy: superAdmin.userId
+      },
         selectedFile
       );
 
