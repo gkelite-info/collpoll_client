@@ -351,6 +351,7 @@ export async function getFacultySubjects(params: {
 
 
       const students = await getStudentCountForAcademics({
+        collegeId: collegeId,
         collegeAcademicYearId: s.collegeAcademicYearId,
         collegeSemesterId: s.collegeSemesterId,
       });
@@ -644,7 +645,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
                 : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
               }`}
           >
-            {isMarkAsLoading ? "Marking..." : "Mark As Complete"}
+            {isMarkAsLoading ? "Saving..." : "Save Progress"}
           </button>
 
           {/* <button
@@ -671,6 +672,7 @@ export function SubjectDetailsCard({
   const [loading, setLoading] = useState(true);
   const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [loadingUnitId, setLoadingUnitId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!details.collegeId || !details.collegeSubjectId) {
@@ -716,36 +718,94 @@ export function SubjectDetailsCard({
     }
   }
 
-
   const handleMarkComplete = async (
     unitId: number,
     topics: UnitTopic[],
     percentage: number
   ) => {
-    // 1️⃣ Save percentage
-    const { error } = await supabase
-      .from("college_subject_units")
-      .update({
-        completionPercentage: percentage,
-        updatedAt: new Date().toISOString(),
-      })
-      .eq("collegeSubjectUnitId", unitId);
+    try {
+     setLoadingUnitId(unitId);
+      /* -----------------------------
+       * 1️⃣ Save topics
+       * ----------------------------- */
+      for (const topic of topics) {
+        const { error: topicError } = await supabase
+          .from("college_subject_unit_topics")
+          .update({
+            isCompleted: topic.isCompleted,
+            updatedAt: new Date().toISOString(),
+          })
+          .eq("collegeSubjectUnitTopicId", topic.id);
 
-    if (error) {
-      toast.error("Failed to save unit progress");
-      return;
+        if (topicError) {
+          throw new Error(topicError.message);
+        }
+      }
+
+      /* -----------------------------
+       * 2️⃣ Save unit percentage
+       * ----------------------------- */
+      const { error: unitError } = await supabase
+        .from("college_subject_units")
+        .update({
+          completionPercentage: percentage,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("collegeSubjectUnitId", unitId);
+
+      if (unitError) {
+        throw new Error(unitError.message);
+      }
+
+      /* -----------------------------
+       * 3️⃣ Sync UI
+       * ----------------------------- */
+      setUnits(prev =>
+        prev.map(u =>
+          u.id === unitId ? { ...u, topics, percentage } : u
+        )
+      );
+
+      toast.success("Progress saved ✅");
+      setHasChanges(false);
+
+    } catch (err: any) {
+      console.error("❌ Mark complete failed:", err);
+      toast.error(err?.message || "Failed to save progress");
+    } finally {
+      setLoadingUnitId(null);
     }
-
-    // 2️⃣ Sync local state
-    setUnits(prev =>
-      prev.map(u =>
-        u.id === unitId ? { ...u, topics, percentage } : u
-      )
-    );
-
-    setHasChanges(true);
-    toast.success("Progress saved ✅");
   };
+
+  // const handleMarkComplete = async (
+  //   unitId: number,
+  //   topics: UnitTopic[],
+  //   percentage: number
+  // ) => {
+  //   // 1️⃣ Save percentage
+  //   const { error } = await supabase
+  //     .from("college_subject_units")
+  //     .update({
+  //       completionPercentage: percentage,
+  //       updatedAt: new Date().toISOString(),
+  //     })
+  //     .eq("collegeSubjectUnitId", unitId);
+
+  //   if (error) {
+  //     toast.error("Failed to save unit progress");
+  //     return;
+  //   }
+
+  //   // 2️⃣ Sync local state
+  //   setUnits(prev =>
+  //     prev.map(u =>
+  //       u.id === unitId ? { ...u, topics, percentage } : u
+  //     )
+  //   );
+
+  //   setHasChanges(true);
+  //   toast.success("Progress saved ✅");
+  // };
 
   const saveProgress = async () => {
     setIsSaveLoading(true)
@@ -821,7 +881,7 @@ export function SubjectDetailsCard({
         <FilterBanner filterBannerDetails={details} />
 
         {/* ✅ SAVE BUTTON */}
-        <button
+        {/* <button
           onClick={saveProgress}
           disabled={!hasChanges || isSaveLoading}
           className={`px-5 py-2 rounded-lg text-sm font-medium transition
@@ -831,7 +891,7 @@ export function SubjectDetailsCard({
             }`}
         >
           {isSaveLoading ? "Saving.." : "Save"}
-        </button>
+        </button> */}
 
 
       </div>
