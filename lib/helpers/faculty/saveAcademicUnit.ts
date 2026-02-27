@@ -21,6 +21,7 @@ export async function saveAcademicUnit(params: {
     collegeSectionsId: params.collegeSectionId,     // DB column
     collegeSubjectUnitId: params.collegeSubjectUnitId,
     createdBy: params.createdBy,
+    isAdmin: null,
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
