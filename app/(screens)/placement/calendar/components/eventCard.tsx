@@ -36,6 +36,22 @@ const EVENT_STYLES = {
   },
 };
 
+/* ✅ SAFE TIME FORMATTER (NO LOCALE DEPENDENCY) */
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+
+  let hours = date.getHours();
+  const minutes = date.getMinutes();
+
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours === 0 ? 12 : hours;
+
+  const paddedMinutes = minutes.toString().padStart(2, "0");
+
+  return `${hours}:${paddedMinutes} ${ampm}`;
+};
+
 const EventCard = ({
   event,
   onDelete,
@@ -56,15 +72,10 @@ const EventCard = ({
   const style = EVENT_STYLES[eventType];
   const Icon = style.Icon;
 
-  const start = new Date(event.startTime);
-  const end = new Date(event.endTime);
-  const timeStr = `${start.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  })} - ${end.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
+  /* ✅ NO MORE toLocaleTimeString */
+  const timeStr = `${formatTime(event.startTime)} - ${formatTime(
+    event.endTime
+  )}`;
 
   return (
     <div
@@ -84,6 +95,7 @@ const EventCard = ({
         </button>
       )}
 
+      {/* EDIT BUTTON */}
       {onEdit && (
         <button
           onClick={(e) => {
@@ -96,6 +108,7 @@ const EventCard = ({
         </button>
       )}
 
+      {/* HEADER */}
       <div
         className="flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed shrink-0"
         style={{
@@ -111,9 +124,11 @@ const EventCard = ({
           <Icon size={14} weight="fill" color="#ffffff" />
         </div>
 
+        {/* ✅ FIXED TIME STRING */}
         <span className="tracking-wide uppercase">{timeStr}</span>
       </div>
 
+      {/* BODY */}
       <div
         className="flex-1 min-h-0 pt-3 flex flex-col overflow-y-auto"
         style={{ backgroundColor: style.lightBg }}
