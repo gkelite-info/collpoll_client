@@ -12,6 +12,7 @@ type CreateCollegePayload = {
   city: string;
   pincode: string;
   educationTypes: string[];
+  createdBy?: number | null;
 };
 
 export async function createCollege(payload: CreateCollegePayload, file: File) {
@@ -59,10 +60,11 @@ export async function createCollege(payload: CreateCollegePayload, file: File) {
 
   if (collegeError) throw collegeError;
 
-    if (payload.educationTypes && payload.educationTypes.length > 0) {
+  if (payload.educationTypes && payload.educationTypes.length > 0) {
     const educationRows = payload.educationTypes.map((eduCode) => ({
       collegeEducationType: eduCode,
       collegeId: college.collegeId,
+      createdBy: payload.createdBy,
       isActive: true,
       createdAt: now,
       updatedAt: now,

@@ -68,8 +68,8 @@ export async function fetchCollegeDegrees() {
     const deps = Array.isArray(row.departments)
       ? row.departments
       : typeof row.departments === "string"
-      ? row.departments.split(",").map((d) => d.trim())
-      : [];
+        ? row.departments.split(",").map((d) => d.trim())
+        : [];
 
     deps.forEach((dep) => group.departments.add(dep));
 

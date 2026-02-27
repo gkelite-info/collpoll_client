@@ -142,16 +142,17 @@ export default function AddAcademicSetup({
     try {
       const adminCtx = await fetchAdminContext(userId);
 
-      await saveAcademicSetupMaster(
-        {
-          educationType: form.degree,
-          branch: {
-            type: form.branch,
-            code: form.dept.replace(/\s+/g, "").toUpperCase(),
-            academicYear: form.year,
-            sections: form.sections,
-          },
+      console.log("what is adminCtx vamshi", adminCtx);
+
+      await saveAcademicSetupMaster({
+        educationType: form.degree,
+        branch: {
+          type: form.branch,
+          code: form.dept.replace(/\s+/g, "").toUpperCase(),
+          academicYear: form.year,
+          sections: form.sections,
         },
+      },
         {
           adminId: adminCtx.adminId,
           collegeId: adminCtx.collegeId,

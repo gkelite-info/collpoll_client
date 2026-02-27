@@ -114,6 +114,7 @@ export const upsertAdminEntry = async (payload: {
   email: string;
   mobile: string;
   gender?: "Male" | "Female";
+  collegeId: number,
   collegePublicId: string;
   collegeCode?: string;
 }) => {
@@ -143,6 +144,7 @@ export const upsertAdminEntry = async (payload: {
           email: payload.email,
           mobile: payload.mobile,
           gender: payload.gender ?? null,
+          collegeId: payload.collegeId,
           collegePublicId: payload.collegePublicId,
           collegeCode: payload.collegeCode ?? null,
           createdBy: createdByUserId,
