@@ -183,7 +183,7 @@ const Page = () => {
                 <AcademicFees
                   plan={displayPlan}
                   summary={[]}
-                  onPay={() => setIsPaymentMode(true)} // 🔥 Trigger Switch
+                  onPay={() => setIsPaymentMode(true)}
                 />
               )}
               {activeTab === "additional" && (

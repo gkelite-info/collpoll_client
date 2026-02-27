@@ -29,16 +29,16 @@ export function DashboardContent() {
     return <PaymentReminder />;
   }
 
-  if (view === "feeCollection"){
-    return <FeeCollection/>
+  if (view === "feeCollection") {
+    return <FeeCollection />;
   }
 
-    return (
-      <main className="flex w-full min-h-screen pb-4">
-        <FinanceDashLeft />
-        <FinanceDashRight />
-      </main>
-    );
+  return (
+    <main className="flex w-full min-h-screen pb-4">
+      <FinanceDashLeft />
+      <FinanceDashRight />
+    </main>
+  );
 }
 
 export default function DashboardPage() {
