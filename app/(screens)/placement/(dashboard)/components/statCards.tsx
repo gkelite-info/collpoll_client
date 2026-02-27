@@ -1,42 +1,19 @@
-import {
-  GraduationCap,
-  Briefcase,
-  Megaphone,
-  Buildings,
-} from "@phosphor-icons/react";
+import React from "react";
+import { IconProps } from "@phosphor-icons/react";
 
-export default function DashboardStats() {
-  const stats = [
-    {
-      title: "Eligible Students",
-      value: "05",
-      bgColor: "bg-[#E5DEFF]",
-      iconColor: "#8B5CF6",
-      Icon: GraduationCap,
-    },
-    {
-      title: "Students Placed",
-      value: "05",
-      bgColor: "bg-[#FFEEDD]",
-      iconColor: "#F97316",
-      Icon: Briefcase,
-    },
-    {
-      title: "Active Drives",
-      value: "14",
-      bgColor: "bg-[#E0FCE0]",
-      iconColor: "#22C55E",
-      Icon: Megaphone,
-    },
-    {
-      title: "Partner Companies",
-      value: "5,480",
-      bgColor: "bg-[#D0E8FF]",
-      iconColor: "#3B82F6",
-      Icon: Buildings,
-    },
-  ];
+export interface StatItem {
+  title: string;
+  value: string;
+  bgColor: string;
+  iconColor: string;
+  Icon: React.ElementType<IconProps>;
+}
 
+export interface DashboardStatsProps {
+  stats: StatItem[];
+}
+
+export default function DashboardStats({ stats }: DashboardStatsProps) {
   return (
     <div className="min-w-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
