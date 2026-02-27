@@ -235,19 +235,19 @@ export default function Page() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facultyId]);
 
-  useEffect(() => {
-    const loadDegrees = async () => {
-      try {
-        const data = await fetchCollegeDegrees();
-        setDegreeOptions(data);
-      } catch (err) {
-        toast.error("LOAD DEGREES FAILED");
-        console.error("LOAD DEGREES FAILED", err);
-      }
-    };
+  // useEffect(() => {
+  //   const loadDegrees = async () => {
+  //     try {
+  //       const data = await fetchCollegeDegrees();
+  //       setDegreeOptions(data);
+  //     } catch (err) {
+  //       toast.error("LOAD DEGREES FAILED");
+  //       console.error("LOAD DEGREES FAILED", err);
+  //     }
+  //   };
 
-    loadDegrees();
-  }, []);
+  //   loadDegrees();
+  // }, []);
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);

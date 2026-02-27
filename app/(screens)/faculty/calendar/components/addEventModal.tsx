@@ -356,7 +356,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     });
 
     if (exists) {
-      // 🔴 CHANGED: Set year directly from incoming value
       setYear(incomingYear);
     } else {
       console.warn(
@@ -371,8 +370,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!userId || loading) return;
 
     fetchFacultyContext(userId).then(ctx => {
-      console.log("🟢 Faculty Context:", ctx);
-
       setFacultyCtx(ctx);
       setEducationId(ctx.collegeEducationId);
       setBranchId(ctx.collegeBranchId);
@@ -391,15 +388,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     const loadAcademics = async () => {
       try {
-        /* 1️⃣ Education */
         const educations = await fetchAcademicDropdowns({
           type: "education",
           collegeId,
         });
         if (cancelled) return;
         setEducations(educations ?? []);
-
-        /* 2️⃣ Branch */
         const branches = await fetchAcademicDropdowns({
           type: "branch",
           collegeId,
@@ -407,8 +401,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         });
         if (cancelled) return;
         setBranches(branches ?? []);
-
-        /* 3️⃣ Academic Year */
         const academicYears = await fetchAcademicDropdowns({
           type: "academicYear",
           collegeId,
@@ -417,13 +409,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         });
         if (cancelled) return;
         setAcademicYears(academicYears ?? []);
-
-        /* 🔥 auto-pick academic year */
         if (facultyCtx.academicYearIds?.length === 1) {
           setAcademicYearId(facultyCtx.academicYearIds[0]);
         }
-
-        /* 4️⃣ Semester */
         const semesters = await fetchAcademicDropdowns({
           type: "semester",
           collegeId,
@@ -433,14 +421,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         });
         if (cancelled) return;
         setSemesters(semesters ?? []);
-
-        // ✅ AUTO-SELECT SEMESTER CORRECTLY
         if ((semesters ?? []).length === 1) {
-          setSemester(semesters[0].collegeSemesterId); // ← THIS WILL BE 20
+          setSemester(semesters[0].collegeSemesterId); 
           setIsSemesterAuto(true);
         }
-
-        /* 5️⃣ Section (filtered by faculty access) */
         const sections = await fetchAcademicDropdowns({
           type: "section",
           collegeId,
@@ -454,8 +438,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         );
 
         setSections(filteredSections);
-
-        // ✅ AUTO-FILL SECTION
         if (filteredSections.length === 1) {
           setSectionIds([filteredSections[0].collegeSectionsId]);
         }
@@ -466,41 +448,30 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         if (filteredSections.length === 1) {
           setSectionId(filteredSections[0].collegeSectionsId);
         }
-
-        /* 6️⃣ Subjects (derived from topics) */
-        const { data: subjectRows } = await supabase
-          .from("college_subject_unit_topics")
-          .select(`
-          collegeSubjectId,
-          college_subjects (
-            collegeSubjectId,
-            subjectName
-          )
-        `)
+        const { data: subjectRows, error } = await supabase
+          .from("college_subjects")
+          .select("collegeSubjectId, subjectName")
           .eq("collegeId", collegeId)
-          .in("collegeSubjectId", facultyCtx.subjectIds);
+          .eq("collegeEducationId", facultyCtx.collegeEducationId)
+          .eq("collegeBranchId", facultyCtx.collegeBranchId)
+          .eq("collegeAcademicYearId", facultyCtx.academicYearIds?.[0])
+          .in("collegeSubjectId", facultyCtx.subjectIds)
+          .eq("isActive", true)
+          .is("deletedAt", null);
+
+        if (error) {
+        }
 
         if (cancelled) return;
 
-        const subjectMap = new Map<number, SubjectRow>();
-        subjectRows?.forEach((row: any) => {
-          if (row.college_subjects) {
-            subjectMap.set(
-              row.college_subjects.collegeSubjectId,
-              row.college_subjects
-            );
-          }
-        });
+        const subjects: SubjectRow[] = subjectRows ?? [];
 
-        const subjects = Array.from(subjectMap.values());
         setSubjects(subjects);
-
         if (subjects.length === 1) {
           setSubjectId(subjects[0].collegeSubjectId);
           setSubject(subjects[0].subjectName);
         }
       } catch (err) {
-        console.error("❌ Faculty academic bootstrap failed", err);
       }
     };
 
@@ -528,19 +499,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   //       if (data?.collegeSemesterId) {
   //        setSemester(semesters[0].collegeSemesterId);
-  //         setIsSemesterAuto(true);             // ✅ lock dropdown
+  //         setIsSemesterAuto(true);            
   //       }
   //     });
   // }, [subjectId]);
 
   useEffect(() => {
     if (!subjectId) {
-      console.log("⏸ Topics blocked - missing subjectId");
       return;
     }
-
-    console.log("📚 Fetching topics for subjectId:", subjectId);
-
     supabase
       .from("college_subject_unit_topics")
       .select("collegeSubjectUnitTopicId, topicTitle")
@@ -556,7 +523,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     toast.error("Please enter meeting title");
     return;
   }
-
 
   const handleSave = () => {
     if (!date) {
@@ -605,8 +571,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       collegeSemesterId: semester!,
       sectionIds,
     };
-
-    console.log("✅ FINAL EVENT PAYLOAD", payload);
     onSave(payload);
     onClose();
   };

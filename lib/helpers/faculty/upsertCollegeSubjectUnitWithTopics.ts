@@ -79,7 +79,6 @@ export async function upsertCollegeSubjectUnitWithTopics(
       },
       {
         onConflict: "collegeId,collegeSubjectId,unitNumber",
-
       }
     )
     .select()
