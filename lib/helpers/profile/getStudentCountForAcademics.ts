@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export async function getStudentCountForAcademics(params: {
+  collegeId: number;
   collegeAcademicYearId?: number;
   collegeSemesterId?: number;
   collegeSectionsId?: number;
@@ -37,7 +38,7 @@ export async function getStudentCountForAcademics(params: {
   console.log("🧮 student_academic_history result:", { count, error });
 
   if (error) {
-    console.error("❌ getStudentCountForAcademics error", error);
+    console.error("❌ getStudentCountForAcademics error:", error.message);
     return 0;
   }
 
