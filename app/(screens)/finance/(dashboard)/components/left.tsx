@@ -6,7 +6,6 @@ import DashboardPage from "./gridDashMain";
 import SemwiseDetail from "../components/semwiseDetail";
 import { useUser } from "@/app/utils/context/UserContext";
 
-
 export default function FinanceDashLeft() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -14,8 +13,8 @@ export default function FinanceDashLeft() {
 
   const { gender } = useUser();
 
-  const financerImage = gender
-    && (gender === "Female" ? "/finance-fe.png" : "/financer-m.png")
+  const financerImage =
+    gender && (gender === "Female" ? "/finance-fe.png" : "/financer-m.png");
 
   const card = [
     {
@@ -25,10 +24,9 @@ export default function FinanceDashLeft() {
       image: financerImage ?? undefined,
       top: "lg:top-[-173px]",
       imageHeight: "h-45",
-      right: "right-35"
+      right: "right-35",
     },
   ];
-
 
   if (view === "semwise" && semester) {
     return (
