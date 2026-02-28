@@ -33,14 +33,20 @@ export default function Academics() {
 
     async function loadSubjects() {
       try {
+        console.log("🟢 loadSubjects triggered");
+    console.log("➡️ userId:", userId);
+    console.log("➡️ collegeId:", collegeId);
         if (userId === null || collegeId === null) return;
+         console.log("❌ userId or collegeId is null");
 
         const facultyCtx = await fetchFacultyContext(userId);
+        console.log("➡️ facultyCtx:", facultyCtx);
 
         const data = await getFacultySubjects({
           collegeId,
           facultyId: facultyCtx.facultyId,
         });
+         console.log("✅ getFacultySubjects result:", data);
 
         setSubjects(data);
       } catch (err) {

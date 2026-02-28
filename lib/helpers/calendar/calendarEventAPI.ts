@@ -35,33 +35,34 @@ export async function fetchCalendarEvents(
     let query = supabase
         .from("calendar_event")
         .select(`
-  calendarEventId,
-  facultyId,
-  subject,
-  eventTopic,
-  type,
-  date,
-  roomNo,
-  fromTime,
-  toTime,
-  meetingLink,
-  is_deleted,
-  createdAt,
-  updatedAt,
-  deletedAt,
+    calendarEventId,
+    facultyId,
+    subject,
+    eventTopic,
+    type,
+    date,
+    roomNo,
+    fromTime,
+    toTime,
+    meetingLink,
+    is_deleted,
+    createdAt,
+    updatedAt,
+    deletedAt,
 
-  college_subjects:subject (
-    collegeSubjectId,
-    subjectName,
-    subjectKey
-  ),
+    college_subjects:subject (
+      collegeSubjectId,
+      subjectName,
+      subjectKey
+    ),
 
-  college_subject_unit_topics (
-    collegeSubjectUnitTopicId,
-    topicTitle
-  )
-`)
-        .is("deletedAt", null);
+    college_subject_unit_topics:eventTopic (
+      collegeSubjectUnitTopicId,
+      topicTitle
+    )
+  `)
+        .is("deletedAt", null)
+        .eq("is_deleted", false);
 
     if (filters.facultyId) {
         query = query.eq("facultyId", filters.facultyId);

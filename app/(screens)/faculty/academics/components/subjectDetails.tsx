@@ -8,7 +8,7 @@ import {
   FilePdf,
 } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
-import { CardProps } from "./subjectCards";
+// import { CardProps } from "./subjectCards";
 import LessonCard from "./lessonCard";
 import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
@@ -17,6 +17,7 @@ import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCou
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { CardProps } from "@/lib/types/faculty";
 
 type FilterBannerProps = {
   filterBannerDetails: CardProps;
