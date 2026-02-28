@@ -256,7 +256,7 @@ export default function AssignmentForm({
                 onChange={(e) =>
                   setForm({ ...form, topicName: e.target.value })
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm"
                 rows={3}
               />
             </div>

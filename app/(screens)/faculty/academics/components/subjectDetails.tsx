@@ -15,6 +15,8 @@ import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCountForAcademics";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 type FilterBannerProps = {
   filterBannerDetails: CardProps;
@@ -25,24 +27,18 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
   return (
     <div className="mb-4 flex flex-col gap-4">
       <div className="flex flex-wrap gap-8">
-
-        {/* SUBJECT */}
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm">Subject :</p>
           <p className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
             {subjectTitle}
           </p>
         </div>
-
-        {/* SEMESTER */}
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm">Semester :</p>
           <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
             {semester}
           </p>
         </div>
-
-        {/* YEAR */}
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm">Year :</p>
           <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
@@ -117,325 +113,18 @@ export type UnitTopic = {
 };
 
 export type Unit = {
-  id: number; // collegeSubjectUnitId
+  id: number;
   unitNumber: number;
   unitLabel: string;
   title: string;
   startDate?: string;
   endDate?: string;
   dateRange: string;
-  percentage: number; // completionPercentage
+  percentage: number;
   topics: UnitTopic[];
   lessons: LessonData[];
   color: "purple" | "orange" | "blue";
 };
-
-
-
-// export type Unit = {
-//   id: number;
-//   unitLabel: string;
-//   title: string;
-//   color: "purple" | "orange" | "blue";
-//   dateRange: string;
-//   percentage: number;
-//   topics: UnitTopic[];
-//   lessons: LessonData[];
-// };
-
-export async function getFacultySubjects(params: {
-  collegeId: number;
-  facultyId: number;
-}) {
-  console.log("🟡 getFacultySubjects called with:", params);
-
-
-  const { collegeId } = params;
-
-  /* ----------------------------
-   * 1️⃣ Fetch Subjects
-   * ---------------------------- */
-  const { data: subjects, error: subjectErr } = await supabase
-    .from("college_subjects")
-    .select(`
-    collegeSubjectId,
-    subjectName,
-
-    collegeEducationId,
-    collegeBranchId,
-    collegeAcademicYearId,
-    collegeSemesterId,
-
-    collegeId
-  `)
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .is("deletedAt", null);
-
-  if (subjectErr) {
-    console.error("❌ Subjects fetch failed:", subjectErr);
-    throw subjectErr;
-  }
-
-  console.log(
-    "📚 SUBJECTS FROM DB:",
-    (subjects ?? []).map(s => ({
-      id: s.collegeSubjectId,
-      name: s.subjectName,
-      edu: s.collegeEducationId,
-      branch: s.collegeBranchId,
-      year: s.collegeAcademicYearId,
-      sem: s.collegeSemesterId,
-    }))
-  );
-
-  const { data: units, error: unitErr } = await supabase
-    .from("college_subject_units")
-
-    .select(`
-  collegeSubjectUnitId,
-  collegeSubjectId,
-  unitNumber,
-  unitTitle,
-  completionPercentage,
-    startDate,
-    endDate
-`)
-
-    .eq("collegeId", collegeId)
-    .eq("isActive", true);
-
-  if (unitErr) {
-    console.error("❌ Units fetch failed:", unitErr);
-    throw unitErr;
-  }
-
-  console.log("🧩 Units fetched:", units);
-
-  const { data: topics, error: topicErr } = await supabase
-    .from("college_subject_unit_topics")
-    .select(`
-  collegeSubjectUnitId,
-  topicTitle,
-  isCompleted,
-  displayOrder,
-  collegeSubjectId
-`)
-
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .order("displayOrder", { ascending: true });
-
-  if (topicErr) {
-    console.error("❌ Topics fetch failed:", topicErr);
-    throw topicErr;
-  }
-
-
-  const topicsBySubject = new Map<number, typeof topics>();
-
-  for (const t of topics ?? []) {
-    const arr = topicsBySubject.get(t.collegeSubjectId) ?? [];
-    arr.push(t);
-    topicsBySubject.set(t.collegeSubjectId, arr);
-  }
-
-
-  /* ----------------------------
-   * 3️⃣ Aggregate per Subject
-   * ---------------------------- */
-  const result: CardProps[] = await Promise.all(
-    subjects.map(async (s) => {
-      const subjectUnits = units.filter(
-        (u) => u.collegeSubjectId === s.collegeSubjectId
-      );
-
-      const unitsCount = subjectUnits.length;
-      const subjectTopics = topicsBySubject.get(s.collegeSubjectId) ?? [];
-
-      const topicsCovered =
-        subjectTopics.filter(t => t.isCompleted === true).length;
-
-
-      let nextLesson = "-";
-
-      // 1️⃣ Sort units in order (Unit-1 → Unit-2 → Unit-3)
-      const sortedUnits = [...subjectUnits].sort(
-        (a, b) => a.unitNumber - b.unitNumber
-      );
-
-      // 2️⃣ Loop units sequentially
-      for (const unit of sortedUnits) {
-        const unitTopics = subjectTopics
-          .filter(t => t.collegeSubjectUnitId === unit.collegeSubjectUnitId)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
-
-        // 3️⃣ First incomplete topic in that unit
-        const firstIncompleteTopic = unitTopics.find(
-          t => t.isCompleted === false
-        );
-
-        if (firstIncompleteTopic) {
-          nextLesson = firstIncompleteTopic.topicTitle;
-          break; // 🔥 THIS enables Unit-2 auto-activation
-        }
-      }
-
-      // Optional fallback
-      if (nextLesson === "-") {
-        nextLesson = "Completed";
-      }
-
-      // 📅 Calculate Subject Start & End Date from Units
-      const subjectUnitDates = subjectUnits
-        .filter(u => u.startDate && u.endDate);
-
-      const fromDate =
-        subjectUnitDates.length > 0
-          ? new Date(
-            Math.min(
-              ...subjectUnitDates.map(u => new Date(u.startDate).getTime())
-            )
-          ).toLocaleDateString("en-GB")
-          : "-";
-
-      const toDate =
-        subjectUnitDates.length > 0
-          ? new Date(
-            Math.max(
-              ...subjectUnitDates.map(u => new Date(u.endDate).getTime())
-            )
-          ).toLocaleDateString("en-GB")
-          : "-";
-
-
-      // // 1️⃣ Sort units by unitNumber
-      // const sortedUnits = [...subjectUnits].sort(
-      //   (a, b) => a.unitNumber - b.unitNumber
-      // );
-
-      // // 2️⃣ Find first unit that is NOT completed
-      // const firstIncompleteUnit = sortedUnits.find(
-      //   (u) => (u.completionPercentage ?? 0) < 100
-      // );
-
-      // // 3️⃣ Find next lesson from THAT unit only
-      // const nextLesson = firstIncompleteUnit
-      //   ? subjectTopics
-      //     .filter(
-      //       (t) =>
-      //         t.collegeSubjectUnitId ===
-      //         firstIncompleteUnit.collegeSubjectUnitId &&
-      //         t.isCompleted === false
-      //     )
-      //     .sort((a, b) => a.displayOrder - b.displayOrder)[0]?.topicTitle ?? "-"
-      //   : "Completed";
-
-
-      const subjectPercentage =
-        subjectUnits.length === 0
-          ? 0
-          : Math.round(
-            subjectUnits.reduce(
-              (sum, u) => sum + (u.completionPercentage ?? 0),
-              0
-            ) / subjectUnits.length
-          );
-
-      console.log("➡️ Fetching student count for subject:", {
-        collegeId,
-        collegeAcademicYearId: s.collegeAcademicYearId,
-        collegeSemesterId: s.collegeSemesterId,
-        collegeSubjectId: s.collegeSubjectId,
-      });
-
-
-      const students = await getStudentCountForAcademics({
-        collegeId: collegeId,
-        collegeAcademicYearId: s.collegeAcademicYearId,
-        collegeSemesterId: s.collegeSemesterId,
-      });
-
-
-
-      console.log("⬅️ Student count received:", students);
-
-      return {
-        collegeId,
-
-        collegeEducationId: s.collegeEducationId,
-        collegeBranchId: s.collegeBranchId,
-        collegeAcademicYearId: s.collegeAcademicYearId,
-        collegeSemesterId: s.collegeSemesterId,
-
-        collegeSubjectId: s.collegeSubjectId,
-        subjectTitle: s.subjectName,
-        semester: `Sem ${s.collegeSemesterId}`,
-        year: `Year ${s.collegeAcademicYearId}`,
-
-
-        units: unitsCount,
-        topicsCovered,
-        topicsTotal: subjectTopics.length,
-        nextLesson,
-        students,
-        percentage: subjectPercentage,
-        fromDate,
-        toDate,
-      };
-    })
-  );
-
-  // const result: CardProps[] = subjects.map((s) => {
-  //   const subjectUnits = units.filter(
-  //     (u) => u.collegeSubjectId === s.collegeSubjectId
-  //   );
-
-  //   const unitsCount = subjectUnits.length;
-
-  //   const subjectTopics = topicsBySubject.get(s.collegeSubjectId) ?? [];
-
-  //   const topicsCovered =
-  //     subjectTopics.filter(t => t.isCompleted === true).length;
-
-  //   // ✅ SAFE: do not mutate subjectUnits
-  //   const firstIncompleteUnit = [...subjectUnits]
-  //     .sort((a, b) => a.unitNumber - b.unitNumber)
-  //     .find(u => (u.completionPercentage ?? 0) < 100);
-
-  //   const nextLesson = firstIncompleteUnit
-  //     ? subjectTopics
-  //       .filter(
-  //         t =>
-  //           t.collegeSubjectUnitId ===
-  //           firstIncompleteUnit.collegeSubjectUnitId &&
-  //           t.isCompleted === false
-  //       )
-  //       .sort((a, b) => a.displayOrder - b.displayOrder)[0]?.topicTitle ?? "-"
-  //     : "-";
-
-  //   return {
-  //     collegeId,
-  //     collegeSubjectId: s.collegeSubjectId,
-  //     subjectTitle: s.subjectName,
-  //     semester: `Sem ${s.collegeSemesterId}`,
-  //     year: `Year ${s.collegeAcademicYearId}`,
-  //     units: unitsCount,
-  //     topicsCovered,
-  //     topicsTotal: subjectTopics.length,
-  //     nextLesson,
-  //     students: 0,
-  //     fromDate: "",
-  //     toDate: "",
-  //   };
-  // });
-
-
-  console.log("✅ Final My Classes cards:", result);
-
-  return result;
-}
-
 
 const colorMap = {
   purple: {
@@ -471,52 +160,37 @@ type UnitCardProps = {
     topics: UnitTopic[],
     percentage: number
   ) => void;
+  loadingUnitId: number | null;
   setHasChanges: (value: boolean) => void;
 };
 
 
 
-function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
+function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCardProps) {
   const colors = colorMap[unit.color];
   const [selectedUnitLessons, setSelectedUnitLessons] = useState<
     LessonData[] | null
   >(null);
-  const [isMarkAsLoading, setIsMarkAsLoading] = useState<boolean>(false);
-
   // const [topics, setTopics] = useState<UnitTopic[]>(unit.topics);
   const [localTopics, setLocalTopics] = useState<UnitTopic[]>(unit.topics);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
     setLocalTopics(unit.topics);
+    setIsDirty(false);
   }, [unit.topics]);
 
   useEffect(() => {
-    console.log("✅ UNIT TOPICS", localTopics);
+    console.log("UNIT TOPICS", localTopics);
   }, [localTopics]);
 
-
-
+  const isSavingThisUnit = loadingUnitId === unit.id;
   if (selectedUnitLessons) {
     return (
       <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6">
-        {/* <LessonCard
-          lesson={selectedUnitLessons}
-          onBack={() => setSelectedUnitLessons(null)}
-        /> */}
       </div>
     );
   }
-
-
-  // const toggleTopic = (index: number) => {
-  //   setTopics((prev) =>
-  //     prev.map((t, i) =>
-  //       i === index ? { ...t, isCompleted: !t.isCompleted } : t
-  //     )
-  //   );
-  // };
-
-
   const completedCount = localTopics.filter(t => t.isCompleted).length;
   const percentage =
     localTopics.length === 0
@@ -582,28 +256,22 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
             >
               <button
                 onClick={() => {
-                  // ✅ UI-only toggle
                   setLocalTopics(prev =>
                     prev.map(t =>
-                      t.id === topic.id
-                        ? { ...t, isCompleted: !t.isCompleted }
-                        : t
+                      t.id === topic.id ? { ...t, isCompleted: !t.isCompleted } : t
                     )
                   );
 
-                  // ✅ mark draft state
+                  setIsDirty(true);
                   setHasChanges(true);
                 }}
               >
                 <CheckCircleIcon
                   size={16}
                   weight="fill"
-                  className={
-                    topic.isCompleted ? colors.accent : "text-gray-300"
-                  }
+                  className={topic.isCompleted ? colors.accent : "text-gray-300"}
                 />
               </button>
-
               <span className={topic.isCompleted ? "" : "text-gray-400"}>
                 {topic.title}
               </span>
@@ -632,20 +300,17 @@ function UnitCard({ unit, onMarkComplete, setHasChanges }: UnitCardProps) {
             </li>
           ))} */}
         </ul>
-        {/* ✅ MARK AS COMPLETE */}
         <div className="mt-4 flex justify-end">
           <button
-            disabled={percentage === 0}
-            onClick={() =>
-              onMarkComplete(unit.id, localTopics, percentage)
-            }
+            onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
+            disabled={!isDirty || isSavingThisUnit}
             className={`border px-4 py-1.5 rounded-lg text-sm transition
-    ${percentage === 0
+    ${!isDirty || isSavingThisUnit
                 ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
                 : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
               }`}
           >
-            {isMarkAsLoading ? "Saving..." : "Save Progress"}
+            {isSavingThisUnit ? "Saving..." : "Save Progress"}
           </button>
 
           {/* <button
@@ -673,6 +338,11 @@ export function SubjectDetailsCard({
   const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [loadingUnitId, setLoadingUnitId] = useState<number | null>(null);
+  const { collegeId, facultyId } = useFaculty();
+  const [cards, setCards] = useState<CardProps[]>([]);
+
+
+
 
   useEffect(() => {
     if (!details.collegeId || !details.collegeSubjectId) {
@@ -688,13 +358,12 @@ export function SubjectDetailsCard({
 
       const data = await getUnitsWithTopics({
         collegeId: details.collegeId,
-        collegeSubjectId: details.collegeSubjectId, // ✅ FIX
+        collegeSubjectId: details.collegeSubjectId,
       });
 
       setUnits(
         data.map((u: any) => ({
-          id: u.id, // collegeSubjectUnitId
-
+          id: u.id,
           unitNumber: Number(
             u.unitLabel.replace("Unit - ", "")
           ),
@@ -704,8 +373,6 @@ export function SubjectDetailsCard({
           percentage: u.percentage ?? 0,
           color: u.color,
           lessons: [],
-
-          // ✅ topics are already correct — DO NOT remap
           topics: u.topics,
         }))
       );
@@ -718,16 +385,32 @@ export function SubjectDetailsCard({
     }
   }
 
+  useEffect(() => {
+    if (collegeId == null || facultyId == null) return;
+
+    async function loadFacultySubjects() {
+      try {
+        const data = await getFacultySubjects({
+          collegeId: Number(collegeId),
+          facultyId: Number(facultyId),
+        });
+
+        setCards(data);
+      } catch (err) {
+        console.error("❌ Failed to fetch faculty subjects:", err);
+      }
+    }
+
+    loadFacultySubjects();
+  }, [collegeId, facultyId]);
+
   const handleMarkComplete = async (
     unitId: number,
     topics: UnitTopic[],
     percentage: number
   ) => {
     try {
-     setLoadingUnitId(unitId);
-      /* -----------------------------
-       * 1️⃣ Save topics
-       * ----------------------------- */
+      setLoadingUnitId(unitId);
       for (const topic of topics) {
         const { error: topicError } = await supabase
           .from("college_subject_unit_topics")
@@ -741,10 +424,6 @@ export function SubjectDetailsCard({
           throw new Error(topicError.message);
         }
       }
-
-      /* -----------------------------
-       * 2️⃣ Save unit percentage
-       * ----------------------------- */
       const { error: unitError } = await supabase
         .from("college_subject_units")
         .update({
@@ -756,21 +435,17 @@ export function SubjectDetailsCard({
       if (unitError) {
         throw new Error(unitError.message);
       }
-
-      /* -----------------------------
-       * 3️⃣ Sync UI
-       * ----------------------------- */
       setUnits(prev =>
         prev.map(u =>
           u.id === unitId ? { ...u, topics, percentage } : u
         )
       );
 
-      toast.success("Progress saved ✅");
+      toast.success("Progress saved ");
       setHasChanges(false);
 
     } catch (err: any) {
-      console.error("❌ Mark complete failed:", err);
+      console.error(" Mark complete failed:", err);
       toast.error(err?.message || "Failed to save progress");
     } finally {
       setLoadingUnitId(null);
@@ -782,7 +457,7 @@ export function SubjectDetailsCard({
   //   topics: UnitTopic[],
   //   percentage: number
   // ) => {
-  //   // 1️⃣ Save percentage
+  //   //  Save percentage
   //   const { error } = await supabase
   //     .from("college_subject_units")
   //     .update({
@@ -796,7 +471,7 @@ export function SubjectDetailsCard({
   //     return;
   //   }
 
-  //   // 2️⃣ Sync local state
+  //   //  Sync local state
   //   setUnits(prev =>
   //     prev.map(u =>
   //       u.id === unitId ? { ...u, topics, percentage } : u
@@ -804,14 +479,13 @@ export function SubjectDetailsCard({
   //   );
 
   //   setHasChanges(true);
-  //   toast.success("Progress saved ✅");
+  //   toast.success("Progress saved ");
   // };
 
   const saveProgress = async () => {
     setIsSaveLoading(true)
     try {
       for (const unit of units) {
-        // 1️⃣ Save topics
         for (const topic of unit.topics) {
           await supabase
             .from("college_subject_unit_topics")
@@ -821,8 +495,6 @@ export function SubjectDetailsCard({
             })
             .eq("collegeSubjectUnitTopicId", topic.id);
         }
-
-        // 2️⃣ Save unit percentage
         await supabase
           .from("college_subject_units")
           .update({
@@ -832,7 +504,7 @@ export function SubjectDetailsCard({
           .eq("collegeSubjectUnitId", unit.id);
       }
 
-      toast.success("Saved successfully 💾");
+      toast.success("Saved successfully");
       setHasChanges(false);
       onBack();
     } catch (err) {
@@ -843,7 +515,7 @@ export function SubjectDetailsCard({
   };
 
   // const saveProgress = async () => {
-  //   console.log("💾 Saving all units progress", units);
+  //   console.log(" Saving all units progress", units);
 
   //   for (const unit of units) {
   //     await supabase
@@ -856,8 +528,8 @@ export function SubjectDetailsCard({
   //   }
 
   //   try {
-  //     console.log("✅ All units saved");
-  //     toast.success("Saved successfully 💾");
+  //     console.log(" All units saved");
+  //     toast.success("Saved successfully ");
 
   //     setHasChanges(false);
   //     onBack();
@@ -880,7 +552,7 @@ export function SubjectDetailsCard({
       <div className="flex justify-between items-start mb-4">
         <FilterBanner filterBannerDetails={details} />
 
-        {/* ✅ SAVE BUTTON */}
+        {/*  SAVE BUTTON */}
         {/* <button
           onClick={saveProgress}
           disabled={!hasChanges || isSaveLoading}
@@ -911,6 +583,7 @@ export function SubjectDetailsCard({
                   unit={unit}
                   onMarkComplete={handleMarkComplete}
                   setHasChanges={setHasChanges}
+                  loadingUnitId={loadingUnitId}
                 />
 
               </div>
