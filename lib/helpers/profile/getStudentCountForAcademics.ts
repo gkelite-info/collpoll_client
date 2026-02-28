@@ -6,7 +6,6 @@ export async function getStudentCountForAcademics(params: {
   collegeSemesterId?: number;
   collegeSectionsId?: number;
 }) {
-  console.log("🟡 getStudentCountForAcademics params:", params);
 
   let query = supabase
     .from("student_academic_history")
@@ -16,8 +15,6 @@ export async function getStudentCountForAcademics(params: {
     })
     .eq("isCurrent", true)
     .is("deletedAt", null);
-
-  // ✅ VALID filters ONLY
   if (params.collegeAcademicYearId) {
     query = query.eq(
       "collegeAcademicYearId",
@@ -34,11 +31,7 @@ export async function getStudentCountForAcademics(params: {
   }
 
   const { count, error } = await query;
-
-  console.log("🧮 student_academic_history result:", { count, error });
-
   if (error) {
-    console.error("❌ getStudentCountForAcademics error:", error.message);
     return 0;
   }
 
