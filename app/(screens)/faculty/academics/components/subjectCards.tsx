@@ -9,39 +9,11 @@ import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.h
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
 import { supabase } from "@/lib/supabaseClient";
+import { CardProps } from "@/lib/types/faculty";
 
-export type CardProps = {
-  collegeId: number;
-
-  collegeEducationId: number;
-  collegeBranchId: number;
-  collegeAcademicYearId: number;
-  collegeSemesterId: number;
-
-  collegeSubjectId: number;
-  collegeSectionId?: number;
-
-  subjectTitle: string;
-  semester: string;
-  year: string;
-  sectionName?: string;
-
-  units: number;
-  topicsCovered: number;
-  topicsTotal: number;
-  nextLesson: string;
-  percentage?: number;
-  students: number;
-  fromDate: string;
-  toDate: string;
-};
-
+ 
 
 type SubjectCardProps = { subjectProps: CardProps[] };
-
-
-
-
 export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   console.log("🟣 SubjectCard received props:", subjectProps);
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
