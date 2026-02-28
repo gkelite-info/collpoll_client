@@ -2,7 +2,7 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { FaChevronDown } from "react-icons/fa6";
-import SubjectCard, { CardProps } from "./components/subjectCards";
+import SubjectCard from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect, useRef } from "react";
 // import { getFacultySubjects } from "./components/subjectDetails";
@@ -11,6 +11,7 @@ import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextA
 import { CircleNotch } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
+import { CardProps } from "@/lib/types/faculty";
 
 export default function Academics() {
   const { userId, collegeId, loading: userLoading } = useUser();
@@ -33,14 +34,20 @@ export default function Academics() {
 
     async function loadSubjects() {
       try {
+        console.log("🟢 loadSubjects triggered");
+    console.log("➡️ userId:", userId);
+    console.log("➡️ collegeId:", collegeId);
         if (userId === null || collegeId === null) return;
+         console.log("❌ userId or collegeId is null");
 
         const facultyCtx = await fetchFacultyContext(userId);
+        console.log("➡️ facultyCtx:", facultyCtx);
 
         const data = await getFacultySubjects({
           collegeId,
           facultyId: facultyCtx.facultyId,
         });
+         console.log("✅ getFacultySubjects result:", data);
 
         setSubjects(data);
       } catch (err) {

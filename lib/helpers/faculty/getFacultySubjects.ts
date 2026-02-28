@@ -1,15 +1,16 @@
-"use server";
-
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCountForAcademics";
-import type { CardProps } from "@/app/(screens)/faculty/academics/components/subjectCards"; 
-// 👆 adjust this import path to wherever CardProps is defined
+import { CardProps } from "@/lib/types/faculty";
+
 
 export async function getFacultySubjects(params: {
   collegeId: number;
   facultyId: number;
 }) {
-  const { collegeId } = params;
+  const { collegeId , facultyId } = params;
+  console.log("🟢 getFacultySubjects called with:");
+    console.log("➡️ collegeId:", collegeId);
+    console.log("➡️ facultyId:", facultyId);
 
   const { data: subjects, error: subjectErr } = await supabase
     .from("college_subjects")
@@ -29,6 +30,8 @@ export async function getFacultySubjects(params: {
     .is("deletedAt", null);
 
   if (subjectErr) throw subjectErr;
+      console.log("📚 Subjects query result:", subjects);
+    console.log("📚 Subjects error:", subjectErr);
 
   console.log(
     "📚 SUBJECTS FROM DB:",
@@ -57,6 +60,8 @@ export async function getFacultySubjects(params: {
     .eq("isActive", true);
 
   if (unitErr) throw unitErr;
+      console.log("📦 Units query result:", units);
+    console.log("📦 Units error:", unitErr);
 
   const { data: topics, error: topicErr } = await supabase
     .from("college_subject_unit_topics")
@@ -72,6 +77,8 @@ export async function getFacultySubjects(params: {
     .order("displayOrder", { ascending: true });
 
   if (topicErr) throw topicErr;
+      console.log("📝 Topics query result:", topics);
+    console.log("📝 Topics error:", topicErr);
 
   const topicsBySubject = new Map<number, typeof topics>();
 
@@ -168,6 +175,6 @@ export async function getFacultySubjects(params: {
       };
     })
   );
-
+ console.log("✅ Final mapped result:", result);
   return result;
 }

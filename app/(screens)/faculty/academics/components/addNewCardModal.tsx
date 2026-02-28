@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
 import { FaChevronDown } from "react-icons/fa6";
-import { CardProps } from "./subjectCards";
+
 // import { upsertFacultyAcademics } from "@/lib/helpers/faculty/upsertFacultyAcademics";
 import { supabase } from "@/lib/supabaseClient";
 // import { suggestTopicsAI } from "@/lib/helpers/faculty/ai/suggestTopics.client";
@@ -17,6 +17,7 @@ import toast from "react-hot-toast";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
 import { getInternalUserId } from "@/lib/helpers/getInternalUserId";
+import { CardProps } from "@/lib/types/faculty";
 
 type AddNewCardModalProps = {
   isOpen: boolean;

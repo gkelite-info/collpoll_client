@@ -8,7 +8,7 @@ import {
   CheckCircle,
   FilePdf,
 } from "@phosphor-icons/react";
-import { CardProps } from "./subjectCards";
+import { CardProps } from "@/lib/types/faculty";
 
 type Topic = {
   title: string;
