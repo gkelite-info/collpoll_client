@@ -37,16 +37,16 @@ type FacultyAcademicForm = {
   educationId?: number;
   branchId?: number;
   academicYearId?: number;
-  semester?: number; 
+  semester?: number;
   subjectName: string;
   subjectId?: number;
-  collegeSubjectId?: number;   
+  collegeSubjectId?: number;
   section?: string;
   sectionId?: number;
   unitName: string;
   unitNumber: number;
-  startDate: string;   
-  endDate: string;     
+  startDate: string;
+  endDate: string;
   topics: string[];
 };
 
@@ -66,7 +66,7 @@ export default function AddNewCardModal({
   onSave,
   facultySubjects,
   defaultSubjectId,
-   facultySections,  
+  facultySections,
 }: AddNewCardModalProps) {
 
   const [formData, setFormData] = useState<FacultyAcademicForm>({

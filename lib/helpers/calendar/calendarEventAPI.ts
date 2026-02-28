@@ -83,9 +83,9 @@ export async function fetchCalendarEvents(
 }
 
 export async function saveCalendarEvent(payload: {
-    calendarEventId?: number; // ✅ needed for edit
+    calendarEventId?: number;
     facultyId: number;
-    subjectId: number | null; // ✅ FIXED
+    subjectId: number | null;
     eventTopic: number | null;
     type: "class" | "meeting" | "exam" | "quiz";
     date: string;
