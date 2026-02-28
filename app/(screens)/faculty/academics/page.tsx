@@ -5,11 +5,12 @@ import { FaChevronDown } from "react-icons/fa6";
 import SubjectCard, { CardProps } from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect, useRef } from "react";
-import { getFacultySubjects } from "./components/subjectDetails";
+// import { getFacultySubjects } from "./components/subjectDetails";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 
 import { CircleNotch } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 
 export default function Academics() {
   const { userId, collegeId, loading: userLoading } = useUser();
