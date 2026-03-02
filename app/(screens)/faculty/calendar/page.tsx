@@ -287,10 +287,12 @@ export default function Page() {
     });
   };
 
-  const handleSaveEvent = async (payload: CalendarEventPayload) => {
+  const handleSaveEvent = async (
+    payload: CalendarEventPayload
+  ): Promise<{ success: boolean }> => {
     if (!facultyId) {
       toast.error("Faculty not found");
-      return;
+      return { success: false };
     }
 
     const conflict = await hasDbConflict(
@@ -304,14 +306,14 @@ export default function Page() {
       setPendingEvent(payload);
       setShowConflictModal(true);
       setIsModalOpen(false);
-      return;
+      return { success: false };
     }
 
     setIsSaving(true);
 
     try {
       const eventRes = await saveCalendarEvent({
-        calendarEventId: editingEventId ? Number(editingEventId) : undefined, // 🔥 THIS LINE
+        calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,
         subjectId: payload.type === "meeting" ? null : payload.subjectId ?? null,
         eventTopic: payload.eventTopic,
@@ -325,7 +327,7 @@ export default function Page() {
 
       if (!eventRes.success) {
         toast.error("Failed to save event");
-        return;
+        return { success: false };
       }
 
       const calendarEventId = eventRes.calendarEventId;
@@ -350,9 +352,12 @@ export default function Page() {
       setFormMode("create");
 
       await loadCalendarEvents();
+
+      return { success: true };
     } catch (err) {
       console.error("handleSaveEvent failed", err);
       toast.error("Failed to save event");
+      return { success: false };
     } finally {
       setIsSaving(false);
     }
