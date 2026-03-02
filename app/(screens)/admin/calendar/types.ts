@@ -5,6 +5,7 @@ export interface CalendarEvent {
   calendarEventId: number;
   title: string;
   type: EventType;
+   sectionId: number; 
   startTime: string;
   endTime: string;
   day: string;

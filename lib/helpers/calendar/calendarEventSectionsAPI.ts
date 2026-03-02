@@ -25,7 +25,8 @@ export async function fetchCalendarEventSections(
       collegeSectionId,
       createdAt
     `)
-        .eq("calendarEventId", calendarEventId);
+        .eq("calendarEventId", calendarEventId)
+        .eq("isActive", true);
 
     if (error) {
         console.error("fetchCalendarEventSections error:", error);
@@ -56,6 +57,9 @@ export async function saveCalendarEventSections(
         collegeSemesterId: payload.collegeSemesterId,
         collegeSectionId: sectionId,
         createdAt: now,
+        updatedAt: now,      // 🔥 REQUIRED
+        isActive: true,      // 🔥 REQUIRED (good practice)
+        deletedAt: null
     }));
 
     const { error } = await supabase
@@ -70,16 +74,23 @@ export async function saveCalendarEventSections(
     return { success: true };
 }
 
-export async function deleteCalendarEventSections(
-    calendarEventId: number
+export async function softDeleteCalendarEventSection(
+    calendarEventId: number,
+    sectionId: number
 ) {
     const { error } = await supabase
         .from("calendar_event_section")
-        .delete()
-        .eq("calendarEventId", calendarEventId);
+        .update({
+            isActive: false,
+            deletedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        })
+        .eq("calendarEventId", calendarEventId)
+        .eq("collegeSectionId", sectionId)
+        .eq("isActive", true); // safety
 
     if (error) {
-        console.error("deleteCalendarEventSections error:", error);
+        console.error("softDeleteCalendarEventSection error:", error);
         return { success: false };
     }
 

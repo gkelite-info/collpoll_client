@@ -62,6 +62,13 @@ function FeeContent() {
     return ["All", ...Array.from(years)];
   }, [feeStructures]);
 
+  // Automatically filter out the deleted item to update UI instantly
+  const handleDeleteSuccess = (deletedId: number) => {
+    setFeeStructures((prev) =>
+      prev.filter((s) => s.feeStructureId !== deletedId),
+    );
+  };
+
   if (fee === "create-fee") {
     return <CreateFee />;
   }
@@ -81,11 +88,12 @@ function FeeContent() {
       )}
 
       <div className="space-y-6">
-        {groupedStructures.map((group) => (
+        {groupedStructures.map((group, index) => (
           <FeeStructureCard
-            key={group[0].branchId}
+            key={group?.[0]?.branchId || index}
             structures={group}
             collegeName={collegeDetails?.collegeName}
+            onDeleteSuccess={handleDeleteSuccess} // Pass the callback here
           />
         ))}
       </div>

@@ -21,9 +21,9 @@ import {
   saveCalendarEvent,
 } from "@/lib/helpers/calendar/calendarEventAPI";
 import {
-  deleteCalendarEventSections,
   fetchCalendarEventSections,
   saveCalendarEventSections,
+  softDeleteCalendarEventSection,
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import EventDetailsModal from "./modal/EventDetailsModal";
@@ -212,6 +212,8 @@ export default function Page() {
 
             calendarEventId: row.calendarEventId,
 
+            sectionId: sectionId,   // 🔥 ADD THIS LINE
+
             rawFormData: {
               topicId: row.eventTopic,
               roomNo: row.roomNo,
@@ -332,10 +334,6 @@ export default function Page() {
 
       const calendarEventId = eventRes.calendarEventId;
 
-      if (editingEventId) {
-        await deleteCalendarEventSections(Number(editingEventId));
-      }
-
       await saveCalendarEventSections(calendarEventId, {
         collegeEducationId: payload.collegeEducationId,
         collegeBranchId: payload.collegeBranchId,
@@ -398,10 +396,6 @@ export default function Page() {
 
       const calendarEventId = eventRes.calendarEventId;
 
-      if (editingEventId) {
-        await deleteCalendarEventSections(Number(editingEventId));
-      }
-
       await saveCalendarEventSections(calendarEventId, {
         collegeEducationId: pendingEvent.collegeEducationId,
         collegeBranchId: pendingEvent.collegeBranchId,
@@ -427,15 +421,26 @@ export default function Page() {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
+  const handleDeleteEvent = async (event: CalendarEvent) => {
     try {
-      await deleteCalendarEventSections(Number(eventId));
-      await deleteCalendarEvent(Number(eventId));
+      const calendarEventId = event.calendarEventId;
+      const sectionId = event.sectionId;
 
-      setEvents((prev: CalendarEvent[]) => prev.filter((e) => e.id !== eventId));
-      toast.success("Event deleted successfully");
+      // 🔥 Soft delete only this section
+      await softDeleteCalendarEventSection(calendarEventId, sectionId);
+
+      // Check if any active sections remain
+      const remaining = await fetchCalendarEventSections(calendarEventId);
+
+      if (!remaining || remaining.length === 0) {
+        // Soft delete main event only if no sections left
+        await deleteCalendarEvent(calendarEventId);
+      }
+
+      await loadCalendarEvents();
+      toast.success("Section deleted successfully");
     } catch (err) {
-      toast.error("Failed to delete event");
+      toast.error("Failed to delete section");
       console.error(err);
     }
   };
@@ -581,7 +586,7 @@ export default function Page() {
             open={!!eventToDelete}
             onCancel={() => setEventToDelete(null)}
             onConfirm={() => {
-              if (eventToDelete) handleDeleteEvent(eventToDelete.id);
+              if (eventToDelete) handleDeleteEvent(eventToDelete);
               setEventToDelete(null);
             }}
           />

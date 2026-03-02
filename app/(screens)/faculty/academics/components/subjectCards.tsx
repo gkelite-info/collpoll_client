@@ -11,18 +11,34 @@ import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssi
 import { supabase } from "@/lib/supabaseClient";
 import { CardProps } from "@/lib/types/faculty";
 
- 
+type FacultySubject = {
+  collegeSubjectId: number;
+  subjectName: string;
+};
 
-type SubjectCardProps = { subjectProps: CardProps[] };
-export default function SubjectCard({ subjectProps }: SubjectCardProps) {
+type FacultySection = {
+  collegeSectionsId: number;
+  collegeSubjectId: number;
+  college_sections: {
+    collegeSections: string;
+  };
+};
+
+type SubjectCardProps = {
+  subjectProps: CardProps[];
+  facultyCtx: any;
+};
+export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardProps) {
   console.log("🟣 SubjectCard received props:", subjectProps);
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+
   const [subjectId, setSubjectId] = useState<number | null>(null);
   const [sectionId, setSectionId] = useState<number | null>(null);
+  const [defaultSubjectId, setDefaultSubjectId] = useState<number | null>(null);
 
   const [subjects, setSubjects] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
@@ -35,55 +51,10 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   } = useUser();
 
 
-  const [facultySubjects, setFacultySubjects] = useState<any[]>([]);
-  const [facultySections, setFacultySections] = useState<any[]>([]);
-  const [defaultSubjectId, setDefaultSubjectId] = useState<number | null>(null);
+  const facultySubjects = facultyCtx?.faculty_subject ?? [];
+  const facultySections = facultyCtx?.sections ?? [];
   const [rawCards, setRawCards] = useState<CardProps[]>(subjectProps);
 
-
-
-  useEffect(() => {
-    async function loadFacultyContext() {
-      if (!userId || role !== "Faculty") return;
-
-      const { data: faculty, error } = await supabase
-        .from("faculty")
-        .select("facultyId")
-        .eq("userId", userId)
-        .single();
-
-      if (error || !faculty) {
-        console.error("Faculty not found");
-        return;
-      }
-
-      const mappings = await getFacultyAssignedSubjects({
-        facultyId: faculty.facultyId,
-      });
-
-      // unique subjects
-      const subjects = Array.from(
-        new Map(
-          mappings.map((m: any) => [
-            m.collegeSubjectId,
-            {
-              collegeSubjectId: m.collegeSubjectId,
-              subjectName: m.college_subjects.subjectName,
-            },
-          ])
-        ).values()
-      );
-
-      setFacultySubjects(subjects);
-      setFacultySections(mappings);
-
-      if (subjects.length === 1) {
-        setDefaultSubjectId(subjects[0].collegeSubjectId);
-      }
-    }
-
-    loadFacultyContext();
-  }, [userId, role]);
 
   useEffect(() => {
     console.log("🟢 facultySections:", facultySections);
@@ -96,31 +67,6 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   useEffect(() => {
     console.log("🔵 cards:", cards);
   }, [cards]);
-
-  useEffect(() => {
-    if (!rawCards.length || !facultySections.length) return;
-
-    const enriched = rawCards.map(card => {
-      const match = facultySections.find(
-        fs => fs.collegeSubjectId === card.collegeSubjectId
-      );
-
-      if (!match) {
-        console.warn("⚠️ No section mapping for card:", card);
-        return card;
-      }
-
-      return {
-        ...card,
-        collegeSectionId: match.collegeSectionsId,
-        sectionName: match.college_sections.collegeSections,
-      };
-    });
-
-    console.log("🟣 Enriched cards:", enriched);
-    setCards(enriched);
-  }, [rawCards, facultySections]);
-
 
 
   const handleSaveNewCard = (newCard: CardProps) => {
@@ -140,11 +86,11 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
 
   const context = subjectProps[0];
 
-  const filteredSections = facultySections.filter(fs =>
+  const filteredSections = facultySections.filter((fs: FacultySection) =>
     subjectId ? fs.collegeSubjectId === subjectId : true
   );
 
-  const filteredCards = cards.filter(card => {
+  const filteredCards = cards.filter((card: CardProps) => {
     if (subjectId && card.collegeSubjectId !== subjectId) {
       return false;
     }
@@ -173,9 +119,9 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
               >
                 <option value="">All</option>
 
-                {facultySubjects.map(s => (
+                {facultySubjects.map((s: FacultySubject, index: number) => (
                   <option
-                    key={s.collegeSubjectId}
+                    key={`${s.collegeSubjectId}-${index}`}
                     value={s.collegeSubjectId}
                   >
                     {s.subjectName}
@@ -200,12 +146,12 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
               >
                 <option value="">All</option>
 
-                {filteredSections.map(fs => (
+                {filteredSections.map((fs: FacultySection, index: number) => (
                   <option
-                    key={fs.collegeSectionsId}
+                    key={`${fs.collegeSectionsId}-${index}`}
                     value={fs.collegeSectionsId}
                   >
-                    {fs.college_sections.collegeSections}
+                    {fs.college_sections?.collegeSections ?? "N/A"}
                   </option>
                 ))}
               </select>
@@ -331,10 +277,10 @@ const IndividualCard = ({
             </span>
             {item.topicsCovered}
           </p>
-          <p>
+          {/* <p>
             <span className="font-semibold text-[#282828]">Section : </span>
             {item.sectionName}
-          </p>
+          </p> */}
         </div>
         <p>
           <span className="font-semibold text-[#282828]">Next lesson : </span>
@@ -364,12 +310,12 @@ const IndividualCard = ({
             {percentage}%
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        {/* <div className="flex items-center gap-1">
           <Timer size={16} weight="fill" className="text-[#9880F3]" />
           <p className="text-[13px] text-[#7153E1]">
             {item.fromDate} - {item.toDate}
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

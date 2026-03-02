@@ -25,7 +25,7 @@ import {
 } from "@/lib/helpers/calendar/calendarEventAPI";
 
 import {
-    deleteCalendarEventSections,
+    softDeleteCalendarEventSection,
     saveCalendarEventSections,
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
 import EventDetailsModal from "@/app/(screens)/faculty/calendar/modal/EventDetailsModal"
@@ -168,6 +168,8 @@ export default function CalendarView({ faculty, onBack }: Props) {
                     expanded.push({
                         id: `${row.calendarEventId}-${sectionId}`,
                         calendarEventId: row.calendarEventId,
+                        sectionId: sectionId,
+
 
                         subjectName: row.college_subjects?.subjectName ?? "-",
                         subjectKey: row.college_subjects?.subjectKey ?? "",
@@ -286,8 +288,16 @@ export default function CalendarView({ faculty, onBack }: Props) {
             }
 
             const calendarEventId = eventRes.calendarEventId;
+
             if (editingEventId) {
-                await deleteCalendarEventSections(Number(editingEventId));
+                const sections = await fetchCalendarEventSections(Number(editingEventId));
+
+                for (const s of sections) {
+                    await softDeleteCalendarEventSection(
+                        Number(editingEventId),
+                        s.collegeSectionId
+                    );
+                }
             }
 
             await saveCalendarEventSections(calendarEventId, {
@@ -423,7 +433,13 @@ export default function CalendarView({ faculty, onBack }: Props) {
             const calendarEventId = eventRes.calendarEventId;
 
             if (editingEventId) {
-                await deleteCalendarEventSections(Number(editingEventId));
+                const sections = await fetchCalendarEventSections(Number(editingEventId));
+                for (const s of sections) {
+                    await softDeleteCalendarEventSection(
+                        Number(editingEventId),
+                        s.collegeSectionId
+                    );
+                }
             }
 
             await saveCalendarEventSections(calendarEventId, {
@@ -451,11 +467,18 @@ export default function CalendarView({ faculty, onBack }: Props) {
         }
     };
 
-    const handleDeleteEvent = async (event: CalendarEvent) => {
+    const handleDeleteEvent = async (event?: CalendarEvent | null) => {
+        if (!event) return false;
         if (!event.calendarEventId) return false;
         try {
             setIsDeleting(true);
-            await deleteCalendarEventSections(event.calendarEventId);
+            const sections = await fetchCalendarEventSections(event.calendarEventId);
+            for (const s of sections) {
+                await softDeleteCalendarEventSection(
+                    event.calendarEventId,
+                    s.collegeSectionId
+                );
+            }
             const res = await deleteCalendarEvent(event.calendarEventId);
             if (!res.success) {
                 toast.error("Failed to delete event.");

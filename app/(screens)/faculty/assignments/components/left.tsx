@@ -93,6 +93,7 @@ export default function AssignmentsLeft() {
       toast.error("Failed to delete: " + res.error);
       return;
     }
+
     toast.success("Assignment deleted");
     setAssignments((prev) => prev.filter((a) => a.assignmentId !== id));
   };
