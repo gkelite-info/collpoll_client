@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef } from "react";
 import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchDegreeAndDepartments } from "@/lib/helpers/admin/academicSetupAPI";
+import {
+  fetchDegreeAndDepartments,
+  fetchAdminAssignedEducation,
+} from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
@@ -37,7 +40,6 @@ export default function AddAcademicSetup({
   const [academicOptions, setAcademicOptions] = useState<
     Record<string, string[]>
   >({});
-  const [availableDegrees, setAvailableDegrees] = useState<string[]>([]);
   const [availableDepts, setAvailableDepts] = useState<string[]>([]);
 
   const defaultSectionOptions = ["A", "B", "C", "D"];
@@ -46,30 +48,10 @@ export default function AddAcademicSetup({
   const [isFetchingExisting, setIsFetchingExisting] = useState(false);
 
   const [customMode, setCustomMode] = useState({
-    degree: false,
     dept: false,
     sections: false,
   });
   const [tempCustomInput, setTempCustomInput] = useState("");
-
-  useEffect(() => {
-    const loadOptions = async () => {
-      const { success, data } = await fetchDegreeAndDepartments();
-      if (success && data) {
-        setAcademicOptions(data);
-        setAvailableDegrees(Object.keys(data));
-      }
-    };
-    loadOptions();
-  }, []);
-
-  useEffect(() => {
-    if (form.degree && academicOptions[form.degree]) {
-      setAvailableDepts(academicOptions[form.degree]);
-    } else {
-      setAvailableDepts([]);
-    }
-  }, [form.degree, academicOptions]);
 
   useEffect(() => {
     if (editData) {
@@ -81,29 +63,54 @@ export default function AddAcademicSetup({
     }
   }, [editData]);
 
-  const getYearOptions = () => {
+  useEffect(() => {
+    const loadOptions = async () => {
+      if (userLoading || !userId) return;
 
+      const { success: deptSuccess, data: deptData } =
+        await fetchDegreeAndDepartments();
+      if (deptSuccess && deptData) {
+        setAcademicOptions(deptData);
+      }
+
+      const { success: eduSuccess, data: eduType } =
+        await fetchAdminAssignedEducation(userId);
+      if (eduSuccess && eduType) {
+        setForm((prev) => ({
+          ...prev,
+          degree: eduType,
+        }));
+      }
+    };
+    loadOptions();
+  }, [userId, userLoading]);
+
+  useEffect(() => {
+    if (form.degree && academicOptions[form.degree]) {
+      setAvailableDepts(academicOptions[form.degree]);
+    } else {
+      setAvailableDepts([]);
+    }
+  }, [form.degree, academicOptions]);
+
+  const getYearOptions = () => {
     let maxYears;
     switch (form.degree.toLowerCase()) {
       case "b.tech":
       case "b.pharm":
         maxYears = 4;
         break;
-
       case "degree":
       case "diploma":
       case "polytechnic":
         maxYears = 3;
         break;
-
       case "b.arch":
         maxYears = 5;
         break;
-
       case "mbbs":
         maxYears = 6;
         break;
-
       default:
         maxYears = 2;
     }
@@ -115,7 +122,7 @@ export default function AddAcademicSetup({
     };
     return Array.from(
       { length: maxYears },
-      (_, i) => `${getOrdinal(i + 1)} Year`
+      (_, i) => `${getOrdinal(i + 1)} Year`,
     );
   };
 
@@ -132,7 +139,7 @@ export default function AddAcademicSetup({
       !form.year.trim()
     ) {
       toast.error(
-        "Education, Branch, Branch Code and Academic Year are required"
+        "Education, Branch, Branch Code and Academic Year are required",
       );
       return;
     }
@@ -142,52 +149,41 @@ export default function AddAcademicSetup({
     try {
       const adminCtx = await fetchAdminContext(userId);
 
-      console.log("what is adminCtx vamshi", adminCtx);
-
-      await saveAcademicSetupMaster({
-        educationType: form.degree,
-        branch: {
-          type: form.branch,
-          code: form.dept.replace(/\s+/g, "").toUpperCase(),
-          academicYear: form.year,
-          sections: form.sections,
+      await saveAcademicSetupMaster(
+        {
+          educationType: form.degree,
+          branch: {
+            type: form.branch,
+            code: form.dept.replace(/\s+/g, "").toUpperCase(),
+            academicYear: form.year,
+            sections: form.sections,
+          },
         },
-      },
         {
           adminId: adminCtx.adminId,
           collegeId: adminCtx.collegeId,
-        }
+        },
       );
 
-      toast.success("Education, Branch & Academic Year saved successfully!");
+      toast.success("Academic setup saved successfully!");
+
+      if (onSuccess) {
+        setTimeout(() => onSuccess(), 1000);
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Something went wrong");
+      toast.error("Something went wrong while saving");
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  const handleSingleSelectChange = (
-    field: "degree" | "dept",
-    value: string
-  ) => {
+  const handleSingleSelectChange = (field: "dept", value: string) => {
     if (value === "+ other") {
       setCustomMode((prev) => ({ ...prev, [field]: true }));
       setTempCustomInput("");
     } else {
       setForm((prev) => ({ ...prev, [field]: value }));
-      if (field === "degree") {
-        setForm((prev) => ({
-          ...prev,
-          degree: value,
-          dept: "",
-          year: "",
-          sections: [],
-          id: undefined,
-        }));
-      }
     }
   };
 
@@ -202,7 +198,7 @@ export default function AddAcademicSetup({
     }
   };
 
-  const saveCustomInput = (field: "degree" | "dept" | "sections") => {
+  const saveCustomInput = (field: "dept" | "sections") => {
     if (!tempCustomInput.trim()) return;
 
     if (field === "sections") {
@@ -221,14 +217,14 @@ export default function AddAcademicSetup({
     setTempCustomInput("");
   };
 
-  const cancelCustomInput = (field: "degree" | "dept" | "sections") => {
+  const cancelCustomInput = (field: "dept" | "sections") => {
     setCustomMode((prev) => ({ ...prev, [field]: false }));
     setTempCustomInput("");
   };
 
   const renderCustomInput = (
-    field: "degree" | "dept" | "sections",
-    placeholder: string
+    field: "dept" | "sections",
+    placeholder: string,
   ) => (
     <div className="flex items-center gap-2 w-full">
       <input
@@ -236,7 +232,6 @@ export default function AddAcademicSetup({
         value={tempCustomInput}
         onChange={(e) => {
           const val = e.target.value;
-
           setTempCustomInput(field === "dept" ? val.toUpperCase() : val);
         }}
         placeholder={placeholder}
@@ -264,32 +259,15 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Eduation Type
+            Education Type
           </label>
-          {customMode.degree ? (
-            renderCustomInput("degree", "Enter Education Name")
-          ) : (
-            <select
-              value={form.degree}
-              onChange={(e) => handleSingleSelectChange("degree", e.target.value)}
-              className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2"
-            >
-              <option value="" disabled>
-                Select Education
-              </option>
-              {availableDegrees.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-              {!availableDegrees.includes(form.degree) && form.degree && (
-                <option value={form.degree}>{form.degree}</option>
-              )}
-              <option className="text-[#43C17A] font-semibold" value="+ other">
-                + Other
-              </option>
-            </select>
-          )}
+          <input
+            type="text"
+            value={form.degree || (userLoading ? "Loading..." : "")}
+            disabled
+            placeholder="Loading..."
+            className="w-full border border-[#CCCCCC] bg-gray-50 text-gray-500 outline-none rounded-lg px-4 py-2 cursor-not-allowed"
+          />
         </div>
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
@@ -300,15 +278,10 @@ export default function AddAcademicSetup({
             value={form.branch}
             onChange={(e) => {
               const value = e.target.value;
-
               const formatted = value
                 .toLowerCase()
                 .replace(/\b\w/g, (char) => char.toUpperCase());
-
-              setForm((prev) => ({
-                ...prev,
-                branch: formatted,
-              }));
+              setForm((prev) => ({ ...prev, branch: formatted }));
             }}
             placeholder="Enter Branch"
             className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
@@ -328,7 +301,7 @@ export default function AddAcademicSetup({
               value={form.dept}
               onChange={(e) => handleSingleSelectChange("dept", e.target.value)}
               className="w-full border border-[#CCCCCC] outline-none text-[#2D3748] rounded-lg px-4 py-2"
-              disabled={!form.degree && !customMode.degree}
+              disabled={!form.degree}
             >
               <option value="" disabled>
                 Select Branch Code
@@ -354,25 +327,8 @@ export default function AddAcademicSetup({
             placeholder="Select Years"
             options={getYearOptions()}
             selectedValues={form.year ? [form.year] : []}
-            // onChange={(val) => {
-            //   if (!form.year.includes(val)) {
-            //     setForm({ ...form, year: [...form.year, val].sort() });
-            //   }
-            // }}
-            onChange={(val) => {
-              setForm({ ...form, year: val });
-            }}
-
-            // onRemove={(val) => {
-            //   setForm({
-            //     ...form,
-            //     year: form.year.filter((y) => y !== val),
-            //   });
-            // }}
-            onRemove={(_val) => {
-              setForm({ ...form, year: "" });
-            }}
-
+            onChange={(val) => setForm({ ...form, year: val })}
+            onRemove={(_val) => setForm({ ...form, year: "" })}
           />
         </div>
       </div>
@@ -402,7 +358,7 @@ export default function AddAcademicSetup({
                     ...defaultSectionOptions,
                     ...form.sections,
                     "+ other",
-                  ])
+                  ]),
                 )}
                 selectedValues={form.sections}
                 onChange={handleSectionSelect}
@@ -420,10 +376,38 @@ export default function AddAcademicSetup({
 
         <button
           onClick={handleSave}
-          disabled={isLoading || userLoading || isFetchingExisting}
-          className="bg-[#43C17A] self-end cursor-pointer text-white py-2 rounded-lg font-semibold hover:bg-[#3ab06e] transition-colors disabled:opacity-70"
+          disabled={
+            isLoading || userLoading || isFetchingExisting || !form.degree
+          }
+          className="bg-[#43C17A] self-end cursor-pointer text-white py-2 rounded-lg font-semibold hover:bg-[#3ab06e] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
         >
-          {isLoading ? "Saving..." : "Save"}
+          {isLoading ? (
+            <>
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Saving...
+            </>
+          ) : (
+            "Save"
+          )}
         </button>
       </div>
     </div>
@@ -495,15 +479,18 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       <div className="relative">
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`w-full border ${isOpen
-            ? "border-[#48C78E] ring-1 ring-[#48C78E]"
-            : "border-[#CCCCCC]"
-            } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
-            }`}
+          className={`w-full border ${
+            isOpen
+              ? "border-[#48C78E] ring-1 ring-[#48C78E]"
+              : "border-[#CCCCCC]"
+          } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${
+            disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
+          }`}
         >
           <span
-            className={`truncate mr-2 ${selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
-              }`}
+            className={`truncate mr-2 ${
+              selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
+            }`}
           >
             {selectedValues.length > 0
               ? `${selectedValues.length} selected`
@@ -514,58 +501,59 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
 
         {isOpen && !disabled && (
           <div
-            className={`absolute z-50 left-0 right-0 bg-white border border-gray-100 rounded-md shadow-xl max-h-48 overflow-y-auto custom-scrollbar 
-            ${direction === "up" ? "bottom-full mb-1" : "top-full mt-1"} 
+            className={`absolute z-50 left-0 right-0 bg-white border border-gray-100 rounded-md shadow-xl max-h-48 overflow-y-auto custom-scrollbar
+            ${direction === "up" ? "bottom-full mb-1" : "top-full mt-1"}
             `}
           >
             {!isGrouped
               ? (options as string[]).map((opt) => (
-                <div
-                  key={opt}
-                  onClick={() => {
-                    onChange(opt);
-                    if (opt === "+ other") setIsOpen(false);
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${opt === "+ other"
-                    ? "text-[#43C17A] font-semibold"
-                    : "text-gray-700"
+                  <div
+                    key={opt}
+                    onClick={() => {
+                      onChange(opt);
+                      if (opt === "+ other") setIsOpen(false);
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${
+                      opt === "+ other"
+                        ? "text-[#43C17A] font-semibold"
+                        : "text-gray-700"
                     }`}
-                >
-                  <span>{opt}</span>
-                  {selectedValues.includes(opt) && (
-                    <Check
-                      size={14}
-                      weight="bold"
-                      className="text-[#48C78E]"
-                    />
-                  )}
-                </div>
-              ))
-              : Object.entries(options as Record<string, string[]>).map(
-                ([category, items]) => (
-                  <div key={category}>
-                    <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                      {category}
-                    </div>
-                    {items.map((opt) => (
-                      <div
-                        key={opt}
-                        onClick={() => onChange(opt)}
-                        className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
-                      >
-                        <span>{opt}</span>
-                        {selectedValues.includes(opt) && (
-                          <Check
-                            size={14}
-                            weight="bold"
-                            className="text-[#48C78E]"
-                          />
-                        )}
-                      </div>
-                    ))}
+                  >
+                    <span>{opt}</span>
+                    {selectedValues.includes(opt) && (
+                      <Check
+                        size={14}
+                        weight="bold"
+                        className="text-[#48C78E]"
+                      />
+                    )}
                   </div>
-                )
-              )}
+                ))
+              : Object.entries(options as Record<string, string[]>).map(
+                  ([category, items]) => (
+                    <div key={category}>
+                      <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                        {category}
+                      </div>
+                      {items.map((opt) => (
+                        <div
+                          key={opt}
+                          onClick={() => onChange(opt)}
+                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
+                        >
+                          <span>{opt}</span>
+                          {selectedValues.includes(opt) && (
+                            <Check
+                              size={14}
+                              weight="bold"
+                              className="text-[#48C78E]"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                )}
           </div>
         )}
       </div>

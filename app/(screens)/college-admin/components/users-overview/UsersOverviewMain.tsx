@@ -87,8 +87,8 @@ function UsersOverview() {
       label: "Admins",
       value: "12",
       light: "bg-[#DED5FF]",
-      inlineStyle : {backgroundColor : "#DED5FF"},
-      inlineActiveStyle : {backgroundColor : "#7557E3"},
+      inlineStyle: { backgroundColor: "#DED5FF" },
+      inlineActiveStyle: { backgroundColor: "#7557E3" },
       dark: "bg-[#7557E3]",
       iconColor: "#7557E3",
     },
@@ -98,8 +98,8 @@ function UsersOverview() {
       value: "4,620",
       light: "bg-[#FFEDDA]",
       dark: "bg-[#FFCB92]",
-      inlineStyle : {backgroundColor : "#FFEDDA"},
-      inlineActiveStyle : {backgroundColor : "#FFCB92"},
+      inlineStyle: { backgroundColor: "#FFEDDA" },
+      inlineActiveStyle: { backgroundColor: "#FFCB92" },
       iconColor: "#FFCB92",
     },
     {
@@ -108,8 +108,8 @@ function UsersOverview() {
       value: "480",
       light: "bg-[#E6FBEA]",
       dark: "bg-[#66CC93]",
-      inlineStyle : {backgroundColor : "#E6FBEA"},
-      inlineActiveStyle : {backgroundColor : "#66CC93"},
+      inlineStyle: { backgroundColor: "#E6FBEA" },
+      inlineActiveStyle: { backgroundColor: "#66CC93" },
       iconColor: "#43C17A",
     },
     {
@@ -118,8 +118,8 @@ function UsersOverview() {
       value: "320",
       light: "bg-[#CEE6FF]",
       dark: "bg-[#60AEFF]",
-      inlineStyle : {backgroundColor : "#CEE6FF"},
-      inlineActiveStyle : {backgroundColor : "#60AEFF"},
+      inlineStyle: { backgroundColor: "#CEE6FF" },
+      inlineActiveStyle: { backgroundColor: "#60AEFF" },
       iconColor: "#60AEFF",
     },
     {
@@ -128,8 +128,8 @@ function UsersOverview() {
       value: "48",
       light: "bg-[#FFF0E1]",
       dark: "bg-[#FF7D00]",
-      inlineStyle : {backgroundColor : "#FFF0E1"},
-      inlineActiveStyle : {backgroundColor : "#FF7D00"},
+      inlineStyle: { backgroundColor: "#FFF0E1" },
+      inlineActiveStyle: { backgroundColor: "#FF7D00" },
       iconColor: "#FF7D00",
     },
     {
@@ -138,26 +138,31 @@ function UsersOverview() {
       value: "48",
       light: "bg-[#FBE1FF]",
       dark: "bg-[#E646FF]",
-      inlineStyle : {backgroundColor : "#FBE1FF"},
-      inlineActiveStyle : {backgroundColor : "#E646FF"},
+      inlineStyle: { backgroundColor: "#FBE1FF" },
+      inlineActiveStyle: { backgroundColor: "#E646FF" },
       iconColor: "#E646FF",
     },
   ];
 
   const renderScreen = () => {
     switch (type) {
-      case "students": return <StudentsScreen />;
-      case "parents": return <ParentsScreen />;
-      case "faculty": return <FacultyScreen />;
-      case "finance": return <FinanceScreen />;
-      case "placement": return <PlacementScreen />;
-      default: return <AdminsScreen />;
+      case "students":
+        return <StudentsScreen />;
+      case "parents":
+        return <ParentsScreen />;
+      case "faculty":
+        return <FacultyScreen />;
+      case "finance":
+        return <FinanceScreen />;
+      case "placement":
+        return <PlacementScreen />;
+      default:
+        return <AdminsScreen />;
     }
   };
 
   return (
     <div className="space-y-6 overflow-hidden">
-
       <h2 className="text-lg font-semibold">
         Total Users : <span className="text-green-600">5480</span>
       </h2>
@@ -176,14 +181,12 @@ function UsersOverview() {
             >
               <CardComponent
                 key={index}
-                inlineStyle={isActive ? card.inlineActiveStyle : card.inlineStyle}
+                inlineStyle={
+                  isActive ? card.inlineActiveStyle : card.inlineStyle
+                }
                 isActive={isActive}
                 icon={
-                  <UsersThree
-                    size={20}
-                    color={card.iconColor}
-                    weight="fill"
-                  />
+                  <UsersThree size={20} color={card.iconColor} weight="fill" />
                 }
                 style={""}
                 textSize="text-sm"
@@ -195,16 +198,26 @@ function UsersOverview() {
         })}
       </div>
 
-      {type !== "admins" &&
+      {type !== "admins" && (
         <div>
-          <h3 className="text-md font-bold text-gray-700 mb-4">User Distribution by Education Type</h3>
-          <div style={{ height: "45vh", overflowX: "auto", overflowY: "hidden", display: "flex", columnGap: 15 }}>
+          <h3 className="text-md font-bold text-gray-700 mb-4">
+            User Distribution by Education Type
+          </h3>
+          <div
+            style={{
+              height: "45vh",
+              overflowX: "auto",
+              overflowY: "hidden",
+              display: "flex",
+              columnGap: 15,
+            }}
+          >
             {educationDistribution.map((item, index) => (
               <DonutCard key={index} {...item} />
             ))}
           </div>
         </div>
-      }
+      )}
       {renderScreen()}
     </div>
   );
@@ -212,7 +225,13 @@ function UsersOverview() {
 
 export default function UsersOverviewMain() {
   return (
-    <Suspense fallback={<div className="p-10 text-center"><Loader /></div>}>
+    <Suspense
+      fallback={
+        <div className="p-10 text-center">
+          <Loader />
+        </div>
+      }
+    >
       <UsersOverview />
     </Suspense>
   );
