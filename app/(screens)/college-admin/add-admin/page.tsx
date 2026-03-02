@@ -32,13 +32,36 @@ const initialFormState: AdminForm = {
     gender: "",
 };
 
+const toPascalCase = (str: string) => {
+    return str.replace(
+        /\w\S*/g,
+        (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
+};
+
+const validatePassword = (password: string) => {
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        return "Password must contain one uppercase, one lowercase, one number and one special character.";
+    }
+    return null;
+};
+
 export default function AdminRegistration() {
     const [form, setForm] = useState<AdminForm>(initialFormState);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [educations, setEducations] = useState<any[]>([]);
 
     const handleChange = (key: keyof AdminForm, value: string) => {
+        if (key === "fullName") {
+            const onlyAlphabets = value.replace(/[^A-Za-z\s]/g, "");
+            value = toPascalCase(onlyAlphabets);
+        }
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
@@ -89,23 +112,60 @@ export default function AdminRegistration() {
         fetchEducations();
     }, [form.collegeId]);
 
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            handleSubmit();
+        }
+    };
+
     const handleSubmit = async () => {
         let createdUserId: number | null = null;
-
         try {
-            setIsLoading(true);
+            if (!form.fullName) return toast.error("Full Name is required.");
+            if (!form.email) return toast.error("Email is required.");
 
-            if (!form.fullName || !form.email)
-                return toast.error("Required fields missing.");
-
+            if (!form.countryCode) {
+                return toast.error("Country code is required.");
+            }
+            if (!/^\+[0-9]+$/.test(form.countryCode)) {
+                return toast.error("Invalid country code format.");
+            }
+            if (!form.phone) {
+                return toast.error("Mobile number is required.");
+            }
+            if (!/^[0-9]{10}$/.test(form.phone)) {
+                return toast.error("Mobile number must be exactly 10 digits.");
+            }
+            if (form.countryCode === "+91") {
+                if (!["6", "7", "8", "9"].includes(form.phone.charAt(0))) {
+                    return toast.error("Indian mobile number must start with 6, 7, 8, or 9.");
+                }
+            }
             if (!form.educationType)
                 return toast.error("Select Education Type.");
 
             if (!form.gender)
                 return toast.error("Select Gender.");
 
-            if (!form.password || form.password !== form.confirmPassword)
-                return toast.error("Check passwords.");
+            if (!form.password) {
+                return toast.error("Password is required.");
+            }
+
+            const passwordError = validatePassword(form.password);
+            if (passwordError) {
+                return toast.error(passwordError);
+            }
+
+            if (!form.confirmPassword) {
+                return toast.error("Confirm Password is required.");
+            }
+
+            if (form.password !== form.confirmPassword) {
+                return toast.error("Password and Confirm Password do not match.");
+            }
+
+            setIsLoading(true);
 
             const { data: authData, error: authError } =
                 await supabase.auth.signUp({
@@ -113,8 +173,20 @@ export default function AdminRegistration() {
                     password: form.password,
                 });
 
-            if (authError || !authData.user) {
-                throw new Error(authError?.message || "Auth creation failed");
+            // if (authError || !authData.user) {
+            //     throw new Error(authError?.message || "Auth creation failed");
+            // }
+
+            if (authError) {
+                if (authError.message.includes("User already registered")) {
+                    throw new Error("This email is already registered.");
+                }
+
+                throw new Error(authError.message);
+            }
+
+            if (!authData.user) {
+                throw new Error("Authentication failed. Please try again.");
             }
 
             const authId = authData.user.id;
@@ -122,15 +194,22 @@ export default function AdminRegistration() {
                 auth_id: authId,
                 fullName: form.fullName,
                 email: form.email.toLowerCase(),
-                mobile: `+91${form.phone}`,
+                mobile: `${form.countryCode}${form.phone}`,
                 role: "Admin",
                 collegeId: Number(form.collegeId),
                 collegePublicId: form.collegeId,
                 gender: form.gender,
             });
 
+            // if (!userRes.success || !userRes.data) {
+            //     throw new Error(userRes.error || "User creation failed");
+            // }
             if (!userRes.success || !userRes.data) {
-                throw new Error(userRes.error || "User creation failed");
+                throw new Error(
+                    userRes.error
+                        ? `User creation failed: ${userRes.error}`
+                        : "Unable to create user record."
+                );
             }
 
             createdUserId = userRes.data.userId;
@@ -139,7 +218,7 @@ export default function AdminRegistration() {
                 userId: createdUserId!,
                 fullName: form.fullName,
                 email: form.email,
-                mobile: `+91${form.phone}`,
+                mobile: `${form.countryCode}${form.phone}`,
                 gender: form.gender,
                 collegeId: Number(form.collegeId),
                 collegePublicId: form.collegeId,
@@ -154,14 +233,15 @@ export default function AdminRegistration() {
             setForm(initialFormState);
 
         } catch (e: any) {
-            console.error(" ERROR:", e);
-
             if (createdUserId) {
-                console.log("⚠ Rolling back user:", createdUserId);
                 await supabase.from("users").delete().eq("userId", createdUserId);
             }
+            let errorMessage = "Admin registration failed. Please try again.";
 
-            toast.error(e.message || "Something went wrong");
+            if (e?.message) {
+                errorMessage = e.message;
+            }
+            toast.error(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -172,13 +252,13 @@ export default function AdminRegistration() {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
-            className="bg-white rounded-2xl shadow-sm p-8 mx-auto"
+            className="bg-white rounded-2xl shadow-sm p-8 m-2"
         >
             <h2 className="text-2xl font-bold text-[#333] mb-2">
                 Admin Registration
             </h2>
             <p className="text-gray-500 text-sm mb-8">
-                Add a new Admin to the CollPoll network by providing verified details
+                Add a new admin to the network by providing verified details
                 below.
             </p>
             <InputField
@@ -201,13 +281,20 @@ export default function AdminRegistration() {
 
                 <div>
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5 block">
-                        Phone
+                        Mobile
                     </label>
                     <div className="flex gap-2">
                         <input
                             type="text"
-                            value="+91"
-                            readOnly
+                            value={form.countryCode}
+                            maxLength={4}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const value = e.target.value;
+                                // Only accept '+' at start and digits
+                                if (/^\+?[0-9]*$/.test(value)) {
+                                    handleChange("countryCode", value);
+                                }
+                            }}
                             className="border border-[#CCCCCC] rounded-lg w-20 px-2 py-2.5 
              text-sm text-[#282828] text-center  
              bg-white 
@@ -220,8 +307,20 @@ export default function AdminRegistration() {
                             pattern="[0-9]*"
                             maxLength={10}
                             value={form.phone}
+                            // onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                            //     const value = e.target.value.replace(/\D/g, "");
+                            //     if (value.length <= 10) {
+                            //         handleChange("phone", value);
+                            //     }
+                            // }}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                const value = e.target.value.replace(/\D/g, "");
+
+                                let value = e.target.value.replace(/\D/g, "");
+                                if (form.countryCode === "+91") {
+                                    if (value.length === 1 && !["6", "7", "8", "9"].includes(value)) {
+                                        return;
+                                    }
+                                }
                                 if (value.length <= 10) {
                                     handleChange("phone", value);
                                 }
@@ -239,6 +338,7 @@ export default function AdminRegistration() {
                 <InputField
                     label="College ID"
                     value={form.collegeId}
+                    disabled={true}
                     placeholder="Enter college ID"
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleChange("collegeId", e.target.value.toUpperCase())
@@ -302,47 +402,27 @@ export default function AdminRegistration() {
                     </label>
 
                     <div className="flex gap-10 mt-2">
-                        <label className="flex items-center gap-3 cursor-pointer">
+                        <label className="flex items-center gap-1 cursor-pointer">
                             <input
                                 type="radio"
                                 name="gender"
                                 value="Male"
                                 checked={form.gender === "Male"}
                                 onChange={() => handleChange("gender", "Male")}
-                                className="hidden"
+
                             />
-                            <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.gender === "Male"
-                                    ? "border-[#49C77F]"
-                                    : "border-gray-400"
-                                    }`}
-                            >
-                                {form.gender === "Male" && (
-                                    <div className="w-2.5 h-2.5 bg-[#49C77F] rounded-full" />
-                                )}
-                            </div>
                             <span className="text-[#333]">Male</span>
                         </label>
 
-                        <label className="flex items-center gap-3 cursor-pointer">
+                        <label className="flex items-center gap-1 cursor-pointer">
                             <input
                                 type="radio"
                                 name="gender"
                                 value="Female"
                                 checked={form.gender === "Female"}
                                 onChange={() => handleChange("gender", "Female")}
-                                className="hidden"
+
                             />
-                            <div
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${form.gender === "Female"
-                                    ? "border-[#49C77F]"
-                                    : "border-gray-400"
-                                    }`}
-                            >
-                                {form.gender === "Female" && (
-                                    <div className="w-2.5 h-2.5 bg-[#49C77F] rounded-full" />
-                                )}
-                            </div>
                             <span className="text-[#333]">Female</span>
                         </label>
                     </div>
@@ -359,7 +439,9 @@ export default function AdminRegistration() {
                         <input
                             type={showPassword ? "text" : "password"}
                             name="password"
+                            placeholder="Enter password"
                             value={form.password}
+                            onKeyDown={handleKeyDown}
                             onChange={(e) => handleChange("password", e.target.value)}
                             className="border border-[#CCCCCC] rounded-lg px-4 py-2.5 text-sm w-full 
                    focus:outline-none focus:border-[#49C77F] 
@@ -378,16 +460,25 @@ export default function AdminRegistration() {
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
                         Confirm Password
                     </label>
-
-                    <input
-                        type={showPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={form.confirmPassword}
-                        onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                        className="border border-[#CCCCCC] rounded-lg px-4 py-2.5 text-sm w-full 
+                    <div className="relative">
+                        <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            name="confirmPassword"
+                            placeholder="Enter confirm password"
+                            value={form.confirmPassword}
+                            onKeyDown={handleKeyDown}
+                            onChange={(e) => handleChange("confirmPassword", e.target.value)}
+                            className="border border-[#CCCCCC] rounded-lg px-4 py-2.5 text-sm w-full 
                  focus:outline-none focus:border-[#49C77F] 
                  text-[#282828] placeholder:text-gray-400 shadow-sm"
-                    />
+                        />
+                        <div
+                            className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                            {showConfirmPassword ? <Eye size={18} /> : <EyeSlash size={18} />}
+                        </div>
+                    </div>
                 </div>
             </div>
             <div className="flex justify-center mt-10">
