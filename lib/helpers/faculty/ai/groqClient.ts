@@ -25,11 +25,38 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
 
       const response = await groq.chat.completions.create({
         model,
+        max_tokens: 600,   // 🔥 ADD THIS
+        temperature: 0.6,  // slightly increase
         messages: [
-          { role: "system", content: "You are an academic syllabus expert." },
-          { role: "user", content: prompt },
+          {
+            role: "system",
+            content: `
+You are a senior university curriculum architect specializing in detailed academic unit design.
+
+TASK:
+Generate comprehensive syllabus-ready topic titles for a single academic unit.
+
+STRICT RULES (Non-Negotiable):
+- Generate EXACTLY 12 distinct topics.
+- Do NOT generate fewer than 12.
+- Continue writing until all 12 are complete.
+- Each topic must be 3–8 academic words.
+- Use precise academic terminology.
+- Avoid generic words like "Overview" or "Introduction".
+- No numbering.
+- No bullet points.
+- No explanations.
+- Return ONLY plain topic titles separated by new lines.
+`
+          },
+          {
+            role: "user",
+            content: `${prompt}
+
+IMPORTANT:
+Generate exactly 12 topics. Do not stop early.`
+          },
         ],
-        temperature: 0.2,
       });
 
       const text = response.choices[0]?.message?.content;

@@ -37,19 +37,22 @@ type FacultyAcademicForm = {
   educationId?: number;
   branchId?: number;
   academicYearId?: number;
-  semester?: number; 
+  semester?: number;
   subjectName: string;
   subjectId?: number;
-  collegeSubjectId?: number;   
+  collegeSubjectId?: number;
   section?: string;
-  sectionId?: number;
+  sectionIds: number[];
   unitName: string;
   unitNumber: number;
-  startDate: string;   
-  endDate: string;     
+  startDate: string;
+  endDate: string;
   topics: string[];
 };
 
+function toPascalCase(value: string) {
+  return value.replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 
 // // 🔹 AI unit name suggestion helper
@@ -66,7 +69,7 @@ export default function AddNewCardModal({
   onSave,
   facultySubjects,
   defaultSubjectId,
-   facultySections,  
+  facultySections,
 }: AddNewCardModalProps) {
 
   const [formData, setFormData] = useState<FacultyAcademicForm>({
@@ -77,7 +80,8 @@ export default function AddNewCardModal({
     collegeSubjectId: undefined,
 
     subjectName: "",
-    subjectId: undefined,   // ✅ CORRECT
+    subjectId: undefined,
+    sectionIds: [],
     unitName: "",
     unitNumber: 1,
     startDate: "",
@@ -88,6 +92,7 @@ export default function AddNewCardModal({
 
   const [facultyId, setFacultyId] = useState<number | null>(null);;
   const [isSemesterAuto, setIsSemesterAuto] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   // const [formData, setFormData] = useState({
   //   facultyAcademicsId: undefined as number | undefined,
   //   facultyId: 0,
@@ -378,18 +383,18 @@ export default function AddNewCardModal({
     }
   }, [subjects]);
 
-  useEffect(() => {
-    if (
-      filteredSections.length === 1 &&
-      !formData.sectionId
-    ) {
-      const only = filteredSections[0];
-      setFormData(prev => ({
-        ...prev,
-        sectionId: only.collegeSectionsId,
-      }));
-    }
-  }, [filteredSections, formData.sectionId]);
+  // useEffect(() => {
+  //   if (
+  //     filteredSections.length === 1 &&
+  //     !formData.sectionId
+  //   ) {
+  //     const only = filteredSections[0];
+  //     setFormData(prev => ({
+  //       ...prev,
+  //       sectionId: only.collegeSectionsId,
+  //     }));
+  //   }
+  // }, [filteredSections, formData.sectionId]);
 
   if (!isOpen) return null;
 
@@ -398,7 +403,8 @@ export default function AddNewCardModal({
   );
 
   const handleSave = async () => {
-    if (loading) return;
+    if (loading || isSaving) return;
+
     if (!collegeId) {
       toast.error("College not found");
       return;
@@ -414,8 +420,8 @@ export default function AddNewCardModal({
       return;
     }
 
-    if (!formData.sectionId) {
-      toast.error("Please select section");
+    if (!formData.sectionIds || formData.sectionIds.length === 0) {
+      toast.error("Please select at least one section");
       return;
     }
 
@@ -433,7 +439,10 @@ export default function AddNewCardModal({
       toast.error("Please add at least one topic");
       return;
     }
+
     try {
+      setIsSaving(true); // 🔥 START LOADING
+
       // 1️⃣ Unit + Topics
       const unitResult = await upsertCollegeSubjectUnitWithTopics({
         collegeId,
@@ -449,21 +458,26 @@ export default function AddNewCardModal({
       const collegeSubjectUnitId = unitResult.collegeSubjectUnitId;
 
       // 2️⃣ Academics mapping
-      await saveAcademicUnit({
-        collegeId,
-        collegeEducationId: formData.educationId!,
-        collegeBranchId: formData.branchId!,
-        collegeAcademicYearId: formData.academicYearId!,
-        collegeSemesterId: formData.semester!,
-        collegeSubjectId: formData.subjectId!,
-        collegeSectionId: formData.sectionId!,
-        collegeSubjectUnitId,
-        createdBy: facultyId,
-      });
+      for (const sectionId of formData.sectionIds) {
+        await saveAcademicUnit({
+          collegeId,
+          collegeEducationId: formData.educationId!,
+          collegeBranchId: formData.branchId!,
+          collegeAcademicYearId: formData.academicYearId!,
+          collegeSemesterId: formData.semester!,
+          collegeSubjectId: formData.subjectId!,
+          collegeSectionId: sectionId,
+          collegeSubjectUnitId,
+          createdBy: facultyId,
+        });
+      }
+
       toast.success("Unit saved successfully");
       onClose();
     } catch (err: any) {
       toast.error(err?.message || "Failed to save unit");
+    } finally {
+      setIsSaving(false); // 🔥 STOP LOADING
     }
   };
 
@@ -509,9 +523,9 @@ export default function AddNewCardModal({
                 }
                 readOnly
                 className="
-      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
+      w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm
       text-gray-900
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none cursor-not-allowed
     "
               />
             </div>
@@ -532,7 +546,7 @@ export default function AddNewCardModal({
                 className="
       w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
       text-gray-900 placeholder:text-gray-400
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none cursor-not-allowed
     "
               />
             </div>
@@ -554,7 +568,7 @@ export default function AddNewCardModal({
                 className="
       w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
       text-gray-900 placeholder:text-gray-400
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none cursor-not-allowed
     "
               />
             </div>
@@ -608,47 +622,80 @@ export default function AddNewCardModal({
                 className="
       w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm
       text-gray-900 placeholder:text-gray-400
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
+      focus:ring-2 focus:ring-[#43C17A] focus:outline-none cursor-not-allowed
     "
               />
             </div>
-            {/* 6️⃣ Section */}
-            {/* 6️⃣ Section */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">
                 Section
               </label>
 
-              <select
-                value={formData.sectionId ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (!value) return;
+              <div className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white min-h-[42px] flex flex-wrap gap-2">
 
-                  setFormData(prev => ({
-                    ...prev,
-                    sectionId: Number(value),
-                  }));
-                }}
-                className={`
-      w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
-      focus:ring-2 focus:ring-[#43C17A] focus:outline-none
-      ${formData.sectionId ? "text-gray-900" : "text-gray-400"}
-    `}
-              >
-                <option value="" disabled hidden>
-                  Select section
-                </option>
+                {/* Selected badges */}
+                {formData.sectionIds.map((id) => {
+                  const section = filteredSections.find(
+                    (s) => s.collegeSectionsId === id
+                  );
 
-                {filteredSections.map(s => (
-                  <option
-                    key={s.collegeSectionsId}
-                    value={s.collegeSectionsId}
-                  >
-                    {s.collegeSections}
-                  </option>
-                ))}
-              </select>
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 bg-[#ECFDF5] text-[#065F46] px-3 py-1 rounded-full text-xs"
+                    >
+                      {section?.collegeSections}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            sectionIds: prev.sectionIds.filter(
+                              (sid) => sid !== id
+                            ),
+                          }))
+                        }
+                        className="text-red-500 font-bold"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+
+                {/* Dropdown */}
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const value = Number(e.target.value);
+                    if (!value) return;
+
+                    setFormData((prev) => ({
+                      ...prev,
+                      sectionIds: prev.sectionIds.includes(value)
+                        ? prev.sectionIds
+                        : [...prev.sectionIds, value],
+                    }));
+                  }}
+                  className="text-sm outline-none flex-1 text-black"
+                >
+                  <option value="">Select section</option>
+
+                  {filteredSections
+                    .filter(
+                      (s) => !formData.sectionIds.includes(s.collegeSectionsId)
+                    )
+                    .map((s) => (
+                      <option
+                        key={s.collegeSectionsId}
+                        value={s.collegeSectionsId}
+                      >
+                        {s.collegeSections}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">Unit Name</label>
@@ -656,11 +703,23 @@ export default function AddNewCardModal({
                 type="text"
                 value={formData.unitName}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  const subject = formData.subjectName;
-                  setFormData(prev => ({ ...prev, unitName: value }));
+                  const rawValue = e.target.value;
 
-                  if (!value || !subject) {
+                  // allow only letters + spaces
+                  const filteredValue = rawValue.replace(/[^a-zA-Z\s]/g, "");
+
+                  // ⚡ instant pascal
+                  const pascalValue = toPascalCase(filteredValue);
+
+                  setFormData(prev => ({
+                    ...prev,
+                    unitName: pascalValue,
+                  }));
+
+                  // ---- AI LOGIC BELOW (UNCHANGED) ----
+                  const subject = formData.subjectName;
+
+                  if (!filteredValue || !subject) {
                     setAvailableTopics([]);
                     return;
                   }
@@ -671,13 +730,22 @@ export default function AddNewCardModal({
 
                   aiTimeoutRef.current = setTimeout(async () => {
                     try {
-                      const suggestions = await suggestTopicsAction(subject, value);
+                      const suggestions = await suggestTopicsAction(subject, filteredValue);
                       setAvailableTopics(suggestions);
-                    } catch (err) {
-                    }
+                    } catch (err) { }
                   }, 1500);
                 }}
-                placeholder="Enter unit name" className=" w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
+
+                onBlur={(e) => {
+                  const pascalValue = toPascalCase(e.target.value);
+                  setFormData(prev => ({
+                    ...prev,
+                    unitName: pascalValue,
+                  }));
+                }}
+
+                placeholder="Enter unit name"
+                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
               />
               {(availableTopics.length > 0 || selectedTopics.length > 0) && (
                 <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
@@ -696,10 +764,17 @@ export default function AddNewCardModal({
                             setSelectAll(checked);
 
                             if (checked) {
+                              // ✅ SELECT ALL
                               setSelectedTopics(prev => [
                                 ...new Set([...prev, ...availableTopics]),
                               ]);
                               setAvailableTopics([]);
+                            } else {
+                              // ✅ UNSELECT ALL
+                              setAvailableTopics(prev => [
+                                ...new Set([...prev, ...selectedTopics]),
+                              ]);
+                              setSelectedTopics([]);
                             }
                           }}
                           className="accent-[#43C17A]"
@@ -801,7 +876,8 @@ export default function AddNewCardModal({
             <div>
               <label className="text-sm font-semibold text-[#282828]">Unit</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min={1}
                 value={formData.unitNumber || ""}
                 onChange={(e) =>
@@ -814,7 +890,7 @@ export default function AddNewCardModal({
                 className=" w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none "
               />
             </div>
-            <div>
+            {/* <div>
               <label className="text-sm font-semibold text-[#282828]">
                 Start Date
               </label>
@@ -826,8 +902,8 @@ export default function AddNewCardModal({
                 }
                 className=" w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm  text-gray-900  focus:ring-2 focus:ring-[#43C17A] focus:outline-none "
               />
-            </div>
-            <div>
+            </div> */}
+            {/* <div>
               <label className="text-sm font-semibold text-[#282828]">
                 End Date
               </label>
@@ -839,20 +915,25 @@ export default function AddNewCardModal({
                 }
                 className="  w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm  text-gray-900  focus:ring-2 focus:ring-[#43C17A] focus:outline-none  "
               />
-            </div>
+            </div> */}
           </div>
 
           <div className="flex gap-4 mt-4">
             <button
               onClick={handleSave}
-              className="flex-1 bg-[#43C17A] text-white font-semibold py-1.5 rounded-xl hover:bg-[#3bad6d]"
+              disabled={isSaving}
+              className={`flex-1 font-semibold py-1.5 rounded-sm transition
+    ${isSaving
+                  ? "bg-[#43C17A] opacity-60 cursor-not-allowed text-white"
+                  : "bg-[#43C17A] hover:bg-[#3bad6d] text-white cursor-pointer"
+                }`}
             >
-              Save
+              {isSaving ? "Saving..." : "Save"}
             </button>
 
             <button
               onClick={onClose}
-              className="flex-1 border border-gray-300 py-1.5 rounded-xl text-[#282828] hover:bg-gray-50 cursor-pointer"
+              className="flex-1 border border-gray-300 py-1.5 rounded-sm text-[#282828] hover:bg-gray-50 cursor-pointer"
             >
               Cancel
             </button>

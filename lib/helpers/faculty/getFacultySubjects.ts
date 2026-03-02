@@ -2,48 +2,55 @@ import { supabase } from "@/lib/supabaseClient";
 import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCountForAcademics";
 import { CardProps } from "@/lib/types/faculty";
 
-
 export async function getFacultySubjects(params: {
   collegeId: number;
-  facultyId: number;
+  collegeEducationId: number;
+  collegeBranchId: number;
+  academicYearIds: number[];
+  subjectIds: number[];
+  sectionIds: number[];
 }) {
-  const { collegeId , facultyId } = params;
-  console.log("🟢 getFacultySubjects called with:");
-    console.log("➡️ collegeId:", collegeId);
-    console.log("➡️ facultyId:", facultyId);
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeBranchId,
+    academicYearIds,
+    subjectIds,
+    sectionIds,
+  } = params;
 
+  // ✅ SUBJECTS QUERY (NO JOIN HERE)
   const { data: subjects, error: subjectErr } = await supabase
     .from("college_subjects")
     .select(`
       collegeSubjectId,
       subjectName,
-
       collegeEducationId,
       collegeBranchId,
       collegeAcademicYearId,
       collegeSemesterId,
-
       collegeId
     `)
     .eq("collegeId", collegeId)
+    .in("collegeSubjectId", subjectIds)
     .eq("isActive", true)
     .is("deletedAt", null);
 
   if (subjectErr) throw subjectErr;
-      console.log("📚 Subjects query result:", subjects);
-    console.log("📚 Subjects error:", subjectErr);
 
-  console.log(
-    "📚 SUBJECTS FROM DB:",
-    (subjects ?? []).map((s) => ({
-      id: s.collegeSubjectId,
-      name: s.subjectName,
-      edu: s.collegeEducationId,
-      branch: s.collegeBranchId,
-      year: s.collegeAcademicYearId,
-      sem: s.collegeSemesterId,
-    }))
-  );
+  // ✅ FETCH FACULTY SECTION MAPPING SEPARATELY
+  const { data: facultySections } = await supabase
+    .from("faculty_subjects")
+    .select(`
+      collegeSubjectId,
+      collegeSectionsId,
+      college_sections (
+        collegeSections
+      )
+    `)
+    .eq("collegeId", collegeId)
+    .in("collegeSubjectId", subjectIds)
+    .in("collegeSectionsId", sectionIds);
 
   const { data: units, error: unitErr } = await supabase
     .from("college_subject_units")
@@ -60,8 +67,6 @@ export async function getFacultySubjects(params: {
     .eq("isActive", true);
 
   if (unitErr) throw unitErr;
-      console.log("📦 Units query result:", units);
-    console.log("📦 Units error:", unitErr);
 
   const { data: topics, error: topicErr } = await supabase
     .from("college_subject_unit_topics")
@@ -77,8 +82,6 @@ export async function getFacultySubjects(params: {
     .order("displayOrder", { ascending: true });
 
   if (topicErr) throw topicErr;
-      console.log("📝 Topics query result:", topics);
-    console.log("📝 Topics error:", topicErr);
 
   const topicsBySubject = new Map<number, typeof topics>();
 
@@ -94,20 +97,38 @@ export async function getFacultySubjects(params: {
         (u) => u.collegeSubjectId === s.collegeSubjectId
       );
 
+      // ✅ CORRECT SECTION ATTACHMENT
+      const sectionRow = facultySections?.find(
+        (fs) => fs.collegeSubjectId === s.collegeSubjectId
+      );
+
+      const collegeSectionId = sectionRow?.collegeSectionsId ?? null;
+
+      const sectionName =
+        sectionRow?.college_sections?.[0]?.collegeSections ?? "-";
+
       const unitsCount = subjectUnits.length;
       const subjectTopics = topicsBySubject.get(s.collegeSubjectId) ?? [];
 
-      const topicsCovered = subjectTopics.filter((t) => t.isCompleted === true).length;
+      const topicsCovered = subjectTopics.filter(
+        (t) => t.isCompleted === true
+      ).length;
 
       let nextLesson = "-";
-      const sortedUnits = [...subjectUnits].sort((a, b) => a.unitNumber - b.unitNumber);
+      const sortedUnits = [...subjectUnits].sort(
+        (a, b) => a.unitNumber - b.unitNumber
+      );
 
       for (const unit of sortedUnits) {
         const unitTopics = subjectTopics
-          .filter((t) => t.collegeSubjectUnitId === unit.collegeSubjectUnitId)
+          .filter(
+            (t) => t.collegeSubjectUnitId === unit.collegeSubjectUnitId
+          )
           .sort((a, b) => a.displayOrder - b.displayOrder);
 
-        const firstIncompleteTopic = unitTopics.find((t) => t.isCompleted === false);
+        const firstIncompleteTopic = unitTopics.find(
+          (t) => t.isCompleted === false
+        );
 
         if (firstIncompleteTopic) {
           nextLesson = firstIncompleteTopic.topicTitle;
@@ -117,19 +138,29 @@ export async function getFacultySubjects(params: {
 
       if (nextLesson === "-") nextLesson = "Completed";
 
-      const subjectUnitDates = subjectUnits.filter((u) => u.startDate && u.endDate);
+      const subjectUnitDates = subjectUnits.filter(
+        (u) => u.startDate && u.endDate
+      );
 
       const fromDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.min(...subjectUnitDates.map((u) => new Date(u.startDate).getTime()))
+              Math.min(
+                ...subjectUnitDates.map((u) =>
+                  new Date(u.startDate).getTime()
+                )
+              )
             ).toLocaleDateString("en-GB")
           : "-";
 
       const toDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.max(...subjectUnitDates.map((u) => new Date(u.endDate).getTime()))
+              Math.max(
+                ...subjectUnitDates.map((u) =>
+                  new Date(u.endDate).getTime()
+                )
+              )
             ).toLocaleDateString("en-GB")
           : "-";
 
@@ -137,16 +168,11 @@ export async function getFacultySubjects(params: {
         subjectUnits.length === 0
           ? 0
           : Math.round(
-              subjectUnits.reduce((sum, u) => sum + (u.completionPercentage ?? 0), 0) /
-                subjectUnits.length
+              subjectUnits.reduce(
+                (sum, u) => sum + (u.completionPercentage ?? 0),
+                0
+              ) / subjectUnits.length
             );
-
-      console.log("➡️ Fetching student count for subject:", {
-        collegeId,
-        collegeAcademicYearId: s.collegeAcademicYearId,
-        collegeSemesterId: s.collegeSemesterId,
-        collegeSubjectId: s.collegeSubjectId,
-      });
 
       const students = await getStudentCountForAcademics({
         collegeId: collegeId,
@@ -161,6 +187,8 @@ export async function getFacultySubjects(params: {
         collegeAcademicYearId: s.collegeAcademicYearId,
         collegeSemesterId: s.collegeSemesterId,
         collegeSubjectId: s.collegeSubjectId,
+        collegeSectionId,
+        sectionName,
         subjectTitle: s.subjectName,
         semester: `Sem ${s.collegeSemesterId}`,
         year: `Year ${s.collegeAcademicYearId}`,
@@ -175,6 +203,6 @@ export async function getFacultySubjects(params: {
       };
     })
   );
- console.log("✅ Final mapped result:", result);
+
   return result;
 }

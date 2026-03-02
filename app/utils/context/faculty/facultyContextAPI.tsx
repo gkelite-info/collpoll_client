@@ -28,6 +28,7 @@ type FacultySectionRaw = {
     collegeSubjectId: number;
     collegeAcademicYearId: number;
     faculty_subject: { subjectName: string }[] | null;
+    college_sections: { collegeSections: string }[] | null;
 };
 
 type FacultySectionJoin = {
@@ -37,6 +38,9 @@ type FacultySectionJoin = {
     collegeAcademicYearId: number;
     faculty_subject: {
         subjectName: string;
+    } | null;
+    college_sections: {
+        collegeSections: string;
     } | null;
 };
 
@@ -72,14 +76,17 @@ export async function fetchFacultyContext(userId: number) {
     const { data: facultySections, error: sectionsError } = await supabase
         .from("faculty_sections")
         .select(`
-      facultySectionId,
-      collegeSectionsId,
-      collegeSubjectId,
-      collegeAcademicYearId,
-      faculty_subject:college_subjects!collegeSubjectId (
+    facultySectionId,
+    collegeSectionsId,
+    collegeSubjectId,
+    collegeAcademicYearId,
+    faculty_subject:college_subjects!collegeSubjectId (
       subjectName
-      )
-    `)
+    ),
+    college_sections:collegeSectionsId!inner (
+      collegeSections
+    )
+  `)
         .eq("facultyId", faculty.facultyId)
         .is("deletedAt", null)
 
@@ -92,6 +99,9 @@ export async function fetchFacultyContext(userId: number) {
         faculty_subject: Array.isArray(s.faculty_subject)
             ? s.faculty_subject[0] ?? null
             : s.faculty_subject ?? null,
+        college_sections: Array.isArray(s.college_sections)
+            ? s.college_sections[0] ?? null
+            : s.college_sections ?? null,
     }));
 
     const faculty_subject = Array.from(
