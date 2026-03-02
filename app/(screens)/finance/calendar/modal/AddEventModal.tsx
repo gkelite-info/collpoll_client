@@ -293,6 +293,20 @@ export default function AddEventModal({
     const formattedFromTime = formatTime(fromHour, fromMinute, fromAmPm);
     const formattedToTime = formatTime(toHour, toMinute, toAmPm);
 
+    const now = new Date();
+    const startDateTime = new Date(`${eventDate}T${formattedFromTime}`);
+    const endDateTime = new Date(`${eventDate}T${formattedToTime}`);
+
+    if (startDateTime < now) {
+      toast.error("Cannot schedule events in the past.");
+      return;
+    }
+
+    if (startDateTime >= endDateTime) {
+      toast.error("End time must be after the start time.");
+      return;
+    }
+
     try {
       const eventRes = await saveFinanceCalendarEvent(
         {
@@ -394,6 +408,7 @@ export default function AddEventModal({
               type="date"
               className={INPUT}
               value={eventDate}
+              min={new Date().toISOString().split("T")[0]}
               onChange={(e) => setEventDate(e.target.value)}
             />
           </div>
