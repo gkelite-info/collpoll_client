@@ -47,6 +47,8 @@ export default function AssignmentForm({
     yearId: "",
   });
 
+  const today = new Date().toISOString().split("T")[0];
+
   useEffect(() => {
     const loadContext = async () => {
       try {
@@ -268,10 +270,12 @@ export default function AssignmentForm({
                 value={form.totalMarks}
                 type="number"
                 placeholder="e.g., 100"
+                maxLength={3}
                 required
-                onChange={(e) =>
-                  setForm({ ...form, totalMarks: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "").slice(0, 3);
+                  setForm({ ...form, totalMarks: value });
+                }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
@@ -358,11 +362,24 @@ export default function AssignmentForm({
               <input
                 type="date"
                 required
+                min={today}
                 value={form.fromDate}
-                onChange={(e) => setForm({ ...form, fromDate: e.target.value })}
+                onChange={(e) => {
+                  const selectedDate = e.target.value;
+
+                  setForm((prev) => ({
+                    ...prev,
+                    fromDate: selectedDate,
+                    toDate:
+                      prev.toDate && prev.toDate < selectedDate
+                        ? ""
+                        : prev.toDate,
+                  }));
+                }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
               />
             </div>
+
             <div>
               <label className="mb-1 block text-xs text-gray-500">
                 Submission Deadline
@@ -370,6 +387,7 @@ export default function AssignmentForm({
               <input
                 type="date"
                 required
+                min={form.fromDate || today}
                 value={form.toDate}
                 onChange={(e) => setForm({ ...form, toDate: e.target.value })}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
