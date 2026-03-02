@@ -97,6 +97,7 @@ export default function WorkWeekCalendar({
   const prevWeek = () => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() - 7);
+    if (d.getFullYear() < 2026) return;
     handleDateChange(d);
   };
 
@@ -120,9 +121,11 @@ export default function WorkWeekCalendar({
     setYearOpen(false);
   };
 
+  const startYear = 2026;
+
   const years = Array.from(
-    { length: 11 },
-    (_, i) => new Date().getFullYear() - 5 + i
+    { length: currentYear + 5 - startYear + 1 },
+    (_, i) => startYear + i
   );
 
   return (
@@ -212,9 +215,9 @@ export default function WorkWeekCalendar({
               style={
                 isActive
                   ? {
-                      background: `linear-gradient(to bottom, ${activeGradient.from}, ${activeGradient.to})`,
-                      color: "white",
-                    }
+                    background: `linear-gradient(to bottom, ${activeGradient.from}, ${activeGradient.to})`,
+                    color: "white",
+                  }
                   : {}
               }
             >

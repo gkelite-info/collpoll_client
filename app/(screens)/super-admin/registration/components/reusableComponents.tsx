@@ -9,6 +9,7 @@ type InputFieldProps = {
   name?: string;
   uppercase?: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
   rightIcon?: React.ReactNode;
 };
 
@@ -17,6 +18,7 @@ export const InputField = ({
   name,
   value,
   onChange,
+  disabled=false,
   placeholder,
   type = "text",
   className = "",
@@ -31,10 +33,11 @@ export const InputField = ({
       <input
         type={type}
         name={name}
+        disabled={disabled}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={`border border-[#CCCCCC] rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${uppercase ? "uppercase" : ""
+        className={`border border-[#CCCCCC] ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${uppercase ? "uppercase" : ""
           }`}
         onWheel={(e) => e.currentTarget.blur()}
       />
