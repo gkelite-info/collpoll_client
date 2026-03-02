@@ -16,6 +16,118 @@ type DegreeGroup = {
   sections: Record<string, Set<string>>;
 };
 
+export async function fetchAdminBranchesWithDetails(adminId: number) {
+  try {
+    const { data: branches, error: branchErr } = await supabase
+      .from("college_branch")
+      .select(
+        `
+        collegeBranchId,
+        collegeBranchType,
+        collegeBranchCode,
+        collegeEducationId,
+        college_education!inner(collegeEducationType)
+      `,
+      )
+      .eq("createdBy", adminId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (branchErr) throw branchErr;
+    if (!branches || branches.length === 0) return [];
+
+    const branchIds = branches.map((b) => b.collegeBranchId);
+
+    const { data: years } = await supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId")
+      .in("collegeBranchId", branchIds)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    const { data: sections } = await supabase
+      .from("college_sections")
+      .select("collegeSectionsId, collegeSections, collegeBranchId")
+      .in("collegeBranchId", branchIds)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    return branches.map((branch: any) => {
+      const branchYears =
+        years?.filter((y) => y.collegeBranchId === branch.collegeBranchId) ||
+        [];
+      const branchSections =
+        sections?.filter((s) => s.collegeBranchId === branch.collegeBranchId) ||
+        [];
+
+      const uniqueYears = Array.from(
+        new Set(branchYears.map((y) => y.collegeAcademicYear)),
+      );
+      const uniqueSections = Array.from(
+        new Set(branchSections.map((s) => s.collegeSections).filter(Boolean)),
+      );
+
+      return {
+        id: branch.collegeBranchId.toString(),
+        degree: branch.college_education?.collegeEducationType || "",
+        branch: branch.collegeBranchType,
+        dept: branch.collegeBranchCode,
+        year: uniqueYears,
+        sections: uniqueSections,
+      };
+    });
+  } catch (err) {
+    console.error("Error fetching admin branches:", err);
+    return [];
+  }
+}
+
+export async function fetchAdminAssignedEducation(userId: number | string) {
+  try {
+    const { data: admin, error: adminErr } = await supabase
+      .from("admins")
+      .select("collegeEducationId")
+      .eq("userId", userId)
+      .is("deletedAt", null)
+      .single();
+
+    if (adminErr || !admin?.collegeEducationId) {
+      throw new Error("Admin education ID not found");
+    }
+
+    const { data: edu, error: eduErr } = await supabase
+      .from("college_education")
+      .select("collegeEducationType")
+      .eq("collegeEducationId", admin.collegeEducationId)
+      .single();
+
+    if (eduErr || !edu) throw new Error("Education type not found");
+
+    return { success: true, data: edu.collegeEducationType };
+  } catch (err) {
+    console.error("Error fetching admin assigned education:", err);
+    return { success: false, data: "" };
+  }
+}
+
+export async function fetchAdminSpecificEducation(collegeEducationId: number) {
+  try {
+    const { data, error } = await supabase
+      .from("college_education")
+      .select("collegeEducationType")
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data: data.collegeEducationType };
+  } catch (err) {
+    console.error("Error fetching admin specific education:", err);
+    return { success: false, data: null };
+  }
+}
+
 export async function fetchCollegeDegrees() {
   const { data, error } = await supabase
     .from("college_degree")
@@ -109,7 +221,7 @@ export async function fetchCollegeDegrees() {
       Object.entries(group.sections).map(([dep, secs]) => [
         dep.trim(),
         Array.from(secs).filter(Boolean),
-      ])
+      ]),
     ),
   }));
 }
@@ -201,7 +313,7 @@ export async function fetchExistingSetup(degree: string, dept: string) {
 export async function saveAcademicSetup(
   form: AcademicData,
   adminId: number | string,
-  isEdit: boolean
+  isEdit: boolean,
 ) {
   try {
     const payload = {
@@ -244,7 +356,7 @@ export async function fetchDegrees() {
       deletedAt,
       years,
       sections
-    `
+    `,
     )
     .eq("is_deleted", false)
     .order("collegeDegreeId", { ascending: true });
