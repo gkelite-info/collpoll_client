@@ -14,52 +14,73 @@ import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
 
 export default function Academics() {
-  const { userId, collegeId, loading: userLoading } = useUser();
+  const { userId, collegeId } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [subjects, setSubjects] = useState<CardProps[]>([]);
+  const [facultyCtx, setFacultyCtx] = useState<any>(null);
 
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
-    if (userLoading) return;
 
     if (userId === null || collegeId === null) {
       setPageLoading(false);
       return;
     }
 
+    // 🔥 IMPORTANT: create narrowed variables
+    const safeUserId = userId;
+    const safeCollegeId = collegeId;
+
     if (!hasLoadedOnce.current) {
       setPageLoading(true);
     }
 
+    let isCancelled = false;
+
     async function loadSubjects() {
       try {
-        console.log("🟢 loadSubjects triggered");
-    console.log("➡️ userId:", userId);
-    console.log("➡️ collegeId:", collegeId);
-        if (userId === null || collegeId === null) return;
-         console.log("❌ userId or collegeId is null");
+        const ctx = await fetchFacultyContext(safeUserId);
 
-        const facultyCtx = await fetchFacultyContext(userId);
-        console.log("➡️ facultyCtx:", facultyCtx);
+        if (!ctx) {
+          setSubjects([]);
+          return;
+        }
+
+        setFacultyCtx(ctx);
+
+        if (!ctx.subjectIds?.length) {
+          setSubjects([]);
+          return;
+        }
 
         const data = await getFacultySubjects({
-          collegeId,
-          facultyId: facultyCtx.facultyId,
+          collegeId: safeCollegeId,
+          collegeEducationId: ctx.collegeEducationId,
+          collegeBranchId: ctx.collegeBranchId,
+          academicYearIds: ctx.academicYearIds,
+          subjectIds: ctx.subjectIds,
+          sectionIds: ctx.sectionIds,
         });
-         console.log("✅ getFacultySubjects result:", data);
 
-        setSubjects(data);
+        if (!isCancelled) {
+          setSubjects(data);
+        }
       } catch (err) {
         console.error("❌ Failed to load faculty subjects", err);
       } finally {
-        setPageLoading(false);
-        hasLoadedOnce.current = true;
+        if (!isCancelled) {
+          setPageLoading(false);
+          hasLoadedOnce.current = true;
+        }
       }
     }
-
     loadSubjects();
-  }, [userId, collegeId, userLoading]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userId, collegeId]);
 
   return (
     <div className="p-2 flex flex-col lg:pb-5">
@@ -78,8 +99,8 @@ export default function Academics() {
         </div>
       </div>
 
-      {userLoading || pageLoading ? (
-          <Loader />
+      {pageLoading ? (
+        <Loader />
       ) : (
         <>
           <div className="mt-4">
@@ -88,7 +109,10 @@ export default function Academics() {
                 No classes assigned
               </p>
             ) : (
-              <SubjectCard subjectProps={subjects} />
+              <SubjectCard
+                subjectProps={subjects}
+                facultyCtx={facultyCtx}
+              />
             )}
           </div>
         </>

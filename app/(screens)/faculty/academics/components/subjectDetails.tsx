@@ -2,7 +2,7 @@
 
 import {
   ArrowLeft,
-  CalendarBlank,
+  // CalendarBlank,
   CaretRight,
   CheckCircleIcon,
   FilePdf,
@@ -221,19 +221,32 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
       </div> */}
 
       <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col">
-        <h3
-          className={`text-base md:text-lg font-semibold mb-3 ${colors.title}`}
-        >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
+            <p className={`text-sm font-semibold ${colors.accent}`}>
+              {unit.unitLabel}
+            </p>
+          </div>
+        </div>
+
+        <h3 className={`text-base md:text-lg font-semibold mb-3 ${colors.title}`}>
           {unit.title}
         </h3>
 
-        <div className="flex items-center justify-between text-xs md:text-sm mb-2">
+        <div className="flex justify-end text-xs md:text-sm mb-2">
+          <span className="font-semibold text-[#333333]">
+            {percentage}%
+          </span>
+        </div>
+
+        {/* <div className="flex items-center justify-between text-xs md:text-sm mb-2">
           <div className="flex items-center gap-2 text-[#6C6C6C]">
             <CalendarBlank size={16} className={colors.accent} />
             <span>{unit.dateRange}</span>
           </div>
           <span className="font-semibold text-[#333333]">{percentage}%</span>
-        </div>
+        </div> */}
 
         <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
           <div
@@ -386,24 +399,24 @@ export function SubjectDetailsCard({
     }
   }
 
-  useEffect(() => {
-    if (collegeId == null || facultyId == null) return;
+  // useEffect(() => {
+  //   if (collegeId == null || facultyId == null) return;
 
-    async function loadFacultySubjects() {
-      try {
-        const data = await getFacultySubjects({
-          collegeId: Number(collegeId),
-          facultyId: Number(facultyId),
-        });
+  //   async function loadFacultySubjects() {
+  //     try {
+  //       const data = await getFacultySubjects({
+  //         collegeId: Number(collegeId),
+  //         facultyId: Number(facultyId),
+  //       });
 
-        setCards(data);
-      } catch (err) {
-        console.error("❌ Failed to fetch faculty subjects:", err);
-      }
-    }
+  //       setCards(data);
+  //     } catch (err) {
+  //       console.error("❌ Failed to fetch faculty subjects:", err);
+  //     }
+  //   }
 
-    loadFacultySubjects();
-  }, [collegeId, facultyId]);
+  //   loadFacultySubjects();
+  // }, [collegeId, facultyId]);
 
   const handleMarkComplete = async (
     unitId: number,
