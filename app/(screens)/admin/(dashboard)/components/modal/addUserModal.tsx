@@ -49,7 +49,7 @@ const AddUserModal: React.FC<{
     mobileCode: "+91",
     mobileNumber: "",
     role: "",
-    gender: "Male" as const,
+    gender: "",
     password: "",
     confirmPassword: "",
     studentId: "",
@@ -171,7 +171,7 @@ const AddUserModal: React.FC<{
           email: user.email || "",
           mobileNumber: user.mobile ? user.mobile.slice(-10) : "",
           role: user.role || "Faculty",
-          gender: user.gender || "Male",
+          gender: user.gender || "",
           studentId: user.studentId ? String(user.studentId) : "",
         }));
       } else {
@@ -217,10 +217,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId ===
-            studentSelectedEducation.collegeEducationId,
-        )
+            (b) =>
+              b.collegeEducationId ===
+              studentSelectedEducation.collegeEducationId,
+          )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -237,8 +237,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-        )
+            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+          )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -255,10 +255,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -267,10 +267,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -324,6 +324,8 @@ const AddUserModal: React.FC<{
     if (!basicData.fullName || !basicData.email || !basicData.role)
       return toast.error("Required fields missing.");
 
+    if (!basicData.gender) return toast.error("Please select a gender.");
+
     if (
       isFaculty &&
       (!selectedEducationId ||
@@ -368,12 +370,12 @@ const AddUserModal: React.FC<{
       let targetUserId: number | null = null;
 
       if (isAdmin) {
-        const { data: authData, error: authError } =
-          await supabase.auth.signUp({
+        const { data: authData, error: authError } = await supabase.auth.signUp(
+          {
             email: basicData.email,
             password: basicData.password,
           },
-          );
+        );
 
         if (authError || !authData.user) {
           throw new Error(authError?.message || "Auth user creation failed");
@@ -412,8 +414,7 @@ const AddUserModal: React.FC<{
         if (!adminRes.success) {
           throw new Error(adminRes.error || "Admin creation failed");
         }
-      }
-      else {
+      } else {
         targetUserId = await persistUser(
           !user,
           { ...basicData, collegePublicId: basicData.collegeId },
@@ -994,10 +995,11 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
-                ? "bg-green-600 cursor-default"
-                : "bg-[#43C17A] hover:bg-[#3ea876]"
-                }`}
+              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
+                isSuccess
+                  ? "bg-green-600 cursor-default"
+                  : "bg-[#43C17A] hover:bg-[#3ea876]"
+              }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

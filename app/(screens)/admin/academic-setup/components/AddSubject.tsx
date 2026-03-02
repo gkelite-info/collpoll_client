@@ -177,35 +177,47 @@ export default function AddSubject({
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Education Type
             </label>
-            <select
-              name="education"
-              value={ui.education}
-              onChange={handleChange}
-              className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
-            >
-              <option value="">Select Education</option>
-              {options.educations.map((e) => (
-                <option key={e.id}>{e.label}</option>
-              ))}
-            </select>
+            {isLoadingOptions && options.educations.length === 0 ? (
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                Loading options...
+              </div>
+            ) : (
+              <select
+                name="education"
+                value={ui.education}
+                onChange={handleChange}
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+              >
+                <option value="">Select Education</option>
+                {options.educations.map((e) => (
+                  <option key={e.id}>{e.label}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Branch Type
             </label>
-            <select
-              name="branch"
-              value={ui.branch}
-              onChange={handleChange}
-              disabled={!ui.education}
-              className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
-            >
-              <option value="">Select Branch</option>
-              {ui.education &&
-                options.branches.map((b) => (
-                  <option key={b.id}>{b.label}</option>
-                ))}
-            </select>
+            {isLoadingOptions && ui.education && !ui.branch ? (
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                Loading options...
+              </div>
+            ) : (
+              <select
+                name="branch"
+                value={ui.branch}
+                onChange={handleChange}
+                disabled={!ui.education}
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Select Branch</option>
+                {ui.education &&
+                  options.branches.map((b) => (
+                    <option key={b.id}>{b.label}</option>
+                  ))}
+              </select>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-6">
@@ -213,33 +225,45 @@ export default function AddSubject({
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Year
             </label>
-            <select
-              name="year"
-              value={ui.year}
-              onChange={handleChange}
-              className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
-            >
-              <option value="">Select Year</option>
-              {options.years.map((y) => (
-                <option key={y.id}>{y.label}</option>
-              ))}
-            </select>
+            {isLoadingOptions && ui.branch && !ui.year ? (
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                Loading options...
+              </div>
+            ) : (
+              <select
+                name="year"
+                value={ui.year}
+                onChange={handleChange}
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+              >
+                <option value="">Select Year</option>
+                {options.years.map((y) => (
+                  <option key={y.id}>{y.label}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Semester
             </label>
-            <select
-              name="semester"
-              value={ui.semester}
-              onChange={handleChange}
-              className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
-            >
-              <option value="">Select Semester</option>
-              {options.semesters.map((s) => (
-                <option key={s.id}>{s.label}</option>
-              ))}
-            </select>
+            {isLoadingOptions && ui.year && !ui.semester ? (
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                Loading options...
+              </div>
+            ) : (
+              <select
+                name="semester"
+                value={ui.semester}
+                onChange={handleChange}
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+              >
+                <option value="">Select Semester</option>
+                {options.semesters.map((s) => (
+                  <option key={s.id}>{s.label}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
