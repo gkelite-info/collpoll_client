@@ -62,15 +62,12 @@ type AcademicDropdownMap = {
     collegeSections: string;
   };
 };
-
-
-
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   value: any | null;
   isSaving?: boolean;
-  onSave: (eventData: CalendarEventPayload) => void;
+  onSave: (eventData: CalendarEventPayload) => Promise<{ success: boolean }>;
   initialData?: any | null;
   mode: "create" | "edit";
   degreeOptions: DegreeOption[];
@@ -98,6 +95,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [meetingLink, setMeetingLink] = useState("");
   const [selectedType, setSelectedType] = useState("Class");
   const [date, setDate] = useState(getTodayDateString());
+  const TODAY = getTodayDateString();
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
   const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
@@ -121,12 +119,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const sectionDropdownRef = useRef<HTMLDivElement>(null);
   const { userId, collegeId, loading } = useUser();
   const [topics, setTopics] = useState<TopicRow[]>([]);
-
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   // const [topics, setTopics] = useState<{ topicTitle: string }[]>([]);
-
-
   const [educationId, setEducationId] = useState<number | undefined>(undefined);
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [academicYearId, setAcademicYearId] = useState<number | undefined>(undefined);
@@ -134,7 +129,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [subjectId, setSubjectId] = useState<number | undefined>(undefined);
   const [unitId, setUnitId] = useState<number | undefined>(undefined);
   const [semesters, setSemesters] = useState<SemesterRow[]>([]);
-
   const [educations, setEducations] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -336,6 +330,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     return `${String(h).padStart(2, "0")}:${minute}`;
   };
 
+  const isValidMeetingLink = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return ["http:", "https:"].includes(parsed.protocol);
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (!isEditMode) return;
     if (!value?.year) return;
@@ -422,7 +425,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         if (cancelled) return;
         setSemesters(semesters ?? []);
         if ((semesters ?? []).length === 1) {
-          setSemester(semesters[0].collegeSemesterId); 
+          setSemester(semesters[0].collegeSemesterId);
           setIsSemesterAuto(true);
         }
         const sections = await fetchAcademicDropdowns({
@@ -519,28 +522,95 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   }, [subjectId]);
 
 
-  if (selectedType === "meeting" && !title.trim()) {
-    toast.error("Please enter meeting title");
-    return;
-  }
+  const validateTimeRange = (
+    newEndHour?: string,
+    newEndMinute?: string,
+    newEndPeriod?: "AM" | "PM"
+  ) => {
+    const startTime = to24Hour(startHour, startMinute, startPeriod);
 
-  const handleSave = () => {
+    const endTime = to24Hour(
+      newEndHour ?? endHour,
+      newEndMinute ?? endMinute,
+      newEndPeriod ?? endPeriod
+    );
+    if (startTime === endTime) {
+      toast.error("Start and End time cannot be the same", { id: "time-error" });
+      return false;
+    }
+    if (startTime > endTime) {
+      toast.error("End time must be after start time");
+      return false;
+    }
+    if (startTime < "08:00" || endTime > "22:00") {
+      toast.error("Events must be between 08:00 AM and 10:00 PM");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSave = async () => {
     if (!date) {
       toast.error("Please select date");
       return;
     }
-
+    if (date < TODAY) {
+      toast.error("Past dates are not allowed");
+      return;
+    }
     if (!semester) {
       toast.error("Please select semester");
+      return;
+    }
+    if (!roomNo.trim()) {
+      toast.error("Please enter Room No.");
+      return;
+    }
+    if (!sectionIds.length) {
+      toast.error("Please select at least one section.");
       return;
     }
 
     const startTime = to24Hour(startHour, startMinute, startPeriod);
     const endTime = to24Hour(endHour, endMinute, endPeriod);
 
+    if (!validateTimeRange()) return;
+
+    // ✅ Allowed Time Window (08:00 AM – 10:00 PM)
+    if (startTime < "08:00" || endTime > "22:00") {
+      toast.error("Events must be between 08:00 AM and 10:00 PM");
+      return;
+    }
+
+    // ✅ Same-day past time block
+    const now = new Date();
+    const currentDate = now.toISOString().split("T")[0];
+
+    // if (date === currentDate) {
+    //   const currentTime = now.toTimeString().slice(0, 5);
+    //   if (startTime <= currentTime) {
+    //     toast.error("Start time must be in the future");
+    //     return;
+    //   }
+    // }
+
+    // ✅ Topic required (non-meeting)
     if (selectedType !== "meeting" && !topicId) {
       toast.error("Please select topic");
       return;
+    }
+
+    // ✅ Meeting validations
+    if (selectedType === "meeting") {
+      if (!title.trim()) {
+        toast.error("Please enter meeting title");
+        return;
+      }
+
+      if (meetingLink && !isValidMeetingLink(meetingLink.trim())) {
+        toast.error("Please enter a valid meeting link");
+        return;
+      }
     }
 
     const payload: CalendarEventPayload = {
@@ -555,7 +625,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       eventTopic:
         selectedType === "meeting"
           ? null
-          : topicId,     // ✅ integer FK
+          : topicId,
 
       type: selectedType.toLowerCase() as any,
       date,
@@ -571,8 +641,23 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       collegeSemesterId: semester!,
       sectionIds,
     };
-    onSave(payload);
-    onClose();
+
+    try {
+      setIsSubmitting(true);
+
+      const result = await onSave(payload);
+
+      // If your onSave returns success flag
+      if (result?.success !== false) {
+        toast.success(isEditMode ? "Event updated successfully" : "Event created successfully");
+        onClose();
+      }
+
+    } catch (error) {
+      toast.error("Failed to save event. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -817,43 +902,37 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </>
           )}
 
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Topic *
-            </label>
+          {selectedType !== "meeting" && (
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Topic *
+              </label>
 
-            <div className="relative">
-              <select
-                value={topicId ?? ""}
-                onChange={(e) => setTopicId(Number(e.target.value))}
-                className={`
-        w-full h-[44px]
-        border border-[#C9C9C9]
-        rounded-lg px-3 pr-10
-        bg-white text-gray-900
-        outline-none cursor-pointer
-        focus:border-emerald-500
-        focus:ring-1 focus:ring-emerald-500
-        transition-all
-        ${!topicId ? "text-gray-400" : "text-gray-900"}
-      `}
-              >
-                <option value="" disabled>
-                  Select Topic
-                </option>
-
-                {topics.map((t) => (
-                  <option
-                    key={t.collegeSubjectUnitTopicId}
-                    value={t.collegeSubjectUnitTopicId}
-                    className="text-gray-900"
-                  >
-                    {t.topicTitle}
+              <div className="relative">
+                <select
+                  value={topicId ?? ""}
+                  onChange={(e) => setTopicId(Number(e.target.value))}
+                  className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg px-3 pr-10
+        bg-white text-gray-900 outline-none cursor-pointer
+        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+        transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
+                >
+                  <option value="" disabled>
+                    Select Topic
                   </option>
-                ))}
-              </select>
+
+                  {topics.map((t) => (
+                    <option
+                      key={t.collegeSubjectUnitTopicId}
+                      value={t.collegeSubjectUnitTopicId}
+                    >
+                      {t.topicTitle}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <div className="flex gap-4">
               <div className="flex-1">
@@ -863,6 +942,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <input
                   type="date"
                   value={date}
+                  min={TODAY}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full cursor-pointer border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                 />
@@ -930,7 +1010,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   <div className="flex gap-1.5">
                     <select
                       value={endHour}
-                      onChange={(e) => setEndHour(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (validateTimeRange(value, undefined, undefined)) {
+                          setEndHour(value);
+                        }
+                      }}
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       {Array.from({ length: 12 }, (_, i) => {
@@ -941,7 +1026,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={endMinute}
-                      onChange={(e) => setEndMinute(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (validateTimeRange(undefined, value, undefined)) {
+                          setEndMinute(value);
+                        }
+                      }}
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       {Array.from({ length: 12 }, (_, i) => {
@@ -952,9 +1042,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={endPeriod}
-                      onChange={(e) =>
-                        setEndPeriod(e.target.value as "AM" | "PM")
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value as "AM" | "PM";
+                        if (validateTimeRange(undefined, undefined, value)) {
+                          setEndPeriod(value);
+                        }
+                      }}
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -1188,16 +1281,19 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           <div className="pt-2">
             <button
               onClick={handleSave}
-              className="w-full cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base"
+              disabled={isSubmitting}
+              className={`w-full font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
+                ? "bg-emerald-400 cursor-not-allowed"
+                : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                }`}
             >
-              {isSaving
+              {isSubmitting
                 ? isEditMode
                   ? "Updating..."
                   : "Saving..."
                 : isEditMode
                   ? "Update Event"
                   : "Save Event"}
-              {/* {value ? "Update Event" : "Save Event"} */}
             </button>
           </div>
         </div>
