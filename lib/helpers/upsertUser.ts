@@ -5,7 +5,7 @@ export const upsertUser = async (payload: {
   fullName: string;
   email: string;
   mobile: string;
-  linkedIn?: string
+  linkedIn?: string;
   collegeId?: number | null;
   currentCity?: string;
   workStatus?: string;
@@ -27,7 +27,7 @@ export const upsertUser = async (payload: {
       role,
       // collegeCode,
       collegePublicId,
-      gender
+      gender,
     } = payload;
 
     const now = new Date().toISOString();
@@ -51,7 +51,7 @@ export const upsertUser = async (payload: {
           updatedAt: now,
           createdAt: now,
         },
-        { onConflict: "auth_id" }
+        { onConflict: "auth_id" },
       )
       .select()
       .single();
@@ -67,7 +67,6 @@ export const upsertUser = async (payload: {
     console.error("UPSERT PERSONAL DETAILS ERROR:", err.message);
     let message = "Something went wrong";
 
-
     if (err.code === "23505") {
       if (err.message.includes("email")) {
         message = "Email is already registered";
@@ -82,8 +81,6 @@ export const upsertUser = async (payload: {
     return { success: false, error: message };
   }
 };
-
-
 
 export const fetchUserDetails = async (auth_id: string) => {
   try {
@@ -114,7 +111,8 @@ export const upsertAdminEntry = async (payload: {
   email: string;
   mobile: string;
   gender?: "Male" | "Female";
-  collegeId: number,
+  collegeId: number;
+  collegeEducationId: number;
   collegePublicId: string;
   collegeCode?: string;
 }) => {
@@ -135,26 +133,25 @@ export const upsertAdminEntry = async (payload: {
 
     const createdByUserId = creator.userId;
 
-    const { error } = await supabase
-      .from("admins")
-      .upsert(
-        {
-          userId: payload.userId,
-          fullName: payload.fullName,
-          email: payload.email,
-          mobile: payload.mobile,
-          gender: payload.gender ?? null,
-          collegeId: payload.collegeId,
-          collegePublicId: payload.collegePublicId,
-          collegeCode: payload.collegeCode ?? null,
-          createdBy: createdByUserId,
-          updatedAt: now,
-          createdAt: now,
-        },
-        {
-          onConflict: "userId",
-        }
-      );
+    const { error } = await supabase.from("admins").upsert(
+      {
+        userId: payload.userId,
+        fullName: payload.fullName,
+        email: payload.email,
+        mobile: payload.mobile,
+        gender: payload.gender ?? null,
+        collegeId: payload.collegeId,
+        collegePublicId: payload.collegePublicId,
+        collegeEducationId: payload.collegeEducationId,
+        collegeCode: payload.collegeCode ?? null,
+        createdBy: createdByUserId,
+        updatedAt: now,
+        createdAt: now,
+      },
+      {
+        onConflict: "userId",
+      },
+    );
 
     if (error) throw error;
 
