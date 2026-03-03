@@ -112,7 +112,7 @@ export const upsertAdminEntry = async (payload: {
   mobile: string;
   gender?: "Male" | "Female";
   collegeId: number;
-  collegeEducationId: number;
+  collegeEducationId?: number;
   collegePublicId: string;
   collegeCode?: string;
 }) => {
