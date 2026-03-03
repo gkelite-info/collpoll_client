@@ -378,14 +378,12 @@ export default function ClientSubjectDetails({
           <CourseScheduleCard style="w-[320px]" />
         </div>
       </div>
-
       <FilterBanner
         subjectName={headerInfo.subjectName}
         semester={headerInfo.semester}
         year={headerInfo.year}
         onAddUnit={() => setIsModalOpen(true)}
       />
-
       <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8">
         {units.length > 0 ? (
           units.map((unit) => (
@@ -402,12 +400,15 @@ export default function ClientSubjectDetails({
           </div>
         )}
       </div>
-
+      // Inside ClientSubjectDetails.tsx
       <AddNewClassModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleRefresh}
         prefilledContext={context}
+        existingUnitNumbers={units.map((u) =>
+          parseInt(u.unitLabel.replace(/\D/g, ""), 10),
+        )}
       />
     </div>
   );
