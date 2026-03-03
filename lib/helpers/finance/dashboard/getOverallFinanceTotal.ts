@@ -1,73 +1,61 @@
 import { supabase } from "@/lib/supabaseClient";
 
-type OverallFinanceFilters = {
-  collegeId: number;
-  collegeEducationId: number;
-};
-
 export async function getOverallFinanceTotal(
-  filters: OverallFinanceFilters
+  collegeId: number,
+  collegeEducationId: number
 ) {
-  const { collegeId, collegeEducationId } = filters;
+  console.log("💰 Overall Finance Ledger Scoped Query:", {
+    collegeId,
+    collegeEducationId,
+  });
 
-  /* 1️⃣ Get Active Students */
+  const { data, error } = await supabase
+    .from("student_fee_ledger")
+    .select(`
+      amount,
+      student_payment_transaction!inner (
+        paymentStatus,
+        student_fee_obligation!inner (
+          studentFeeObligationId,
+          collegeEducationId,
+          students!inner (
+            studentId,
+            collegeId,
+            collegeEducationId,
+            status,
+            isActive,
+            deletedAt
+          )
+        )
+      )
+    `)
 
-  const { data: students } = await supabase
-    .from("students")
-    .select("studentId")
-    .eq("collegeId", collegeId)
-    .eq("collegeEducationId", collegeEducationId)
-    .eq("status", "Active")
-    .eq("isActive", true)
-    .is("deletedAt", null);
+    // 🔐 STRICT SCOPE AT STUDENT LEVEL
+    .eq("student_payment_transaction.student_fee_obligation.students.collegeId", collegeId)
+    .eq("student_payment_transaction.student_fee_obligation.students.collegeEducationId", collegeEducationId)
 
-  if (!students?.length) return 0;
+    // Only successful transactions
+    .eq("student_payment_transaction.paymentStatus", "success")
 
-  const studentIds = students.map((s) => s.studentId);
+    // Safety filters
+    .eq("student_payment_transaction.student_fee_obligation.students.status", "Active")
+    .eq("student_payment_transaction.student_fee_obligation.students.isActive", true)
+    .is("student_payment_transaction.student_fee_obligation.students.deletedAt", null)
 
-  /* 2️⃣ Get Obligations */
+    .eq("student_payment_transaction.student_fee_obligation.isActive", true)
+    .is("student_payment_transaction.student_fee_obligation.deletedAt", null);
 
-  const { data: obligations } = await supabase
-    .from("student_fee_obligation")
-    .select("studentFeeObligationId")
-    .in("studentId", studentIds)
-    .eq("collegeEducationId", collegeEducationId)
-    .eq("isActive", true)
-    .is("deletedAt", null);
+  if (error) {
+    console.error("❌ Overall Finance Error:", error);
+    throw error;
+  }
 
-  if (!obligations?.length) return 0;
-
-  const obligationIds = obligations.map(
-    (o) => o.studentFeeObligationId
-  );
-
-  /* 3️⃣ Get Success Transactions */
-
-  const { data: transactions } = await supabase
-    .from("student_payment_transaction")
-    .select("studentPaymentTransactionId")
-    .in("studentFeeObligationId", obligationIds)
-    .eq("paymentStatus", "success");
-
-  if (!transactions?.length) return 0;
-
-  const transactionIds = transactions.map(
-    (t) => t.studentPaymentTransactionId
-  );
-
-  /* 4️⃣ Sum All Collections */
-
-  const { data: collections } = await supabase
-    .from("student_fee_collection")
-    .select("collectedAmount")
-    .in("studentPaymentTransactionId", transactionIds);
-
-  if (!collections?.length) return 0;
-
-  const total = collections.reduce(
-    (sum, c) => sum + Number(c.collectedAmount || 0),
+  const total = (data ?? []).reduce(
+    (sum: number, row: any) => sum + Number(row.amount ?? 0),
     0
   );
+
+  console.log("✅ Overall Finance Total:", total);
 
   return total;
 }
