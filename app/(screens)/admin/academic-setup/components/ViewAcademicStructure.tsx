@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { fetchAdminBranchesWithDetails } from "@/lib/helpers/admin/academicSetupAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { Pagination } from "./pagination";
 
 export type AcademicViewData = {
   id: string;
@@ -13,6 +15,8 @@ export type AcademicViewData = {
   sections: any[];
 };
 
+const ITEMS_PER_PAGE = 10;
+
 export default function ViewAcademicStructure({
   onEdit,
 }: {
@@ -21,6 +25,7 @@ export default function ViewAcademicStructure({
   const { adminId, loading: adminLoading } = useAdmin();
   const [data, setData] = useState<AcademicViewData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadData = async () => {
@@ -29,16 +34,19 @@ export default function ViewAcademicStructure({
 
       const mappedData = await fetchAdminBranchesWithDetails(adminId);
       setData(mappedData);
-
+      setCurrentPage(1); // Reset on load
       setIsFetching(false);
     };
 
     loadData();
   }, [adminId, adminLoading]);
 
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   return (
-    <div className="w-[80%] mx-auto bg-white rounded-md shadow-lg overflow-hidden">
-      <div className="max-h-[420px] overflow-y-auto">
+    <div className="w-[85%] mx-auto bg-white rounded-md border overflow-hidden flex flex-col">
+      <div className="min-h-[420px] overflow-y-auto w-full ">
         <table className="w-full text-sm">
           <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10">
             <tr>
@@ -53,21 +61,27 @@ export default function ViewAcademicStructure({
           <tbody>
             {isFetching ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-gray-400">
-                  Loading branches...
+                <td
+                  colSpan={5}
+                  className="p-8 text-center text-gray-400 h-[300px]"
+                >
+                  <Loader />
                 </td>
               </tr>
-            ) : data.length === 0 ? (
+            ) : currentData.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-gray-400">
+                <td
+                  colSpan={5}
+                  className="p-8 text-center text-gray-400 h-[300px]"
+                >
                   No academic structures found.
                 </td>
               </tr>
             ) : (
-              data.map((row, i) => (
+              currentData.map((row, i) => (
                 <tr
                   key={i}
-                  className="hover:bg-gray-50 text-gray-800 transition"
+                  className="hover:bg-gray-50 text-gray-800 transition border-b border-gray-50 last:border-b-0"
                 >
                   <td className="p-4">{row.degree}</td>
                   <td className="p-4">{row.dept}</td>
@@ -98,6 +112,15 @@ export default function ViewAcademicStructure({
           </tbody>
         </table>
       </div>
+
+      {!isFetching && (
+        <Pagination
+          currentPage={currentPage}
+          totalItems={data.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
+      )}
     </div>
   );
 }
