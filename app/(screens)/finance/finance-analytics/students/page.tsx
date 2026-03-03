@@ -18,7 +18,28 @@ import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterO
 
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { getOverallStudentsOverview } from "@/lib/helpers/finance/getOverallStudentsOverview";
+import { getOverallStudentsOverview, getOverallStudentsSummary } from "@/lib/helpers/finance/getOverallStudentsOverview";
+
+
+type Semester = {
+  collegeSemesterId: number;
+  collegeSemester: number;
+  collegeAcademicYearId: number;
+};
+
+type AcademicYear = {
+  collegeAcademicYearId: number;
+  collegeAcademicYear: string;
+  collegeBranchId: number;
+  semesters: Semester[];
+};
+
+type Branch = {
+  collegeBranchId: number;
+  collegeBranchCode: string;
+  years: AcademicYear[];
+};
+
 
 function OverallStudentsOverview() {
   const router = useRouter();
@@ -26,7 +47,7 @@ function OverallStudentsOverview() {
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
   const [search, setSearch] = useState("");
-   const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [educationFilter, setEducationFilter] = useState("All");
   const [branchFilter, setBranchFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
@@ -34,10 +55,9 @@ function OverallStudentsOverview() {
   const [statusFilter, setStatusFilter] = useState("All");
   const searchParams = useSearchParams();
   const studentsCount = searchParams.get("studentsCount");
-  const [branches, setBranches] = useState<any[]>([]);
-  const [years, setYears] = useState<any[]>([]);
-  const [semesters, setSemesters] = useState<any[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [studentsData, setStudentsData] = useState<any[]>([]);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const [summaryCounts, setSummaryCounts] = useState({
     total: 0,
     paid: 0,
@@ -99,9 +119,85 @@ function OverallStudentsOverview() {
   //   setSummaryCounts(summary);
   // };
 
+  useEffect(() => {
+    loadCardsSummary();
+  }, [collegeId, collegeEducationId]);
+
+  useEffect(() => {
+    console.log("🔐 Finance Context:", {
+      collegeId,
+      collegeEducationId,
+      collegeEducationType,
+      loading,
+    });
+  }, [collegeId, collegeEducationId, collegeEducationType, loading]);
+
+
+  const loadCardsSummary = async () => {
+    if (!collegeId || !collegeEducationId || loading) {
+      console.log("⛔ Skipping Cards Load:", {
+        collegeId,
+        collegeEducationId,
+        loading,
+      });
+      return;
+    }
+
+    console.log("📊 Loading Cards Summary with:", {
+      collegeId,
+      collegeEducationId,
+    });
+
+    setCardsLoading(true);
+
+    try {
+      const summary = await getOverallStudentsSummary(
+        collegeId,
+        collegeEducationId
+      );
+
+      console.log("✅ Cards Summary Result:", summary);
+      console.log("➡ Total:", summary.total);
+      console.log("➡ Paid:", summary.paid);
+      console.log("➡ Pending:", summary.pending);
+      console.log("➡ Partial:", summary.partial);
+
+      setSummaryCounts(summary);
+    } catch (err: any) {
+      console.error("❌ Cards Summary Error:", err);
+      toast.error(err?.message || "Failed to load summary");
+    } finally {
+      setCardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    console.log("🟢 summaryCounts Updated:", summaryCounts);
+  }, [summaryCounts]);
+
   const loadStudents = async () => {
-    if (!collegeId || !collegeEducationId || loading) return;
+    if (!collegeId || !collegeEducationId || loading) {
+      console.log("⛔ Skipping Table Load:", {
+        collegeId,
+        collegeEducationId,
+        loading,
+      });
+      return;
+    }
+
+    console.log("📋 Loading Table Data with Filters:", {
+      collegeId,
+      collegeEducationId,
+      branchFilter,
+      yearFilter,
+      semesterFilter,
+      statusFilter,
+      currentPage,
+      search,
+    });
+
     setTableLoading(true);
+
     try {
       const data = await getOverallStudentsOverview(
         {
@@ -123,22 +219,18 @@ function OverallStudentsOverview() {
         search,
       );
 
+      console.log("📌 Table API Response:", data);
+
       setStudentsData(data.students);
-      // setCounts(data.counts);
       setTotalRecords(data.totalCount ?? 0);
 
-
     } catch (error: any) {
+      console.error("❌ Table Load Error:", error);
       toast.error(error?.message || "Failed to load students");
-    }
-    finally {
+    } finally {
       setTableLoading(false);
     }
   };
-
-  // useEffect(() => {
-  //   loadCardsSummary();
-  // }, [collegeId, collegeEducationId]);
 
   useEffect(() => {
     loadStudents();
@@ -202,8 +294,37 @@ function OverallStudentsOverview() {
     }));
   }, [studentsData]);
 
-  const handleDownload = () => {
-    downloadCSV(studentsData, "students-report");
+  const handleDownload = async () => {
+    if (!studentsData || studentsData.length === 0) {
+      toast.error("No data available to download");
+      return;
+    }
+
+    try {
+      setDownloadLoading(true);
+
+      const exportData = studentsData.map((item) => ({
+        studentId: item.studentId,
+        studentName: item.studentName,
+        educationType: collegeEducationType ?? "",
+        branchCode: item.branchCode,
+        yearName: item.yearName,
+        semester: item.semester,
+        paidAmount: item.paidAmount,
+        pendingAmount: item.pendingAmount,
+        status: item.status,
+      }));
+
+      // Small delay so UI updates before heavy processing
+      setTimeout(() => {
+        downloadCSV(exportData, "students-report");
+        setDownloadLoading(false);
+      }, 300);
+
+    } catch (error) {
+      setDownloadLoading(false);
+      toast.error("Failed to download report");
+    }
   };
 
   const columns = [
@@ -254,13 +375,19 @@ function OverallStudentsOverview() {
             Overall Students Overview
           </h2>
         </div>
-        <button
-          onClick={handleDownload}
-          className="bg-[#16284F] cursor-pointer text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
-        >
-          Download Report
-          <DownloadSimple size={18} />
-        </button>
+       <button
+  onClick={handleDownload}
+  disabled={downloadLoading}
+  className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
+    ${
+      downloadLoading
+        ? "opacity-70 cursor-not-allowed"
+        : "hover:bg-[#1E3A8A]"
+    }`}
+>
+  {downloadLoading ? "Downloading Report..." : "Download Report"}
+  {!downloadLoading && <DownloadSimple size={18} />}
+</button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
@@ -347,20 +474,17 @@ function OverallStudentsOverview() {
                     className="appearance-none bg-[#43C17A26] text-center text-[#43C17A] outline-none px-6 py-1 pr-8 rounded-full text-sm cursor-pointer"
                   >
                     <option value="All">All</option>
-                    {years
-                      .filter(
-                        (y) =>
-                          branchFilter === "All" ||
-                          y.collegeBranchId == branchFilter,
-                      )
-                      .map((y) => (
-                        <option
-                          key={y.collegeAcademicYearId}
-                          value={y.collegeAcademicYearId}
-                        >
-                          {y.collegeAcademicYear}
-                        </option>
-                      ))}
+                    {branchFilter !== "All" &&
+                      branches
+                        .find((b) => b.collegeBranchId === Number(branchFilter))
+                        ?.years?.map((year) => (
+                          <option
+                            key={year.collegeAcademicYearId}
+                            value={year.collegeAcademicYearId}
+                          >
+                            {year.collegeAcademicYear}
+                          </option>
+                        ))}
                   </select>
                   <CaretDown
                     size={14}
@@ -383,20 +507,21 @@ function OverallStudentsOverview() {
                     className="appearance-none bg-[#43C17A26] text-center text-[#43C17A] outline-none px-6 py-1 pr-8 rounded-full text-sm cursor-pointer"
                   >
                     <option value="All">All</option>
-                    {semesters
-                      .filter(
-                        (s) =>
-                          yearFilter === "All" ||
-                          s.collegeAcademicYearId == yearFilter,
-                      )
-                      .map((s) => (
-                        <option
-                          key={s.collegeSemesterId}
-                          value={s.collegeSemesterId}
-                        >
-                          Sem {s.collegeSemester}
-                        </option>
-                      ))}
+                    {branchFilter !== "All" &&
+                      yearFilter !== "All" &&
+                      branches
+                        .find((b) => b.collegeBranchId === Number(branchFilter))
+                        ?.years?.find(
+                          (y) => y.collegeAcademicYearId === Number(yearFilter)
+                        )
+                        ?.semesters?.map((sem) => (
+                          <option
+                            key={sem.collegeSemesterId}
+                            value={sem.collegeSemesterId}
+                          >
+                            Sem {sem.collegeSemester}
+                          </option>
+                        ))}
                   </select>
                   <CaretDown
                     size={14}

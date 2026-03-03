@@ -277,7 +277,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 date: data.date,
                 roomNo: data.roomNo,
                 fromTime: data.fromTime,
-                toTime: data.toTime,
+                toTime: data.toTime, 
 
                 meetingLink: data.meetingLink ?? null,
             });
