@@ -28,13 +28,11 @@ export interface UIStudent {
   reason: string;
 }
 
-// 1. Fetch Today's Classes for Faculty
 export async function getFacultyClasses(
   facultyId: number,
 ): Promise<ClassOption[]> {
   const supabase = await createClient();
 
-  // Get Today's Date in YYYY-MM-DD format (Server Time)
   const today = new Date().toISOString().split("T")[0];
 
   const { data: events, error } = await supabase
@@ -51,8 +49,8 @@ export async function getFacultyClasses(
     )
     .eq("facultyId", facultyId)
     .eq("is_deleted", false)
-    .eq("date", today) // FILTER: TODAY ONLY
-    .order("fromTime", { ascending: true }); // Earliest first
+    .eq("date", today)
+    .order("fromTime", { ascending: true });
 
   if (error) {
     console.error("❌ getFacultyClasses Error:", error);
@@ -73,9 +71,6 @@ export async function getFacultyClasses(
     };
   });
 }
-
-// ... (Keep getClassSections, getStudentsForClass, saveAttendance exactly as they were) ...
-// (Implicitly preserved to save space)
 
 export async function getClassSections(
   classId: string,
@@ -100,36 +95,155 @@ export async function getClassSections(
   return Array.from(unique.values());
 }
 
+// export async function getStudentsForClass(
+//   classId: string,
+//   sectionFilterId?: string,
+// ): Promise<UIStudent[]> {
+//   const supabase = await createClient();
+//   let sectionIds: number[] = [];
+//   if (sectionFilterId) {
+//     sectionIds = [parseInt(sectionFilterId)];
+//   } else {
+//     const { data: eventSections } = await supabase
+//       .from("calendar_event_section")
+//       .select("collegeSectionId")
+//       .eq("calendarEventId", classId);
+//     sectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+//   }
+//   if (sectionIds.length === 0) return [];
+
+//   const { data: history } = await supabase
+//     .from("student_academic_history")
+//     .select("studentId")
+//     .in("collegeSectionsId", sectionIds)
+//     .eq("isCurrent", true);
+//   const ids = history?.map((h) => h.studentId) || [];
+//   if (ids.length === 0) return [];
+
+//   const { data: eventData } = await supabase
+//     .from("calendar_event")
+//     .select("subject")
+//     .eq("calendarEventId", classId)
+//     .single();
+//   const subjectId = eventData?.subject;
+//   const statsMap = new Map<number, { present: number; total: number }>();
+
+//   if (subjectId) {
+//     const { data: allRecords } = await supabase
+//       .from("attendance_record")
+//       .select(`studentId, status, event:calendar_event!inner(subject)`)
+//       .in("studentId", ids)
+//       .eq("event.subject", subjectId);
+//     allRecords?.forEach((r: any) => {
+//       if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
+//         const s = statsMap.get(r.studentId) || { present: 0, total: 0 };
+//         s.total++;
+//         if (r.status === "PRESENT") s.present++;
+//         statsMap.set(r.studentId, s);
+//       }
+//     });
+//   }
+
+//   const { data: students, error } = await supabase
+//     .from("students")
+//     .select(
+//       `studentId, user:users (fullName, gender), attendance_record (status, reason, calendarEventId)`,
+//     )
+//     .in("studentId", ids)
+//     .eq("attendance_record.calendarEventId", classId)
+//     .order("studentId");
+//   if (error) return [];
+
+//   return students!.map((s: any) => {
+//     const record = s.attendance_record?.[0];
+//     let status = "Not Marked";
+//     let reason = "";
+//     if (record) {
+//       switch (record.status) {
+//         case "PRESENT":
+//           status = "Present";
+//           break;
+//         case "ABSENT":
+//           status = "Absent";
+//           break;
+//         case "LEAVE":
+//           status = "Leave";
+//           break;
+//         case "LATE":
+//           status = "Late";
+//           break;
+//         case "CLASS_CANCEL":
+//         case "CANCELLED":
+//         case "CANCEL_CLASS":
+//           status = "Class Cancel";
+//           break;
+//         default:
+//           status = "Present";
+//       }
+//       reason = record.reason || "";
+//     }
+//     const stats = statsMap.get(s.studentId) || { present: 0, total: 0 };
+//     const pct =
+//       stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
+//     const userGender = s.user?.gender || "Male";
+//     return {
+//       id: String(s.studentId),
+//       name: s.user?.fullName || `Student ${s.studentId}`,
+//       roll: String(s.studentId),
+//       photo: userGender === "Female" ? "/student-f.png" : "/maleuser.png",
+//       percentage: `${pct}%`,
+//       attendance: status as any,
+//       reason: reason,
+//     };
+//   });
+// }
+
 export async function getStudentsForClass(
   classId: string,
   sectionFilterId?: string,
 ): Promise<UIStudent[]> {
   const supabase = await createClient();
-  let sectionIds: number[] = [];
+
+  const [eventIdStr, sectionNameFilter] = classId.split("-");
+  const eventId = parseInt(eventIdStr);
+
+  let targetSectionIds: number[] = [];
+
   if (sectionFilterId) {
-    sectionIds = [parseInt(sectionFilterId)];
+    targetSectionIds = [parseInt(sectionFilterId)];
+  } else if (sectionNameFilter) {
+    const { data: eventSections } = await supabase
+      .from("calendar_event_section")
+      .select("collegeSectionId, college_sections!inner(collegeSections)")
+      .eq("calendarEventId", eventId)
+      .eq("college_sections.collegeSections", sectionNameFilter);
+
+    targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
   } else {
     const { data: eventSections } = await supabase
       .from("calendar_event_section")
       .select("collegeSectionId")
-      .eq("calendarEventId", classId);
-    sectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
+      .eq("calendarEventId", eventId);
+    targetSectionIds = eventSections?.map((s) => s.collegeSectionId) || [];
   }
-  if (sectionIds.length === 0) return [];
+
+  if (targetSectionIds.length === 0) return [];
 
   const { data: history } = await supabase
     .from("student_academic_history")
     .select("studentId")
-    .in("collegeSectionsId", sectionIds)
+    .in("collegeSectionsId", targetSectionIds)
     .eq("isCurrent", true);
+
   const ids = history?.map((h) => h.studentId) || [];
   if (ids.length === 0) return [];
 
   const { data: eventData } = await supabase
     .from("calendar_event")
     .select("subject")
-    .eq("calendarEventId", classId)
+    .eq("calendarEventId", eventId)
     .single();
+
   const subjectId = eventData?.subject;
   const statsMap = new Map<number, { present: number; total: number }>();
 
@@ -139,11 +253,12 @@ export async function getStudentsForClass(
       .select(`studentId, status, event:calendar_event!inner(subject)`)
       .in("studentId", ids)
       .eq("event.subject", subjectId);
+
     allRecords?.forEach((r: any) => {
       if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
         const s = statsMap.get(r.studentId) || { present: 0, total: 0 };
         s.total++;
-        if (r.status === "PRESENT") s.present++;
+        if (r.status === "PRESENT" || r.status === "LATE") s.present++;
         statsMap.set(r.studentId, s);
       }
     });
@@ -155,8 +270,9 @@ export async function getStudentsForClass(
       `studentId, user:users (fullName, gender), attendance_record (status, reason, calendarEventId)`,
     )
     .in("studentId", ids)
-    .eq("attendance_record.calendarEventId", classId)
+    .eq("attendance_record.calendarEventId", eventId)
     .order("studentId");
+
   if (error) return [];
 
   return students!.map((s: any) => {
@@ -203,13 +319,50 @@ export async function getStudentsForClass(
   });
 }
 
+// export async function saveAttendance(classId: string, payload: any[]) {
+//   const supabase = await createClient();
+//   const { data } = await supabase
+//     .from("calendar_event")
+//     .select("date")
+//     .eq("calendarEventId", classId)
+//     .single();
+//   const dbRecords = payload
+//     .filter((p) => p.status !== "Not Marked")
+//     .map((p) => {
+//       let dbStatus = "PRESENT";
+//       if (p.status === "Absent") dbStatus = "ABSENT";
+//       else if (p.status === "Leave") dbStatus = "LEAVE";
+//       else if (p.status === "Late") dbStatus = "LATE";
+//       else if (p.status === "Class Cancel") dbStatus = "CLASS_CANCEL";
+//       return {
+//         studentId: parseInt(p.studentId),
+//         calendarEventId: parseInt(classId),
+//         status: dbStatus,
+//         reason: p.reason || null,
+//         markedAt: data?.date,
+//         facultyMark: p.facultyId,
+//         createdAt: new Date().toISOString(),
+//         updatedAt: new Date().toISOString(),
+//       };
+//     });
+//   const { error } = await supabase
+//     .from("attendance_record")
+//     .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
+//   if (error) return { success: false, error: error.message };
+//   return { success: true };
+// }
+
 export async function saveAttendance(classId: string, payload: any[]) {
   const supabase = await createClient();
+
+  const eventId = parseInt(classId.split("-")[0]);
+
   const { data } = await supabase
     .from("calendar_event")
     .select("date")
-    .eq("calendarEventId", classId)
+    .eq("calendarEventId", eventId)
     .single();
+
   const dbRecords = payload
     .filter((p) => p.status !== "Not Marked")
     .map((p) => {
@@ -218,9 +371,10 @@ export async function saveAttendance(classId: string, payload: any[]) {
       else if (p.status === "Leave") dbStatus = "LEAVE";
       else if (p.status === "Late") dbStatus = "LATE";
       else if (p.status === "Class Cancel") dbStatus = "CLASS_CANCEL";
+
       return {
         studentId: parseInt(p.studentId),
-        calendarEventId: parseInt(classId),
+        calendarEventId: eventId,
         status: dbStatus,
         reason: p.reason || null,
         markedAt: data?.date,
@@ -229,9 +383,11 @@ export async function saveAttendance(classId: string, payload: any[]) {
         updatedAt: new Date().toISOString(),
       };
     });
+
   const { error } = await supabase
     .from("attendance_record")
     .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
+
   if (error) return { success: false, error: error.message };
   return { success: true };
 }

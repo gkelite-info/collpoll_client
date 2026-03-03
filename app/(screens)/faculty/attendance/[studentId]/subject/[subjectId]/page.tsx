@@ -9,6 +9,7 @@ import StudentProfileCard from "../../../components/stuProfileCard";
 
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 export default function SubjectDetailPage() {
   const params = useParams();
@@ -73,7 +74,10 @@ export default function SubjectDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading Records...
+        <div className="flex items-center justify-center gap-5">
+          <Loader />
+          <p>Loading Records</p>
+        </div>
       </div>
     );
   }
