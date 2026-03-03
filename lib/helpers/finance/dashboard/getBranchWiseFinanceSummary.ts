@@ -19,7 +19,9 @@ type Branch = {
 };
 
 export default async function getBranchWiseFinanceSummary(
-  filters: BranchFinanceFilters
+  filters: BranchFinanceFilters,
+  page: number,
+  limit: number
 ) {
   const {
     collegeId,
@@ -27,17 +29,38 @@ export default async function getBranchWiseFinanceSummary(
     collegeAcademicYearId,
     collegeSessionId,
   } = filters;
-  const { data: branches } = await supabase
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  /* --------------------------------------------------
+     1️⃣ Fetch Branches (Paginated)
+  --------------------------------------------------- */
+
+  const {
+    data: branches,
+    count: totalCount,
+  } = await supabase
     .from("college_branch")
-    .select("collegeBranchId, collegeBranchCode")
+    .select("collegeBranchId, collegeBranchCode", {
+      count: "exact",
+    })
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
-    .is("deletedAt", null);
+    .is("deletedAt", null)
+    .range(from, to);
+
   if (!branches?.length) {
-    return [];
+    return {
+      data: [],
+      totalCount: 0,
+    };
   }
 
+  /* --------------------------------------------------
+     2️⃣ Fetch Obligations (Same logic untouched)
+  --------------------------------------------------- */
 
   let obligationQuery = supabase
     .from("student_fee_obligation")
@@ -64,12 +87,14 @@ export default async function getBranchWiseFinanceSummary(
 
   const { data: obligations } = await obligationQuery;
 
-  console.log("💰 OBLIGATIONS:", obligations);
-
   const obligationIds =
     (obligations as Obligation[])?.map(
       (o) => o.studentFeeObligationId
     ) || [];
+
+  /* --------------------------------------------------
+     3️⃣ Transactions (unchanged)
+  --------------------------------------------------- */
 
   const { data: transactions } = await supabase
     .from("student_payment_transaction")
@@ -78,12 +103,18 @@ export default async function getBranchWiseFinanceSummary(
     )
     .in("studentFeeObligationId", obligationIds)
     .eq("paymentStatus", "success");
+
   const transactionIds =
     transactions?.map(
       (t) => t.studentPaymentTransactionId
     ) || [];
 
+  /* --------------------------------------------------
+     4️⃣ Ledger (unchanged)
+  --------------------------------------------------- */
+
   const ledgerMap = new Map<number, number>();
+
   if (transactionIds.length > 0) {
     const { data: ledgers } = await supabase
       .from("student_fee_ledger")
@@ -91,15 +122,21 @@ export default async function getBranchWiseFinanceSummary(
         "studentFeeObligationId, amount"
       )
       .in("studentPaymentTransactionId", transactionIds);
+
     ledgers?.forEach((l: any) => {
       const existing =
         ledgerMap.get(l.studentFeeObligationId) || 0;
+
       ledgerMap.set(
         l.studentFeeObligationId,
         existing + Number(l.amount)
       );
     });
   }
+
+  /* --------------------------------------------------
+     5️⃣ Aggregation (unchanged)
+  --------------------------------------------------- */
 
   const branchMap = new Map<
     number,
@@ -126,6 +163,11 @@ export default async function getBranchWiseFinanceSummary(
       branchEntry.collected += collected;
     }
   );
+
+  /* --------------------------------------------------
+     6️⃣ Final Result
+  --------------------------------------------------- */
+
   const result = (branches as Branch[]).map(
     (branch) => {
       const data = branchMap.get(
@@ -140,11 +182,11 @@ export default async function getBranchWiseFinanceSummary(
         expected === 0
           ? 0
           : Number(
-              (
-                (collected / expected) *
-                100
-              ).toFixed(2)
-            );
+            (
+              (collected / expected) *
+              100
+            ).toFixed(2)
+          );
 
       return {
         branchId: branch.collegeBranchId,
@@ -156,5 +198,30 @@ export default async function getBranchWiseFinanceSummary(
       };
     }
   );
-  return result;
+
+  let totalExpected = 0;
+  let totalCollected = 0;
+
+  branchMap.forEach((value) => {
+    totalExpected += value.expected;
+    totalCollected += value.collected;
+  });
+
+  const totalPending = totalExpected - totalCollected;
+
+  const overallPercentage =
+    totalExpected === 0
+      ? 0
+      : Number(((totalCollected / totalExpected) * 100).toFixed(2));
+
+  return {
+    data: result, // paginated branches
+    totalCount: totalCount ?? 0,
+    summary: {
+      totalExpected,
+      totalCollected,
+      totalPending,
+      overallPercentage,
+    },
+  };
 }

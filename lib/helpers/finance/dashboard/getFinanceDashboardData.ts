@@ -11,7 +11,9 @@ type FinanceDashboardFilters = {
 export type PaymentStatus = "Pending" | "Paid" | "Partial";
 
 export async function getFinanceDashboardData(
-    filters: FinanceDashboardFilters
+    filters: FinanceDashboardFilters,
+    page: number,
+    limit: number
 ) {
     console.log("🚀 getFinanceDashboardData called with:", filters);
 
@@ -26,9 +28,13 @@ export async function getFinanceDashboardData(
     /* =========================
        1️⃣ STUDENTS
     ========================= */
-    const { data: students, error: studentError } = await supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data: students, error: studentError, count } = await supabase
         .from("students")
-        .select(`
+        .select(
+            `
     studentId,
     user:users!students_userId_fkey (
       userId,
@@ -38,13 +44,16 @@ export async function getFinanceDashboardData(
       collegeBranchId,
       collegeBranchCode
     )
-  `)
+  `,
+            { count: "exact" }
+        )
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
         .eq("collegeBranchId", collegeBranchId)
         .eq("status", "Active")
         .eq("isActive", true)
-        .is("deletedAt", null);
+        .is("deletedAt", null)
+        .range(from, to);
     // .eq(
     //   "student_academic_history.collegeAcademicYearId",
     //   collegeAcademicYearId
@@ -255,6 +264,7 @@ export async function getFinanceDashboardData(
 
     return {
         tableData,
+         totalCount: count ?? 0,
         summary: {
             totalStudents: tableData.length,
             expected,
@@ -268,23 +278,25 @@ export async function getFinanceDashboardData(
 }
 
 function emptyDashboard() {
-    console.log("📭 Returning Empty Dashboard");
-    return {
-        tableData: [],
-        summary: {
-            totalStudents: 0,
-            expected: 0,
-            collected: 0,
-            pending: 0,
-            paidStudents: 0,
-            pendingStudents: 0,
-        },
-        quickInsights: {
-            thisWeek: 0,
-            lastWeek: 0,
-            thisMonth: 0,
-            lastMonth: 0,
-            thisYear: 0,
-        },
-    };
+  console.log("📭 Returning Empty Dashboard");
+
+  return {
+    tableData: [],
+    totalCount: 0,  
+    summary: {
+      totalStudents: 0,
+      expected: 0,
+      collected: 0,
+      pending: 0,
+      paidStudents: 0,
+      pendingStudents: 0,
+    },
+    quickInsights: {
+      thisWeek: 0,
+      lastWeek: 0,
+      thisMonth: 0,
+      lastMonth: 0,
+      thisYear: 0,
+    },
+  };
 }
