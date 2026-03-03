@@ -221,7 +221,6 @@ export async function getAdminSubjectDetails(
   }
 }
 
-// ... (Keep updateUnitProgress logic same as before) ...
 export async function updateUnitProgress(
   unitId: number,
   updates: { topicId: number; isCompleted: boolean }[],
@@ -234,7 +233,6 @@ export async function updateUnitProgress(
       .from("college_subject_unit_topics")
       .update({
         isCompleted: u.isCompleted,
-        isAdmin: adminId,
         updatedAt: now,
       })
       .eq("collegeSubjectUnitTopicId", u.topicId),
@@ -258,6 +256,7 @@ export async function updateUnitProgress(
     .from("college_subject_units")
     .update({
       completionPercentage: newPercentage,
+      isAdmin: adminId,
       updatedAt: now,
     })
     .eq("collegeSubjectUnitId", unitId);

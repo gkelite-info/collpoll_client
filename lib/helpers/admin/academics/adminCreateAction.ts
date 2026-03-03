@@ -2,9 +2,6 @@
 
 import { supabase } from "@/lib/supabaseClient";
 
-/* -------------------------------
- * HELPER: Date Formatters
- * ------------------------------- */
 function toISODate(date?: string) {
   if (!date) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
@@ -18,9 +15,6 @@ function isValidDateRange(start?: string | null, end?: string | null) {
   return new Date(start).getTime() <= new Date(end).getTime();
 }
 
-/* -------------------------------
- * HELPER: Fetch Faculty List
- * ------------------------------- */
 export async function getFacultyByBranch(collegeId: number, branchId: number) {
   const { data, error } = await supabase
     .from("faculty")
@@ -37,14 +31,11 @@ export async function getFacultyByBranch(collegeId: number, branchId: number) {
   return data;
 }
 
-/* -------------------------------
- * ACTION 1: Upsert Unit & Topics
- * ------------------------------- */
 type UpsertUnitPayload = {
   collegeId: number;
   collegeSubjectId: number;
   adminId: number;
-  facultyId: number; // 👈 NEW: Passed from UI
+  facultyId: number;
   unitNumber: number;
   unitTitle: string;
   startDate?: string;
@@ -57,7 +48,7 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
     collegeId,
     collegeSubjectId,
     adminId,
-    facultyId, // 👈 Use this
+    facultyId,
     unitNumber,
     unitTitle,
     startDate,
@@ -74,7 +65,6 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
 
   const now = new Date().toISOString();
 
-  // 1️⃣ UPSERT UNIT
   const { data: unit, error: unitError } = await supabase
     .from("college_subject_units")
     .upsert(
@@ -85,7 +75,8 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
         unitTitle,
         startDate: startISO,
         endDate: endISO,
-        createdBy: facultyId, // ✅ Legit Faculty ID
+        createdBy: facultyId,
+        isAdmin: adminId,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -105,7 +96,6 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
 
   const collegeSubjectUnitId = unit.collegeSubjectUnitId;
 
-  // 2️⃣ UPSERT TOPICS
   if (topics.length > 0) {
     const topicRows = topics.map((topic, index) => ({
       topicTitle: topic,
@@ -113,8 +103,8 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
       collegeSubjectUnitId,
       collegeSubjectId,
       collegeId,
-      createdBy: facultyId, // ✅ Legit Faculty ID
-      isAdmin: adminId, // ✅ Audit Trail
+      createdBy: facultyId,
+      // isAdmin: adminId,
       isActive: true,
       createdAt: now,
       updatedAt: now,
@@ -126,18 +116,12 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
         onConflict: "collegeSubjectUnitId,topicTitle",
       });
 
-    if (topicError) {
-      console.error("❌ Topic upsert failed:", topicError);
-      throw topicError;
-    }
+    if (topicError) throw topicError;
   }
 
   return { success: true, collegeSubjectUnitId };
 }
 
-/* -------------------------------
- * ACTION 2: Save Academic Record
- * ------------------------------- */
 export async function saveAdminAcademicUnit(params: {
   collegeId: number;
   collegeEducationId: number;

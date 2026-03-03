@@ -3,7 +3,7 @@
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
-import { CheckCircle, UserCircle } from "@phosphor-icons/react";
+import { CheckCircle, UserCircle, Spinner } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
@@ -18,6 +18,7 @@ type AddNewCardModalProps = {
   onClose: () => void;
   onSave?: () => void;
   prefilledContext?: SubjectContext;
+  existingUnitNumbers?: number[];
 };
 
 export default function AddNewClassModal({
@@ -25,10 +26,11 @@ export default function AddNewClassModal({
   onClose,
   onSave,
   prefilledContext,
+  existingUnitNumbers = [],
 }: AddNewCardModalProps) {
   // State for form
   const [unitName, setUnitName] = useState("");
-  const [unitNumber, setUnitNumber] = useState(1);
+  const [unitNumber, setUnitNumber] = useState<number | "">("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -38,10 +40,30 @@ export default function AddNewClassModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [adminId, setAdminId] = useState<number | null>(null);
   const { userId, collegeId, loading } = useUser();
+
+  const resetForm = () => {
+    setUnitName("");
+    setUnitNumber("");
+    setStartDate("");
+    setEndDate("");
+    setAvailableTopics([]);
+    setSelectedTopics([]);
+    setSearchQuery("");
+    setSelectAll(false);
+    setShowSearch(false);
+    setIsAiLoading(false);
+    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
 
   // Load Admin Context
   useEffect(() => {
@@ -62,12 +84,33 @@ export default function AddNewClassModal({
       return;
     }
 
+    if (existingUnitNumbers.includes(Number(unitNumber))) {
+      toast.error(`Unit No. ${unitNumber} already exists for this subject!`);
+      return;
+    }
+
     if (!unitName.trim()) {
-      toast.error("Please enter unit name");
+      toast.error("Please enter a Unit Name.");
+      return;
+    }
+    if (!unitNumber || unitNumber < 1) {
+      toast.error("Please enter a valid Unit Number.");
+      return;
+    }
+    if (!startDate) {
+      toast.error("Please select a Start Date.");
+      return;
+    }
+    if (!endDate) {
+      toast.error("Please select an End Date.");
+      return;
+    }
+    if (new Date(startDate) > new Date(endDate)) {
+      toast.error("Start Date cannot be after the End Date.");
       return;
     }
     if (selectedTopics.length === 0) {
-      toast.error("Please add topics");
+      toast.error("Please add at least one topic.");
       return;
     }
 
@@ -77,10 +120,10 @@ export default function AddNewClassModal({
         collegeSubjectId: prefilledContext.subjectId,
         adminId: adminId,
         facultyId: prefilledContext.facultyId,
-        unitNumber: unitNumber,
+        unitNumber: Number(unitNumber),
         unitTitle: unitName,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
+        startDate: startDate,
+        endDate: endDate,
         topics: selectedTopics,
       });
 
@@ -99,20 +142,27 @@ export default function AddNewClassModal({
 
       toast.success("Class saved successfully");
       if (onSave) onSave();
-      onClose();
+      handleClose();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Save failed");
     }
   };
 
-  // --- AI HANDLER ---
   const handleUnitNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.replace(/\b\w/g, (char) => char.toUpperCase());
     setUnitName(val);
 
-    if (!val || !prefilledContext?.subjectName) return;
     if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+
+    if (!val || !prefilledContext?.subjectName) {
+      setAvailableTopics([]);
+      setIsAiLoading(false);
+      return;
+    }
+
+    setAvailableTopics([]);
+    setIsAiLoading(true);
 
     aiTimeoutRef.current = setTimeout(async () => {
       try {
@@ -123,9 +173,16 @@ export default function AddNewClassModal({
         setAvailableTopics(suggestions);
       } catch (e) {
         console.error(e);
+        toast.error("Failed to generate AI suggestions.");
+      } finally {
+        setIsAiLoading(false);
       }
-    }, 1500);
+    }, 2000);
   };
+
+  const isUnitNumberDuplicate = existingUnitNumbers.includes(
+    Number(unitNumber),
+  );
 
   return (
     <div className="fixed inset-0 text-black z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -170,121 +227,151 @@ export default function AddNewClassModal({
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <div className="col-span-2">
               <label className="text-sm font-semibold text-[#282828]">
-                Unit Name
+                Unit Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={unitName}
                 onChange={handleUnitNameChange}
-                placeholder="e.g. Introduction to Graphs"
+                placeholder="e.g. Introduction To Graphs"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#43C17A] outline-none"
               />
 
-              {/* AI Topics UI */}
-              {(availableTopics.length > 0 || selectedTopics.length > 0) && (
-                <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 relative z-10">
-                  {/* Header */}
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold text-[#15803d]">
-                      AI Suggestions
-                    </span>
-                    <div className="flex gap-2">
-                      <label className="text-xs flex items-center gap-1 cursor-pointer select-none text-[#15803d]">
-                        <input
-                          type="checkbox"
-                          checked={selectAll}
-                          onChange={(e) => {
-                            setSelectAll(e.target.checked);
-                            if (e.target.checked) {
-                              setSelectedTopics((p) => [
-                                ...new Set([...p, ...availableTopics]),
-                              ]);
-                              setAvailableTopics([]);
-                            }
-                          }}
-                          className="accent-[#15803d]"
-                        />
-                        Select All
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Selected Chips */}
-                  {selectedTopics.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {selectedTopics.map((t) => (
-                        <span
-                          key={t}
-                          onClick={() => {
-                            setSelectedTopics((p) => p.filter((x) => x !== t));
-                            setAvailableTopics((p) => [...p, t]);
-                            setSelectAll(false);
-                          }}
-                          className="bg-white border border-green-200 text-green-800 text-[11px] px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
-                        >
-                          <CheckCircle weight="fill" /> {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Available Chips */}
-                  <div className="flex flex-wrap gap-2">
-                    {availableTopics
-                      .filter((t) =>
-                        t.toLowerCase().includes(searchQuery.toLowerCase()),
-                      )
-                      .map((t) => (
-                        <span
-                          key={t}
-                          onClick={() => {
-                            setSelectedTopics((p) => [...p, t]);
-                            setAvailableTopics((p) => p.filter((x) => x !== t));
-                            setSelectAll(false);
-                          }}
-                          className="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full cursor-pointer border border-transparent hover:border-green-300"
-                        >
-                          + {t}
-                        </span>
-                      ))}
-                  </div>
+              {isAiLoading && (
+                <div className="mt-3 flex items-center gap-2 text-xs font-medium text-[#43C17A] bg-[#F0FDF4] p-3 rounded-lg border border-[#BBF7D0]">
+                  <Spinner size={16} className="animate-spin" />
+                  Generating AI suggestions for "{unitName}"...
                 </div>
               )}
+
+              {!isAiLoading &&
+                (availableTopics.length > 0 || selectedTopics.length > 0) && (
+                  <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 relative z-10">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-bold text-[#15803d]">
+                        AI Suggestions
+                      </span>
+                      {availableTopics.length > 0 && (
+                        <div className="flex gap-2">
+                          <label className="text-xs flex items-center gap-1 cursor-pointer select-none text-[#15803d]">
+                            <input
+                              type="checkbox"
+                              checked={selectAll}
+                              onChange={(e) => {
+                                setSelectAll(e.target.checked);
+                                if (e.target.checked) {
+                                  setSelectedTopics((p) => [
+                                    ...new Set([...p, ...availableTopics]),
+                                  ]);
+                                  setAvailableTopics([]);
+                                }
+                              }}
+                              className="accent-[#15803d]"
+                            />
+                            Select All
+                          </label>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedTopics.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {selectedTopics.map((t) => (
+                          <span
+                            key={t}
+                            onClick={() => {
+                              setSelectedTopics((p) =>
+                                p.filter((x) => x !== t),
+                              );
+                              setAvailableTopics((p) => [...p, t]);
+                              setSelectAll(false);
+                            }}
+                            className="bg-white border border-green-200 text-green-800 text-[11px] px-2 py-1 rounded-full cursor-pointer flex items-center gap-1 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                          >
+                            <CheckCircle weight="fill" /> {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      {availableTopics
+                        .filter((t) =>
+                          t.toLowerCase().includes(searchQuery.toLowerCase()),
+                        )
+                        .map((t) => (
+                          <span
+                            key={t}
+                            onClick={() => {
+                              setSelectedTopics((p) => [...p, t]);
+                              setAvailableTopics((p) =>
+                                p.filter((x) => x !== t),
+                              );
+                              setSelectAll(false);
+                            }}
+                            className="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full cursor-pointer border border-transparent hover:border-green-300 transition-colors"
+                          >
+                            + {t}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
             </div>
-            {/* Unit No & Dates */}
+
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Unit No.
+                Unit No. <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
                 min={1}
                 value={unitNumber}
-                onChange={(e) => setUnitNumber(Number(e.target.value))}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#43C17A]"
+                onChange={(e) =>
+                  setUnitNumber(
+                    e.target.value === "" ? "" : Number(e.target.value),
+                  )
+                }
+                className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 ${
+                  isUnitNumberDuplicate
+                    ? "border-red-500 focus:ring-red-500 bg-red-50"
+                    : "border-gray-300 focus:ring-[#43C17A]"
+                }`}
               />
+              {isUnitNumberDuplicate && (
+                <span className="text-[11px] font-medium text-red-500 mt-1 block">
+                  Unit {unitNumber} already exists!
+                </span>
+              )}
             </div>
             <div></div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                Start Date
+                Start Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  setStartDate(e.target.value);
+                  if (endDate && new Date(e.target.value) > new Date(endDate)) {
+                    setEndDate("");
+                  }
+                }}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#43C17A]"
               />
             </div>
             <div>
               <label className="text-sm font-semibold text-[#282828]">
-                End Date
+                End Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
+                min={startDate}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#43C17A]"
+                disabled={!startDate}
+                className={`w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#43C17A] ${!startDate ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
               />
             </div>
           </div>
@@ -292,13 +379,18 @@ export default function AddNewClassModal({
           <div className="flex gap-4 mt-6">
             <button
               onClick={handleSave}
-              className="flex-1 bg-[#43C17A] text-white font-semibold py-2 rounded-xl hover:bg-[#3bad6d]"
+              disabled={isUnitNumberDuplicate}
+              className={`flex-1 text-white cursor-pointer font-semibold py-2 rounded-xl transition-all ${
+                isUnitNumberDuplicate
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-[#43C17A] hover:bg-[#3bad6d]"
+              }`}
             >
               Save Unit
             </button>
             <button
-              onClick={onClose}
-              className="flex-1 border border-gray-300 py-2 rounded-xl text-[#282828] hover:bg-gray-50"
+              onClick={handleClose}
+              className="flex-1 border cursor-pointer border-gray-300 py-2 rounded-xl text-[#282828] hover:bg-gray-50"
             >
               Cancel
             </button>

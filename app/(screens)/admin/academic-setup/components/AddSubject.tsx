@@ -314,14 +314,23 @@ export default function AddSubject({
             <input
               type="number"
               name="credits"
-              onChange={handleChange}
+              step="0.01"
+              min="0"
+              max="10"
               value={form.credits === 0 ? "" : form.credits}
               onFocus={(e) => e.target.select()}
-              placeholder="e.g. 4"
-              step={1}
+              placeholder="e.g. 4.0"
+              onChange={(e) => {
+                const value = e.target.value;
+
+                if (/^\d*\.?\d{0,2}$/.test(value) && Number(value) <= 10) {
+                  handleChange(e);
+                }
+              }}
               onKeyDown={(e) => {
-                if (["e", "E", "+", "-", "."].includes(e.key))
+                if (["e", "E", "+", "-"].includes(e.key)) {
                   e.preventDefault();
+                }
               }}
               onWheel={(e) => e.currentTarget.blur()}
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"

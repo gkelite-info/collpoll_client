@@ -26,7 +26,6 @@ export async function getOverallStudentsOverview(
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-
     /* --------------------------------------------------
        1️⃣ Fetch Students
     --------------------------------------------------- */
@@ -34,30 +33,29 @@ export async function getOverallStudentsOverview(
         .from("students")
         .select(
             `
-      studentId,
-      collegeEducationId,
-      college_branch:collegeBranchId (
-        collegeBranchId,
-        collegeBranchCode
+    studentId,
+    collegeEducationId,
+    college_branch:collegeBranchId (
+      collegeBranchId,
+      collegeBranchCode
+    ),
+    users:userId!inner (
+      fullName
+    ),
+    student_academic_history!inner(
+      collegeAcademicYearId,
+      collegeSemesterId,
+      isCurrent,
+      college_academic_year (
+        collegeAcademicYear
       ),
-      users:userId (
-        fullName
-      ),
-      student_academic_history!inner(
-        collegeAcademicYearId,
-        collegeSemesterId,
-        isCurrent,
-        college_academic_year (
-          collegeAcademicYear
-        ),
-        college_semester (
-          collegeSemester
-        )
+      college_semester (
+        collegeSemester
       )
-    `,
-            { count: "exact" } // ✅ moved here
+    )
+  `,
+            { count: "exact" }
         )
-
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
         .eq("status", "Active")
@@ -65,6 +63,7 @@ export async function getOverallStudentsOverview(
         .is("deletedAt", null)
         .eq("student_academic_history.isCurrent", true);
 
+    /* Optional Filters */
     if (collegeBranchId) {
         query = query.eq("collegeBranchId", collegeBranchId);
     }
@@ -84,34 +83,38 @@ export async function getOverallStudentsOverview(
     }
 
     /* -----------------------------
-   🔍 SEARCH LOGIC
------------------------------- */
+       🔍 SEARCH LOGIC (FINAL SAFE VERSION)
+    ------------------------------ */
     if (search && search.trim() !== "") {
-        const searchValue = search.trim();
-        const isNumber = !isNaN(Number(searchValue));
-
-        let searchQuery = `users.fullName.ilike.%${searchValue}%`;
+        const trimmed = search.trim();
+        const isNumber = !isNaN(Number(trimmed));
 
         if (isNumber) {
-            searchQuery += `,studentId.eq.${Number(searchValue)}`;
+            // Search only by studentId
+            query = query.eq("studentId", Number(trimmed));
+        } else {
+            // Search only by fullName
+            query = query.ilike("users.fullName", `%${trimmed}%`);
         }
-
-        query = query.or(searchQuery);
     }
 
+    /* Execute Query */
     const { data: students, error, count } = await query.range(from, to);
 
+    if (error) {
+        console.error("SUPABASE ERROR:", error);
+        throw error;
+    }
 
-    if (error) throw error;
     if (!students || students.length === 0) {
         return {
             students: [],
+            totalCount: 0,
             counts: { total: 0, paid: 0, pending: 0, partial: 0 },
         };
     }
 
-    const studentIds = students.map((s) => s.studentId);
-
+    const studentIds = students.map((s: any) => s.studentId);
     /* --------------------------------------------------
        2️⃣ Fetch Obligations
     --------------------------------------------------- */
