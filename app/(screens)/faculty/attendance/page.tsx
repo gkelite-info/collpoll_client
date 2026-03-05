@@ -40,7 +40,7 @@ function AttendanceContent() {
 
   // Data
   const [classData, setClassData] = useState<UpcomingLesson | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -90,13 +90,13 @@ function AttendanceContent() {
 
   useEffect(() => {
     if (urlClassId) {
+      setSelectedClassId(urlClassId);
       loadStudents(urlClassId);
       setIsEditing(true);
     } else {
       if (contextLoading || !facultyId) return;
       async function initFilters() {
         try {
-          // Load TODAY's classes
           const classes = await getFacultyClasses(facultyId!);
           setClassOptions(classes);
           if (classes.length > 0) {
@@ -152,7 +152,10 @@ function AttendanceContent() {
       const result = await saveAttendance(activeClassId, payload);
       if (!result.success) throw new Error(result.error);
       toast.success("Saved!");
-      setIsEditing(false); // Lock after save
+      setIsEditing(false);
+
+      await loadStudents(activeClassId, selectedSectionId);
+
       if (urlClassId) setTimeout(() => router.push("/faculty"), 2000);
     } catch (error: any) {
       toast.error(error.message);
@@ -212,7 +215,9 @@ function AttendanceContent() {
     },
   ];
 
-  if (loading && !studentsList.length) return <AttendanceSkeleton />;
+  if ((loading || contextLoading) && !studentsList.length) {
+    return <AttendanceSkeleton />;
+  }
 
   return (
     <main className="px-4 py-4 min-h-screen">
@@ -326,7 +331,6 @@ function AttendanceContent() {
           selectedSection={selectedSectionId}
           onFilterChange={urlClassId ? undefined : handleFilterChange}
           loadingFilters={loading}
-          // EDIT MODE
           isEditing={isEditing}
           onEditClick={() => setIsEditing(true)}
         />

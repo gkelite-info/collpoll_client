@@ -90,6 +90,12 @@ export default function FinanceNavbar() {
       return;
     }
 
+    // ✅ ADD THIS BLOCK
+    if (pathname.startsWith("/finance") && pathname !== "/finance") {
+      setActive("Home");
+      return;
+    }
+
     const current = items.find((item) => item.path === pathname);
     if (current) {
       setActive(current.label);
@@ -138,4 +144,4 @@ export default function FinanceNavbar() {
       </div>
     </div>
   );
-}
+} 

@@ -7,6 +7,7 @@ import {
   MagnifyingGlass,
   CaretDown,
   CaretLeftIcon,
+  CaretRight,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -53,13 +54,18 @@ function FeeCollectionDetailsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "partial">("all");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
 
   const year = searchParams.get("year") || "1st Year";
   const columns = [
     { title: "Student Name", key: "name" },
     { title: "Student ID", key: "id" },
-    { title: "Department", key: "dept" },
+    { title: "Branch", key: "dept" },
     { title: "Total Fee (₹)", key: "total" },
     { title: "Paid Amount (₹)", key: "paid" },
     { title: "Balance (₹)", key: "balance" },
@@ -116,19 +122,31 @@ function FeeCollectionDetailsPage() {
 
       setLoading(true);
 
-      const data = await getYearFinanceStudentList({
-        collegeId,
-        collegeEducationId,
-        collegeBranchId: Number(branchId),
-        collegeAcademicYearId: Number(academicYearId),
-      });
+      try {
+        const res = await getYearFinanceStudentList(
+          {
+            collegeId,
+            collegeEducationId,
+            collegeBranchId: Number(branchId),
+            collegeAcademicYearId: Number(academicYearId),
+          },
+          currentPage,
+          rowsPerPage
+        );
 
-      setStudents(data || []);
-      setLoading(false);
+        setStudents(Array.isArray(res?.students) ? res.students : []);
+        setTotalRecords(typeof res?.totalCount === "number" ? res.totalCount : 0);
+      } catch (err) {
+        console.error("Failed to load students:", err);
+        setStudents([]);
+        setTotalRecords(0);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchStudents();
-  }, [collegeId, collegeEducationId, branchId, academicYearId]);
+  }, [collegeId, collegeEducationId, branchId, academicYearId, currentPage]);
 
   return (
     <div className="p-2 bg-[#F3F4F6] min-h-screen">
@@ -141,7 +159,7 @@ function FeeCollectionDetailsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
         <CardComponent
           icon={<UsersThreeIcon size={22} weight="fill" />}
-          value={students.length.toString()}
+          value={totalRecords.toString()}
           label="Total Students"
           iconBgColor="#FFFFFF"
           iconColor="#6D28D9"
@@ -186,7 +204,9 @@ function FeeCollectionDetailsPage() {
         <div className="flex items-center gap-6 text-sm text-[#374151]">
           <FilterPill title="Branch" value={branchTypeClean} />
           <FilterPill title="Year" value={yearShort} />
-          <div className="relative">
+          <div className="flex items-center gap-2 relative">
+            <span className="font-medium text-[#374151]">Status</span>
+
             <div
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
               className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#43C17A26] text-[#43C17A] font-medium cursor-pointer"
@@ -215,11 +235,62 @@ function FeeCollectionDetailsPage() {
           </div>
         </div>
       </div>
-      <TableComponent
-        columns={columns}
-        tableData={tableData}
-        height="60vh"
-      />
+      {loading ? (
+        <div className="flex justify-center items-center h-[200px]">
+          <Loader />
+        </div>
+      ) : (
+        <TableComponent
+          columns={columns}
+          tableData={tableData}
+          height="60vh"
+        />
+      )}
+      {totalPages > 1 && (
+        <div className="flex justify-end items-center gap-3 mt-8 mb-4">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className={`w-10 h-10 flex items-center justify-center rounded-lg border
+        ${currentPage === 1
+                ? "border-gray-200 text-gray-300"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
+          >
+            <CaretLeftIcon size={18} weight="bold" />
+          </button>
+
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentPage(i + 1)}
+              className={`w-10 h-10 rounded-lg font-semibold
+          ${currentPage === i + 1
+                  ? "bg-[#16284F] text-white"
+                  : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          <button
+            onClick={() =>
+              setCurrentPage((p) =>
+                Math.min(totalPages, p + 1)
+              )
+            }
+            disabled={currentPage === totalPages}
+            className={`w-10 h-10 flex items-center justify-center rounded-lg border
+        ${currentPage === totalPages
+                ? "border-gray-200 text-gray-300"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
+          >
+            <CaretRight size={18} weight="bold" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

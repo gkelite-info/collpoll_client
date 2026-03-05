@@ -37,11 +37,13 @@ export default function ClientLayout({
     if (pathname.startsWith("/admin")) return <AdminNavbar />;
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;
+    if (pathname === "/placement" || pathname.startsWith("/placement/")) {
+      return <PlacementNavbar />;
+    }
     if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
     if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
     if (pathname.startsWith('/college-admin')) return <CollegeAdminNavbar />
-    if (pathname.startsWith('/placement')) return <PlacementNavbar />
     return <StudentNavbar />
   };
 

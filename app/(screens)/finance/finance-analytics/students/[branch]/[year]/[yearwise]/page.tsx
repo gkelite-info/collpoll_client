@@ -130,13 +130,12 @@ export default function YearWiseFeeCollection() {
         status: (
           <div className="flex items-center gap-2 justify-center">
             <span
-              className={`h-3 w-3 rounded-full ${
-                status === "paid"
+              className={`h-3 w-3 rounded-full ${status === "paid"
                   ? "bg-green-600"
                   : status === "pending"
                     ? "bg-red-600"
                     : "bg-yellow-500"
-              }`}
+                }`}
             />
             <span
               className={
