@@ -44,55 +44,61 @@ export default function AssignmentCard({
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-3">
       {cardProp.map((item, index) => (
         <div
           key={index}
-          className="bg-white relative w-full h-[170px] rounded-xl flex items-center p-3 gap-3 mb-3"
+          className="bg-white w-full rounded-xl flex p-4 gap-4 shadow-sm"
         >
-          <div className="h-[139px] w-[145px] rounded-lg overflow-hidden">
-            <img src={item.image} className="h-full w-full object-cover" />
+          <div className="h-[140px] w-[150px] rounded-lg overflow-hidden shrink-0">
+            <img
+              src={item.image}
+              className="h-full w-full object-cover"
+              alt={item.title}
+            />
           </div>
 
-          <div className="h-[139px] w-[520px] flex flex-col justify-between">
-            <div className="w-full h-[75%] flex">
-              <div className="w-[60%] flex flex-col pt-1 gap-1">
+          <div className="flex flex-1 flex-col justify-between">
+            <div className="flex justify-between">
+              <div className="flex flex-col gap-1 max-w-[65%]">
                 <h5 className="text-[#111827] font-semibold text-lg">
                   {item.title}
                 </h5>
-                <p className="text-[#111827] text-sm">{item.description}</p>
 
-                <div className="flex items-center gap-2 mt-auto pb-2">
+                <p className="text-[#111827] text-sm line-clamp-2">
+                  {item.description}
+                </p>
+
+                <div className="flex items-center gap-2 mt-2">
                   <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
-                    <CalendarDots className="text-md text-[#57C788]" />
+                    <CalendarDots className="text-[#57C788]" />
                   </div>
+
                   <p className="text-[#474747] text-sm">
                     {formatDate(item.fromDate)} - {formatDate(item.toDate)}
                   </p>
                 </div>
               </div>
 
-              <div className="w-[40%] flex flex-col justify-between">
-                <div className="flex items-center justify-center gap-5">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
-                      onClick={() => onEdit(item)}
-                    >
-                      <TfiPencil className="text-md text-[#57C788]" />
-                    </div>
-
-                    {activeView === "active" && (
-                      <div
-                        className="rounded-full bg-[#F6E3E3] p-1.5 flex items-center justify-center cursor-pointer"
-                        onClick={() => {
-                          setDeleteId(item.assignmentId ?? null);
-                        }}
-                      >
-                        <Trash className="text-md text-[#C14343]" />
-                      </div>
-                    )}
+              {/* Top-right actions */}
+              <div className="flex flex-col items-end pt-1 pr-1">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="rounded-full bg-[#E2F3E9] p-2 cursor-pointer"
+                    onClick={() => onEdit(item)}
+                  >
+                    <TfiPencil className="text-[#57C788]" />
                   </div>
+
+                  {activeView === "active" && (
+                    <div
+                      className="rounded-full bg-[#F6E3E3] p-2 cursor-pointer"
+                      onClick={() => setDeleteId(item.assignmentId ?? null)}
+                    >
+                      <Trash className="text-[#C14343]" />
+                    </div>
+                  )}
+
                   <h4
                     className="text-[#43C17A] text-sm cursor-pointer underline"
                     onClick={() =>
@@ -105,25 +111,27 @@ export default function AssignmentCard({
               </div>
             </div>
 
-            <div className="flex items-center gap-5">
+            <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-2">
-                <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
-                  <Book className="text-md text-[#57C788]" />
+                <div className="rounded-full bg-[#E2F3E9] p-1.5">
+                  <Book className="text-[#57C788]" />
                 </div>
+
                 <p className="text-[#474747] text-sm">Total Submissions</p>
+
                 <span className="text-[#44C07A] text-sm font-semibold">
-                  {`${item.totalSubmissions} / ${item.totalSubmitted}`}
+                  {item.totalSubmissions} / {item.totalSubmitted}
                 </span>
               </div>
-            </div>
-          </div>
 
-          <div className="absolute left-133.5 top-26 flex items-center justify-center overflow-hidden rounded-sm">
-            <div className="bg-[#16284F] h-10 flex items-center text-white px-2 py-1 text-sm font-bold">
-              {item.marks === undefined || item.marks === null ? 0 : item.marks}
-            </div>
-            <div className="bg-[#E3E5EA] h-10 w-26 flex items-center justify-center text-[#16284F] py-1 text-xs font-semibold">
-              Total Marks
+              <div className="flex overflow-hidden rounded-md">
+                <div className="bg-[#16284F] text-white px-3 py-2 flex items-center text-sm font-bold">
+                  {item.marks ?? 0}
+                </div>
+                <div className="bg-[#E3E5EA] text-[#16284F] px-3 flex items-center text-xs font-semibold">
+                  Total Marks
+                </div>
+              </div>
             </div>
           </div>
         </div>
