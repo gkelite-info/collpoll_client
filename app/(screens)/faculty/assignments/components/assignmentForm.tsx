@@ -7,6 +7,7 @@ import { Assignment } from "./left";
 import { fetchFacultyContext } from "@/lib/helpers/faculty/assignment/fetchFacultyContext";
 import { upsertFacultyAssignment } from "@/lib/helpers/faculty/assignment/upsertFacultyAssignment";
 import FormSkeleton from "../shimmer/FormSkeleton";
+import { useRouter } from "next/navigation";
 
 type Props = {
   initialData?: Assignment | null;
@@ -30,9 +31,11 @@ export default function AssignmentForm({
   onSave,
   onCancel,
 }: Props) {
+  const router = useRouter();
   const [facultyId, setFacultyId] = useState<number | null>(null);
   const [facultySections, setFacultySections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [form, setForm] = useState({
     assignmentId: initialData?.assignmentId,
@@ -107,6 +110,15 @@ export default function AssignmentForm({
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [facultySections]);
 
+  useEffect(() => {
+    if (uniqueSubjects.length === 1 && !form.subjectId) {
+      setForm((prev) => ({
+        ...prev,
+        subjectId: String(uniqueSubjects[0].id),
+      }));
+    }
+  }, [uniqueSubjects, form.subjectId]);
+
   const availableBranches = useMemo(() => {
     if (!form.subjectId) return [];
     const map = new Map();
@@ -124,6 +136,18 @@ export default function AssignmentForm({
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [facultySections, form.subjectId]);
+
+  useEffect(() => {
+    if (
+      availableBranches.length === 1 &&
+      form.branchId !== String(availableBranches[0].id)
+    ) {
+      setForm((prev) => ({
+        ...prev,
+        branchId: String(availableBranches[0].id),
+      }));
+    }
+  }, [availableBranches, form.branchId]);
 
   const availableSections = useMemo(() => {
     if (!form.subjectId || !form.branchId) return [];
@@ -172,7 +196,26 @@ export default function AssignmentForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
     if (!facultyId) return toast.error("Faculty ID missing");
+
+    const fromDateObj = new Date(form.fromDate);
+    const toDateObj = new Date(form.toDate);
+    const todayObj = new Date(today);
+
+    if (fromDateObj < todayObj) {
+      return toast.error("Assigned date cannot be in the past.");
+    }
+    if (toDateObj < todayObj) {
+      return toast.error("Submission deadline cannot be in the past.");
+    }
+    if (fromDateObj > toDateObj) {
+      return toast.error(
+        "Assigned date must be before the submission deadline.",
+      );
+    }
+
+    setIsSaving(true);
 
     const payload = {
       assignmentId: form.assignmentId,
@@ -187,25 +230,36 @@ export default function AssignmentForm({
       marks: form.totalMarks,
     };
 
-    const res = await upsertFacultyAssignment(payload);
+    try {
+      const res = await upsertFacultyAssignment(payload);
 
-    if (res.success) {
-      toast.success(res.message || "Operation completed successfully.");
-      onSave({
-        ...initialData,
-        assignmentId: res.data ? res.data[0]?.assignmentId : undefined,
-        description: form.topicName,
-        title: form.topicName,
-        fromDate: form.fromDate,
-        toDate: form.toDate,
-        marks: form.totalMarks,
-      } as Assignment);
-    } else {
-      toast.error(res.error);
+      if (res.success) {
+        toast.success(res.message || "Operation completed successfully.");
+        onSave({
+          ...initialData,
+          assignmentId: res.data ? res.data[0]?.assignmentId : undefined,
+          description: form.topicName,
+          title: form.topicName,
+          fromDate: form.fromDate,
+          toDate: form.toDate,
+          marks: form.totalMarks,
+        } as Assignment);
+
+        router.push("/faculty/assignments");
+      } else {
+        toast.error(res.error);
+        setIsSaving(false);
+      }
+    } catch (error) {
+      toast.error("An unexpected error occurred.");
+      setIsSaving(false);
     }
   };
 
   if (isLoading) return <FormSkeleton />;
+
+  const singleSubjectDisplay =
+    uniqueSubjects.length === 1 ? uniqueSubjects[0].name : "";
 
   return (
     <div className="w-[68%] mx-1 max-w-3xl">
@@ -222,30 +276,35 @@ export default function AssignmentForm({
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Subject
             </label>
-            <select
-              value={form.subjectId}
-              required
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  subjectId: e.target.value,
-                  branchId: "",
-                  sectionId: "",
-                  yearId: "",
-                })
-              }
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="">Select Subject</option>
-              {uniqueSubjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            {uniqueSubjects.length === 1 ? (
+              <div className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                {singleSubjectDisplay}
+              </div>
+            ) : (
+              <select
+                value={form.subjectId}
+                required
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    subjectId: e.target.value,
+                    branchId: "",
+                    sectionId: "",
+                    yearId: "",
+                  })
+                }
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
+              >
+                <option value="">Select Subject</option>
+                {uniqueSubjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* Topic & Marks */}
           <div className="mb-4 flex gap-4">
             <div className="flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -258,7 +317,7 @@ export default function AssignmentForm({
                 onChange={(e) =>
                   setForm({ ...form, topicName: e.target.value })
                 }
-                className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
                 rows={3}
               />
             </div>
@@ -272,42 +331,53 @@ export default function AssignmentForm({
                 placeholder="e.g., 100"
                 maxLength={3}
                 required
+                onWheel={(e) => e.currentTarget.blur()}
+                onKeyDown={(e) => {
+                  if (["e", "E", "+", "-", "."].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, "").slice(0, 3);
                   setForm({ ...form, totalMarks: value });
                 }}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
             </div>
           </div>
 
-          {/* Branch, Section, Year */}
           <div className="flex gap-4">
             <div className="mb-4 flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Branch
               </label>
-              <select
-                value={form.branchId}
-                required
-                disabled={!form.subjectId}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    branchId: e.target.value,
-                    sectionId: "",
-                    yearId: "",
-                  })
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
-              >
-                <option value="">Select Branch</option>
-                {availableBranches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+              {availableBranches.length === 1 ? (
+                <div className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                  {availableBranches[0].name}
+                </div>
+              ) : (
+                <select
+                  value={form.branchId}
+                  required
+                  disabled={!form.subjectId}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      branchId: e.target.value,
+                      sectionId: "",
+                      yearId: "",
+                    })
+                  }
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
+                >
+                  <option value="">Select Branch</option>
+                  {availableBranches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className="mb-4 flex-1">
@@ -321,7 +391,7 @@ export default function AssignmentForm({
                 onChange={(e) =>
                   setForm({ ...form, sectionId: e.target.value, yearId: "" })
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
               >
                 <option value="">Select Section</option>
                 {availableSections.map((s) => (
@@ -341,7 +411,7 @@ export default function AssignmentForm({
                 required
                 disabled={!form.sectionId}
                 onChange={(e) => setForm({ ...form, yearId: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
               >
                 <option value="">Select Year</option>
                 {availableYears.map((y) => (
@@ -353,7 +423,6 @@ export default function AssignmentForm({
             </div>
           </div>
 
-          {/* Schedule */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="mb-1 block text-xs text-gray-500">
@@ -376,7 +445,7 @@ export default function AssignmentForm({
                         : prev.toDate,
                   }));
                 }}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
             </div>
 
@@ -390,7 +459,7 @@ export default function AssignmentForm({
                 min={form.fromDate || today}
                 value={form.toDate}
                 onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
             </div>
           </div>
@@ -398,14 +467,16 @@ export default function AssignmentForm({
           <div className="flex gap-3">
             <button
               type="submit"
-              className="flex-1 bg-[#43C17A] cursor-pointer text-white py-2 rounded-md hover:bg-green-600"
+              disabled={isSaving}
+              className="flex-1 bg-[#43C17A] cursor-pointer text-white py-2 rounded-md hover:bg-green-600 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Save
+              {isSaving ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 border cursor-pointer py-2 rounded-md hover:bg-gray-100"
+              disabled={isSaving}
+              className="flex-1 border cursor-pointer py-2 rounded-md hover:bg-gray-100 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
