@@ -74,6 +74,21 @@ function AttendanceContent() {
     toast("Marked as Cancelled. Click Save.", { icon: "⚠️" });
   };
 
+  // const loadStudents = async (cId: string, sId?: string) => {
+  //   setLoading(true);
+  //   try {
+  //     const students = await getStudentsForClass(cId, sId);
+  //     setStudentsList(students);
+  //     const cData = await getClassDetails(cId);
+  //     setClassData(cData);
+  //   } catch (e) {
+  //     console.error(e);
+  //     toast.error("Failed to load students");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const loadStudents = async (cId: string, sId?: string) => {
     setLoading(true);
     try {
@@ -129,7 +144,7 @@ function AttendanceContent() {
           console.error(e);
         } finally {
           setLoading(false);
-          setInitialized(true);
+          setInitialized(true); // ⭐ important
         }
       }
       initFilters();
@@ -339,9 +354,9 @@ function AttendanceContent() {
       </section>
 
       <section>
-        {classOptions.length === 0 ? (
+        {studentsList.length === 0 ? (
           <div className="flex justify-center items-center py-16 text-gray-500">
-            No Class Found Today
+            No students found
           </div>
         ) : (
           <StuAttendanceTable

@@ -97,6 +97,72 @@ export async function fetchExistingFinanceCalendarEvent(payload: {
   return { success: true, data };
 }
 
+// export async function saveFinanceCalendarEvent(
+//   payload: {
+//     financeCalendarId?: number;
+//     eventTitle: string;
+//     eventTopic: string;
+//     date: string;
+//     fromTime: string;
+//     toTime: string;
+//   },
+//   createdBy: number,
+// ) {
+//   const now = new Date().toISOString();
+
+//   if (payload.financeCalendarId) {
+//     const { data, error } = await supabase
+//       .from("finance_calendar")
+//       .update({
+//         eventTitle: payload.eventTitle.trim(),
+//         eventTopic: payload.eventTopic.trim(),
+//         date: payload.date,
+//         fromTime: payload.fromTime,
+//         toTime: payload.toTime,
+//         createdBy,
+//         updatedAt: now,
+//       })
+//       .eq("financeCalendarId", payload.financeCalendarId)
+//       .select("financeCalendarId")
+//       .single();
+
+//     if (error) {
+//       console.error("saveFinanceCalendarEvent update error:", error);
+//       return { success: false, error };
+//     }
+
+//     return {
+//       success: true,
+//       financeCalendarId: data.financeCalendarId,
+//     };
+//   } else {
+//     const { data, error } = await supabase
+//       .from("finance_calendar")
+//       .insert({
+//         eventTitle: payload.eventTitle.trim(),
+//         eventTopic: payload.eventTopic.trim(),
+//         date: payload.date,
+//         fromTime: payload.fromTime,
+//         toTime: payload.toTime,
+//         createdBy,
+//         createdAt: now,
+//         updatedAt: now,
+//       })
+//       .select("financeCalendarId")
+//       .single();
+
+//     if (error) {
+//       console.error("saveFinanceCalendarEvent insert error:", error);
+//       return { success: false, error };
+//     }
+
+//     return {
+//       success: true,
+//       financeCalendarId: data.financeCalendarId,
+//     };
+//   }
+// }
+
 export async function saveFinanceCalendarEvent(
   payload: {
     financeCalendarId?: number;
@@ -110,6 +176,53 @@ export async function saveFinanceCalendarEvent(
 ) {
   const now = new Date().toISOString();
 
+  // 1. Check if an event already exists at this exact slot for THIS user
+  const { data: existingEvent } = await supabase
+    .from("finance_calendar")
+    .select("financeCalendarId, isActive, deletedAt")
+    .eq("date", payload.date)
+    .eq("fromTime", payload.fromTime)
+    .eq("toTime", payload.toTime)
+    .eq("createdBy", createdBy)
+    .single();
+
+  if (existingEvent) {
+    // If it's active and NOT the exact one we are currently editing -> Block it
+    if (
+      existingEvent.isActive &&
+      existingEvent.financeCalendarId !== payload.financeCalendarId
+    ) {
+      return {
+        success: false,
+        error: {
+          message:
+            "You already have an event scheduled for this exact date and time.",
+        },
+      };
+    }
+
+    // If it is soft-deleted, RESURRECT IT instead of inserting a new one to bypass the unique constraint
+    const { data, error } = await supabase
+      .from("finance_calendar")
+      .update({
+        eventTitle: payload.eventTitle.trim(),
+        eventTopic: payload.eventTopic.trim(),
+        isActive: true,
+        deletedAt: null, // Clear the delete flag
+        updatedAt: now,
+      })
+      .eq("financeCalendarId", existingEvent.financeCalendarId)
+      .select("financeCalendarId")
+      .single();
+
+    if (error) {
+      console.error("saveFinanceCalendarEvent resurrect error:", error);
+      return { success: false, error };
+    }
+    return { success: true, financeCalendarId: data.financeCalendarId };
+  }
+
+  // 2. Normal Update (If no time conflict but we are editing an ID)
   if (payload.financeCalendarId) {
     const { data, error } = await supabase
       .from("finance_calendar")
@@ -136,6 +249,7 @@ export async function saveFinanceCalendarEvent(
       financeCalendarId: data.financeCalendarId,
     };
   } else {
+    // 3. Normal Insert (Clean slot)
     const { data, error } = await supabase
       .from("finance_calendar")
       .insert({
@@ -147,6 +261,8 @@ export async function saveFinanceCalendarEvent(
         createdBy,
         createdAt: now,
         updatedAt: now,
+        isActive: true,
+        deletedAt: null,
       })
       .select("financeCalendarId")
       .single();
