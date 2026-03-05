@@ -1,116 +1,219 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function getYearWiseFinanceSummary({
-  collegeId,
-  collegeEducationId,
-  branchCode,
-}: {
+type YearFinanceFilters = {
   collegeId: number;
   collegeEducationId: number;
   branchCode: string;
-}) {
-  console.log(" INPUT FILTERS:", {
-    collegeId,
-    collegeEducationId,
-    branchCode,
-  });
-  const { data: branch, error: branchError } = await supabase
-    .from("college_branch")
-    .select("collegeBranchId, collegeBranchCode")
-    .eq("collegeBranchCode", branchCode)
-    .eq("collegeId", collegeId)
-    .single();
+};
 
-  if (branchError) {
-    return [];
-  }
-  if (!branch) {
-    return [];
-  }
-  const branchId = branch.collegeBranchId;
-  const { data: years, error: yearError } = await supabase
-    .from("college_academic_year")
-    .select("collegeAcademicYearId, collegeAcademicYear")
-    .eq("collegeBranchId", branchId)
-    .eq("collegeId", collegeId)
-    .is("deletedAt", null);
+export async function getYearWiseFinanceSummary(
+  filters: YearFinanceFilters,
+  page: number,
+  limit: number
+) {
+  try {
+    const { collegeId, collegeEducationId, branchCode } = filters;
 
-  if (yearError) {
-    return [];
-  }
-  if (!years || years.length === 0) {
-    return [];
-  }
-  const { data: obligations, error: obligationError } = await supabase
-    .from("student_fee_obligation")
-    .select(
-      "studentFeeObligationId, totalAmount, collegeAcademicYearId"
-    )
-    .eq("collegeBranchId", branchId);
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
-  if (obligationError) {
-    return [];
-  }
-  const yearMap = new Map();
-  years.forEach((y) => {
-    yearMap.set(y.collegeAcademicYearId, {
-      yearId: y.collegeAcademicYearId,
-      year: y.collegeAcademicYear,
-      expected: 0,
-      collected: 0,
-    });
-  });
-  obligations?.forEach((o) => {
-    const year = yearMap.get(o.collegeAcademicYearId);
-    if (year) {
-      year.expected += o.totalAmount;
+    /* =====================================================
+       1️⃣ Resolve BranchId
+    ====================================================== */
+
+    const { data: branchData, error: branchError } = await supabase
+      .from("college_branch")
+      .select("collegeBranchId")
+      .eq("collegeBranchCode", branchCode)
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .single();
+
+    if (branchError || !branchData) {
+      throw new Error("Branch not found");
     }
-  });
-  const obligationIds =
-    obligations?.map((o) => o.studentFeeObligationId) || [];
-  if (obligationIds.length > 0) {
-    const { data: ledger, error: ledgerError } = await supabase
-      .from("student_fee_ledger")
-      .select("studentFeeObligationId, amount")
-      .in("studentFeeObligationId", obligationIds);
-    if (ledgerError) {
-    } else {
-      ledger?.forEach((entry) => {
-        const obligation = obligations.find(
-          (o) =>
-            o.studentFeeObligationId ===
-            entry.studentFeeObligationId
+
+    const branchId = branchData.collegeBranchId;
+
+    /* =====================================================
+       2️⃣ Fetch Academic Years (Paginated)
+    ====================================================== */
+
+    const {
+      data: years,
+      count: totalCount,
+      error: yearError,
+    } = await supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear", {
+        count: "exact",
+      })
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("collegeBranchId", branchId)
+      .is("deletedAt", null)
+      .range(from, to);
+
+    if (yearError) throw yearError;
+
+    if (!years?.length) {
+      return {
+        data: [],
+        totalCount: 0,
+        summary: {
+          totalExpected: 0,
+          totalCollected: 0,
+          totalPending: 0,
+          overallPercentage: 0,
+        },
+      };
+    }
+
+    /* =====================================================
+       3️⃣ Fetch ALL Obligations (Not Paginated)
+    ====================================================== */
+
+    const { data: obligations } = await supabase
+      .from("student_fee_obligation")
+      .select(
+        "studentFeeObligationId, totalAmount, collegeAcademicYearId"
+      )
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("collegeBranchId", branchId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    const obligationIds =
+      obligations?.map((o) => o.studentFeeObligationId) || [];
+
+    /* =====================================================
+       4️⃣ Successful Transactions
+    ====================================================== */
+
+    const { data: transactions } = await supabase
+      .from("student_payment_transaction")
+      .select("studentPaymentTransactionId, studentFeeObligationId")
+      .in("studentFeeObligationId", obligationIds)
+      .eq("paymentStatus", "success");
+
+    const transactionIds =
+      transactions?.map((t) => t.studentPaymentTransactionId) || [];
+
+    /* =====================================================
+       5️⃣ Ledger Map
+    ====================================================== */
+
+    const ledgerMap = new Map<number, number>();
+
+    if (transactionIds.length > 0) {
+      const { data: ledgers } = await supabase
+        .from("student_fee_ledger")
+        .select("studentFeeObligationId, amount")
+        .in("studentPaymentTransactionId", transactionIds);
+
+      ledgers?.forEach((l: any) => {
+        const existing =
+          ledgerMap.get(l.studentFeeObligationId) || 0;
+
+        ledgerMap.set(
+          l.studentFeeObligationId,
+          existing + Number(l.amount)
         );
-
-        if (obligation) {
-          const year = yearMap.get(
-            obligation.collegeAcademicYearId
-          );
-
-          if (year) {
-            year.collected += entry.amount;
-          }
-        }
       });
     }
-  }
-  const result = Array.from(yearMap.values()).map((y) => {
-    const pending = y.expected - y.collected;
-    const percentage =
-      y.expected === 0
+
+    /* =====================================================
+       6️⃣ Year Aggregation Map (ALL YEARS)
+    ====================================================== */
+
+    const yearMap = new Map<
+      number,
+      { expected: number; collected: number }
+    >();
+
+    obligations?.forEach((o) => {
+      const expected = Number(o.totalAmount) || 0;
+      const collected =
+        ledgerMap.get(o.studentFeeObligationId) || 0;
+
+      if (!yearMap.has(o.collegeAcademicYearId)) {
+        yearMap.set(o.collegeAcademicYearId, {
+          expected: 0,
+          collected: 0,
+        });
+      }
+
+      const entry = yearMap.get(o.collegeAcademicYearId)!;
+      entry.expected += expected;
+      entry.collected += collected;
+    });
+
+    /* =====================================================
+       7️⃣ Paginated Year Result (Table)
+    ====================================================== */
+
+    const result = years.map((year) => {
+      const data = yearMap.get(year.collegeAcademicYearId);
+
+      const expected = data?.expected || 0;
+      const collected = data?.collected || 0;
+      const pending = expected - collected;
+
+      const collectionPercentage =
+        expected === 0
+          ? 0
+          : Number(((collected / expected) * 100).toFixed(2));
+
+      return {
+        yearId: year.collegeAcademicYearId,
+        year: year.collegeAcademicYear,
+        expected,
+        collected,
+        pending,
+        collectionPercentage,
+      };
+    });
+
+    /* =====================================================
+       8️⃣ Summary (ALL YEARS TOTAL)
+    ====================================================== */
+
+    let totalExpected = 0;
+    let totalCollected = 0;
+
+    yearMap.forEach((value) => {
+      totalExpected += value.expected;
+      totalCollected += value.collected;
+    });
+
+    const totalPending = totalExpected - totalCollected;
+
+    const overallPercentage =
+      totalExpected === 0
         ? 0
-        : Number(
-            ((y.collected / y.expected) * 100).toFixed(2)
-          );
+        : Number(((totalCollected / totalExpected) * 100).toFixed(2));
 
     return {
-      yearId: y.yearId,
-      year: y.year,
-      expected: y.expected,
-      collected: y.collected,
-      pending,
-      collectionPercentage: percentage,
+      data: result,
+      totalCount: totalCount ?? 0,
+      summary: {
+        totalExpected,
+        totalCollected,
+        totalPending,
+        overallPercentage,
+      },
     };
-  });
-  return result;
+  } catch (error) {
+    console.error("Year-wise finance summary error:", error);
+    return {
+      data: [],
+      totalCount: 0,
+      summary: {
+        totalExpected: 0,
+        totalCollected: 0,
+        totalPending: 0,
+        overallPercentage: 0,
+      },
+    };
+  }
 }

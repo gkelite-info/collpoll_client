@@ -9,6 +9,8 @@ import {
   CurrencyDollarSimpleIcon,
   BuildingApartmentIcon,
   CaretDown,
+  CaretRight,
+  CaretLeft,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -18,7 +20,7 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import toast from "react-hot-toast";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
- export default function BranchFinanceSummary() {
+export default function BranchFinanceSummary() {
   const router = useRouter();
   const params = useParams();
   const branchParam = (params?.branch as string)?.toUpperCase();
@@ -28,27 +30,19 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
   // const [semesterFilter, setSemesterFilter] = useState("All");
   // const [statusFilter, setStatusFilter] = useState("All");
   const [financeData, setFinanceData] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const { collegeId, collegeEducationId } = useFinanceManager()
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const formatCurrency = (amount: number) =>
     `₹ ${amount.toLocaleString("en-IN")}`;
-  const totalExpected = financeData.reduce(
-    (sum: number, b: any) => sum + b.expected,
-    0
-  );
 
-  const totalCollected = financeData.reduce(
-    (sum: number, b: any) => sum + b.collected,
-    0
-  );
-  const totalPending = totalExpected - totalCollected;
-  const overallPercent =
-    totalExpected === 0
-      ? 0
-      : Number(
-        ((totalCollected / totalExpected) * 100).toFixed(2)
-      );
   const cardsData = [
     {
       style: "bg-[#E2DAFF]",
@@ -59,7 +53,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
           weight="fill"
         />
       ),
-      value: formatCurrency(totalExpected),
+      value: formatCurrency(summary?.totalExpected || 0),
       label: "Total Fee Expected",
     },
     {
@@ -71,7 +65,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
           weight="fill"
         />
       ),
-      value: formatCurrency(totalCollected),
+      value: formatCurrency(summary?.totalCollected || 0),
       label: "Total Collected",
     },
     {
@@ -83,7 +77,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
           weight="fill"
         />
       ),
-      value: formatCurrency(totalPending),
+      value: formatCurrency(summary?.totalPending || 0),
       label: "Total Pending",
     },
     {
@@ -95,25 +89,10 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
           weight="fill"
         />
       ),
-      value: `${overallPercent}%`,
+      value: `${summary?.overallPercentage || 0}%`,
       label: "Collection Rate",
     },
   ];
-  // const branchOptions = ["All", "CSE", "EEE", "IT", "ME", "CIVIL", "ECE"];
-  // const yearOptions = ["All", "1st Year", "2nd Year", "3rd Year", "4th Year"];
-  // const semesterOptions = [
-  //   "All",
-  //   "Sem 1",
-  //   "Sem 2",
-  //   "Sem 3",
-  //   "Sem 4",
-  //   "Sem 5",
-  //   "Sem 6",
-  //   "Sem 7",
-  //   "Sem 8",
-  // ];
-  // const statusOptions = ["All", "paid", "pending", "partial"];
-
   const filteredData = useMemo(() => {
     return financeData
       .filter((item) =>
@@ -143,37 +122,58 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
   }, [financeData, search, router]);
 
   useEffect(() => {
-
     async function loadFinance() {
       if (!collegeId || !collegeEducationId) return;
+
       setLoading(true);
 
       try {
-        const data = await getBranchWiseFinanceSummary({
-          collegeId: collegeId,             
-          collegeEducationId: collegeEducationId,    
-        });
-        setFinanceData(data);
+        const response = await getBranchWiseFinanceSummary(
+          {
+            collegeId,
+            collegeEducationId,
+          },
+          currentPage,
+          rowsPerPage
+        );
+
+        setFinanceData(response.data);
+        setTotalRecords(response.totalCount);
+        setSummary(response.summary);
       } catch (err) {
-        toast.error("Failed to load finance data")
+        toast.error("Failed to load finance data");
       } finally {
         setLoading(false);
       }
     }
-
     loadFinance();
-  }, []);
+  }, [collegeId, collegeEducationId, currentPage]);
 
   const handleDownload = () => {
-    const exportData = financeData.map((item) => ({
-      Branch: item.branchCode,
-      Expected: item.expected,
-      Collected: item.collected,
-      Pending: item.pending,
-      "Collection %": `${item.collectionPercentage}%`,
-    }));
+    if (!financeData.length) {
+      toast.error("No data available");
+      return;
+    }
 
-    downloadCSV(exportData, `${branchParam || "finance"}-summary`);
+    try {
+      setDownloadLoading(true);
+
+      const exportData = financeData.map((item) => ({
+        Branch: item.branchCode,
+        Expected: item.expected,
+        Collected: item.collected,
+        Pending: item.pending,
+        "Collection %": `${item.collectionPercentage}%`,
+      }));
+
+      setTimeout(() => {
+        downloadCSV(exportData, `${branchParam || "finance"}-summary`);
+        setDownloadLoading(false);
+      }, 300);
+    } catch {
+      setDownloadLoading(false);
+      toast.error("Download failed");
+    }
   };
 
   const columns = [
@@ -200,13 +200,18 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
         </div>
         <button
           onClick={handleDownload}
-          className="bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2"
+          disabled={downloadLoading}
+          className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
+    ${downloadLoading
+              ? "opacity-70 cursor-not-allowed"
+              : "hover:bg-[#1E3A8A]"
+            }`}
         >
-          Download Report
-          <DownloadSimple size={18} />
+          {downloadLoading ? "Downloading Report..." : "Download Report"}
+          {!downloadLoading && <DownloadSimple size={18} />}
         </button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
         {cardsData.map((card, index) => (
           <CardComponent
             key={index}
@@ -374,6 +379,52 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
             tableData={filteredData}
             height="55vh"
           />
+        )}
+        {totalPages > 1 && (
+          <div className="flex justify-end items-center gap-3 mt-8 mb-4">
+            {/* Prev Button */}
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
+        ${currentPage === 1
+                  ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <CaretLeft size={18} weight="bold" />
+            </button>
+
+            {/* Page Numbers */}
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-10 h-10 rounded-lg font-semibold transition-all
+          ${currentPage === i + 1
+                    ? "bg-[#16284F] text-white shadow-md"
+                    : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            {/* Next Button */}
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={currentPage === totalPages}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
+        ${currentPage === totalPages
+                  ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <CaretRight size={18} weight="bold" />
+            </button>
+          </div>
         )}
       </div>
     </div>

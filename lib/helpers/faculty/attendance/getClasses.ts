@@ -141,32 +141,32 @@ export async function getUpcomingClasses(
       const department = safeGet(
         sectionRow.branch,
         "collegeBranchCode",
-        "Unknown Branch"
+        "Unknown Branch",
       );
 
       const semester = `Sem ${safeGet(
         sectionRow.semester,
         "collegeSemester",
-        "?"
+        "?",
       )}`;
 
       const degree = safeGet(
         sectionRow.education,
         "collegeEducationType",
-        "B.Tech"
+        "B.Tech",
       );
 
       const yearString = safeGet(
         sectionRow.yearData,
         "collegeAcademicYear",
-        "1"
+        "1",
       );
       const year = parseInt(yearString) || 1;
 
       const subjectName = safeGet(
         event.subjectData,
         "subjectName",
-        "Unknown Subject"
+        "Unknown Subject",
       );
 
       const topicTitle = safeGet(event.topicData, "topicTitle");
@@ -221,7 +221,6 @@ export async function getUpcomingClasses(
   //     )
   //   ).join(", ");
 
-
   //   const firstSection = sectionsData[0];
   //   const degree = safeGet(
   //     firstSection?.education,
@@ -266,6 +265,8 @@ export async function getClassDetails(
 ): Promise<UpcomingLesson | null> {
   const supabase = await createClient();
 
+  const eventId = parseInt(classId.split("-")[0]);
+
   const { data: event, error } = await supabase
     .from("calendar_event")
     .select(
@@ -288,7 +289,7 @@ export async function getClassDetails(
       )
     `,
     )
-    .eq("calendarEventId", classId)
+    .eq("calendarEventId", eventId)
     .single();
 
   if (error || !event) {

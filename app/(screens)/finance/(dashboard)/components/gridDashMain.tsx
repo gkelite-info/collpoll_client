@@ -389,6 +389,7 @@ export default function DashboardPage() {
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState<string>(currentYear);
   const yearRef = React.useRef<HTMLDivElement>(null);
+  const [loadingOverallFinance, setLoadingOverallFinance] = useState(false);
   const [financeSummary, setFinanceSummary] = useState({
     academicYearTotal: 0,
     yearWiseData: defaultYearWiseData,
@@ -459,22 +460,36 @@ export default function DashboardPage() {
   }, [loading, collegeId, collegeEducationId]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadOverallFinance = async () => {
       if (!collegeId || !collegeEducationId) return;
 
       try {
-        const total = await getOverallFinanceTotal({
-          collegeId,
-          collegeEducationId,
-        });
+        setLoadingOverallFinance(true);
 
-        setOverallFinanceTotal(total ?? 0);
+        const total = await getOverallFinanceTotal(
+          collegeId,
+          collegeEducationId
+        );
+
+        if (isMounted) {
+          setOverallFinanceTotal(total ?? 0);
+        }
       } catch (err) {
-        console.error("Overall finance error:", err);
+        console.error("❌ Overall finance error:", err);
+      } finally {
+        if (isMounted) {
+          setLoadingOverallFinance(false);
+        }
       }
     };
 
     loadOverallFinance();
+
+    return () => {
+      isMounted = false;
+    };
   }, [collegeId, collegeEducationId]);
 
   useEffect(() => {

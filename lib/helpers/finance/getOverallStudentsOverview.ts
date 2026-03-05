@@ -207,6 +207,7 @@ export async function getOverallStudentsOverview(
     return {
         students: filtered,
         totalCount: count ?? 0,
+        currentPageCount: filtered.length,
         counts: {
             total: count ?? 0,
             paid: paidCount,
@@ -216,11 +217,6 @@ export async function getOverallStudentsOverview(
     };
 
 }
-
-
-
-
-
 
 
 export async function getOverallStudentsSummary(
