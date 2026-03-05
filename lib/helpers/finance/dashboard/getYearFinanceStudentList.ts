@@ -9,7 +9,11 @@ type YearFinanceFilters = {
 
 export type PaymentStatus = "Pending" | "Paid" | "Partial";
 
-export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
+export async function getYearFinanceStudentList(
+    filters: YearFinanceFilters,
+    page: number,
+    limit: number
+) {
     const {
         collegeId,
         collegeEducationId,
@@ -17,18 +21,24 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         collegeAcademicYearId,
     } = filters;
 
-    /* 1️⃣ Students in that Academic Year */
-    const { data: students } = await supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    /* 1️⃣ Students in that Academic Year (PAGINATED) */
+    const { data: students, count } = await supabase
         .from("students")
-        .select(`
-      studentId,
-      users!students_userId_fkey(fullName),
-      college_branch(collegeBranchCode),
-      student_academic_history!inner(
-        collegeAcademicYearId,
-        deletedAt
-      )
-    `)
+        .select(
+            `
+            studentId,
+            users!students_userId_fkey(fullName),
+            college_branch(collegeBranchCode),
+            student_academic_history!inner(
+                collegeAcademicYearId,
+                deletedAt
+            )
+        `,
+            { count: "exact" }
+        )
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
         .eq("collegeBranchId", collegeBranchId)
@@ -36,9 +46,16 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         .eq("isActive", true)
         .is("deletedAt", null)
         .eq("student_academic_history.collegeAcademicYearId", collegeAcademicYearId)
-        .is("student_academic_history.deletedAt", null);
+        .is("student_academic_history.deletedAt", null)
+        .range(from, to); // ✅ Pagination added
 
-    if (!students?.length) return emptyResponse();
+    if (!students?.length) {
+        return {
+            students: [],
+            totalCount: count ?? 0,
+            currentPageCount: 0,
+        };
+    }
 
     const studentIds = students.map((s) => s.studentId);
 
@@ -52,9 +69,14 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         .eq("isActive", true)
         .is("deletedAt", null);
 
-    if (!obligations?.length) return emptyResponse();
+    if (!obligations?.length) {
+        return {
+            students: [],
+            totalCount: count ?? 0,
+            currentPageCount: 0,
+        };
+    }
 
-    /* 🔥 ADD THIS FILTERING LOGIC */
     const obligationStudentIds = new Set(
         obligations.map(o => o.studentId)
     );
@@ -72,7 +94,8 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         .in("studentFeeObligationId", obligationIds)
         .eq("paymentStatus", "success");
 
-    const transactionIds = transactions?.map(t => t.studentPaymentTransactionId) || [];
+    const transactionIds =
+        transactions?.map(t => t.studentPaymentTransactionId) || [];
 
     /* 4️⃣ Ledger */
     const { data: ledgers } = await supabase
@@ -89,7 +112,7 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         );
     });
 
-    /* 5️⃣ Build Result (NOW USE filteredStudents) */
+    /* 5️⃣ Build Result */
     const result = filteredStudents.map(student => {
         const obligation = obligations.find(
             o => o.studentId === student.studentId
@@ -124,9 +147,9 @@ export async function getYearFinanceStudentList(filters: YearFinanceFilters) {
         };
     });
 
-    return result;
-}
-
-function emptyResponse() {
-    return [];
+    return {
+        students: result,
+        totalCount: count ?? 0,
+        currentPageCount: result.length,
+    };
 }

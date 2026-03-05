@@ -21,7 +21,11 @@ export type SemesterStudent = {
   lastPaymentDate: string | null;
 };
 
-export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters) {
+export async function getSemesterFinanceSummary(
+  filters: SemesterFinanceFilters,
+  page: number,
+  limit: number
+) {
   const {
     collegeId,
     collegeEducationId,
@@ -30,19 +34,25 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
     collegeSemesterId,
   } = filters;
 
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   /* 1) Students in selected academicYear + semester */
-  const { data: students, error: studentError } = await supabase
+  const { data: students, error: studentError, count } = await supabase
     .from("students")
-    .select(`
-  studentId,
-  users!students_userId_fkey(fullName),
- college_branch(collegeBranchCode),
-  student_academic_history!inner(
-    collegeAcademicYearId,
-    collegeSemesterId,
-    deletedAt
-  )
-`)
+    .select(
+      `
+    studentId,
+    users!students_userId_fkey(fullName),
+    college_branch(collegeBranchCode),
+    student_academic_history!inner(
+      collegeAcademicYearId,
+      collegeSemesterId,
+      deletedAt
+    )
+  `,
+      { count: "exact" }
+    )
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
@@ -51,7 +61,8 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
     .is("deletedAt", null)
     .eq("student_academic_history.collegeAcademicYearId", collegeAcademicYearId)
     .eq("student_academic_history.collegeSemesterId", collegeSemesterId)
-    .is("student_academic_history.deletedAt", null);
+    .is("student_academic_history.deletedAt", null)
+    .range(from, to);
 
   if (studentError) {
     return null;
@@ -214,31 +225,35 @@ export async function getSemesterFinanceSummary(filters: SemesterFinanceFilters)
   return {
     students: result,
     summary: {
-      totalStudents: result.length,
+      totalStudents: count ?? 0,
       expected,
       collected,
       pending,
       paidStudents,
       pendingStudents,
     },
+    totalCount: count ?? 0,
+    currentPageCount: result.length,
   };
 }
 
-function emptyResponse() {
+function emptyResponse(count: number = 0) {
   return {
     students: [],
     summary: {
-      totalStudents: 0,
+      totalStudents: count,
       expected: 0,
       collected: 0,
       pending: 0,
       paidStudents: 0,
       pendingStudents: 0,
     },
+    totalCount: count,
+    currentPageCount: 0,
   };
 }
 
-function buildFromNoPayments(students: any[], obligations: any[]) {
+function buildFromNoPayments(students: any[], obligations: any[], count: number = 0) {
   let expected = 0;
 
   const obligationStudentIds = new Set(
@@ -269,12 +284,14 @@ function buildFromNoPayments(students: any[], obligations: any[]) {
   return {
     students: result,
     summary: {
-      totalStudents: result.length,
+      totalStudents: count ?? 0,
       expected,
       collected: 0,
       pending: expected,
       paidStudents: 0,
       pendingStudents: result.length,
     },
+    totalCount: count ?? 0,
+    currentPageCount: result.length,
   };
 }

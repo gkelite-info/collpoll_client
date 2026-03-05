@@ -7,18 +7,18 @@ export async function getOverallPending(filters: {
   selectedYear?: string;
 }) {
   const {
-    collegeId,
     collegeEducationId,
     collegeBranchId,
     selectedYear,
   } = filters;
 
+  console.log("🔎 Pending Filters:", filters);
+
   let obligationQuery = supabase
     .from("student_fee_obligation")
     .select(`
       studentFeeObligationId,
-      totalAmount,
-      collegeBranchId
+      totalAmount
     `)
     .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
@@ -33,54 +33,35 @@ export async function getOverallPending(filters: {
 
   const { data: obligations } = await obligationQuery;
 
+  console.log("📊 Obligations:", obligations);
+
   if (!obligations?.length) return 0;
 
   const obligationIds = obligations.map(
     (o) => o.studentFeeObligationId
   );
 
-  const { data: transactions } = await supabase
-    .from("student_payment_transaction")
-    .select(
-      "studentPaymentTransactionId, studentFeeObligationId"
-    )
-    .in("studentFeeObligationId", obligationIds)
-    .eq("paymentStatus", "success");
-
-  if (!transactions?.length) {
-    // No successful payments → full pending
-    return obligations.reduce(
-      (sum, o) => sum + Number(o.totalAmount),
-      0
-    );
-  }
-
-  const transactionIds = transactions.map(
-    (t) => t.studentPaymentTransactionId
-  );
-
   let ledgerQuery = supabase
     .from("student_fee_ledger")
-    .select(
-      "studentPaymentTransactionId, amount, createdAt"
-    )
-    .in("studentPaymentTransactionId", transactionIds);
+    .select(`
+      studentFeeObligationId,
+      amount,
+      createdAt
+    `)
+    .in("studentFeeObligationId", obligationIds);
 
   if (selectedYear) {
-    const start = new Date(
-      `${selectedYear}-01-01T00:00:00`
-    ).toISOString();
-
-    const end = new Date(
-      `${selectedYear}-12-31T23:59:59`
-    ).toISOString();
+    const start = new Date(`${selectedYear}-01-01T00:00:00Z`);
+    const end = new Date(`${selectedYear}-12-31T23:59:59Z`);
 
     ledgerQuery = ledgerQuery
-      .gte("createdAt", start)
-      .lte("createdAt", end);
+      .gte("createdAt", start.toISOString())
+      .lte("createdAt", end.toISOString());
   }
 
   const { data: ledgers } = await ledgerQuery;
+
+  console.log("📘 Ledgers:", ledgers);
 
   const paidMap: Record<number, number> = {};
 
@@ -88,30 +69,22 @@ export async function getOverallPending(filters: {
     paidMap[o.studentFeeObligationId] = 0;
   });
 
-  ledgers?.forEach((l: any) => {
-    const txn = transactions.find(
-      (t) =>
-        t.studentPaymentTransactionId ===
-        l.studentPaymentTransactionId
-    );
-
-    if (txn) {
-      paidMap[txn.studentFeeObligationId] += Number(
-        l.amount
-      );
-    }
+  ledgers?.forEach((l) => {
+    paidMap[l.studentFeeObligationId] += Number(l.amount);
   });
 
   let totalPending = 0;
 
   obligations.forEach((o) => {
-    const paid =
-      paidMap[o.studentFeeObligationId] || 0;
+    const paid = paidMap[o.studentFeeObligationId] || 0;
+    const pending = Number(o.totalAmount) - paid;
 
-    if (paid === 0) {
-      totalPending += Number(o.totalAmount);
+    if (pending > 0) {
+      totalPending += pending;
     }
   });
+
+  console.log("💰 Final Pending:", totalPending);
 
   return totalPending;
 }

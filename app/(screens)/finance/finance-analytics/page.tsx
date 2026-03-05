@@ -196,7 +196,10 @@ function FinanceAnalyticsContent() {
                   tick={{ dy: -4 }}
                   tickMargin={10}
                 />
-                <Tooltip cursor={{ fill: "#f8fafc" }} />
+                <Tooltip
+                  cursor={{ fill: "#f8fafc" }}
+                  labelStyle={{ color: "#000000", fontWeight: 600 }}
+                />
                 <Bar
                   dataKey="collected"
                   stackId="a"

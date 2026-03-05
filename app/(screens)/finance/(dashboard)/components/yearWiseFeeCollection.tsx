@@ -154,13 +154,12 @@ function YearWiseFeeCollectionContent() {
         status: (
           <div className="flex items-center gap-2 justify-center">
             <span
-              className={`h-3 w-3 rounded-full ${
-                status === "paid"
+              className={`h-3 w-3 rounded-full ${status === "paid"
                   ? "bg-green-600"
                   : status === "pending"
                     ? "bg-red-600"
                     : "bg-yellow-500"
-              }`}
+                }`}
             />
             <span
               className={
@@ -281,10 +280,11 @@ function YearWiseFeeCollectionContent() {
                       <Tooltip
                         formatter={(value) =>
                           typeof value === "number"
-                            ? `₹ ${value.toLocaleString("en-IN")}`
+                            ? `₹ ${value.toLocaleString()}`
                             : value
                         }
                         cursor={{ fill: "#f8fafc" }}
+                        labelStyle={{ color: "#000", opacity: 1, fontWeight: 600 }}
                       />
                       <Bar
                         dataKey="collected"
@@ -304,7 +304,7 @@ function YearWiseFeeCollectionContent() {
             ))}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 pb-10">
             <h3 className="font-semibold text-lg text-[#282828]">
               Students Overview
             </h3>

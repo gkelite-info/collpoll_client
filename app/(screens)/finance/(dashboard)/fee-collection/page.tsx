@@ -126,7 +126,7 @@ function FeeCollectionPage() {
   };
 
   return (
-    <div className="p-2 bg-[#F3F4F6] min-h-screen">
+    <div className="p-2 bg-[#F3F4F6] h-[89vh] sticky top-0 z-20">
       <div className="flex items-center gap-2 lg:mb-3">
         <CaretLeftIcon size={20} weight="bold" className="cursor-pointer text-black active:scale-90" onClick={router.back} />
         <h1 className="text-xl font-semibold text-[#282828] mb-0">
@@ -181,7 +181,7 @@ function FeeCollectionPage() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-3 mt-4">
+      <div className="grid md:grid-cols-2 gap-3 mt-4 overflow-y-auto max-h-[calc(100vh-210px)]">
         {isFetchingData ? (
           [...Array(4)].map((_, i) => (
             <div key={i} className={`h-[350px] rounded-lg shadow-sm ${shimmerClass}`} />
