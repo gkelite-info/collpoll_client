@@ -40,7 +40,8 @@ function AttendanceContent() {
 
   // Data
   const [classData, setClassData] = useState<UpcomingLesson | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -77,12 +78,19 @@ function AttendanceContent() {
     setLoading(true);
     try {
       const students = await getStudentsForClass(cId, sId);
-      setStudentsList(students);
+
+      if (!students || students.length === 0) {
+        setStudentsList([]);
+      } else {
+        setStudentsList(students);
+      }
+
       const cData = await getClassDetails(cId);
       setClassData(cData);
     } catch (e) {
       console.error(e);
       toast.error("Failed to load students");
+      setStudentsList([]);
     } finally {
       setLoading(false);
     }
@@ -91,25 +99,37 @@ function AttendanceContent() {
   useEffect(() => {
     if (urlClassId) {
       setSelectedClassId(urlClassId);
-      loadStudents(urlClassId);
+      loadStudents(urlClassId).finally(() => setInitialized(true));
       setIsEditing(true);
     } else {
       if (contextLoading || !facultyId) return;
       async function initFilters() {
         try {
+          setLoading(true);
+
           const classes = await getFacultyClasses(facultyId!);
           setClassOptions(classes);
-          if (classes.length > 0) {
-            const firstClass = classes[0];
-            setSelectedClassId(firstClass.id);
-            const sections = await getClassSections(firstClass.id);
-            setSectionOptions(sections);
-            const firstSec = sections.length > 0 ? sections[0].id : "";
-            setSelectedSectionId(firstSec);
-            loadStudents(firstClass.id, firstSec);
+
+          if (classes.length === 0) {
+            setStudentsList([]);
+            return;
           }
+
+          const firstClass = classes[0];
+          setSelectedClassId(firstClass.id);
+
+          const sections = await getClassSections(firstClass.id);
+          setSectionOptions(sections);
+
+          const firstSec = sections.length > 0 ? sections[0].id : "";
+          setSelectedSectionId(firstSec);
+
+          await loadStudents(firstClass.id, firstSec);
         } catch (e) {
           console.error(e);
+        } finally {
+          setLoading(false);
+          setInitialized(true);
         }
       }
       initFilters();
@@ -215,7 +235,7 @@ function AttendanceContent() {
     },
   ];
 
-  if ((loading || contextLoading) && !studentsList.length) {
+  if (!initialized || loading || contextLoading) {
     return <AttendanceSkeleton />;
   }
 
@@ -319,21 +339,27 @@ function AttendanceContent() {
       </section>
 
       <section>
-        <StuAttendanceTable
-          students={studentsList}
-          setStudents={setStudentsList}
-          handleSaveAttendance={handleSaveAttendance}
-          saving={saving}
-          isTopicMode={isTopicMode}
-          classes={classOptions}
-          sections={sectionOptions}
-          selectedClass={selectedClassId}
-          selectedSection={selectedSectionId}
-          onFilterChange={urlClassId ? undefined : handleFilterChange}
-          loadingFilters={loading}
-          isEditing={isEditing}
-          onEditClick={() => setIsEditing(true)}
-        />
+        {classOptions.length === 0 ? (
+          <div className="flex justify-center items-center py-16 text-gray-500">
+            No Class Found Today
+          </div>
+        ) : (
+          <StuAttendanceTable
+            students={studentsList}
+            setStudents={setStudentsList}
+            handleSaveAttendance={handleSaveAttendance}
+            saving={saving}
+            isTopicMode={isTopicMode}
+            classes={classOptions}
+            sections={sectionOptions}
+            selectedClass={selectedClassId}
+            selectedSection={selectedSectionId}
+            onFilterChange={urlClassId ? undefined : handleFilterChange}
+            loadingFilters={loading}
+            isEditing={isEditing}
+            onEditClick={() => setIsEditing(true)}
+          />
+        )}
       </section>
     </main>
   );
