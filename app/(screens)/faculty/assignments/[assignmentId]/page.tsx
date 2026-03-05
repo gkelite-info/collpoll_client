@@ -1,9 +1,9 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { UserCircle, UsersThree } from "@phosphor-icons/react";
+import toast from "react-hot-toast";
+import { UserCircle, UsersThree, CaretLeft } from "@phosphor-icons/react";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
@@ -11,6 +11,8 @@ import AssignmentTable from "./components/assignmentTable";
 import CardComponent, {
   CardProps,
 } from "@/app/(screens)/admin/assignments/[departmentId]/subject/[subjectId]/[assignmentId]/components/cardComponent";
+import { supabase } from "@/lib/supabaseClient";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function formatDate(value: number | string) {
   if (!value) return "";
@@ -23,6 +25,7 @@ function formatDate(value: number | string) {
 
 export default function AdminAssignmentDetailPage() {
   const { assignmentId } = useParams();
+  const router = useRouter();
   const [assignment, setAssignment] = useState<any>(null);
 
   useEffect(() => {
@@ -61,8 +64,7 @@ export default function AdminAssignmentDetailPage() {
     }
   }
 
-  if (!assignment)
-    return <div className="p-6 text-gray-500">Loading Summary...</div>;
+  if (!assignment) return <Loader />;
 
   const cardData: CardProps[] = [
     {
@@ -97,7 +99,16 @@ export default function AdminAssignmentDetailPage() {
     <main className="px-4 py-4 min-h-screen bg-[#F3F6F9]">
       <section className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => router.push("/faculty/assignments")}
+              className=" hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
+              title="Back to Assignments"
+            >
+              <CaretLeft size={24} weight="bold" />
+            </button>
+            <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
+          </div>
           <p className="text-sm text-gray-500 mt-1">
             Reviewing submission stats and evaluating student work.
           </p>
