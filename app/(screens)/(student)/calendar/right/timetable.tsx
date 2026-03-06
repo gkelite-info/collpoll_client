@@ -120,6 +120,7 @@ export default function CalendarTimeTable() {
                         room: item.roomNo,
                         faculty: item.facultyName,
                         img: "/ai.png",
+                        isCancelled: item.isCancelled
                     }))
                 );
             } catch (err) {
@@ -256,6 +257,12 @@ export default function CalendarTimeTable() {
                                                             </span>
                                                             .
                                                         </p>
+
+                                                        {item.isCancelled && (
+                                                            <p className="text-red-500 text-xs font-semibold">
+                                                                Class Cancel
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
 

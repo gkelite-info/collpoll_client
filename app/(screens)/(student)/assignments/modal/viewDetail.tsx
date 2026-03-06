@@ -18,7 +18,7 @@ export default function ViewDetailModal({ isOpen, onClose, card, submissionFileN
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999]">
             <div className="bg-white lg:w-fit lg:h-fit lg:p-5 lg:rounded-xl lg:relative lg:shadow-lg">
                 <div className="bg-red-00 w-full flex items-center justify-between lg:gap-2">
-                    <div className="flex items-center gap-5">
+                    <div className="w-full flex justify-end">
                         <button
                             onClick={onClose}
                             className="text-[#282828] hover:text-black text-xl cursor-pointer"
@@ -79,7 +79,7 @@ export default function ViewDetailModal({ isOpen, onClose, card, submissionFileN
                 </div>
 
                 <div className="bg-indigo-00 mt-2">
-                    <h3 className="text-[#282828] font-semibold text-lg">Instructions</h3>
+                    {/* <h3 className="text-[#282828] font-semibold text-lg">Instructions</h3>
                     <ul className="list-disc ml-4">
                         <li className="text-[#474747] text-sm">
                             Prepare a detailed case study on various process scheduling algorithms (FCFS, SJF, Priority, Round Robin).
@@ -90,7 +90,7 @@ export default function ViewDetailModal({ isOpen, onClose, card, submissionFileN
                         <li className="text-[#474747] text-sm">
                             Submit your report in PDF format with proper documentation and charts.
                         </li>
-                    </ul>
+                    </ul> */}
                     <h3 className="text-[#282828] font-semibold text-lg mt-2">Attachment:</h3>
 
                     {submissionFileName ? (

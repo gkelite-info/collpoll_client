@@ -23,6 +23,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
         name: string;
     } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [fileDeleted, setFileDeleted] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -41,7 +43,12 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
     }, [existingFilePath, isOpen]);
     if (!isOpen) return null;
 
+    const isLocked = (existingFilePath && !fileDeleted) || selectedFiles.length > 0;
     const triggerFileInput = () => {
+        if (isLocked) {
+            toast.error("Delete the existing file before uploading a new one");
+            return;
+        }
         fileInputRef.current?.click();
     };
 
@@ -78,33 +85,41 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             return;
         }
 
-        const file = selectedFiles[0];
-        const filePath = `assignments/${card.assignmentId}/${file.name}`;
+        try {
+            setIsUploading(true);
 
-        const { error } = await supabase.storage
-            .from("student_submissions")
-            .upload(filePath, file, { upsert: true });
+            const file = selectedFiles[0];
+            const filePath = `assignments/${card.assignmentId}/${file.name}`;
 
-        if (error) {
+            const { error } = await supabase.storage
+                .from("student_submissions")
+                .upload(filePath, file, { upsert: true });
+
+            if (error) {
+                toast.error("Upload failed");
+                return;
+            }
+
+            const res = await insertAssignmentSubmission({
+                assignmentId: Number(card.assignmentId),
+                filePath,
+            });
+
+            if (!res.success) {
+                toast.error("Failed to save submission");
+                return;
+            }
+
+            onUpload(filePath, index!);
+            toast.success("Assignment submitted successfully 🎉");
+            onClose();
+        } catch (err) {
+            console.error(err);
             toast.error("Upload failed");
-            return;
+        } finally {
+            setIsUploading(false);
         }
-
-        const res = await insertAssignmentSubmission({
-            assignmentId: Number(card.assignmentId),
-            filePath,
-        });
-
-        if (!res.success) {
-            toast.error("Failed to save submission");
-            return;
-        }
-
-        onUpload(filePath, index!);
-        toast.success("Assignment submitted successfully 🎉");
-        onClose();
     };
-
     const handleDeleteExistingFile = async () => {
 
         if (!existingFilePath || !card) {
@@ -157,7 +172,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             const { data: updatedRow, error: dbErr } = await supabase
                 .from("student_assignments_submission")
                 .update({
-                    file: null,
+                    file: "",
                     updatedAt: new Date().toISOString(),
                 })
                 .eq("studentId", student.studentId)
@@ -176,8 +191,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             }
 
             setSelectedFiles([]);
+            setFileDeleted(true);
             onUpload("", index!);
-
             toast.success("File deleted. You can upload a new file now.");
 
         } catch (err) {
@@ -196,16 +211,19 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-[420px] max-h-[90vh] flex flex-col animate-fadeIn relative">
-                <div className="flex justify-start lg:gap-3 items-center mb-1">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-start justify-center overflow-y-auto z-50 p-6">
+            <div className="bg-white rounded-lg shadow-xl p-6 w-[420px] max-h-[90vh] overflow-y-auto  flex flex-col animate-fadeIn relative">
+                <div className="flex justify-between items-center mb-1">
+                    <h2 className="text-[#282828] font-semibold text-lg">
+                        Upload Assignment
+                    </h2>
+
                     <button
                         onClick={onClose}
                         className="text-[#282828] hover:text-black text-xl cursor-pointer"
                     >
                         ✕
                     </button>
-                    <h2 className="text-[#282828] font-semibold text-lg">Upload Assignment</h2>
                 </div>
                 <p className="text-sm text-[#282828] mb-2">Submit your assignment file in the required format. </p>
 
@@ -222,9 +240,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                                 {card?.subjectName}
                             </p>
 
-                            <p className="text-sm text-[#282828]">
-                                {card?.topicName}
-                            </p>
+                            <div className="max-w-[250px] overflow-x-auto whitespace-nowrap">
+                                <p className="text-sm text-[#282828]">
+                                    {card?.topicName}
+                                </p>
+                            </div>
 
                             <p className="text-sm text-[#282828]">
                                 {card?.professor}
@@ -233,19 +253,24 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                     </div>
                 </div>
 
-                <div className="bg-red-00 mt-2 flex flex-col justify-start gap-2 flex-1 overflow-hidden">
+                <div className="bg-red-00 mt-2 flex flex-col justify-start gap-2 flex-1">
                     <h5 className="text-[#111827] font-medium text-left">Upload your file</h5>
                     <div
                         className={`lg:w-full gap-2 border border-[#707070] border-dashed border-2 rounded-lg p-4 py-3 flex flex-col items-center justify-center
-    ${existingFilePath ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                        onClick={!existingFilePath ? triggerFileInput : undefined}
+  ${isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        onClick={!isLocked ? triggerFileInput : undefined}
                     >
                         <CloudArrowUp size={65} className="text-[#CECECE]" />
                         <h5 className="text-[#666666] text-sm">Drag & Drop your file here or</h5>
                         <button
-                            className="lg:px-3 lg:mb-4 lg:py-1 text-[#111827] lg:font-medium border border-[#666666] rounded-lg cursor-pointer"
-                            onClick={triggerFileInput}
+                            className={`lg:px-3 lg:mb-4 lg:py-1 text-[#111827] lg:font-medium border border-[#666666] rounded-lg cursor-pointer
+    ${isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                triggerFileInput();
+                            }}
                             type="button"
+                            disabled={isLocked}
                         >
                             Browse Files
                         </button>
@@ -255,6 +280,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                             ref={fileInputRef}
                             className="hidden"
                             onChange={handleFileSelect}
+                            disabled={isLocked}
                         />
                     </div>
 
@@ -269,9 +295,9 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                                         <img src="/pdf.png" alt="/pdf.png" className="h-6" />
                                         <p className="text-[#111827] lg:text-sm lg:truncate">{file.name} <span style={{ fontSize: 10, marginLeft: 2, color: "#454545" }}>({formatFileSize(file.size)})</span></p>
                                     </div>
-                                    <button onClick={() => removeFile(idx)}>
+                                    {/* <button onClick={() => removeFile(idx)}>
                                         <Trash size={22} className="text-red-500 cursor-pointer" />
-                                    </button>
+                                    </button> */}
                                 </div>
                             ))}
                         </div>
@@ -280,7 +306,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
 
                 {existingFilePath && (
                     <button
-                        className="text-red-500 text-sm underline mt-3 self-start"
+                        className="text-red-500 text-sm underline mt-3 self-start cursor-pointer"
                         onClick={handleDeleteExistingFile}
                     >
                         Delete uploaded file
@@ -289,10 +315,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
 
                 <div className="flex justify-center gap-3 mt-5">
                     <button
-                        className="bg-[#43C17A] text-white w-[49%] py-2 cursor-pointer rounded-md text-sm hover:bg-[#3AAA6B]"
+                        className="bg-[#43C17A] text-white w-[49%] py-2 cursor-pointer rounded-md text-sm hover:bg-[#3AAA6B] disabled:opacity-60 disabled:cursor-not-allowed"
                         onClick={handleUpload}
+                        disabled={isUploading}
                     >
-                        Submit Assignment
+                        {isUploading ? "Submitting..." : "Submit Assignment"}
                     </button>
                     <button
                         className="border w-[49%] py-2 rounded-md text-sm text-[#282828] cursor-pointer"

@@ -51,11 +51,13 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
 
 
                 <h3 className="font-semibold text-base mb-1 text-gray-900">
-                    {event.subjectName || "-"}
-                    <span className="text-gray-500 font-medium">
-                        {" "}— [{event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                        {event.subjectKey ? `, (${event.subjectKey})` : ""}]
-                    </span>
+                    {event.type.charAt(0).toUpperCase() + event.type.slice(1)} -{" "}
+                    {event.subjectName || "-"}{" "}
+                    {event.subjectKey && (
+                        <span className="text-gray-500 font-medium">
+                            [{event.subjectKey}]
+                        </span>
+                    )}
                 </h3>
 
                 {event.rawFormData?.topicId && (
