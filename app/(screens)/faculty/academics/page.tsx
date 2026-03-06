@@ -1,23 +1,21 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { FaChevronDown } from "react-icons/fa6";
 import SubjectCard from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect, useRef } from "react";
-// import { getFacultySubjects } from "./components/subjectDetails";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
-
-import { CircleNotch } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 export default function Academics() {
   const { userId, collegeId } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [subjects, setSubjects] = useState<CardProps[]>([]);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
+  const { facultyId } = useFaculty();
 
   const hasLoadedOnce = useRef(false);
 
@@ -28,7 +26,6 @@ export default function Academics() {
       return;
     }
 
-    // 🔥 IMPORTANT: create narrowed variables
     const safeUserId = userId;
     const safeCollegeId = collegeId;
 
@@ -104,7 +101,7 @@ export default function Academics() {
       ) : (
         <>
           <div className="mt-4">
-            {subjects.length === 0 ? (
+            {subjects.length === 0 && facultyId ? (
               <p className="text-sm text-gray-500 text-center mt-10">
                 No classes assigned
               </p>

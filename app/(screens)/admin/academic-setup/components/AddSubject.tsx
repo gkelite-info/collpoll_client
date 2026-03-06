@@ -1,6 +1,7 @@
 "use client";
 
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchSubjectOptions } from "@/lib/helpers/admin/academicSetup/subjectDropdownsAPI";
 import { useEffect, useState } from "react";
@@ -37,6 +38,8 @@ export default function AddSubject({
   onFormReady?: () => void;
 }) {
   const { userId } = useUser();
+  const { collegeEducationType } = useAdmin();
+
   const [form, setForm] = useState<SubjectFormData>({
     collegeEducationId: 0,
     collegeBranchId: 0,
@@ -107,18 +110,9 @@ export default function AddSubject({
     }
 
     if (name === "subjectName") {
-      let cleaned = value.replace(/[^a-zA-Z\s&-]/g, "").replace(/\s{2,}/g, " ");
-      const parts = cleaned.split("-");
-      if (parts.length > 2)
-        cleaned = parts[0] + "-" + parts.slice(1).join("").replace(/-/g, "");
-      const pascal = cleaned
-        .toLowerCase()
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-      const finalParts = pascal.split("-");
-      let finalResult = pascal;
-      if (finalParts.length === 2)
-        finalResult = finalParts[0] + "-" + finalParts[1].toUpperCase();
-      setForm({ ...form, subjectName: finalResult });
+      let cleaned = value.replace(/\s{2,}/g, " ");
+
+      setForm({ ...form, [name]: cleaned });
       return;
     }
     if (name === "subjectCode") {
@@ -129,9 +123,11 @@ export default function AddSubject({
       return;
     }
     if (name === "subjectKey") {
+      let cleaned = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10);
+
       setForm({
         ...form,
-        subjectKey: value.replace(/[^a-zA-Z]/g, "").toUpperCase(),
+        subjectKey: cleaned,
       });
       return;
     }
@@ -149,14 +145,19 @@ export default function AddSubject({
     if (!ui.education) return toast.error("Please select Education");
     if (!ui.branch) return toast.error("Please select Branch");
     if (!ui.year) return toast.error("Please select Year");
-    if (!ui.semester) return toast.error("Please select Semester");
 
+    if (!["Inter"].includes(collegeEducationType!)) {
+      if (!ui.semester) return toast.error("Please select Semester");
+    }
     if (!form.subjectName.trim())
       return toast.error("Please enter Subject Name");
     if (!form.subjectCode.trim())
       return toast.error("Please enter Subject Code");
     if (!form.subjectKey.trim()) return toast.error("Please enter Subject Key");
-    if (!form.credits) return toast.error("Please enter Credits");
+
+    if (!["Inter"].includes(collegeEducationType!)) {
+      if (!form.credits) return toast.error("Please enter Credits");
+    }
 
     setIsSubmitting(true);
 
@@ -243,31 +244,30 @@ export default function AddSubject({
               </select>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Semester
-            </label>
-            {isLoadingOptions && ui.year && !ui.semester ? (
-              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
-                Loading options...
-              </div>
-            ) : (
-              <select
-                name="semester"
-                value={ui.semester}
-                onChange={handleChange}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
-              >
-                <option value="">Select Semester</option>
-                {options.semesters.map((s) => (
-                  <option key={s.id}>{s.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-6">
+          {!["Inter"].includes(collegeEducationType!) && (
+            <div>
+              <label className="block text-sm font-medium text-[#16284F] mb-1">
+                Semester
+              </label>
+              {isLoadingOptions && ui.year && !ui.semester ? (
+                <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                  Loading options...
+                </div>
+              ) : (
+                <select
+                  name="semester"
+                  value={ui.semester}
+                  onChange={handleChange}
+                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+                >
+                  <option value="">Select Semester</option>
+                  {options.semesters.map((s) => (
+                    <option key={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Subject Name
@@ -292,8 +292,6 @@ export default function AddSubject({
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
             />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Subject Key
@@ -310,6 +308,9 @@ export default function AddSubject({
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
               Credits
+              {collegeEducationType === "Inter" && (
+                <span className="ml-1 text-[#16284F] text-sm">(Optional)</span>
+              )}
             </label>
             <input
               type="number"
@@ -337,7 +338,6 @@ export default function AddSubject({
             />
           </div>
         </div>
-
         <div className="flex justify-center pt-4">
           <button
             type="submit"

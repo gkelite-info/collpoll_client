@@ -18,10 +18,12 @@ import CreateFeeSkeleton from "./shimmer/createFeeSkeleton";
 import { motion, AnimatePresence } from "framer-motion";
 import { saveAdditionalFeeStructure } from "@/lib/helpers/finance/feeStructure/additionalFee/additionalFeeStructureAPI";
 import { saveAdditionalFeeComponent } from "@/lib/helpers/finance/feeStructure/additionalFee/additionalFeeComponentAPI";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 export default function CreateFee() {
   const { userId } = useUser();
   const router = useRouter();
+  const { collegeEducationType } = useAdmin();
 
   const [collegeName, setCollegeName] = useState("");
   const [educationType, setEducationType] = useState("");
@@ -740,7 +742,7 @@ export default function CreateFee() {
             </div>
             <div className="flex flex-col w-[49%]">
               <label className="font-medium text-[#282828]">
-                Branch <span className="text-red-500">*</span>
+                {!["Inter"].includes(collegeEducationType!) ? "Group" : "Branch"} <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedBranch ?? ""}
@@ -1157,11 +1159,10 @@ export default function CreateFee() {
                   <button
                     onClick={handleSaveFeeStructure}
                     disabled={isSaving}
-                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${
-                      isSaving
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-[#58AE77] hover:bg-[#469160]"
-                    }`}
+                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${isSaving
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-[#58AE77] hover:bg-[#469160]"
+                      }`}
                   >
                     {isSaving ? "Saving..." : "Save Fee Structure"}
                   </button>
@@ -1306,10 +1307,9 @@ export default function CreateFee() {
                       onClick={handleSaveAdditionalDues}
                       disabled={isSaving}
                       className={`px-8 py-3 text-lg font-medium text-white rounded-md transition-colors shadow-sm
-                        ${
-                          isSaving
-                            ? "bg-gray-300 cursor-not-allowed"
-                            : "bg-[#58AE77] hover:bg-[#469160]"
+                        ${isSaving
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : "bg-[#58AE77] hover:bg-[#469160]"
                         }`}
                     >
                       {isSaving ? "Saving..." : "Save Additional Due"}

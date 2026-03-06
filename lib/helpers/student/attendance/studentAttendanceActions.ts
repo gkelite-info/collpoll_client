@@ -2,14 +2,8 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
-/* ================================
-   STATUS RULES (FINAL)
-================================ */
-
-// ✅ Numerator (student attended)
 const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 
-// ✅ Denominator (class conducted) – anything except cancel
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
 
 function isAttendedStatus(s: string) {
@@ -20,11 +14,7 @@ function isConductedStatus(s: string) {
   return (CONDUCTED_STATUSES as readonly string[]).includes(s);
 }
 
-/* ================================
-   MAIN HELPER
-================================ */
-export async function getStudentDashboardData(userId: number, dateStr: string) {
-  /* ---------- 1️⃣ Student context ---------- */
+export async function getStudentDashboardData(userId: number, dateStr: string, isInter: boolean) {
   const ctx = await fetchStudentContext(userId);
   const {
     studentId,
@@ -35,15 +25,19 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
     collegeSectionsId,
   } = ctx;
 
-  /* ---------- 2️⃣ Class students ---------- */
-  const { data: sahRows, error: sahErr } = await supabase
+  let sahQuery = supabase
     .from("student_academic_history")
     .select("studentId")
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("collegeSemesterId", collegeSemesterId)
     .eq("collegeSectionsId", collegeSectionsId)
     .eq("isCurrent", true)
     .is("deletedAt", null);
+    
+  if (!isInter && collegeSemesterId) {
+    sahQuery = sahQuery.eq("collegeSemesterId", collegeSemesterId);
+  }
+
+  const { data: sahRows, error: sahErr } = await sahQuery;
 
   if (sahErr) throw sahErr;
 
@@ -63,7 +57,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
   const classStudentIds = (classStudents ?? []).map(s => s.studentId);
   if (!classStudentIds.length) return emptyDashboard();
 
-  /* ---------- 3️⃣ TODAY attendance ---------- */
   const { data: todayAll, error: todayErr } = await supabase
     .from("attendance_record")
     .select("studentId, calendarEventId, status")
@@ -72,7 +65,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
 
   if (todayErr) throw todayErr;
 
-  /* ---------- 4️⃣ TODAY totals ---------- */
   const todayConductedSet = new Set<number>();
   const todayAttendedSet = new Set<number>();
 
@@ -88,12 +80,10 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
   const todayConducted = todayConductedSet.size;
   const todayAttended = todayAttendedSet.size;
 
-  /* ---------- 5️⃣ Student rows ---------- */
   const todayStudentRows = (todayAll ?? []).filter(
     r => r.studentId === studentId
   );
 
-  /* ---------- 6️⃣ SEMESTER attendance ---------- */
   const { data: semAll, error: semErr } = await supabase
     .from("attendance_record")
     .select("studentId, calendarEventId, status")
@@ -102,12 +92,10 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
 
   if (semErr) throw semErr;
 
-  /* 🔥 FIX: use SEMESTER events, not today-only */
   const eventIds = [
     ...new Set((semAll ?? []).map(r => r.calendarEventId)),
   ];
 
-  /* ---------- 7️⃣ Event → subject / faculty ---------- */
   const { data: events, error: eventErr } = await supabase
     .from("calendar_event")
     .select("calendarEventId, subject, facultyId")
@@ -120,7 +108,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
     (events ?? []).map(e => [e.calendarEventId, e])
   );
 
-  /* ---------- 8️⃣ Subject & faculty maps ---------- */
   const subjectIds = [
     ...new Set((events ?? []).map(e => e.subject).filter(Boolean)),
   ];
@@ -145,7 +132,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
     (faculty ?? []).map(f => [f.facultyId, f.fullName])
   );
 
-  /* ---------- 9️⃣ SEMESTER subject-wise stats (FOR TABLE) ---------- */
   const semesterSubjectStats: Record<
     number,
     { totalSet: Set<number>; attendedSet: Set<number> }
@@ -171,7 +157,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
     }
   }
 
-  /* ---------- 🔟 TABLE ---------- */
   const tableData = todayStudentRows.map(row => {
     const ev = eventMap.get(row.calendarEventId);
 
@@ -198,7 +183,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
     };
   });
 
-  /* ---------- 11️⃣ SEMESTER cards ---------- */
   const semesterConductedSet = new Set<number>();
   const semesterAttendedSet = new Set<number>();
 
@@ -212,7 +196,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
   const semesterConducted = semesterConductedSet.size;
   const semesterAttended = semesterAttendedSet.size;
 
-  /* ---------- 12️⃣ Semester distribution ---------- */
   const semPresent = new Set<number>();
   const semAbsent = new Set<number>();
   const semLate = new Set<number>();
@@ -249,9 +232,6 @@ export async function getStudentDashboardData(userId: number, dateStr: string) {
   };
 }
 
-/* ================================
-   EMPTY
-================================ */
 function emptyDashboard() {
   return {
     todayStats: { attended: 0, total: 0 },

@@ -34,8 +34,6 @@
 //   const [showDropdown, setShowDropdown] = useState(false);
 //   const { userId } = useUser();
 
-//   console.log("what is userId", userId);
-
 //   const router = useRouter();
 //   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 //     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -455,9 +453,6 @@ export default function CollegeRegistration() {
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [educationList, setEducationList] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const { userId } = useUser();
-
-  console.log("what is userId", userId);
 
   const router = useRouter();
 
@@ -710,11 +705,10 @@ export default function CollegeRegistration() {
               </button>
 
               <div
-                className={`border border-dashed ${
-                  selectedFile
-                    ? "border-[#49C77F] text-[#49C77F]"
-                    : "border-gray-300 text-gray-500"
-                } rounded-lg flex-1 flex items-center px-4 text-xs`}
+                className={`border border-dashed ${selectedFile
+                  ? "border-[#49C77F] text-[#49C77F]"
+                  : "border-gray-300 text-gray-500"
+                  } rounded-lg flex-1 flex items-center px-4 text-xs`}
               >
                 {selectedFile
                   ? `Ready: ${selectedFile.name}`
@@ -787,17 +781,16 @@ export default function CollegeRegistration() {
                             edu.educationCode,
                           )
                             ? prev.educationType.filter(
-                                (v) => v !== edu.educationCode,
-                              )
+                              (v) => v !== edu.educationCode,
+                            )
                             : [...prev.educationType, edu.educationCode],
                         }));
                       }}
                       className={`px-4 py-2 text-sm cursor-pointer flex justify-between items-center transition-all
-    ${
-      formData.educationType.includes(edu.educationCode)
-        ? "bg-[#E6F7EF] text-[#43C17A] font-medium"
-        : "hover:bg-gray-100 text-gray-700"
-    }`}
+    ${formData.educationType.includes(edu.educationCode)
+                          ? "bg-[#E6F7EF] text-[#43C17A] font-medium"
+                          : "hover:bg-gray-100 text-gray-700"
+                        }`}
                     >
                       <span>{edu.educationCode}</span>
 

@@ -28,7 +28,7 @@ interface ProfileOptions {
 }
 
 
-export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu, }: Props) {
+export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
@@ -38,6 +38,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     const { adminId } = useAdmin();
     const { collegeAdminId } = useCollegeAdmin();
     const { parentId } = useParent();
+    const [loading, setLoading] = useState(false);
 
     const academicYear = extractAcademicYearNumber(collegeAcademicYear);
 
@@ -56,15 +57,24 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
     if (!open) return null;
 
     const handleLogout = async () => {
-        const res = await logoutUser();
+        try {
+            setLoading(true);
 
-        if (res.success) {
-            setShowLogoutModal(false);
-            onClose();
-            toast.success("Loggedout successfully");
-            router.replace("/login");
-        } else {
-            toast.error("Logout failed. Please try again.")
+            const res = await logoutUser();
+
+            if (res.success) {
+                setShowLogoutModal(false);
+                onClose();
+                toast.success("Loggedout successfully");
+                router.replace("/login");
+            } else {
+                toast.error("Logout failed. Please try again.")
+            }
+        } catch (error) {
+            console.error("Failed to logout", error);
+        }
+        finally {
+            setLoading(false);
         }
     }
 
@@ -214,6 +224,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                 </div>
                 {showLogoutModal && (
                     <ConfirmLogoutModal
+                        loading={loading}
                         onCancel={() => setShowLogoutModal(false)}
                         onConfirm={() => {
                             handleLogout();

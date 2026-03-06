@@ -237,7 +237,6 @@ export default function Signup() {
         password: "",
         confirmPassword: ""
       })
-      console.log("res is", res);
 
       toast.success("Please verify your email!");
       router.push("/login");

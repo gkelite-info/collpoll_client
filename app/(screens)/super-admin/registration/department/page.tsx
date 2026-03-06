@@ -1,35 +1,35 @@
 "use client";
- 
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
 import { insertEducationDepartments }
   from "@/lib/helpers/superadmin/insertdepartment";
- 
+
 /* ================= Types ================= */
 type DepartmentItem = {
   uuid: string;
   name: string;
   code: string;
 };
- 
+
 export default function Department() {
   const [educationId, setEducationId] = useState("");
   const [departmentName, setDepartmentName] = useState("");
   const [departmentCode, setDepartmentCode] = useState("");
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
- 
+
   /* ================= Add Department ================= */
   const addDepartment = () => {
     const name = departmentName.trim();
     const code = departmentCode.trim();
- 
+
     if (!name || !code) {
       alert("Department name and code are required");
       return;
     }
- 
+
     if (
       departments.some(
         (d) =>
@@ -40,45 +40,43 @@ export default function Department() {
       alert("Department name or code already added");
       return;
     }
- 
+
     setDepartments((prev) => [
       ...prev,
       { uuid: crypto.randomUUID(), name, code },
     ]);
- 
+
     setDepartmentName("");
     setDepartmentCode("");
   };
- 
+
   /* ================= Submit ================= */
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
- 
+
       if (!eduId || eduId < 1) {
         alert("Education ID must be 1 or greater");
         return;
       }
- 
+
       if (departments.length === 0) {
         alert("Add at least one department");
         return;
       }
- 
+
       setLoading(true);
- 
+
       const payload = {
         educationId: eduId,
         departments,
       };
- 
-      console.log("Submitting payload:", payload);
- 
-      const res = await insertEducationDepartments(payload);
-      console.log("Saved:", res);
- 
+
+
+      await insertEducationDepartments(payload);
+
       alert("Departments saved successfully");
- 
+
       // reset UI only
       setDepartments([]);
       setDepartmentName("");
@@ -89,7 +87,7 @@ export default function Department() {
       setLoading(false);
     }
   };
- 
+
   /* ================= UI ================= */
   return (
     <motion.div
@@ -108,7 +106,7 @@ export default function Department() {
           value={educationId}
           onChange={(e: any) => setEducationId(e.target.value)}
         />
- 
+
         <InputField
           label="Department Name"
           name="departmentName"
@@ -117,7 +115,7 @@ export default function Department() {
           onChange={(e: any) => setDepartmentName(e.target.value)}
         />
       </div>
- 
+
       {/* Row 2 */}
       <div className="grid grid-cols-2 gap-[32px] items-end">
         <InputField
@@ -127,7 +125,7 @@ export default function Department() {
           value={departmentCode}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
- 
+
         <button
           type="button"
           onClick={addDepartment}
@@ -136,7 +134,7 @@ export default function Department() {
           Add
         </button>
       </div>
- 
+
       {departments.map((d, i) => (
         <div
           key={d.uuid}
@@ -153,7 +151,7 @@ export default function Department() {
           </span>
         </div>
       ))}
- 
+
       <div className="flex justify-center pt-6">
         <button
           onClick={handleSubmit}

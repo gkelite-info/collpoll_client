@@ -1,21 +1,11 @@
 "use client";
 
-import {
-  ArrowLeft,
-  // CalendarBlank,
-  CaretRight,
-  CheckCircleIcon,
-  FilePdf,
-} from "@phosphor-icons/react";
+import { ArrowLeft, CheckCircleIcon } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
-// import { CardProps } from "./subjectCards";
-import LessonCard from "./lessonCard";
 import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
-import { getStudentCountForAcademics } from "@/lib/helpers/profile/getStudentCountForAcademics";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
-import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { CardProps } from "@/lib/types/faculty";
 
@@ -24,6 +14,7 @@ type FilterBannerProps = {
 };
 function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
   const { subjectTitle, semester, year } = filterBannerDetails;
+  const { faculty_edu_type } = useFaculty();
 
   return (
     <div className="mb-4 flex flex-col gap-4">
@@ -34,12 +25,14 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
             {subjectTitle}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-sm">Semester :</p>
-          <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-            {semester}
-          </p>
-        </div>
+        {!(faculty_edu_type === "Inter") && (
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Semester :</p>
+            <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+              {semester}
+            </p>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm">Year :</p>
           <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
@@ -182,7 +175,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
   }, [unit.topics]);
 
   useEffect(() => {
-    console.log("UNIT TOPICS", localTopics);
+    localTopics
   }, [localTopics]);
 
   const isSavingThisUnit = loadingUnitId === unit.id;

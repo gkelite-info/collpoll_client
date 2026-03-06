@@ -1,42 +1,107 @@
 "use client";
-import { useSearchParams } from "next/navigation";
-import AcademicAchievements from "./AcademicAchievements";
-import Accomplishments from "./Accomplishments/Accomplishments";
-import CompetetiveExams from "./CompetetiveExams";
-import EducationSection from "./Education/Education";
-import Employment from "./Employment/Employment";
-
-import KeySkills from "./KeySkills/keySkills";
-import Languages from "./languages";
-import PersonalDetails from "./personalDetails";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import PersonalDetails from "./resume/personalDetails";
+import EducationSection from "./resume/Education/Education";
+import KeySkillsWithModal from "./resume/KeySkills/keySkills";
+import Languages from "./resume/languages";
+import Internships from "./resume/Internships/internships";
+import ProjectsForm from "./resume/Projects/ProjectsForm";
+import ProfileSummary from "./resume/ProfileSummary";
+import Accomplishments from "./resume/Accomplishments/Accomplishments";
+import CompetetiveExams from "./resume/CompetetiveExams";
+import Employment from "./resume/Employment/Employment";
+import AcademicAchievements from "./resume/AcademicAchievements";
+import ResumeSteps from "./resumeSteps";
 import ProfileSteps from "./profileSteps";
-import ProfileSummary from "./ProfileSummary";
-import ProjectsForm from "./Projects/ProjectsForm";
-import Internships from "./Internships/internships";
+import ProfilePersonalDetails from "./profilePersonalDetails";
+import ProfileEducationSection from "./profileEducation/Education";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
-  const query = searchParams.toString().replace("=", "") ?? "personal-details";
+  const router = useRouter();
+  const pathname = usePathname();
+  const isProfileMode = searchParams.has("profile");
+  const currentView = isProfileMode ? "profile" : "resume";
+  const currentStep = searchParams.get(currentView) || "personal-details";
+
+  const handleViewToggle = (targetView: string) => {
+    const params = new URLSearchParams();
+
+    params.set(targetView, "personal-details");
+    router.push(`${pathname}?${params.toString()}&Step=1`);
+  };
+
+  const renderContent = () => {
+    switch (currentStep) {
+      case "personal-details":
+        return isProfileMode ? <ProfilePersonalDetails /> : <PersonalDetails />;
+
+      case "education":
+        return isProfileMode ? <ProfileEducationSection /> : <EducationSection />;
+
+      case "key-skills":
+        return <KeySkillsWithModal />;
+
+      case "languages":
+        return <Languages />;
+
+      case "internships":
+        return <Internships />;
+
+      case "projects":
+        return <ProjectsForm />;
+
+      case "profile-summary":
+        return <ProfileSummary />;
+
+      case "accomplishments":
+        return <Accomplishments />;
+
+      case "competitive-exams":
+        return <CompetetiveExams />;
+
+      case "employment":
+        return <Employment />;
+
+      case "academic-achievements":
+        return <AcademicAchievements />;
+
+      default:
+        return isProfileMode ? <ProfilePersonalDetails /> : <PersonalDetails />;
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 h-[85vh] p-2">
-      <div>
-        <ProfileSteps />
+
+      <div className="flex-none mb-4">
+        {isProfileMode ? (
+          <ProfileSteps key="profile-stepper" />
+        ) : (
+          <ResumeSteps key="resume-stepper" />
+        )}
       </div>
+
       <p className="mt-3 mb-1 text-[#282828] font-normal">
-        <span className="text-[#43C17A] font-medium">Profile /</span> Resume
+        <span
+          onClick={() => handleViewToggle("resume")}
+          className={`cursor-pointer transition-colors ${!isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
+            }`}
+        >
+          Resume
+        </span>
+        <span className="mx-1 text-gray-400"> / </span>
+        <span
+          onClick={() => handleViewToggle("profile")}
+          className={`cursor-pointer transition-colors ${isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
+            }`}
+        >
+          Profile
+        </span>
       </p>
-      <div className="flex-1">
-        {query === "personal-details" && <PersonalDetails />}
-        {query === "education" && <EducationSection />}
-        {query === "key-skills" && <KeySkills />}
-        {query === "languages" && <Languages />}
-        {query === "internships" && <Internships />}
-        {query === "projects" && <ProjectsForm />}
-        {query === "profile-summary" && <ProfileSummary />}
-        {query === "accomplishments" && <Accomplishments />}
-        {query === "competitive-exams" && <CompetetiveExams />}
-        {query === "employment" && <Employment />}
-        {query === "academic-achievements" && <AcademicAchievements />}
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar pt-2">
+        {renderContent()}
       </div>
     </div>
   );

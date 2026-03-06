@@ -11,6 +11,7 @@ type AdminContextType = {
     collegePublicId: string | null;
     collegeCode: string | null;
     collegeEducationId: number | null;
+    collegeEducationType: string | null;
 };
 
 const AdminContext = createContext<AdminContextType>({
@@ -20,6 +21,7 @@ const AdminContext = createContext<AdminContextType>({
     collegePublicId: null,
     collegeCode: null,
     collegeEducationId: null,
+    collegeEducationType: null,
 });
 
 export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
@@ -32,6 +34,7 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
         collegePublicId: null,
         collegeCode: null,
         collegeEducationId: null,
+        collegeEducationType: null,
     });
 
     useEffect(() => {
@@ -53,6 +56,7 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
                     collegePublicId: admin.collegePublicId,
                     collegeCode: admin.collegeCode,
                     collegeEducationId: admin.collegeEducationId,
+                    collegeEducationType: admin.collegeEducationType,
                 });
             } catch (err) {
                 console.error("Failed to load admin context", err);

@@ -3,9 +3,11 @@
 export default function ConfirmLogoutModal({
     onConfirm,
     onCancel,
+    loading
 }: {
     onConfirm: () => void;
     onCancel: () => void;
+    loading: boolean
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -48,8 +50,9 @@ export default function ConfirmLogoutModal({
                     <button
                         className="flex-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm shadow-orange-200 transition-colors duration-200"
                         onClick={onConfirm}
+                        disabled={loading}
                     >
-                        Logout
+                        {loading ? "Please wait..." : "Logout"}
                     </button>
                 </div>
             </div>

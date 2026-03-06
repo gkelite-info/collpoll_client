@@ -8,6 +8,7 @@ import { fetchFacultyContext } from "@/lib/helpers/faculty/assignment/fetchFacul
 import { upsertFacultyAssignment } from "@/lib/helpers/faculty/assignment/upsertFacultyAssignment";
 import FormSkeleton from "../shimmer/FormSkeleton";
 import { useRouter } from "next/navigation";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 type Props = {
   initialData?: Assignment | null;
@@ -36,6 +37,8 @@ export default function AssignmentForm({
   const [facultySections, setFacultySections] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const { faculty_edu_type } = useFaculty();
+
 
   const [form, setForm] = useState({
     assignmentId: initialData?.assignmentId,
@@ -271,7 +274,6 @@ export default function AssignmentForm({
 
       <form onSubmit={handleSubmit}>
         <div className="bg-white p-4 rounded-xl text-[#282828]">
-          {/* Subject */}
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Subject
@@ -349,7 +351,7 @@ export default function AssignmentForm({
           <div className="flex gap-4">
             <div className="mb-4 flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Branch
+                {faculty_edu_type === "Inter" ? "Group" : "Branch"}
               </label>
               {availableBranches.length === 1 ? (
                 <div className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
