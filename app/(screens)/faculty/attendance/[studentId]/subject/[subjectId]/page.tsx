@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import SubjectAttendanceTable from "../../../components/subjectAttendanceTable";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -10,9 +10,12 @@ import StudentProfileCard from "../../../components/stuProfileCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { CaretLeft } from "@phosphor-icons/react";
 
 export default function SubjectDetailPage() {
   const params = useParams();
+
+  const router = useRouter();
 
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
@@ -107,13 +110,21 @@ export default function SubjectDetailPage() {
   return (
     <main className="px-4 py-4 min-h-screen space-y-6">
       <section className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Track, Verify and Manage Attendance Records.
-          </p>
+        <div className="flex text-black items-start gap-2">
+          <button
+            onClick={() => router.back()}
+            className="mt-1 text-gray-600 cursor-pointer hover:text-black"
+          >
+            <CaretLeft size={25} weight="bold" />
+          </button>
+
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Track, Verify and Manage Attendance Records.
+            </p>
+          </div>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
       </section>
 
       <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
