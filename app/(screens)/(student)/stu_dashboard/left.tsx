@@ -149,6 +149,15 @@ export default function StuDashLeft() {
         },
     ];
 
+    const formatDate = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+
+        return `${day}-${month}-${year}`;
+    };
+
     return (
         <>
             <div className="w-[68%] p-2">
@@ -190,10 +199,11 @@ export default function StuDashLeft() {
                                             lectures.map((lec) => (
                                                 <LectureCard
                                                     key={lec.calendarEventId}
-                                                    time={formatTimeToAMPM(lec.fromTime)}
+                                                    time={`${formatTimeToAMPM(lec.fromTime)}\n-\n${formatTimeToAMPM(lec.toTime)}`}
                                                     title={lec.eventTitle}
                                                     professor={`Prof. ${lec.facultyName}`}
-                                                    description={lec.eventTopic}
+                                                    description={`${lec.eventTopic} • ${formatDate(lec.date)}`}
+                                                    status={lec.isCancelled ? "Class Cancel" : ""}
                                                 />
                                             ))
                                         )}

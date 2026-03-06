@@ -15,9 +15,13 @@ export async function fetchUpcomingClassesForStudent(filters: {
       calendarEventId,
       date,
       fromTime,
+      toTime,
       faculty:facultyId ( fullName ),
       subject:subject ( subjectName ),
       topic:eventTopic ( topicTitle ),
+      attendance_record (
+        status
+      ),
       sections:calendar_event_section (
         collegeEducationId,
         collegeBranchId,
@@ -33,7 +37,6 @@ export async function fetchUpcomingClassesForStudent(filters: {
     .order("fromTime", { ascending: true });
 
   if (error) {
-    console.error(error);
     return [];
   }
 
@@ -47,11 +50,21 @@ export async function fetchUpcomingClassesForStudent(filters: {
     )
   );
 
-  return filtered.map((item: any) => ({
-    calendarEventId: item.calendarEventId,
-    fromTime: item.fromTime.slice(0, 5),
-    eventTitle: item.subject?.subjectName ?? "Class",
-    eventTopic: item.topic?.topicTitle ?? "",
-    facultyName: item.faculty?.fullName ?? "Faculty",
-  }));
+  const mapped = filtered.map((item: any) => {
+    return {
+      calendarEventId: item.calendarEventId,
+      date: item.date,
+      fromTime: item.fromTime.slice(0, 5),
+      toTime: item.toTime.slice(0, 5),
+      eventTitle: item.subject?.subjectName ?? "Class",
+      eventTopic: item.topic?.topicTitle ?? "",
+      facultyName: item.faculty?.fullName ?? "Faculty",
+
+      isCancelled: item.attendance_record?.some(
+        (a: any) => a.status === "CLASS_CANCEL"
+      ),
+    };
+  });
+
+  return mapped;
 }

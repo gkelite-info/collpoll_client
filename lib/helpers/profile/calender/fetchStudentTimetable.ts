@@ -4,10 +4,11 @@ export type StudentTimetableRow = {
   calendarEventId: number;
   fromTime: string;
   toTime: string;
-  eventTitle: string;   // Subject
-  eventTopic: string;   // Topic
+  eventTitle: string;
+  eventTopic: string;
   facultyName: string;
   roomNo: string;
+  isCancelled?: boolean;
 };
 
 export async function fetchStudentTimetableByDate(params: {
@@ -18,6 +19,9 @@ export async function fetchStudentTimetableByDate(params: {
   collegeSemesterId: number;
   collegeSectionId: number;
 }): Promise<StudentTimetableRow[]> {
+
+ 
+
   const { data, error } = await supabase
     .from("calendar_event")
     .select(`
@@ -34,6 +38,9 @@ export async function fetchStudentTimetableByDate(params: {
       ),
       topic:eventTopic (
         topicTitle
+      ),
+      attendance_record (
+        status
       ),
       sections:calendar_event_section!inner (
         collegeEducationId,
@@ -54,17 +61,37 @@ export async function fetchStudentTimetableByDate(params: {
     .order("fromTime", { ascending: true });
 
   if (error) {
-    console.error("❌ [StudentTimetable] Supabase error", error);
     return [];
   }
 
-  return (data ?? []).map((item: any) => ({
-    calendarEventId: item.calendarEventId,
-    fromTime: item.fromTime?.slice(0, 5),
-    toTime: item.toTime?.slice(0, 5),
-    eventTitle: item.subject?.subjectName ?? "Class",
-    eventTopic: item.topic?.topicTitle ?? "",
-    facultyName: item.faculty?.fullName ?? "Faculty",
-    roomNo: item.roomNo ?? "",
-  }));
+
+  const mapped = (data ?? []).map((item: any) => {
+
+    console.log(
+      `📌 Attendance for event ${item.calendarEventId}:`,
+      item.attendance_record
+    );
+
+    const isCancelled = item.attendance_record?.some(
+      (a: any) => a.status === "CLASS_CANCEL"
+    );
+
+    console.log(
+      `🚫 Cancel detection for event ${item.calendarEventId}:`,
+      isCancelled
+    );
+
+    return {
+      calendarEventId: item.calendarEventId,
+      fromTime: item.fromTime?.slice(0, 5),
+      toTime: item.toTime?.slice(0, 5),
+      eventTitle: item.subject?.subjectName ?? "Class",
+      eventTopic: item.topic?.topicTitle ?? "",
+      facultyName: item.faculty?.fullName ?? "Faculty",
+      roomNo: item.roomNo ?? "",
+      isCancelled,
+    };
+  });
+
+  return mapped;
 }
