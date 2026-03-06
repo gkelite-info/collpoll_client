@@ -162,11 +162,13 @@ export async function fetchStudentFinanceMeetings(params: {
         .from("finance_meetings_sections")
         .select(`
             financeMeetingSectionsId,
+            collegeAcademicYearId,
             college_education!inner ( collegeEducationType ),
             college_branch!inner ( collegeBranchCode ),
             college_sections!inner ( collegeSectionsId, collegeSections ),
+            college_academic_year!inner ( collegeAcademicYear ),
             finance_meetings!inner (
-                financeMeetingId, title, role, date, fromTime, toTime, meetingLink, isActive, deletedAt
+                financeMeetingId, title, description, role, date, fromTime, toTime, meetingLink, isActive, deletedAt
             )
         `, { count: "exact" })
         .eq("finance_meetings.isActive", true)
@@ -188,7 +190,6 @@ export async function fetchStudentFinanceMeetings(params: {
         .range(from, to);
 
     if (error) throw error;
-
     const formattedData = (data as any[]).map((row) => ({
         id: `${row.finance_meetings.financeMeetingId}-${row.financeMeetingSectionsId}`,
         financeMeetingId: row.finance_meetings.financeMeetingId,
@@ -197,6 +198,7 @@ export async function fetchStudentFinanceMeetings(params: {
         educationType: row.college_education?.collegeEducationType ?? '',
         branch: row.college_branch?.collegeBranchCode ?? '',
         description: row.finance_meetings.description,
+        year: row.college_academic_year?.collegeAcademicYear ?? '',
         date: row.finance_meetings.date,
         participants: 0,
         section: row.college_sections?.collegeSections ?? '',

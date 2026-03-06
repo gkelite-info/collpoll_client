@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import CourseCard from "../components/courseCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminSubjectDetails } from "@/lib/helpers/admin/assignments/fetchAdminSubjectDetails";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 
 const DepartmentSubjectPage = () => {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const departmentId = decodeURIComponent(params.departmentId as string);
   const year = searchParams.get("year") || "1";
@@ -52,8 +55,8 @@ const DepartmentSubjectPage = () => {
 
   if (loading)
     return (
-      <div className="p-10 text-center text-black">
-        Loading Faculty Subjects...
+      <div className="p-10 text-center">
+        <Loader/>
       </div>
     );
 
@@ -61,9 +64,12 @@ const DepartmentSubjectPage = () => {
     <div className="flex flex-col m-4 relative">
       <div className="mb-6 flex justify-between items-center">
         <div>
+          <div className="flex items-center gap-1">
+            <CaretLeftIcon size={20} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>router.back()}/>
           <h1 className="text-xl font-bold text-[#282828]">
             {departmentId} — {year} Overview
           </h1>
+          </div>
           <p className="text-[#282828] mt-1 text-sm">
             Detailed view of faculty assignments and subject progress.
           </p>

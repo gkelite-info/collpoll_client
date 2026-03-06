@@ -151,7 +151,7 @@ const Page = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`relative z-10 px-6 py-2 text-sm font-semibold transition-colors duration-300 ${
+                    className={`relative z-10 cursor-pointer px-6 py-2 text-sm font-semibold transition-colors duration-300 ${
                       activeTab === tab.id
                         ? "text-white delay-100"
                         : "text-gray-500 hover:text-gray-700"

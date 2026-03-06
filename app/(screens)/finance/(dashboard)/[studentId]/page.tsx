@@ -20,6 +20,7 @@ import ProfileDetails from "./components/profileCard";
 import QuickActions from "./components/quickActions";
 import RecordPayment from "./components/recordPayment";
 import { fetchActiveObligationByStudent } from "@/lib/helpers/finance/analytics/studentPaymentHelpers";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 const mockNonFinancialDues: NonFinancialDue[] = [
   {
@@ -166,9 +167,7 @@ const Page = () => {
   if (loading || !profile) {
     return (
       <div className="p-4 lg:p-6 bg-[#F5F5F7] h-screen flex justify-center items-center">
-        <div className="text-gray-500 animate-pulse font-semibold">
-          Loading Student Financials...
-        </div>
+          <Loader/>
       </div>
     );
   }
@@ -207,7 +206,7 @@ const Page = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`relative z-10 px-6 py-2 text-sm font-semibold transition-colors duration-300 ${
+                  className={`relative z-10 cursor-pointer px-6 py-2 text-sm font-semibold transition-colors duration-300 ${
                     activeTab === tab.id
                       ? "text-white delay-100"
                       : "text-gray-500 hover:text-gray-700"

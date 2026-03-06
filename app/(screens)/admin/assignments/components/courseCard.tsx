@@ -80,7 +80,7 @@ const CourseCard: React.FC<CourseCardData> = ({
 
       <button
         onClick={handleViewAssignments}
-        className="w-full bg-[#16284F] hover:bg-[#1b3878] text-white py-2 rounded-full text-sm font-medium transition-colors"
+        className="w-full bg-[#16284F] cursor-pointer text-white py-2 rounded-full text-sm font-medium transition-colors"
       >
         View Assignments
       </button>

@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 interface FilterProps {
   label: string;
@@ -120,7 +121,7 @@ const AssignmentPage = () => {
 
   if (loading)
     return (
-      <div className="p-10 text-black text-center">Loading Overview...</div>
+      <div className="p-10 text-center"><Loader/></div>
     );
 
   return (
@@ -160,7 +161,7 @@ const AssignmentPage = () => {
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
-            label="Department"
+            label="Branch"
             value={deptFilter}
             options={uniqueDepts}
             onChange={setDeptFilter}
