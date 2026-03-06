@@ -167,7 +167,7 @@ const Page = () => {
   if (loading || !profile) {
     return (
       <div className="p-4 lg:p-6 bg-[#F5F5F7] h-screen flex justify-center items-center">
-          <Loader/>
+        <Loader />
       </div>
     );
   }
