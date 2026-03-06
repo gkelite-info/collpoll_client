@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { fetchAdminFacultyAssignments } from "@/lib/helpers/admin/assignments/fetchAdminFacultyAssignments";
 import AssignmentSkeleton from "@/app/(screens)/faculty/assignments/shimmer/assignmentShimmer";
 import AssignmentForm from "./assignmentForm";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 
 interface Props {
   subjectId: number;
@@ -86,9 +87,12 @@ export default function AssignmentsLeft({
   return (
     <div className="w-[68%] p-2 flex flex-col">
       <div className="mb-4">
-        <h1 className="text-[#282828] font-bold text-2xl mb-1">
-          Subject Assignments
-        </h1>
+        <div className="flex items-center gap-1">
+          <CaretLeftIcon size={22} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>window.history.back()}/>
+          <h1 className="text-[#282828] font-bold text-2xl mb-1">
+            Subject Assignments
+          </h1>
+        </div>
         <p className="text-[#282828] text-sm">
           Reviewing assignments created by the instructor.
         </p>
@@ -109,7 +113,7 @@ export default function AssignmentsLeft({
           activeView="active"
           cardProp={assignments}
           onEdit={(item: any) => setEditingAssignment(item)}
-          onDelete={(id: number) => {}}
+          onDelete={(id: number) => { }}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ import ViewDetailModal from "../modal/viewDetail";
 import UploadModal from "../modal/uploadModal";
 import { supabase } from "@/lib/supabaseClient";
 import { downloadAssignmentFile } from "@/app/utils/storageActions";
+import toast from "react-hot-toast";
 
 async function downloadFile(filePath: string) {
     try {
@@ -126,29 +127,33 @@ export default function AssignmentCard({
         setShowUploadModal(true);
     };
 
-    // ✅ RESTORED handleDownload (so no TS error)
     const handleDownload = async (index: number, item: CardProp) => {
         try {
-            // Prefer backend file path (existingFilePath), else fallback uploadedFiles
             const storedPath = item.existingFilePath ?? uploadedFiles[index];
 
             if (!storedPath) {
-                alert("No uploaded file found!");
+                toast.error("No uploaded file found!");
                 return;
             }
 
             const fileName = storedPath.split("/").pop();
+
             if (!fileName) {
-                alert("Invalid file path!");
+                toast.error("Invalid file path!");
                 return;
             }
 
+            toast.loading("Downloading file...", { id: "download" });
+
             await downloadAssignmentFile(Number(item.assignmentId), fileName);
+
+            toast.success("File downloaded successfully!", { id: "download" });
+
         } catch (error) {
             console.error("DOWNLOAD ERROR:", error);
+            toast.error("Download failed!");
         }
     };
-
     return (
         <>
             {cardProp.map((item, index) => (
@@ -307,7 +312,9 @@ export default function AssignmentCard({
                 index={uploadingIndex ?? undefined}
                 existingFilePath={
                     uploadingIndex !== null
-                        ? cardProp[uploadingIndex]?.existingFilePath ?? undefined
+                        ? uploadedFiles[uploadingIndex] ??
+                        cardProp[uploadingIndex]?.existingFilePath ??
+                        undefined
                         : undefined
                 }
             />

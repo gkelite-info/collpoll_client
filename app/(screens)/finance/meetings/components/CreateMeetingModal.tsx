@@ -51,6 +51,30 @@ const validateTimeRange = (
     return true;
 };
 
+const ALLOWED_MEETING_PROVIDERS = [
+    "meet.google.com",
+    "zoom.us",
+    "teams.microsoft.com",
+    "teams.live.com",
+    "webex.com",
+    "gotomeeting.com",
+    "skype.com"
+];
+
+const validateMeetingUrl = (url: string): boolean => {
+    try {
+        const parsedUrl = new URL(url.trim());
+        const hostname = parsedUrl.hostname.toLowerCase();
+        const isAllowed = ALLOWED_MEETING_PROVIDERS.some(provider =>
+            hostname === provider || hostname.endsWith(`.${provider}`)
+        );
+        if (parsedUrl.pathname.match(/\.(jpg|jpeg|png|gif|mp4|pdf)$/i)) return false;
+        return isAllowed;
+    } catch {
+        return false;
+    }
+};
+
 const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, editingSectionId }: CreateMeetingModalProps) => {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -233,7 +257,6 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
             if (!role || role === "Select Role") { toast.error("Please select a role"); return; }
             if (!date) { toast.error("Please select meeting date"); return; }
             if (!validateTimeRange(startHour, startMinute, startPeriod, endHour, endMinute, endPeriod)) { return; }
-            if (!inAppNotification && !emailNotification) { toast.error("Please select at least one notification type"); return; }
 
             if (role !== "Admin") {
                 if (!branch) { toast.error("Please select branch"); return; }
@@ -241,8 +264,26 @@ const CreateMeetingModal = ({ isOpen, onClose, onSuccess, editingMeetingId, edit
                 if (sectionsSelected.length === 0) { toast.error("Please select at least one section"); return; }
             }
 
-            if (!meetingLink.trim()) { toast.error("Meeting link is required"); return; }
-            try { new URL(meetingLink); } catch { toast.error("Please enter a valid meeting link"); return; }
+            const trimmedLink = meetingLink.trim();
+            if (!trimmedLink) {
+                toast.error("Meeting link is required");
+                return;
+            }
+            let parsedUrl: URL;
+            try {
+                parsedUrl = new URL(trimmedLink);
+            } catch {
+                toast.error("Please enter a valid meeting URL");
+                return;
+            }
+            const isValidProvider = validateMeetingUrl(trimmedLink);
+            if (!isValidProvider) {
+                toast.error(
+                    "Only valid meeting platforms are allowed (Google Meet, Zoom, Microsoft Teams, Webex, Skype, GoToMeeting)"
+                );
+                return;
+            }
+            if (!inAppNotification && !emailNotification) { toast.error("Please select at least one notification type"); return; }
             if (!financeManagerId) { toast.error("User context missing. Please log in again."); return; }
 
             setIsLoading(true);

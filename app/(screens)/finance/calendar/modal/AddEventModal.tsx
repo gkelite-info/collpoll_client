@@ -74,6 +74,9 @@ export default function AddEventModal({
     Record<number, number>
   >({});
 
+  // NEW: Save loading state
+  const [isSaving, setIsSaving] = useState(false);
+
   const { financeManagerId, collegeId, collegeEducationId } =
     useFinanceManager();
 
@@ -155,9 +158,7 @@ export default function AddEventModal({
   }, [isOpen, editData]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (!collegeId || !collegeEducationId) return;
-
+    if (!isOpen || !collegeId || !collegeEducationId) return;
     const loadBranches = async () => {
       try {
         setLoadingBranches(true);
@@ -170,13 +171,11 @@ export default function AddEventModal({
         setLoadingBranches(false);
       }
     };
-
     loadBranches();
   }, [isOpen, collegeId, collegeEducationId]);
 
   useEffect(() => {
     if (!collegeId || !selectedBranchId) return;
-
     const loadAcademicYears = async () => {
       try {
         setLoadingYears(true);
@@ -192,13 +191,11 @@ export default function AddEventModal({
         setLoadingYears(false);
       }
     };
-
     loadAcademicYears();
   }, [collegeId, selectedBranchId]);
 
   useEffect(() => {
     if (!collegeId || !collegeEducationId || !selectedAcademicYearId) return;
-
     const loadSemesters = async () => {
       try {
         setLoadingSemesters(true);
@@ -215,7 +212,6 @@ export default function AddEventModal({
         setLoadingSemesters(false);
       }
     };
-
     loadSemesters();
   }, [collegeId, collegeEducationId, selectedAcademicYearId]);
 
@@ -227,7 +223,6 @@ export default function AddEventModal({
       !selectedAcademicYearId
     )
       return;
-
     const loadSections = async () => {
       try {
         setLoadingSections(true);
@@ -245,7 +240,6 @@ export default function AddEventModal({
         setLoadingSections(false);
       }
     };
-
     loadSections();
   }, [collegeId, collegeEducationId, selectedBranchId, selectedAcademicYearId]);
 
@@ -258,11 +252,11 @@ export default function AddEventModal({
   const sectionIdToLabelMap = new Map(
     sections.map((s) => [s.collegeSectionsId, s.collegeSections]),
   );
-
   const selectedSectionLabels = selectedSectionIds
     .map((id) => sectionIdToLabelMap.get(id))
     .filter(Boolean) as string[];
 
+  // UPDATED handleSave with Timeout and isSaving flag
   const handleSave = async () => {
     if (!financeManagerId || !collegeEducationId) {
       toast.error("Missing user context");
@@ -301,11 +295,12 @@ export default function AddEventModal({
       toast.error("Cannot schedule events in the past.");
       return;
     }
-
     if (startDateTime >= endDateTime) {
       toast.error("End time must be after the start time.");
       return;
     }
+
+    setIsSaving(true); // START LOADING
 
     try {
       const eventRes = await saveFinanceCalendarEvent(
@@ -345,13 +340,19 @@ export default function AddEventModal({
           "Event saved, but failed to link one or more sections.",
         );
 
+      // Fire toast FIRST
       toast.success(
         editData
           ? "Event updated successfully!"
           : "Event created successfully!",
       );
-      onClose();
-      window.location.reload();
+
+      // Wait 3 full seconds before closing and refreshing
+      setTimeout(() => {
+        onClose();
+        setIsSaving(false);
+        window.location.reload();
+      }, 3000);
     } catch (error) {
       console.error("Save error:", error);
       toast.error(
@@ -359,6 +360,7 @@ export default function AddEventModal({
           ? error.message
           : "Failed to save event. Please try again.",
       );
+      setIsSaving(false);
     }
   };
 
@@ -371,7 +373,7 @@ export default function AddEventModal({
           <h2 className="text-lg font-semibold text-gray-800">
             {editData ? "Edit Event" : "Add Event"}
           </h2>
-          <button onClick={onClose}>
+          <button onClick={onClose} disabled={isSaving}>
             <X size={20} className="text-gray-500 hover:text-gray-800" />
           </button>
         </div>
@@ -415,7 +417,6 @@ export default function AddEventModal({
 
           <div className="flex flex-col">
             <label className="text-sm font-medium text-gray-700">Time</label>
-
             <div className="flex gap-4 mt-2">
               <div className="flex-1">
                 <span className="block text-gray-500 text-xs mb-1">From</span>
@@ -434,7 +435,6 @@ export default function AddEventModal({
                       );
                     })}
                   </select>
-
                   <select
                     className={`${INPUT} w-16 px-2`}
                     value={fromMinute}
@@ -449,7 +449,6 @@ export default function AddEventModal({
                       );
                     })}
                   </select>
-
                   <select
                     className={`${INPUT} w-16 px-2`}
                     value={fromAmPm}
@@ -460,7 +459,6 @@ export default function AddEventModal({
                   </select>
                 </div>
               </div>
-
               <div className="flex-1">
                 <span className="block text-gray-500 text-xs mb-1">To</span>
                 <div className="flex gap-2">
@@ -478,7 +476,6 @@ export default function AddEventModal({
                       );
                     })}
                   </select>
-
                   <select
                     className={`${INPUT} w-16 px-2`}
                     value={toMinute}
@@ -493,7 +490,6 @@ export default function AddEventModal({
                       );
                     })}
                   </select>
-
                   <select
                     className={`${INPUT} w-16 px-2`}
                     value={toAmPm}
@@ -523,7 +519,6 @@ export default function AddEventModal({
                 }}
               >
                 <option value="">Select Branch</option>
-
                 {branches.map((b) => (
                   <option key={b.collegeBranchId} value={b.collegeBranchId}>
                     {b.collegeBranchCode}
@@ -531,7 +526,6 @@ export default function AddEventModal({
                 ))}
               </select>
             </div>
-
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">Year</label>
               <select
@@ -548,7 +542,6 @@ export default function AddEventModal({
                 <option value="">
                   {loadingYears ? "loading..." : "Select Academic Year"}
                 </option>
-
                 {academicYears.map((y) => (
                   <option
                     key={y.collegeAcademicYearId}
@@ -586,7 +579,6 @@ export default function AddEventModal({
                 ))}
               </select>
             </div>
-
             <div className="flex flex-col gap-2">
               <CustomMultiSelect
                 label="Section"
@@ -614,13 +606,13 @@ export default function AddEventModal({
             </div>
           </div>
 
+          {/* UPDATED BUTTON WITH IS_SAVING STATE */}
           <button
-            onClick={() => {
-              handleSave();
-            }}
-            className="w-full mt-4 bg-[#43C17A] cursor-pointer text-white py-3 rounded-lg font-semibold transition"
+            disabled={isSaving}
+            onClick={handleSave}
+            className="w-full mt-4 bg-[#43C17A] cursor-pointer text-white py-3 rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {isSaving ? "Saving..." : editData ? "Update" : "Save"}
           </button>
         </div>
       </div>

@@ -355,19 +355,20 @@ const SemBox = ({
   );
 };
 
-const defaultYearWiseData = [1, 2, 3, 4].map((year) => ({
-  year:
-    year === 1
-      ? "1st Year"
-      : year === 2
-        ? "2nd Year"
-        : year === 3
-          ? "3rd Year"
-          : "4th Year",
-  sem1: 0,
-  sem2: 0,
-  total: 0,
-}));
+
+// const defaultYearWiseData = [1, 2, 3, 4].map((year) => ({
+//   year:
+//     year === 1
+//       ? "1st Year"
+//       : year === 2
+//         ? "2nd Year"
+//         : year === 3
+//           ? "3rd Year"
+//           : "4th Year",
+//   sem1: 0,
+//   sem2: 0,
+//   total: 0,
+// }));
 
 interface AcademicYearData {
   collegeAcademicYear: string;
@@ -392,7 +393,7 @@ export default function DashboardPage() {
   const [loadingOverallFinance, setLoadingOverallFinance] = useState(false);
   const [financeSummary, setFinanceSummary] = useState({
     academicYearTotal: 0,
-    yearWiseData: defaultYearWiseData,
+    yearWiseData: [] as any[],
   });
   const [overallFinanceTotal, setOverallFinanceTotal] = useState<number>(0);
 
@@ -411,6 +412,25 @@ export default function DashboardPage() {
       ? undefined
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
         ?.collegeBranchId;
+
+  const selectedBranchData = branches.find(
+    (b: any) => b.collegeBranchCode === selectedBranch
+  );
+
+  const branchYears = selectedBranchData?.years || [];
+
+  const dynamicYearWiseData = branchYears.map((yearObj: any) => {
+    const summaryYear = financeSummary.yearWiseData.find(
+      (y: any) => y.year === yearObj.collegeAcademicYear
+    );
+
+    return {
+      year: yearObj.collegeAcademicYear,
+      total: summaryYear?.total ?? 0,
+      sem1: summaryYear?.sem1 ?? 0,
+      sem2: summaryYear?.sem2 ?? 0,
+    };
+  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -514,10 +534,7 @@ export default function DashboardPage() {
 
         setFinanceSummary({
           academicYearTotal: summary.academicYearTotal ?? 0,
-          yearWiseData:
-            summary.yearWiseData?.length > 0
-              ? summary.yearWiseData
-              : defaultYearWiseData,
+          yearWiseData: summary.yearWiseData ?? [],
         });
       } catch (err) {
         console.error("Finance summary error:", err);
@@ -566,7 +583,19 @@ export default function DashboardPage() {
     selectedYear,
   ]);
 
+
+
   useEffect(() => {
+    console.log("🟡 Overall Pending useEffect triggered");
+
+    console.log("Filters:", {
+      loading,
+      collegeId,
+      collegeEducationId,
+      selectedBranchId,
+      selectedYear,
+    });
+
     const loadOverallPending = async () => {
       if (
         loading ||
@@ -575,18 +604,34 @@ export default function DashboardPage() {
         !selectedBranchId ||
         !selectedYear
       ) {
+        console.log("⛔ Skipping Overall Pending API call due to missing filters");
+        setOverallPending(0);
         return;
       }
 
       try {
+        console.log("🚀 Calling getOverallPending API with:", {
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: selectedBranchId,
+          selectedYear,
+        });
+
         const pending = await getOverallPending({
           collegeId,
           collegeEducationId,
           collegeBranchId: selectedBranchId,
           selectedYear,
         });
+
+        console.log("✅ Overall Pending API result:", pending);
+
         setOverallPending(pending ?? 0);
+
+        console.log("📦 State updated: overallPending =", pending ?? 0);
       } catch (err) {
+        console.error("❌ Overall Pending error:", err);
+        setOverallPending(0);
       }
     };
 
@@ -672,7 +717,7 @@ export default function DashboardPage() {
   const BASE_YEAR = 2026;
   const CURRENT_YEAR = new Date().getFullYear();
 
-  const trendData = financeSummary.yearWiseData.map((item) => ({
+  const trendData = dynamicYearWiseData.map((item: any) => ({
     name: item.year,
     value: Number((item.total / 100000).toFixed(1)),
   }));
@@ -781,8 +826,15 @@ export default function DashboardPage() {
 
               const enableScroll = branchYears.length >= 5;
 
-              if (branchYears.length === 0) return null;
-
+              if (branchYears.length === 0) {
+                return (
+                  <div className="col-span-9 flex items-center justify-center h-[203px]">
+                    <div className="text-center text-gray-500 text-xs font-medium">
+                      Academic Years and Semesters are not registered for this branch
+                    </div>
+                  </div>
+                );
+              }
               return <div
                 className={`col-span-9 grid grid-cols-2 gap-3 ${enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
                   }`}
@@ -853,7 +905,7 @@ export default function DashboardPage() {
                 />
               </div>
               <div className="flex-1 space-y-2">
-                {financeSummary.yearWiseData.map((yearData: any, i: number) => (
+                {dynamicYearWiseData.map((yearData: any, i: number) => (
                   <div
                     key={i}
                     className="flex justify-between items-center text-[10px]"
@@ -1048,40 +1100,44 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="col-span-3">
-            <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[120px] flex flex-col justify-center">
-              <h4 className="font-bold text-gray-800 text-xs mb-1">
-                Overall Pending
-              </h4>
-              <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
-                Total unpaid fees across all students
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-[#43C17A]">₹</span>
-                <span className="text-2xl font-bold text-[#43C17A]">
-                  {formatAmount(overallPending)}
-                </span>
-              </div>
-            </div>
-          </div>
+          <div className="flex col-span-6 justify-around p-2 bg-white rounded-lg">
 
-          <div className="col-span-3">
-            <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[120px] flex flex-col justify-center">
-              <h4 className="font-bold text-gray-800 text-xs mb-1">
-                Current Semester
-              </h4>
-              <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
-                Students yet to complete payment
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[#43C17A]">
-                  {pendingStudentsCount}
-                </span>
-                <span className="text-[10px] font-bold text-[#43C17A]">
-                  Students
-                </span>
+            <div className="col-span-3">
+              <div className="bg-[#E5F6EC] p-3  rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 text-xs mb-1">
+                  Overall Pending
+                </h4>
+                <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
+                  Total unpaid fees across all students
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-[#43C17A]">₹</span>
+                  <span className="text-2xl font-bold text-[#43C17A]">
+                    {formatAmount(overallPending)}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="col-span-3">
+              <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 text-xs mb-1">
+                  Current Semester
+                </h4>
+                <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
+                  Students yet to complete payment
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-[#43C17A]">
+                    {pendingStudentsCount}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#43C17A]">
+                    Students
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="col-span-6">

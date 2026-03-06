@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { fetchFacultyAssignments } from "@/lib/helpers/faculty/assignment/fetchFacultyAssignments";
 import { deleteFacultyAssignment } from "@/lib/helpers/faculty/assignment/deleteFacultyAssignment";
 import AssignmentSkeleton from "../shimmer/assignmentShimmer";
+import { Pagination } from "./pagination";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -22,21 +23,26 @@ export interface Assignment {
   marks: string | number;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function AssignmentsLeft() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
+
   const [activeView, setActiveView] = useState<"active" | "previous">("active");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
   useEffect(() => {
     fetchAssignments();
-  }, []);
+  }, [activeView, currentPage]);
 
   async function fetchAssignments() {
     try {
-      setIsLoading(true);
-
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
 
@@ -56,8 +62,13 @@ export default function AssignmentsLeft() {
 
       if (!facultyData) return;
 
-      const { data, error } = await fetchFacultyAssignments(
+      const dbStatus = activeView === "active" ? "Active" : "Evaluated";
+
+      const { data, count, error } = await fetchFacultyAssignments(
         facultyData.facultyId,
+        dbStatus,
+        currentPage,
+        ITEMS_PER_PAGE,
       );
 
       if (error) {
@@ -79,13 +90,28 @@ export default function AssignmentsLeft() {
           marks: a.marks ? String(a.marks) : "0",
         }));
         setAssignments(formatted);
+        setTotalCount(count || 0);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
     }
   }
+
+  const handleTabChange = (tab: "active" | "previous") => {
+    if (activeView === tab) return;
+    setIsLoading(true);
+    setActiveView(tab);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page === currentPage) return;
+    setIsFetchingMore(true);
+    setCurrentPage(page);
+  };
 
   const handleDelete = async (id: number) => {
     const res = await deleteFacultyAssignment(id);
@@ -95,7 +121,12 @@ export default function AssignmentsLeft() {
     }
 
     toast.success("Assignment deleted");
-    setAssignments((prev) => prev.filter((a) => a.assignmentId !== id));
+
+    if (assignments.length === 1 && currentPage > 1) {
+      setCurrentPage((prev) => prev - 1);
+    } else {
+      fetchAssignments();
+    }
   };
 
   if (view === "add" || view === "edit") {
@@ -107,6 +138,7 @@ export default function AssignmentsLeft() {
           setView("list");
         }}
         onSave={() => {
+          setIsLoading(true);
           fetchAssignments();
           setEditing(null);
           setView("list");
@@ -125,62 +157,81 @@ export default function AssignmentsLeft() {
         </p>
       </div>
 
-      <div className="w-full flex flex-col">
-        <div className="flex flex-col justify-between items-start">
+      <div className="w-full flex flex-col flex-1 min-h-[500px]">
+        <div className="flex flex-col justify-between items-start h-full w-full">
           <div className="flex justify-between mb-2 w-full">
             <div className="flex gap-4 pb-1">
               <h5
-                className={`text-sm cursor-pointer pb-1 ${
+                className={`text-sm cursor-pointer pb-1 transition-all ${
                   activeView === "active"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
                 }`}
-                onClick={() => setActiveView("active")}
+                onClick={() => handleTabChange("active")}
               >
                 Active Assignments
               </h5>
 
               <h5
-                className={`text-sm cursor-pointer pb-1 ${
+                className={`text-sm cursor-pointer pb-1 transition-all ${
                   activeView === "previous"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
                 }`}
-                onClick={() => setActiveView("previous")}
+                onClick={() => handleTabChange("previous")}
               >
                 Evaluated Assignments
               </h5>
             </div>
 
             <button
-              className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1 rounded-sm"
+              className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1 rounded-sm hover:bg-[#102040] transition-colors"
               onClick={() => setView("add")}
             >
               Add Assignment
             </button>
           </div>
 
-          {isLoading ? (
-            <div className="w-full">
-              {[1, 2, 3].map((i) => (
-                <AssignmentSkeleton key={i} />
-              ))}
-            </div>
-          ) : assignments.length === 0 ? (
-            <div className="w-full py-10 text-center text-gray-500">
-              No assignments found.
-            </div>
-          ) : (
-            <AssignmentCard
-              cardProp={assignments}
-              activeView={activeView}
-              onEdit={(a) => {
-                setEditing(a);
-                setView("edit");
-              }}
-              onDelete={handleDelete}
-            />
-          )}
+          <div className="flex flex-col flex-1 w-full relative">
+            {isLoading ? (
+              <div className="w-full">
+                {[1, 2, 3].map((i) => (
+                  <AssignmentSkeleton key={i} />
+                ))}
+              </div>
+            ) : assignments.length === 0 ? (
+              <div className="w-full py-10 text-center text-gray-500">
+                No assignments found.
+              </div>
+            ) : (
+              <>
+                {isFetchingMore && (
+                  <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
+                    <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+
+                <AssignmentCard
+                  cardProp={assignments}
+                  activeView={activeView}
+                  onEdit={(a) => {
+                    setEditing(a);
+                    setView("edit");
+                  }}
+                  onDelete={handleDelete}
+                />
+
+                {totalCount > ITEMS_PER_PAGE && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalCount}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                    onPageChange={handlePageChange}
+                  />
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

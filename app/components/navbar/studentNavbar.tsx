@@ -83,7 +83,7 @@ export default function Navbar() {
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
-      path: "/placements",
+      path: "/stu_placements",
     },
     {
       icon: (isActive) => (

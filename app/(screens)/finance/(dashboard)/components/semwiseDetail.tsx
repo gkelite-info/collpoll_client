@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { useEffect, useMemo, useState } from "react";
 import CardComponent from "@/app/utils/card";
 import {
@@ -8,18 +8,21 @@ import {
   CurrencyInr,
   FunnelSimple,
   Faders,
+  CaretLeftIcon,
+  CaretRight,
 } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import { useRouter } from "next/navigation";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
- 
+
 import { useSearchParams } from "next/navigation";
 import { getSemesterFinanceSummary } from "@/lib/helpers/finance/getSemesterStudents";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 // import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
 // import { getSemesterStudents } from "@/lib/helpers/finance/getSemesterStudents";
 // import { getFinanceYearSemesterCollectionSummary } from "@/lib/helpers/finance/getSemesterStudents";
 // import { getSemesterStudents } from "@/lib/helpers/finance/getSemesterStudents";
- 
+
 type StudentRow = {
   studentId: number;
   fullName: string;
@@ -30,13 +33,16 @@ type StudentRow = {
   paymentStatus: "Paid" | "Pending" | "Partial";
   lastPaymentDate: string | null;
 };
- 
+
 export default function SemwiseDetail({ semester }: { semester: string }) {
   const [sortKey, setSortKey] = useState<string>("studentName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "partial">("all");
   const [search, setSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
+  const [loadingTable, setLoadingTable] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [summary, setSummary] = useState({
     totalStudents: 0,
@@ -48,21 +54,24 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   });
   const { collegeId, collegeEducationId, loading } = useFinanceManager();
   const router = useRouter();
- 
+
   const searchParams = useSearchParams();
- 
+
   const branchIdParam = searchParams.get("branchId");
   const academicYearParam = searchParams.get("academicYearId");
   const academicYear = searchParams.get("academicYear");
   const semesterParam = searchParams.get("semesterId");
- 
+
   const branchId = branchIdParam ? Number(branchIdParam) : null;
   const academicYearId = academicYearParam ? Number(academicYearParam) : null;
   const semesterId = semesterParam ? Number(semesterParam) : null;
   const branchName = searchParams.get("branchName");
   const year = searchParams.get("year");
   const breadcrumb = `B-Tech → ${branchName} - ${academicYear} - ${semester}`;
- 
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
   const filterOptions: { label: string; value: "all" | "paid" | "pending" | "partial" }[] =
     [
       { label: "All", value: "all" },
@@ -70,131 +79,8 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       { label: "Pending", value: "pending" },
       { label: "Partial", value: "partial" },
     ];
- 
- 
-  // const initialData = [
-  //   {
-  //     studentName: "Aarav Reddy",
-  //     studentId: "CSE21A001",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Priya Sharma",
-  //     studentId: "CSE21A002",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 60000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Rohit Kumar",
-  //     studentId: "CSE21A003",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Ananya Verma",
-  //     studentId: "CSE21A004",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 45000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Sai Teja",
-  //     studentId: "CSE21A005",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Kiran Rao",
-  //     studentId: "CSE21A006",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 50000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Megha Das",
-  //     studentId: "CSE21A007",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Rahul Singh",
-  //     studentId: "CSE21A008",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 30000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Divya Patel",
-  //     studentId: "CSE21A009",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Vikram Jain",
-  //     studentId: "CSE21A010",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 70000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Harsha Vardhan",
-  //     studentId: "CSE21A011",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Neha Kapoor",
-  //     studentId: "CSE21A012",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 40000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Manoj Kumar",
-  //     studentId: "CSE21A013",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Sneha Reddy",
-  //     studentId: "CSE21A014",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 65000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  //   {
-  //     studentName: "Arjun Nair",
-  //     studentId: "CSE21A015",
-  //     department: "CSE",
-  //     totalFee: 85000,
-  //     paidAmount: 85000,
-  //     lastPaymentDate: "15 Jan 2026",
-  //   },
-  // ];
- 
+
+
   const columns = [
     { title: "Student Name", key: "fullName" },
     { title: "Student ID", key: "studentId" },
@@ -206,22 +92,22 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     { title: "Last Payment Date", key: "lastPaymentDate" },
     { title: "Action", key: "action" },
   ];
- 
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
- 
+
     const date = new Date(dateString);
- 
+
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
- 
+
   const processedData = useMemo(() => {
     let data = [...students];
- 
+
     if (search) {
       data = data.filter(
         (item) =>
@@ -229,35 +115,35 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           String(item.studentId).toLowerCase().includes(search.toLowerCase())
       );
     }
- 
+
     data.sort((a: any, b: any) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
- 
+
       if (typeof aVal === "number") {
         return sortDirection === "asc"
           ? aVal - bVal
           : bVal - aVal;
       }
- 
+
       return sortDirection === "asc"
         ? String(aVal).localeCompare(String(bVal))
         : String(bVal).localeCompare(String(aVal));
     });
- 
+
     return data.map((item) => ({
       ...item,
- 
+
       totalAmount: item.totalAmount,   // keep number
       paidAmount: item.paidAmount,
       balanceAmount: item.balanceAmount,
- 
+
       totalAmountFormatted: `₹ ${item.totalAmount.toLocaleString("en-IN")}`,
       paidAmountFormatted: `₹ ${item.paidAmount.toLocaleString("en-IN")}`,
       balanceAmountFormatted: `₹ ${item.balanceAmount.toLocaleString("en-IN")}`,
- 
+
       lastPaymentDate: formatDate(item.lastPaymentDate),
- 
+
       paymentStatusElement: (
         <div className="flex items-center justify-center gap-2">
           <span
@@ -268,7 +154,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                 : "bg-red-600"
               }`}
           />
- 
+
           <span
             className={`${item.paymentStatus === "Paid"
               ? "text-green-600"
@@ -281,7 +167,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           </span>
         </div>
       ),
- 
+
       action: (
         <span
           className="cursor-pointer text-[#00A94A] font-medium"
@@ -292,13 +178,13 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       ),
     }));
   }, [students, search]);
- 
- 
- 
- 
+
+
+
+
   // const processedData = useMemo(() => {
   //   let data = [...initialData];
- 
+
   //   if (search) {
   //     data = data.filter(
   //       (item) =>
@@ -306,23 +192,23 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //         item.studentId.toLowerCase().includes(search.toLowerCase()),
   //     );
   //   }
- 
+
   //   if (statusFilter === "paid") {
   //     data = data.filter((item) => item.paidAmount === item.totalFee);
   //   }
- 
+
   //   if (statusFilter === "pending") {
   //     data = data.filter((item) => item.paidAmount < item.totalFee);
   //   }
- 
+
   //   data = data.map((item) => {
   //     const balance = item.totalFee - item.paidAmount;
   //     const isPaid = balance === 0;
- 
+
   //     return {
   //       ...item,
   //       balance,
- 
+
   //       paymentStatus: (
   //         <div className="flex items-center justify-center gap-2">
   //           <span
@@ -334,7 +220,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //           </span>
   //         </div>
   //       ),
- 
+
   //       action: (
   //         <span
   //           className="cursor-pointer text-[#00A94A] font-medium"
@@ -345,7 +231,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //       ),
   //     };
   //   });
- 
+
   //   data.sort((a: any, b: any) => {
   //     if (typeof a[sortKey] === "number") {
   //       return sortDirection === "asc"
@@ -356,10 +242,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   //       ? String(a[sortKey]).localeCompare(String(b[sortKey]))
   //       : String(b[sortKey]).localeCompare(String(a[sortKey]));
   //   });
- 
+
   //   return data;
   // }, [search, statusFilter, sortKey, sortDirection]);
- 
+
   const handleSort = (key: string) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -368,7 +254,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       setSortDirection("asc");
     }
   };
- 
+
   useEffect(() => {
     const loadData = async () => {
       if (
@@ -379,38 +265,49 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         academicYearId === null ||
         semesterId === null
       ) return;
- 
+
+      setLoadingTable(true);
+
       try {
-        const response = await getSemesterFinanceSummary({
-          collegeId,
-          collegeEducationId,
-          collegeBranchId: branchId,
-          collegeAcademicYearId: academicYearId,
-          collegeSemesterId: semesterId,
-        });
- 
+        const response = await getSemesterFinanceSummary(
+          {
+            collegeId,
+            collegeEducationId,
+            collegeBranchId: branchId,
+            collegeAcademicYearId: academicYearId,
+            collegeSemesterId: semesterId,
+          },
+          currentPage,
+          rowsPerPage
+        );
+
         if (!response) return;
- 
+
         let studentData: StudentRow[] = response.students || [];
- 
+
         if (statusFilter === "paid") {
           studentData = studentData.filter((s) => s.paymentStatus === "Paid");
         }
- 
+
         if (statusFilter === "pending") {
           studentData = studentData.filter((s) => s.paymentStatus === "Pending");
         }
- 
+
         if (statusFilter === "partial") {
           studentData = studentData.filter((s) => s.paymentStatus === "Partial");
         }
- 
+
         setStudents(studentData);
         setSummary(response.summary);
+        setTotalRecords(response.totalCount || 0);
+
       } catch (error) {
+        console.error("Semester finance fetch error:", error);
+      } finally {
+        setLoadingTable(false);
       }
     };
- 
+
     loadData();
   }, [
     loading,
@@ -420,13 +317,22 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     academicYearId,
     semesterId,
     statusFilter,
+    currentPage
   ]);
- 
+
   return (
     <div className="flex flex-col h-screen">
-      <h2 className="text-lg font-semibold text-[#2E7D32] mb-3">
-        {breadcrumb}
-      </h2>
+      <div className="flex items-center gap-2 mb-3">
+        <CaretLeftIcon
+          size={20}
+          weight="bold"
+          className="cursor-pointer text-black active:scale-90"
+          onClick={router.back}
+        />
+        <h2 className="text-lg font-semibold text-[#2E7D32]">
+          {breadcrumb}
+        </h2>
+      </div>
       <div className="bg-[#E2DAFF] rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 text-sm font-medium">
         <div>
           <p className="text-[#3E18CB] font-semibold text-md">
@@ -453,7 +359,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           <p className="text-[#282828] text-sm">Pending</p>
         </div>
       </div>
- 
+
       <div className="flex gap-4 mt-6">
         <CardComponent
           style="bg-[#CEE6FF] h-[120px] w-[220px]"
@@ -473,7 +379,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           value={summary.paidStudents.toString()}
           label="Paid Students"
         />
- 
+
         <CardComponent
           style="bg-[#FFEDDA] h-[120px] w-[220px]"
           icon={<UsersThree size={28} weight="fill" color="#FFBB70" />}
@@ -481,7 +387,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           label="Pending Students"
         />
       </div>
- 
+
       <div className="flex justify-between items-center mt-6 mb-3 ">
         <div className="w-[55%] bg-[#EAEAEA] px-2 rounded-2xl flex items-center justify-center">
           <input
@@ -493,7 +399,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           />
           <MagnifyingGlass size={20} className="text-[#43C17A] left-3 top-3" />
         </div>
- 
+
         <div className="flex gap-2">
           <div
             onClick={() => handleSort("fullName")}
@@ -501,7 +407,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           >
             <FunnelSimple size={20} className="text-[#00A94A]" />
           </div>
- 
+
           <div
             onClick={() => setShowFilter(!showFilter)}
             className="relative bg-[#43C17A1F] cursor-pointer rounded-full p-2 flex items-center justify-center"
@@ -516,20 +422,20 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                     if (option.value === "partial") return "text-orange-500";
                     return "text-gray-700"; // all
                   };
- 
+
                   const getDotColor = () => {
                     if (option.value === "paid") return "bg-green-600";
                     if (option.value === "pending") return "bg-red-600";
                     if (option.value === "partial") return "bg-orange-500";
                     return "bg-gray-400";
                   };
- 
+
                   return (
                     <div
                       key={option.value}
                       className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${statusFilter === option.value
-                          ? "bg-gray-100 font-semibold"
-                          : ""
+                        ? "bg-gray-100 font-semibold"
+                        : ""
                         }`}
                       onClick={() => {
                         setStatusFilter(option.value);
@@ -548,16 +454,66 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           </div>
         </div>
       </div>
- 
+
       <div className="flex-1">
-        <TableComponent
-          columns={columns}
-          tableData={processedData}
-          height="69vh"
-        />
+        {loadingTable ? (
+          <div className="flex justify-center items-center h-[200px]">
+            <Loader />
+          </div>
+        ) : (
+          <TableComponent
+            columns={columns}
+            tableData={processedData}
+            height="69vh"
+          />
+        )}
+        {totalPages > 1 && (
+          <div className="flex justify-end items-center gap-3 mt-6 mb-4">
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === 1
+                  ? "border-gray-200 text-gray-300"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <CaretLeftIcon size={18} weight="bold" />
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i + 1)}
+                className={`w-10 h-10 rounded-lg font-semibold
+        ${currentPage === i + 1
+                    ? "bg-[#16284F] text-white"
+                    : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                {i + 1}
+              </button>
+            ))}
+
+            <button
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages, p + 1))
+              }
+              disabled={currentPage === totalPages}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === totalPages
+                  ? "border-gray-200 text-gray-300"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
+            >
+              <CaretRight size={18} weight="bold" />
+            </button>
+
+          </div>
+        )}
       </div>
     </div>
   );
 }
- 
- 
+

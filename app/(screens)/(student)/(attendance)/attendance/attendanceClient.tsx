@@ -144,7 +144,7 @@ export default function AttendanceClient() {
       console.log("🧹 Attendance useEffect cleanup");
       isMounted = false;
     };
-  }, [userId, userLoading, viewDate]);
+  }, [userId, viewDate]);
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
