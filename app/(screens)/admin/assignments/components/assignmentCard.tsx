@@ -120,7 +120,7 @@ const AssignmentCard = ({
         </div>
         <button
           onClick={handleViewDetails}
-          className="bg-[#16284F] cursor-pointer text-white px-4 py-1 rounded-md text-xs tracking-wide hover:bg-[#253b66] transition-all"
+          className="bg-[#16284F] cursor-pointer text-white px-4 py-1 rounded-md text-xs tracking-wide"
         >
           View Details
         </button>

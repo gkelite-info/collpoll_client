@@ -62,8 +62,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
 
   useEffect(() => {
+    if (!userId || role !== "Student") return;
     getStudentId().then(setStudentId).catch(console.error);
-  }, []);
+  }, [userId, role]);
 
   useEffect(() => {
     async function loadStudentContext() {

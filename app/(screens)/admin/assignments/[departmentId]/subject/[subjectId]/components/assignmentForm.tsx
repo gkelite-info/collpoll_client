@@ -3,11 +3,14 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { updateAdminAssignment } from "@/lib/helpers/admin/assignments/updateAdminAssignment";
+import { useRouter } from "next/navigation";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 
 export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
   const [deadline, setDeadline] = useState(initialData.toDate || "");
   const [status, setStatus] = useState(initialData.status || "Active");
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +32,12 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
 
   return (
     <div className="w-[68%] mx-1 max-w-3xl">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">
-        Edit Assignment (Admin)
-      </h2>
+      <div className="flex items-center gap-1 mb-6">
+        <CaretLeftIcon size={20} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>router.back()}/>
+        <h2 className="text-xl font-semibold text-gray-900 ">
+          Edit Assignment (Admin)
+        </h2>
+      </div>
       <form
         onSubmit={handleSubmit}
         className="bg-white p-4 rounded-xl text-[#282828]"
@@ -43,7 +49,7 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
           <textarea
             disabled
             value={initialData.description}
-            className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+            className="w-full rounded-md cursor-not-allowed border border-[#CCCCCC] focus:outline-none bg-gray-50 px-3 py-2 text-sm"
             rows={3}
           />
         </div>
@@ -56,7 +62,7 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
             <input
               disabled
               value={initialData.marks}
-              className="w-full rounded-md border bg-gray-50 px-3 py-2 text-sm"
+              className="w-full rounded-md border cursor-not-allowed border-[#CCCCCC] focus:outline-none bg-gray-50 px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -66,7 +72,7 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              className="w-full rounded-md cursor-pointer border border-[#CCCCCC] focus:outline-none px-3 py-2 text-sm"
             >
               <option value="Active">Active</option>
               <option value="Cancelled">Cancelled</option>
@@ -77,14 +83,15 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
 
         <div className="mb-6">
           <label className="mb-1 block text-sm font-medium text-gray-700">
-            Submission Deadline
+            Submission deadline
           </label>
           <input
             type="date"
             required
+            min={new Date().toISOString().split("T")[0]}
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="w-full cursor-pointer rounded-md border border-[#CCCCCC] focus:outline-none px-3 py-2 text-sm"
           />
         </div>
 
@@ -92,14 +99,14 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
           <button
             type="submit"
             disabled={isSaving}
-            className="flex-1 bg-[#43C17A] text-white py-2 rounded-md hover:bg-green-600"
+            className="flex-1 cursor-pointer bg-[#43C17A] text-white py-2 rounded-md hover:bg-green-600"
           >
             {isSaving ? "Saving..." : "Update Deadline"}
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 border py-2 rounded-md hover:bg-gray-100"
+            className="flex-1 cursor-pointer border py-2 rounded-md hover:bg-gray-100"
           >
             Cancel
           </button>

@@ -539,7 +539,7 @@ export default function Page() {
       {loading ? (
         <Loader />
       ) : (
-        <div className="w-full min-h-screen bg-[#f3f4f6] text-gray-800">
+        <div className="w-full h-[80vh] bg-[#f3f4f6] text-gray-800">
           <CalendarGrid
             events={events}
             weekDays={weekDays}

@@ -10,9 +10,9 @@ function AcademicsContent() {
   const { studentProfile, subjects, loading } = useStudent();
 
   return (
-    <div className="p-2 w-261.25 flex flex-col lg:pb-5">
+    <div className="p-2 flex flex-col lg:pb-5">
       <div className="flex justify-between items-center mb-5">
-        <div className="flex flex-col w-[50%]">
+        <div className="flex flex-col w-[68%]">
           <h1 className="text-[#282828] font-bold text-[28px] mb-1">
             Academics
           </h1>

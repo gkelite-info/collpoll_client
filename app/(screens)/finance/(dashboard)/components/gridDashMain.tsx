@@ -1100,40 +1100,44 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="col-span-3">
-            <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[120px] flex flex-col justify-center">
-              <h4 className="font-bold text-gray-800 text-xs mb-1">
-                Overall Pending
-              </h4>
-              <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
-                Total unpaid fees across all students
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-[#43C17A]">₹</span>
-                <span className="text-2xl font-bold text-[#43C17A]">
-                  {formatAmount(overallPending)}
-                </span>
-              </div>
-            </div>
-          </div>
+          <div className="flex col-span-6 justify-around p-2 bg-white rounded-lg">
 
-          <div className="col-span-3">
-            <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[120px] flex flex-col justify-center">
-              <h4 className="font-bold text-gray-800 text-xs mb-1">
-                Current Semester
-              </h4>
-              <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
-                Students yet to complete payment
-              </p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[#43C17A]">
-                  {pendingStudentsCount}
-                </span>
-                <span className="text-[10px] font-bold text-[#43C17A]">
-                  Students
-                </span>
+            <div className="col-span-3">
+              <div className="bg-[#E5F6EC] p-3  rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 text-xs mb-1">
+                  Overall Pending
+                </h4>
+                <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
+                  Total unpaid fees across all students
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-[#43C17A]">₹</span>
+                  <span className="text-2xl font-bold text-[#43C17A]">
+                    {formatAmount(overallPending)}
+                  </span>
+                </div>
               </div>
             </div>
+
+            <div className="col-span-3">
+              <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
+                <h4 className="font-bold text-gray-800 text-xs mb-1">
+                  Current Semester
+                </h4>
+                <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
+                  Students yet to complete payment
+                </p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-[#43C17A]">
+                    {pendingStudentsCount}
+                  </span>
+                  <span className="text-[10px] font-bold text-[#43C17A]">
+                    Students
+                  </span>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <div className="col-span-6">

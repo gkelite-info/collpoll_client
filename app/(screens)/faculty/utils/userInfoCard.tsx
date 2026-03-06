@@ -78,7 +78,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                 {item.studentsTaskPercentage}
                 {!item.show && "%"}
               </span>{" "}
-              {!item.show && "of the the tasks."}
+              {!item.show && "of the tasks."}
             </p>
             <p className="text-sm text-[#454545] mt-0">
               {item.childPerformance}
