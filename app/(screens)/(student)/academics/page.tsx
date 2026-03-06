@@ -5,6 +5,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SubjectCard from "./components/subjectCard";
 import { StudentProvider, useStudent } from "@/lib/helpers/student/academics/studentFetchAcademics";
 import SubjectSkeleton from "./shimmer/subjectSkeleton";
+import { Loader } from "../calendar/right/timetable";
 
 function AcademicsContent() {
   const { studentProfile, subjects, loading } = useStudent();
@@ -16,7 +17,7 @@ function AcademicsContent() {
           <h1 className="text-[#282828] font-bold text-[28px] mb-1">
             Academics
           </h1>
-          <p className="text-[#282828] text-[18px]">
+          <p className="text-[#282828] text-sm">
             Track syllabus Progress and manage notes by semester
           </p>
         </div>
@@ -46,7 +47,7 @@ export default function Academics() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-10 text-sm text-gray-500">
-          Loading…
+          <Loader />
         </div>
       }
     >

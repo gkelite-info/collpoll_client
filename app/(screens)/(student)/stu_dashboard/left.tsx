@@ -13,6 +13,7 @@ import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/f
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useRouter } from "next/navigation";
 
 
 
@@ -32,6 +33,7 @@ export default function StuDashLeft() {
     const [view, setView] = useState<"dashboard" | "exams">("dashboard");
     const [loadingLectures, setLoadingLectures] = useState(true);
     const [lectures, setLectures] = useState<any[]>([]);
+    const router = useRouter();
 
     useEffect(() => {
         const loadUpcomingClasses = async () => {
@@ -158,6 +160,16 @@ export default function StuDashLeft() {
         return `${day}-${month}-${year}`;
     };
 
+    const handleUpcomingClasses = () => {
+        router.push('/calendar');
+        return
+    };
+
+    const handleSubjectProgress = () => {
+        router.push('/academics');
+        return
+    }
+
     return (
         <>
             <div className="w-[68%] p-2">
@@ -183,12 +195,15 @@ export default function StuDashLeft() {
                         <div className="mt-5 flex items-center justify-between rounded-lg">
                             <SubjectProgressCards
                                 props={subjects}
+                                onViewMore={handleSubjectProgress}
                             />
                             <div className="bg-red-400 h-64 rounded-lg w-[49%] shadow-md">
                                 <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2">
                                     <div className="flex justify-between items-center">
                                         <h6 className="text-[#282828] font-semibold">Upcoming Classes</h6>
-                                        <FaChevronRight className="cursor-pointer text-black" />
+                                        <FaChevronRight className="cursor-pointer text-black"
+                                            onClick={handleUpcomingClasses}
+                                        />
                                     </div>
                                     <div className="overflow-y-auto">
                                         {loadingLectures ? (

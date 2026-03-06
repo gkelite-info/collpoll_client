@@ -1,20 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import {
-  BuildingOffice,
-  Calendar,
-  CheckCircle,
-  ClipboardText,
-  CurrencyCircleDollar,
-  FolderOpen,
-  Gear,
-  GraduationCap,
-  House,
-  Laptop,
-  Note,
-  Student,
-} from "@phosphor-icons/react";
+import { BuildingOffice, Calendar, CheckCircle, ClipboardText, CurrencyCircleDollar, FolderOpen, Gear, GraduationCap, House, Laptop, Note, Student } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
@@ -124,12 +111,12 @@ export default function Navbar() {
   }, [pathname]);
 
   return (
-    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
+    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md pt-5 focus:outline-none">
       <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
         Logo
       </div>
 
-      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
+      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4 overflow-y-auto pb-3 focus:outline-none">
         {items.map((item, index) => {
           const isActive = active === item.label;
 

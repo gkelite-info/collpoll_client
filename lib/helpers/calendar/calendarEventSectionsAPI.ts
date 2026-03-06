@@ -57,8 +57,8 @@ export async function saveCalendarEventSections(
         collegeSemesterId: payload.collegeSemesterId,
         collegeSectionId: sectionId,
         createdAt: now,
-        updatedAt: now,      // 🔥 REQUIRED
-        isActive: true,      // 🔥 REQUIRED (good practice)
+        updatedAt: now,
+        isActive: true,
         deletedAt: null
     }));
 
@@ -87,7 +87,7 @@ export async function softDeleteCalendarEventSection(
         })
         .eq("calendarEventId", calendarEventId)
         .eq("collegeSectionId", sectionId)
-        .eq("isActive", true); // safety
+        .eq("isActive", true);
 
     if (error) {
         console.error("softDeleteCalendarEventSection error:", error);

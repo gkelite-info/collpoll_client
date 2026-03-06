@@ -1,4 +1,5 @@
 "use client";
+
 import { useRef, useEffect, useState } from "react";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -10,14 +11,20 @@ type StepItem = {
 };
 
 const STEP_DATA: StepItem[] = [
-    { id: 1, title: "Personal Details", query: "profile=personal-details" },
-    { id: 2, title: "Education", query: "profile=education" },
-    { id: 3, title: "Key Skills", query: "profile=key-skills" },
-    { id: 4, title: "Languages", query: "profile=languages" },
-    { id: 5, title: "Profile Summary", query: "profile=profile-summary" },
+    { id: 1, title: "Personal Details", query: "personal-details" },
+    { id: 2, title: "Education", query: "education" },
+    { id: 3, title: "Key Skills", query: "key-skills" },
+    { id: 4, title: "Languages", query: "languages" },
+    { id: 5, title: "Internships", query: "internships" },
+    { id: 6, title: "Projects", query: "projects" },
+    { id: 7, title: "Profile Summary", query: "profile-summary" },
+    { id: 8, title: "Accomplishments", query: "accomplishments" },
+    { id: 9, title: "Competitive Exams", query: "competitive-exams" },
+    { id: 10, title: "Employment", query: "employment" },
+    { id: 11, title: "Academic Achievements", query: "academic-achievements" },
 ];
 
-export default function ProfileSteps() {
+export default function ResumeSteps() {
     const [currentStep, setCurrentStep] = useState<number>(1);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const stepRefs = useRef<HTMLDivElement[]>([]);
@@ -38,21 +45,16 @@ export default function ProfileSteps() {
     }, [currentStep]);
 
     useEffect(() => {
-        const stepQuery = searchParams.get("profile");
-        const matchedStep = STEP_DATA.find((s) => s.query === stepQuery);
+        const query = searchParams.toString().replace("=", "");
+        const matchedStep = STEP_DATA.find((s) => s.query === query);
 
         if (matchedStep) {
             setCurrentStep(matchedStep.id);
+        } else {
+            router.replace("/profile?personal-details", { scroll: false });
+            setCurrentStep(1);
         }
-    }, [searchParams]);
-
-    const handleStepClick = (stepQuery: string, stepId: number) => {
-        setCurrentStep(stepId);
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("step", stepQuery);
-        params.set("view", "profile");
-        router.push(`${window.location.pathname}?${params.toString()}`, { scroll: false });
-    };
+    }, [searchParams, router]);
 
     const addRef = (el: HTMLDivElement | null, index: number) => {
         if (!el) return;
@@ -66,7 +68,7 @@ export default function ProfileSteps() {
                 className="w-full overflow-x-auto no-scrollbar py-1"
                 style={{ WebkitOverflowScrolling: "touch" }}
             >
-                <div className="flex items-center justify-between gap-1 px-2 min-w-max ">
+                <div className="flex items-center gap-1 px-2 min-w-max">
                     {STEP_DATA.map((step, index) => {
                         const isCompleted = step.id < currentStep;
                         const isActive = step.id === currentStep;
@@ -108,7 +110,7 @@ export default function ProfileSteps() {
                                 </div>
 
                                 {index !== STEP_DATA.length - 1 && (
-                                    <div className="lg:w-30 lg:h-0.5 mx-2 relative mt-3">
+                                    <div className="w-16 h-0.5 mx-2 relative mt-3">
                                         <div className="absolute -inset-5 border-t-2 border-dashed border-[#878787]" />
                                         {isCompleted && <div className="absolute -inset-5 border-t-2 border-dashed border-[#74CB64]" />}
                                     </div>

@@ -7,12 +7,12 @@ export type CardProps = {
   collegeSemesterId: number;
 
   collegeSubjectId: number;
-  collegeSectionId?: number;     // ✅ add this
+  collegeSectionId?: number;
 
   subjectTitle: string;
   semester: string;
   year: string;
-  sectionName?: string;          // ✅ add this
+  sectionName?: string;
 
   units: number;
   topicsCovered: number;

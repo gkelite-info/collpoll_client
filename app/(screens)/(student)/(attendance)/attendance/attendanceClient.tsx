@@ -1,5 +1,4 @@
 "use client";
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import CardComponent from "@/app/utils/card";
@@ -8,18 +7,14 @@ import AttendanceInsight from "@/app/utils/insightChart";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
 import Table from "@/app/utils/table";
 import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
-
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import SubjectAttendance from "../../(attendance)/subject-attendance/page";
 import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
 import { useUser } from "@/app/utils/context/UserContext";
-
-import {
-  DashboardSkeleton,
-  TableSkeleton,
-} from "../shimmer/attendanceDashSkeleton";
+import { DashboardSkeleton, TableSkeleton } from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { Loader } from "../../calendar/right/timetable";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 interface TableRow {
   Subject: string;
@@ -72,33 +67,30 @@ export default function AttendanceClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
-
   const tab = searchParams.get("tab");
   const showSubjectAttendanceTable = tab === "subject-attendance";
   const showSubjectAttendanceDetails = tab === "subject-attendance-details";
-  const hideRightSection =
-    showSubjectAttendanceTable || showSubjectAttendanceDetails;
-
+  const hideRightSection = showSubjectAttendanceTable || showSubjectAttendanceDetails;
   const [dataLoading, setDataLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
-
+  const { collegeEducationType } = useStudent();
   const [viewDate, setViewDate] = useState<Date>(new Date());
 
 
   useEffect(() => {
-    console.log("🔁 Attendance useEffect triggered", {
+    console.log("Attendance useEffect triggered", {
       userId,
       userLoading,
       viewDate,
     });
 
     if (userLoading) {
-      console.log("⏳ User context still loading...");
+      console.log("User context still loading...");
       return;
     }
 
     if (!userId) {
-      console.warn("❌ No User ID found: Student not logged in");
+      console.warn("No User ID found: Student not logged in");
       setDataLoading(false);
       return;
     }
@@ -115,25 +107,25 @@ export default function AttendanceClient() {
         const dateStr = `${year}-${month}-${day}`;
 
         if (!userId) {
-          console.warn("⚠️ User ID became null before helper call");
+          console.warn("User ID became null before helper call");
           setDataLoading(false);
           return;
         }
 
         const safeUserId = userId;
 
-        const data = await getStudentDashboardData(safeUserId, dateStr);
+        const isInter = collegeEducationType === "Inter";
+        const data = await getStudentDashboardData(userId, dateStr, isInter);
 
         if (isMounted) {
           setDashboardData(data);
-          console.log("🧠 Dashboard state updated");
         }
       } catch (err) {
-        console.error("🔥 Failed to fetch attendance dashboard", err);
+        console.error("Failed to fetch attendance dashboard", err);
       } finally {
         if (isMounted) {
           setDataLoading(false);
-          console.log("✅ Attendance dashboard loading finished");
+          console.log("Attendance dashboard loading finished");
         }
       }
     }
@@ -141,7 +133,7 @@ export default function AttendanceClient() {
     fetchData();
 
     return () => {
-      console.log("🧹 Attendance useEffect cleanup");
+      console.log("Attendance useEffect cleanup");
       isMounted = false;
     };
   }, [userId, viewDate]);

@@ -4,6 +4,7 @@ import { SubjectDetailsCard } from "./subjectDetails";
 import { useCallback, useState, useMemo } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 export type UnitTopic = {
   topicId: number;
@@ -45,6 +46,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { collegeEducationType } = useStudent();
 
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
   const ballSize = "10px";
@@ -91,11 +93,10 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
 
   return (
     <>
-      {/* Filters */}
       <div className="mb-4 flex flex-col gap-3">
         <div className="w-full flex flex-wrap gap-6">
           <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-[16px]">Subject :</p>
+            <p className="text-[#525252] text-sm">Subject :</p>
             <div className="relative flex items-center">
               <select
                 value={selectedSubject}
@@ -114,16 +115,18 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-[16px]">Semester :</p>
-            <div className="relative flex items-center">
-              <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
-                {subjectProps[0]?.semester || "N/A"}
-              </p>
+          {!(collegeEducationType === "Inter") && (
+            <div className="flex items-center gap-2">
+              <p className="text-[#525252] text-sm">Semester :</p>
+              <div className="relative flex items-center">
+                <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
+                  {subjectProps[0]?.semester || "N/A"}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-[16px]">Year :</p>
+            <p className="text-[#525252] text-sm">Year :</p>
             <div className="relative flex items-center">
               <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
                 {subjectProps[0]?.academicYear || "N/A"}
@@ -234,12 +237,12 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                       {percentage}%
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  {/* <div className="flex items-center gap-1.5">
                     <Timer size={15} weight="fill" className="text-[#9880F3]" />
                     <p className="text-xs text-[#7153E1]">
                       {item.fromDate} - {item.toDate}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             );

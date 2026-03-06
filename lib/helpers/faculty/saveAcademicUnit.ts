@@ -18,7 +18,7 @@ export async function saveAcademicUnit(params: {
     collegeAcademicYearId: params.collegeAcademicYearId,
     collegeSemesterId: params.collegeSemesterId,
     collegeSubjectId: params.collegeSubjectId,
-    collegeSectionsId: params.collegeSectionId,     // DB column
+    collegeSectionsId: params.collegeSectionId,
     collegeSubjectUnitId: params.collegeSubjectUnitId,
     createdBy: params.createdBy,
     isAdmin: null,

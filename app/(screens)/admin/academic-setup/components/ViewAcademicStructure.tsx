@@ -34,7 +34,7 @@ export default function ViewAcademicStructure({
 
       const mappedData = await fetchAdminBranchesWithDetails(adminId);
       setData(mappedData);
-      setCurrentPage(1); // Reset on load
+      setCurrentPage(1);
       setIsFetching(false);
     };
 
@@ -50,8 +50,8 @@ export default function ViewAcademicStructure({
         <table className="w-full text-sm">
           <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10">
             <tr>
-              <th className="p-4 text-left">Degree</th>
-              <th className="p-4 text-left">Department Code</th>
+              <th className="p-4 text-left">Education Type</th>
+              <th className="p-4 text-left">Branch Code</th>
               <th className="p-4 text-left">Year</th>
               <th className="p-4 text-left">Sections</th>
               <th className="p-4 text-left">Actions</th>

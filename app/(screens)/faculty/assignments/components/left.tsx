@@ -151,7 +151,7 @@ export default function AssignmentsLeft() {
     <div className="w-[68%] p-2 flex flex-col">
       <div className="mb-4">
         <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
-        <p className="text-[#282828]">
+        <p className="text-[#282828] text-sm">
           Create, manage, and evaluate assignments for your students
           efficiently.
         </p>
@@ -162,22 +162,20 @@ export default function AssignmentsLeft() {
           <div className="flex justify-between mb-2 w-full">
             <div className="flex gap-4 pb-1">
               <h5
-                className={`text-sm cursor-pointer pb-1 transition-all ${
-                  activeView === "active"
+                className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "active"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
                 onClick={() => handleTabChange("active")}
               >
                 Active Assignments
               </h5>
 
               <h5
-                className={`text-sm cursor-pointer pb-1 transition-all ${
-                  activeView === "previous"
+                className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "previous"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
                 onClick={() => handleTabChange("previous")}
               >
                 Evaluated Assignments

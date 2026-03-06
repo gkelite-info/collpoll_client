@@ -14,15 +14,16 @@ type SubjectProgressCard = {
 
 type SubjectProgressCardProps = {
     props: SubjectProgressCard[];
+    onViewMore?: () => void
 }
 
-export default function SubjectProgressCards({ props }: SubjectProgressCardProps) {
+export default function SubjectProgressCards({ props, onViewMore }: SubjectProgressCardProps) {
     return (
         <>
             <div className="bg-white h-64 rounded-lg w-[49%] p-4 shadow-md flex flex-col gap-2">
                 <div className="flex justify-between items-center">
                     <h6 className="text-[#282828] font-semibold">Subjects Progress</h6>
-                    <FaChevronRight className="cursor-pointer text-black" />
+                    <FaChevronRight className="cursor-pointer text-black" onClick={onViewMore} />
                 </div>
                 <div className="flex flex-col gap-2 overflow-y-auto">
                     {props.map((subject, index) => (

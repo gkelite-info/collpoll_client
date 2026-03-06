@@ -212,7 +212,7 @@ export default function Page() {
 
             calendarEventId: row.calendarEventId,
 
-            sectionId: sectionId,   // 🔥 ADD THIS LINE
+            sectionId: sectionId,
 
             rawFormData: {
               topicId: row.eventTopic,
@@ -342,8 +342,6 @@ export default function Page() {
         sectionIds: payload.sectionIds,
       });
 
-      toast.success(editingEventId ? "Event updated ✏️" : "Event created 🎉");
-
       setIsModalOpen(false);
       setEditingEventId(null);
       setEventForm(null);
@@ -354,7 +352,6 @@ export default function Page() {
       return { success: true };
     } catch (err) {
       console.error("handleSaveEvent failed", err);
-      toast.error("Failed to save event");
       return { success: false };
     } finally {
       setIsSaving(false);

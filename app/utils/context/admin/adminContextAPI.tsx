@@ -1,39 +1,53 @@
 import { supabase } from "@/lib/supabaseClient";
 
+type AdminJoin = {
+  adminId: number;
+  userId: number;
+  collegeId: number;
+  collegePublicId: string;
+  collegeCode: string;
+  collegeEducationId: number;
+
+  college_edu_type: {
+    collegeEducationType: string;
+  };
+
+  college: {
+    collegeCode: string;
+  };
+};
+
 export async function fetchAdminContext(userId: number) {
   const { data: admin, error } = await supabase
     .from("admins")
-    .select("adminId, userId, collegePublicId, collegeCode, collegeId")
+    .select(`
+      adminId,
+      userId,
+      collegeId,
+      collegePublicId,
+      collegeEducationId,
+
+      college:collegeId!inner (
+        collegeCode
+      ),
+
+      college_edu_type:collegeEducationId!inner (
+        collegeEducationType
+      )
+    `)
     .eq("userId", userId)
     .is("deletedAt", null)
-    .single();
+    .single<AdminJoin>();
 
   if (error) throw error;
-
-  const { data: college, error: collegeErr } = await supabase
-    .from("colleges")
-    .select("collegeId, collegeCode")
-    .eq("collegeId", admin.collegeId)
-    .single();
-
-  if (collegeErr) throw collegeErr;
-
-  const { data: education, error: eduErr } = await supabase
-    .from("college_education")
-    .select("collegeEducationId")
-    .eq("createdBy", userId)
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .maybeSingle();
-
-  if (eduErr) throw eduErr;
 
   return {
     adminId: admin.adminId,
     userId: admin.userId,
-    collegeId: college.collegeId,
+    collegeId: admin.collegeId,
     collegePublicId: admin.collegePublicId,
-    collegeCode: college.collegeCode,
-    collegeEducationId: education?.collegeEducationId,
+    collegeCode: admin.college.collegeCode,
+    collegeEducationId: admin.collegeEducationId,
+    collegeEducationType: admin.college_edu_type.collegeEducationType,
   };
 }

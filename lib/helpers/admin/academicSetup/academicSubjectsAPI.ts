@@ -57,6 +57,63 @@ export const resolveSubjectUIFromIds = async ({
   };
 };
 
+// export const resolveSubjectIds = async ({
+//   education,
+//   branch,
+//   year,
+//   semester,
+//   collegeId,
+// }: {
+//   education: string;
+//   branch: string;
+//   year: string;
+//   semester: string;
+//   collegeId: number;
+// }) => {
+//   const { data: edu, error: eduErr } = await supabase
+//     .from("college_education")
+//     .select("collegeEducationId")
+//     .eq("collegeEducationType", education)
+//     .eq("collegeId", collegeId)
+//     .is("deletedAt", null)
+//     .single();
+//   if (eduErr || !edu) throw new Error("Education not found");
+
+//   const { data: br, error: brErr } = await supabase
+//     .from("college_branch")
+//     .select("collegeBranchId")
+//     .eq("collegeBranchCode", branch)
+//     .eq("collegeEducationId", edu.collegeEducationId)
+//     .is("deletedAt", null)
+//     .single();
+//   if (brErr || !br) throw new Error("Branch not found");
+
+//   const { data: yr, error: yrErr } = await supabase
+//     .from("college_academic_year")
+//     .select("collegeAcademicYearId")
+//     .eq("collegeAcademicYear", year)
+//     .eq("collegeBranchId", br.collegeBranchId)
+//     .is("deletedAt", null)
+//     .single();
+//   if (yrErr || !yr) throw new Error("Academic year not found");
+
+//   const { data: sem, error: semErr } = await supabase
+//     .from("college_semester")
+//     .select("collegeSemesterId")
+//     .eq("collegeSemester", Number(semester))
+//     .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
+//     .is("deletedAt", null)
+//     .single();
+//   if (semErr || !sem) throw new Error("Semester not found");
+
+//   return {
+//     collegeEducationId: edu.collegeEducationId,
+//     collegeBranchId: br.collegeBranchId,
+//     collegeAcademicYearId: yr.collegeAcademicYearId,
+//     collegeSemesterId: sem.collegeSemesterId,
+//   };
+// };
+
 export const resolveSubjectIds = async ({
   education,
   branch,
@@ -97,20 +154,34 @@ export const resolveSubjectIds = async ({
     .single();
   if (yrErr || !yr) throw new Error("Academic year not found");
 
-  const { data: sem, error: semErr } = await supabase
-    .from("college_semester")
-    .select("collegeSemesterId")
-    .eq("collegeSemester", Number(semester))
-    .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
-    .is("deletedAt", null)
-    .single();
-  if (semErr || !sem) throw new Error("Semester not found");
+  let collegeSemesterId: number | null = null;
+
+  if (education === "Inter") {
+    const { data: sem } = await supabase
+      .from("college_semester")
+      .select("collegeSemesterId")
+      .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
+      .limit(1)
+      .single();
+
+    collegeSemesterId = sem?.collegeSemesterId || null;
+  } else {
+    const { data: sem, error: semErr } = await supabase
+      .from("college_semester")
+      .select("collegeSemesterId")
+      .eq("collegeSemester", Number(semester))
+      .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
+      .is("deletedAt", null)
+      .single();
+    if (semErr || !sem) throw new Error("Semester not found");
+    collegeSemesterId = sem.collegeSemesterId;
+  }
 
   return {
     collegeEducationId: edu.collegeEducationId,
     collegeBranchId: br.collegeBranchId,
     collegeAcademicYearId: yr.collegeAcademicYearId,
-    collegeSemesterId: sem.collegeSemesterId,
+    collegeSemesterId: collegeSemesterId as number,
   };
 };
 
