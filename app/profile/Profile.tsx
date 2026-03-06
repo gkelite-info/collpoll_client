@@ -1,6 +1,9 @@
 "use client";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import ProfileSteps from "./profileSteps";
+import ProfilePersonalDetails from "./profilePersonalDetails";
 import PersonalDetails from "./resume/personalDetails";
+import ProfileEducationSection from "./profileEducation/Education";
 import EducationSection from "./resume/Education/Education";
 import KeySkillsWithModal from "./resume/KeySkills/keySkills";
 import Languages from "./resume/languages";
@@ -12,9 +15,6 @@ import CompetetiveExams from "./resume/CompetetiveExams";
 import Employment from "./resume/Employment/Employment";
 import AcademicAchievements from "./resume/AcademicAchievements";
 import ResumeSteps from "./resumeSteps";
-import ProfileSteps from "./profileSteps";
-import ProfilePersonalDetails from "./profilePersonalDetails";
-import ProfileEducationSection from "./profileEducation/Education";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
