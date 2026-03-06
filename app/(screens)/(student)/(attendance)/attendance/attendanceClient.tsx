@@ -75,6 +75,13 @@ export default function AttendanceClient() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const { collegeEducationType } = useStudent();
   const [viewDate, setViewDate] = useState<Date>(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const [tableLoading, setTableLoading] = useState(false);
 
 
   useEffect(() => {
@@ -82,6 +89,7 @@ export default function AttendanceClient() {
       userId,
       userLoading,
       viewDate,
+      currentPage,
     });
 
     if (userLoading) {
@@ -100,6 +108,7 @@ export default function AttendanceClient() {
     async function fetchData() {
       try {
         setDataLoading(true);
+        setTableLoading(true);
 
         const year = viewDate.getFullYear();
         const month = String(viewDate.getMonth() + 1).padStart(2, "0");
@@ -115,17 +124,25 @@ export default function AttendanceClient() {
         const safeUserId = userId;
 
         const isInter = collegeEducationType === "Inter";
-        const data = await getStudentDashboardData(userId, dateStr, isInter);
+        const data = await getStudentDashboardData(
+          safeUserId,
+          dateStr,
+          currentPage,
+          rowsPerPage,
+          isInter
+        );
 
         if (isMounted) {
           setDashboardData(data);
+          setTotalRecords(data.totalCount || 0);
         }
       } catch (err) {
         console.error("Failed to fetch attendance dashboard", err);
       } finally {
         if (isMounted) {
           setDataLoading(false);
-          console.log("Attendance dashboard loading finished");
+          setTableLoading(false);
+          console.log("✅ Attendance dashboard loading finished");
         }
       }
     }
@@ -136,7 +153,8 @@ export default function AttendanceClient() {
       console.log("Attendance useEffect cleanup");
       isMounted = false;
     };
-  }, [userId, viewDate]);
+  }, [userId, viewDate, currentPage]);
+
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
@@ -255,7 +273,58 @@ export default function AttendanceClient() {
                   </div>
                 ) : (
                   <>
-                    <Table columns={columns} data={tableRows} />
+                    <Table
+                      columns={columns}
+                      data={tableRows}
+                    />
+
+                    {totalPages > 1 && (
+                      <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
+
+                        {/* Prev */}
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === 1
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
+                        >
+                          ‹
+                        </button>
+
+                        {[...Array(totalPages)].map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`w-10 h-10 rounded-lg font-semibold
+        ${currentPage === i + 1
+                                ? "bg-[#16284F] text-white"
+                                : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                              }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+
+                        {/* Next */}
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === totalPages
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
+                        >
+                          ›
+                        </button>
+
+                      </div>
+                    )}
 
                     {tableRows.length === 0 && (
                       <p className="text-gray-400 italic text-sm mt-4 text-center border p-4 rounded-lg">

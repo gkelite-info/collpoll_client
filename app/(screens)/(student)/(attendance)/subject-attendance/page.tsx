@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
-import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
+import { CaretLeft, Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 // import { getStudentDashboardData } from "@/lib/helpers/attendance/studentAtendanceActions";
@@ -35,55 +35,63 @@ export default function SubjectAttendance() {
   const router = useRouter();
 
 
-  const { userId, loading: userLoading } = useUser();
+  const { userId } = useUser();
 
   const [dashboardData, setDashboardData] =
     useState<DashboardData | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
 
   useEffect(() => {
-    if (userLoading) return;
 
-    // ✅ HARD GUARD
-    if (userId === null) {
-      console.warn("User not logged in");
-      return;
-    }
+    if (!userId) return;
 
-    // ✅ freeze non-null userId for TS
     const safeUserId = userId;
 
     async function loadData() {
+
       setLoading(true);
 
       const today = new Date();
       const dateStr = today.toISOString().split("T")[0];
 
-      // ✅ guaranteed number
-      const data = await getStudentDashboardData(safeUserId, dateStr);
+      const data = await getStudentDashboardData(
+        safeUserId,
+        dateStr,
+        currentPage,
+        rowsPerPage
+      );
+
       setDashboardData(data);
+      setTotalRecords(data.totalCount || 0);
 
       setLoading(false);
     }
 
     loadData();
-  }, [userId, userLoading]);
+
+  }, [userId, currentPage]);
 
 
 
   const cards: CardItem[] = [
-    {
-      id: 1,
-      icon: <UsersThree size={32} />,
-      value: dashboardData
-        ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
-        : "0/0",
-      label: "Total Classes",
-      style: "bg-[#FFEDDA] w-44",
-      iconBgColor: "#FFBB70",
-      iconColor: "#EFEFEF",
-    },
+    // {
+    //   id: 1,
+    //   icon: <UsersThree size={32} />,
+    //   value: dashboardData
+    //     ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
+    //     : "0/0",
+    //   label: "Total Classes",
+    //   style: "bg-[#FFEDDA] w-44",
+    //   iconBgColor: "#FFBB70",
+    //   iconColor: "#EFEFEF",
+    // },
     {
       id: 2,
       icon: <Chalkboard size={32} />,
@@ -170,19 +178,18 @@ export default function SubjectAttendance() {
     }
   };
 
-  if (loading || userLoading) {
-    return <div className="p-6 flext justify-center text-gray-500"><Loader /></div>;
-  }
-
 
   return (
     <>
       <div className="flex flex-col pb-3">
         <div className="flex justify-between items-center">
           <div className="flex flex-col w-[50%]">
-            <h1 className="text-[#282828] font-bold text-2xl mb-1">
-              Attendance
-            </h1>
+            <div className="flex gap-0 items-center">
+              <button onClick={() => handleCardClick(1)} className="cursor-pointer">
+                <CaretLeft size={23} className="cursor-pointer text-black -ml-1.5" />
+              </button>
+              <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
+            </div>
             <p className="text-[#282828]">
               Track, Manage, and Maintain Your Attendance Effortlessly
             </p>
@@ -232,7 +239,58 @@ export default function SubjectAttendance() {
             Subject-Wise Attendance
           </h4>
           <p className="text-[#282828] text-sm mt-1">Subject-Wise Breakdown</p>
-          <TableComponent columns={columns} tableData={tableData} />
+          <TableComponent
+            columns={columns}
+            tableData={tableData}
+            isLoading={loading}
+          />
+          {totalPages > 1 && (
+            <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
+
+              {/* Prev */}
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === 1
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                ‹
+              </button>
+
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-10 h-10 rounded-lg font-semibold
+        ${currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              {/* Next */}
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === totalPages
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
+              >
+                ›
+              </button>
+
+            </div>
+          )}
         </div>
       </div>
     </>

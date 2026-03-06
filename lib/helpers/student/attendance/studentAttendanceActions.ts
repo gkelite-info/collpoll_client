@@ -1,4 +1,3 @@
-
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -14,10 +13,28 @@ function isConductedStatus(s: string) {
   return (CONDUCTED_STATUSES as readonly string[]).includes(s);
 }
 
-export async function getStudentDashboardData(userId: number, dateStr: string, isInter: boolean) {
+export async function getStudentDashboardData(
+  userId: number,
+  dateStr: string,
+  page: number,
+  limit: number,
+  isInter: boolean
+) {
+
+  console.log("📥 getStudentDashboardData called", { userId, dateStr });
+
+  /* ---------- 1️⃣ Student context ---------- */
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
   const ctx = await fetchStudentContext(userId);
+
+  console.log("🧠 Student Context:", ctx);
+
   const {
     studentId,
+    collegeId, // ✅ ADDED
     collegeEducationId,
     collegeBranchId,
     collegeAcademicYearId,
@@ -32,7 +49,7 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
     .eq("collegeSectionsId", collegeSectionsId)
     .eq("isCurrent", true)
     .is("deletedAt", null);
-    
+
   if (!isInter && collegeSemesterId) {
     sahQuery = sahQuery.eq("collegeSemesterId", collegeSemesterId);
   }
@@ -41,20 +58,33 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
 
   if (sahErr) throw sahErr;
 
+  console.log("📚 student_academic_history rows:", sahRows);
+
   const sahStudentIds = (sahRows ?? []).map(r => r.studentId);
+
+  console.log("👨‍🎓 SAH Student IDs:", sahStudentIds);
+
   if (!sahStudentIds.length) return emptyDashboard();
+
+  /* ---------- 2️⃣ Students table ---------- */
 
   const { data: classStudents, error: classErr } = await supabase
     .from("students")
     .select("studentId")
     .in("studentId", sahStudentIds)
+    .eq("collegeId", collegeId) // ✅ ADDED
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
     .is("deletedAt", null);
 
   if (classErr) throw classErr;
 
+  console.log("🏫 Class Students:", classStudents);
+
   const classStudentIds = (classStudents ?? []).map(s => s.studentId);
+
+  console.log("👥 Final Class Student IDs:", classStudentIds);
+
   if (!classStudentIds.length) return emptyDashboard();
 
   const { data: todayAll, error: todayErr } = await supabase
@@ -69,9 +99,11 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
   const todayAttendedSet = new Set<number>();
 
   for (const r of todayAll ?? []) {
+
     if (isConductedStatus(r.status)) {
       todayConductedSet.add(r.calendarEventId);
     }
+
     if (r.studentId === studentId && isAttendedStatus(r.status)) {
       todayAttendedSet.add(r.calendarEventId);
     }
@@ -104,6 +136,8 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
 
   if (eventErr) throw eventErr;
 
+  console.log("📚 Calendar Events:", events);
+
   const eventMap = new Map(
     (events ?? []).map(e => [e.calendarEventId, e])
   );
@@ -112,10 +146,15 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
     ...new Set((events ?? []).map(e => e.subject).filter(Boolean)),
   ];
 
+  console.log("📘 Subject IDs:", subjectIds);
+
   const { data: subjects } = await supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
+    .eq("collegeId", collegeId) // ✅ ADDED
     .in("collegeSubjectId", subjectIds);
+
+  console.log("📖 Subjects:", subjects);
 
   const subjectMap = new Map(
     (subjects ?? []).map(s => [s.collegeSubjectId, s.subjectName])
@@ -123,10 +162,15 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
 
   const facultyIds = [...new Set((events ?? []).map(e => e.facultyId))];
 
+  console.log("👨‍🏫 Faculty IDs:", facultyIds);
+
   const { data: faculty } = await supabase
     .from("faculty")
     .select("facultyId, fullName")
+    .eq("collegeId", collegeId) // ✅ ADDED
     .in("facultyId", facultyIds);
+
+  console.log("👩‍🏫 Faculty:", faculty);
 
   const facultyMap = new Map(
     (faculty ?? []).map(f => [f.facultyId, f.fullName])
@@ -138,10 +182,12 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
   > = {};
 
   for (const r of semAll ?? []) {
+
     const ev = eventMap.get(r.calendarEventId);
     if (!ev?.subject) continue;
 
     if (!semesterSubjectStats[ev.subject]) {
+
       semesterSubjectStats[ev.subject] = {
         totalSet: new Set(),
         attendedSet: new Set(),
@@ -161,6 +207,7 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
     const ev = eventMap.get(row.calendarEventId);
 
     if (!ev?.subject || row.status === "CLASS_CANCEL") {
+
       return {
         subject: subjectMap.get(ev?.subject) ?? "Unknown",
         faculty: facultyMap.get(ev?.facultyId) ?? "Unknown",
@@ -171,6 +218,7 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
     }
 
     const semStats = semesterSubjectStats[ev.subject];
+
     const total = semStats?.totalSet.size ?? 0;
     const attended = semStats?.attendedSet.size ?? 0;
 
@@ -187,7 +235,16 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
   const semesterAttendedSet = new Set<number>();
 
   for (const r of semAll ?? []) {
-    if (isConductedStatus(r.status)) semesterConductedSet.add(r.calendarEventId);
+
+    const ev = eventMap.get(r.calendarEventId);
+
+    // ❌ skip deleted events
+    if (!ev) continue;
+
+    if (isConductedStatus(r.status)) {
+      semesterConductedSet.add(r.calendarEventId);
+    }
+
     if (r.studentId === studentId && isAttendedStatus(r.status)) {
       semesterAttendedSet.add(r.calendarEventId);
     }
@@ -201,7 +258,14 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
   const semLate = new Set<number>();
 
   for (const r of semAll ?? []) {
+
+    const ev = eventMap.get(r.calendarEventId);
+
+    // ❌ skip deleted events
+    if (!ev) continue;
+
     if (r.studentId !== studentId) continue;
+
     if (r.status === "PRESENT") semPresent.add(r.calendarEventId);
     else if (r.status === "ABSENT") semAbsent.add(r.calendarEventId);
     else if (r.status === "LATE") semLate.add(r.calendarEventId);
@@ -209,11 +273,21 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
 
   const totalDist = semPresent.size + semAbsent.size + semLate.size;
 
+  console.log("📊 Semester Distribution", {
+    present: semPresent.size,
+    absent: semAbsent.size,
+    late: semLate.size
+  });
+
+  const paginatedRows = tableData.slice(from, to + 1);
+
   return {
+
     todayStats: {
       attended: todayAttended,
       total: todayConducted,
     },
+
     cards: {
       attended: semesterAttended,
       totalClasses: semesterConducted,
@@ -222,22 +296,43 @@ export async function getStudentDashboardData(userId: number, dateStr: string, i
           ? 0
           : Math.round((semesterAttended / semesterConducted) * 100),
     },
+
     semesterStats: {
-      present: totalDist === 0 ? 0 : Math.round((semPresent.size / totalDist) * 100),
-      absent: totalDist === 0 ? 0 : Math.round((semAbsent.size / totalDist) * 100),
-      late: totalDist === 0 ? 0 : Math.round((semLate.size / totalDist) * 100),
+      present:
+        totalDist === 0
+          ? 0
+          : Math.round((semPresent.size / totalDist) * 100),
+
+      absent:
+        totalDist === 0
+          ? 0
+          : Math.round((semAbsent.size / totalDist) * 100),
+
+      late:
+        totalDist === 0
+          ? 0
+          : Math.round((semLate.size / totalDist) * 100),
     },
-    tableData,
+
+    tableData: paginatedRows,   // ✅ UI expects this
+    totalCount: tableData.length, // ✅ pagination needs this
+
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
 }
 
 function emptyDashboard() {
+
+  console.log("⚠️ Empty dashboard returned");
+
   return {
     todayStats: { attended: 0, total: 0 },
     cards: { attended: 0, totalClasses: 0, percentage: 0 },
     semesterStats: { present: 0, absent: 0, late: 0 },
+
     tableData: [],
+    totalCount: 0,
+
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
 }
