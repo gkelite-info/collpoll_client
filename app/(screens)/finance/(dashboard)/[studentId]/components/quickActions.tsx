@@ -35,7 +35,7 @@ const QuickActions = () => {
             onClick={action.onClick}
             className="flex items-center gap-2 group"
           >
-            <div className="w-7 h-7 rounded-full bg-[#E5FDF4] flex items-center justify-center text-[#10B981] group-hover:bg-[#10B981] group-hover:text-white transition-colors">
+            <div className="w-7 h-7 rounded-full bg-[#E5FDF4] cursor-pointer  flex items-center justify-center text-[#10B981] group-hover:bg-[#10B981] group-hover:text-white transition-colors">
               <action.icon weight="bold" size={14} />
             </div>
 

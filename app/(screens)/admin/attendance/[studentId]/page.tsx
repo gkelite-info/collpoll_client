@@ -7,6 +7,7 @@ import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/ge
 import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectWiseAttendance from "../tables/subjectWiseTable";
 import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 export default function StudentAttendanceDetailsPage() {
   const params = useParams();
@@ -38,7 +39,7 @@ export default function StudentAttendanceDetailsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500">
-        Loading Student Profile...
+        <Loader />
       </div>
     );
   }

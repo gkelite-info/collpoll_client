@@ -22,7 +22,6 @@ export default function AssignmentsLeft({
   const [assignments, setAssignments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // State to track if we are editing an assignment
   const [editingAssignment, setEditingAssignment] = useState<any | null>(null);
 
   useEffect(() => {
@@ -88,7 +87,11 @@ export default function AssignmentsLeft({
     <div className="w-[68%] p-2 flex flex-col">
       <div className="mb-4">
         <div className="flex items-center gap-1">
-          <CaretLeftIcon size={22} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>window.history.back()}/>
+          <CaretLeftIcon
+            size={22}
+            className="text-[#282828] cursor-pointer -ml-1"
+            onClick={() => window.history.back()}
+          />
           <h1 className="text-[#282828] font-bold text-2xl mb-1">
             Subject Assignments
           </h1>
@@ -113,7 +116,7 @@ export default function AssignmentsLeft({
           activeView="active"
           cardProp={assignments}
           onEdit={(item: any) => setEditingAssignment(item)}
-          onDelete={(id: number) => { }}
+          onDelete={(id: number) => {}}
         />
       )}
     </div>
