@@ -98,7 +98,7 @@ export default function AdminDashLeft({
 
   const card = [
     {
-      show: false,
+      show: true,
       user: fullName ?? "User",
       activeFacultyTasks: 12,
       pendingApprovals: 3,

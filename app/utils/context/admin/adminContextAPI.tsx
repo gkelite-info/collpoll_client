@@ -15,6 +15,9 @@ type AdminJoin = {
   college: {
     collegeCode: string;
   };
+  admin_gender: {
+    gender: string;
+  }
 };
 
 export async function fetchAdminContext(userId: number) {
@@ -33,6 +36,10 @@ export async function fetchAdminContext(userId: number) {
 
       college_edu_type:collegeEducationId!inner (
         collegeEducationType
+      ),
+
+      admin_gender:userId!inner (
+      gender
       )
     `)
     .eq("userId", userId)
@@ -49,5 +56,6 @@ export async function fetchAdminContext(userId: number) {
     collegeCode: admin.college.collegeCode,
     collegeEducationId: admin.collegeEducationId,
     collegeEducationType: admin.college_edu_type.collegeEducationType,
+    gender: admin.admin_gender.gender
   };
 }

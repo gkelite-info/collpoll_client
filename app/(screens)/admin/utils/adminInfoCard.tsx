@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useEffect, useState } from "react";
 
 type UserInfoCardProps = {
@@ -22,6 +23,7 @@ type UserInfoProps = {
 
 export function AdminInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
+  const { admin_gender } = useAdmin();
 
   useEffect(() => {
     const currentDate = new Date();
@@ -44,8 +46,8 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
               <span className="text-lg text-[#282828] leading-tight ">
                 Welcome Back,
               </span>
-              <span className="text-lg font-semibold text-[#089144] leading-tight">
-                {!item.show && " Mr."} {item.user}
+              <span className="text-lg font-semibold text-[#089144] leading-tight ml-2">
+                {admin_gender === "Male" ? "Mr" : "Ms"} {item.user}
               </span>
             </div>
             <div className="bg-red-00 flex items-baseline flex-wrap gap-2">
@@ -86,7 +88,6 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
               className={`lg:relative left-95 ${item.top} z-10 h-[175px]`}
             />
           )}
-
         </div>
       ))}
     </div>

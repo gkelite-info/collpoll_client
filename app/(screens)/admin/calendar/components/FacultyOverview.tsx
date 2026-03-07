@@ -43,10 +43,12 @@ export default function FacultyOverview({ onSelect }: Props) {
     const { collegeId } = useUser();
     const { collegeEducationId, collegeEducationType } = useAdmin()
 
-    // 🔵 CHANGE: Auto set education from admin context instead of fetching dropdown
     useEffect(() => {
         if (collegeEducationId) {
             setEducationId(collegeEducationId);
+            if (collegeEducationType === "Inter") {
+                setSemesterId(0);
+            }
         }
     }, [collegeEducationId]);
 
@@ -76,18 +78,25 @@ export default function FacultyOverview({ onSelect }: Props) {
     }, [collegeId, educationId, academicYearId]);
 
     useEffect(() => {
+        const isInter = collegeEducationType === "Inter";
+
         if (
             !collegeId ||
             !collegeEducationId ||
             !branchId ||
             !academicYearId ||
-            !semesterId
-        ) return;
+            (!isInter && !semesterId)
+        ) {
+            setSubjects([]);
+            return
+        };
 
-        fetchSubjects(collegeId, collegeEducationId, branchId, academicYearId, semesterId)
+        const effectiveSemesterId = isInter ? 0 : (semesterId as number);
+
+        fetchSubjects(collegeId, collegeEducationId, branchId, academicYearId, effectiveSemesterId, collegeEducationType as string)
             .then(setSubjects)
             .catch(() => toast.error("Failed to load subjects"));
-    }, [collegeId, educationId, branchId, academicYearId, semesterId]);
+    }, [collegeId, educationId, branchId, academicYearId, semesterId, collegeEducationType]);
 
     const loadFaculty = async () => {
         if (!collegeId || !collegeEducationId) return
@@ -100,6 +109,9 @@ export default function FacultyOverview({ onSelect }: Props) {
                 collegeAcademicYearId: academicYearId ?? undefined,
                 collegeSubjectId: subjectId ?? undefined,
             });
+
+            console.log("what is console", data);
+
 
             // const enriched: FacultyUI[] = data.map(f => ({
             //     ...f,
@@ -142,7 +154,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                         Calendar Overview
                     </h1>
                     <p className="text-sm text-gray-500">
-                        Select a Faculty, Branch, or Course Calendar to view or manage schedules.
+                        Select a faculty, branch, or course calendar to view or manage schedules.
                     </p>
                 </div>
                 <div className="flex items-center justify-center">
@@ -162,7 +174,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
 
                 <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Branch</label>
+                    <label className="text-xs text-[#282828]">{collegeEducationType === "Inter" ? "Group" : "Branch"}</label>
                     <select
                         disabled={!educationId}
                         value={branchId ?? "All"}
@@ -221,35 +233,36 @@ export default function FacultyOverview({ onSelect }: Props) {
                     </select>
                 </div>
 
-
-                <div className="flex-1">
-                    <label className="text-xs text-[#282828]">Semester</label>
-                    <select
-                        disabled={!academicYearId}
-                        value={semesterId ?? "All"}
-                        onChange={(e) => {
-                            setSemesterId(e.target.value === "All" ? null : Number(e.target.value))
-                            setSubjectId(null)
-                            setSubjects([]);
-                        }}
-                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                    >
-                        <option value="All">All</option>
-                        {semesters.length === 0 && academicYearId && (
-                            <option disabled>No data available</option>
-                        )}
-                        {semesters.map(s => (
-                            <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
-                                {s.collegeSemester}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+                {!(collegeEducationType === "Inter") && (
+                    <div className="flex-1">
+                        <label className="text-xs text-[#282828]">Semester</label>
+                        <select
+                            disabled={!academicYearId}
+                            value={semesterId ?? "All"}
+                            onChange={(e) => {
+                                setSemesterId(e.target.value === "All" ? null : Number(e.target.value))
+                                setSubjectId(null)
+                                setSubjects([]);
+                            }}
+                            className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
+                        >
+                            <option value="All">All</option>
+                            {semesters.length === 0 && academicYearId && (
+                                <option disabled>No data available</option>
+                            )}
+                            {semesters.map(s => (
+                                <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
+                                    {s.collegeSemester}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 <div className="flex-1">
                     <label className="text-xs text-[#282828]">Subject</label>
                     <select
-                        disabled={!semesterId}
+                        disabled={collegeEducationType === "Inter" ? !academicYearId : !semesterId}
                         value={subjectId ?? "All"}
                         onChange={(e) =>
                             setSubjectId(e.target.value === "All" ? null : Number(e.target.value))
@@ -257,7 +270,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                         className="w-full mt-1 outline-none cursor-pointer text-[#282828] border border-[#CCCCCC] rounded-md px-3 py-2 text-sm"
                     >
                         <option value="All">All</option>
-                        {subjects.length === 0 && semesterId && (
+                        {subjects.length === 0 && (collegeEducationType === "Inter" ? academicYearId : semesterId) && (
                             <option disabled>No data available</option>
                         )}
                         {subjects.map(s => (
@@ -328,7 +341,6 @@ export default function FacultyOverview({ onSelect }: Props) {
                     )}
                 </section>
             )}
-
         </main >
     )
 }

@@ -276,7 +276,7 @@ export default function AddSubject({
               name="subjectName"
               value={form.subjectName}
               onChange={handleChange}
-              placeholder="e.g. Data Structures"
+              placeholder="e.g. Mathematics"
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
             />
           </div>
@@ -300,7 +300,7 @@ export default function AddSubject({
               name="subjectKey"
               value={form.subjectKey}
               onChange={handleChange}
-              placeholder="e.g. DS"
+              placeholder="e.g. Math"
               className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
             />
           </div>
@@ -349,8 +349,8 @@ export default function AddSubject({
                 ? "Updating..."
                 : "Saving..."
               : editData
-                ? "Update Subject"
-                : "Save Subject"}
+                ? "Update subject"
+                : "Save subject"}
           </button>
         </div>
       </form>

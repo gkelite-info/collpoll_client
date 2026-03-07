@@ -291,7 +291,7 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {collegeEducationType === "Inter" ? "Group Type" : "Branch Code"}
+            {collegeEducationType === "Inter" ? "Group Code" : "Branch Code"}
           </label>
           {customMode.dept ? (
             renderCustomInput("dept", "Enter Branch Code")

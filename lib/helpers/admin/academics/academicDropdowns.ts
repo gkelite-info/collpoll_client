@@ -1,8 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
 
-/* =========================
-   EDUCATION TYPES
-========================= */
 export async function fetchEducations(collegeId: number) {
   const { data, error } = await supabase
     .from("college_education")
@@ -14,9 +11,7 @@ export async function fetchEducations(collegeId: number) {
   return data ?? [];
 }
 
-/* =========================
-   BRANCHES
-========================= */
+
 export async function fetchBranches(
   collegeId: number,
   collegeEducationId: number,
@@ -32,9 +27,6 @@ export async function fetchBranches(
   return data ?? [];
 }
 
-/* =========================
-   ACADEMIC YEARS
-========================= */
 export async function fetchAcademicYears(
   collegeId: number,
   collegeEducationId: number,
@@ -51,9 +43,6 @@ export async function fetchAcademicYears(
   return data ?? [];
 }
 
-/* =========================
-   SEMESTERS
-========================= */
 export async function fetchSemesters(
   collegeId: number,
   collegeEducationId: number,
@@ -71,17 +60,16 @@ export async function fetchSemesters(
   return data ?? [];
 }
 
-/* =========================
-   SUBJECTS
-========================= */
+
 export async function fetchSubjects(
   collegeId: number,
   collegeEducationId: number,
   collegeBranchId: number,
   collegeAcademicYearId: number,
-  collegeSemesterId: number
+  collegeSemesterId: number,
+  educationType?: string
 ) {
-  const { data, error } = await supabase
+  let query = supabase
     .from("college_subjects")
     .select(`
       collegeSubjectId,
@@ -94,16 +82,17 @@ export async function fetchSubjects(
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
     .eq("collegeAcademicYearId", collegeAcademicYearId)
-    .eq("collegeSemesterId", collegeSemesterId)
     .eq("isActive", true);
+
+  if (educationType !== "Inter") {
+    query = query.eq("collegeSemesterId", collegeSemesterId);
+  }
+  const { data, error } = await query;
 
   if (error) throw error;
   return data ?? [];
 }
 
-/* =========================
-   SECTIONS
-========================= */
 export async function fetchSections(
   collegeId: number,
   collegeEducationId: number,

@@ -238,10 +238,10 @@ const IndividualCard = ({
             </span>
             {item.topicsCovered}
           </p>
-          <p>
+          {/* <p>
             <span className="font-semibold text-[#282828]">Section : </span>
             {item.sectionName}
-          </p>
+          </p> */}
         </div>
         <p>
           <span className="font-semibold text-[#282828]">Next lesson : </span>

@@ -34,6 +34,7 @@ export default function ViewSubjects({
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { collegeEducationType } = useAdmin();
+  const isInter = collegeEducationType === "Inter";
 
   useEffect(() => {
     if (!userId) return;
@@ -84,22 +85,20 @@ export default function ViewSubjects({
   );
 
   return (
-    <div className="w-[95%] mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
-      <div className="flex-1 overflow-x-auto min-h-[40vh]">
-        <table className="w-full text-sm text-[#2D3748]">
-          <thead className="bg-gray-100">
+    <div className="w-[95%] mx-auto bg-red-00 border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+      <div className="flex-1 overflow-x-auto min-h-[40vh] bg-yellow-00">
+        <table className="w-full bg-pink-00 text-sm text-[#2D3748]">
+          <thead className="bg-gray-100 w-full">
             <tr>
               <th className="p-3 text-left text-[#2D3748]">Subject</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Code</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Key</th>
               <th className="p-3 text-left text-[#2D3748]">Credits</th>
               <th className="p-3 text-left text-[#2D3748]">Education</th>
-              <th className="p-3 text-left text-[#2D3748]">{collegeEducationType === "Inter" ? "Group" : "Branch"}</th>
+              <th className="p-3 text-left text-[#2D3748]">{isInter ? "Group" : "Branch"}</th>
               <th className="p-3 text-left text-[#2D3748]">Year</th>
-              {!(collegeEducationType === "Inter") && (
-                <th className="p-3 text-left text-[#2D3748]">Sem</th>
-              )}
-              <th className="p-3 text-left text-[#2D3748]">Action</th>
+              {!isInter && <th className="p-3 text-left">Sem</th>}
+              <th className="p-3 text-left">Action</th>
             </tr>
           </thead>
 
@@ -123,9 +122,9 @@ export default function ViewSubjects({
                   <td className="p-3 text-[#2D3748]">{row.education}</td>
                   <td className="p-3 text-[#2D3748]">{row.branch}</td>
                   <td className="p-3 text-[#2D3748]">{row.year}</td>
-                  <td className="p-3 text-[#2D3748]">{row.semester}</td>
+                  {!isInter && <td className="p-3">{row.semester}</td>}
                   <td
-                    className="p-3 underline cursor-pointer text-[#16284F] hover:text-[#43C17A] transition-colors"
+                    className="p-3 hover:underline cursor-pointer text-[#16284F] hover:text-[#43C17A] transition-colors"
                     onClick={() => onEdit(row)}
                   >
                     Edit

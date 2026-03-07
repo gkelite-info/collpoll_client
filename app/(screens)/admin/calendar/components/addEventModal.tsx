@@ -72,8 +72,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
   const isMeeting = selectedType.toLowerCase() === "meeting";
-  const { collegeId } = useUser()
-  const { collegeEducationType } = useAdmin()
+  const { collegeId } = useUser();
+  const { collegeEducationType } = useAdmin();
 
   const isEditMode = mode === "edit";
   const selectedDegreeObj = React.useMemo(() => {
@@ -171,7 +171,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       }
     };
     loadFacultyAcademics();
-    return () => {cancelled = true};
+    return () => { cancelled = true };
   }, [collegeId, facultyCtx]);
 
   useEffect(() => {
@@ -268,9 +268,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       setIsDeptOpen(false);
       setIsSectionOpen(false);
       setSubjectId(undefined);
-      setTopicId(undefined);
-      setMeetingTitle("");
-      setMeetingLink("");
+      setTopicId(undefined);
+      setMeetingTitle("");
+      setMeetingLink("");
     }
   }, [isOpen]);
 
@@ -376,13 +376,15 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       toast.error("Please select at least one Section.");
       return;
     }
-    if (typeof semester !== "number") {
+    if (!collegeEducationType && typeof semester !== "number") {
       toast.error("Semester not resolved.");
       return;
     }
-    if (!semester || !semesterLabel) {
-      toast.error("Semester not resolved.");
-      return;
+    if (!collegeEducationType) {
+      if (!semester || !semesterLabel) {
+        toast.error("Semester not resolved.");
+        return;
+      }
     }
     if (!roomNo.trim()) {
       toast.error("Please enter Room No.");
@@ -688,12 +690,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
             </div>
             <div className="flex-1 min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Branch <span className="text-red-600">*</span>
+                {collegeEducationType === "Inter" ? "Group" : "Branch"} <span className="text-red-600">*</span>
               </label>
               <input
                 readOnly
                 value={branchName}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                className="w-full h-11 border text-gray-900 focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
           </div>
@@ -705,19 +707,22 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
               <input
                 readOnly
                 value={academicYearLabel}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                className="w-full h-11 border text-gray-900 focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Semester <span className="text-red-600">*</span>
-              </label>
-              <input
-                readOnly
-                value={semesterLabel ? `Semester ${semesterLabel}` : ""}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
-              />
-            </div>
+            {!(collegeEducationType === "Inter") && (
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Semester <span className="text-red-600">*</span>
+                </label>
+                <input
+                  readOnly
+                  value={semesterLabel ? `Semester ${semesterLabel}` : ""}
+                  className="w-full h-11 border text-gray-900 focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                />
+              </div>
+            )}
+
           </div>
           <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium text-gray-700 mb-1">
