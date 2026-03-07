@@ -26,6 +26,7 @@ export default function ViewAcademicStructure({
   const [data, setData] = useState<AcademicViewData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
     const loadData = async () => {
@@ -51,7 +52,7 @@ export default function ViewAcademicStructure({
           <thead className="bg-gray-100 text-gray-600 sticky top-0 z-10">
             <tr>
               <th className="p-4 text-left">Education Type</th>
-              <th className="p-4 text-left">Branch Code</th>
+              <th className="p-4 text-left">{collegeEducationType === "Inter" ? "Group Code" : "Branch Code"}</th>
               <th className="p-4 text-left">Year</th>
               <th className="p-4 text-left">Sections</th>
               <th className="p-4 text-left">Actions</th>

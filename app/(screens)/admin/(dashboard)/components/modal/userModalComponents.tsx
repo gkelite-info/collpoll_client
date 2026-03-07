@@ -36,6 +36,7 @@ interface MultiSelectProps {
   paddingY?: string;
   closedBorder?: string;
   placeholderColorActive?: string;
+  gap?: string
 }
 
 export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -50,6 +51,8 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   paddingY = "py-2",
   closedBorder = "border-gray-200",
   placeholderColorActive = "text-gray-400",
+  gap = "gap-2"
+
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -69,10 +72,10 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 w-full" ref={wrapperRef}>
+    <div className={`flex flex-col ${gap} w-full`} ref={wrapperRef}>
       {/* Label — matches native select exactly */}
       {label && (
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label className={`text-sm font-medium text-gray-700`}>{label}</label>
       )}
 
       <div className="relative">
@@ -92,30 +95,26 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
             items-center
             bg-white
             transition-all
-            ${
-              disabled
-                ? "bg-gray-50 cursor-not-allowed opacity-70"
-                : "cursor-pointer"
+            ${disabled
+              ? "bg-gray-50 cursor-not-allowed opacity-70"
+              : "cursor-pointer"
             }
           `}
         >
           <span
-            className={`truncate mr-2 ${
-              selectedValues.length ? "text-gray-700" : placeholderColorActive
-            }`}
+            className={`truncate mr-2 ${selectedValues.length ? "text-gray-700" : placeholderColorActive
+              }`}
           >
             {selectedValues.length > 0
-              ? `${selectedValues.length} ${label ?? ""}${
-                  selectedValues.length > 1 ? "s" : ""
-                } selected`
+              ? `${selectedValues.length} ${label ?? ""}${selectedValues.length > 1 ? "s" : ""
+              } selected`
               : placeholder}
           </span>
 
           <CaretDown
             size={14}
-            className={`text-gray-400 flex-shrink-0 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
+            className={`text-gray-400 flex-shrink-0 transition-transform ${isOpen ? "rotate-180" : ""
+              }`}
           />
         </div>
 
@@ -141,10 +140,10 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
           >
             {!isGrouped
               ? (options as string[]).map((opt, idx) => (
-                  <div
-                    key={`${label}-${opt}-${idx}`}
-                    onClick={() => onChange(opt)}
-                    className="
+                <div
+                  key={`${label}-${opt}-${idx}`}
+                  onClick={() => onChange(opt)}
+                  className="
                       flex
                       items-center
                       justify-between
@@ -155,23 +154,23 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                       text-sm
                       text-gray-700
                     "
-                  >
-                    <span>{opt}</span>
+                >
+                  <span>{opt}</span>
 
-                    {selectedValues.includes(opt) && (
-                      <Check
-                        size={14}
-                        weight="bold"
-                        className="text-[#48C78E]"
-                      />
-                    )}
-                  </div>
-                ))
+                  {selectedValues.includes(opt) && (
+                    <Check
+                      size={14}
+                      weight="bold"
+                      className="text-[#48C78E]"
+                    />
+                  )}
+                </div>
+              ))
               : Object.entries(options as Record<string, string[]>).map(
-                  ([category, items]) => (
-                    <div key={`${label}-${category}`}>
-                      <div
-                        className="
+                ([category, items]) => (
+                  <div key={`${label}-${category}`}>
+                    <div
+                      className="
                       sticky
                       top-0
                       z-10
@@ -186,15 +185,15 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                       border-b
                       border-gray-100
                     "
-                      >
-                        {category}
-                      </div>
+                    >
+                      {category}
+                    </div>
 
-                      {items.map((opt) => (
-                        <div
-                          key={`${label}-${category}-${opt}`}
-                          onClick={() => onChange(opt)}
-                          className="
+                    {items.map((opt) => (
+                      <div
+                        key={`${label}-${category}-${opt}`}
+                        onClick={() => onChange(opt)}
+                        className="
                           flex
                           items-center
                           justify-between
@@ -206,21 +205,21 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
                           text-gray-700
                           pl-5
                         "
-                        >
-                          <span>{opt}</span>
+                      >
+                        <span>{opt}</span>
 
-                          {selectedValues.includes(opt) && (
-                            <Check
-                              size={14}
-                              weight="bold"
-                              className="text-[#48C78E]"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ),
-                )}
+                        {selectedValues.includes(opt) && (
+                          <Check
+                            size={14}
+                            weight="bold"
+                            className="text-[#48C78E]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
           </div>
         )}
       </div>

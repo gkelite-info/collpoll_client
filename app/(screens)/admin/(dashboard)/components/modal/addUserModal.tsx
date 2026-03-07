@@ -15,6 +15,24 @@ import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
+const toPascalCase = (str: string) => {
+  return str.replace(
+    /\w\S*/g,
+    (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  );
+};
+
+const validatePassword = (password: string) => {
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+    return "Password must contain one uppercase, one lowercase, one number and one special character.";
+  }
+  return null;
+};
+
 const AddUserModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -39,6 +57,7 @@ const AddUserModal: React.FC<{
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const initialBasicData = {
     fullName: "",
@@ -179,12 +198,22 @@ const AddUserModal: React.FC<{
     }
   }, [isOpen, user]);
 
+  const selectedEducation = useMemo(
+    () =>
+      dbData.educations.find(
+        (e) => e.collegeEducationType === collegeEducationType
+      ),
+    [dbData.educations, collegeEducationType]
+  );
+
   const filteredBranches = useMemo(
     () =>
-      dbData.branches.filter(
-        (b) => b.collegeEducationId == selectedEducationId,
-      ),
-    [dbData.branches, selectedEducationId],
+      selectedEducation
+        ? dbData.branches.filter(
+          (b) => b.collegeEducationId === selectedEducation.collegeEducationId
+        )
+        : [],
+    [dbData.branches, selectedEducation]
   );
 
   const filteredYears = useMemo(
@@ -207,9 +236,9 @@ const AddUserModal: React.FC<{
   const studentSelectedEducation = useMemo(
     () =>
       dbData.educations.find(
-        (e) => e.collegeEducationType === selectedDegrees[0],
+        (e) => e.collegeEducationId === collegeEducationId
       ),
-    [selectedDegrees, dbData.educations],
+    [dbData.educations, collegeEducationId]
   );
 
   const studentAvailableBranches = useMemo(
@@ -274,9 +303,36 @@ const AddUserModal: React.FC<{
     [studentSelectedYear, dbData.sections],
   );
 
+  // const handleBasicChange = (
+  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  // ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
+
   const handleBasicChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
+  ) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === "fullName") {
+      const onlyAlphabets = value.replace(/[^A-Za-z\s]/g, "");
+      formattedValue = toPascalCase(onlyAlphabets);
+    } else if (name === "email") {
+      formattedValue = value.toLowerCase();
+    } else if (name === "mobileCode") {
+      if (!/^\+?[0-9]*$/.test(value)) return;
+      formattedValue = value;
+    } else if (name === "mobileNumber") {
+      formattedValue = value.replace(/\D/g, "");
+      if (basicData.mobileCode === "+91") {
+        if (formattedValue.length === 1 && !["6", "7", "8", "9"].includes(formattedValue)) {
+          return;
+        }
+      }
+      if (formattedValue.length > 10) return;
+    }
+
+    setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
+  };
 
   const toggleSectionId = (idStr: string) => {
     const id = parseInt(idStr);
@@ -320,14 +376,36 @@ const AddUserModal: React.FC<{
   const isFinance = basicData.role === "Finance";
 
   const handleSave = async () => {
-    if (!basicData.fullName || !basicData.email || !basicData.role)
-      return toast.error("Required fields missing.");
+    // if (!basicData.fullName || !basicData.email || !basicData.role)
+    //   return toast.error("Required fields missing.");
+
+    if (!basicData.fullName) return toast.error("Full Name is required.");
+    if (!basicData.email) return toast.error("Email is required.");
+    if (!basicData.mobileCode) {
+      return toast.error("Country code is required.");
+    }
+    if (!/^\+[0-9]+$/.test(basicData.mobileCode)) {
+      return toast.error("Invalid country code format.");
+    }
+    if (!basicData.mobileNumber) {
+      return toast.error("Mobile number is required.");
+    }
+    if (!/^[0-9]{10}$/.test(basicData.mobileNumber)) {
+      return toast.error("Mobile number must be exactly 10 digits.");
+    }
+    if (basicData.mobileCode === "+91") {
+      if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
+        return toast.error("Indian mobile number must start with 6, 7, 8, or 9.");
+      }
+    }
+
+    if (!basicData.role) return toast.error("Role is required.");
 
     if (!basicData.gender) return toast.error("Please select a gender.");
 
     if (
       isFaculty &&
-      (!selectedEducationId ||
+      (!collegeEducationId ||
         !selectedBranchId ||
         !selectedYearId ||
         !selectedSubjectId ||
@@ -337,7 +415,7 @@ const AddUserModal: React.FC<{
 
     if (isStudent) {
       if (
-        !selectedDegrees.length ||
+        !collegeEducationId ||
         !selectedDepts.length ||
         !selectedYears.length ||
         !["Inter"].includes(collegeEducationType!) && !selectedSemester.length
@@ -352,14 +430,30 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student ID required.");
 
-    if (isFinance && !selectedEducationId)
+    if (isFinance && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
 
-    if (
-      !user &&
-      (!basicData.password || basicData.password !== basicData.confirmPassword)
-    )
-      return toast.error("Check passwords.");
+    // if (
+    //   !user &&
+    //   (!basicData.password || basicData.password !== basicData.confirmPassword)
+    // )
+    //   return toast.error("Check passwords.");
+
+    if (!user) {
+      if (!basicData.password) {
+        return toast.error("Password is required.");
+      }
+      const passwordError = validatePassword(basicData.password);
+      if (passwordError) {
+        return toast.error(passwordError);
+      }
+      if (!basicData.confirmPassword) {
+        return toast.error("Confirm Password is required.");
+      }
+      if (basicData.password !== basicData.confirmPassword) {
+        return toast.error("Password and Confirm Password do not match.");
+      }
+    }
 
     setLoading(true);
     let createdUserId: number | null = null;
@@ -432,7 +526,7 @@ const AddUserModal: React.FC<{
         await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
-          collegeEducationId: selectedEducationId!,
+          collegeEducationId: collegeEducationId!,
           createdBy: basicData.adminId,
           isActive: true,
           createdAt: timestamp,
@@ -445,7 +539,7 @@ const AddUserModal: React.FC<{
           targetUserId,
           { ...basicData, collegePublicId: basicData.collegeId },
           {
-            educationId: selectedEducationId!,
+            educationId: collegeEducationId!,
             branchId: selectedBranchId!,
             yearId: selectedYearId!,
             subjectId: selectedSubjectId!,
@@ -521,6 +615,7 @@ const AddUserModal: React.FC<{
         setLoading(false);
         setIsSuccess(false);
       }, 2000);
+      setSessionOptions([]);
     } catch (e: any) {
       console.error(e);
       if (createdUserId && !user) {
@@ -559,6 +654,7 @@ const AddUserModal: React.FC<{
                 name="fullName"
                 value={basicData.fullName}
                 onChange={handleBasicChange}
+                placeholder="Enter Fullname"
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
@@ -571,6 +667,7 @@ const AddUserModal: React.FC<{
                 name="email"
                 value={basicData.email}
                 onChange={handleBasicChange}
+                placeholder="Enter email address"
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
@@ -600,6 +697,7 @@ const AddUserModal: React.FC<{
                   <input
                     type="text"
                     name="mobileCode"
+                    maxLength={5}
                     value={basicData.mobileCode}
                     onChange={handleBasicChange}
                     className="w-[60px] border border-gray-200 rounded-md px-2 py-1 text-sm text-center outline-none focus:ring-1 focus:ring-[#48C78E]"
@@ -628,7 +726,7 @@ const AddUserModal: React.FC<{
                     className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                   >
                     <option value="" disabled>
-                      Select Role
+                      Select role
                     </option>
                     <option value="Admin">Admin</option>
                     <option value="Faculty">Faculty</option>
@@ -649,7 +747,7 @@ const AddUserModal: React.FC<{
                     Education Type
                   </label>
                   <div className="relative">
-                    <select
+                    {/* <select
                       value={selectedEducationId || ""}
                       onChange={(e) => {
                         setSelectedEducationId(Number(e.target.value));
@@ -672,25 +770,44 @@ const AddUserModal: React.FC<{
                     <CaretDown
                       size={14}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    /> */}
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={collegeEducationType!}
+                      className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
+                      placeholder="Auto-filled from Admin context"
+                    />
+                    <Lock
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                     />
                   </div>
                 </div>
               )}
               {isStudent && (
-                <CustomMultiSelect
-                  label="Education Type"
-                  placeholder="Select Education"
-                  options={degreeOptions}
-                  selectedValues={selectedDegrees}
-                  onChange={(v) => {
-                    handleSingleSelect(v, setSelectedDegrees);
-                    setSelectedDepts([]);
-                    setSelectedYears([]);
-                    setSelectedSemester([]);
-                    setSelectedSections([]);
-                  }}
-                  onRemove={() => setSelectedDegrees([])}
-                />
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Education Type
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={collegeEducationType!}
+                        className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
+                        placeholder="Auto-filled from Admin context"
+                      />
+                      <Lock
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               {isParent && (
@@ -720,7 +837,7 @@ const AddUserModal: React.FC<{
                     <div className="relative">
                       <select
                         value={selectedBranchId || ""}
-                        disabled={!selectedEducationId}
+                        disabled={!selectedEducation}
                         onChange={(e) => {
                           setSelectedBranchId(Number(e.target.value));
                           setSelectedYearId(null);
@@ -834,6 +951,8 @@ const AddUserModal: React.FC<{
                       );
                       if (s) toggleSectionId(String(s.collegeSectionsId));
                     }}
+                    paddingY="py-1"
+                    gap="gap-1"
                   />
                 </div>
               </>
@@ -847,7 +966,7 @@ const AddUserModal: React.FC<{
                     placeholder={collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
                     options={branchOptions}
                     selectedValues={selectedDepts}
-                    disabled={selectedDegrees.length === 0}
+                    disabled={!collegeEducationId}
                     onChange={(v) => {
                       handleSingleSelect(v, setSelectedDepts);
                       setSelectedYears([]);
@@ -963,6 +1082,7 @@ const AddUserModal: React.FC<{
                       name="password"
                       value={basicData.password}
                       onChange={handleBasicChange}
+                      placeholder="Enter password"
                       className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] pr-8"
                     />
                     <div
@@ -981,13 +1101,31 @@ const AddUserModal: React.FC<{
                   <label className="text-xs font-bold text-[#2D3748]">
                     Confirm Password
                   </label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={basicData.confirmPassword}
-                    onChange={handleBasicChange}
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      value={basicData.confirmPassword}
+                      onChange={handleBasicChange}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSave();
+                        }
+                      }}
+                      placeholder="Confirm password"
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <Eye size={16} />
+                      ) : (
+                        <EyeSlash size={16} />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -997,7 +1135,7 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
                 ? "bg-green-600 cursor-default"
                 : "bg-[#43C17A] hover:bg-[#3ea876]"
                 }`}
@@ -1006,7 +1144,7 @@ const AddUserModal: React.FC<{
             </button>
             <button
               onClick={onClose}
-              className="flex-1 border cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
+              className="flex-1 border focus:outline-none cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>
