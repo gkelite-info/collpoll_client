@@ -185,7 +185,7 @@ export const resolveSubjectIds = async ({
   };
 };
 
-export const getAcademicSubjects = async (collegeId: number) => {
+export const getAcademicSubjects = async (collegeId: number, collegeEducationId: number) => {
   const { data, error } = await supabase
     .from("college_subjects")
     .select(
@@ -198,6 +198,7 @@ export const getAcademicSubjects = async (collegeId: number) => {
     `,
     )
     .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
     .is("deletedAt", null)
     .order("createdAt", { ascending: false });
 
