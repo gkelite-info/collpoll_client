@@ -279,7 +279,7 @@ export default function AssignmentForm({
               Subject
             </label>
             {uniqueSubjects.length === 1 ? (
-              <div className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+              <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
                 {singleSubjectDisplay}
               </div>
             ) : (
@@ -354,7 +354,7 @@ export default function AssignmentForm({
                 {faculty_edu_type === "Inter" ? "Group" : "Branch"}
               </label>
               {availableBranches.length === 1 ? (
-                <div className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
+                <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
                   {availableBranches[0].name}
                 </div>
               ) : (
@@ -393,7 +393,7 @@ export default function AssignmentForm({
                 onChange={(e) =>
                   setForm({ ...form, sectionId: e.target.value, yearId: "" })
                 }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
+                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
               >
                 <option value="">Select Section</option>
                 {availableSections.map((s) => (
@@ -413,7 +413,7 @@ export default function AssignmentForm({
                 required
                 disabled={!form.sectionId}
                 onChange={(e) => setForm({ ...form, yearId: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
+                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
               >
                 <option value="">Select Year</option>
                 {availableYears.map((y) => (
@@ -447,7 +447,7 @@ export default function AssignmentForm({
                         : prev.toDate,
                   }));
                 }}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
+                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
             </div>
 
@@ -461,7 +461,7 @@ export default function AssignmentForm({
                 min={form.fromDate || today}
                 value={form.toDate}
                 onChange={(e) => setForm({ ...form, toDate: e.target.value })}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
+                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function AssignmentForm({
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 bg-[#43C17A] cursor-pointer text-white py-2 rounded-md hover:bg-green-600 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex-1 bg-[#43C17A] font-semibold cursor-pointer text-white py-2 rounded-md disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isSaving ? "Saving..." : "Save"}
             </button>
@@ -478,7 +478,7 @@ export default function AssignmentForm({
               type="button"
               onClick={onCancel}
               disabled={isSaving}
-              className="flex-1 border cursor-pointer py-2 rounded-md hover:bg-gray-100 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex-1 border font-semibold cursor-pointer py-2 rounded-md  disabled:opacity-70 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
