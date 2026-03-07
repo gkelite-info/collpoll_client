@@ -29,6 +29,7 @@ import {
     saveCalendarEventSections,
 } from "@/lib/helpers/calendar/calendarEventSectionsAPI";
 import EventDetailsModal from "@/app/(screens)/faculty/calendar/modal/EventDetailsModal"
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 
 interface Props {
     faculty: {
@@ -277,7 +278,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
                 date: data.date,
                 roomNo: data.roomNo,
                 fromTime: data.fromTime,
-                toTime: data.toTime, 
+                toTime: data.toTime,
 
                 meetingLink: data.meetingLink ?? null,
             });
@@ -516,10 +517,10 @@ export default function CalendarView({ faculty, onBack }: Props) {
                         <CaretLeft size={23} onClick={onBack} className="cursor-pointer -ml-1.5" />  Calendar & Events
                     </h1>
                     <p className="text-sm text-[#282828] mt-1">
-                        Viewing Calendar for {faculty.name} ({faculty.branch}) – ID {faculty.id}
+                        Viewing Calendar for faculty: <span className="font-semibold">{faculty.name}</span> ({faculty.branch}) <span className="font-semibold"> facultyId - {faculty.id}</span>
                     </p>
                 </div>
-                <CourseScheduleCard style="w-[320px]" department={faculty.branch} year={faculty.year} />
+                <CourseScheduleCard style="w-[320px]" department={faculty.branch} year={faculty.year} isVisibile={false}/>
             </section>
 
             <div className="flex justify-between mb-2">
@@ -535,7 +536,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
             {isLoadingEvents ? (
                 <div className="flex justify-center items-center h-[300px]">
-                    <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <Loader />
                 </div>
             ) : (
                 <CalendarGrid

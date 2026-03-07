@@ -31,7 +31,7 @@ export default function ConfirmDeleteModal({
           <button
             onClick={onCancel}
             disabled={isDeleting}
-            className="px-4 py-2 cursor-pointer rounded-lg text-sm border"
+            className="px-4 py-2 text-[#282828] cursor-pointer rounded-lg text-sm border"
           >
             Cancel
           </button>
