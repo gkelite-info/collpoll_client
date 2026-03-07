@@ -78,7 +78,7 @@ export default function FinanceNavbar() {
     }
 
     if (pathname === "/finance/finance-analytics/students") {
-      setActive("Home");
+      setActive("Finance / Analytics");
       return;
     }
 
@@ -90,16 +90,13 @@ export default function FinanceNavbar() {
       return;
     }
 
-    // ✅ ADD THIS BLOCK
-    if (pathname.startsWith("/finance") && pathname !== "/finance") {
-      setActive("Home");
-      return;
-    }
-
     const current = items.find((item) => item.path === pathname);
     if (current) {
       setActive(current.label);
+      return;
     }
+
+    setActive("Home");
   }, [pathname]);
 
   return (
