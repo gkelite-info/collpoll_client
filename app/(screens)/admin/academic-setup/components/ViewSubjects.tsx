@@ -33,20 +33,20 @@ export default function ViewSubjects({
   const [subjects, setSubjects] = useState<SubjectViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const { collegeEducationType } = useAdmin();
+  const { collegeEducationType, collegeEducationId } = useAdmin();
 
   useEffect(() => {
     if (!userId) return;
     loadSubjects();
-  }, [userId]);
+  }, [userId, collegeEducationId]);
 
   const loadSubjects = async () => {
-    if (!userId) return;
+    if (!userId || !collegeEducationId) return;
     try {
       setIsLoading(true);
 
       const { collegeId } = await fetchAdminContext(userId);
-      const res = await getAcademicSubjects(collegeId);
+      const res = await getAcademicSubjects(collegeId, collegeEducationId);
 
       if (!res.success) {
         toast.error(res.error || "Unable to load subjects. Please try again.");
