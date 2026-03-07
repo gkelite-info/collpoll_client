@@ -391,24 +391,6 @@ export default function AssignmentForm({
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Section
               </label>
-<<<<<<< Updated upstream
-              <select
-                value={form.sectionId}
-                required
-                disabled={!form.branchId}
-                onChange={(e) =>
-                  setForm({ ...form, sectionId: e.target.value, yearId: "" })
-                }
-                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
-              >
-                <option value="">Select Section</option>
-                {availableSections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-=======
 
               <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white min-h-[40px] flex flex-wrap gap-2">
 
@@ -466,7 +448,6 @@ export default function AssignmentForm({
                     ))}
                 </select>
               </div>
->>>>>>> Stashed changes
             </div>
 
             <div className="mb-4 flex-1">
