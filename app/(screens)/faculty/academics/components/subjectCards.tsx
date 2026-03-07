@@ -4,6 +4,7 @@ import { FaChevronDown } from "react-icons/fa6";
 import { SubjectDetailsCard } from "./subjectDetails";
 import AddNewCardModal from "./addNewCardModal";
 import { CardProps } from "@/lib/types/faculty";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type FacultySubject = {
   collegeSubjectId: number;
@@ -22,6 +23,7 @@ type SubjectCardProps = {
   subjectProps: CardProps[];
   facultyCtx: any;
 };
+
 export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardProps) {
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
@@ -33,14 +35,33 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
   const facultySubjects = facultyCtx?.faculty_subject ?? [];
   const facultySections = facultyCtx?.sections ?? [];
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     setSectionId(null);
   }, [subjectId]);
 
 
+
   useEffect(() => {
     setCards(subjectProps);
   }, [subjectProps]);
+
+  useEffect(() => {
+    const subjectIdParam = searchParams.get("subjectId");
+
+    if (subjectIdParam && cards.length > 0) {
+      const found = cards.find(
+        (item) => item.collegeSubjectId === Number(subjectIdParam)
+      );
+
+      if (found) {
+        setSelectedCard(found);
+        setShowDetails(true);
+      }
+    }
+  }, [searchParams, cards]);
 
 
   const handleSaveNewCard = (newCard: CardProps) => {
@@ -52,7 +73,10 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
       <div className="h-screen overflow-x-scroll">
         <SubjectDetailsCard
           details={selectedCard}
-          onBack={() => setShowDetails(false)}
+          onBack={() => {
+            setShowDetails(false);
+            router.push("/faculty/academics");
+          }}
         />
       </div>
     );
@@ -143,12 +167,20 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
             key={index}
             item={item}
             onViewDetails={() => {
-              setSelectedCard({
-                ...item,
-                collegeSubjectId: item.collegeSubjectId,
-              });
+              setSelectedCard(item);
               setShowDetails(true);
+
+              router.push(`/faculty/academics?subjectId=${item.collegeSubjectId}`, {
+                scroll: false,
+              });
             }}
+          // onViewDetails={() => {
+          //   setSelectedCard({
+          //     ...item,
+          //     collegeSubjectId: item.collegeSubjectId,
+          //   });
+          //   setShowDetails(true);
+          // }}
 
           />
         ))}
@@ -216,12 +248,13 @@ const IndividualCard = ({
   return (
     <div className="bg-white rounded-2xl w-full p-6 flex flex-col shadow-sm border border-gray-100">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-[#282828] font-semibold text-xl">
+        <h3 className="text-[#282828] font-semibold text-xl whitespace-nowrap overflow-x-auto flex-1">
           {item.subjectTitle} – {item.year}
         </h3>
+
         <button
           onClick={onViewDetails}
-          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm"
+          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm shrink-0"
         >
           View Details
         </button>
@@ -238,10 +271,10 @@ const IndividualCard = ({
             </span>
             {item.topicsCovered}
           </p>
-          <p>
+          {/* <p>
             <span className="font-semibold text-[#282828]">Section : </span>
             {item.sectionName}
-          </p>
+          </p> */}
         </div>
         <p>
           <span className="font-semibold text-[#282828]">Next lesson : </span>

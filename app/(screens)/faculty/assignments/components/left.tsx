@@ -158,8 +158,8 @@ export default function AssignmentsLeft() {
       </div>
 
       <div className="w-full flex flex-col flex-1 min-h-[500px]">
-        <div className="flex flex-col justify-between items-start h-full w-full">
-          <div className="flex justify-between mb-2 w-full">
+        <div className="flex flex-col gap-3 items-start h-full w-full">
+          <div className="flex justify-between w-full">
             <div className="flex gap-4 pb-1">
               <h5
                 className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "active"
@@ -190,7 +190,7 @@ export default function AssignmentsLeft() {
             </button>
           </div>
 
-          <div className="flex flex-col flex-1 w-full relative">
+          <div className="h-[164vh] overflow-y-auto w-full">
             {isLoading ? (
               <div className="w-full">
                 {[1, 2, 3].map((i) => (

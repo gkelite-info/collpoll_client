@@ -80,7 +80,8 @@ export default function Academics() {
   }, [userId, collegeId]);
 
   return (
-    <div className="p-2 flex flex-col lg:pb-5">
+    <div className="p-2 flex flex-col h-[calc(100vh-80px)] lg:pb-5">
+
       <div className="flex justify-between items-center mb-5">
         <div className="flex flex-col w-[50%]">
           <h1 className="text-[#282828] font-semibold text-2xl mb-1">
@@ -91,6 +92,7 @@ export default function Academics() {
             your batches.
           </p>
         </div>
+
         <div className="flex justify-end w-[32%]">
           <CourseScheduleCard style="w-[320px]" />
         </div>
@@ -99,20 +101,15 @@ export default function Academics() {
       {pageLoading ? (
         <Loader />
       ) : (
-        <>
-          <div className="mt-4">
-            {subjects.length === 0 && facultyId ? (
-              <p className="text-sm text-gray-500 text-center mt-10">
-                No classes assigned
-              </p>
-            ) : (
-              <SubjectCard
-                subjectProps={subjects}
-                facultyCtx={facultyCtx}
-              />
-            )}
-          </div>
-        </>
+        <div className="mt-4 flex-1 overflow-y-auto pr-2">
+          {subjects.length === 0 && facultyId ? (
+            <p className="text-sm text-gray-500 text-center mt-10">
+              No classes assigned
+            </p>
+          ) : (
+            <SubjectCard subjectProps={subjects} facultyCtx={facultyCtx} />
+          )}
+        </div>
       )}
     </div>
   );

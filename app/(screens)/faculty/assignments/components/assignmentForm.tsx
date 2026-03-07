@@ -38,6 +38,7 @@ export default function AssignmentForm({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { faculty_edu_type } = useFaculty();
+  const [sectionSelect, setSectionSelect] = useState("");
 
 
   const [form, setForm] = useState({
@@ -49,7 +50,7 @@ export default function AssignmentForm({
 
     subjectId: "",
     branchId: "",
-    sectionId: "",
+    sectionIds: [] as string[],
     yearId: "",
   });
 
@@ -86,7 +87,7 @@ export default function AssignmentForm({
               ...prev,
               subjectId: String(matchedSection.collegeSubjectId),
               branchId: String(sectionObj.collegeBranchId),
-              sectionId: String(matchedSection.collegeSectionsId),
+              sectionIds: [String(matchedSection.collegeSectionsId)],
               yearId: String(matchedSection.collegeAcademicYearId),
             }));
           }
@@ -175,7 +176,7 @@ export default function AssignmentForm({
   }, [facultySections, form.subjectId, form.branchId]);
 
   const availableYears = useMemo(() => {
-    if (!form.subjectId || !form.branchId || !form.sectionId) return [];
+    if (!form.subjectId || !form.branchId || form.sectionIds.length === 0) return [];
     const map = new Map();
     facultySections
       .filter((s) => {
@@ -183,7 +184,7 @@ export default function AssignmentForm({
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
           sectionObj?.collegeBranchId === Number(form.branchId) &&
-          s.collegeSectionsId === Number(form.sectionId)
+          form.sectionIds.includes(String(s.collegeSectionsId))
         );
       })
       .forEach((s) => {
@@ -195,7 +196,7 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId, form.sectionId]);
+  }, [facultySections, form.subjectId, form.branchId, form.sectionIds]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -219,41 +220,45 @@ export default function AssignmentForm({
     }
 
     setIsSaving(true);
-
-    const payload = {
-      assignmentId: form.assignmentId,
-      facultyId: facultyId,
-      subjectId: form.subjectId,
-      topicName: form.topicName,
-      dateAssigned: form.fromDate,
-      submissionDeadline: form.toDate,
-      collegeBranchId: form.branchId,
-      collegeSectionsId: form.sectionId,
-      collegeAcademicYearId: form.yearId,
-      marks: form.totalMarks,
-    };
-
     try {
-      const res = await upsertFacultyAssignment(payload);
 
-      if (res.success) {
-        toast.success(res.message || "Operation completed successfully.");
-        onSave({
-          ...initialData,
-          assignmentId: res.data ? res.data[0]?.assignmentId : undefined,
-          description: form.topicName,
-          title: form.topicName,
-          fromDate: form.fromDate,
-          toDate: form.toDate,
+      for (const sectionId of form.sectionIds) {
+
+        const payload = {
+          assignmentId: form.assignmentId,
+          facultyId: facultyId,
+          subjectId: form.subjectId,
+          topicName: form.topicName,
+          dateAssigned: form.fromDate,
+          submissionDeadline: form.toDate,
+          collegeBranchId: form.branchId,
+          collegeSectionsId: sectionId,
+          collegeAcademicYearId: form.yearId,
           marks: form.totalMarks,
-        } as Assignment);
+        };
 
-        router.push("/faculty/assignments");
-      } else {
-        toast.error(res.error);
-        setIsSaving(false);
+        const res = await upsertFacultyAssignment(payload);
+
+        if (!res.success) {
+          throw new Error(res.error);
+        }
       }
+
+      toast.success("Assignment saved successfully");
+
+      onSave({
+        ...initialData,
+        description: form.topicName,
+        title: form.topicName,
+        fromDate: form.fromDate,
+        toDate: form.toDate,
+        marks: form.totalMarks,
+      } as Assignment);
+
+      router.push("/faculty/assignments");
+
     } catch (error) {
+      console.error(error);
       toast.error("An unexpected error occurred.");
       setIsSaving(false);
     }
@@ -291,7 +296,7 @@ export default function AssignmentForm({
                     ...form,
                     subjectId: e.target.value,
                     branchId: "",
-                    sectionId: "",
+                    sectionIds: [] as string[],
                     yearId: "",
                   })
                 }
@@ -366,7 +371,7 @@ export default function AssignmentForm({
                     setForm({
                       ...form,
                       branchId: e.target.value,
-                      sectionId: "",
+                      sectionIds: [],
                       yearId: "",
                     })
                   }
@@ -386,6 +391,7 @@ export default function AssignmentForm({
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Section
               </label>
+<<<<<<< Updated upstream
               <select
                 value={form.sectionId}
                 required
@@ -402,6 +408,65 @@ export default function AssignmentForm({
                   </option>
                 ))}
               </select>
+=======
+
+              <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white min-h-[40px] flex flex-wrap gap-2">
+
+                {form.sectionIds.map((id) => {
+                  const section = availableSections.find((s) => String(s.id) === id);
+
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 bg-[#ECFDF5] text-[#065F46] px-3 py-1 rounded-full text-xs"
+                    >
+                      {section?.name}
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            sectionIds: prev.sectionIds.filter((sid) => sid !== id),
+                          }))
+                        }
+                        className="text-red-500 font-bold"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+
+                <select
+                  value={sectionSelect}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (!value) return;
+
+                    setForm((prev) => ({
+                      ...prev,
+                      sectionIds: prev.sectionIds.includes(value)
+                        ? prev.sectionIds
+                        : [...prev.sectionIds, value],
+                    }));
+
+                    setSectionSelect(""); // reset dropdown
+                  }}
+                  className="text-sm outline-none flex-1 text-black"
+                >
+                  <option value="">Select section</option>
+
+                  {availableSections
+                    .filter((s) => !form.sectionIds.includes(String(s.id)))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+>>>>>>> Stashed changes
             </div>
 
             <div className="mb-4 flex-1">
@@ -411,7 +476,7 @@ export default function AssignmentForm({
               <select
                 value={form.yearId}
                 required
-                disabled={!form.sectionId}
+                disabled={form.sectionIds.length === 0}
                 onChange={(e) => setForm({ ...form, yearId: e.target.value })}
                 className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
               >

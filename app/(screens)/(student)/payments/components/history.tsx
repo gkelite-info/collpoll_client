@@ -46,35 +46,41 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.map((trx, idx) => (
-                <tr key={trx.id || idx} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-gray-600">{trx.id}</td>
-                  <td className="px-6 py-4 text-gray-600">{trx.items}</td>
-                  <td className="px-6 py-4 text-gray-600">{trx.qty}</td>
-                  <td className="px-6 py-4 text-gray-600">{trx.costCenter}</td>
-                  <td className="px-6 py-4 text-gray-600">
-                    {trx.amount.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">
-                    {trx.message || "-"}
-                  </td>
-                  <td className="px-6 py-4 text-blue-800 font-bold italic">
-                    {trx.gateway}
-                  </td>
-                  <td className="px-6 py-4 text-gray-600">{trx.trxnId}</td>
-                  <td className="px-6 py-4 text-gray-600">{trx.paidOn}</td>
-                  <td
-                    className={`px-6 py-4 font-medium ${trx.status === "Success"
-                        ? "text-emerald-500"
-                        : trx.status === "Failure"
-                          ? "text-red-500"
-                          : "text-yellow-500"
-                      }`}
-                  >
-                    {trx.status}
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-6 py-8 text-center text-gray-500 font-medium">
+                    No Data Available
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((trx, idx) => (
+                  <tr key={trx.id || idx} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-gray-600">{trx.id}</td>
+                    <td className="px-6 py-4 text-gray-600">{trx.items}</td>
+                    <td className="px-6 py-4 text-gray-600">{trx.qty}</td>
+                    <td className="px-6 py-4 text-gray-600">{trx.costCenter}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {trx.amount.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{trx.message || "-"}</td>
+                    <td className="px-6 py-4 text-blue-800 font-bold italic">
+                      {trx.gateway}
+                    </td>
+                    <td className="px-6 py-4 text-gray-600">{trx.trxnId}</td>
+                    <td className="px-6 py-4 text-gray-600">{trx.paidOn}</td>
+                    <td
+                      className={`px-6 py-4 font-medium ${trx.status === "Success"
+                          ? "text-emerald-500"
+                          : trx.status === "Failure"
+                            ? "text-red-500"
+                            : "text-yellow-500"
+                        }`}
+                    >
+                      {trx.status}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
