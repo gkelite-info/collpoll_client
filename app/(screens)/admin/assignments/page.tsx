@@ -30,31 +30,33 @@ const FilterDropdown = ({
   options,
   onChange,
   displayModifier,
-}: FilterProps) => (
-  <div className="flex flex-col gap-1 min-w-30">
-    <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
-      {label}
-    </label>
-    <div className="relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none bg-transparent text-[13px] font-medium text-gray-700 pl-2 pr-2 focus:outline-none cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt} className="py-2">
-            {displayModifier ? displayModifier(opt) : opt}
-          </option>
-        ))}
-      </select>
-      <CaretDown
-        size={12}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-        weight="bold"
-      />
+}: FilterProps) => {
+  return (
+    <div className="flex flex-col gap-1 min-w-30">
+      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
+        {label}
+      </label>
+      <div className="relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none bg-transparent text-[13px] font-medium text-gray-700 pl-2 pr-2 focus:outline-none cursor-pointer"
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt} className="py-2">
+              {displayModifier ? displayModifier(opt) : opt}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          size={12}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+          weight="bold"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AssignmentPage = () => {
   const [search, setSearch] = useState("");
@@ -121,7 +123,9 @@ const AssignmentPage = () => {
 
   if (loading)
     return (
-      <div className="p-10 text-center"><Loader/></div>
+      <div className="p-10 text-center">
+        <Loader />
+      </div>
     );
 
   return (
@@ -171,7 +175,7 @@ const AssignmentPage = () => {
             value={yearFilter}
             options={uniqueYears}
             onChange={setYearFilter}
-            displayModifier={(o) => (o === "All" ? o : `${o} Year`)}
+            displayModifier={(o) => (o === "All" ? o : `${o}`)}
           />
         </div>
       </div>
