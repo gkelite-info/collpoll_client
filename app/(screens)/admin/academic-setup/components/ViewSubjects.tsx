@@ -7,6 +7,7 @@ import { getAcademicSubjects } from "@/lib/helpers/admin/academicSetup/academicS
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 export type SubjectViewData = {
   id: number;
@@ -32,6 +33,7 @@ export default function ViewSubjects({
   const [subjects, setSubjects] = useState<SubjectViewData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
     if (!userId) return;
@@ -92,9 +94,11 @@ export default function ViewSubjects({
               <th className="p-3 text-left text-[#2D3748]">Subject Key</th>
               <th className="p-3 text-left text-[#2D3748]">Credits</th>
               <th className="p-3 text-left text-[#2D3748]">Education</th>
-              <th className="p-3 text-left text-[#2D3748]">Branch</th>
+              <th className="p-3 text-left text-[#2D3748]">{collegeEducationType === "Inter" ? "Group" : "Branch"}</th>
               <th className="p-3 text-left text-[#2D3748]">Year</th>
-              <th className="p-3 text-left text-[#2D3748]">Sem</th>
+              {!(collegeEducationType === "Inter") && (
+                <th className="p-3 text-left text-[#2D3748]">Sem</th>
+              )}
               <th className="p-3 text-left text-[#2D3748]">Action</th>
             </tr>
           </thead>
@@ -131,7 +135,7 @@ export default function ViewSubjects({
             ) : (
               <tr>
                 <td colSpan={9} className="text-center p-3 h-[30vh]">
-                  No Subjects Available.
+                  No subjects available.
                 </td>
               </tr>
             )}

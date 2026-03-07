@@ -198,7 +198,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Branch Type
+              {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
             </label>
             {isLoadingOptions && ui.education && !ui.branch ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -212,7 +212,7 @@ export default function AddSubject({
                 disabled={!ui.education}
                 className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select Branch</option>
+                <option value="">{collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}</option>
                 {ui.education &&
                   options.branches.map((b) => (
                     <option key={b.id}>{b.label}</option>

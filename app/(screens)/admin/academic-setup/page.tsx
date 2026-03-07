@@ -3,21 +3,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import AddAcademicSetup, { AcademicData } from "./components/AddAcademicSetup";
-import ViewAcademicStructure, {
-  AcademicViewData,
-} from "./components/ViewAcademicStructure";
+import ViewAcademicStructure, { AcademicViewData } from "./components/ViewAcademicStructure";
 import ViewSubjects, { SubjectViewData } from "./components/ViewSubjects";
-import AddSubject, {
-  SubjectFormData,
-  SubjectUIState,
-} from "./components/AddSubject";
+import AddSubject, { SubjectFormData, SubjectUIState } from "./components/AddSubject";
 import toast from "react-hot-toast";
-import {
-  getAcademicSubjectById,
-  resolveSubjectUIFromIds,
-  upsertAcademicSubject,
-  resolveSubjectIds,
-} from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
+import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
@@ -123,56 +113,6 @@ export default function AcademicSetup() {
     }
   };
 
-  // const handleSubjectSave = async (
-  //   form: SubjectFormData,
-  //   ui: SubjectUIState,
-  // ) => {
-  //   try {
-  //     if (!userId) {
-  //       toast.error("User not found");
-  //       return;
-  //     }
-
-  //     const { collegeId, adminId } = await fetchAdminContext(userId);
-
-  //     const resolvedIds = await resolveSubjectIds({
-  //       education: ui.education,
-  //       branch: ui.branch,
-  //       year: ui.year,
-  //       semester: ui.semester,
-  //       collegeId,
-  //     });
-
-  //     const payload = {
-  //       ...(form.id && { collegeSubjectId: form.id }),
-  //       subjectName: form.subjectName,
-  //       subjectCode: form.subjectCode,
-  //       subjectKey: form.subjectKey,
-  //       credits: form.credits,
-  //       ...resolvedIds,
-  //       collegeId,
-
-  //       createdBy: adminId,
-  //     };
-
-  //     const res = await upsertAcademicSubject(payload);
-
-  //     if (!res.success) {
-  //       throw new Error(res.error);
-  //     }
-
-  //     setEditSubject(null);
-  //     setEditSubjectUi(null);
-  //     setActiveTab("view-subject");
-  //     toast.success(
-  //       form.id ? "Subject updated successfully" : "Subject added successfully",
-  //     );
-  //   } catch (err: any) {
-  //     toast.error(err.message || "Subject save failed");
-  //     throw err;
-  //   }
-  // };
-
   const handleSubjectSave = async (
     form: SubjectFormData,
     ui: SubjectUIState,
@@ -185,7 +125,6 @@ export default function AcademicSetup() {
 
       const { collegeId, adminId } = await fetchAdminContext(userId);
 
-      // We pass the data to our smart resolver
       const resolvedIds = await resolveSubjectIds({
         education: ui.education,
         branch: ui.branch,
@@ -259,8 +198,8 @@ export default function AcademicSetup() {
                   }
                 }}
                 className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
-                    ? "text-white"
-                    : "text-gray-500 hover:text-gray-700"
+                  ? "text-white"
+                  : "text-gray-500 hover:text-gray-700"
                   }`}
               >
                 {tab.label}

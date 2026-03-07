@@ -38,24 +38,18 @@ export async function saveAcademicSetupMaster(
 
     const collegeEducationId = education.collegeEducationId;
 
-    console.log("what is collegeEducaitonId", collegeEducationId);
-
-    const branchResult = await upsertCollegeBranches(
-        [
-            {
-                type: input.branch.type,
-                code: input.branch.code,
-            },
-        ],
+    const branchResult = await upsertCollegeBranches([
+        {
+            type: input.branch.type,
+            code: input.branch.code,
+        },
+    ],
         {
             collegeEducationId,
             collegeId: context.collegeId,
             adminId: context.adminId,
         }
     );
-
-    console.log("what is brenah length", branchResult);
-
 
     if (!branchResult?.length) {
         throw new Error("Failed to save college branch");
@@ -78,19 +72,23 @@ export async function saveAcademicSetupMaster(
 
     const collegeAcademicYearId = yearResult.collegeAcademicYearId;
 
-    if (input.branch.academicYear?.trim()) {
+    if (
+        input.branch.academicYear?.trim() &&
+        input.educationType.toLowerCase() !== "inter"
+    ) {
         const semesters = deriveSemesters(
             input.educationType,
             input.branch.academicYear
         );
 
         if (semesters.length) {
-            await saveCollegeSemesters({
-                collegeSemesters: semesters,
-                collegeEducationId,
-                collegeAcademicYearId,
-                collegeId: context.collegeId,
-            },
+            await saveCollegeSemesters(
+                {
+                    collegeSemesters: semesters,
+                    collegeEducationId,
+                    collegeAcademicYearId,
+                    collegeId: context.collegeId,
+                },
                 context.adminId
             );
         }
