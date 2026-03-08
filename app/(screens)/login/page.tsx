@@ -228,7 +228,7 @@ export default function LoginPage() {
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${current === i
                 ? "w-18 bg-[#1A5D3C]"
-                : "w-14 bg-white/60 border border-white/40"
+                : "w-5 bg-white/60 border border-white/40"
                 }`}
             ></div>
           ))}
