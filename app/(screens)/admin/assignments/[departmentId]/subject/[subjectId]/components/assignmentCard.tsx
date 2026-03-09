@@ -27,8 +27,8 @@ function formatDate(dateValue: number | string) {
 
   if (/^\d{8}$/.test(str)) {
     const year = str.substring(0, 4);
-    const month = str.substring(4, 6).replace(/^0/, "");
-    const day = str.substring(6, 8).replace(/^0/, "");
+    const month = str.substring(4, 6)
+    const day = str.substring(6, 8)
     return `${day}/${month}/${year}`;
   }
 

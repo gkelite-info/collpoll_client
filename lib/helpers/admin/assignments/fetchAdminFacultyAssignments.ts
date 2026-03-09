@@ -1,12 +1,15 @@
-// lib/helpers/admin/assignments/fetchAdminFacultyAssignments.ts
 import { supabase } from "@/lib/supabaseClient";
 
 export const fetchAdminFacultyAssignments = async (
   subjectId: number,
   facultyId: number,
+  page: number,
+  pageSize: number,
 ) => {
   try {
-    const { data, error } = await supabase
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error, count } = await supabase
       .from("assignments")
       .select(
         `
@@ -18,11 +21,13 @@ export const fetchAdminFacultyAssignments = async (
         marks,
         status
       `,
+        { count: "exact" },
       )
       .eq("subjectId", subjectId)
-      .eq("createdBy", facultyId) // Directly matches the ID from params
+      .eq("createdBy", facultyId)
       .eq("is_deleted", false)
-      .order("assignmentId", { ascending: false });
+      .order("assignmentId", { ascending: false })
+      .range(from, to);
 
     if (error) throw error;
 
@@ -37,9 +42,10 @@ export const fetchAdminFacultyAssignments = async (
         ...a,
         subjectName: subjectData?.subjectName || "Subject",
       })),
+      count : count || 0,
       error: null,
     };
   } catch (error: any) {
-    return { data: [], error: error.message };
+    return { data: [], count: 0, error: error.message };
   }
 };

@@ -7,6 +7,7 @@ import { fetchAdminFacultyAssignments } from "@/lib/helpers/admin/assignments/fe
 import AssignmentSkeleton from "@/app/(screens)/faculty/assignments/shimmer/assignmentShimmer";
 import AssignmentForm from "./assignmentForm";
 import { CaretLeftIcon } from "@phosphor-icons/react";
+import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
 
 interface Props {
   subjectId: number;
@@ -23,23 +24,30 @@ export default function AssignmentsLeft({
   const [isLoading, setIsLoading] = useState(true);
 
   const [editingAssignment, setEditingAssignment] = useState<any | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 10;
 
   useEffect(() => {
-    if (subjectId && facultyId) loadAssignments();
-  }, [subjectId, facultyId]);
+    if (subjectId && facultyId) loadAssignments(page);
+  }, [subjectId, facultyId, page]);
 
-  async function loadAssignments() {
+  async function loadAssignments(currentPage: number) {
     try {
       setIsLoading(true);
-      const { data, error } = await fetchAdminFacultyAssignments(
+      const { data, error, count } = await fetchAdminFacultyAssignments(
         subjectId,
         facultyId,
+        currentPage,
+        pageSize,
       );
 
       if (error) {
         toast.error("Failed to load assignments");
         return;
       }
+
+      setTotalCount(count || 0);
 
       if (data && Array.isArray(data)) {
         const formatted = data.map((a: any) => ({
@@ -84,7 +92,7 @@ export default function AssignmentsLeft({
   }
 
   return (
-    <div className="w-[68%] p-2 flex flex-col">
+    <div className="w-[68%] p-2 flex flex-col h-full">
       <div className="mb-4">
         <div className="flex items-center gap-1">
           <CaretLeftIcon
@@ -100,23 +108,32 @@ export default function AssignmentsLeft({
           Reviewing assignments created by the instructor.
         </p>
       </div>
-
-      {isLoading ? (
-        <>
-          <AssignmentSkeleton />
-          <AssignmentSkeleton />
-          <AssignmentSkeleton />
-        </>
-      ) : assignments.length === 0 ? (
-        <div className="py-20 text-center text-gray-400 border border-dashed rounded-xl bg-white">
-          No assignments found for this subject and faculty.
-        </div>
-      ) : (
-        <AssignmentCard
-          activeView="active"
-          cardProp={assignments}
-          onEdit={(item: any) => setEditingAssignment(item)}
-          onDelete={(id: number) => {}}
+      <div className="h-[114.6vh] overflow-y-auto pr-1 pb-4">
+        {isLoading ? (
+          <>
+            <AssignmentSkeleton />
+            <AssignmentSkeleton />
+            <AssignmentSkeleton />
+          </>
+        ) : assignments.length === 0 ? (
+          <div className="py-20 text-center text-gray-400 border border-dashed rounded-xl bg-white">
+            No assignments found for this subject and faculty.
+          </div>
+        ) : (
+          <AssignmentCard
+            activeView="active"
+            cardProp={assignments}
+            onEdit={(item: any) => setEditingAssignment(item)}
+            onDelete={(id: number) => { }}
+          />
+        )}
+      </div>
+      {!isLoading && totalCount > pageSize && (
+        <Pagination
+          currentPage={page}
+          totalItems={totalCount}
+          itemsPerPage={pageSize}
+          onPageChange={(p: number) => setPage(p)}
         />
       )}
     </div>

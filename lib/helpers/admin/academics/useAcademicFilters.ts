@@ -51,12 +51,15 @@ export function useAcademicFilters(userId?: number) {
   }, [collegeId, branch, year, section]);
 
   const selectEducation = async (edu: any) => {
+    if (!collegeId) return;
     setEducation(edu);
     setBranch(null);
     setYear(null);
     setSection(null);
 
-    setBranches(await fetchBranches(collegeId!, edu.collegeEducationId));
+    // setBranches(await fetchBranches(collegeId!, edu.collegeEducationId));
+    const branchData = await fetchBranches(collegeId, edu.collegeEducationId);
+    setBranches(branchData);
     setYears([]);
     setSections([]);
   };
