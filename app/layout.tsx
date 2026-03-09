@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Collpoll",
+  title: "Tekton Campus",
 };
 
 export default function RootLayout({
