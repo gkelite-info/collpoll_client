@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-const AssignmentsLeft = () => {
+const MyAttendanceLeft = () => {
   const [activeMainTab, setActiveMainTab] = useState<
     "attendance" | "payroll" | "analytics"
-  >("payroll");
+  >("attendance");
 
   const [activePayrollTab, setActivePayrollTab] = useState<
     "summary" | "myPay" | "manageTax"
-  >("manageTax");
+  >("summary");
 
   const mainTabs = [
     { id: "attendance", label: "Attendance" },
@@ -25,7 +25,7 @@ const AssignmentsLeft = () => {
   ];
 
   return (
-    <div className="w-full flex-1 font-sans min-h-[600px] pt-4">
+    <div className="w-full flex-1 font-sans min-h-[600px] pt-4 px-6">
       <div className="flex justify-center mb-8 w-full">
         <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
           {mainTabs.map((tab) => (
@@ -110,4 +110,4 @@ const AssignmentsLeft = () => {
   );
 };
 
-export default AssignmentsLeft;
+export default MyAttendanceLeft;
