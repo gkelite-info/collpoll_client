@@ -1,6 +1,6 @@
 "use client";
 
-import { CaretDown, MinusCircle, X } from "@phosphor-icons/react"; // Fixed MinusCircleIcon to MinusCircle
+import { CaretDown, MinusCircle, X } from "@phosphor-icons/react";
 import AddFeeHeader from "./components/Header";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -19,11 +19,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { saveAdditionalFeeStructure } from "@/lib/helpers/finance/feeStructure/additionalFee/additionalFeeStructureAPI";
 import { saveAdditionalFeeComponent } from "@/lib/helpers/finance/feeStructure/additionalFee/additionalFeeComponentAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
 export default function CreateFee() {
   const { userId } = useUser();
   const router = useRouter();
-  const { collegeEducationType } = useAdmin();
+  const { collegeEducationType } = useFinanceManager();
 
   const [collegeName, setCollegeName] = useState("");
   const [educationType, setEducationType] = useState("");
@@ -93,8 +94,26 @@ export default function CreateFee() {
   });
   const [additionalTotalFee, setAdditionalTotalFee] = useState(0);
 
-  // Today's date for limiting past dates safely
   const todayDateStr = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    const loadSessions = async () => {
+      if (!collegeId || !collegeEducationId || !selectedBranch) return;
+
+      const { data: sessionData } = await supabase
+        .from("college_session")
+        .select("*")
+        .eq("collegeId", collegeId)
+        .eq("collegeEducationId", collegeEducationId)
+        .eq("collegeBranchId", selectedBranch)
+        .eq("is_deleted", false)
+        .order("startYear", { ascending: false });
+
+      setAvailableSessions(sessionData || []);
+    };
+
+    loadSessions();
+  }, [collegeId, collegeEducationId, selectedBranch]);
 
   const handleFeeChange = (key: string, value: string) => {
     const cleanValue = value.replace(/\D/g, "");
@@ -291,23 +310,24 @@ export default function CreateFee() {
       try {
         const data = await getFinanceCollegeStructure(userId);
 
-        // Safely set data to avoid undefined mapping errors
         setCollegeName(data?.collegeName || "");
         setEducationType(data?.educationType || "");
         setCollegeId(data?.collegeId || null);
         setCollegeEducationId(data?.collegeEducationId || null);
-        setBranches(data?.branches || []); // Safe fallback
+        setBranches(data?.branches || []);
 
-        if (data?.collegeId) {
-          const { data: sessionData } = await supabase
-            .from("college_session")
-            .select("*")
-            .eq("collegeId", data.collegeId)
-            .eq("is_deleted", false)
-            .order("startYear", { ascending: false });
+        // if (data?.collegeId) {
+        //   const { data: sessionData } = await supabase
+        //     .from("college_session")
+        //     .select("*")
+        //     .eq("collegeId", data.collegeId)
+        //     .eq("collegeEducationId", data.collegeEducationId)
+        //     .eq("collegeBranchId", selectedBranch)
+        //     .eq("is_deleted", false)
+        //     .order("startYear", { ascending: false });
 
-          setAvailableSessions(sessionData || []); // Safe fallback
-        }
+        //   setAvailableSessions(sessionData || []);
+        // }
 
         const { data: fmData } = await supabase
           .from("finance_manager")
@@ -415,6 +435,8 @@ export default function CreateFee() {
         error: sessionError,
       } = await getOrCreateCollegeSession(
         collegeId,
+        collegeEducationId,
+        selectedBranch!,
         Number(sessionStart),
         Number(sessionEnd),
       );
@@ -679,7 +701,7 @@ export default function CreateFee() {
                 onClick={handleSaveModalComponent}
                 className="w-full bg-[#58AE77] hover:bg-[#469160] text-white font-medium py-3 rounded-md transition-colors"
               >
-                Save Additional Due
+                Save additional due
               </button>
             </motion.div>
           </motion.div>
@@ -742,14 +764,14 @@ export default function CreateFee() {
             </div>
             <div className="flex flex-col w-[49%]">
               <label className="font-medium text-[#282828]">
-                {!["Inter"].includes(collegeEducationType!) ? "Group" : "Branch"} <span className="text-red-500">*</span>
+                {["Inter"].includes(collegeEducationType!) ? "Group" : "Branch"} <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedBranch ?? ""}
                 onChange={(e) => setSelectedBranch(Number(e.target.value))}
-                className="border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989]"
+                className="border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989] cursor-pointer"
               >
-                <option value="">Select Branch</option>
+                <option value="">{collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}</option>
                 {(branches || []).map((branch) => (
                   <option
                     key={branch.collegeBranchId}
@@ -1082,7 +1104,7 @@ export default function CreateFee() {
                   <input
                     type="text"
                     value={gstValue}
-                    onChange={(e) => setGstValue(e.target.value)}
+                    onChange={(e) => setGstValue(e.target.value.replace(/\D/g, ""))}
                     placeholder="Ex: 18 (Enter 0 if none)"
                     className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
                   />
@@ -1164,7 +1186,7 @@ export default function CreateFee() {
                       : "bg-[#58AE77] hover:bg-[#469160]"
                       }`}
                   >
-                    {isSaving ? "Saving..." : "Save Fee Structure"}
+                    {isSaving ? "Saving..." : "Save fee structure"}
                   </button>
                 </div>
               </div>
@@ -1312,7 +1334,7 @@ export default function CreateFee() {
                           : "bg-[#58AE77] hover:bg-[#469160]"
                         }`}
                     >
-                      {isSaving ? "Saving..." : "Save Additional Due"}
+                      {isSaving ? "Saving..." : "Save additional due"}
                     </button>
                   </div>
                 </div>
