@@ -238,7 +238,7 @@ export default function LoginPage() {
       <div className="w-[55%] h-screen flex justify-center items-center bg-[#F5F6F8]">
         <div className="w-[560px] bg-white rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-8">
           <h1 className="text-[20px] font-semibold text-[#16284F] text-center">
-            Signin to Your Account
+            Login to Your Account
           </h1>
 
           <p className="text-[13px] text-[#414141] text-center mt-1 mb-3">
