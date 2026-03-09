@@ -1,8 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function fetchAdminDepartmentStats(collegeId: number) {
+export async function fetchAdminDepartmentStats(collegeId: number, collegeEducationId: number) {
   try {
-    // 1. Fetch active Faculty Sections
     const { data: sections, error } = await supabase
       .from("faculty_sections")
       .select(
@@ -18,11 +17,11 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
         faculty (fullName, userId, email)
       `,
       )
-      .eq("isActive", true);
+      .eq("isActive", true)
+      .eq("college_sections.collegeEducationId", collegeEducationId);
 
     if (error) throw error;
 
-    // 2. Fetch Active Students for real counts
     const { data: students } = await supabase
       .from("students")
       .select("collegeBranchId")
@@ -37,7 +36,6 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
       );
     });
 
-    // 3. Group by Branch-Year
     const grouped = new Map();
 
     sections.forEach((item: any) => {
@@ -60,7 +58,7 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
           deptCode: branchCode,
           year: year,
           facultySet: new Set(),
-          subjectIds: new Set<number>(), // <--- Properly initialized here
+          subjectIds: new Set<number>(),
           studentCount: studentCounts.get(branchId) || 0,
         });
       }
@@ -70,7 +68,6 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
       if (item.faculty) group.facultySet.add(JSON.stringify(item.faculty));
     });
 
-    // 4. Final aggregation with Dynamic Assignment check
     const result = await Promise.all(
       Array.from(grouped.values()).map(async (g) => {
         const uniqueFaculty = Array.from(g.facultySet).map((f: any) =>
@@ -78,7 +75,6 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
         );
         const subIds = Array.from(g.subjectIds) as number[];
 
-        // Count Subjects in this group that have at least one Active Assignment
         let activeSubjectsCount = 0;
         if (subIds.length > 0) {
           const { data: assignments } = await supabase
@@ -88,7 +84,6 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
             .eq("status", "Active")
             .eq("is_deleted", false);
 
-          // Get unique subjects from the assignments found
           activeSubjectsCount = new Set(assignments?.map((a) => a.subjectId))
             .size;
         }
@@ -100,7 +95,7 @@ export async function fetchAdminDepartmentStats(collegeId: number) {
           year: g.year,
           ...getDeptColor(g.name),
           totalStudents: g.studentCount,
-          activeSubjects: activeSubjectsCount, // <--- Now Dynamic
+          activeSubjects: activeSubjectsCount,
           issuesRaised: 0,
           facultyCount: uniqueFaculty.length,
           facultyList: uniqueFaculty,

@@ -96,12 +96,11 @@ const DepartmentSubjectPage = () => {
           </p>
         </div>
         <div className="w-80">
-          <CourseScheduleCard department={departmentId} year={year} />
+          <CourseScheduleCard department={departmentId} year={year} isVisibile={false} />
         </div>
       </div>
 
       <div className="flex flex-col flex-1 relative">
-        {/* Soft Loader Overlay */}
         {isFetchingMore && (
           <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
             <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
@@ -120,7 +119,6 @@ const DepartmentSubjectPage = () => {
               ))}
             </div>
 
-            {/* Render Pagination only if there's more than 1 page worth of items */}
             {totalCount > ITEMS_PER_PAGE && (
               <div className="mt-auto pt-4">
                 <Pagination

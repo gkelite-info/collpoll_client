@@ -1,20 +1,13 @@
 "use client";
-
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import {
-  CaretDown,
-  CaretLeft,
-  CaretRight,
-  MagnifyingGlass,
-} from "@phosphor-icons/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { CaretDown, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 interface FilterProps {
   label: string;
@@ -65,7 +58,7 @@ const AssignmentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
-
+  const { collegeEducationType } = useAdmin();
   const cardsPerPage = 15;
 
   useEffect(() => {
@@ -84,7 +77,7 @@ const AssignmentPage = () => {
 
         const adminCtx = await fetchAdminContext(userRecord.userId);
 
-        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId);
+        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId, adminCtx.collegeEducationId);
         setDataList(data || []);
       } catch (err) {
         console.error(err);
@@ -165,7 +158,7 @@ const AssignmentPage = () => {
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
-            label="Branch"
+            label={collegeEducationType === "Inter" ? "Group" : "Branch"}
             value={deptFilter}
             options={uniqueDepts}
             onChange={setDeptFilter}
