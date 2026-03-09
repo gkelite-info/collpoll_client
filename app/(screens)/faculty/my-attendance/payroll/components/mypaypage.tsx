@@ -7,20 +7,17 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
  function MyPayPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  // Read URL parameters to determine which sub-view to show
   const mainParam = searchParams.get("main") || "payroll";
   const subParam = searchParams.get("sub") || "myPay";
   const viewParam = (searchParams.get("view") as "salary" | "tax") || "salary";
 
   const [activeTab, setActiveTab] = useState<"salary" | "tax">(viewParam);
 
-  // Sync state if the user navigates back/forward in the browser
+
   useEffect(() => {
     setActiveTab(viewParam);
   }, [viewParam]);
 
-  // Handle tab switching & URL updating
   const handleTabSwitch = (tab: "salary" | "tax") => {
     setActiveTab(tab);
     router.push(`?main=${mainParam}&sub=${subParam}&view=${tab}`, { scroll: false });
@@ -43,10 +40,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col h-[550px] text-left">
-      
-      {/* ========================================== */}
-      {/* FIXED TABS (Always visible at the top) */}
-      {/* ========================================== */}
       <div className="flex-shrink-0 text-[14px] font-bold mb-4">
         <span 
           onClick={() => handleTabSwitch("salary")}
@@ -62,13 +55,8 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
           Income TAX
         </span>
       </div>
-
-      {/* ========================================== */}
-      {/* CONDITIONAL RENDER: SALARY VS TAX */}
-      {/* ========================================== */}
       {activeTab === "salary" ? (
         <>
-          {/* -- FIXED SALARY HEADER (Sticks to top) -- */}
           <div className="flex-shrink-0 ">
             <h2 className="text-[16px] font-extrabold text-[#333333] mb-3">My Salary</h2>
             
@@ -124,8 +112,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
             <h2 className="text-[16px] font-extrabold text-[#333333] mb-3">Pay Slips</h2>
           </div>
-
-          {/* -- SCROLLING PAYSLIPS LIST -- */}
           <div className="min-h-[108vh] overflow-y-auto pr-2 pb-6 space-y-4 rounded-xl custom-scrollbar">
             {paySlips.map((slip) => (
               <div key={slip.id} className="bg-white rounded-xl p-5 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
@@ -167,10 +153,7 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
           </div>
         </>
       ) : (
-        /* -- INCOME TAX TAB CONTENT -- */
         <div className="flex-1 min-h-[154vh] overflow-y-auto pr-2 pb-6 custom-scrollbar">
-          
-          {/* Card 1: Tax Summary Grid */}
           <div className="bg-white rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
             <div>
               <p className="text-[#333333] font-bold text-[14px]">Net Taxable Income</p>
@@ -197,8 +180,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
               <p className="text-[#43C17A] font-medium text-[13px] mt-1">INR 0</p>
             </div>
           </div>
-
-          {/* Card 2: Salary Breakup Table */}
           <div className="bg-white rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 overflow-hidden">
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left text-[14px]">
