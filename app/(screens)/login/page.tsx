@@ -238,7 +238,7 @@ export default function LoginPage() {
       <div className="w-[55%] h-screen flex justify-center items-center bg-[#F5F6F8]">
         <div className="w-[560px] bg-white rounded-[8px] shadow-[0_4px_20px_rgba(0,0,0,0.08)] p-8">
           <h1 className="text-[20px] font-semibold text-[#16284F] text-center">
-            Login to Your Account
+            Signin to Your Account
           </h1>
 
           <p className="text-[13px] text-[#414141] text-center mt-1 mb-3">
@@ -287,7 +287,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 focus:outline-none cursor-pointer"
               >
                 <Icon
                   icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
@@ -312,20 +312,9 @@ export default function LoginPage() {
               disabled={loading}
               className="cursor-pointer w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
             >
-              {loading ? "Loading..." : "Login"}
+              {loading ? "Loading..." : "Signin"}
             </button>
           </div>
-
-          {/* <p className="text-center mt-4 text-[14px] text-[#444]">
-            Don’t have an account?{" "}
-            <Link
-              href="/signup"
-              className="text-[#0A8E2E] cursor-pointer"
-            >
-              Register Now
-            </Link>
-          </p> */}
-
         </div>
       </div>
     </div>

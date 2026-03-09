@@ -15,6 +15,7 @@ export default function EducationalType() {
     });
 
     const { userId } = useUser();
+    const [loading, setLoading] = useState(false);
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -60,7 +61,25 @@ export default function EducationalType() {
 
     const handleSubmit = async () => {
         try {
-            const saved = await insertEducation({
+            if (!form.educationName) {
+                toast.error("Education name is required");
+                return;
+            }
+            if (!form.educationCode) {
+                toast.error("Education code is required");
+                return;
+            }
+            if (!form.educationLevel) {
+                toast.error("Education level is required");
+                return;
+            }
+            if (!form.durationYears) {
+                toast.error("Duration of years is required");
+                return;
+            }
+
+            setLoading(true);
+            await insertEducation({
                 educationName: form.educationName.trim(),
                 educationCode: form.educationCode.trim(),
                 educationLevel: form.educationLevel.trim(),
@@ -68,7 +87,6 @@ export default function EducationalType() {
             },
                 userId
             );
-            console.log("Education saved ✅", saved);
             toast.success("Education saved successfully");
             setForm({
                 educationName: "",
@@ -79,6 +97,9 @@ export default function EducationalType() {
         } catch (err: any) {
             console.error("Insert failed ❌", err.message);
             toast.error("Insert failed");
+        }
+        finally {
+            setLoading(false);
         }
     };
 

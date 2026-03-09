@@ -11,6 +11,7 @@ type InputFieldProps = {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   rightIcon?: React.ReactNode;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export const InputField = ({
@@ -18,12 +19,13 @@ export const InputField = ({
   name,
   value,
   onChange,
-  disabled=false,
+  disabled = false,
   placeholder,
   type = "text",
   className = "",
   rightIcon,
   uppercase,
+  onKeyDown
 }: InputFieldProps) => (
   <div className={`flex flex-col w-full ${className}`}>
     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
@@ -37,13 +39,14 @@ export const InputField = ({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         className={`border border-[#CCCCCC] ${disabled ? "bg-gray-100 cursor-not-allowed" : ""} rounded-lg px-4 py-2.5 pr-10 text-sm text-[#525252] placeholder:text-gray-400 focus:outline-none focus:border-[#49C77F] transition-colors shadow-sm w-full ${uppercase ? "uppercase" : ""
           }`}
         onWheel={(e) => e.currentTarget.blur()}
       />
 
       {rightIcon && (
-        <div className="absolute right-3 flex text-gray-500">{rightIcon}</div>
+        <div className="absolute right-3 flex text-gray-500 focus:outline-none">{rightIcon}</div>
       )}
     </div>
     {/* <input

@@ -24,7 +24,7 @@ export default function Page() {
                 : "Departments"}
         </h1>
         <p className="text-gray-500 text-sm mb-8">
-          Add a new college to the CollPoll network by providing verified
+          Add a new college to the <span className="text-black font-semibold">Tekton Campus</span> network by providing verified
           details below.
         </p>
 

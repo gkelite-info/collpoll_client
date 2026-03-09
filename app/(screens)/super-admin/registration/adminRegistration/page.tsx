@@ -1,14 +1,14 @@
 "use client"
 import { motion } from "framer-motion";
-
 import toast from "react-hot-toast";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
 import { InputField } from "../components/reusableComponents";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { saveCollegeAdmin } from "@/lib/helpers/collegeAdmin/collegeAdmin";
+import { CollegeDropdown, fetchCollegesForAdmin } from "@/lib/helpers/superadmin/collegeHelper";
 
 type AdminForm = {
   fullName: string;
@@ -40,13 +40,29 @@ export default function AdminRegistration() {
   const [form, setForm] = useState<AdminForm>(initialFormState);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
   const [isCollegeCodeManual, setIsCollegeCodeManual] = useState(false);
+  const [colleges, setColleges] = useState<CollegeDropdown[]>([]);
+
   const handleChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const router = useRouter()
+  const router = useRouter();
+
+  useEffect(() => {
+    const loadColleges = async () => {
+      const res = await fetchCollegesForAdmin();
+
+      if (!res.success) {
+        toast.error(res.error);
+      } else {
+        setColleges(res.data);
+      }
+    };
+
+    loadColleges();
+  }, []);
 
   const PASSWORD_REGEX =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
@@ -108,22 +124,18 @@ export default function AdminRegistration() {
 
 
   const handleSubmit = async () => {
-    setIsLoading(true);
 
     try {
-      console.log("🔍 Checking SuperAdmin auth...");
       const superAdmin = await checkSuperAdminAuth();
 
       if (!superAdmin) {
         return;
       }
 
-      console.log("🔍 Validating Full Name...");
       if (!form.fullName.trim()) {
         return toast.error("Full Name is required");
       }
 
-      console.log("🔍 Validating Email...");
       if (!form.email.trim()) {
         return toast.error("Email Address is required");
       }
@@ -133,7 +145,6 @@ export default function AdminRegistration() {
         return toast.error("Enter a valid email address");
       }
 
-      console.log("🔍 Validating Country Code...");
       if (!form.countryCode.trim()) {
         return toast.error("Country code is required");
       }
@@ -142,7 +153,6 @@ export default function AdminRegistration() {
         return toast.error("Enter a valid country code (e.g. +91)");
       }
 
-      console.log("🔍 Validating Mobile...");
       if (!form.mobile.trim()) {
         return toast.error("Mobile number is required");
       }
@@ -151,19 +161,14 @@ export default function AdminRegistration() {
         return toast.error("Mobile number must be 10 digits");
       }
 
-      console.log("🔍 Validating College ID...");
       if (!form.collegeId.trim()) {
         return toast.error("College ID is required");
       }
 
-
-
-      console.log("🔍 Validating Gender...");
       if (!form.gender) {
         return toast.error("Please select gender");
       }
 
-      console.log("🔍 Validating Password...");
       if (!form.password) {
         return toast.error("Password is required");
       }
@@ -182,11 +187,12 @@ export default function AdminRegistration() {
         form.collegeId
       );
 
-
       if (!collegeValidation.success) {
         toast.error("College ID and College Code do not match.");
         return;
       }
+
+      setIsLoading(true);
 
       const actualCollegeId = collegeValidation.collegeId;
 
@@ -194,15 +200,13 @@ export default function AdminRegistration() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: "https://collpoll-client.vercel.app/login",
+          emailRedirectTo: "https://tektoncampus.com/login",
         },
       });
 
       if (error) {
         throw error;
       }
-
-      console.log("Auth user created:", data.user);
 
       if (!data.user) {
         throw new Error("Auth user not created");
@@ -230,15 +234,12 @@ export default function AdminRegistration() {
         collegeId: actualCollegeId,
       });
 
-
       if (!collegeAdminResult.success) {
         toast.error("User created, but college admin creation failed");
         return;
       }
 
-      console.log(" SUCCESS: Admin registered");
       toast.success("Admin registered successfully");
-
       setForm(initialFormState);
       setIsCollegeCodeManual(false);
       setShowPassword(false);
@@ -274,7 +275,7 @@ export default function AdminRegistration() {
 
       <div className="grid grid-cols-2 gap-4">
         <InputField
-          label="Email Address"
+          label="Email address"
           name="email"
           placeholder='e.g., "admin.mallareddy@gmail.com"'
           value={form.email}
@@ -316,26 +317,31 @@ export default function AdminRegistration() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <InputField
-          label="College ID"
-          placeholder='e.g., "Enter your college ID"'
-          value={form.collegeId}
-          // onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange("collegeId", e.target.value.toUpperCase())}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-            const value = e.target.value.toUpperCase();
-            handleChange("collegeId", value);
+        <div className="flex flex-col">
+          <label className="text-[#333] font-semibold text-[15px] mb-1.5">
+            College
+          </label>
 
-            // if (!isCollegeCodeManual) {
-            //   const extractedCode = value.match(/^[A-Z]+/)?.[0] || "";
-            //   handleChange("collegeCode", extractedCode);
-            // }
-          }}
-        />
+          <select
+            value={form.collegeId}
+            onChange={(e) => handleChange("collegeId", e.target.value)}
+            className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm
+               focus:outline-none focus:border-[#49C77F] cursor-pointer text-[#282828]"
+          >
+            <option value="">Select college</option>
+
+            {colleges.map((college) => (
+              <option key={college.collegeId} value={college.collegeId}>
+                {college.collegeName}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex flex-col">
           <label className="text-[#333] font-semibold text-[15px] mb-1.5">
             Role
           </label>
-          <div className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-gray-100 text-gray-600">
+          <div className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-gray-100 text-gray-600 cursor-not-allowed">
             CollegeAdmin
           </div>
         </div>
@@ -367,6 +373,7 @@ export default function AdminRegistration() {
               value="Male"
               checked={form.gender === "Male"}
               onChange={() => handleChange("gender", "Male")}
+              className="focus:outline-none"
             />
             <span className="text-[#333]">Male</span>
           </label>
@@ -378,12 +385,12 @@ export default function AdminRegistration() {
               value="Female"
               checked={form.gender === "Female"}
               onChange={() => handleChange("gender", "Female")}
+              className="focus:outline-none"
             />
             <span className="text-[#333]">Female</span>
           </label>
         </div>
       </div>
-
 
       <div>
         <h4 className="text-[#333] font-bold text-base mb-3">
@@ -396,16 +403,21 @@ export default function AdminRegistration() {
             label="Password"
             name="password"
             type={showPassword ? "text" : "password"}
-            placeholder="Enter Password"
+            placeholder="Enter password..."
             value={form.password}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleChange("password", e.target.value)
             }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSubmit();
+              }
+            }}
             rightIcon={
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="hover:text-gray-700 cursor-pointer"
+                className="hover:text-gray-700 cursor-pointer focus:outline-none"
               >
                 {showPassword ? (
                   <AiOutlineEyeInvisible size={20} />
@@ -418,7 +430,7 @@ export default function AdminRegistration() {
           />
 
           <InputField
-            label="Confirm Password"
+            label="Confirm password"
             name="confirmPassword"
             type={showConfirmPassword ? "text" : "password"}
             placeholder="Re-enter password..."
@@ -426,11 +438,16 @@ export default function AdminRegistration() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleChange("confirmPassword", e.target.value)
             }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSubmit();
+              }
+            }}
             rightIcon={
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="hover:text-gray-700 cursor-pointer"
+                className="hover:text-gray-700 cursor-pointer focus:outline-none"
               >
                 {showConfirmPassword ? (
                   <AiOutlineEyeInvisible size={20} />
@@ -445,10 +462,10 @@ export default function AdminRegistration() {
         <div className="flex items-center justify-center">
           <button
             onClick={handleSubmit}
-            disabled={isLoading}
             className="my-6 cursor-pointer bg-[#49C77F] text-white h-[42px] w-[30%] rounded-lg font-bold text-lg shadow-md hover:bg-[#3fb070] transition-all"
+            disabled={isLoading}
           >
-            {isLoading ? 'Registering…' : 'Register'}
+            {isLoading ? 'Registering...' : 'Register'}
           </button>
         </div>
       </div>

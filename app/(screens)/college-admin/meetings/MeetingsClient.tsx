@@ -18,10 +18,10 @@ export default function MeetingsClient() {
         <div className="flex flex-col h-screen overflow-hidden mb-2">
             <div className="w-full  flex justify-between p-2 pb-1 mx-auto">
                 <div className="mt-6 ml-6">
-                    <h1 className="text-2xl font-medium text-[#282828]">
+                    <h1 className="text-2xl font-bold text-[#282828]">
                         Meetings
                     </h1>
-                    <p className="text-lg font-normal text-[#282828] mt-2">
+                    <p className="text-sm font-normal text-[#282828] mt-2">
                         View and join meetings or schedule meetings
                     </p>
                 </div>
@@ -44,7 +44,7 @@ export default function MeetingsClient() {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto mt-2 pr-2 pb-3">
+            <div className="flex-1 overflow-y-auto mt-2 p-2 pb-3">
                 {activeTab === "upcoming" ? (
                     <MeetingsGrid />
                 ) : (
@@ -56,11 +56,6 @@ export default function MeetingsClient() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
             />
-
-            
-
-
-
         </div>
     );
 }

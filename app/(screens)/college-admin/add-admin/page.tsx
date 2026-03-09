@@ -264,7 +264,7 @@ export default function AdminRegistration() {
             <h2 className="text-2xl font-bold text-[#333] mb-2">
                 Admin Registration
             </h2>
-            <p className="text-gray-500 text-sm mb-8">
+            <p className="text-[#282828] text-sm mb-8">
                 Add a new admin to the network by providing verified details below.
             </p>
             <InputField
@@ -333,7 +333,7 @@ export default function AdminRegistration() {
                                     handleChange("phone", value);
                                 }
                             }}
-                            placeholder="Enter mobile"
+                            placeholder="Enter mobile number"
                             className="border border-[#CCCCCC] rounded-lg px-4 py-2.5 text-sm w-full 
              focus:outline-none focus:border-[#49C77F] 
              text-[#282828] placeholder:text-gray-400 shadow-sm"
@@ -356,7 +356,7 @@ export default function AdminRegistration() {
                     <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
                         Role
                     </label>
-                    <div className="border border-[#CCCCCC] bg-gray-100 text-[#525252] rounded-lg px-4 py-2.5 text-sm shadow-sm">
+                    <div className="border border-[#CCCCCC] bg-gray-100 text-[#525252] rounded-lg px-4 py-2.5 text-sm shadow-sm cursor-not-allowed">
                         Admin
                     </div>
                 </div>
@@ -374,7 +374,7 @@ export default function AdminRegistration() {
                 w-full
                 border border-[#CCCCCC]
                 rounded-lg
-                px-4 py-2.5
+                px-2 py-2.5
                 text-sm
                 text-[#282828]
                 bg-white
