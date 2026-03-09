@@ -1,7 +1,6 @@
 'use client'
 import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-// 🛑 COMMENTED OUT: We won't need the actual API right now
 // import { fetchAdminFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import { motion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -34,9 +33,7 @@ export interface Meeting {
     sections?: any[];
 }
 
-// 👇 ADDED: Static Mock Data for 6 Upcoming and 6 Previous meetings 👇
 const MOCK_MEETINGS: Meeting[] = [
-    // --- UPCOMING MEETINGS ---
     { id: 'u1', financeMeetingId: 101, financeMeetingSectionsId: 1, category: 'Admin', title: 'Q2 Budget Allocation Review', timeRange: '10:00 - 11:30', educationType: 'B.Tech', branch: 'CSE', description: 'Reviewing department-wise budget requests for Q2.', date: '25 Mar 2026', participants: 15, year: '2026', section: 'A', tags: 'Budget, Planning', type: 'upcoming', meetingLink: 'https://meet.google.com/abc-defg-hij' },
     { id: 'u2', financeMeetingId: 102, financeMeetingSectionsId: 2, category: 'Admin', title: 'Infrastructure Expansion Funds', timeRange: '02:00  - 03:00 ', educationType: 'M.Tech', branch: 'Civil', description: 'Discussing the release of funds for the new library wing.', date: '28 Mar 2026', participants: 8, year: '2026', section: 'B', tags: 'Infrastructure, Capital', type: 'upcoming', meetingLink: 'https://meet.google.com/xyz-uvwx-yz' },
     { id: 'u3', financeMeetingId: 103, financeMeetingSectionsId: 3, category: 'Admin', title: 'Faculty Salary Revisions', timeRange: '11:00 - 12:30 ', educationType: 'B.Sc', branch: 'Physics', description: 'Annual appraisal and salary revision meeting.', date: '02 Apr 2026', participants: 12, year: '2026', section: 'A', tags: 'HR, Payroll', type: 'upcoming', meetingLink: 'https://meet.google.com/qwe-rtyu-iop' },
@@ -44,7 +41,6 @@ const MOCK_MEETINGS: Meeting[] = [
     { id: 'u5', financeMeetingId: 105, financeMeetingSectionsId: 5, category: 'Admin', title: 'Alumni Endowment Review', timeRange: '09:00 - 10:30', educationType: 'MBA', branch: 'Finance', description: 'Reviewing recent alumni contributions and fund allocation.', date: '10 Apr 2026', participants: 10, year: '2026', section: 'N/A', tags: 'Alumni, Funds', type: 'upcoming', meetingLink: 'https://meet.google.com/xcv-bnmq-wer' },
     { id: 'u6', financeMeetingId: 106, financeMeetingSectionsId: 6, category: 'Admin', title: 'Vendor Payment Schedules', timeRange: '03:00  - 04:30 ', educationType: 'B.Tech', branch: 'Mechanical', description: 'Setting up payment milestones for lab equipment vendors.', date: '15 Apr 2026', participants: 6, year: '2026', section: 'A', tags: 'Vendors, Procurement', type: 'upcoming', meetingLink: 'https://meet.google.com/tyu-iopa-sdf' },
 
-    // --- PREVIOUS MEETINGS ---
     { id: 'p1', financeMeetingId: 201, financeMeetingSectionsId: 7, category: 'Admin', title: 'Annual Financial Audit', timeRange: '10:00 - 01:00', educationType: 'All', branch: 'All', description: 'External audit of the college financial records.', date: '10 Feb 2026', participants: 25, year: '2025', section: 'All', tags: 'Audit, Compliance', type: 'previous', meetingLink: 'https://meet.google.com/prev-123' },
     { id: 'p2', financeMeetingId: 202, financeMeetingSectionsId: 8, category: 'Admin', title: 'Tech Fest Sponsorships', timeRange: '02:00 - 03:00', educationType: 'B.Tech', branch: 'IT', description: 'Finalizing sponsor funds for the upcoming tech fest.', date: '15 Feb 2026', participants: 14, year: '2026', section: 'A', tags: 'Events, Sponsorship', type: 'previous', meetingLink: 'https://meet.google.com/prev-456' },
     { id: 'p3', financeMeetingId: 203, financeMeetingSectionsId: 9, category: 'Admin', title: 'Hostel Maintenance Budget', timeRange: '11:00 - 12:00', educationType: 'Admin', branch: 'Facilities', description: 'Approving the quarterly budget for hostel repairs.', date: '20 Feb 2026', participants: 9, year: '2026', section: 'N/A', tags: 'Maintenance, Operations', type: 'previous', meetingLink: 'https://meet.google.com/prev-789' },
@@ -52,10 +48,9 @@ const MOCK_MEETINGS: Meeting[] = [
     { id: 'p5', financeMeetingId: 205, financeMeetingSectionsId: 11, category: 'Admin', title: 'Research Grant Allocation', timeRange: '09:30 - 11:00', educationType: 'Ph.D', branch: 'Biotech', description: 'Allocating state grants to ongoing research projects.', date: '01 Mar 2026', participants: 18, year: '2026', section: 'A', tags: 'Research, Grants', type: 'previous', meetingLink: 'https://meet.google.com/prev-def' },
     { id: 'p6', financeMeetingId: 206, financeMeetingSectionsId: 12, category: 'Admin', title: 'Transportation Fleet Insurance', timeRange: '01:00 - 02:00', educationType: 'Admin', branch: 'Transport', description: 'Negotiating insurance renewals for college buses.', date: '05 Mar 2026', participants: 7, year: '2026', section: 'N/A', tags: 'Transport, Insurance', type: 'previous', meetingLink: 'https://meet.google.com/prev-ghi' },
 ];
-// 👆 ADDED 👆
 
 export default function AdminMeetingsPage() {
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [page, setPage] = useState(1);
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -77,10 +72,7 @@ export default function AdminMeetingsPage() {
 
     const formatMeetingDate = (dateStr: string) => {
         if (!dateStr) return '';
-        // 👇 ADDED: Check if date is already formatted (our mock data has string dates like "25 Mar 2026")
         if (dateStr.includes(' ')) return dateStr;
-        // 👆 ADDED 👆
-        
         const [year, month, day] = dateStr.split('-');
         const date = new Date(Number(year), Number(month) - 1, Number(day));
         return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -92,20 +84,19 @@ export default function AdminMeetingsPage() {
     ];
 
     useEffect(() => {
-        if (!adminId) {
+        if (!currentCategory) {
             setMeetings([]);
             return;
         }
         loadMeetings();
 
-    }, [currentType, page, adminId]);
+    }, [currentType, page]);
     
     const loadMeetings = async () => {
         try {
             setIsLoading(true);
             setMeetings([]);
 
-            // 🛑 COMMENTED OUT DYNAMIC API CALL 🛑
             /*
             const res = await fetchAdminFinanceMeetings({
                 role: currentCategory,
@@ -124,7 +115,6 @@ export default function AdminMeetingsPage() {
             setTotalPages(res.totalPages || 1);
             */
 
-            // 👇 ADDED: Simulate API call with static data 👇
             setTimeout(() => {
                 const filteredMeetings = MOCK_MEETINGS.filter(m => m.type === currentType);
                 
@@ -135,19 +125,17 @@ export default function AdminMeetingsPage() {
                 }));
 
                 setMeetings(finalMeetings);
-                setTotalPages(1); // Since we only have 6 items per tab, 1 page is enough
+                setTotalPages(1);
                 setIsLoading(false);
-            }, 500); // 500ms fake delay for realistic loading state
-            // 👆 ADDED 👆
+            }, 500);
 
         } catch (err) {
             toast.error(`Failed to fetch ${currentType} meetings`);
-            setIsLoading(false); // Ensure loading stops on error
+            setIsLoading(false);
         } 
-        // 🛑 COMMENTED OUT: Handled inside the setTimeout now
-        // finally {
-        //     setIsLoading(false);
-        // }
+        finally {
+            setIsLoading(false);
+        }
     };
 
 
