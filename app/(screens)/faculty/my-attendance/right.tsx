@@ -5,8 +5,7 @@ import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
 
-
-export default function AssignmentsRight() {
+export default function MyAttendanceRight() {
   // const myTasks = [
   //   {
   //     title: "Complete Python Lab",

@@ -1,12 +1,12 @@
-import AssignmentsLeft from "./left";
-import AssignmentsRight from "./right";
+import MyAttendanceLeft from "./left";
+import MyAttendanceRight from "./right";
 
 export default function Assignments() {
   return (
     <>
       <div className="flex items-start justify-between">
-        <AssignmentsLeft />
-        <AssignmentsRight />
+        <MyAttendanceLeft />
+        <MyAttendanceRight />
       </div>
     </>
   );
