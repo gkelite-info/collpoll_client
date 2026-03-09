@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { BuildingApartmentIcon, Calendar, FolderOpen, Gear, House, Note, PlusCircle } from "@phosphor-icons/react";
+import { BuildingApartmentIcon, Calendar, FolderOpen, Gear, House, Laptop, PlusCircle } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
@@ -44,13 +44,13 @@ export default function CollegeAdminNavbar() {
             label: "Institution Management",
             path: "/college-admin/institution-management",
         },
-        {
-            icon: (isActive) => (
-                <Note size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Meetings",
-            path: "/college-admin/meetings",
-        },
+        // {
+        //     icon: (isActive) => (
+        //         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+        //     ),
+        //     label: "Meetings",
+        //     path: "/college-admin/meetings",
+        // },
         {
             icon: (isActive) => (
                 <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />

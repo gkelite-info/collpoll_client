@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
-import { insertEducationDepartments } from "@/lib/helpers/superadmin/insertdepartment";
 import toast from "react-hot-toast";
 import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+import { EducationDropdown, getEducationDropdown } from "@/lib/helpers/superadmin/fetchEducations";
+import { insertEducationDepartments } from "@/lib/helpers/superadmin/insertdepartment";
 
 type DepartmentItem = {
   uuid: string;
@@ -20,6 +21,21 @@ export default function Department() {
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [educations, setEducations] = useState<EducationDropdown[]>([]);
+
+  useEffect(() => {
+    const loadEducations = async () => {
+      const res = await getEducationDropdown();
+
+      if (!res.success) {
+        toast.error(res.error);
+      } else {
+        setEducations(res.data);
+      }
+    };
+
+    loadEducations();
+  }, []);
 
   const handleAddOrUpdate = () => {
     const name = departmentName.trim();
@@ -126,16 +142,27 @@ export default function Department() {
       exit={{ opacity: 0, x: -10 }}
       className="space-y-4 max-w-[980px]"
     >
-      {/* Row 1 */}
       <div className="grid grid-cols-2 gap-[32px]">
-        <InputField
-          label="Education ID"
-          name="educationId"
-          type="number"
-          placeholder="Enter Education ID"
-          value={educationId}
-          onChange={(e: any) => setEducationId(e.target.value)}
-        />
+        <div className="flex flex-col">
+          <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
+            Education Type
+          </label>
+
+          <select
+            value={educationId}
+            onChange={(e) => setEducationId(e.target.value)}
+            className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm text-[#282828]
+               focus:outline-none focus:border-[#49C77F] cursor-pointer"
+          >
+            <option value="">Select education</option>
+
+            {educations.map((edu) => (
+              <option key={edu.educationId} value={edu.educationId}>
+                {edu.educationName}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <InputField
           label="Department Name"
@@ -146,7 +173,6 @@ export default function Department() {
         />
       </div>
 
-      {/* Row 2 */}
       <div className="grid grid-cols-2 gap-[32px] items-end">
         <InputField
           label="Department Code"
@@ -161,8 +187,8 @@ export default function Department() {
             type="button"
             onClick={handleAddOrUpdate}
             className={`flex-1 cursor-pointer text-white h-[42px] rounded-lg font-semibold transition-colors ${editingId
-                ? "bg-blue-600" 
-                : "bg-[#49C77F]"
+              ? "bg-blue-600"
+              : "bg-[#49C77F]"
               }`}
           >
             {editingId ? "Update" : "Add"}
@@ -185,8 +211,8 @@ export default function Department() {
           <div
             key={d.uuid}
             className={`flex justify-between items-center px-4 py-3 rounded-md text-sm text-gray-900 border transition-all ${editingId === d.uuid
-                ? "bg-blue-50 border-blue-300 shadow-sm"
-                : "bg-[#F9FAFB] border-gray-200"
+              ? "bg-blue-50 border-blue-300 shadow-sm"
+              : "bg-[#F9FAFB] border-gray-200"
               }`}
           >
             <div className="flex flex-col">
@@ -198,16 +224,14 @@ export default function Department() {
               </span>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-2">
-              {/* Edit Button */}
               <button
                 type="button"
                 onClick={() => handleEdit(d)}
                 className="text-blue-600 cursor-pointer"
                 title="Edit"
               >
-                <PencilSimpleIcon size={22}/>
+                <PencilSimpleIcon size={22} />
               </button>
 
               <button
@@ -216,7 +240,7 @@ export default function Department() {
                 className="text-red-600  cursor-pointer"
                 title="Delete"
               >
-                <TrashIcon size={22}/>
+                <TrashIcon size={22} />
               </button>
             </div>
           </div>

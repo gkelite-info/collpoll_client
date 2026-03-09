@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import Link from "next/link";
 import { resetPassword } from "@/lib/helpers/resetPassword";
 
 export default function ForgotPassword() {
@@ -12,7 +11,6 @@ export default function ForgotPassword() {
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // Email regex (same pattern style as your signup page)
     const emailRegex = /^[a-z0-9._]+@[a-z0-9]+\.[a-z]+$/;
 
     type Slide = {
@@ -213,6 +211,7 @@ export default function ForgotPassword() {
       rounded px-4
       text-[14px] text-[#000]
       placeholder:text-[#9CA3AF]
+      focus:outline-none
     "
                         />
                     </div>
@@ -239,7 +238,7 @@ export default function ForgotPassword() {
                             onClick={() => router.push("/login")}
                             className="text-[13px] text-[#0A8E2E] text-center mt-5 cursor-pointer underline"
                         >
-                            Back to Login
+                            Back to Signin
                         </button>
                     </div>
                 </div>
