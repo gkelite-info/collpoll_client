@@ -6,6 +6,7 @@ import { useState } from "react";
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editData?: any;
 }
 
 const INPUT =
@@ -26,7 +27,7 @@ const YEARS = [
 
 const SECTIONS = ["A", "B", "C", "D"];
 
-export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
+export default function AddEventModal({ isOpen, onClose, editData }: AddEventModalProps) {
 
   const [eventTitle, setEventTitle] = useState("");
   const [eventTopic, setEventTopic] = useState("");
