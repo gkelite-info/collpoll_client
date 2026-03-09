@@ -47,7 +47,7 @@ export default function Signup() {
 
   const slides: Slide[] = [
     {
-      heading: "Welcome to GK Elite",
+      heading: "Welcome to Tekton Campus",
       para: "Your trusted partner in digital solutions.",
       image: "/Group 2774.png",
     },
