@@ -3,13 +3,11 @@
 import { useEffect, useState, useRef } from "react";
 import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import {
-  fetchDegreeAndDepartments,
-  fetchAdminAssignedEducation,
-} from "@/lib/helpers/admin/academicSetupAPI";
+import { fetchDegreeAndDepartments, fetchAdminAssignedEducation } from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 export type AcademicData = {
   id?: string;
@@ -52,6 +50,7 @@ export default function AddAcademicSetup({
     sections: false,
   });
   const [tempCustomInput, setTempCustomInput] = useState("");
+  const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
     if (editData) {
@@ -271,7 +270,7 @@ export default function AddAcademicSetup({
         </div>
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Branch Type
+            {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
           </label>
           <input
             type="text"
@@ -283,7 +282,7 @@ export default function AddAcademicSetup({
                 .replace(/\b\w/g, (char) => char.toUpperCase());
               setForm((prev) => ({ ...prev, branch: formatted }));
             }}
-            placeholder="Enter Branch"
+            placeholder={collegeEducationType === "Inter" ? "Enter Group" : "Enter Branch"}
             className="w-full border border-[#CCCCCC] text-[#2D3748] outline-none rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
           />
         </div>
@@ -292,7 +291,7 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Branch Code
+            {collegeEducationType === "Inter" ? "Group Type" : "Branch Code"}
           </label>
           {customMode.dept ? (
             renderCustomInput("dept", "Enter Branch Code")
@@ -300,11 +299,11 @@ export default function AddAcademicSetup({
             <select
               value={form.dept}
               onChange={(e) => handleSingleSelectChange("dept", e.target.value)}
-              className="w-full border border-[#CCCCCC] outline-none text-[#2D3748] rounded-lg px-4 py-2"
+              className="w-full border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2"
               disabled={!form.degree}
             >
               <option value="" disabled>
-                Select Branch Code
+                {collegeEducationType === "Inter" ? "Select Group Code" : "Select Branch Code"}
               </option>
               {availableDepts.map((opt) => (
                 <option key={opt} value={opt}>
@@ -484,18 +483,15 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       <div className="relative">
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}
-          className={`w-full border ${
-            isOpen
-              ? "border-[#48C78E] ring-1 ring-[#48C78E]"
-              : "border-[#CCCCCC]"
-          } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${
-            disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
-          }`}
+          className={`w-full border ${isOpen
+            ? "border-[#48C78E] ring-1 ring-[#48C78E]"
+            : "border-[#CCCCCC]"
+            } rounded-lg px-4 py-2 text-sm flex justify-between items-center cursor-pointer bg-white transition-all ${disabled ? "bg-gray-50 cursor-not-allowed opacity-70" : ""
+            }`}
         >
           <span
-            className={`truncate mr-2 ${
-              selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
-            }`}
+            className={`truncate mr-2 ${selectedValues.length ? "text-[#2D3748]" : "text-gray-400"
+              }`}
           >
             {selectedValues.length > 0
               ? `${selectedValues.length} selected`
@@ -512,53 +508,52 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
           >
             {!isGrouped
               ? (options as string[]).map((opt) => (
-                  <div
-                    key={opt}
-                    onClick={() => {
-                      onChange(opt);
-                      if (opt === "+ other") setIsOpen(false);
-                    }}
-                    className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${
-                      opt === "+ other"
-                        ? "text-[#43C17A] font-semibold"
-                        : "text-gray-700"
+                <div
+                  key={opt}
+                  onClick={() => {
+                    onChange(opt);
+                    if (opt === "+ other") setIsOpen(false);
+                  }}
+                  className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm ${opt === "+ other"
+                    ? "text-[#43C17A] font-semibold"
+                    : "text-gray-700"
                     }`}
-                  >
-                    <span>{opt}</span>
-                    {selectedValues.includes(opt) && (
-                      <Check
-                        size={14}
-                        weight="bold"
-                        className="text-[#48C78E]"
-                      />
-                    )}
-                  </div>
-                ))
+                >
+                  <span>{opt}</span>
+                  {selectedValues.includes(opt) && (
+                    <Check
+                      size={14}
+                      weight="bold"
+                      className="text-[#48C78E]"
+                    />
+                  )}
+                </div>
+              ))
               : Object.entries(options as Record<string, string[]>).map(
-                  ([category, items]) => (
-                    <div key={category}>
-                      <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
-                        {category}
-                      </div>
-                      {items.map((opt) => (
-                        <div
-                          key={opt}
-                          onClick={() => onChange(opt)}
-                          className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
-                        >
-                          <span>{opt}</span>
-                          {selectedValues.includes(opt) && (
-                            <Check
-                              size={14}
-                              weight="bold"
-                              className="text-[#48C78E]"
-                            />
-                          )}
-                        </div>
-                      ))}
+                ([category, items]) => (
+                  <div key={category}>
+                    <div className="sticky top-0 z-10 px-3 py-1.5 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                      {category}
                     </div>
-                  ),
-                )}
+                    {items.map((opt) => (
+                      <div
+                        key={opt}
+                        onClick={() => onChange(opt)}
+                        className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700 pl-5"
+                      >
+                        <span>{opt}</span>
+                        {selectedValues.includes(opt) && (
+                          <Check
+                            size={14}
+                            weight="bold"
+                            className="text-[#48C78E]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              )}
           </div>
         )}
       </div>

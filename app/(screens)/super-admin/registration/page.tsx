@@ -6,6 +6,7 @@ import CollegeRegistration from "./collegeRegistration/page";
 import AdminRegistration from "./adminRegistration/page";
 import EducationalType from "./educationalType/page";
 import DepartmentType from "./department/page";
+import { Toaster } from "react-hot-toast";
 
 export default function Page() {
   const [activeTab, setActiveTab] = useState("college");
@@ -17,10 +18,10 @@ export default function Page() {
           {activeTab === "college"
             ? "College Registration"
             : activeTab === "admin"
-            ? "Admin Registration"
-            : activeTab === "education"
-            ? "Educational Type"
-            : "Departments"}
+              ? "Admin Registration"
+              : activeTab === "education"
+                ? "Educational Type"
+                : "Departments"}
         </h1>
         <p className="text-gray-500 text-sm mb-8">
           Add a new college to the CollPoll network by providing verified
@@ -40,43 +41,39 @@ export default function Page() {
                   activeTab === "college"
                     ? "6px"
                     : activeTab === "admin"
-                    ? "25%"
-                    : activeTab === "education"
-                    ? "50%"
-                    : "75%",
+                      ? "25%"
+                      : activeTab === "education"
+                        ? "50%"
+                        : "75%",
                 width: "calc(25% - 9px)",
               }}
               transition={{ type: "spring", stiffness: 380, damping: 30 }}
             />
             <button
               onClick={() => setActiveTab("college")}
-              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${
-                activeTab === "college" ? "text-white" : "text-gray-600"
-              }`}
+              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "college" ? "text-white" : "text-gray-600"
+                }`}
             >
               College Registration
             </button>
             <button
               onClick={() => setActiveTab("admin")}
-              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${
-                activeTab === "admin" ? "text-white" : "text-gray-600"
-              }`}
+              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "admin" ? "text-white" : "text-gray-600"
+                }`}
             >
               Admin Registration
             </button>
             <button
               onClick={() => setActiveTab("education")}
-              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${
-                activeTab === "education" ? "text-white" : "text-gray-600"
-              }`}
+              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "education" ? "text-white" : "text-gray-600"
+                }`}
             >
               Educational Type
             </button>
             <button
               onClick={() => setActiveTab("departments")}
-              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${
-                activeTab === "departments" ? "text-white" : "text-gray-600"
-              }`}
+              className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "departments" ? "text-white" : "text-gray-600"
+                }`}
             >
               Departments
             </button>
@@ -95,6 +92,7 @@ export default function Page() {
           )}
         </AnimatePresence>
       </div>
+      <Toaster position="top-right" />
     </div>
   );
 }

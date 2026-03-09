@@ -194,7 +194,7 @@ export default function AssignmentTable({
               <th className="px-4 py-3 text-left font-semibold">S.No</th>
               <th className="px-4 py-3 text-left font-semibold">Photo</th>
               <th className="px-4 py-3 text-left font-semibold">Name</th>
-              <th className="px-4 py-3 text-left font-semibold">Roll No.</th>
+              <th className="px-4 py-3 text-left font-semibold">Student ID</th>
               <th className="px-4 py-3 text-left font-semibold">Date</th>
               <th className="px-4 py-3 text-left font-semibold">File</th>
               <th className="px-4 py-3 text-left font-semibold">Marks</th>

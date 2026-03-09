@@ -6,6 +6,7 @@ import AdminDashLeft from "./components/left";
 import AdminDashRight from "./components/right";
 import PendingApprovals from "./components/pendingApprovals";
 import PendingUserRegistration from "./components/pendingUserRegistration";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 function DashboardContent() {
   const router = useRouter();
@@ -32,7 +33,7 @@ function DashboardContent() {
 export default function Page() {
   return (
     <Suspense
-      fallback={<div className="text-black p-10">Loading Dashboard...</div>}
+      fallback={<div className="text-black p-10 flex items-center justify-center min-h-screen"><Loader /></div>}
     >
       <DashboardContent />
     </Suspense>

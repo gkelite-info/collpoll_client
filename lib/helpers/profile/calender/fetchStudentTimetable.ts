@@ -16,13 +16,12 @@ export async function fetchStudentTimetableByDate(params: {
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
-  collegeSemesterId: number;
+  collegeSemesterId?: number | null;
   collegeSectionId: number;
+  isInter?: boolean;
 }): Promise<StudentTimetableRow[]> {
 
- 
-
-  const { data, error } = await supabase
+  let query = supabase
     .from("calendar_event")
     .select(`
       calendarEventId,
@@ -56,9 +55,13 @@ export async function fetchStudentTimetableByDate(params: {
     .eq("sections.collegeEducationId", params.collegeEducationId)
     .eq("sections.collegeBranchId", params.collegeBranchId)
     .eq("sections.collegeAcademicYearId", params.collegeAcademicYearId)
-    .eq("sections.collegeSemesterId", params.collegeSemesterId)
-    .eq("sections.collegeSectionId", params.collegeSectionId)
-    .order("fromTime", { ascending: true });
+    .eq("sections.collegeSectionId", params.collegeSectionId);
+
+  if (!params.isInter && params.collegeSemesterId) {
+    query = query.eq("sections.collegeSemesterId", params.collegeSemesterId);
+  }
+
+  const { data, error } = await query.order("fromTime", { ascending: true });
 
   if (error) {
     return [];
@@ -67,18 +70,8 @@ export async function fetchStudentTimetableByDate(params: {
 
   const mapped = (data ?? []).map((item: any) => {
 
-    console.log(
-      `📌 Attendance for event ${item.calendarEventId}:`,
-      item.attendance_record
-    );
-
     const isCancelled = item.attendance_record?.some(
       (a: any) => a.status === "CLASS_CANCEL"
-    );
-
-    console.log(
-      `🚫 Cancel detection for event ${item.calendarEventId}:`,
-      isCancelled
     );
 
     return {

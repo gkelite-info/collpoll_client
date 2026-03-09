@@ -1,12 +1,5 @@
 "use client";
-
-import {
-  ArrowLeft,
-  CalendarBlank,
-  CheckCircleIcon,
-  FilePdf,
-  UserCircle,
-} from "@phosphor-icons/react";
+import { ArrowLeft, CalendarBlank, CheckCircleIcon, FilePdf, UserCircle } from "@phosphor-icons/react";
 import { CardProps, UnitTopic } from "./subjectCard";
 
 type Unit = {
@@ -55,18 +48,19 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
     <div className="flex flex-col gap-4">
       <div className="w-full flex flex-wrap gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-[18px] whitespace-nowrap">
+          <p className="text-[#525252] text-sm whitespace-nowrap">
             Subject :
           </p>
-          <p className="px-5 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[16px] font-medium whitespace-nowrap">
+          <p className="px-5 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap">
             {filterBannerDetails.subjectTitle}
           </p>
         </div>
+
         <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-[18px] whitespace-nowrap">
+          <p className="text-[#525252] text-sm whitespace-nowrap">
             Semester :
           </p>
-          <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[16px] font-medium whitespace-nowrap">
+          <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap">
             {filterBannerDetails.semester
               ? `Sem ${filterBannerDetails.semester}`
               : "N/A"}
@@ -103,11 +97,11 @@ function UnitCard({ unit }: UnitCardProps) {
           {unit.title}
         </h3>
 
-        <div className="flex items-center justify-between text-xs md:text-sm mb-2 shrink-0">
-          <div className="flex items-center gap-2 text-[#6C6C6C]">
+        <div className="flex items-center justify-end text-xs md:text-sm mb-2 shrink-0">
+          {/* <div className="flex items-center gap-2 text-[#6C6C6C]">
             <CalendarBlank size={16} className={colors.accent} />
             <span>{unit.dateRange}</span>
-          </div>
+          </div> */}
           <span className="font-semibold text-[#333333]">{percentage}%</span>
         </div>
 

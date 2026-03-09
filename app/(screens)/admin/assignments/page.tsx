@@ -1,20 +1,13 @@
 "use client";
-
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import {
-  CaretDown,
-  CaretLeft,
-  CaretRight,
-  MagnifyingGlass,
-} from "@phosphor-icons/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { CaretDown, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 interface FilterProps {
   label: string;
@@ -30,31 +23,33 @@ const FilterDropdown = ({
   options,
   onChange,
   displayModifier,
-}: FilterProps) => (
-  <div className="flex flex-col gap-1 min-w-30">
-    <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
-      {label}
-    </label>
-    <div className="relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none bg-transparent text-[13px] font-medium text-gray-700 pl-2 pr-2 focus:outline-none cursor-pointer"
-      >
-        {options.map((opt) => (
-          <option key={opt} value={opt} className="py-2">
-            {displayModifier ? displayModifier(opt) : opt}
-          </option>
-        ))}
-      </select>
-      <CaretDown
-        size={12}
-        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-        weight="bold"
-      />
+}: FilterProps) => {
+  return (
+    <div className="flex flex-col gap-1 min-w-30">
+      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold px-1">
+        {label}
+      </label>
+      <div className="relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none bg-transparent text-[13px] font-medium text-gray-700 pl-2 pr-2 focus:outline-none cursor-pointer"
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt} className="py-2">
+              {displayModifier ? displayModifier(opt) : opt}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          size={12}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+          weight="bold"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const AssignmentPage = () => {
   const [search, setSearch] = useState("");
@@ -63,7 +58,7 @@ const AssignmentPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
-
+  const { collegeEducationType } = useAdmin();
   const cardsPerPage = 15;
 
   useEffect(() => {
@@ -82,7 +77,7 @@ const AssignmentPage = () => {
 
         const adminCtx = await fetchAdminContext(userRecord.userId);
 
-        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId);
+        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId, adminCtx.collegeEducationId);
         setDataList(data || []);
       } catch (err) {
         console.error(err);
@@ -121,7 +116,9 @@ const AssignmentPage = () => {
 
   if (loading)
     return (
-      <div className="p-10 text-center"><Loader/></div>
+      <div className="p-10 text-center">
+        <Loader />
+      </div>
     );
 
   return (
@@ -161,7 +158,7 @@ const AssignmentPage = () => {
 
         <div className="bg-white rounded-xl p-2 px-4 shadow-sm flex flex-wrap gap-4 border border-gray-100">
           <FilterDropdown
-            label="Branch"
+            label={collegeEducationType === "Inter" ? "Group" : "Branch"}
             value={deptFilter}
             options={uniqueDepts}
             onChange={setDeptFilter}
@@ -171,7 +168,7 @@ const AssignmentPage = () => {
             value={yearFilter}
             options={uniqueYears}
             onChange={setYearFilter}
-            displayModifier={(o) => (o === "All" ? o : `${o} Year`)}
+            displayModifier={(o) => (o === "All" ? o : `${o}`)}
           />
         </div>
       </div>

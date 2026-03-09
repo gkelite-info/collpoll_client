@@ -3,21 +3,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import AddAcademicSetup, { AcademicData } from "./components/AddAcademicSetup";
-import ViewAcademicStructure, {
-  AcademicViewData,
-} from "./components/ViewAcademicStructure";
+import ViewAcademicStructure, { AcademicViewData } from "./components/ViewAcademicStructure";
 import ViewSubjects, { SubjectViewData } from "./components/ViewSubjects";
-import AddSubject, {
-  SubjectFormData,
-  SubjectUIState,
-} from "./components/AddSubject";
+import AddSubject, { SubjectFormData, SubjectUIState } from "./components/AddSubject";
 import toast from "react-hot-toast";
-import {
-  getAcademicSubjectById,
-  resolveSubjectUIFromIds,
-  upsertAcademicSubject,
-  resolveSubjectIds,
-} from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
+import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
@@ -63,12 +53,12 @@ export default function AcademicSetup() {
       year: extractSingleValue(row.year),
       sections: Array.isArray(row.sections)
         ? row.sections
-            .map((s: any) =>
-              typeof s === "string"
-                ? s
-                : s?.name || s?.code || s?.label || s?.value || "",
-            )
-            .filter(Boolean)
+          .map((s: any) =>
+            typeof s === "string"
+              ? s
+              : s?.name || s?.code || s?.label || s?.value || "",
+          )
+          .filter(Boolean)
         : [],
     };
     setEditData(sanitizedData);
@@ -151,7 +141,6 @@ export default function AcademicSetup() {
         credits: form.credits,
         ...resolvedIds,
         collegeId,
-
         createdBy: adminId,
       };
 
@@ -208,11 +197,10 @@ export default function AcademicSetup() {
                     setEditData(null);
                   }
                 }}
-                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${
-                  activeTab === tab.id
-                    ? "text-white"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`relative cursor-pointer px-6 py-2 text-sm font-semibold z-10 ${activeTab === tab.id
+                  ? "text-white"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 {tab.label}
                 {activeTab === tab.id && (

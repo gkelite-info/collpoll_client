@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import StudentProfileCard from "../components/stuProfileCard";
 import SubjectWiseAttendance from "../components/subjectWiseTable";
 import AiBotCard from "../components/aiBotCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { CaretLeft } from "@phosphor-icons/react";
 
 export default function StudentAttendanceDetailsPage() {
+  const router = useRouter();
   const params = useParams();
+
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
     : params?.studentId;
@@ -58,11 +61,28 @@ export default function StudentAttendanceDetailsPage() {
   return (
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
+        <div className="flex text-black items-start gap-2">
+          <button
+            onClick={() => router.back()}
+            className="mt-1 text-gray-600 cursor-pointer hover:text-black"
+          >
+            <CaretLeft size={25} weight="bold" />
+          </button>
+
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Track, Verify and Manage Attendance Records.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Info label="Department" value={student.department} />
+          <Info label="Branch" value={student.department} />
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />
-          <Info label="Degree" value={student.degree} />
+          <Info label="Education Type" value={student.degree} />
         </div>
 
         <CourseScheduleCard

@@ -12,7 +12,7 @@ import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader } from "../../calendar/right/timetable";
+
 
 
 interface CardItem {
@@ -85,6 +85,11 @@ export default function SubjectAttendanceDetailsClient() {
     type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
 
     const [activeView, setActiveView] = useState<ViewFilter>("ALL");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
+
+    const rowsPerPage = 10;
+    const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
     // const [activeView, setActiveView] = useState<"table" | "present" | "absent">(
     //   "table"
@@ -100,27 +105,36 @@ export default function SubjectAttendanceDetailsClient() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<any>(null);
 
-
     useEffect(() => {
-        if (userId === null || !subjectId) return;
+        if (!userId || !subjectId) return;
 
         const safeUserId = userId;
 
         async function loadDetails() {
-            setLoading(true);
+            try {
+                setLoading(true);
 
-            const res = await getStudentAttendanceDetails({
-                userId: safeUserId,
-                subjectId,
-                statusFilter: activeView,
-            });
+                const res = await getStudentAttendanceDetails({
+                    userId: safeUserId,
+                    subjectId,
+                    statusFilter: activeView,
+                    page: currentPage,
+                    limit: rowsPerPage,
+                });
 
-            setData(res);
-            setLoading(false);
+                setData(res);
+                setTotalRecords(res.totalCount || 0);
+
+            } catch (err) {
+                console.error("❌ Failed to load attendance details:", err);
+            } finally {
+                setLoading(false);
+            }
         }
 
         loadDetails();
-    }, [userId, subjectId, activeView]);
+
+    }, [userId, subjectId, activeView, currentPage]);
 
     const cards: CardItem[] = [
         {
@@ -230,10 +244,6 @@ Missed: ${data?.headerStats.absent ?? 0} |
         router.push("/attendance?tab=subject-attendance")
     }
 
-    if (loading) {
-        return <div className="p-6 flex justify-center text-gray-500"><Loader /></div>;
-    }
-
     return (
         <div className="flex flex-col pb-3">
             <div className="flex justify-between items-center">
@@ -320,7 +330,53 @@ Missed: ${data?.headerStats.absent ?? 0} |
                     <TableComponent
                         columns={columns}
                         tableData={filteredTableData}
+                        isLoading={loading}
                     />
+                    {totalPages > 1 && (
+                        <div className="flex justify-end items-center gap-3 mt-6">
+
+                            <button
+                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === 1
+                                        ? "border-gray-200 text-gray-300"
+                                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                ‹
+                            </button>
+
+                            {[...Array(totalPages)].map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setCurrentPage(i + 1)}
+                                    className={`w-10 h-10 rounded-lg font-semibold
+        ${currentPage === i + 1
+                                            ? "bg-[#16284F] text-white"
+                                            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                        }`}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+
+                            <button
+                                onClick={() =>
+                                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                                }
+                                disabled={currentPage === totalPages}
+                                className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === totalPages
+                                        ? "border-gray-200 text-gray-300"
+                                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                                    }`}
+                            >
+                                ›
+                            </button>
+
+                        </div>
+                    )}
                 </div>
 
             </div>

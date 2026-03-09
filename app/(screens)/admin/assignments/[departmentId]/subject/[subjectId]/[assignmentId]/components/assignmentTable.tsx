@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { CaretDown, Check, X, FilePdf } from "@phosphor-icons/react";
-import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-type Status = "Evaluated" | "Pending";
+type Status = "Evaluated" | "Pending" | "Not Submitted";
 
 interface Row {
   id: number;
@@ -70,9 +70,16 @@ export default function AssignmentTable({
             : "-",
           file: sub?.file?.split("/").pop() || "-",
           filePath: sub?.file || null,
-          marks: sub?.marksScored !== null ? `${sub.marksScored}` : "",
+          marks:
+            sub?.marksScored !== null && sub?.marksScored !== undefined
+              ? `${sub.marksScored}`
+              : "",
           feedback: sub?.feedback || "",
-          status: sub?.status === "Evaluated" ? "Evaluated" : "Pending",
+          status: sub
+            ? sub.status === "Evaluated"
+              ? "Evaluated"
+              : "Pending"
+            : "Not Submitted",
           submissionId: sub?.studentAssignmentSubmissionId,
         };
       });
@@ -96,7 +103,7 @@ export default function AssignmentTable({
 
   const startEditing = (row: Row) => {
     if (!row.submissionId) {
-      toast.error("No submission found to evaluate");
+      toast.error("Cannot evaluate. Student has not submitted the assignment.");
       return;
     }
     setEditingId(row.id);
@@ -117,7 +124,7 @@ export default function AssignmentTable({
     const { error } = await updateSubmissionEvaluation(row.submissionId, {
       marksScored: parseInt(tempData.marks) || 0,
       feedback: tempData.feedback,
-      status: tempData.status,
+      status: tempData.status as "Evaluated" | "Pending",
     });
 
     if (error) {
@@ -136,7 +143,11 @@ export default function AssignmentTable({
     filter === "All" ? rows : rows.filter((r) => r.status === filter);
 
   if (loading)
-    return <div className="p-10 text-center text-gray-400">Loading...</div>;
+    return (
+      <div className="p-10 text-center text-gray-400">
+        <Loader />
+      </div>
+    );
 
   return (
     <div className="w-full relative">
@@ -177,6 +188,7 @@ export default function AssignmentTable({
           <option>All</option>
           <option>Evaluated</option>
           <option>Pending</option>
+          <option>Not Submitted</option>
         </select>
       </div>
 
@@ -187,7 +199,7 @@ export default function AssignmentTable({
               <th className="px-4 py-3 text-left font-semibold">S.No</th>
               <th className="px-4 py-3 text-left font-semibold">Photo</th>
               <th className="px-4 py-3 text-left font-semibold">Name</th>
-              <th className="px-4 py-3 text-left font-semibold">Roll No.</th>
+              <th className="px-4 py-3 text-left font-semibold">Student ID</th>
               <th className="px-4 py-3 text-left font-semibold">Date</th>
               <th className="px-4 py-3 text-left font-semibold">File</th>
               <th className="px-4 py-3 text-left font-semibold">Marks</th>
@@ -208,6 +220,7 @@ export default function AssignmentTable({
                   <img
                     src={r.photo}
                     className="h-8 w-8 rounded-full border border-gray-100"
+                    alt="avatar"
                   />
                 </td>
                 <td className="px-4 py-3 font-semibold text-[#282828]">
@@ -250,7 +263,7 @@ export default function AssignmentTable({
                   ) : (
                     <span
                       onClick={() => startEditing(r)}
-                      className="cursor-pointer font-bold text-[#282828]"
+                      className={`font-bold ${r.status !== "Not Submitted" ? "cursor-pointer text-[#282828]" : "text-gray-300"}`}
                     >
                       {r.marks || "-"}
                     </span>
@@ -269,7 +282,7 @@ export default function AssignmentTable({
                   ) : (
                     <span
                       onClick={() => startEditing(r)}
-                      className="cursor-pointer truncate block max-w-[150px] italic text-gray-500"
+                      className={`truncate block max-w-[150px] italic ${r.status !== "Not Submitted" ? "cursor-pointer text-gray-500" : "text-gray-300"}`}
                     >
                       {r.feedback || "-"}
                     </span>
@@ -304,6 +317,10 @@ export default function AssignmentTable({
                         <X size={20} />
                       </button>
                     </div>
+                  ) : r.status === "Not Submitted" ? (
+                    <span className="inline-block rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-500">
+                      Not Submitted
+                    </span>
                   ) : (
                     <button
                       onClick={() => startEditing(r)}

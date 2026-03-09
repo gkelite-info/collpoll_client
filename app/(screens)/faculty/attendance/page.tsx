@@ -272,7 +272,7 @@ function AttendanceContent() {
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-[#282828] mt-1">
               Track, Verify, and Manage Attendance.
             </p>
           </div>

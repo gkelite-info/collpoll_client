@@ -41,7 +41,7 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
 
                     <button
                         onClick={onClose}
-                        className="flex items-center justify-center h-9 w-9 
+                        className="flex items-center cursor-pointer justify-center h-9 w-9 
                rounded-full text-gray-500 hover:text-gray-900 
                hover:bg-gray-100"
                     >

@@ -1,21 +1,12 @@
 "use client";
-
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  MagnifyingGlass,
-  DownloadSimple,
-  UsersThree,
-  CaretLeftIcon,
-  BuildingApartmentIcon,
-  CaretDown,
-} from "@phosphor-icons/react";
+import { MagnifyingGlass, DownloadSimple, UsersThree, CaretLeftIcon, CaretDown } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
-
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { getOverallStudentsOverview, getOverallStudentsSummary } from "@/lib/helpers/finance/getOverallStudentsOverview";
@@ -44,8 +35,7 @@ type Branch = {
 function OverallStudentsOverview() {
   const router = useRouter();
 
-  const { collegeId, collegeEducationId, collegeEducationType, loading } =
-    useFinanceManager();
+  const { collegeId, collegeEducationId, collegeEducationType, loading } = useFinanceManager();
   const [search, setSearch] = useState("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [educationFilter, setEducationFilter] = useState("All");
@@ -108,17 +98,6 @@ function OverallStudentsOverview() {
     },
   ];
 
-  // const loadCardsSummary = async () => {
-  //   if (!collegeId || !collegeEducationId) return;
-
-  //   const summary = await getOverallStudentsSummary(
-  //     collegeId,
-  //     collegeEducationId,
-  //   );
-
-  //   setSummaryCounts(summary);
-  // };
-
   useEffect(() => {
     loadCardsSummary();
   }, [collegeId, collegeEducationId]);
@@ -135,18 +114,8 @@ function OverallStudentsOverview() {
 
   const loadCardsSummary = async () => {
     if (!collegeId || !collegeEducationId || loading) {
-      console.log("⛔ Skipping Cards Load:", {
-        collegeId,
-        collegeEducationId,
-        loading,
-      });
       return;
     }
-
-    console.log("📊 Loading Cards Summary with:", {
-      collegeId,
-      collegeEducationId,
-    });
 
     setCardsLoading(true);
 
@@ -155,12 +124,6 @@ function OverallStudentsOverview() {
         collegeId,
         collegeEducationId
       );
-
-      console.log("✅ Cards Summary Result:", summary);
-      console.log("➡ Total:", summary.total);
-      console.log("➡ Paid:", summary.paid);
-      console.log("➡ Pending:", summary.pending);
-      console.log("➡ Partial:", summary.partial);
 
       setSummaryCounts(summary);
     } catch (err: any) {
@@ -177,24 +140,8 @@ function OverallStudentsOverview() {
 
   const loadStudents = async () => {
     if (!collegeId || !collegeEducationId || loading) {
-      console.log("⛔ Skipping Table Load:", {
-        collegeId,
-        collegeEducationId,
-        loading,
-      });
       return;
     }
-
-    console.log("📋 Loading Table Data with Filters:", {
-      collegeId,
-      collegeEducationId,
-      branchFilter,
-      yearFilter,
-      semesterFilter,
-      statusFilter,
-      currentPage,
-      search,
-    });
 
     setTableLoading(true);
 
@@ -218,8 +165,6 @@ function OverallStudentsOverview() {
         rowsPerPage,
         search,
       );
-
-      console.log("📌 Table API Response:", data);
 
       setStudentsData(data.students);
       setTotalRecords(data.totalCount ?? 0);
@@ -275,7 +220,7 @@ function OverallStudentsOverview() {
   const tableData = useMemo(() => {
     return studentsData.map((item) => ({
       studentName: item.studentName,
-      rollNo: item.studentId,   // ✅ changed here
+      rollNo: item.studentId,
       educationType: collegeEducationType,
       branch: item.branchCode,
       year: item.yearName,
@@ -315,7 +260,6 @@ function OverallStudentsOverview() {
         status: item.status,
       }));
 
-      // Small delay so UI updates before heavy processing
       setTimeout(() => {
         downloadCSV(exportData, "students-report");
         setDownloadLoading(false);
@@ -339,6 +283,18 @@ function OverallStudentsOverview() {
     { title: "Status", key: "status" },
     { title: "Action", key: "action" },
   ];
+
+  const interColumns = [
+    { title: "Student Name", key: "studentName" },
+    { title: "Student ID", key: "rollNo" },
+    { title: "Education Type", key: "educationType" },
+    { title: "Group", key: "branch" },
+    { title: "Year", key: "year" },
+    { title: "Paid", key: "paid" },
+    { title: "Pending", key: "pending" },
+    { title: "Status", key: "status" },
+    { title: "Action", key: "action" },
+  ]
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -375,19 +331,18 @@ function OverallStudentsOverview() {
             Overall Students Overview
           </h2>
         </div>
-       <button
-  onClick={handleDownload}
-  disabled={downloadLoading}
-  className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
-    ${
-      downloadLoading
-        ? "opacity-70 cursor-not-allowed"
-        : "hover:bg-[#1E3A8A]"
-    }`}
->
-  {downloadLoading ? "Downloading Report..." : "Download Report"}
-  {!downloadLoading && <DownloadSimple size={18} />}
-</button>
+        <button
+          onClick={handleDownload}
+          disabled={downloadLoading}
+          className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
+    ${downloadLoading
+              ? "opacity-70 cursor-not-allowed"
+              : "hover:bg-[#1E3A8A]"
+            }`}
+        >
+          {downloadLoading ? "Downloading Report..." : "Download Report"}
+          {!downloadLoading && <DownloadSimple size={18} />}
+        </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
@@ -404,7 +359,7 @@ function OverallStudentsOverview() {
       <div className="flex items-center gap-6">
         <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[300px] flex-shrink-0">
           <input
-            placeholder="Search by Student Name / Roll No."
+            placeholder="Search by student name / roll no."
             className="bg-transparent outline-none text-sm w-full text-[#282828]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -425,7 +380,7 @@ function OverallStudentsOverview() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#282828] font-semibold">
-                Branch
+                {collegeEducationType === "Inter" ? "Group" : "Branch"}
               </span>
 
               <div className="relative">
@@ -435,7 +390,6 @@ function OverallStudentsOverview() {
                     const value = e.target.value;
                     setBranchFilter(value);
 
-                    // Reset dependent fields
                     setYearFilter("All");
                     setSemesterFilter("All");
                   }}
@@ -467,7 +421,6 @@ function OverallStudentsOverview() {
                       const value = e.target.value;
                       setYearFilter(value);
 
-                      // Reset Semester when Year changes
                       setSemesterFilter("All");
                     }}
                     disabled={branchFilter === "All"}
@@ -494,42 +447,44 @@ function OverallStudentsOverview() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {!(collegeEducationType === "Inter") && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[#282828] font-semibold">
-                  Sem
-                </span>
-                <div className="relative">
-                  <select
-                    value={semesterFilter}
-                    onChange={(e) => setSemesterFilter(e.target.value)}
-                    disabled={yearFilter === "All"}
-                    className="appearance-none bg-[#43C17A26] text-center text-[#43C17A] outline-none px-6 py-1 pr-8 rounded-full text-sm cursor-pointer"
-                  >
-                    <option value="All">All</option>
-                    {branchFilter !== "All" &&
-                      yearFilter !== "All" &&
-                      branches
-                        .find((b) => b.collegeBranchId === Number(branchFilter))
-                        ?.years?.find(
-                          (y) => y.collegeAcademicYearId === Number(yearFilter)
-                        )
-                        ?.semesters?.map((sem) => (
-                          <option
-                            key={sem.collegeSemesterId}
-                            value={sem.collegeSemesterId}
-                          >
-                            Sem {sem.collegeSemester}
-                          </option>
-                        ))}
-                  </select>
-                  <CaretDown
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
-                  />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[#282828] font-semibold">
+                    Sem
+                  </span>
+                  <div className="relative">
+                    <select
+                      value={semesterFilter}
+                      onChange={(e) => setSemesterFilter(e.target.value)}
+                      disabled={yearFilter === "All"}
+                      className="appearance-none bg-[#43C17A26] text-center text-[#43C17A] outline-none px-6 py-1 pr-8 rounded-full text-sm cursor-pointer"
+                    >
+                      <option value="All">All</option>
+                      {branchFilter !== "All" &&
+                        yearFilter !== "All" &&
+                        branches
+                          .find((b) => b.collegeBranchId === Number(branchFilter))
+                          ?.years?.find(
+                            (y) => y.collegeAcademicYearId === Number(yearFilter)
+                          )
+                          ?.semesters?.map((sem) => (
+                            <option
+                              key={sem.collegeSemesterId}
+                              value={sem.collegeSemesterId}
+                            >
+                              Sem {sem.collegeSemester}
+                            </option>
+                          ))}
+                    </select>
+                    <CaretDown
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A] pointer-events-none"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#282828] font-semibold">
@@ -562,14 +517,13 @@ function OverallStudentsOverview() {
         Overall Students Overview
       </h1>
       <TableComponent
-        columns={columns}
+        columns={collegeEducationType === "Inter" ? interColumns : columns}
         tableData={tableData}
         isLoading={tableLoading}
         height="55vh"
       />
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-3 mt-8 mb-4">
-          {/* Prev Button */}
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
@@ -582,7 +536,6 @@ function OverallStudentsOverview() {
             <CaretLeft size={18} weight="bold" />
           </button>
 
-          {/* Page Numbers */}
           {[...Array(totalPages)].map((_, i) => (
             <button
               key={i}
@@ -597,7 +550,6 @@ function OverallStudentsOverview() {
             </button>
           ))}
 
-          {/* Next Button */}
           <button
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}

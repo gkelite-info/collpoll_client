@@ -22,11 +22,10 @@ export function useAcademicFilters(userId?: number) {
   const [branch, setBranch] = useState<any>(null);
   const [year, setYear] = useState<any>(null);
   const [section, setSection] = useState<any>(null);
-  // 🔖 CHANGE 1: add subject state
+
   const [subjects, setSubjects] = useState<any[]>([]);
   const [subject, setSubject] = useState<any | null>(null);
 
-  // 🔖 CHANGE: load college
   useEffect(() => {
     if (!userId) return;
     fetchAdminContext(userId).then((ctx) => {
@@ -34,13 +33,11 @@ export function useAcademicFilters(userId?: number) {
     });
   }, [userId]);
 
-  // 🔖 CHANGE: load educations
   useEffect(() => {
     if (!collegeId) return;
     fetchEducations(collegeId).then(setEducations);
   }, [collegeId]);
 
-  // 🔖 CHANGE 2: load subjects correctly
   useEffect(() => {
     if (!collegeId || !branch || !year || !section) {
       setSubjects([]);
@@ -53,7 +50,6 @@ export function useAcademicFilters(userId?: number) {
       .catch(() => setSubjects([]));
   }, [collegeId, branch, year, section]);
 
-  // 🔖 CHANGE: handlers (copied from calendar – SAFE)
   const selectEducation = async (edu: any) => {
     setEducation(edu);
     setBranch(null);

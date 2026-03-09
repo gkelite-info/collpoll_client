@@ -1,8 +1,5 @@
 "use client";
-import {
-  fetchModalInitialData,
-  persistFaculty,
-} from "@/lib/helpers/admin/upsertFaculty";
+import { fetchModalInitialData, persistFaculty } from "@/lib/helpers/admin/upsertFaculty";
 import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
 import { supabase } from "@/lib/supabaseClient";
@@ -16,7 +13,25 @@ import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
-import { number } from "framer-motion";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+
+const toPascalCase = (str: string) => {
+  return str.replace(
+    /\w\S*/g,
+    (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+  );
+};
+
+const validatePassword = (password: string) => {
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+    return "Password must contain one uppercase, one lowercase, one number and one special character.";
+  }
+  return null;
+};
 
 const AddUserModal: React.FC<{
   isOpen: boolean;
@@ -42,6 +57,7 @@ const AddUserModal: React.FC<{
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const initialBasicData = {
     fullName: "",
@@ -83,8 +99,10 @@ const AddUserModal: React.FC<{
   >([]);
 
   const [isSuccess, setIsSuccess] = useState(false);
+  const { collegeEducationId, collegeEducationType } = useAdmin();
 
   const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
+  const INTER_ENTRY = ["Regular", "Transfer"];
 
   const resetForm = () => {
     setBasicData((prev: any) => ({
@@ -180,12 +198,22 @@ const AddUserModal: React.FC<{
     }
   }, [isOpen, user]);
 
+  const selectedEducation = useMemo(
+    () =>
+      dbData.educations.find(
+        (e) => e.collegeEducationType === collegeEducationType
+      ),
+    [dbData.educations, collegeEducationType]
+  );
+
   const filteredBranches = useMemo(
     () =>
-      dbData.branches.filter(
-        (b) => b.collegeEducationId == selectedEducationId,
-      ),
-    [dbData.branches, selectedEducationId],
+      selectedEducation
+        ? dbData.branches.filter(
+          (b) => b.collegeEducationId === selectedEducation.collegeEducationId
+        )
+        : [],
+    [dbData.branches, selectedEducation]
   );
 
   const filteredYears = useMemo(
@@ -208,19 +236,19 @@ const AddUserModal: React.FC<{
   const studentSelectedEducation = useMemo(
     () =>
       dbData.educations.find(
-        (e) => e.collegeEducationType === selectedDegrees[0],
+        (e) => e.collegeEducationId === collegeEducationId
       ),
-    [selectedDegrees, dbData.educations],
+    [dbData.educations, collegeEducationId]
   );
 
   const studentAvailableBranches = useMemo(
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId ===
-              studentSelectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId ===
+            studentSelectedEducation.collegeEducationId,
+        )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -237,8 +265,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-          )
+          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+        )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -255,10 +283,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -267,17 +295,44 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.sections],
   );
 
+  // const handleBasicChange = (
+  //   e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  // ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
+
   const handleBasicChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => setBasicData((p: any) => ({ ...p, [e.target.name]: e.target.value }));
+  ) => {
+    const { name, value } = e.target;
+    let formattedValue = value;
+
+    if (name === "fullName") {
+      const onlyAlphabets = value.replace(/[^A-Za-z\s]/g, "");
+      formattedValue = toPascalCase(onlyAlphabets);
+    } else if (name === "email") {
+      formattedValue = value.toLowerCase();
+    } else if (name === "mobileCode") {
+      if (!/^\+?[0-9]*$/.test(value)) return;
+      formattedValue = value;
+    } else if (name === "mobileNumber") {
+      formattedValue = value.replace(/\D/g, "");
+      if (basicData.mobileCode === "+91") {
+        if (formattedValue.length === 1 && !["6", "7", "8", "9"].includes(formattedValue)) {
+          return;
+        }
+      }
+      if (formattedValue.length > 10) return;
+    }
+
+    setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
+  };
 
   const toggleSectionId = (idStr: string) => {
     const id = parseInt(idStr);
@@ -321,14 +376,36 @@ const AddUserModal: React.FC<{
   const isFinance = basicData.role === "Finance";
 
   const handleSave = async () => {
-    if (!basicData.fullName || !basicData.email || !basicData.role)
-      return toast.error("Required fields missing.");
+    // if (!basicData.fullName || !basicData.email || !basicData.role)
+    //   return toast.error("Required fields missing.");
+
+    if (!basicData.fullName) return toast.error("Full Name is required.");
+    if (!basicData.email) return toast.error("Email is required.");
+    if (!basicData.mobileCode) {
+      return toast.error("Country code is required.");
+    }
+    if (!/^\+[0-9]+$/.test(basicData.mobileCode)) {
+      return toast.error("Invalid country code format.");
+    }
+    if (!basicData.mobileNumber) {
+      return toast.error("Mobile number is required.");
+    }
+    if (!/^[0-9]{10}$/.test(basicData.mobileNumber)) {
+      return toast.error("Mobile number must be exactly 10 digits.");
+    }
+    if (basicData.mobileCode === "+91") {
+      if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
+        return toast.error("Indian mobile number must start with 6, 7, 8, or 9.");
+      }
+    }
+
+    if (!basicData.role) return toast.error("Role is required.");
 
     if (!basicData.gender) return toast.error("Please select a gender.");
 
     if (
       isFaculty &&
-      (!selectedEducationId ||
+      (!collegeEducationId ||
         !selectedBranchId ||
         !selectedYearId ||
         !selectedSubjectId ||
@@ -338,10 +415,11 @@ const AddUserModal: React.FC<{
 
     if (isStudent) {
       if (
-        !selectedDegrees.length ||
+        !collegeEducationId ||
         !selectedDepts.length ||
         !selectedYears.length ||
-        !selectedSemester.length ||
+        !["Inter"].includes(collegeEducationType!) && !selectedSemester.length
+        ||
         !selectedEntryType.length ||
         !selectedSections.length
       ) {
@@ -352,14 +430,30 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student ID required.");
 
-    if (isFinance && !selectedEducationId)
+    if (isFinance && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
 
-    if (
-      !user &&
-      (!basicData.password || basicData.password !== basicData.confirmPassword)
-    )
-      return toast.error("Check passwords.");
+    // if (
+    //   !user &&
+    //   (!basicData.password || basicData.password !== basicData.confirmPassword)
+    // )
+    //   return toast.error("Check passwords.");
+
+    if (!user) {
+      if (!basicData.password) {
+        return toast.error("Password is required.");
+      }
+      const passwordError = validatePassword(basicData.password);
+      if (passwordError) {
+        return toast.error(passwordError);
+      }
+      if (!basicData.confirmPassword) {
+        return toast.error("Confirm Password is required.");
+      }
+      if (basicData.password !== basicData.confirmPassword) {
+        return toast.error("Password and Confirm Password do not match.");
+      }
+    }
 
     setLoading(true);
     let createdUserId: number | null = null;
@@ -404,6 +498,7 @@ const AddUserModal: React.FC<{
           userId: targetUserId!,
           fullName: basicData.fullName,
           email: basicData.email,
+          collegeEducationId: collegeEducationId,
           mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
           gender: basicData.gender,
           collegeId: basicData.collegeId,
@@ -431,7 +526,7 @@ const AddUserModal: React.FC<{
         await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
-          collegeEducationId: selectedEducationId!,
+          collegeEducationId: collegeEducationId!,
           createdBy: basicData.adminId,
           isActive: true,
           createdAt: timestamp,
@@ -444,7 +539,7 @@ const AddUserModal: React.FC<{
           targetUserId,
           { ...basicData, collegePublicId: basicData.collegeId },
           {
-            educationId: selectedEducationId!,
+            educationId: collegeEducationId!,
             branchId: selectedBranchId!,
             yearId: selectedYearId!,
             subjectId: selectedSubjectId!,
@@ -464,11 +559,12 @@ const AddUserModal: React.FC<{
         const semesterId = studentAvailableSemesters.find(
           (s) => s.collegeSemester.toString() === selectedSemester[0],
         )?.collegeSemesterId;
+
         const sectionId = studentAvailableSections.find(
           (s) => s.collegeSections === selectedSections[0],
         )?.collegeSectionsId;
 
-        if (!eduId || !branchId || !yearId || !semesterId || !sectionId) {
+        if (!eduId || !branchId || !yearId || !["Inter"].includes(collegeEducationType!) && !semesterId || !sectionId) {
           throw new Error("Invalid academic selection data");
         }
 
@@ -519,6 +615,7 @@ const AddUserModal: React.FC<{
         setLoading(false);
         setIsSuccess(false);
       }, 2000);
+      setSessionOptions([]);
     } catch (e: any) {
       console.error(e);
       if (createdUserId && !user) {
@@ -557,6 +654,7 @@ const AddUserModal: React.FC<{
                 name="fullName"
                 value={basicData.fullName}
                 onChange={handleBasicChange}
+                placeholder="Enter Fullname"
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
@@ -569,6 +667,7 @@ const AddUserModal: React.FC<{
                 name="email"
                 value={basicData.email}
                 onChange={handleBasicChange}
+                placeholder="Enter email address"
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
@@ -598,6 +697,7 @@ const AddUserModal: React.FC<{
                   <input
                     type="text"
                     name="mobileCode"
+                    maxLength={5}
                     value={basicData.mobileCode}
                     onChange={handleBasicChange}
                     className="w-[60px] border border-gray-200 rounded-md px-2 py-1 text-sm text-center outline-none focus:ring-1 focus:ring-[#48C78E]"
@@ -626,7 +726,7 @@ const AddUserModal: React.FC<{
                     className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                   >
                     <option value="" disabled>
-                      Select Role
+                      Select role
                     </option>
                     <option value="Admin">Admin</option>
                     <option value="Faculty">Faculty</option>
@@ -647,7 +747,7 @@ const AddUserModal: React.FC<{
                     Education Type
                   </label>
                   <div className="relative">
-                    <select
+                    {/* <select
                       value={selectedEducationId || ""}
                       onChange={(e) => {
                         setSelectedEducationId(Number(e.target.value));
@@ -670,25 +770,44 @@ const AddUserModal: React.FC<{
                     <CaretDown
                       size={14}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    /> */}
+                    <input
+                      type="text"
+                      readOnly
+                      disabled
+                      value={collegeEducationType!}
+                      className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
+                      placeholder="Auto-filled from Admin context"
+                    />
+                    <Lock
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
                     />
                   </div>
                 </div>
               )}
               {isStudent && (
-                <CustomMultiSelect
-                  label="Education Type"
-                  placeholder="Select Education"
-                  options={degreeOptions}
-                  selectedValues={selectedDegrees}
-                  onChange={(v) => {
-                    handleSingleSelect(v, setSelectedDegrees);
-                    setSelectedDepts([]);
-                    setSelectedYears([]);
-                    setSelectedSemester([]);
-                    setSelectedSections([]);
-                  }}
-                  onRemove={() => setSelectedDegrees([])}
-                />
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Education Type
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        disabled
+                        value={collegeEducationType!}
+                        className="w-full border border-gray-200 bg-gray-50 text-gray-500 rounded-md px-3 py-1 text-sm outline-none cursor-not-allowed"
+                        placeholder="Auto-filled from Admin context"
+                      />
+                      <Lock
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      />
+                    </div>
+                  </div>
+                </>
               )}
 
               {isParent && (
@@ -713,12 +832,12 @@ const AddUserModal: React.FC<{
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#2D3748]">
-                      Branch
+                      {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
                     </label>
                     <div className="relative">
                       <select
                         value={selectedBranchId || ""}
-                        disabled={!selectedEducationId}
+                        disabled={!selectedEducation}
                         onChange={(e) => {
                           setSelectedBranchId(Number(e.target.value));
                           setSelectedYearId(null);
@@ -726,7 +845,7 @@ const AddUserModal: React.FC<{
                         className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                       >
                         <option value="" disabled>
-                          Select Branch
+                          {collegeEducationType === "Inter" ? "Select Group Type" : "Select Branch Type"}
                         </option>
                         {filteredBranches.map((b: any) => (
                           <option
@@ -832,6 +951,8 @@ const AddUserModal: React.FC<{
                       );
                       if (s) toggleSectionId(String(s.collegeSectionsId));
                     }}
+                    paddingY="py-1"
+                    gap="gap-1"
                   />
                 </div>
               </>
@@ -841,11 +962,11 @@ const AddUserModal: React.FC<{
               <>
                 <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
-                    label="Branch Type"
-                    placeholder="Select Branch"
+                    label={collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
+                    placeholder={collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}
                     options={branchOptions}
                     selectedValues={selectedDepts}
-                    disabled={selectedDegrees.length === 0}
+                    disabled={!collegeEducationId}
                     onChange={(v) => {
                       handleSingleSelect(v, setSelectedDepts);
                       setSelectedYears([]);
@@ -869,15 +990,17 @@ const AddUserModal: React.FC<{
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-5">
-                  <CustomMultiSelect
-                    label="Semester"
-                    placeholder="Select Semester"
-                    options={semesterOptions}
-                    selectedValues={selectedSemester}
-                    disabled={selectedYears.length === 0}
-                    onChange={(v) => handleSingleSelect(v, setSelectedSemester)}
-                    onRemove={() => setSelectedSemester([])}
-                  />
+                  {!["Inter"].includes(collegeEducationType!) &&
+                    <CustomMultiSelect
+                      label="Semester"
+                      placeholder="Select Semester"
+                      options={semesterOptions}
+                      selectedValues={selectedSemester}
+                      disabled={selectedYears.length === 0}
+                      onChange={(v) => handleSingleSelect(v, setSelectedSemester)}
+                      onRemove={() => setSelectedSemester([])}
+                    />
+                  }
                   <CustomMultiSelect
                     label="Section"
                     placeholder="Select Section"
@@ -887,14 +1010,12 @@ const AddUserModal: React.FC<{
                     onChange={(v) => handleSingleSelect(v, setSelectedSections)}
                     onRemove={() => setSelectedSections([])}
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-5">
                   <CustomMultiSelect
                     label="Entry Type"
                     placeholder="Select Entry Type"
-                    options={ENTRY_TYPES}
+                    options={!["Inter", "Polytechnic", "Diploma"].includes(collegeEducationType!) ? ENTRY_TYPES : INTER_ENTRY}
                     selectedValues={selectedEntryType}
-                    disabled={selectedSemester.length === 0}
+                    disabled={!["Inter"].includes(collegeEducationType!) && selectedSemester.length === 0}
                     onChange={(v) =>
                       handleSingleSelect(v, setSelectedEntryType)
                     }
@@ -961,6 +1082,7 @@ const AddUserModal: React.FC<{
                       name="password"
                       value={basicData.password}
                       onChange={handleBasicChange}
+                      placeholder="Enter password"
                       className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] pr-8"
                     />
                     <div
@@ -979,13 +1101,31 @@ const AddUserModal: React.FC<{
                   <label className="text-xs font-bold text-[#2D3748]">
                     Confirm Password
                   </label>
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="confirmPassword"
-                    value={basicData.confirmPassword}
-                    onChange={handleBasicChange}
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirmPassword"
+                      value={basicData.confirmPassword}
+                      onChange={handleBasicChange}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleSave();
+                        }
+                      }}
+                      placeholder="Confirm password"
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                    <div
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <Eye size={16} />
+                      ) : (
+                        <EyeSlash size={16} />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -995,17 +1135,16 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
-                isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>
             <button
               onClick={onClose}
-              className="flex-1 border cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
+              className="flex-1 border focus:outline-none cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-1 rounded-md hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>

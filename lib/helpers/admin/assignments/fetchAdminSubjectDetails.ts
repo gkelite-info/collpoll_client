@@ -4,6 +4,8 @@ export async function fetchAdminSubjectDetails(
   collegeId: number,
   branchCode: string,
   yearName: string,
+  page: number = 1,
+  limit: number = 10,
 ) {
   try {
     const { data: branchData } = await supabase
@@ -22,7 +24,7 @@ export async function fetchAdminSubjectDetails(
       .maybeSingle();
 
     if (!branchData || !yearData)
-      return { data: [], error: "Invalid Branch or Year" };
+      return { data: [], count: 0, error: "Invalid Branch or Year" };
 
     const { data: rawSections, error: fetchError } = await supabase
       .from("faculty_sections")
@@ -57,9 +59,14 @@ export async function fetchAdminSubjectDetails(
     });
 
     const uniquePairs = Array.from(groupedMap.values());
+    const totalCount = uniquePairs.length;
+
+    const from = (page - 1) * limit;
+    const to = from + limit;
+    const paginatedPairs = uniquePairs.slice(from, to);
 
     const result = await Promise.all(
-      uniquePairs.map(async (item: any) => {
+      paginatedPairs.map(async (item: any) => {
         const fac = Array.isArray(item.faculty)
           ? item.faculty[0]
           : item.faculty;
@@ -89,9 +96,9 @@ export async function fetchAdminSubjectDetails(
       }),
     );
 
-    return { data: result, error: null };
+    return { data: result, count: totalCount, error: null };
   } catch (err: any) {
     console.error("Admin Subject Fetch Error:", err);
-    return { data: [], error: err.message };
+    return { data: [], count: 0, error: err.message };
   }
 }

@@ -25,7 +25,6 @@ export interface Department {
   }[];
 }
 
-
 const FacultyAttendanceCard = ({
   name,
   text,
@@ -53,18 +52,23 @@ const FacultyAttendanceCard = ({
   const handleViewDetails = () => {
     const params = new URLSearchParams(searchParams);
     params.set("view", "subjectWise");
-    params.set("branch", branch);
-    params.set("section", section);
-    params.set("students", totalStudents.toString());
-    params.set("subjects", totalSubjects.toString());
+    params.set("branch", branch || "");
+    params.set("section", section || "");
+
+    params.set("students", (totalStudents ?? 0).toString());
+    params.set("subjects", (totalSubjects ?? 0).toString());
     params.set("below75", (belowThresholdCount ?? 0).toString());
-    params.set("faculties", totalFaculties.toString());
-    params.set("collegeId", collegeId.toString());
-    params.set("collegeEducationId", collegeEducationId.toString());
-    params.set("collegeBranchId", collegeBranchId.toString());
-    params.set("collegeAcademicYearId", collegeAcademicYearId.toString());
-    params.set("collegeSectionsId", collegeSectionsId.toString());
+    params.set("faculties", (totalFaculties ?? 0).toString());
+    params.set("collegeId", (collegeId ?? "").toString());
+    params.set("collegeEducationId", (collegeEducationId ?? "").toString());
+    params.set("collegeBranchId", (collegeBranchId ?? "").toString());
+    params.set(
+      "collegeAcademicYearId",
+      (collegeAcademicYearId ?? "").toString(),
+    );
+    params.set("collegeSectionsId", (collegeSectionsId ?? "").toString());
     params.set("year", year ?? "");
+
     router.push(`${pathname}?${params.toString()}`);
   };
 

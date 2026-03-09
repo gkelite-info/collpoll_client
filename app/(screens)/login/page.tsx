@@ -43,6 +43,26 @@ export default function LoginPage() {
       para: "Designed for performance and reliability.",
       image: "/Group 2774 (3).png",
     },
+    {
+      heading: "Leading Campus Operations Efficiently",
+      para: "Oversee academic activities, departments, and student management across the institution.",
+      image: "/home.png",
+    },
+    {
+      heading: "Managing Institutional Finances with Precision",
+      para: "Handle fee structures, payments, financial records, and reports seamlessly.",
+      image: "/finance home.png",
+    },
+    {
+      heading: "Shaping Student Careers and Opportunities",
+      para: "Coordinate placement drives, track student progress, and connect with top recruiters.",
+      image: "/Placement Home.png",
+    },
+    {
+      heading: "Building Strong Teams for Better Education",
+      para: "Manage recruitment, staff records, payroll, and employee performance efficiently.",
+      image: "/HR home.png",
+    },
   ];
 
 
@@ -194,6 +214,7 @@ export default function LoginPage() {
               <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden">
                 <img
                   src={slide.image}
+                  alt={`Slide ${idx + 1}`}
                   className=" inset-0 w-full h-full object-cover pointer-events-none"
                 />
               </div>
@@ -206,8 +227,8 @@ export default function LoginPage() {
             <div
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-24 bg-[#1A5D3C]"
-                : "w-20 bg-white/60 border border-white/40"
+                ? "w-18 bg-[#1A5D3C]"
+                : "w-5 bg-white/60 border border-white/40"
                 }`}
             ></div>
           ))}

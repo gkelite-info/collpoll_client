@@ -1,5 +1,4 @@
 "use client";
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import CardComponent from "@/app/utils/card";
@@ -8,18 +7,14 @@ import AttendanceInsight from "@/app/utils/insightChart";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
 import Table from "@/app/utils/table";
 import { Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
-
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import SubjectAttendance from "../../(attendance)/subject-attendance/page";
 import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
 import { useUser } from "@/app/utils/context/UserContext";
-
-import {
-  DashboardSkeleton,
-  TableSkeleton,
-} from "../shimmer/attendanceDashSkeleton";
+import { DashboardSkeleton, TableSkeleton } from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { Loader } from "../../calendar/right/timetable";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 interface TableRow {
   Subject: string;
@@ -72,33 +67,38 @@ export default function AttendanceClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
-
   const tab = searchParams.get("tab");
   const showSubjectAttendanceTable = tab === "subject-attendance";
   const showSubjectAttendanceDetails = tab === "subject-attendance-details";
-  const hideRightSection =
-    showSubjectAttendanceTable || showSubjectAttendanceDetails;
-
+  const hideRightSection = showSubjectAttendanceTable || showSubjectAttendanceDetails;
   const [dataLoading, setDataLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
-
+  const { collegeEducationType } = useStudent();
   const [viewDate, setViewDate] = useState<Date>(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const [tableLoading, setTableLoading] = useState(false);
 
 
   useEffect(() => {
-    console.log("🔁 Attendance useEffect triggered", {
+    console.log("Attendance useEffect triggered", {
       userId,
       userLoading,
       viewDate,
+      currentPage,
     });
 
     if (userLoading) {
-      console.log("⏳ User context still loading...");
+      console.log("User context still loading...");
       return;
     }
 
     if (!userId) {
-      console.warn("❌ No User ID found: Student not logged in");
+      console.warn("No User ID found: Student not logged in");
       setDataLoading(false);
       return;
     }
@@ -108,6 +108,7 @@ export default function AttendanceClient() {
     async function fetchData() {
       try {
         setDataLoading(true);
+        setTableLoading(true);
 
         const year = viewDate.getFullYear();
         const month = String(viewDate.getMonth() + 1).padStart(2, "0");
@@ -115,24 +116,32 @@ export default function AttendanceClient() {
         const dateStr = `${year}-${month}-${day}`;
 
         if (!userId) {
-          console.warn("⚠️ User ID became null before helper call");
+          console.warn("User ID became null before helper call");
           setDataLoading(false);
           return;
         }
 
         const safeUserId = userId;
 
-        const data = await getStudentDashboardData(safeUserId, dateStr);
+        const isInter = collegeEducationType === "Inter";
+        const data = await getStudentDashboardData(
+          safeUserId,
+          dateStr,
+          currentPage,
+          rowsPerPage,
+          isInter
+        );
 
         if (isMounted) {
           setDashboardData(data);
-          console.log("🧠 Dashboard state updated");
+          setTotalRecords(data.totalCount || 0);
         }
       } catch (err) {
-        console.error("🔥 Failed to fetch attendance dashboard", err);
+        console.error("Failed to fetch attendance dashboard", err);
       } finally {
         if (isMounted) {
           setDataLoading(false);
+          setTableLoading(false);
           console.log("✅ Attendance dashboard loading finished");
         }
       }
@@ -141,10 +150,11 @@ export default function AttendanceClient() {
     fetchData();
 
     return () => {
-      console.log("🧹 Attendance useEffect cleanup");
+      console.log("Attendance useEffect cleanup");
       isMounted = false;
     };
-  }, [userId, viewDate]);
+  }, [userId, viewDate, currentPage]);
+
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
@@ -263,7 +273,58 @@ export default function AttendanceClient() {
                   </div>
                 ) : (
                   <>
-                    <Table columns={columns} data={tableRows} />
+                    <Table
+                      columns={columns}
+                      data={tableRows}
+                    />
+
+                    {totalPages > 1 && (
+                      <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
+
+                        {/* Prev */}
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === 1
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
+                        >
+                          ‹
+                        </button>
+
+                        {[...Array(totalPages)].map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`w-10 h-10 rounded-lg font-semibold
+        ${currentPage === i + 1
+                                ? "bg-[#16284F] text-white"
+                                : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                              }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+
+                        {/* Next */}
+                        <button
+                          onClick={() =>
+                            setCurrentPage((p) => Math.min(totalPages, p + 1))
+                          }
+                          disabled={currentPage === totalPages}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border
+      ${currentPage === totalPages
+                              ? "border-gray-200 text-gray-300"
+                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                            }`}
+                        >
+                          ›
+                        </button>
+
+                      </div>
+                    )}
 
                     {tableRows.length === 0 && (
                       <p className="text-gray-400 italic text-sm mt-4 text-center border p-4 rounded-lg">

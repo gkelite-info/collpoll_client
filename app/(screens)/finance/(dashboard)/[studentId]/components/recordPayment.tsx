@@ -4,6 +4,7 @@ import React from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
 import { useRecordPayment } from "../useRecordPayment";
+import toast from "react-hot-toast";
 
 interface RecordPaymentProps {
   studentFeeObligationId: number;
@@ -43,6 +44,39 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
     handleRecordPayment,
     modalData,
   } = useRecordPayment({ studentFeeObligationId, collegeSemesterId });
+
+  const handleValidateAndSubmit = () => {
+    const amount = Number(amountReceived);
+
+    if (!amountReceived || isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount received.");
+      return;
+    }
+
+    if (!paymentMethod) {
+      toast.error("Please select a payment method.");
+      return;
+    }
+
+    if (!selectedDate) {
+      toast.error("Payment date is required.");
+      return;
+    }
+
+    if (!attachedFile) {
+      toast.error("Please upload payment proof.");
+      return;
+    }
+
+    const maxFileSize = 5 * 1024 * 1024;
+
+    if (attachedFile.size > maxFileSize) {
+      toast.error("File size must be less than 5MB.");
+      return;
+    }
+
+    handleRecordPayment();
+  };
 
   if (isLoadingData) {
     return (
@@ -192,7 +226,7 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
 
                 <button
                   onClick={handleUploadClick}
-                  className="bg-[#34D399] hover:bg-[#10B981] text-white px-3 py-1 rounded text-xs font-bold transition-colors"
+                  className="bg-[#34D399] hover:bg-[#10B981] text-white px-3 py-1 rounded text-xs cursor-pointer font-bold transition-colors"
                 >
                   Upload
                 </button>
@@ -245,9 +279,9 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
             </div>
           </div>
           <button
-            onClick={handleRecordPayment}
+            onClick={handleValidateAndSubmit}
             disabled={isSubmitting}
-            className="w-full bg-[#34D399] hover:bg-[#10B981] disabled:bg-gray-400 text-white py-2.5 rounded font-bold text-sm transition-colors shadow-sm mt-auto"
+            className="w-full bg-[#34D399] hover:bg-[#10B981] disabled:bg-gray-400 cursor-pointer  text-white py-2.5 rounded font-bold text-sm transition-colors shadow-sm mt-auto"
           >
             {isSubmitting ? "Processing..." : "Record Offline Payment"}
           </button>

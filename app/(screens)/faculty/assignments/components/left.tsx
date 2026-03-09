@@ -151,33 +151,31 @@ export default function AssignmentsLeft() {
     <div className="w-[68%] p-2 flex flex-col">
       <div className="mb-4">
         <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
-        <p className="text-[#282828]">
+        <p className="text-[#282828] text-sm">
           Create, manage, and evaluate assignments for your students
           efficiently.
         </p>
       </div>
 
       <div className="w-full flex flex-col flex-1 min-h-[500px]">
-        <div className="flex flex-col justify-between items-start h-full w-full">
-          <div className="flex justify-between mb-2 w-full">
+        <div className="flex flex-col gap-3 items-start h-full w-full">
+          <div className="flex justify-between w-full">
             <div className="flex gap-4 pb-1">
               <h5
-                className={`text-sm cursor-pointer pb-1 transition-all ${
-                  activeView === "active"
+                className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "active"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
                 onClick={() => handleTabChange("active")}
               >
                 Active Assignments
               </h5>
 
               <h5
-                className={`text-sm cursor-pointer pb-1 transition-all ${
-                  activeView === "previous"
+                className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "previous"
                     ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
                 onClick={() => handleTabChange("previous")}
               >
                 Evaluated Assignments
@@ -192,7 +190,7 @@ export default function AssignmentsLeft() {
             </button>
           </div>
 
-          <div className="flex flex-col flex-1 w-full relative">
+          <div className="h-[164vh] overflow-y-auto w-full">
             {isLoading ? (
               <div className="w-full">
                 {[1, 2, 3].map((i) => (

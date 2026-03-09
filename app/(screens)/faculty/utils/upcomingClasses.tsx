@@ -52,7 +52,7 @@ const AddLessonModal: React.FC<ModalProps> = ({ isOpen, onClose, onSave }) => {
     onClose();
   };
 
-   
+
 
   return (
     <div className="fixed text-black inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-2">
@@ -255,9 +255,9 @@ export default function UpcomingClasses({
         </div>
 
         <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 max-h-[350px]">
-          {lessons.map((lesson) => (
+          {lessons.map((lesson, index) => (
             <div
-              key={lesson.id}
+              key={`${lesson.id}-${lesson.fromTime}-${index}`}
               onClick={() => handleLessonClick(lesson)}
               className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
             >

@@ -8,6 +8,8 @@ import {
   CaretLeftIcon,
   FunnelSimple,
   MagnifyingGlass,
+  CaretLeft,
+  CaretRight,
 } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -20,6 +22,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+const ITEMS_PER_PAGE = 10;
 
 const RightAlignedLabel = (props: any) => {
   const { y, height, value, viewBox } = props;
@@ -46,6 +50,10 @@ function YearWiseFeeCollectionContent() {
   const breadcrumb = `${branchCode} → Year-wise Fee Collection`;
 
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [semester, setSemester] = useState("All Semesters");
   const [academicYear, setAcademicYear] = useState(
     new Date().getFullYear().toString(),
@@ -66,6 +74,19 @@ function YearWiseFeeCollectionContent() {
     collegeEducationId,
     loading: fmLoading,
   } = useFinanceManager();
+
+  useEffect(() => {
+    setIsSearching(true);
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+      setIsSearching(false);
+    }, 400);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [search]);
 
   useEffect(() => {
     async function fetchYearData() {
@@ -101,7 +122,7 @@ function YearWiseFeeCollectionContent() {
 
   const columns = [
     { title: "Student Name", key: "studentName" },
-    { title: "Roll No.", key: "rollNo" },
+    { title: "Student ID", key: "rollNo" }, // Changed title to Student ID
     { title: "Department", key: "department" },
     { title: "Year", key: "year" },
     { title: "Semester", key: "semester" },
@@ -125,8 +146,10 @@ function YearWiseFeeCollectionContent() {
   const processedData = useMemo(() => {
     let data = initialData.filter(
       (item) =>
-        item.studentName.toLowerCase().includes(search.toLowerCase()) ||
-        item.rollNo.toLowerCase().includes(search.toLowerCase()),
+        item.studentName
+          .toLowerCase()
+          .includes(debouncedSearch.toLowerCase()) ||
+        item.rollNo.toLowerCase().includes(debouncedSearch.toLowerCase()),
     );
 
     if (semester !== "All Semesters") {
@@ -154,12 +177,13 @@ function YearWiseFeeCollectionContent() {
         status: (
           <div className="flex items-center gap-2 justify-center">
             <span
-              className={`h-3 w-3 rounded-full ${status === "paid"
+              className={`h-3 w-3 rounded-full ${
+                status === "paid"
                   ? "bg-green-600"
                   : status === "pending"
                     ? "bg-red-600"
                     : "bg-yellow-500"
-                }`}
+              }`}
             />
             <span
               className={
@@ -188,7 +212,13 @@ function YearWiseFeeCollectionContent() {
         ),
       };
     });
-  }, [search, sortOrder, initialData, semester]);
+  }, [debouncedSearch, sortOrder, initialData, semester, router]);
+
+  const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return processedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [processedData, currentPage]);
 
   const isPageLoading = fmLoading || isLoading;
 
@@ -223,7 +253,6 @@ function YearWiseFeeCollectionContent() {
                   onChange={(e) => setAcademicYear(e.target.value)}
                   className="bg-purple-100 text-purple-700 px-1 py-0.5 rounded-full outline-none"
                 >
-                  {/* 🟢 CHANGED: Dynamically map through available years */}
                   {availableYears.map((yearOption) => (
                     <option key={yearOption} value={yearOption}>
                       {yearOption}
@@ -284,7 +313,11 @@ function YearWiseFeeCollectionContent() {
                             : value
                         }
                         cursor={{ fill: "#f8fafc" }}
-                        labelStyle={{ color: "#000", opacity: 1, fontWeight: 600 }}
+                        labelStyle={{
+                          color: "#000",
+                          opacity: 1,
+                          fontWeight: 600,
+                        }}
                       />
                       <Bar
                         dataKey="collected"
@@ -312,7 +345,7 @@ function YearWiseFeeCollectionContent() {
             <div className="flex justify-between items-center">
               <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[40%]">
                 <input
-                  placeholder="Search by Student Name / Roll No."
+                  placeholder="Search by Student Name / Student ID"
                   className="bg-transparent outline-none text-sm w-full text-[#282828]"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -323,7 +356,10 @@ function YearWiseFeeCollectionContent() {
               <div className="flex items-center gap-4 text-sm">
                 <select
                   value={semester}
-                  onChange={(e) => setSemester(e.target.value)}
+                  onChange={(e) => {
+                    setSemester(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="bg-[#43C17A1F] text-[#00A94A] cursor-pointer px-3 py-1 rounded-md outline-none"
                 >
                   <option value="All Semesters">All Semesters</option>
@@ -336,9 +372,10 @@ function YearWiseFeeCollectionContent() {
                 </select>
 
                 <div
-                  onClick={() =>
-                    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
-                  }
+                  onClick={() => {
+                    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                    setCurrentPage(1);
+                  }}
                   className="bg-[#43C17A1F] cursor-pointer rounded-full p-2"
                 >
                   <FunnelSimple size={18} className="text-[#00A94A]" />
@@ -346,11 +383,57 @@ function YearWiseFeeCollectionContent() {
               </div>
             </div>
 
-            <TableComponent
-              columns={columns}
-              tableData={processedData}
-              height="60vh"
-            />
+            <div className="relative min-h-[400px]">
+              {isSearching ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-xl">
+                  <Loader />
+                </div>
+              ) : null}
+
+              <TableComponent
+                columns={columns}
+                tableData={paginatedData}
+                height="60vh"
+              />
+            </div>
+
+            {totalPages > 1 && !isSearching && (
+              <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+                >
+                  <CaretLeft size={18} weight="bold" color="black" />
+                </button>
+
+                <div className="flex gap-1">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
+                        currentPage === i + 1
+                          ? "bg-[#16284F] text-white"
+                          : "bg-white text-gray-600 border hover:border-gray-300"
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  <CaretRight size={18} weight="bold" color="black" />
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}

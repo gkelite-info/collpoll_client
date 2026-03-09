@@ -43,6 +43,11 @@ export default function StudentProfileCard({
   activeFilter,
   onFilterChange,
 }: Props) {
+  const countedDays = attendanceDays + absentDays;
+
+  const attendancePercent =
+    countedDays === 0 ? 0 : Math.round((attendanceDays / countedDays) * 100);
+
   return (
     <div className="rounded-[20px] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -131,7 +136,7 @@ export default function StudentProfileCard({
             iconBg="bg-[#4CAF50]"
             title="Total Attendance"
             value={`${attendanceDays} Days`}
-            percent={80}
+            percent={attendancePercent}
           />
           <StatCard
             bg="bg-[#FFEBEE]"

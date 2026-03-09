@@ -2,9 +2,6 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
-import { FaChevronDown } from "react-icons/fa6";
-
-// import { upsertFacultyAcademics } from "@/lib/helpers/faculty/upsertFacultyAcademics";
 import { supabase } from "@/lib/supabaseClient";
 // import { suggestTopicsAI } from "@/lib/helpers/faculty/ai/suggestTopics.client";
 // import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
@@ -16,8 +13,8 @@ import { upsertCollegeSubjectUnitWithTopics } from "@/lib/helpers/faculty/upsert
 import toast from "react-hot-toast";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
 import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
-import { getInternalUserId } from "@/lib/helpers/getInternalUserId";
 import { CardProps } from "@/lib/types/faculty";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 type AddNewCardModalProps = {
   isOpen: boolean;
@@ -53,16 +50,11 @@ type FacultyAcademicForm = {
 function toPascalCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
-
-
 // // 🔹 AI unit name suggestion helper
 // function suggestUnitName(subject: string, unitNumber: number) {
 //   if (!subject) return "";
 //   return `Unit ${unitNumber}: Introduction to ${subject}`;
 // }
-
-
-
 export default function AddNewCardModal({
   isOpen,
   onClose,
@@ -89,7 +81,6 @@ export default function AddNewCardModal({
     topics: [],
   });
 
-
   const [facultyId, setFacultyId] = useState<number | null>(null);;
   const [isSemesterAuto, setIsSemesterAuto] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -107,22 +98,12 @@ export default function AddNewCardModal({
   //   unitNumber: 1,
   //   topics: [] as string[],
   // });
-
-
-
-
   const [educations, setEducations] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [semesters, setSemesters] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
-
-
-
-
-
-
   const [aiTopics, setAiTopics] = useState<string[]>([]);
   // const [facultyId, setFacultyId] = useState<number | null>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -132,10 +113,9 @@ export default function AddNewCardModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectAll, setSelectAll] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-
   const { userId, collegeId, loading } = useUser();
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
-
+  const { faculty_edu_type } = useFaculty();
 
   // const [subjectId, setSubjectId] = useState<number | null>(
   //   defaultSubjectId
@@ -146,7 +126,6 @@ export default function AddNewCardModal({
   //     setSubjectId(defaultSubjectId);
   //   }
   // }, [defaultSubjectId]);
-
   const filteredSections = sections;
 
   useEffect(() => {
@@ -176,7 +155,6 @@ export default function AddNewCardModal({
 
     const yearIds = facultyCtx.academicYearIds ?? [];
 
-    // ✅ Auto-fill year ONLY if exactly one
     if (yearIds.length === 1) {
       setFormData(prev => ({
         ...prev,
@@ -184,8 +162,6 @@ export default function AddNewCardModal({
       }));
     }
   }, [facultyCtx]);
-
-
 
   useEffect(() => {
     if (facultySubjects.length === 1) {
@@ -198,8 +174,6 @@ export default function AddNewCardModal({
       }));
     }
   }, [facultySubjects]);
-
-
 
   useEffect(() => {
     setFormData(prev => ({
@@ -215,8 +189,6 @@ export default function AddNewCardModal({
       setSelectAll(false);
     }
   }, [availableTopics, selectedTopics]);
-
-
 
   // const handleAddTopicFromAI = (topic: string) => {
   //   setFormData(prev => ({
@@ -255,7 +227,6 @@ export default function AddNewCardModal({
 
     const loadAcademics = async () => {
       try {
-        // 1) Education list (for display)
         const edu = await fetchAcademicDropdowns({
           type: "education",
           collegeId,
@@ -263,7 +234,6 @@ export default function AddNewCardModal({
         if (cancelled) return;
         setEducations(edu ?? []);
 
-        // 2) Branch list (for display)
         const br = await fetchAcademicDropdowns({
           type: "branch",
           collegeId,
@@ -272,7 +242,6 @@ export default function AddNewCardModal({
         if (cancelled) return;
         setBranches(br ?? []);
 
-        // 3) Academic years (for display)
         const years = await fetchAcademicDropdowns({
           type: "academicYear",
           collegeId,
@@ -282,7 +251,6 @@ export default function AddNewCardModal({
         if (cancelled) return;
         setAcademicYears(years ?? []);
 
-        // ensure year is set if only one
         const selectedYearId =
           facultyCtx.academicYearIds?.length === 1 ? facultyCtx.academicYearIds[0] : formData.academicYearId;
 
@@ -290,7 +258,6 @@ export default function AddNewCardModal({
           setFormData((prev) => ({ ...prev, academicYearId: selectedYearId }));
         }
 
-        // 4) Semesters
         if (selectedYearId) {
           const sems = await fetchAcademicDropdowns({
             type: "semester",
@@ -302,7 +269,6 @@ export default function AddNewCardModal({
           if (cancelled) return;
           setSemesters(sems ?? []);
 
-          // auto semester if only one
           if ((sems ?? []).length === 1) {
             setFormData((prev) => ({ ...prev, semester: sems[0].collegeSemesterId }));
             setIsSemesterAuto(true);
@@ -310,7 +276,6 @@ export default function AddNewCardModal({
             setIsSemesterAuto(false);
           }
 
-          // 5) Sections (FETCH then FILTER by facultyCtx.sectionIds)
           const secs = await fetchAcademicDropdowns({
             type: "section",
             collegeId,
@@ -326,12 +291,10 @@ export default function AddNewCardModal({
           if (cancelled) return;
           setSections(filteredSections);
 
-          // auto pick section if only one
           if (filteredSections.length === 1) {
             setFormData((prev) => ({ ...prev, sectionId: filteredSections[0].collegeSectionsId }));
           }
 
-          // 6) Subjects (FETCH then FILTER by facultyCtx.subjectIds)
           const { data: subjectRows, error } = await supabase
             .from("college_subjects")
             .select("collegeSubjectId, subjectName")
@@ -344,6 +307,7 @@ export default function AddNewCardModal({
             .is("deletedAt", null);
 
           if (error) {
+            toast.error("Failed to load subjects");
           }
 
           if (cancelled) return;
@@ -351,7 +315,6 @@ export default function AddNewCardModal({
           const filteredSubjects = subjectRows ?? [];
           setSubjects(filteredSubjects);
 
-          // if only 1 subject -> autofill
           if (filteredSubjects.length === 1) {
             setFormData((prev) => ({
               ...prev,
@@ -441,9 +404,8 @@ export default function AddNewCardModal({
     }
 
     try {
-      setIsSaving(true); // 🔥 START LOADING
+      setIsSaving(true);
 
-      // 1️⃣ Unit + Topics
       const unitResult = await upsertCollegeSubjectUnitWithTopics({
         collegeId,
         collegeSubjectId: formData.subjectId,
@@ -457,7 +419,6 @@ export default function AddNewCardModal({
 
       const collegeSubjectUnitId = unitResult.collegeSubjectUnitId;
 
-      // 2️⃣ Academics mapping
       for (const sectionId of formData.sectionIds) {
         await saveAcademicUnit({
           collegeId,
@@ -474,10 +435,28 @@ export default function AddNewCardModal({
 
       toast.success("Unit saved successfully");
       onClose();
+      setFormData({
+        educationId: undefined,
+        branchId: undefined,
+        academicYearId: undefined,
+        semester: undefined,
+        collegeSubjectId: undefined,
+
+        subjectName: "",
+        subjectId: undefined,
+        sectionIds: [],
+        unitName: "",
+        unitNumber: 1,
+        startDate: "",
+        endDate: "",
+        topics: [],
+      });
+      setAvailableTopics([]);
+      setSelectedTopics([]);
     } catch (err: any) {
       toast.error(err?.message || "Failed to save unit");
     } finally {
-      setIsSaving(false); // 🔥 STOP LOADING
+      setIsSaving(false);
     }
   };
 
@@ -487,13 +466,10 @@ export default function AddNewCardModal({
     ).values()
   );
 
-
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
         <div className="p-6 overflow-y-auto">
-          {/* Header */}
           <h2 className="text-xl font-bold text-[#282828] mb-1">
             Add Unit
           </h2>
@@ -501,16 +477,7 @@ export default function AddNewCardModal({
             Track progress, add lessons, and manage course content across all your batches.
           </p>
 
-          {/* Form */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-
-            {/* shared select style */}
-            {/*
-    placeholder → text-gray-400
-    selected → text-gray-900
-  */}
-
-            {/* 1️⃣ Education */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Education</label>
 
@@ -530,7 +497,6 @@ export default function AddNewCardModal({
               />
             </div>
 
-            {/* 2️⃣ Branch */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Branch</label>
 
@@ -551,11 +517,8 @@ export default function AddNewCardModal({
               />
             </div>
 
-            {/* 3️⃣ Year */}
-            {/* 3️⃣ Year (Auto from faculty context, NOT editable) */}
             <div>
               <label className="text-sm font-semibold text-[#282828]">Year</label>
-
               <input
                 type="text"
                 value={
@@ -572,48 +535,43 @@ export default function AddNewCardModal({
     "
               />
             </div>
+            {!['Inter'].includes(faculty_edu_type!) &&
+              <div>
+                <label className="text-sm font-semibold text-[#282828]">Semester</label>
+                <select
+                  value={formData.semester ?? ""}
+                  onChange={(e) =>
+                    setFormData(prev => ({
+                      ...prev,
+                      semester: e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value),
+                    }))
+                  }
 
-            {/* 4️⃣ Semester */}
-            <div>
-              <label className="text-sm font-semibold text-[#282828]">Semester</label>
-              <select
-                value={formData.semester ?? ""}
-                onChange={(e) =>
-                  setFormData(prev => ({
-                    ...prev,
-                    semester: e.target.value === ""
-                      ? undefined
-                      : Number(e.target.value),
-                    // subjectName: "",          // 🔥 reset subject
-                  }))
-                }
-
-                className={`
+                  className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
     ${formData.semester ? "text-gray-900" : "text-gray-400"}
   `}
-              >
-                <option value="" disabled hidden>
-                  Choose semester
-                </option>
-
-                {semesters.map((s) => (
-                  <option
-                    key={s.collegeSemesterId}
-                    value={s.collegeSemesterId}   // ✅ ID goes here
-                  >
-                    Semester {s.collegeSemester}
+                >
+                  <option value="" disabled hidden>
+                    Choose semester
                   </option>
-                ))}
-              </select>
 
-            </div>
-
-            {/* 5️⃣ Subject Name */}
+                  {semesters.map((s) => (
+                    <option
+                      key={s.collegeSemesterId}
+                      value={s.collegeSemesterId}
+                    >
+                      Semester {s.collegeSemester}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            }
             <div>
               <label className="text-sm font-semibold text-[#282828]">Subject Name</label>
-
               <input
                 type="text"
                 value={formData.subjectName || ""}
@@ -632,8 +590,6 @@ export default function AddNewCardModal({
               </label>
 
               <div className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white min-h-[42px] flex flex-wrap gap-2">
-
-                {/* Selected badges */}
                 {formData.sectionIds.map((id) => {
                   const section = filteredSections.find(
                     (s) => s.collegeSectionsId === id
@@ -664,7 +620,6 @@ export default function AddNewCardModal({
                   );
                 })}
 
-                {/* Dropdown */}
                 <select
                   value=""
                   onChange={(e) => {
@@ -704,11 +659,7 @@ export default function AddNewCardModal({
                 value={formData.unitName}
                 onChange={(e) => {
                   const rawValue = e.target.value;
-
-                  // allow only letters + spaces
                   const filteredValue = rawValue.replace(/[^a-zA-Z\s]/g, "");
-
-                  // ⚡ instant pascal
                   const pascalValue = toPascalCase(filteredValue);
 
                   setFormData(prev => ({
@@ -716,7 +667,6 @@ export default function AddNewCardModal({
                     unitName: pascalValue,
                   }));
 
-                  // ---- AI LOGIC BELOW (UNCHANGED) ----
                   const subject = formData.subjectName;
 
                   if (!filteredValue || !subject) {
@@ -764,13 +714,11 @@ export default function AddNewCardModal({
                             setSelectAll(checked);
 
                             if (checked) {
-                              // ✅ SELECT ALL
                               setSelectedTopics(prev => [
                                 ...new Set([...prev, ...availableTopics]),
                               ]);
                               setAvailableTopics([]);
                             } else {
-                              // ✅ UNSELECT ALL
                               setAvailableTopics(prev => [
                                 ...new Set([...prev, ...selectedTopics]),
                               ]);

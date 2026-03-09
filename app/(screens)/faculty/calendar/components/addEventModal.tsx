@@ -9,6 +9,7 @@ import { X } from "@phosphor-icons/react";
 import type { CalendarEventPayload } from "../page";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 type DegreeOption = {
   collegeDegreeId: number;
@@ -137,6 +138,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [units, setUnits] = useState<any[]>([]);
   const [sectionIds, setSectionIds] = useState<number[]>([]);
   const [editSectionIds, setEditSectionIds] = useState<number[] | null>(null);
+  const { faculty_edu_type } = useFaculty();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -558,10 +560,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       toast.error("Past dates are not allowed");
       return;
     }
-    if (!semester) {
-      toast.error("Please select semester");
-      return;
+    if (!["Inter"].includes(faculty_edu_type!)) {
+      if (!semester) {
+        toast.error("Please select semester");
+        return;
+      }
     }
+
     if (!roomNo.trim()) {
       toast.error("Please enter Room No.");
       return;
@@ -576,13 +581,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     if (!validateTimeRange()) return;
 
-    // ✅ Allowed Time Window (08:00 AM – 10:00 PM)
     if (startTime < "08:00" || endTime > "22:00") {
       toast.error("Events must be between 08:00 AM and 10:00 PM");
       return;
     }
 
-    // ✅ Same-day past time block
     const now = new Date();
     const currentDate = now.toISOString().split("T")[0];
 
@@ -594,13 +597,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     //   }
     // }
 
-    // ✅ Topic required (non-meeting)
     if (selectedType !== "meeting" && !topicId) {
       toast.error("Please select topic");
       return;
     }
 
-    // ✅ Meeting validations
     if (selectedType === "meeting") {
       if (!title.trim()) {
         toast.error("Please enter meeting title");
@@ -647,7 +648,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
       const result = await onSave(payload);
 
-      // If your onSave returns success flag
       if (result?.success !== false) {
         toast.success(isEditMode ? "Event updated successfully" : "Event created successfully");
         onClose();
@@ -1173,54 +1173,51 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   </option>
                 );
               })}
-              {/* </select>  */}
             </div>
-            {/* Semester */}
-            <div className="flex-1 min-w-0">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Semester *
-              </label>
+            {!["Inter"].includes(faculty_edu_type!) &&
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Semester *
+                </label>
 
-              <select
-                value={semester ?? ""}
-                disabled={isSemesterAuto}
-                onChange={(e) => {
-                  if (isSemesterAuto) return;
-                  setSemester(Number(e.target.value));
-                }}
-                className={`
+                <select
+                  value={semester ?? ""}
+                  disabled={isSemesterAuto}
+                  onChange={(e) => {
+                    if (isSemesterAuto) return;
+                    setSemester(Number(e.target.value));
+                  }}
+                  className={`
     w-full ${INPUT_HEIGHT}
     border border-[#C9C9C9]
     rounded-lg px-3 text-sm
     focus:ring-2 focus:ring-[#43C17A]
     focus:outline-none
     ${isSemesterAuto
-                    ? "bg-gray-50 cursor-not-allowed text-gray-900"
-                    : "bg-white cursor-pointer text-gray-900"
-                  }
+                      ? "bg-gray-50 cursor-not-allowed text-gray-900"
+                      : "bg-white cursor-pointer text-gray-900"
+                    }
   `}
-              >
-                <option value="" disabled hidden>
-                  Select Semester
-                </option>
-
-                {semesters.map((s) => (
-                  <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
-                    Semester {s.collegeSemester}
+                >
+                  <option value="" disabled hidden>
+                    Select Semester
                   </option>
-                ))}
-              </select>
-            </div>
+
+                  {semesters.map((s) => (
+                    <option key={s.collegeSemesterId} value={s.collegeSemesterId}>
+                      Semester {s.collegeSemester}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            }
           </div>
 
-          {/* 6️⃣ Section */}
-          {/* 6️⃣ Section */}
           <div className="flex-1 min-w-0 relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Section *
             </label>
 
-            {/* Selected display */}
             <div
               onClick={() => setIsSectionOpen((p) => !p)}
               className={`
@@ -1245,7 +1242,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <span className="text-gray-400">▾</span>
             </div>
 
-            {/* Dropdown */}
             {isSectionOpen && (
               <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto">
                 {sections.map((s) => {
@@ -1282,7 +1278,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             <button
               onClick={handleSave}
               disabled={isSubmitting}
-              className={`w-full font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
+              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
                 ? "bg-emerald-400 cursor-not-allowed"
                 : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
                 }`}

@@ -1,96 +1,124 @@
 "use client";
- 
+
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { InputField } from "../components/reusableComponents";
-import { insertEducationDepartments }
-  from "@/lib/helpers/superadmin/insertdepartment";
- 
-/* ================= Types ================= */
+import { insertEducationDepartments } from "@/lib/helpers/superadmin/insertdepartment";
+import toast from "react-hot-toast";
+import { PencilSimpleIcon, TrashIcon } from "@phosphor-icons/react";
+
 type DepartmentItem = {
   uuid: string;
   name: string;
   code: string;
 };
- 
+
 export default function Department() {
   const [educationId, setEducationId] = useState("");
   const [departmentName, setDepartmentName] = useState("");
   const [departmentCode, setDepartmentCode] = useState("");
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [loading, setLoading] = useState(false);
- 
-  /* ================= Add Department ================= */
-  const addDepartment = () => {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleAddOrUpdate = () => {
     const name = departmentName.trim();
     const code = departmentCode.trim();
- 
-    if (!name || !code) {
-      alert("Department name and code are required");
+    if (!educationId) {
+      toast.error("Education ID is required.");
       return;
     }
- 
-    if (
-      departments.some(
-        (d) =>
-          d.name.toLowerCase() === name.toLowerCase() ||
-          d.code.toLowerCase() === code.toLowerCase()
-      )
-    ) {
-      alert("Department name or code already added");
+    if (!name) {
+      toast.error("Department name is required.");
       return;
     }
- 
-    setDepartments((prev) => [
-      ...prev,
-      { uuid: crypto.randomUUID(), name, code },
-    ]);
- 
+    if (!code) {
+      toast.error("Department code is required.");
+      return;
+    }
+
+    const isDuplicate = departments.some(
+      (d) =>
+        d.uuid !== editingId &&
+        (d.name.toLowerCase() === name.toLowerCase() ||
+          d.code.toLowerCase() === code.toLowerCase())
+    );
+
+    if (isDuplicate) {
+      toast.error("Department name or code already exists");
+      return;
+    }
+
+    if (editingId) {
+      setDepartments((prev) =>
+        prev.map((d) => (d.uuid === editingId ? { ...d, name, code } : d))
+      );
+      setEditingId(null);
+    } else {
+      setDepartments((prev) => [
+        ...prev,
+        { uuid: crypto.randomUUID(), name, code },
+      ]);
+    }
+
     setDepartmentName("");
     setDepartmentCode("");
   };
- 
-  /* ================= Submit ================= */
+
+  const handleEdit = (department: DepartmentItem) => {
+    setDepartmentName(department.name);
+    setDepartmentCode(department.code);
+    setEditingId(department.uuid);
+  };
+
+  const handleCancelEdit = () => {
+    setDepartmentName("");
+    setDepartmentCode("");
+    setEditingId(null);
+  };
+
+  const handleDelete = (uuid: string) => {
+    if (editingId === uuid) {
+      handleCancelEdit();
+    }
+    setDepartments((prev) => prev.filter((d) => d.uuid !== uuid));
+  };
+
   const handleSubmit = async () => {
     try {
       const eduId = Number(educationId);
- 
+
       if (!eduId || eduId < 1) {
-        alert("Education ID must be 1 or greater");
+        toast.error("Education ID must be 1 or greater");
         return;
       }
- 
+
       if (departments.length === 0) {
-        alert("Add at least one department");
+        toast.error("Add at least one department");
         return;
       }
- 
+
       setLoading(true);
- 
+
       const payload = {
         educationId: eduId,
         departments,
       };
- 
-      console.log("Submitting payload:", payload);
- 
-      const res = await insertEducationDepartments(payload);
-      console.log("Saved:", res);
- 
-      alert("Departments saved successfully");
- 
-      // reset UI only
+
+      await insertEducationDepartments(payload);
+
+      toast.success("Departments saved successfully");
       setDepartments([]);
       setDepartmentName("");
       setDepartmentCode("");
+      setEditingId(null);
     } catch (err: any) {
-      alert(err.message || "Something went wrong");
+      toast.error(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   };
- 
-  /* ================= UI ================= */
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}
@@ -108,7 +136,7 @@ export default function Department() {
           value={educationId}
           onChange={(e: any) => setEducationId(e.target.value)}
         />
- 
+
         <InputField
           label="Department Name"
           name="departmentName"
@@ -117,7 +145,7 @@ export default function Department() {
           onChange={(e: any) => setDepartmentName(e.target.value)}
         />
       </div>
- 
+
       {/* Row 2 */}
       <div className="grid grid-cols-2 gap-[32px] items-end">
         <InputField
@@ -127,33 +155,74 @@ export default function Department() {
           value={departmentCode}
           onChange={(e: any) => setDepartmentCode(e.target.value)}
         />
- 
-        <button
-          type="button"
-          onClick={addDepartment}
-          className="bg-[#49C77F] cursor-pointer text-white h-[42px] rounded-lg font-semibold hover:bg-[#3fb070]"
-        >
-          Add
-        </button>
-      </div>
- 
-      {departments.map((d, i) => (
-        <div
-          key={d.uuid}
-          className="flex justify-between items-center
-                     bg-[#F9FAFB] border border-gray-200
-                     px-4 py-2 rounded-md
-                     text-sm text-gray-900"
-        >
-          <span className="font-semibold">
-            {i + 1}. {d.name}
-          </span>
-          <span className="text-gray-600 text-xs font-mono">
-            {d.code}
-          </span>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleAddOrUpdate}
+            className={`flex-1 cursor-pointer text-white h-[42px] rounded-lg font-semibold transition-colors ${editingId
+                ? "bg-blue-600" 
+                : "bg-[#49C77F]"
+              }`}
+          >
+            {editingId ? "Update" : "Add"}
+          </button>
+
+          {editingId && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="px-4 bg-gray-200 cursor-pointer text-gray-700 h-[42px] rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          )}
         </div>
-      ))}
- 
+      </div>
+
+      <div className="space-y-2 mt-4">
+        {departments.map((d, i) => (
+          <div
+            key={d.uuid}
+            className={`flex justify-between items-center px-4 py-3 rounded-md text-sm text-gray-900 border transition-all ${editingId === d.uuid
+                ? "bg-blue-50 border-blue-300 shadow-sm"
+                : "bg-[#F9FAFB] border-gray-200"
+              }`}
+          >
+            <div className="flex flex-col">
+              <span className="font-semibold text-base">
+                {i + 1}. {d.name}
+              </span>
+              <span className="text-gray-500 text-xs font-mono mt-0.5">
+                Code: {d.code}
+              </span>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2">
+              {/* Edit Button */}
+              <button
+                type="button"
+                onClick={() => handleEdit(d)}
+                className="text-blue-600 cursor-pointer"
+                title="Edit"
+              >
+                <PencilSimpleIcon size={22}/>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDelete(d.uuid)}
+                className="text-red-600  cursor-pointer"
+                title="Delete"
+              >
+                <TrashIcon size={22}/>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="flex justify-center pt-6">
         <button
           onClick={handleSubmit}
@@ -162,8 +231,11 @@ export default function Department() {
              h-[43px] w-[300px]
              rounded-md font-semibold
              flex items-center justify-center
-             hover:bg-[#3fb070]
-      ${loading ? "opacity-60 cursor-not-allowed" : "hover:bg-[#3ab06d] cursor-pointer"}
+             hover:bg-[#3fb070] transition-colors
+      ${loading
+              ? "opacity-60 cursor-not-allowed"
+              : "hover:bg-[#3ab06d] cursor-pointer"
+            }
     `}
         >
           {loading ? "Saving..." : "Save Departments"}

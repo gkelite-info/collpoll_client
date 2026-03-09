@@ -1,15 +1,10 @@
 "use client";
-
-import { Timer } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 import { SubjectDetailsCard } from "./subjectDetails";
 import AddNewCardModal from "./addNewCardModal";
-import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
-import { useUser } from "@/app/utils/context/UserContext";
-import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
-import { supabase } from "@/lib/supabaseClient";
 import { CardProps } from "@/lib/types/faculty";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type FacultySubject = {
   collegeSubjectId: number;
@@ -28,45 +23,45 @@ type SubjectCardProps = {
   subjectProps: CardProps[];
   facultyCtx: any;
 };
+
 export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardProps) {
-  console.log("🟣 SubjectCard received props:", subjectProps);
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-
   const [subjectId, setSubjectId] = useState<number | null>(null);
   const [sectionId, setSectionId] = useState<number | null>(null);
   const [defaultSubjectId, setDefaultSubjectId] = useState<number | null>(null);
-
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [sections, setSections] = useState<any[]>([]);
-
-  const {
-    userId,
-    role,
-    collegeId,
-    loading,
-  } = useUser();
-
-
   const facultySubjects = facultyCtx?.faculty_subject ?? [];
   const facultySections = facultyCtx?.sections ?? [];
-  const [rawCards, setRawCards] = useState<CardProps[]>(subjectProps);
 
-
-  useEffect(() => {
-    console.log("🟢 facultySections:", facultySections);
-  }, [facultySections]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     setSectionId(null);
   }, [subjectId]);
 
+
+
   useEffect(() => {
-    console.log("🔵 cards:", cards);
-  }, [cards]);
+    setCards(subjectProps);
+  }, [subjectProps]);
+
+  useEffect(() => {
+    const subjectIdParam = searchParams.get("subjectId");
+
+    if (subjectIdParam && cards.length > 0) {
+      const found = cards.find(
+        (item) => item.collegeSubjectId === Number(subjectIdParam)
+      );
+
+      if (found) {
+        setSelectedCard(found);
+        setShowDetails(true);
+      }
+    }
+  }, [searchParams, cards]);
 
 
   const handleSaveNewCard = (newCard: CardProps) => {
@@ -78,35 +73,33 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
       <div className="h-screen overflow-x-scroll">
         <SubjectDetailsCard
           details={selectedCard}
-          onBack={() => setShowDetails(false)}
+          onBack={() => {
+            setShowDetails(false);
+            router.push("/faculty/academics");
+          }}
         />
       </div>
     );
   }
 
-  const context = subjectProps[0];
-
   const filteredSections = facultySections.filter((fs: FacultySection) =>
     subjectId ? fs.collegeSubjectId === subjectId : true
   );
 
-  const filteredCards = cards.filter((card: CardProps) => {
-    if (subjectId && card.collegeSubjectId !== subjectId) {
-      return false;
-    }
+  const filteredCards = cards.filter((card: any) => {
+    const cardSubId = card.collegeSubjectId;
+    const cardSecId = card.collegeSectionId;
 
-    if (sectionId && card.collegeSectionId !== sectionId) {
-      return false;
-    }
+    if (subjectId !== null && Number(cardSubId) !== Number(subjectId)) return false;
+    if (sectionId !== null && Number(cardSecId) !== Number(sectionId)) return false;
 
     return true;
   });
+
   return (
     <>
       <div className="flex justify-between items-start">
         <div className="mb-6 flex flex-wrap gap-8">
-
-
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Subject :</p>
             <div className="relative">
@@ -115,24 +108,20 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
                 onChange={(e) =>
                   setSubjectId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+                className="px-3 py-0.5 focus:outline-none bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
               >
                 <option value="">All</option>
-
-                {facultySubjects.map((s: FacultySubject, index: number) => (
-                  <option
-                    key={`${s.collegeSubjectId}-${index}`}
-                    value={s.collegeSubjectId}
-                  >
-                    {s.subjectName}
+                {Array.from(
+                  new Map(subjectProps.map(s => [s.collegeSubjectId, s])).values()
+                ).map((s) => (
+                  <option key={s.collegeSubjectId} value={s.collegeSubjectId}>
+                    {s.subjectTitle}
                   </option>
                 ))}
               </select>
-
               <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
             </div>
           </div>
-
 
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Section :</p>
@@ -142,10 +131,9 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
                 onChange={(e) =>
                   setSectionId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+                className="px-3 py-0.5 bg-[#DCEAE2] focus:outline-none text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
               >
                 <option value="">All</option>
-
                 {filteredSections.map((fs: FacultySection, index: number) => (
                   <option
                     key={`${fs.collegeSectionsId}-${index}`}
@@ -155,11 +143,9 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
                   </option>
                 ))}
               </select>
-
               <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
             </div>
           </div>
-
         </div>
 
         {/* <div className="mb-6 flex flex-wrap gap-8">
@@ -181,13 +167,20 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
             key={index}
             item={item}
             onViewDetails={() => {
-              console.log("➡️ View Details clicked for:", item);
-              setSelectedCard({
-                ...item,
-                collegeSubjectId: item.collegeSubjectId,
-              });
+              setSelectedCard(item);
               setShowDetails(true);
+
+              router.push(`/faculty/academics?subjectId=${item.collegeSubjectId}`, {
+                scroll: false,
+              });
             }}
+          // onViewDetails={() => {
+          //   setSelectedCard({
+          //     ...item,
+          //     collegeSubjectId: item.collegeSubjectId,
+          //   });
+          //   setShowDetails(true);
+          // }}
 
           />
         ))}
@@ -255,12 +248,13 @@ const IndividualCard = ({
   return (
     <div className="bg-white rounded-2xl w-full p-6 flex flex-col shadow-sm border border-gray-100">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-[#282828] font-semibold text-xl">
+        <h3 className="text-[#282828] font-semibold text-xl whitespace-nowrap overflow-x-auto flex-1">
           {item.subjectTitle} – {item.year}
         </h3>
+
         <button
           onClick={onViewDetails}
-          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm"
+          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm shrink-0"
         >
           View Details
         </button>

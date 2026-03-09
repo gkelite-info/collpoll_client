@@ -1,23 +1,21 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { FaChevronDown } from "react-icons/fa6";
 import SubjectCard from "./components/subjectCards";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useState, useEffect, useRef } from "react";
-// import { getFacultySubjects } from "./components/subjectDetails";
 import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextAPI";
-
-import { CircleNotch } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 export default function Academics() {
   const { userId, collegeId } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [subjects, setSubjects] = useState<CardProps[]>([]);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
+  const { facultyId } = useFaculty();
 
   const hasLoadedOnce = useRef(false);
 
@@ -28,7 +26,6 @@ export default function Academics() {
       return;
     }
 
-    // 🔥 IMPORTANT: create narrowed variables
     const safeUserId = userId;
     const safeCollegeId = collegeId;
 
@@ -83,7 +80,8 @@ export default function Academics() {
   }, [userId, collegeId]);
 
   return (
-    <div className="p-2 flex flex-col lg:pb-5">
+    <div className="p-2 flex flex-col h-[calc(100vh-80px)] lg:pb-5">
+
       <div className="flex justify-between items-center mb-5">
         <div className="flex flex-col w-[50%]">
           <h1 className="text-[#282828] font-semibold text-2xl mb-1">
@@ -94,6 +92,7 @@ export default function Academics() {
             your batches.
           </p>
         </div>
+
         <div className="flex justify-end w-[32%]">
           <CourseScheduleCard style="w-[320px]" />
         </div>
@@ -102,20 +101,15 @@ export default function Academics() {
       {pageLoading ? (
         <Loader />
       ) : (
-        <>
-          <div className="mt-4">
-            {subjects.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center mt-10">
-                No classes assigned
-              </p>
-            ) : (
-              <SubjectCard
-                subjectProps={subjects}
-                facultyCtx={facultyCtx}
-              />
-            )}
-          </div>
-        </>
+        <div className="mt-4 flex-1 overflow-y-auto pr-2">
+          {subjects.length === 0 && facultyId ? (
+            <p className="text-sm text-gray-500 text-center mt-10">
+              No classes assigned
+            </p>
+          ) : (
+            <SubjectCard subjectProps={subjects} facultyCtx={facultyCtx} />
+          )}
+        </div>
       )}
     </div>
   );

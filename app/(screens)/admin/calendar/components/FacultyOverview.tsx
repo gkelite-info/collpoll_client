@@ -6,6 +6,8 @@ import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacult
 import { useUser } from "@/app/utils/context/UserContext"
 import { fetchAcademicYears, fetchBranches, fetchEducations, fetchSemesters, fetchSubjects } from "@/lib/helpers/admin/academics/academicDropdowns"
 import toast from "react-hot-toast"
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
+import { useAdmin } from "@/app/utils/context/admin/useAdmin"
 // import { fetchFacultyCalendar } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
 interface Props {
     onSelect: (faculty: any) => void
@@ -15,7 +17,7 @@ interface FacultyUI {
     id: string;
     name: string;
     gender: "Male" | "Female";
-    branch  : string;
+    branch: string;
     subjects: string;
     lastUpdate: string;
     image: string;
@@ -39,26 +41,19 @@ export default function FacultyOverview({ onSelect }: Props) {
     const itemsPerPage = 15;
 
     const { collegeId } = useUser();
+    const { collegeEducationId, collegeEducationType } = useAdmin()
 
-    const getEducationTypes = async (collegeId: number) => {
-        try {
-            const res = await fetchEducations(collegeId);
-            setEducations(res);
-        } catch (error) {
-            toast.error("Failed to fetch education types.");
+    // 🔵 CHANGE: Auto set education from admin context instead of fetching dropdown
+    useEffect(() => {
+        if (collegeEducationId) {
+            setEducationId(collegeEducationId);
         }
-    }
+    }, [collegeEducationId]);
 
     useEffect(() => {
-        if (collegeId) {
-            getEducationTypes(collegeId);
-        }
-    }, [collegeId]);
+        if (!collegeId || !collegeEducationId) return;
 
-    useEffect(() => {
-        if (!collegeId || !educationId) return;
-
-        fetchBranches(collegeId, educationId)
+        fetchBranches(collegeId, collegeEducationId)
             .then(setBranches)
             .catch(() => toast.error("Failed to load branches"));
     }, [collegeId, educationId]);
@@ -83,24 +78,24 @@ export default function FacultyOverview({ onSelect }: Props) {
     useEffect(() => {
         if (
             !collegeId ||
-            !educationId ||
+            !collegeEducationId ||
             !branchId ||
             !academicYearId ||
             !semesterId
         ) return;
 
-        fetchSubjects(collegeId, educationId, branchId, academicYearId, semesterId)
+        fetchSubjects(collegeId, collegeEducationId, branchId, academicYearId, semesterId)
             .then(setSubjects)
             .catch(() => toast.error("Failed to load subjects"));
     }, [collegeId, educationId, branchId, academicYearId, semesterId]);
 
     const loadFaculty = async () => {
-        if (!collegeId) return
+        if (!collegeId || !collegeEducationId) return
         setLoading(true);
         try {
             const data = await fetchFilteredFaculties({
                 collegeId,
-                collegeEducationId: educationId ?? undefined,
+                collegeEducationId: collegeEducationId ?? undefined,
                 collegeBranchId: branchId ?? undefined,
                 collegeAcademicYearId: academicYearId ?? undefined,
                 collegeSubjectId: subjectId ?? undefined,
@@ -158,30 +153,12 @@ export default function FacultyOverview({ onSelect }: Props) {
             <section className="bg-white rounded-xl p-4 flex gap-4 mb-6">
                 <div className="flex-1">
                     <label className="text-xs text-[#282828]">Education Type</label>
-                    <select
-                        value={educationId ?? "All"}
-                        onChange={(e) => {
-                            const val = e.target.value;
-                            setEducationId(val === "All" ? null : Number(val));
-                            setBranchId(null);
-                            setAcademicYearId(null);
-                            setSubjectId(null);
-                            setBranches([]);
-                            setAcademicYears([]);
-                            setSubjects([]);
-                        }}
-                        className="w-full mt-1 outline-none cursor-pointer border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm"
-                    >
-                        <option value="All">All</option>
-                        {educations.map((e) => (
-                            <option
-                                key={e.collegeEducationId}
-                                value={e.collegeEducationId}
-                            >
-                                {e.collegeEducationType}
-                            </option>
-                        ))}
-                    </select>
+                    <input
+                        type="text"
+                        value={collegeEducationType || ""}
+                        disabled
+                        className="w-full mt-1 outline-none border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 text-sm bg-gray-100 cursor-not-allowed"
+                    />
                 </div>
 
                 <div className="flex-1">
@@ -295,7 +272,7 @@ export default function FacultyOverview({ onSelect }: Props) {
 
             {loading && (
                 <div className="flex items-center justify-center min-h-[60vh] w-full -mt-20">
-                    <p className="text-sm text-gray-500">Loading...</p>
+                    <Loader />
                 </div>
             )}
 

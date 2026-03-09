@@ -19,7 +19,6 @@ export async function getFacultySubjects(params: {
     sectionIds,
   } = params;
 
-  // ✅ SUBJECTS QUERY (NO JOIN HERE)
   const { data: subjects, error: subjectErr } = await supabase
     .from("college_subjects")
     .select(`
@@ -29,7 +28,13 @@ export async function getFacultySubjects(params: {
       collegeBranchId,
       collegeAcademicYearId,
       collegeSemesterId,
-      collegeId
+      collegeId,
+      college_academic_year(
+      collegeAcademicYear
+      ),
+      college_semester(
+      collegeSemester
+      )
     `)
     .eq("collegeId", collegeId)
     .in("collegeSubjectId", subjectIds)
@@ -38,9 +43,8 @@ export async function getFacultySubjects(params: {
 
   if (subjectErr) throw subjectErr;
 
-  // ✅ FETCH FACULTY SECTION MAPPING SEPARATELY
-  const { data: facultySections } = await supabase
-    .from("faculty_subjects")
+  const { data: facultySections, error: fsErr } = await supabase
+    .from("faculty_sections")
     .select(`
       collegeSubjectId,
       collegeSectionsId,
@@ -48,9 +52,10 @@ export async function getFacultySubjects(params: {
         collegeSections
       )
     `)
-    .eq("collegeId", collegeId)
     .in("collegeSubjectId", subjectIds)
     .in("collegeSectionsId", sectionIds);
+
+  if (fsErr) console.error("Error fetching faculty_sections:", fsErr);
 
   const { data: units, error: unitErr } = await supabase
     .from("college_subject_units")
@@ -97,7 +102,6 @@ export async function getFacultySubjects(params: {
         (u) => u.collegeSubjectId === s.collegeSubjectId
       );
 
-      // ✅ CORRECT SECTION ATTACHMENT
       const sectionRow = facultySections?.find(
         (fs) => fs.collegeSubjectId === s.collegeSubjectId
       );
@@ -145,34 +149,46 @@ export async function getFacultySubjects(params: {
       const fromDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.min(
-                ...subjectUnitDates.map((u) =>
-                  new Date(u.startDate).getTime()
-                )
+            Math.min(
+              ...subjectUnitDates.map((u) =>
+                new Date(u.startDate).getTime()
               )
-            ).toLocaleDateString("en-GB")
+            )
+          ).toLocaleDateString("en-GB")
           : "-";
 
       const toDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.max(
-                ...subjectUnitDates.map((u) =>
-                  new Date(u.endDate).getTime()
-                )
+            Math.max(
+              ...subjectUnitDates.map((u) =>
+                new Date(u.endDate).getTime()
               )
-            ).toLocaleDateString("en-GB")
+            )
+          ).toLocaleDateString("en-GB")
           : "-";
 
       const subjectPercentage =
         subjectUnits.length === 0
           ? 0
           : Math.round(
-              subjectUnits.reduce(
-                (sum, u) => sum + (u.completionPercentage ?? 0),
-                0
-              ) / subjectUnits.length
-            );
+            subjectUnits.reduce(
+              (sum, u) => sum + (u.completionPercentage ?? 0),
+              0
+            ) / subjectUnits.length
+          );
+
+      const joinedYear = Array.isArray(s.college_academic_year)
+        ? s.college_academic_year[0]
+        : s.college_academic_year;
+
+      const yearName = joinedYear?.collegeAcademicYear || `Year ${s.collegeAcademicYearId}`;
+
+      const semData = Array.isArray(s.college_semester) ? s.college_semester[0] : s.college_semester;
+
+      const semesterDisplay = semData?.collegeSemester
+        ? `Sem ${semData.collegeSemester}`
+        : "-";
 
       const students = await getStudentCountForAcademics({
         collegeId: collegeId,
@@ -190,8 +206,8 @@ export async function getFacultySubjects(params: {
         collegeSectionId,
         sectionName,
         subjectTitle: s.subjectName,
-        semester: `Sem ${s.collegeSemesterId}`,
-        year: `Year ${s.collegeAcademicYearId}`,
+        semester: semesterDisplay,
+        year: yearName,
         units: unitsCount,
         topicsCovered,
         topicsTotal: subjectTopics.length,

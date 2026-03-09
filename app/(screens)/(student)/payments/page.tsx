@@ -5,17 +5,15 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import AcademicFees from "./components/academicFees";
 import AdditionalDues from "./components/additionalDues";
 import History from "./components/history";
-import PaymentConfirm, { FeePlan } from "./components/paymentConfirm"; // 🔥 Import
+import PaymentConfirm, { FeePlan } from "./components/paymentConfirm";
 import { useEffect, useState } from "react";
 import ProfileCard from "./components/profileCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStudentProfileCardData } from "@/lib/helpers/student/payments/fetchStudentProfileCardData";
 import PaymentsSkeleton from "./shimmer/PaymentsSkeleton";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
-import {
-  FeeSummaryItem,
-  fetchStudentPaymentHistory,
-} from "@/lib/helpers/student/payments/fetchStudentPaymentHistory";
+import { FeeSummaryItem } from "@/lib/helpers/student/payments/fetchStudentPaymentHistory";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 const Page = () => {
   const [activeTab, setActiveTab] = useState<
@@ -26,7 +24,6 @@ const Page = () => {
   const [profile, setProfile] = useState<any>(null);
   const [feePlan, setFeePlan] = useState<FeePlan | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [isPaymentMode, setIsPaymentMode] = useState(false);
   const [paymentSummary, setPaymentSummary] = useState<FeeSummaryItem[]>([]);
 
@@ -69,20 +66,6 @@ const Page = () => {
     return <PaymentsSkeleton />;
   }
 
-  // const displayPlan: FeePlan = feePlan || {
-  //   programName: "No Active Plan",
-  //   type: "Academic Fees",
-  //   academicYear: "-",
-  //   openingBalance: 0,
-  //   components: [],
-  //   gstAmount: 0,
-  //   gstPercent: 0,
-  //   applicableFees: 0,
-  //   scholarship: 0,
-  //   totalPayable: 0,
-  //   paidTillNow: 0,
-  //   pendingAmount: 0,
-  // };
   const displayPlan: FeePlan = feePlan || {
     studentFeeObligationId: 0,
     collegeSemesterId: 0,
@@ -141,21 +124,18 @@ const Page = () => {
           />
         </div>
       ) : (
-        // Render Standard Tabs Container
         <div className="bg-white shadow-sm rounded-xl p-8 font-sans min-h-[600px] mt-6">
           <div className="max-w-7xl mx-auto">
-            {/* Tab Switcher */}
             <div className="flex justify-center mb-10">
               <div className="relative flex items-center bg-gray-100/80 backdrop-blur-xl border border-white/50 p-1.5 rounded-full shadow-[inset_0_2px_6px_rgba(0,0,0,0.06)]">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`relative z-10 cursor-pointer px-6 py-2 text-sm font-semibold transition-colors duration-300 ${
-                      activeTab === tab.id
+                    className={`relative z-10 cursor-pointer px-6 py-2 text-sm font-semibold transition-colors duration-300 ${activeTab === tab.id
                         ? "text-white delay-100"
                         : "text-gray-500 hover:text-gray-700"
-                    }`}
+                      }`}
                   >
                     <span className="relative z-10">{tab.label}</span>
                     {activeTab === tab.id && (
