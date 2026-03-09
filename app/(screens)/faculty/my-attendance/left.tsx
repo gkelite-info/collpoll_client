@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import AttendancePage from "./components/attendancePage";
+import AttendanceAnalyticsPage from "./components/AttendanceAnalyticsPage";
 
 const MyAttendanceLeft = () => {
   const [activeMainTab, setActiveMainTab] = useState<
@@ -25,7 +27,7 @@ const MyAttendanceLeft = () => {
   ];
 
   return (
-    <div className="w-full flex-1 font-sans min-h-[600px] pt-4 px-6">
+    <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-6">
       <div className="flex justify-center mb-8 w-full">
         <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
           {mainTabs.map((tab) => (
@@ -57,8 +59,8 @@ const MyAttendanceLeft = () => {
 
       <div className="transition-opacity duration-300 mt-4">
         {activeMainTab === "attendance" && (
-          <div className="p-6 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-xl w-full">
-            Attendance Content
+          <div className=" w-full">
+            <AttendancePage />
           </div>
         )}
 
@@ -101,8 +103,8 @@ const MyAttendanceLeft = () => {
         )}
 
         {activeMainTab === "analytics" && (
-          <div className="p-6 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-xl w-full">
-            Attendance Analytics Content
+          <div className="w-full">
+            <AttendanceAnalyticsPage />
           </div>
         )}
       </div>
