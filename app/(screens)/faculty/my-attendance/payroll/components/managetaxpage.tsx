@@ -14,15 +14,12 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
  function ManageTaxPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-
-    // Route handling
     const mainParam = searchParams.get("main") || "payroll";
     const subParam = searchParams.get("sub") || "manageTax";
     const viewParam = (searchParams.get("taxView") as "declaration" | "forms" | "taxFiling" | "taxSaving") || "declaration";
 
     const [activeTab, setActiveTab] = useState(viewParam);
 
-    // Sync state with URL
     useEffect(() => {
         if (viewParam !== activeTab) {
             setActiveTab(viewParam);
@@ -37,8 +34,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
     return (
         <div className="w-full max-w-5xl mx-auto flex flex-col h-[600px] text-left">
-
-            {/* Sub-Navigation Tabs */}
             <div className="flex-shrink-0 text-[14px] font-bold mb-6">
                 {["declaration", "forms", "taxFiling", "taxSaving"].map((tab, index) => (
                     <React.Fragment key={tab}>
@@ -54,8 +49,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-6">
-
-                {/* --- 1. DECLARATION SCREEN --- */}
                 {activeTab === "declaration" && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
                         <div className="flex flex-col gap-4">
@@ -94,24 +87,18 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                         </div>
                     </div>
                 )}
-
-                {/* --- 2. FORMS SCREEN --- */}
                 {activeTab === "forms" && (
                     <div className="flex flex-col gap-4">
-
-                        {/* Form 16 Card */}
                         <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 16</h3>
                                 <div className="flex gap-2">
-                                    {/* Styled Dropdown */}
                                     <div className="relative flex items-center">
                                         <select className="appearance-none bg-[#43C17A] text-white text-[11px] font-bold pl-3 pr-8 py-1.5 rounded-md outline-none cursor-pointer">
                                             <option>APR 2024 - MAR 2025</option>
                                         </select>
                                         <CaretDown size={14} weight="bold" className="absolute right-2 text-white pointer-events-none" />
                                     </div>
-                                    {/* Download Button */}
                                     <button className="bg-[#43C17A] text-white text-[11px] font-bold px-4 py-1.5 rounded-md flex items-center gap-1.5 hover:bg-[#3aa869] transition-colors">
                                         Download <DownloadSimple size={14} weight="bold" />
                                     </button>
@@ -120,8 +107,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                             <p className="text-[#1F2937] text-base mb-8 leading-relaxed">
                                 Form 16 Summarizes your salary, deductions and tax paid and is needed for filing tax returns.
                             </p>
-
-                            {/* Empty State with FileMagnifyingGlass */}
                             <div className="flex flex-col items-center justify-center py-6 text-center border-t border-gray-50 mt-4">
                                 <div className="text-gray-300 mb-4 opacity-50">
                                     <FileMagnifyingGlass size={80} weight="light" />
@@ -134,8 +119,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                                 </button>
                             </div>
                         </div>
-
-                        {/* Form 12 BB Card */}
                         <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 12 BB</h3>
@@ -158,32 +141,21 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
                     </div>
                 )}
-                {/* --- 3. TAX FILING SCREEN --- */}
                 {activeTab === "taxFiling" && (
                     <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
-
-                        {/* Heading */}
                         <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
                             Tax Filing
                         </h3>
-
-                        {/* Description */}
                         <p className="text-[#1F2937] text-base mb-6">
                             E-file your income tax returns easily through trusted HRMS Partners.
                         </p>
-
-                        {/* Due Date Box */}
                         <div className="border border-gray-400 rounded-md px-4 py-3 mb-6 w-fit bg-white">
                             <p className="text-[1F2937] text-base border-[#5E5E5E]">
                                 Filing due date for FY 2024-25 (AY 2025-26) is{" "}
                                 <span className="text-base">September 15, 2025</span>
                             </p>
                         </div>
-
-                        {/* Main Container */}
                         <div className="border border-gray-300 rounded-md p-6 bg-white">
-
-                            {/* GK Choice */}
                             <h4 className="text-[#1F2937] font-semibold text-lg mb-2">
                                 GK's Choice
                             </h4>
@@ -194,8 +166,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                                 Form 16, deductions, and investment details directly from your HRMS
                                 portal — making filing accurate and hassle-free.
                             </p>
-
-                            {/* Why Choose */}
                             <div className="mb-6">
                                 <h5 className="text-[#1F2937] font-semibold text-base mb-3">
                                     Why Choose GK :
@@ -220,8 +190,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                                     ))}
                                 </ul>
                             </div>
-
-                            {/* How to File */}
                             <div>
                                 <h5 className="text-[#1F2937] font-semibold text-base mb-3">
                                     How to File Via Smart Tax
@@ -237,12 +205,8 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                         </div>
                     </div>
                 )}
-                {/* --- 4. TAX SAVING INVESTMENT SCREEN --- */}
-                {/* --- TAX SAVING INVESTMENT SCREEN --- */}
                 {activeTab === "taxSaving" && (
                     <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm flex flex-col gap-6">
-
-                        {/* Heading */}
                         <div>
                             <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
                                 Tax Saving Investment
@@ -252,8 +216,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                                 Grow your savings smartly while reducing your taxable income.
                             </p>
                         </div>
-
-                        {/* FIRST CARD */}
                         <div className="border border-black rounded-md p-6 bg-white">
                             <h4 className="text-[#1F2937] font-semibold text-base mb-4">
                                 Wondering how to save tax and build wealth together?
@@ -275,8 +237,6 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                                 ))}
                             </ul>
                         </div>
-
-                        {/* SECOND CARD */}
                         <div className="border border-black rounded-md p-6 bg-white">
                             <h4 className="text-[#1F2937] font-semibold text-base mb-4">
                                 Grow Your Financial Wellness

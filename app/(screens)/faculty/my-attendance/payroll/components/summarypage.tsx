@@ -1,7 +1,6 @@
-// app/(screens)/faculty/my-attendance/payroll/summarypage.tsx
+
 import React from 'react';
 
-// Adjusted width to 180px to pull the values closer to the labels
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <div className="flex items-start py-1.5 text-[14px] text-left w-full">
     <span className="w-[140px] sm:w-[180px] font-semibold text-[#333333] shrink-0 pr-2">
@@ -14,8 +13,6 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 export default function SummaryPage() {
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
-      
-      {/* --- Card 1: Profile Summary --- */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
           <img 
@@ -35,14 +32,13 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* --- Card 2: Payment Information --- */}
+
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 pb-4 border-b border-gray-100 text-left">
           Payment Information
         </h2>
         
         <div className="mb-5">
-          {/* Removed space before colon */}
           <InfoRow label="Salary Payment Mode:" value="Bank Transfer" />
         </div>
         
@@ -57,7 +53,6 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* --- Card 3: Identity Information (Aadhar) --- */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 text-left">Identity Information</h2>
         <h3 className="text-[15px] font-bold text-gray-800 mb-3 text-left">Photo ID</h3>
@@ -79,8 +74,6 @@ export default function SummaryPage() {
           <InfoRow label="Gender:" value="Female" />
         </div>
       </div>
-
-      {/* --- Card 4: Identity Information (PAN) --- */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex items-center justify-start space-x-2.5 mb-5 mt-1">
           <img src="/india.png" alt="Flag of India" className="h-[14px] w-auto object-contain rounded-[1px]" />

@@ -22,8 +22,6 @@ export default function PayrollPage() {
 
   return (
     <div className="w-full">
-
-      {/* Tab Navigation */}
       <div className="flex justify-center space-x-12 border-b border-gray-20  max-w-4xl mx-auto">
 
         <button
@@ -56,7 +54,6 @@ export default function PayrollPage() {
 
       </div>
 
-      {/* Conditional Rendering */}
       <div className="mt-6">
         {activeTab === 'summary' && <SummaryPage />}
         {activeTab === 'my-pay' && <MyPayPage />}
