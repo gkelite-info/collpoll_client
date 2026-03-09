@@ -1,8 +1,6 @@
 "use client";
-
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { CaretDown, Funnel } from "@phosphor-icons/react";
 import FeeStructureCard from "./components/FeeStructureCard";
 import AddFeeHeader from "./components/Header";
 import CreateFee from "./create-fee";
@@ -62,7 +60,6 @@ function FeeContent() {
     return ["All", ...Array.from(years)];
   }, [feeStructures]);
 
-  // Automatically filter out the deleted item to update UI instantly
   const handleDeleteSuccess = (deletedId: number) => {
     setFeeStructures((prev) =>
       prev.filter((s) => s.feeStructureId !== deletedId),
@@ -93,7 +90,7 @@ function FeeContent() {
             key={group?.[0]?.branchId || index}
             structures={group}
             collegeName={collegeDetails?.collegeName}
-            onDeleteSuccess={handleDeleteSuccess} // Pass the callback here
+            onDeleteSuccess={handleDeleteSuccess}
           />
         ))}
       </div>

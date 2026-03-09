@@ -2,15 +2,18 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function getOrCreateCollegeSession(
   collegeId: number,
+  collegeEducationId: number,
+  collegeBranchId: number,
   startYear: number,
   endYear: number,
 ) {
-  // 1. Check if session already exists
   const { data: existing } = await supabase
     .from("college_session")
     .select("collegeSessionId")
     .match({
       collegeId,
+      collegeEducationId,
+      collegeBranchId,
       startYear,
       endYear,
     })
@@ -20,7 +23,6 @@ export async function getOrCreateCollegeSession(
     return { success: true, collegeSessionId: existing.collegeSessionId };
   }
 
-  // 2. Create new session if not found
   const sessionName = `${startYear}-${endYear}`;
   const now = new Date().toISOString();
 
@@ -28,6 +30,8 @@ export async function getOrCreateCollegeSession(
     .from("college_session")
     .insert({
       collegeId,
+      collegeEducationId,
+      collegeBranchId,
       sessionName,
       startYear,
       endYear,

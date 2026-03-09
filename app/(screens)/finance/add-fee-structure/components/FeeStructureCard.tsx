@@ -1,21 +1,17 @@
 "use client";
 
 import { downloadFeePdf } from "@/lib/helpers/finance/downloadFeePdf";
-import {
-  CaretDown,
-  DownloadSimple,
-  Pencil,
-  Trash,
-} from "@phosphor-icons/react";
+import { CaretDown, DownloadSimple, Pencil, Trash } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
 interface FeeStructureCardProps {
   structures?: any[];
   collegeName?: string;
-  onDeleteSuccess?: (deletedId: number) => void; // New callback prop
+  onDeleteSuccess?: (deletedId: number) => void;
 }
 
 export default function FeeStructureCard({
@@ -28,9 +24,9 @@ export default function FeeStructureCard({
   const [selectedId, setSelectedId] = useState(structures?.[0]?.feeStructureId);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // States for Delete Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { collegeEducationType } = useFinanceManager();
 
   const getSessionLabel = (struct: any) => {
     return (
@@ -45,6 +41,7 @@ export default function FeeStructureCard({
       const parts = session
         .split(/[-–]/)
         .map((year) => parseInt(year.trim(), 10));
+
       if (
         parts.length === 2 &&
         !isNaN(parts[0]) &&
@@ -52,17 +49,21 @@ export default function FeeStructureCard({
         parts[1] > parts[0]
       ) {
         const years = parts[1] - parts[0];
-        const semesters = years * 2;
-
         const yearLabel = years === 1 ? "Year" : "Years";
-        const semLabel = semesters === 1 ? "Semester" : "Semesters";
 
+        if (collegeEducationType === "Inter") {
+          return `${years} ${yearLabel}`;
+        }
+
+        const semesters = years * 2;
+        const semLabel = semesters === 1 ? "Semester" : "Semesters";
         return `${years} ${yearLabel} (${semesters} ${semLabel})`;
       }
     } catch (e) {
       console.error("Invalid session format", e);
     }
-    return "4 Years (8 Semesters)";
+
+    return collegeEducationType === "Inter" ? "2 Years" : "4 Years (8 Semesters)";
   };
 
   const currentData = useMemo(() => {
@@ -111,7 +112,6 @@ export default function FeeStructureCard({
     router.push(`?${params.toString()}`);
   };
 
-  // Immediate UI reflection logic
   const handleDelete = async () => {
     if (!currentData) return;
     setIsDeleting(true);
@@ -197,7 +197,7 @@ export default function FeeStructureCard({
                     Academic Session: {getSessionLabel(currentData)}
                   </h3>
                   <p className="text-lg text-[#282828]">
-                    Branch : {currentData.branchName}
+                    {collegeEducationType === "Inter" ? "Group" : "Branch"} : {currentData.branchName}
                   </p>
                 </div>
               </div>
@@ -206,7 +206,7 @@ export default function FeeStructureCard({
                 <div className="relative">
                   <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="flex items-center gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md hover:bg-[#2a3f70] transition-colors"
+                    className="flex items-center cursor-pointer gap-1 bg-[#1F2F56] text-white text-sm px-3 py-1 rounded-md transition-colors"
                   >
                     {getSessionLabel(currentData)}
                     <CaretDown size={14} />
@@ -226,12 +226,11 @@ export default function FeeStructureCard({
                               setSelectedId(struct.feeStructureId);
                               setIsDropdownOpen(false);
                             }}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 
-                                ${
-                                  selectedId === struct.feeStructureId
-                                    ? "font-bold text-[#43C17A] bg-green-50"
-                                    : "text-gray-700"
-                                }
+                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 cursor-pointer 
+                                ${selectedId === struct.feeStructureId
+                                ? "font-bold text-[#43C17A] bg-green-50"
+                                : "text-gray-700"
+                              }
                             `}
                           >
                             {getSessionLabel(struct)}
