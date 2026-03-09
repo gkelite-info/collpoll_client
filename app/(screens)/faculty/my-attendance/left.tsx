@@ -1,6 +1,6 @@
 "use client";
  
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import SummaryPage from "./payroll/components/summarypage";
@@ -8,6 +8,7 @@ import MyPayPage from "./payroll/components/mypaypage";
 import ManageTaxPage from "./payroll/components/managetaxpage";
 import AttendancePage from "./components/attendancePage";
 import AttendanceAnalyticsPage from "./components/AttendanceAnalyticsPage";
+import { Loader } from "../../(student)/calendar/right/timetable";
  
 const MyAttendanceLeft = () => {
   const router = useRouter();
@@ -137,4 +138,11 @@ const MyAttendanceLeft = () => {
   );
 };
 
-export default MyAttendanceLeft;
+export default function Page() {
+    return (
+        <Suspense fallback={<div className="p-6 text-sm "> <Loader /> </div>}>
+            < MyAttendanceLeft/>
+        </Suspense>
+    );
+
+  }

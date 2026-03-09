@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
-export default function MyPayPage() {
+ function MyPayPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -235,3 +236,12 @@ export default function MyPayPage() {
     </div>
   );
 }
+
+export default function Page() {
+    return (
+        <Suspense fallback={<div className="p-6 text-sm "> <Loader /> </div>}>
+            <MyPayPage />
+        </Suspense>
+    );
+
+  }

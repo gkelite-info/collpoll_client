@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     CaretDown,
@@ -9,8 +9,9 @@ import {
     CheckCircle,
     ArrowRight
 } from "@phosphor-icons/react";
+import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
-export default function ManageTaxPage() {
+ function ManageTaxPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -301,4 +302,13 @@ export default function ManageTaxPage() {
             </div>
         </div>
     );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={<div className="p-6 text-sm "> <Loader /> </div>}>
+            <ManageTaxPage />
+        </Suspense>
+    );
+
 }
