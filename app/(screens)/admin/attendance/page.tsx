@@ -620,7 +620,7 @@ const AttendancePage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div><Loader/></div>}>
       <AttendancePage />
     </Suspense>
   );
