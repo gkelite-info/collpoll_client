@@ -1,10 +1,10 @@
 "use client"
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard"
 import FacultyCard from "./FacultyCard"
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
 import { useUser } from "@/app/utils/context/UserContext"
-import { fetchAcademicYears, fetchBranches, fetchEducations, fetchSemesters, fetchSubjects } from "@/lib/helpers/admin/academics/academicDropdowns"
+import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects } from "@/lib/helpers/admin/academics/academicDropdowns"
 import toast from "react-hot-toast"
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
@@ -31,19 +31,18 @@ export default function FacultyOverview({ onSelect }: Props) {
     const [branchId, setBranchId] = useState<number | null>(null);
     const [academicYearId, setAcademicYearId] = useState<number | null>(null);
     const [subjectId, setSubjectId] = useState<number | null>(null);
-    const [educations, setEducations] = useState<any[]>([]);
     const [branches, setBranches] = useState<any[]>([]);
     const [academicYears, setAcademicYears] = useState<any[]>([]);
     const [subjects, setSubjects] = useState<any[]>([]);
     const [semesterId, setSemesterId] = useState<number | null>(null);
     const [semesters, setSemesters] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalCount, setTotalCount] = useState(0);
     const itemsPerPage = 15;
 
     const { collegeId } = useUser();
     const { collegeEducationId, collegeEducationType } = useAdmin()
 
-    // 🔵 CHANGE: Auto set education from admin context instead of fetching dropdown
     useEffect(() => {
         if (collegeEducationId) {
             setEducationId(collegeEducationId);
@@ -61,7 +60,6 @@ export default function FacultyOverview({ onSelect }: Props) {
 
     useEffect(() => {
         if (!collegeId || !educationId || !branchId) return;
-
         fetchAcademicYears(collegeId, educationId, branchId)
             .then(setAcademicYears)
             .catch(() => toast.error("Failed to load academic years"));
@@ -87,18 +85,20 @@ export default function FacultyOverview({ onSelect }: Props) {
         fetchSubjects(collegeId, collegeEducationId, branchId, academicYearId, semesterId)
             .then(setSubjects)
             .catch(() => toast.error("Failed to load subjects"));
-    }, [collegeId, educationId, branchId, academicYearId, semesterId]);
+    }, [collegeId, educationId, branchId, academicYearId, semesterId, currentPage]);
 
     const loadFaculty = async () => {
         if (!collegeId || !collegeEducationId) return
         setLoading(true);
         try {
-            const data = await fetchFilteredFaculties({
+            const { data, total } = await fetchFilteredFaculties({
                 collegeId,
                 collegeEducationId: collegeEducationId ?? undefined,
                 collegeBranchId: branchId ?? undefined,
                 collegeAcademicYearId: academicYearId ?? undefined,
                 collegeSubjectId: subjectId ?? undefined,
+                page: currentPage,
+                limit: itemsPerPage
             });
 
             // const enriched: FacultyUI[] = data.map(f => ({
@@ -109,6 +109,7 @@ export default function FacultyOverview({ onSelect }: Props) {
             // }));
 
             setFacultyList(data);
+            setTotalCount(total);
 
             // setFacultyList(enriched);
         } catch (error) {
@@ -118,12 +119,8 @@ export default function FacultyOverview({ onSelect }: Props) {
         }
     };
 
-    const totalPages = Math.ceil(facultyList.length / itemsPerPage);
-
-    const paginatedFaculty = facultyList.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+    const totalPages = Math.ceil(totalCount  / itemsPerPage);
+    const paginatedFaculty = facultyList
 
     useEffect(() => {
         loadFaculty();

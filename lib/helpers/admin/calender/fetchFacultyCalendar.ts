@@ -85,9 +85,16 @@ type FacultyFilterParams = {
     collegeBranchId?: number;
     collegeAcademicYearId?: number;
     collegeSubjectId?: number;
+    page?: number;
+    limit?: number;
 };
 
 export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
+    const page = filters.page ?? 1;
+    const limit = filters.limit ?? 15;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
         .from("faculty_sections")
         .select(`
@@ -112,8 +119,9 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
     branch:collegeBranchId (
       collegeBranchCode
     )
-  )
-    `)
+  )`,
+        { count: "exact" }
+)
         .eq("isActive", true)
         .eq("faculty.collegeId", filters.collegeId);
 
@@ -133,10 +141,12 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
         query = query.eq("faculty.collegeEducationId", filters.collegeEducationId);
     }
 
-    const { data, error } = await query;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
     if (error) {
         console.error("Faculty filter error:", error);
-        return [];
+        return {data: [], total: 0};
     }
 
     const facultyMap = new Map<number, any>();
@@ -172,8 +182,13 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
 
     });
 
-    return Array.from(facultyMap.values()).map(f => ({
+    const result = Array.from(facultyMap.values()).map(f => ({
         ...f,
         subjects: Array.from(new Set(f.subjects)).join(", "),
     }));
+
+    return {
+        data: result,
+        total: count ?? 0,
+    };
 }

@@ -1,7 +1,7 @@
 'use client'
 import { Suspense } from "react";
 import { Loader } from "../../(student)/calendar/right/timetable";
-import AdminMeetingsPage from "./adminMeetings";
+import AdminMeetingsPage from "./hrMeetings";
 
 export default function FacultyMeetings() {
     return (

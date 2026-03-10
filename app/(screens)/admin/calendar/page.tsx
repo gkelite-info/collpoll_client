@@ -28,12 +28,12 @@ function PageContent() {
       if (!collegeId || !collegeEducationId) return
 
       try {
-        const data = await fetchFilteredFaculties({
+        const {data} = await fetchFilteredFaculties({
           collegeId,
           collegeEducationId,
         })
 
-        const faculty = data.find((f) => f.id === facultyId)
+        const faculty = data.find((f: any) => f.id === facultyId)
         if (faculty) {
           setSelectedFaculty(faculty)
         } else {
