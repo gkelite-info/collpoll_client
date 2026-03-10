@@ -11,6 +11,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 import { useParent } from "@/app/utils/context/parent/useParent";
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 
 
 export default function Header() {
@@ -26,6 +27,7 @@ export default function Header() {
   const { fullName, role, collegeEducationType, collegeBranchCode, studentId, facultyId, adminId } = useUser();
   const { financeManagerId } = useFinanceManager();
   const { collegeAdminId } = useCollegeAdmin();
+  const { collegeHrId } = useCollegeHr()
   const { parentId } = useParent();
 
   function openPDFModal() {
@@ -170,6 +172,12 @@ export default function Header() {
                   <>
                     <p>{role}</p>
                     <p>ID - <span>{parentId}</span></p>
+                  </>
+                )}
+                {role === "CollegeHr" && (
+                  <>
+                    <p>{role}</p>
+                    <p>ID - <span>{collegeHrId}</span></p>
                   </>
                 )}
                 {["SuperAdmin"].includes(role as string) && (
