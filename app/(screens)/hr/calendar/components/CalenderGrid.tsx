@@ -174,7 +174,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[400px] 2xl:h-[700px]">
+    <div className="bg-white shadow-sm overflow-y-auto flex flex-col relative -mt-2 lg:h-[400px] xl:h-[560px]">
       <div className="flex border-b border-gray-400 bg-white min-h-[60px]">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 z-10">
 
