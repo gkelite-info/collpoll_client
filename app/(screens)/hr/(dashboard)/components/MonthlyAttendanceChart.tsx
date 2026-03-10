@@ -1,14 +1,12 @@
-import React from "react";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
 } from "recharts";
-import { CaretRight } from "@phosphor-icons/react";
 
 export interface ChartData {
   month: string;
@@ -18,14 +16,18 @@ export interface ChartData {
 interface Props {
   title: string;
   data: ChartData[];
+  onBarClick?: (month: string) => void;
 }
 
-export default function MonthlyAttendanceChart({ title, data }: Props) {
+export default function MonthlyAttendanceChart({
+  title,
+  data,
+  onBarClick,
+}: Props) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 w-full">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-[#282828] font-medium text-[15px]">{title}</h3>
-        <CaretRight size={18} className="text-gray-500 cursor-pointer" />
       </div>
 
       <div className="h-[200px] w-full">
@@ -58,16 +60,26 @@ export default function MonthlyAttendanceChart({ title, data }: Props) {
             />
             <Tooltip
               cursor={{ fill: "transparent" }}
-              labelStyle={{
-                color: "gray",
-              }}
+              labelStyle={{ color: "gray" }}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             />
-            <Bar dataKey="value" barSize={32} radius={[4, 4, 0, 0]}>
+            <Bar
+              dataKey="value"
+              barSize={32}
+              radius={[4, 4, 0, 0]}
+              cursor="pointer"
+              activeBar={{ fillOpacity: 0.7 }}
+              onClick={(data: any) => {
+                const clickedMonth = data?.payload?.month || data?.month;
+                if (onBarClick && clickedMonth) {
+                  onBarClick(clickedMonth);
+                }
+              }}
+            >
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill="url(#greenGradient)" />
               ))}
