@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import NewMeetingCard from "./components/NewMeetingCard";
+import CreateMeetingModal from "./modal/CreateMeetingModal";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Hr';
@@ -60,6 +61,28 @@ export default function MeetingsPage() {
     const currentCategory = 'Student';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
+<<<<<<< Updated upstream
+=======
+    // 1. Logic to check if the modal should be open based on the URL
+    const isCreateModalOpen = searchParams.get('create') === 'true';
+
+    // 2. Function to open the modal by adding ?create=true to the URL
+    const openCreateModal = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('create', 'true');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    // 3. Function to close the modal by removing the params from the URL
+    const closeCreateModal = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('create');
+        params.delete('selectRole'); // Also clean up the sub-modal state
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+
+>>>>>>> Stashed changes
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
         setPage(1)
@@ -145,6 +168,7 @@ export default function MeetingsPage() {
                         View and join meetings scheduled by the Tekton Campus team
                     </p>
                 </div>
+<<<<<<< Updated upstream
                 <div className='w-[320px]'>
                     <CourseScheduleCard isVisibile={false} />
                 </div>
@@ -243,5 +267,118 @@ export default function MeetingsPage() {
                 )}
             </div>
         </div>
+=======
+                <div className="bg-red-00">
+                    {/* Filter and Create Row */}
+                    <div className="w-full relative flex items-center justify-center mb-4 mt-2">
+                        {/* Tabs Container - Perfectly Centered */}
+                        <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto">
+                            {typeTabs.map((tab) => {
+                                const isActive = currentType === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => updateFilter('type', tab.id)}
+                                        className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
+                                            ? 'text-[#E9E9E9]'
+                                            : 'text-[#414141]'
+                                            }`}
+                                    >
+                                        {tab.label}
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="type-pill"
+                                                className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
+                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                            />
+                                        )}
+                                        {!isActive && (
+                                            <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* Create Button - Locked to the far right of this specific row */}
+                        {/* Create Button - Change setIsCreateModalOpen(true) to openCreateModal */}
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                            <button
+                                onClick={openCreateModal} // <--- Update this line
+                                className="bg-[#43C17A] text-white px-3 py-2 rounded-lg font-semibold hover:bg-[#38a869] transition-colors shadow-sm cursor-pointer"
+                            >
+                                Create Meeting
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+                            {isLoading ? (
+                                <div className="col-span-full flex justify-center items-center h-[400px]">
+                                    <Loader />
+                                </div>
+                            ) : meetings.length > 0 ? (
+                                meetings.map((meeting) => (
+                                    <NewMeetingCard key={meeting.id} data={meeting} role={"Finance"} />
+                                ))
+                            ) : (
+                                <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                                    <p className="text-lg">
+                                        No {currentType} meetings found.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex justify-center pb-4">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                    disabled={page === 1}
+                                    className={`p-2 rounded-md ${page === 1
+                                        ? 'bg-gray-100 text-gray-400'
+                                        : 'bg-gray-200 hover:bg-gray-300'
+                                        }`}
+                                >
+                                    <CaretLeft size={16} weight="bold" />
+                                </button>
+
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                    (p) => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPage(p)}
+                                            className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
+                                                ? 'bg-[#16284F] text-white'
+                                                : 'bg-gray-200 hover:bg-gray-300'
+                                                }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    )
+                                )}
+
+                                <button
+                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages}
+                                    className={`p-2 rounded-md ${page === totalPages
+                                        ? 'bg-gray-100 text-gray-400'
+                                        : 'bg-gray-200 hover:bg-gray-300'
+                                        }`}
+                                >
+                                    <CaretRight size={16} weight="bold" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <CreateMeetingModal
+                isOpen={isCreateModalOpen} // This is the variable: searchParams.get('create') === 'true'
+                onClose={closeCreateModal} // This is the function that removes it from the URL
+            />
+        </>
+>>>>>>> Stashed changes
     )
 };

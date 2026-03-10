@@ -135,7 +135,7 @@ export default function FinanceCalendarPage() {
         />
       </div>
 
-      <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+      <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
         <CalendarGrid
           events={events}
           weekDays={weekDays}
