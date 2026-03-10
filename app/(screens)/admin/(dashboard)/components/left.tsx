@@ -1,7 +1,12 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
-import { ArrowsClockwise, BookOpenIcon, HourglassIcon, UsersThree } from "@phosphor-icons/react";
+import {
+  ArrowsClockwise,
+  BookOpenIcon,
+  HourglassIcon,
+  UsersThree,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { AdminInfoCard } from "../../utils/adminInfoCard";
 import { dashboardData } from "../data";
@@ -29,10 +34,7 @@ export default function AdminDashLeft({
   const [view, setView] = useState<ViewState>("MAIN");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const {
-    cards,
-    loading: adminLoading,
-  } = useAdminDashboard();
+  const { cards, loading: adminLoading } = useAdminDashboard();
   const isAutomationsView = searchParams.get("view") === "automations";
   const isPolicyView = searchParams.get("view") === "policy-setup";
 
@@ -62,8 +64,8 @@ export default function AdminDashLeft({
 
   const { fullName, gender, loading } = useUser();
 
-  const adminImage = gender
-    && (gender === "Female" ? "/admin-f.png" : "/admin-male.png");
+  const adminImage =
+    gender && (gender === "Female" ? "/admin-f.png" : "/admin-male.png");
 
   const cardData = [
     {
@@ -120,7 +122,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
       </div>
     );
   }

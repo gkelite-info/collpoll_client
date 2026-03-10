@@ -5,9 +5,10 @@ import { CaretLeft, UserCircle } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyView from "./facultyView";
 import UptimeChart, { UptimeDataPoint } from "./uptimeChart";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+
 interface TotalUsersProps {
   onBack: () => void;
-
   onViewDetails?: (dept: string) => void;
 }
 
@@ -60,12 +61,15 @@ const mockData: UptimeDataPoint[] = [
 
 const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const { collegeId, collegeEducationId } = useAdmin();
 
-  if (selectedDept) {
+  if (selectedDept && collegeId && collegeEducationId) {
     return (
       <FacultyView
-        departmentId={2} // Placeholder ID for now
+        departmentId={2}
         departmentName={selectedDept}
+        collegeId={collegeId}
+        collegeEducationId={collegeEducationId}
         onBack={() => setSelectedDept(null)}
       />
     );

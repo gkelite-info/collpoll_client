@@ -8,10 +8,10 @@ import CardComponent from "./cards";
 import FacultyView from "./facultyView";
 import UserRequestsTable from "./tables/pendingUserRegistTable";
 import { UptimeDataPoint } from "./uptimeChart";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 interface TotalUsersProps {
   onBack: () => void;
-
   onViewDetails?: (dept: string) => void;
 }
 
@@ -50,26 +50,17 @@ const cardData = [
   },
 ];
 
-const mockData: UptimeDataPoint[] = [
-  { date: "1 Nov", value: 58 },
-  { date: "2 Nov", value: 78 },
-  { date: "3 Nov", value: 66 },
-  { date: "4 Nov", value: 74 },
-  { date: "5 Nov", value: 71 },
-  { date: "6 Nov", value: 64 },
-  { date: "7 Nov", value: 63 },
-  { date: "8 Nov", value: 72 },
-  { date: "9 Nov", value: 72 },
-];
-
 const PendingUserRegistration: React.FC<TotalUsersProps> = ({ onBack }) => {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const { collegeId, collegeEducationId } = useAdmin();
 
-  if (selectedDept) {
+  if (selectedDept && collegeId && collegeEducationId) {
     return (
       <FacultyView
-        departmentId={2} // Placeholder ID for now
+        departmentId={2}
         departmentName={selectedDept}
+        collegeId={collegeId}
+        collegeEducationId={collegeEducationId}
         onBack={() => setSelectedDept(null)}
       />
     );
