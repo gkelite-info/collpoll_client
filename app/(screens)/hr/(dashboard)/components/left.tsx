@@ -1,26 +1,40 @@
 "use client";
 
-import { UserInfoCard } from "@/app/(screens)/faculty/utils/userInfoCard";
 import CardComponent from "@/app/utils/card";
-import {
-  BookOpen,
-  Chalkboard,
-  Clock,
-  ClockAfternoon,
-  User,
-  UserCheck,
-  UserMinus,
-  Users,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { Clock, User, UsersThree } from "@phosphor-icons/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useTransition } from "react";
 import { HrInfoCard } from "./hrInfoCard";
 
-import TopPerformersCard from "./TopPerformersCard";
 import MonthlyAttendanceChart from "./MonthlyAttendanceChart";
+import TopPerformersCard from "./TopPerformersCard";
+import FacultyMonthDetailTable from "./facultyAttendanceTable";
 import FacultyOverviewTable, { FacultyRecord } from "./facultyOverviewTable";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-export default function HrDashLeft() {
+function HrDashContent() {
   const hrImage = "/hr-fe.png";
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const selectedMonth = searchParams.get("month");
+
+  const handleMonthRoute = (month: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (month) {
+      params.set("month", month);
+    } else {
+      params.delete("month");
+    }
+
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    });
+  };
 
   const cardData = [
     {
@@ -155,6 +169,19 @@ export default function HrDashLeft() {
     },
   ];
 
+  if (selectedMonth) {
+    return (
+      <div className="w-[68%] p-2">
+        <FacultyMonthDetailTable
+          month={selectedMonth}
+          months={monthlyChartData.map((data) => data.month)}
+          onMonthChange={(newMonth) => handleMonthRoute(newMonth)}
+          onBack={() => handleMonthRoute(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="w-[68%] p-2">
@@ -174,15 +201,28 @@ export default function HrDashLeft() {
 
         <div className="mt-4 flex flex-col gap-6">
           <TopPerformersCard performers={topPerformersData} />
-
           <MonthlyAttendanceChart
             title="Monthly Attendance Overview (CSE)"
             data={monthlyChartData}
+            onBarClick={(month) => handleMonthRoute(month)}
           />
-
           <FacultyOverviewTable records={facultyRecordsData} />
         </div>
       </div>
     </>
+  );
+}
+
+export default function HrDashLeft() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-8 text-center text-gray-500">
+          <Loader />
+        </div>
+      }
+    >
+      <HrDashContent />
+    </Suspense>
   );
 }
