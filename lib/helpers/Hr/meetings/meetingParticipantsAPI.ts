@@ -1,13 +1,14 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export type HrMeetingParticipantRow = {
-    id: number;
+    hrMeetingParticipantId: number;
     hrMeetingId: number;
     userId: number;
-    userRole: "FACULTY" | "ADMIN" | "FINANCE" | "PLACEMENT";
+    role: "Faculty" | "Admin" | "Finance" | "Placement";
     notifiedInApp: boolean;
     notifiedEmail: boolean;
     createdAt: string;
+    updatedAt: string;
 };
 
 
@@ -15,16 +16,17 @@ export async function fetchMeetingParticipants(hrMeetingId: number) {
     const { data, error } = await supabase
         .from("hr_meeting_participants")
         .select(`
-      id,
-      hrMeetingId,
-      userId,
-      userRole,
-      notifiedInApp,
-      notifiedEmail,
-      createdAt
-    `)
+            hrMeetingParticipantId,
+            hrMeetingId,
+            userId,
+            role,
+            notifiedInApp,
+            notifiedEmail,
+            createdAt,
+            updatedAt
+        `)
         .eq("hrMeetingId", hrMeetingId)
-        .order("id", { ascending: true });
+        .order("hrMeetingParticipantId", { ascending: true });
 
     if (error) {
         console.error("fetchMeetingParticipants error:", error);
@@ -39,7 +41,7 @@ export async function addMeetingParticipants(
     hrMeetingId: number,
     participants: {
         userId: number;
-        userRole: "FACULTY" | "ADMIN" | "FINANCE" | "PLACEMENT";
+        role: "Faculty" | "Admin" | "Finance" | "Placement";
     }[],
 ) {
     if (!participants.length) {
@@ -49,9 +51,11 @@ export async function addMeetingParticipants(
     const rows = participants.map((p) => ({
         hrMeetingId,
         userId: p.userId,
-        userRole: p.userRole,
+        role: p.role,
         notifiedInApp: true,
         notifiedEmail: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     }));
 
     const { error } = await supabase
