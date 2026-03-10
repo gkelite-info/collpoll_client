@@ -90,7 +90,7 @@ export default function MeetingsPage() {
         loadMeetings();
 
     }, [currentType, page]);
-    
+
     const loadMeetings = async () => {
         try {
             setIsLoading(true);
@@ -115,7 +115,7 @@ export default function MeetingsPage() {
 
             setTimeout(() => {
                 const filteredMeetings = MOCK_MEETINGS.filter(m => m.type === currentType);
-                
+
                 const finalMeetings: Meeting[] = filteredMeetings.map((meeting: any) => ({
                     ...meeting,
                     section: meeting.section || "N/A",
@@ -130,7 +130,7 @@ export default function MeetingsPage() {
         } catch (err) {
             toast.error(`Failed to fetch ${currentType} meetings`);
             setIsLoading(false);
-        } 
+        }
         finally {
             setIsLoading(false);
         }
@@ -138,113 +138,111 @@ export default function MeetingsPage() {
 
 
     return (
-        <>
-            <div className="bg-red-00 h-screen p-2 flex flex-col">
-                <div className="flex justify-between items-start mb-6">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
-                        <p className="text-[#282828] text-sm mt-1">
-                            View and join meetings scheduled by the Tekton Campus team
-                        </p>
-                    </div>
-                    <div className='w-[320px]'>
-                        <CourseScheduleCard isVisibile={false} />
-                    </div>
+        <div className="bg-red-00 h-screen p-2 flex flex-col">
+            <div className="flex justify-between items-start mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
+                    <p className="text-[#282828] text-sm mt-1">
+                        View and join meetings scheduled by the Tekton Campus team
+                    </p>
                 </div>
-                <div className="bg-red-00">
-                    <div className="flex items-center justify-center w-full">
-                        <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
-                            {typeTabs.map((tab) => {
-                                const isActive = currentType === tab.id;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => updateFilter('type', tab.id)}
-                                        className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
-                                            ? 'text-[#E9E9E9]'
-                                            : 'text-[#414141]'
-                                            }`}
-                                    >
-                                        {tab.label}
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="type-pill"
-                                                className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
-                                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                            />
-                                        )}
-
-                                        {!isActive && (
-                                            <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
-                                        )}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2 mt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
-                            {isLoading ? (
-                                <div className="col-span-full flex justify-center items-center h-[400px]">
-                                    <Loader />
-                                </div>
-                            ) : meetings.length > 0 ? (
-                                meetings.map((meeting) => (
-                                    <NewMeetingCard key={meeting.id} data={meeting} role={"Finance"} />
-                                ))
-                            ) : (
-                                <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
-                                    <p className="text-lg">
-                                        No {currentType} meetings found.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {totalPages > 1 && (
-                        <div className="flex justify-center pb-4">
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                    className={`p-2 rounded-md ${page === 1
-                                        ? 'bg-gray-100 text-gray-400'
-                                        : 'bg-gray-200 hover:bg-gray-300'
-                                        }`}
-                                >
-                                    <CaretLeft size={16} weight="bold" />
-                                </button>
-
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                                    (p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPage(p)}
-                                            className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
-                                                ? 'bg-[#16284F] text-white'
-                                                : 'bg-gray-200 hover:bg-gray-300'
-                                                }`}
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
-
-                                <button
-                                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                    disabled={page === totalPages}
-                                    className={`p-2 rounded-md ${page === totalPages
-                                        ? 'bg-gray-100 text-gray-400'
-                                        : 'bg-gray-200 hover:bg-gray-300'
-                                        }`}
-                                >
-                                    <CaretRight size={16} weight="bold" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                <div className='w-[320px]'>
+                    <CourseScheduleCard isVisibile={false} />
                 </div>
             </div>
-        </>
+            <div className="bg-red-00 flex flex-col flex-1 min-h-0">
+                <div className="flex items-center justify-center w-full sticky top-0 z-20 py-2">
+                    <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
+                        {typeTabs.map((tab) => {
+                            const isActive = currentType === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => updateFilter('type', tab.id)}
+                                    className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
+                                        ? 'text-[#E9E9E9]'
+                                        : 'text-[#414141]'
+                                        }`}
+                                >
+                                    {tab.label}
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="type-pill"
+                                            className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
+                                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                        />
+                                    )}
+
+                                    {!isActive && (
+                                        <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-2 mt-4 min-h-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+                        {isLoading ? (
+                            <div className="col-span-full flex justify-center items-center h-[400px]">
+                                <Loader />
+                            </div>
+                        ) : meetings.length > 0 ? (
+                            meetings.map((meeting) => (
+                                <NewMeetingCard key={meeting.id} data={meeting} role={"Finance"} />
+                            ))
+                        ) : (
+                            <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                                <p className="text-lg">
+                                    No {currentType} meetings found.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {totalPages > 1 && (
+                    <div className="flex justify-center pb-4">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className={`p-2 rounded-md ${page === 1
+                                    ? 'bg-gray-100 text-gray-400'
+                                    : 'bg-gray-200 hover:bg-gray-300'
+                                    }`}
+                            >
+                                <CaretLeft size={16} weight="bold" />
+                            </button>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                (p) => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPage(p)}
+                                        className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
+                                            ? 'bg-[#16284F] text-white'
+                                            : 'bg-gray-200 hover:bg-gray-300'
+                                            }`}
+                                    >
+                                        {p}
+                                    </button>
+                                )
+                            )}
+
+                            <button
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className={`p-2 rounded-md ${page === totalPages
+                                    ? 'bg-gray-100 text-gray-400'
+                                    : 'bg-gray-200 hover:bg-gray-300'
+                                    }`}
+                            >
+                                <CaretRight size={16} weight="bold" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
     )
 };
