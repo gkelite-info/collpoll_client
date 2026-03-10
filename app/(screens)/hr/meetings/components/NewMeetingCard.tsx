@@ -69,14 +69,14 @@ export default function NewMeetingCard({
         <>
             <div
                 onClick={() => setIsModalOpen(true)}
-                className="bg-[#FFFFFF] rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-[#FFFFFF] rounded-t-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow cursor-pointer"
             >
                 <div className="bg-[#43C17A26] px-4 py-3 flex items-center justify-between gap-3 border-b-2 border-dashed border-[#43C17A]">
                     <div className="flex gap-2 items-center justify-center">
                         <div className="bg-[#43C17A] p-1.5 rounded-full text-white">
                             <Laptop size={18} weight="fill" color="#ffffff" />
                         </div>
-                        <span className="text-[#43C17A] font-medium text-base tracking-wide">
+                        <span className="text-[#11934A] font-medium text-base tracking-wide">
                             {formattedTimeRange}
                         </span>
                     </div>
@@ -109,7 +109,7 @@ export default function NewMeetingCard({
                 <div className="p-4 flex-1 flex flex-col gap-3">
                     <div className="flex justify-between items-start gap-2">
                         <div className="overflow-x-auto whitespace-nowrap max-w-full scrollbar-hide">
-                            <h2 className="text-[#43C17A] font-semibold text-lg leading-tight inline-block">
+                            <h2 className="text-[#43C17A] font-semibold leading-tight inline-block">
                                 {data.title}
                             </h2>
                         </div>
@@ -121,14 +121,14 @@ export default function NewMeetingCard({
                     </div>
 
                     <div className="flex items-start gap-2">
-                        <span className="text-[#303030] font-normal text-base whitespace-nowrap">Description :</span>
+                        <span className="text-[#303030] font-normal text-sm whitespace-nowrap">Description :</span>
                         <p className="text-sm text-[#16284F] line-clamp-2 leading-relaxed">
                             {data.description}
                         </p>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <span className="text-[#303030] font-normal text-base whitespace-nowrap">Date :</span>
+                        <span className="text-[#303030] font-normal text-sm whitespace-nowrap">Date :</span>
                         <DetailPill label={data.date} />
                     </div>
 
@@ -181,7 +181,7 @@ export default function NewMeetingCard({
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 10 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-2xl shadow-xl w-full max-w-xl overflow-hidden p-5 relative"
+                            className="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden p-5 relative"
                         >
                             <div className="flex justify-between items-start mb-2">
                                 <h2 className="text-lg font-bold text-[#282828]">
@@ -195,7 +195,7 @@ export default function NewMeetingCard({
                                 </button>
                             </div>
 
-                            <p className="text-sm text-[#555555] mb-8 leading-relaxed">
+                            <p className="text-sm text-[#555555] mb-6 leading-relaxed">
                                 This meeting is Scheduled to discuss {data.description.toLowerCase()}
                             </p>
 
