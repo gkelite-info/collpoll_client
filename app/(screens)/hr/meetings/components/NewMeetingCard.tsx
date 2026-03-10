@@ -84,7 +84,7 @@ export default function NewMeetingCard({
                     {(data.type === "upcoming" && role === "Finance") && (
                         <div className="flex gap-2 items-center justify-center">
                             <button
-                                className="w-8 h-8 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
+                                className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onEdit?.(data.financeMeetingId, data.financeMeetingSectionsId);
@@ -94,7 +94,7 @@ export default function NewMeetingCard({
                             </button>
 
                             <button
-                                className="w-8 h-8 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
+                                className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onDelete?.(data);
@@ -144,15 +144,15 @@ export default function NewMeetingCard({
                                     />
                                 ))}
                             </div>
-                            <span className="text-sm text-[#303030] ml-3 font-medium">
+                            <span className="text-sm text-[#303030] ml-1.5 font-medium">
                                 + {data.participants} Faculties
                             </span>
                         </div>
 
                         <button
-                            className={`px-5 py-1.5 rounded-full cursor-pointer text-sm font-semibold transition-colors ${data.type === 'previous'
+                            className={`px-5 py-1.5 rounded-full  text-sm font-medium transition-colors ${data.type === 'previous'
                                 ? 'bg-[#E9E9E9] text-[#7A7A7A] cursor-not-allowed'
-                                : 'bg-[#16284F] text-white hover:bg-[#111e3b]'
+                                : 'bg-[#16284F] text-white hover:bg-[#111e3b] cursor-pointer'
                                 }`}
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -196,7 +196,7 @@ export default function NewMeetingCard({
                             </div>
 
                             <p className="text-sm text-[#555555] mb-6 leading-relaxed">
-                                This meeting is Scheduled to discuss {data.description.toLowerCase()}
+                                {data.description.toLowerCase()}
                             </p>
 
                             <div className="grid grid-cols-2 gap-y-4 gap-x-8">
