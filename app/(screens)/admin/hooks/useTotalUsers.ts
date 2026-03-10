@@ -18,7 +18,10 @@ type DepartmentRow = {
   total: number;
 };
 
-export function useTotalUsers() {
+export function useTotalUsers(
+  collegeId: number | null,
+  collegeEducationId: number | null,
+) {
   const [roles, setRoles] = useState<RoleCounts>({
     ADMIN: 0,
     FACULTY: 0,
@@ -31,52 +34,84 @@ export function useTotalUsers() {
 
   useEffect(() => {
     async function load() {
+      if (!collegeId || !collegeEducationId) return;
+
+      setLoading(true);
       try {
-        const roleResults = await Promise.all(
-          ["Admin", "Faculty", "Student", "Parent"].map(async (role) => {
-            const { count, error } = await supabase
-              .from("users")
-              .select("*", { count: "exact", head: true })
-              .eq("role", role)
-              .eq("is_deleted", false);
+        const [
+          { count: studentsCount },
+          { count: facultyCount },
+          { count: adminsCount },
+          { count: parentsCount },
+        ] = await Promise.all([
+          supabase
+            .from("students")
+            .select("studentId", { count: "exact", head: true })
+            .eq("collegeId", collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("isActive", true),
 
-            if (error) throw error;
+          supabase
+            .from("faculty")
+            .select("facultyId", { count: "exact", head: true })
+            .eq("collegeId", collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("isActive", true),
 
-            return { role, count: count ?? 0 };
-          })
-        );
+          supabase
+            .from("admins")
+            .select("adminId", { count: "exact", head: true })
+            .eq("collegeId", collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("is_deleted", false),
+
+          supabase
+            .from("parents")
+            .select("parentId, students!inner(collegeEducationId)", {
+              count: "exact",
+              head: true,
+            })
+            .eq("collegeId", collegeId)
+            .eq("students.collegeEducationId", collegeEducationId)
+            .eq("is_deleted", false),
+        ]);
 
         setRoles({
-          ADMIN: roleResults.find((r) => r.role === "Admin")?.count ?? 0,
-          FACULTY: roleResults.find((r) => r.role === "Faculty")?.count ?? 0,
-          STUDENT: roleResults.find((r) => r.role === "Student")?.count ?? 0,
-          PARENT: roleResults.find((r) => r.role === "Parent")?.count ?? 0,
+          ADMIN: adminsCount ?? 0,
+          FACULTY: facultyCount ?? 0,
+          STUDENT: studentsCount ?? 0,
+          PARENT: parentsCount ?? 0,
         });
 
-        /* ===============================
-           DEPARTMENT OVERVIEW
-        =============================== */
-
-        const { data, error } = await supabase.from("departments").select(`
-            departmentId,
-            departmentName,
-            student_academic_profiles(count),
-            faculty_profiles(count)
-          `);
+        const { data, error } = await supabase
+          .from("college_branch")
+          .select(
+            `
+            collegeBranchId,
+            collegeBranchType,
+            students(count),
+            faculty(count)
+          `,
+          )
+          .eq("collegeId", collegeId)
+          .eq("collegeEducationId", collegeEducationId)
+          .eq("isActive", true)
+          .is("deletedAt", null);
 
         if (error) throw error;
 
         const deptCounts: DepartmentRow[] =
           data?.map((d: any) => {
-            const students = d.student_academic_profiles?.[0]?.count ?? 0;
-            const faculty = d.faculty_profiles?.[0]?.count ?? 0;
+            const studentsCount =
+              d.students?.[0]?.count ?? d.students?.count ?? 0;
+            const facultyCount = d.faculty?.[0]?.count ?? d.faculty?.count ?? 0;
 
             return {
-              departmentId: d.departmentId,
-              departmentName: d.departmentName,
-              students,
-              faculty,
-              total: students + faculty,
+              departmentId: d.collegeBranchId,
+              departmentName: d.collegeBranchType,
+              students: studentsCount,
+              faculty: facultyCount,
+              total: studentsCount + facultyCount,
             };
           }) ?? [];
 
@@ -89,11 +124,7 @@ export function useTotalUsers() {
     }
 
     load();
-  }, []);
+  }, [collegeId, collegeEducationId]);
 
-  return {
-    roles,
-    departments,
-    loading,
-  };
+  return { roles, departments, loading };
 }

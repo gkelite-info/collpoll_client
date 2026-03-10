@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { CaretLeft } from "@phosphor-icons/react";
 import FacultyView from "./facultyView";
 import ActiveAutomationsTable from "./tables/activeAutomationsTable";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 const sampleRequests = [
   {
@@ -104,16 +105,19 @@ interface TotalAutomationsProps {
 
 const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const { collegeId, collegeEducationId } = useAdmin();
 
   const handleRowClick = (id: string) => {
     console.log("Automation ID:", id);
   };
 
-  if (selectedDept) {
+  if (selectedDept && collegeId && collegeEducationId) {
     return (
       <FacultyView
-        departmentId={2} // Placeholder ID for now
+        departmentId={2}
         departmentName={selectedDept}
+        collegeId={collegeId}
+        collegeEducationId={collegeEducationId}
         onBack={() => setSelectedDept(null)}
       />
     );

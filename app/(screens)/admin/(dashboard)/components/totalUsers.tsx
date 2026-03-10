@@ -1,22 +1,36 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { CaretLeft, User, UserCircle } from "@phosphor-icons/react";
+import React from "react";
+import { CaretLeft, UserCircle } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyView from "./facultyView";
 import { useTotalUsers } from "../../hooks/useTotalUsers";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 interface TotalUsersProps {
   onBack: () => void;
 }
 
 const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
-  const [selectedDept, setSelectedDept] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const { roles, departments, loading } = useTotalUsers();
+  const {
+    collegeId,
+    collegeEducationId,
+    loading: adminContextLoading,
+  } = useAdmin();
+
+  const {
+    roles,
+    departments,
+    loading: dataLoading,
+  } = useTotalUsers(collegeId, collegeEducationId);
+
+  const deptId = searchParams.get("deptId");
+  const deptName = searchParams.get("deptName");
 
   const cardData: CardProps[] = [
     {
@@ -53,18 +67,24 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
     },
   ];
 
-  if (selectedDept) {
+  if (deptId && deptName && collegeId && collegeEducationId) {
     return (
       <FacultyView
-        departmentId={selectedDept.id}
-        departmentName={selectedDept.name}
-        onBack={() => setSelectedDept(null)}
+        departmentId={Number(deptId)}
+        departmentName={deptName}
+        collegeId={collegeId}
+        collegeEducationId={collegeEducationId}
+        onBack={() => router.push("?view=TOTAL_USERS")}
       />
     );
   }
 
-  if (loading) {
-    return <div className="p-6 text-sm text-gray-500">Loading users…</div>;
+  if (adminContextLoading || dataLoading) {
+    return (
+      <div className="p-6 text-sm text-gray-500">
+        <Loader />
+      </div>
+    );
   }
 
   return (
@@ -95,7 +115,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
           <thead>
             <tr className="bg-[#F1F2F4]">
               <th className="py-4 px-8 font-semibold text-[#4A5568] text-sm">
-                Department
+                Branches
               </th>
               <th className="py-4 px-4 font-semibold text-[#4A5568] text-sm text-center">
                 Faculty
@@ -116,11 +136,10 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
             {departments.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-gray-500">
-                  No departments found
+                  No Branches found
                 </td>
               </tr>
             )}
-
             {departments.map((dept) => (
               <tr
                 key={dept.departmentId}
@@ -140,12 +159,15 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
                 </td>
                 <td className="py-3 px-8 text-right">
                   <button
-                    onClick={() =>
-                      setSelectedDept({
-                        id: dept.departmentId,
-                        name: dept.departmentName,
-                      })
-                    }
+                    onClick={() => {
+                      const params = new URLSearchParams(
+                        searchParams.toString(),
+                      );
+                      params.set("deptId", dept.departmentId.toString());
+                      params.set("deptName", dept.departmentName);
+                      params.set("tab", "Faculty");
+                      router.push(`?${params.toString()}`);
+                    }}
                     className="text-[#2D3748] cursor-pointer font-bold underline decoration-2 underline-offset-4 hover:text-black transition-colors"
                   >
                     View
