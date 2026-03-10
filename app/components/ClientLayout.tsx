@@ -27,11 +27,11 @@ export default function ClientLayout({
     "/verify-email",
     "/forgot-password",
     "/reset-password",
-    "/construction"
+    "/construction",
   ];
 
   const shouldHideLayout = hideLayoutRoutes.some((route) =>
-    pathname.startsWith(route)
+    pathname.startsWith(route),
   );
 
   const renderNavbar = () => {
@@ -44,22 +44,24 @@ export default function ClientLayout({
     if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
     if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
-    if (pathname.startsWith('/college-admin')) return <CollegeAdminNavbar />
-    if(pathname.startsWith('/hr')) return <HrNavbar />
-    return <StudentNavbar />
+    if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar />;
+    if (pathname.startsWith("/hr")) return <HrNavbar />;
+    return <StudentNavbar />;
   };
 
   return (
     <>
-      <Toaster position="top-right" reverseOrder={false} containerStyle={{ zIndex: 10000, }} />
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        containerStyle={{ zIndex: 10000 }}
+      />
 
       {shouldHideLayout ? (
         <>{children}</>
       ) : (
         <div className="flex h-screen w-screen overflow-hidden justify-between">
-          <div className="w-[17%] h-full bg-[#43C17A]">
-            {renderNavbar()}
-          </div>
+          <div className="w-[17%] h-full bg-[#43C17A]">{renderNavbar()}</div>
 
           <div className="flex flex-col w-[83%] h-full">
             <div className="h-[13%] flex justify-end bg-[#F4F4F4]">

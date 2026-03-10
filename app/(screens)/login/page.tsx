@@ -6,7 +6,6 @@ import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
 
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -65,14 +64,12 @@ export default function LoginPage() {
     },
   ];
 
-
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length);
     }, 2500);
     return () => clearInterval(interval);
   }, []);
-
 
   const validate = () => {
     if (!email.trim()) {
@@ -91,17 +88,17 @@ export default function LoginPage() {
       return false;
     }
 
-    const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
+    const passwordRegex =
+      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
     if (!passwordRegex.test(password)) {
       toast.error(
-        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character"
+        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character",
       );
       return false;
     }
     return true;
   };
-
 
   const handleLogin = async () => {
     if (!validate()) return;
@@ -117,6 +114,8 @@ export default function LoginPage() {
 
       const role = res.user.role?.toLowerCase();
 
+      console.log("what is role", role);
+
       const roleRouteMap: Record<string, string> = {
         admin: "/admin",
         parent: "/parent",
@@ -124,7 +123,8 @@ export default function LoginPage() {
         student: "/stu_dashboard",
         superadmin: "/super-admin",
         finance: "/finance",
-        collegeadmin: "/college-admin"
+        collegeadmin: "/college-admin",
+        collegehr: "/hr",
       };
 
       const redirectPath = roleRouteMap[role] || "/login";
@@ -184,8 +184,9 @@ export default function LoginPage() {
               style={{
                 transform: `
           translateX(-50%)
-          rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                  }deg)
+          rotate(${
+            position === "left" ? -40 : position === "right" ? 40 : 0
+          }deg)
           translateY(-${radius}px)
         `,
               }}
@@ -206,7 +207,6 @@ export default function LoginPage() {
                 }}
               ></div>
 
-
               {/* <div className="absolute bottom-[-40%] w-[346px] h-[346px] bg-[#43C17A] rounded-full opacity-35"></div> */}
 
               {/* <div className="absolute top-[15%] w-[75%] h-[95px]  rounded-3xl"></div> */}
@@ -226,10 +226,11 @@ export default function LoginPage() {
           {slides.map((_, i) => (
             <div
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-18 bg-[#1A5D3C]"
-                : "w-5 bg-white/60 border border-white/40"
-                }`}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                current === i
+                  ? "w-18 bg-[#1A5D3C]"
+                  : "w-5 bg-white/60 border border-white/40"
+              }`}
             ></div>
           ))}
         </div>
@@ -290,7 +291,9 @@ export default function LoginPage() {
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 focus:outline-none cursor-pointer"
               >
                 <Icon
-                  icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
+                  icon={
+                    showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"
+                  }
                   width={20}
                 />
               </button>
