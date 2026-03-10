@@ -134,7 +134,6 @@ export default function MeetingsPage() {
         }
     };
 
-
     return (
         <>
             <div className="bg-red-00 h-screen p-2 flex flex-col">
@@ -149,7 +148,7 @@ export default function MeetingsPage() {
                         <CourseScheduleCard isVisibile={false} />
                     </div>
                 </div>
-                
+
                 <div className="bg-red-00">
                     {/* Filter and Create Row */}
                     <div className="w-full relative flex items-center justify-center mb-4 mt-2">
@@ -192,7 +191,7 @@ export default function MeetingsPage() {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div className="flex-1 overflow-y-auto p-2 mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
                             {isLoading ? (

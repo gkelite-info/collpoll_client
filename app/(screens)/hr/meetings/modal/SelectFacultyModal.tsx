@@ -14,15 +14,15 @@ const MOCK_FACULTY = [
     { id: 8, name: "Aishwarya Kulkarni", dept: "CSE - A", img: "https://i.pravatar.cc/150?u=8" },
 ];
 
-export default function SelectFacultyModal({ 
-    isOpen, 
-    onClose, 
+export default function SelectFacultyModal({
+    isOpen,
+    onClose,
     onSelect,
-    title = "Select Faculties",  
-    roleName = "Faculty"         
-}: { 
-    isOpen: boolean; 
-    onClose: () => void; 
+    title = "Select Faculties",
+    roleName = "Faculty"
+}: {
+    isOpen: boolean;
+    onClose: () => void;
     onSelect: (f: any[]) => void;
     title?: string;
     roleName?: string;
@@ -30,7 +30,7 @@ export default function SelectFacultyModal({
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
-    const filteredFaculty = MOCK_FACULTY.filter(f => 
+    const filteredFaculty = MOCK_FACULTY.filter(f =>
         f.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -48,15 +48,22 @@ export default function SelectFacultyModal({
     };
 
     const toggleSelection = (id: number) => {
-        setSelectedIds(prev => 
+        setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
     };
 
-    useEffect(() => {
+    // useEffect(() => {
+    //     const selectedObjects = MOCK_FACULTY.filter(f => selectedIds.includes(f.id));
+    //     onSelect(selectedObjects);
+    // }, [selectedIds, onSelect]);
+
+    const handleConfirmSelection = () => {
         const selectedObjects = MOCK_FACULTY.filter(f => selectedIds.includes(f.id));
         onSelect(selectedObjects);
-    }, [selectedIds, onSelect]);
+        onClose();
+    };
+
 
     useEffect(() => {
         if (!isOpen) setSearchQuery('');
@@ -65,13 +72,13 @@ export default function SelectFacultyModal({
     return (
         <AnimatePresence>
             {isOpen && (
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
                 >
-                    <motion.div 
+                    <motion.div
                         initial={{ scale: 0.95, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.95, opacity: 0 }}
@@ -82,26 +89,30 @@ export default function SelectFacultyModal({
                         <div className="flex justify-between items-center mb-4 shrink-0">
                             <h3 className="text-[20px] font-bold text-[#282828]">{title}</h3>
                             <div className="flex gap-4 items-center">
-                                <button 
+                                <button
                                     onClick={handleSelectAll}
                                     className="bg-[#16284F] text-white text-xs px-4 py-2 rounded-md font-medium hover:bg-[#111e3b] transition-colors cursor-pointer"
                                 >
                                     {isAllSelected ? "Unselect All" : "Select All"}
                                 </button>
                                 <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-                                    <X size={20} className="text-[#555555] cursor-pointer"/>
+                                    <X size={20} className="text-[#555555] cursor-pointer" />
                                 </button>
                             </div>
                         </div>
 
                         <div className="relative mb-4 shrink-0">
-                            <MagnifyingGlass className="absolute left-3 top-2.5 text-gray-400" size={18} />
-                            <input 
-                                type="text" 
+                            <MagnifyingGlass
+                                className="absolute left-3 top-2.5 text-gray-400 pointer-events-none"
+                                size={18}
+                            />
+
+                            <input
+                                type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder={`Search by name`} 
-                                className="w-full pl-10 pr-4 py-2 bg-[#F6F6F6] border border-transparent rounded-full text-sm outline-none focus:border-[#43C17A] transition-colors" 
+                                placeholder="Search by name"
+                                className="w-full pl-11 pr-4 py-2 bg-[#F6F6F6] border border-transparent rounded-full text-sm outline-none focus:border-[#43C17A] transition-colors placeholder:text-gray-500"
                             />
                         </div>
 
@@ -117,18 +128,33 @@ export default function SelectFacultyModal({
                                                 <p className="text-xs text-gray-500">{f.dept}</p>
                                             </div>
                                         </div>
-                                        <input 
-                                            type="checkbox" 
+                                        <input
+                                            type="checkbox"
                                             checked={selectedIds.includes(f.id)}
                                             onChange={() => toggleSelection(f.id)}
-                                            onClick={(e) => e.stopPropagation()} 
-                                            className="w-5 h-5 rounded border-[#CCCCCC] text-[#16284F] focus:ring-[#16284F] accent-[#16284F] cursor-pointer" 
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="w-5 h-5 rounded border-[#CCCCCC] text-[#16284F] focus:ring-[#16284F] accent-[#16284F] cursor-pointer"
                                         />
                                     </div>
                                 ))
                             ) : (
                                 <p className="text-center text-sm text-gray-500 py-4">No {roleName.toLowerCase()} found.</p>
                             )}
+                        </div>
+                        <div className="mt-4 flex gap-3">
+                            <button
+                                onClick={onClose}
+                                className="flex-1 py-2 bg-gray-200 rounded-md font-medium text-[#282828] hover:bg-gray-300 transition cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                onClick={handleConfirmSelection}
+                                className="flex-1 py-2 bg-[#43C17A] text-white rounded-md font-medium hover:bg-[#36a968] transition cursor-pointer"
+                            >
+                                Select
+                            </button>
                         </div>
                     </motion.div>
                 </motion.div>
