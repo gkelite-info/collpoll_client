@@ -1,13 +1,14 @@
-import { supabase } from "@/lib/supabaseClient";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
+import { supabase } from "@/lib/supabaseClient";
 
-export type HrMeetingRow = {
-    hrMeetingId: number;
+export type HrCalendarEventRow = {
+    hrCalendarEventId: number;
     title: string;
-    agenda: string;
-    meetingDate: string;
+    topic: string;
+    eventDate: string;
     fromTime: string;
     toTime: string;
+    roomNo: string;
     collegeId: number;
     createdBy: number;
     isActive: boolean;
@@ -17,16 +18,17 @@ export type HrMeetingRow = {
 };
 
 
-export async function fetchHrMeetings(collegeId: number) {
+export async function fetchHrCalendarEvents(collegeId: number) {
     const { data, error } = await supabase
-        .from("hr_meetings")
+        .from("hr_calendar_events")
         .select(`
-            hrMeetingId,
+            hrCalendarEventId,
             title,
-            agenda,
-            meetingDate,
+            topic,
+            eventDate,
             fromTime,
             toTime,
+            roomNo,
             collegeId,
             createdBy,
             isActive,
@@ -37,30 +39,31 @@ export async function fetchHrMeetings(collegeId: number) {
         .eq("collegeId", collegeId)
         .eq("isActive", true)
         .is("deletedAt", null)
-        .order("meetingDate", { ascending: false });
+        .order("eventDate", { ascending: true });
 
     if (error) {
-        console.error("fetchHrMeetings error:", error);
+        console.error("fetchHrCalendarEvents error:", error);
         throw error;
     }
 
     return data ?? [];
 }
 
-export async function fetchHrMeetingsForLoggedInAdmin(userId: number) {
+export async function fetchHrCalendarEventsForLoggedInAdmin(userId: number) {
     const { collegeId } = await fetchAdminContext(userId);
-    return fetchHrMeetings(collegeId);
+    return fetchHrCalendarEvents(collegeId);
 }
 
 
-export async function saveHrMeeting(
+export async function saveHrCalendarEvent(
     payload: {
-        hrMeetingId?: number;
+        hrCalendarEventId?: number;
         title: string;
-        agenda: string;
-        meetingDate: string;
+        topic: string;
+        eventDate: string;
         fromTime: string;
         toTime: string;
+        roomNo: string;
         collegeId: number;
     },
     collegeHrId: number,
@@ -68,48 +71,49 @@ export async function saveHrMeeting(
     const now = new Date().toISOString();
 
     const { data, error } = await supabase
-        .from("hr_meetings")
+        .from("hr_calendar_events")
         .upsert(
             {
-                hrMeetingId: payload.hrMeetingId,
+                hrCalendarEventId: payload.hrCalendarEventId,
                 title: payload.title.trim(),
-                agenda: payload.agenda.trim(),
-                meetingDate: payload.meetingDate,
+                topic: payload.topic.trim(),
+                eventDate: payload.eventDate,
                 fromTime: payload.fromTime,
                 toTime: payload.toTime,
+                roomNo: payload.roomNo.trim(),
                 collegeId: payload.collegeId,
                 createdBy: collegeHrId,
                 createdAt: now,
                 updatedAt: now,
             },
-            { onConflict: "hrMeetingId" },
+            { onConflict: "hrCalendarEventId" },
         )
-        .select("hrMeetingId")
+        .select("hrCalendarEventId")
         .single();
 
     if (error) {
-        console.error("saveHrMeeting error:", error);
+        console.error("saveHrCalendarEvent error:", error);
         return { success: false, error };
     }
 
     return {
         success: true,
-        hrMeetingId: data.hrMeetingId,
+        hrCalendarEventId: data.hrCalendarEventId,
     };
 }
 
 
-export async function deactivateHrMeeting(hrMeetingId: number) {
+export async function deactivateHrCalendarEvent(hrCalendarEventId: number) {
     const { error } = await supabase
-        .from("hr_meetings")
+        .from("hr_calendar_events")
         .update({
             isActive: false,
             deletedAt: new Date().toISOString(),
         })
-        .eq("hrMeetingId", hrMeetingId);
+        .eq("hrCalendarEventId", hrCalendarEventId);
 
     if (error) {
-        console.error("deactivateHrMeeting error:", error);
+        console.error("deactivateHrCalendarEvent error:", error);
         return { success: false };
     }
 
