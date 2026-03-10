@@ -60,7 +60,6 @@ export default function MeetingsPage() {
     const currentCategory = 'Student';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
         setPage(1)
