@@ -12,8 +12,6 @@ export async function getOverallPending(filters: {
     selectedYear,
   } = filters;
 
-  console.log("🔎 Pending Filters:", filters);
-
   let obligationQuery = supabase
     .from("student_fee_obligation")
     .select(`
@@ -32,9 +30,6 @@ export async function getOverallPending(filters: {
   }
 
   const { data: obligations } = await obligationQuery;
-
-  console.log("📊 Obligations:", obligations);
-
   if (!obligations?.length) return 0;
 
   const obligationIds = obligations.map(
@@ -60,9 +55,6 @@ export async function getOverallPending(filters: {
   }
 
   const { data: ledgers } = await ledgerQuery;
-
-  console.log("📘 Ledgers:", ledgers);
-
   const paidMap: Record<number, number> = {};
 
   obligations.forEach((o) => {
@@ -83,8 +75,6 @@ export async function getOverallPending(filters: {
       totalPending += pending;
     }
   });
-
-  console.log("💰 Final Pending:", totalPending);
 
   return totalPending;
 }

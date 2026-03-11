@@ -6,9 +6,6 @@ export async function getFacultyAssignedSubjects(params: {
   facultyId: number;
 }) {
   const { facultyId } = params;
-
-  console.log("🟡 Fetching faculty assigned subjects", { facultyId });
-
   const { data, error } = await supabase
     .from("faculty_sections")
     .select(`
@@ -33,11 +30,8 @@ export async function getFacultyAssignedSubjects(params: {
     .is("deletedAt", null);
 
   if (error) {
-    console.error("❌ Failed to fetch faculty sections", error);
+    console.error("Failed to fetch faculty sections", error);
     throw error;
   }
-
-  console.log("✅ Faculty subject-section mapping:", data);
-
   return data ?? [];
 }

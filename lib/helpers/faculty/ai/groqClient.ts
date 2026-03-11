@@ -1,13 +1,8 @@
 import Groq from "groq-sdk";
-
-console.log("🟢 Groq helper loaded");
-console.log("Groq key loaded:", !!process.env.GROQ_API_KEY);
-
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
 });
 
-// ✅ Priority order (best → fallback)
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile",
   "llama-3.1-8b-instant",
@@ -21,12 +16,11 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
 
   for (const model of GROQ_MODELS) {
     try {
-      console.log(`🤖 Trying Groq model: ${model}`);
 
       const response = await groq.chat.completions.create({
         model,
-        max_tokens: 600,   // 🔥 ADD THIS
-        temperature: 0.6,  // slightly increase
+        max_tokens: 600,   
+        temperature: 0.6,  
         messages: [
           {
             role: "system",
@@ -64,14 +58,9 @@ Generate exactly 12 topics. Do not stop early.`
 
     } catch (error: any) {
       lastError = error;
-
-      // 🔁 Rate limit → switch model
       if (error?.status === 429) {
-        console.warn(`⚠️ Rate limit hit for ${model}, switching...`);
         continue;
       }
-
-      // ❌ Other errors → stop
       throw error;
     }
   }

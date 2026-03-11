@@ -8,6 +8,7 @@ export type HrMeetingRow = {
     meetingDate: string;
     fromTime: string;
     toTime: string;
+    meetingLink: string;
     collegeId: number;
     createdBy: number;
     isActive: boolean;
@@ -27,6 +28,7 @@ export async function fetchHrMeetings(collegeId: number) {
             meetingDate,
             fromTime,
             toTime,
+              meetingLink,
             collegeId,
             createdBy,
             isActive,
@@ -60,6 +62,7 @@ export async function saveHrMeeting(
         meetingDate: string;
         fromTime: string;
         toTime: string;
+        meetingLink: string;
         collegeId: number;
     },
     collegeHrId: number,
@@ -75,6 +78,7 @@ export async function saveHrMeeting(
                 meetingDate: payload.meetingDate,
                 fromTime: payload.fromTime,
                 toTime: payload.toTime,
+                meetingLink: payload.meetingLink.trim(),
                 collegeId: payload.collegeId,
                 createdBy: collegeHrId,
                 createdAt: now,
@@ -86,7 +90,19 @@ export async function saveHrMeeting(
         .single();
 
     if (error) {
-        console.error("saveHrMeeting error:", error);
+        if (error) {
+
+            console.error("saveHrMeeting error:", error);
+
+            if (error.code === "23505") {
+                return {
+                    success: false,
+                    message: "A meeting is already scheduled for this time slot. Please choose a different time."
+                };
+            }
+
+            return { success: false, message: "Failed to create meeting" };
+        }
         return { success: false, error };
     }
 

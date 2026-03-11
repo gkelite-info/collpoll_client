@@ -42,6 +42,8 @@ export async function addMeetingParticipants(
     participants: {
         userId: number;
         role: "Faculty" | "Admin" | "Finance" | "Placement";
+        notifiedInApp: boolean;
+        notifiedEmail: boolean;
     }[],
 ) {
     if (!participants.length) {
@@ -52,8 +54,8 @@ export async function addMeetingParticipants(
         hrMeetingId,
         userId: p.userId,
         role: p.role,
-        notifiedInApp: true,
-        notifiedEmail: false,
+        notifiedInApp: p.notifiedInApp,
+        notifiedEmail: p.notifiedEmail,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     }));

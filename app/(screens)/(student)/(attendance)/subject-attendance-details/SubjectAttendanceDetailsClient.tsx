@@ -126,7 +126,6 @@ export default function SubjectAttendanceDetailsClient() {
                 setTotalRecords(res.totalCount || 0);
 
             } catch (err) {
-                console.error("❌ Failed to load attendance details:", err);
             } finally {
                 setLoading(false);
             }

@@ -8,7 +8,6 @@ export async function suggestTopicsAction(
   subject: string,
   unitName: string
 ): Promise<string[]> {
-    console.log("🟢 suggestTopicsAction called", { subject, unitName });
   if (!subject || !unitName) return [];
 
    
@@ -24,8 +23,6 @@ Do NOT include \`\`\`.
 
   try {
     let text = await generateWithGroqFallback(prompt);
-
-    // 🧹 cleanup (extra safety)
     text = text
       .replace(/```json/gi, "")
       .replace(/```/g, "")

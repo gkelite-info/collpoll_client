@@ -98,8 +98,6 @@ export default function AdminRegistration() {
         if (!form.collegeId) {
             return;
         }
-        console.log("This is collegeEducationId: ", form.collegeEducationId);
-
         const fetchEducations = async () => {
             const { data, error } = await supabase
                 .from("college_education")

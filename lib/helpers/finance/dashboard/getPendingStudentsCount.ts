@@ -10,11 +10,6 @@ export async function getCurrentSemesterPendingStudents({
   collegeBranchId?: number;
 }) {
 
-  console.log("🔎 Filters:", {
-    collegeId,
-    collegeEducationId,
-    collegeBranchId
-  });
 
   let studentQuery = supabase
     .from("students")
@@ -44,13 +39,10 @@ export async function getCurrentSemesterPendingStudents({
   }
 
   if (!students?.length) {
-    console.log("⚠ No students found");
     return 0;
   }
 
   const studentIds = students.map(s => s.studentId);
-
-  console.log("👨‍🎓 Students found:", studentIds.length);
 
   const { data: obligations, error: obligationError } = await supabase
     .from("student_fee_obligation")
@@ -69,7 +61,6 @@ export async function getCurrentSemesterPendingStudents({
   }
 
   if (!obligations?.length) {
-    console.log("⚠ No obligations");
     return 0;
   }
 
@@ -108,18 +99,12 @@ export async function getCurrentSemesterPendingStudents({
 
     const pending =
       Number(o.totalAmount) - paid;
-
-    console.log(
-      `➡ Student ${o.studentId} | Total=${o.totalAmount} Paid=${paid} Pending=${pending}`
-    );
-
     if (pending > 0) {
       pendingStudents.add(o.studentId);
     }
 
   });
 
-  console.log("🎯 Pending Students:", pendingStudents.size);
 
   return pendingStudents.size;
 }

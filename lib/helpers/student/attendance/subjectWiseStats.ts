@@ -1,10 +1,6 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
-/* ================================
-   STATUS RULES
-================================ */
-
 const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS"] as const;
@@ -21,22 +17,14 @@ function isCancelledStatus(status: string) {
   return (CANCELLED_STATUSES as readonly string[]).includes(status);
 }
 
-/* ================================
-   MAIN HELPER
-================================ */
-
 export async function getStudentDashboardData(
   userId: number,
   dateStr: string,
   page: number,
   limit: number
 ) {
-
-  console.log("📥 Subject-wise attendance helper called", { userId, dateStr });
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-
-  /* ---------- 1️⃣ Student context ---------- */
 
   const ctx = await fetchStudentContext(userId);
 
@@ -49,8 +37,6 @@ export async function getStudentDashboardData(
     collegeSemesterId,
     collegeSectionsId,
   } = ctx;
-
-  /* ---------- 2️⃣ Class students ---------- */
 
   const { data: sahRows } = await supabase
     .from("student_academic_history")
@@ -78,8 +64,6 @@ export async function getStudentDashboardData(
 
   if (!classStudentIds.length) return emptyDashboard();
 
-  /* ---------- 3️⃣ SEMESTER attendance ---------- */
-
   const { data: semAll } = await supabase
     .from("attendance_record")
     .select("studentId, calendarEventId, status")
@@ -87,9 +71,6 @@ export async function getStudentDashboardData(
     .lte("markedAt", dateStr);
 
   if (!semAll?.length) return emptyDashboard();
-
-  /* ---------- 4️⃣ Calendar events ---------- */
-
   const eventIds = [...new Set(semAll.map(r => r.calendarEventId))];
 
   const { data: events } = await supabase
@@ -105,8 +86,6 @@ export async function getStudentDashboardData(
   const eventMap = new Map(
     (events ?? []).map(e => [e.calendarEventId, e])
   );
-
-  /* ---------- 5️⃣ Subjects ---------- */
 
   const subjectIds = [
     ...new Set((events ?? []).map(e => e.subject).filter(Boolean)),
@@ -124,8 +103,6 @@ export async function getStudentDashboardData(
     (subjects ?? []).map(s => [s.collegeSubjectId, s.subjectName])
   );
 
-  /* ---------- 6️⃣ SUBJECT-WISE ATTENDANCE ---------- */
-
   const subjectWiseMap: Record<
     number,
     {
@@ -139,8 +116,6 @@ export async function getStudentDashboardData(
   for (const r of semAll) {
 
     const ev = eventMap.get(r.calendarEventId);
-
-    // skip deleted events
     if (!ev || !ev.subject) continue;
 
     if (isCancelledStatus(r.status)) continue;
@@ -190,9 +165,6 @@ export async function getStudentDashboardData(
   );
 
   const paginatedStats = allSubjectWiseStats.slice(from, to + 1);
-
-  /* ---------- 7️⃣ SEMESTER TOTALS ---------- */
-
   const semesterTotalSet = new Set<number>();
   const semesterAttendedSet = new Set<number>();
 
@@ -215,8 +187,6 @@ export async function getStudentDashboardData(
   const semesterTotal = semesterTotalSet.size;
   const semesterAttended = semesterAttendedSet.size;
 
-  /* ---------- 8️⃣ SEMESTER DISTRIBUTION ---------- */
-
   let present = 0;
   let absent = 0;
   let late = 0;
@@ -237,8 +207,6 @@ export async function getStudentDashboardData(
   }
 
   const distTotal = present + absent + late + leave;
-
-  /* ---------- 9️⃣ TODAY ATTENDANCE ---------- */
 
   const { data: todayAll } = await supabase
     .from("attendance_record")
@@ -264,9 +232,6 @@ export async function getStudentDashboardData(
       todayAttendedSet.add(r.calendarEventId);
     }
   }
-
-  /* ---------- FINAL RETURN ---------- */
-
   return {
 
     todayStats: {
@@ -303,10 +268,6 @@ export async function getStudentDashboardData(
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
 }
-
-/* ================================
-   EMPTY
-================================ */
 
 function emptyDashboard() {
   return {

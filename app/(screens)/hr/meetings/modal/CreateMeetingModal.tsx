@@ -3,9 +3,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { CaretDown, CaretRight } from '@phosphor-icons/react';
 import SelectFacultyModal from './SelectFacultyModal';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useUser } from '@/app/utils/context/UserContext';
+import { saveHrMeeting } from '@/lib/helpers/Hr/meetings/meetingsAPI';
+import { addMeetingParticipants } from '@/lib/helpers/Hr/meetings/meetingParticipantsAPI';
+import { useCollegeHr } from '@/app/utils/context/hr/useCollegeHr';
 
 
 const convertTo24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
@@ -18,7 +22,7 @@ const convertTo24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
 const MIN_TIME = 8 * 60;
 const MAX_TIME = 22 * 60;
 
-const MAX_MEETING_DURATION = 4 * 60; // 4 hours
+const MAX_MEETING_DURATION = 4 * 60;
 
 const validateTimeRange = (
     sHour: string, sMinute: string, sPeriod: "AM" | "PM",
@@ -78,8 +82,8 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-
-    // 1. Local state for form dropdown
+    const { userId } = useUser();
+    const { collegeHrId, collegeId } = useCollegeHr();
     const [selectedRole, setSelectedRole] = useState('Select Role');
     const [title, setTitle] = useState("");
     const [agenda, setAgenda] = useState("");
@@ -87,41 +91,73 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
     const [inAppNotification, setInAppNotification] = useState(false);
     const [emailNotification, setEmailNotification] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
-
+    const [meetingLink, setMeetingLink] = useState("");
     const [startHour, setStartHour] = useState("09");
     const [startMinute, setStartMinute] = useState("00");
     const [startPeriod, setStartPeriod] = useState<"AM" | "PM">("AM");
-
     const [endHour, setEndHour] = useState("10");
     const [endMinute, setEndMinute] = useState("00");
     const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
+    const [isScheduling, setIsScheduling] = useState(false);
+    const selectModalRoleParam = searchParams.get('selectRole');
+    const isSelectModalOpen = !!selectModalRoleParam;
 
-    // 2. Read from URL Props (URL Search Params)
-    const selectModalRoleParam = searchParams.get('selectRole'); // Gets 'Placement', 'Admin', etc. from URL
-    const isSelectModalOpen = !!selectModalRoleParam; // Opens modal if param exists in URL
+    useEffect(() => {
+        if (isOpen) {
+            resetForm();
+        }
+    }, [isOpen]);
 
-    // Helper to dynamically change text based on local state
+    const resetForm = () => {
+        setTitle("");
+        setAgenda("");
+        setDate("");
+        setSelectedRole("Select Role");
+        setMeetingLink("");
+
+        setStartHour("09");
+        setStartMinute("00");
+        setStartPeriod("AM");
+
+        setEndHour("10");
+        setEndMinute("00");
+        setEndPeriod("AM");
+
+        setSelectedUsers([]);
+
+        setInAppNotification(false);
+        setEmailNotification(false);
+    };
     const getDynamicSelectionText = () => {
         switch (selectedRole) {
-            case 'Admin': return 'Select Admins';
-            case 'Faculty': return 'Select Faculties';
-            case 'Placement': return 'Select Placements';
-            case 'Finance': return 'Select Finance';
-            default: return 'Select Faculties';
+            case 'Admin':
+                return 'Select Admins';
+            case 'Faculty':
+                return 'Select Faculties';
+            case 'Placement':
+                return 'Select Placements';
+            case 'Finance':
+                return 'Select Finance';
+            default:
+                return 'Select Participants';
         }
     };
     const dynamicText = getDynamicSelectionText();
 
-    // Helper to get title specifically for the second modal based on the URL prop
     const getModalTitleFromUrl = () => {
         switch (selectModalRoleParam) {
-            case 'Admin': return 'Select Admins';
-            case 'Placement': return 'Select Placements';
-            case 'Finance': return 'Select Finance';
-            default: return 'Select Faculties';
+            case 'Admin':
+                return 'Select Admins';
+            case 'Faculty':
+                return 'Select Faculties';
+            case 'Placement':
+                return 'Select Placements';
+            case 'Finance':
+                return 'Select Finance';
+            default:
+                return 'Select Participants';
         }
     }
-
     const validateTitle = (title: string) => {
         const regex = /^[A-Za-z\s]+$/;
 
@@ -137,7 +173,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
 
         return true;
     };
-
     const validateAgenda = (agenda: string) => {
         if (!agenda.trim()) {
             toast.error("Agenda is required");
@@ -145,7 +180,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
         }
         return true;
     };
-
     const validateDate = (date: string) => {
         if (!date) {
             toast.error("Please select meeting date");
@@ -163,40 +197,64 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
 
         return true;
     };
+    const ALLOWED_MEETING_PROVIDERS = [
+        "meet.google.com",
+        "zoom.us",
+        "teams.microsoft.com",
+        "teams.live.com",
+        "webex.com",
+        "gotomeeting.com",
+        "skype.com"
+    ];
+    const validateMeetingUrl = (url: string): boolean => {
+        try {
+            setIsScheduling(true);
+            toast.loading("Scheduling meeting...", { id: "schedule-loading" });
+            const parsedUrl = new URL(url.trim());
+            const hostname = parsedUrl.hostname.toLowerCase();
 
-    // 3. Open Modal: Push prop to URL
+            const isAllowed = ALLOWED_MEETING_PROVIDERS.some(provider =>
+                hostname === provider || hostname.endsWith(`.${provider}`)
+            );
+
+            // Prevent image/file links
+            if (parsedUrl.pathname.match(/\.(jpg|jpeg|png|gif|mp4|pdf)$/i)) return false;
+
+            return isAllowed;
+        } catch {
+            return false;
+        }
+    };
     const handleOpenSelectModal = () => {
+
+        if (selectedRole === "Select Role") {
+            toast.error("Please select a role first");
+            return;
+        }
+
         const params = new URLSearchParams(searchParams.toString());
-        const roleToPass = selectedRole === 'Select Role' ? 'Faculty' : selectedRole;
-        params.set('selectRole', roleToPass); // Sets e.g., ?selectRole=Placement
+        params.set('selectRole', selectedRole);
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
-
-    // 4. Close Modal: Remove prop from URL
     const handleCloseSelectModal = () => {
         const params = new URLSearchParams(searchParams.toString());
-        params.delete('selectRole'); // Removes ?selectRole=...
+        params.delete('selectRole');
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
+    const handleSubmit = async () => {
 
-    const handleSubmit = () => {
-
-        // Title validation
+        if (!collegeId || !collegeHrId) {
+            toast.error("HR context not loaded yet");
+            return;
+        }
         if (!validateTitle(title)) return;
-
-        // Agenda validation
+        if (!validateTitle(title)) return;
         if (!validateAgenda(agenda)) return;
-
-        // Role validation
         if (!selectedRole || selectedRole === "Select Role") {
             toast.error("Please select a role", { id: "role-error" });
             return;
         }
-
-        // Date validation
         if (!validateDate(date)) return;
-
-        // Time validation
         if (!validateTimeRange(
             startHour,
             startMinute,
@@ -205,21 +263,94 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
             endMinute,
             endPeriod
         )) return;
-
+        const trimmedLink = meetingLink.trim();
+        if (!trimmedLink) {
+            toast.error("Meeting link is required", { id: "meeting-link-error" });
+            return;
+        }
+        let parsedUrl: URL;
+        try {
+            parsedUrl = new URL(trimmedLink);
+        } catch {
+            toast.error("Please enter a valid meeting URL", { id: "meeting-link-error" });
+            return;
+        }
+        const isValidProvider = validateMeetingUrl(trimmedLink);
+        if (!isValidProvider) {
+            toast.error(
+                "Only valid meeting platforms are allowed (Google Meet, Zoom, Microsoft Teams, Webex, Skype, GoToMeeting)",
+                { id: "meeting-link-error" }
+            );
+            return;
+        }
         if (selectedUsers.length === 0) {
             toast.error(`Please select at least one ${selectedRole.toLowerCase()}`, { id: "participant-error" });
             return;
         }
-
-        // Notification validation
         if (!inAppNotification && !emailNotification) {
             toast.error("Please select at least one notification option", { id: "notification-error" });
             return;
         }
+        try {
 
-        // Success
-        toast.success("Meeting scheduled successfully");
+            setIsScheduling(true);
+            toast.loading("Scheduling meeting...", { id: "schedule-loading" });
+
+            const meetingRes = await saveHrMeeting(
+                {
+                    title,
+                    agenda,
+                    meetingDate: date,
+                    fromTime,
+                    toTime,
+                    meetingLink: trimmedLink,
+                    collegeId
+                },
+                collegeHrId
+            );
+
+            if (!meetingRes.success) {
+                toast.error(meetingRes.message || "Failed to create meeting", { id: "schedule-loading" });
+                return;
+            }
+
+            const hrMeetingId = meetingRes.hrMeetingId;
+
+            const participants = selectedUsers.map((u) => ({
+                userId: u.userId,
+                role: selectedRole as "Faculty" | "Admin" | "Finance" | "Placement",
+                notifiedInApp: inAppNotification,
+                notifiedEmail: emailNotification
+            }));
+
+            const participantRes = await addMeetingParticipants(
+                hrMeetingId,
+                participants
+            );
+
+            if (!participantRes.success) {
+                toast.error("Meeting created but participants failed", { id: "schedule-loading" });
+                return;
+            }
+
+            toast.success("Meeting scheduled successfully", { id: "schedule-loading" });
+
+            resetForm();
+            onClose();
+
+        } catch (err) {
+
+            console.error(err);
+            toast.error("Something went wrong", { id: "schedule-loading" });
+
+        } finally {
+
+            setIsScheduling(false);
+
+        }
     };
+    const fromTime = `${startHour}:${startMinute} ${startPeriod}`;
+    const toTime = `${endHour}:${endMinute} ${endPeriod}`;
 
     return (
         <>
@@ -237,21 +368,18 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 10 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-2xl w-full max-w-2xl p-8 shadow-xl custom-scrollbar overflow-y-auto max-h-[90vh]"
+                            className="bg-white rounded-2xl w-full max-w-112 p-4 max-h-[90vh] shadow-xl custom-scrollbar overflow-y-auto "
                         >
                             <h2 className="text-[22px] font-bold text-[#282828] mb-6">Create Meeting</h2>
 
                             <div className="space-y-3">
-                                {/* Title */}
                                 <div>
-                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Title</label>
+                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Title<span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={title}
                                         onChange={(e) => {
                                             const value = e.target.value;
-
-                                            // Allow only letters and spaces
                                             if (/^[A-Za-z\s]*$/.test(value)) {
                                                 setTitle(value);
                                             } else {
@@ -259,37 +387,33 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                             }
                                         }}
                                         placeholder="e.g., Internal Assessment Discussion"
-                                        className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-medium outline-none focus:border-[#43C17A] text-[#282828]"
+                                        className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-regular outline-none focus:border-gray-300 focus:ring-0 text-[#282828]"
                                     />
 
                                 </div>
-
-                                {/* Agenda */}
                                 <div>
-                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Agenda</label>
+                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Agenda<span className="text-red-500">*</span></label>
                                     <textarea
                                         rows={3}
                                         value={agenda}
                                         onChange={(e) => setAgenda(e.target.value)}
                                         placeholder="Brief description of the meeting......!!!!"
-                                        className="w-full border border-[#E0E0E0] rounded-lg px-3 py-1 text-sm font-medium outline-none focus:border-[#43C17A] resize-none text-[#282828]"
+                                        className="w-full border border-[#E0E0E0] rounded-lg px-3 py-1 text-sm font-regular outline-none resize-none text-[#282828]"
                                     />
                                 </div>
-
-                                {/* Date & Role */}
                                 <div className="grid grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Date</label>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Date<span className="text-red-500">*</span></label>
                                         <input
                                             type="date"
                                             value={date}
                                             min={getTodayDateString()}
                                             onChange={(e) => setDate(e.target.value)}
-                                            className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-medium outline-none text-[#555555] cursor-pointer"
+                                            className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-regular outline-none text-[#555555] cursor-pointer"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Role</label>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Role<span className="text-red-500">*</span></label>
                                         <div className="relative">
                                             <select
                                                 value={selectedRole}
@@ -306,19 +430,12 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Time */}
                                 <div>
                                     <label className="block text-base font-semibold text-[#282828] mb-1.5">Time</label>
                                     <div className="grid grid-cols-2 gap-6">
-                                        {/* From Time */}
-                                        {/* From Time */}
                                         <div>
-                                            <span className="text-base text-[#555555] block mb-1">From</span>
-
+                                            <span className="text-base text-[#555555] block mb-1">From<span className="text-red-500">*</span></span>
                                             <div className="flex gap-2">
-
-                                                {/* Hour */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={startHour}
@@ -335,8 +452,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                                         })}
                                                     </select>
                                                 </div>
-
-                                                {/* Minute */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={startMinute}
@@ -353,8 +468,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                                         })}
                                                     </select>
                                                 </div>
-
-                                                {/* AM / PM */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={startPeriod}
@@ -368,14 +481,10 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
 
                                             </div>
                                         </div>
-                                        {/* To Time */}
-                                        {/* From Time */}
                                         <div>
-                                            <span className="text-base text-[#555555] block mb-1">To</span>
+                                            <span className="text-base text-[#555555] block mb-1">To<span className="text-red-500">*</span></span>
 
                                             <div className="flex gap-2">
-
-                                                {/* Hour */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={endHour}
@@ -392,8 +501,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                                         })}
                                                     </select>
                                                 </div>
-
-                                                {/* Minute */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={endMinute}
@@ -410,8 +517,6 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                                         })}
                                                     </select>
                                                 </div>
-
-                                                {/* AM / PM */}
                                                 <div className="relative flex-1">
                                                     <select
                                                         value={endPeriod}
@@ -427,31 +532,44 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Dynamic Selection Block (Faculties / Admin / Placement / etc.) */}
-                                <div>
-                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">{dynamicText}</label>
-                                    <div
-                                        onClick={handleOpenSelectModal}
-                                        className="relative cursor-pointer"
-                                    >
-                                        <div className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm bg-white text-[#555555]">
-                                            {dynamicText}
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">
+                                            {selectedRole === "Select Role" ? "Select Participants" : dynamicText}<span className="text-red-500">*</span>
+                                        </label>
+                                        <div
+                                            onClick={handleOpenSelectModal}
+                                            className="relative cursor-pointer"
+                                        >
+                                            <div className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm bg-white text-[#555555]">
+                                                {selectedRole === "Select Role" ? "Select Participants" : dynamicText}
+                                            </div>
+                                            <CaretRight size={14} className="absolute right-3 top-3.5 text-[#555555] pointer-events-none" />
                                         </div>
-                                        <CaretRight size={14} className="absolute right-3 top-3.5 text-[#555555] pointer-events-none" />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">
+                                            Meeting Link<span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="url"
+                                            value={meetingLink}
+                                            onChange={(e) => setMeetingLink(e.target.value)}
+                                            placeholder="https://meet.google.com/..."
+                                            className="w-full px-3 py-2.5 border border-[#CCCCCC] rounded-lg focus:outline-none focus:ring-1 text-sm text-[#555555]"
+                                        />
                                     </div>
                                 </div>
-
-                                {/* Notifications */}
                                 <div>
-                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Notifications</label>
+                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Notifications<span className="text-red-500">*</span></label>
                                     <div className="flex gap-4">
                                         <label className="flex-1 border border-[#E0E0E0] rounded-lg px-3 py-2.5 flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={inAppNotification}
                                                 onChange={(e) => setInAppNotification(e.target.checked)}
-                                                className="w-4 h-4 rounded border-gray-300 accent-[#43C17A] cursor-pointer"
+                                                className="w-4 h-4 rounded border-gray-300 cursor-pointer"
                                             />
                                             <span className="text-sm text-[#282828]">In-app notification</span>
                                         </label>
@@ -460,26 +578,26 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                                 type="checkbox"
                                                 checked={emailNotification}
                                                 onChange={(e) => setEmailNotification(e.target.checked)}
-                                                className="w-4 h-4 rounded border-gray-300 accent-[#43C17A] cursor-pointer"
+                                                className="w-4 h-4 rounded border-gray-300 cursor-pointer"
                                             />
                                             <span className="text-sm text-[#282828]">Email notification</span>
                                         </label>
                                     </div>
                                 </div>
-
-                                {/* Actions */}
                                 <div className="flex gap-4 pt-2">
                                     <button
                                         onClick={onClose}
-                                        className="flex-1 py-3 bg-[#E9E9E9] rounded-lg font-semibold text-[#282828] hover:bg-[#d8d8d8] transition-colors cursor-pointer"
+                                        className="flex-1 py-1.5 bg-[#E9E9E9] rounded-lg font-semibold text-[#282828] hover:bg-[#d8d8d8] transition-colors cursor-pointer"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleSubmit}
-                                        className="flex-1 py-3 bg-[#43C17A] rounded-lg font-semibold text-white hover:bg-[#38a869] transition-colors shadow-sm cursor-pointer"
+                                        disabled={isScheduling}
+                                        className={`flex-1 py-1.5 rounded-lg font-semibold text-white transition-colors shadow-sm
+    ${isScheduling ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#38a869] cursor-pointer"}`}
                                     >
-                                        Schedule
+                                        {isScheduling ? "Scheduling..." : "Schedule"}
                                     </button>
                                 </div>
                             </div>
@@ -487,14 +605,12 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Sub-modal reading directly from the URL param */}
             <SelectFacultyModal
                 isOpen={isSelectModalOpen}
                 onClose={handleCloseSelectModal}
                 onSelect={(users) => setSelectedUsers(users)}
                 title={getModalTitleFromUrl()}
-                roleName={selectModalRoleParam || 'Faculty'}
+                roleName={(selectModalRoleParam as "Admin" | "Faculty" | "Finance") || "Faculty"}
             />
         </>
     );

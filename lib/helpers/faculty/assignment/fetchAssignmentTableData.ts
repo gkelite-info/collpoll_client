@@ -8,9 +8,6 @@ export async function fetchAssignmentTableData(assignmentId: string) {
     .single();
 
   if (assignErr) throw assignErr;
-
-  console.log("Test log");
-
   const { data: students, error: studentError } = await supabase
     .from("students")
     .select(`studentId, users (fullName, email, userId)`)

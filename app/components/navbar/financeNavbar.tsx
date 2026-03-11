@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { CalendarIcon, ChartLineIcon, FolderOpen, Gear, House, Laptop } from "@phosphor-icons/react";
+import { CalendarIcon, ChartLineIcon, CheckCircle, FolderOpen, Gear, House, Laptop } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 import { CurrencyCircleDollar } from "@phosphor-icons/react/dist/ssr";
 
@@ -62,6 +62,13 @@ export default function FinanceNavbar() {
       label: "Drive",
       path: "/finance/drive",
     },
+    {
+          icon: (isActive) => (
+            <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+          ),
+          label: "My Attendance",
+          path: "/finance/MyAttendance",
+        },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />

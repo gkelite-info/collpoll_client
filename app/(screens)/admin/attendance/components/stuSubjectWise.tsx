@@ -100,9 +100,6 @@ export default function StudentAttendanceDetailsPage({
 }: StudentAttendanceDetailsPageProps) {
   const params = useSearchParams();
   const studentId = params.get("studentId");
-
-  console.log("Student ID from params:", studentId);
-
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
