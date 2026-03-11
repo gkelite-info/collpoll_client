@@ -1,7 +1,5 @@
 'use client'
-import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-// import { fetchAdminFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import { motion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -10,14 +8,17 @@ import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import NewMeetingCard from "./components/NewMeetingCard";
 import CreateMeetingModal from "./modal/CreateMeetingModal";
+import { deactivateHrMeeting, fetchHrMeetings } from "@/lib/helpers/Hr/meetings/meetingsAPI";
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Hr';
 
 interface Meeting {
     id: string;
-    financeMeetingId: number;
-    financeMeetingSectionsId: number;
+    hrMeetingId: number;
+    hrMeetingSectionsId: number;
     category: MeetingCategory;
     title: string;
     timeRange: string;
@@ -34,21 +35,15 @@ interface Meeting {
     sections?: any[];
 }
 
-const MOCK_MEETINGS: Meeting[] = [
-    { id: 'u1', financeMeetingId: 101, financeMeetingSectionsId: 1, category: 'Hr', title: 'Q2 Budget Allocation Review', timeRange: '10:00 - 11:30', educationType: 'B.Tech', branch: 'CSE', description: 'Reviewing department-wise budget requests for Q2.', date: '25 Mar 2026', participants: 15, year: '2026', section: 'A', tags: 'Budget, Planning', type: 'upcoming', meetingLink: 'https://meet.google.com/abc-defg-hij' },
-    { id: 'u2', financeMeetingId: 102, financeMeetingSectionsId: 2, category: 'Hr', title: 'Infrastructure Expansion Funds', timeRange: '02:00  - 03:00 ', educationType: 'M.Tech', branch: 'Civil', description: 'Discussing the release of funds for the new library wing.', date: '28 Mar 2026', participants: 8, year: '2026', section: 'B', tags: 'Infrastructure, Capital', type: 'upcoming', meetingLink: 'https://meet.google.com/xyz-uvwx-yz' },
-    { id: 'u3', financeMeetingId: 103, financeMeetingSectionsId: 3, category: 'Hr', title: 'Faculty Salary Revisions', timeRange: '11:00 - 12:30 ', educationType: 'B.Sc', branch: 'Physics', description: 'Annual appraisal and salary revision meeting.', date: '02 Apr 2026', participants: 12, year: '2026', section: 'A', tags: 'HR, Payroll', type: 'upcoming', meetingLink: 'https://meet.google.com/qwe-rtyu-iop' },
-    { id: 'u4', financeMeetingId: 104, financeMeetingSectionsId: 4, category: 'Hr', title: 'Scholarship Grant Approvals', timeRange: '04:00  - 05:00 ', educationType: 'B.Tech', branch: 'ECE', description: 'Finalizing the list of students for merit scholarships.', date: '05 Apr 2026', participants: 20, year: '2026', section: 'C', tags: 'Grants, Students', type: 'upcoming', meetingLink: 'https://meet.google.com/asd-fghj-klz' },
-    { id: 'u5', financeMeetingId: 105, financeMeetingSectionsId: 5, category: 'Hr', title: 'Alumni Endowment Review', timeRange: '09:00 - 10:30', educationType: 'MBA', branch: 'Finance', description: 'Reviewing recent alumni contributions and fund allocation.', date: '10 Apr 2026', participants: 10, year: '2026', section: 'N/A', tags: 'Alumni, Funds', type: 'upcoming', meetingLink: 'https://meet.google.com/xcv-bnmq-wer' },
-    { id: 'u6', financeMeetingId: 106, financeMeetingSectionsId: 6, category: 'Hr', title: 'Vendor Payment Schedules', timeRange: '03:00  - 04:30 ', educationType: 'B.Tech', branch: 'Mechanical', description: 'Setting up payment milestones for lab equipment vendors.', date: '15 Apr 2026', participants: 6, year: '2026', section: 'A', tags: 'Vendors, Procurement', type: 'upcoming', meetingLink: 'https://meet.google.com/tyu-iopa-sdf' },
-
-    { id: 'p1', financeMeetingId: 201, financeMeetingSectionsId: 7, category: 'Hr', title: 'Annual Financial Audit', timeRange: '10:00 - 01:00', educationType: 'All', branch: 'All', description: 'External audit of the college financial records.', date: '10 Feb 2026', participants: 25, year: '2025', section: 'All', tags: 'Audit, Compliance', type: 'previous', meetingLink: 'https://meet.google.com/prev-123' },
-    { id: 'p2', financeMeetingId: 202, financeMeetingSectionsId: 8, category: 'Hr', title: 'Tech Fest Sponsorships', timeRange: '02:00 - 03:00', educationType: 'B.Tech', branch: 'IT', description: 'Finalizing sponsor funds for the upcoming tech fest.', date: '15 Feb 2026', participants: 14, year: '2026', section: 'A', tags: 'Events, Sponsorship', type: 'previous', meetingLink: 'https://meet.google.com/prev-456' },
-    { id: 'p3', financeMeetingId: 203, financeMeetingSectionsId: 9, category: 'Hr', title: 'Hostel Maintenance Budget', timeRange: '11:00 - 12:00', educationType: 'B.Tech', branch: 'Facilities', description: 'Approving the quarterly budget for hostel repairs.', date: '20 Feb 2026', participants: 9, year: '2026', section: 'N/A', tags: 'Maintenance, Operations', type: 'previous', meetingLink: 'https://meet.google.com/prev-789' },
-    { id: 'p4', financeMeetingId: 204, financeMeetingSectionsId: 10, category: 'Hr', title: 'Emergency Software Licensing', timeRange: '04:00 - 04:45', educationType: 'B.Tech', branch: 'CSE', description: 'Approval for urgent renewal of IDE licenses.', date: '25 Feb 2026', participants: 5, year: '2026', section: 'B', tags: 'Software, IT', type: 'previous', meetingLink: 'https://meet.google.com/prev-abc' },
-    { id: 'p5', financeMeetingId: 205, financeMeetingSectionsId: 11, category: 'Hr', title: 'Research Grant Allocation', timeRange: '09:30 - 11:00', educationType: 'Ph.D', branch: 'Biotech', description: 'Allocating state grants to ongoing research projects.', date: '01 Mar 2026', participants: 18, year: '2026', section: 'A', tags: 'Research, Grants', type: 'previous', meetingLink: 'https://meet.google.com/prev-def' },
-    { id: 'p6', financeMeetingId: 206, financeMeetingSectionsId: 12, category: 'Hr', title: 'Transportation Fleet Insurance', timeRange: '01:00 - 02:00', educationType: 'B.Tech', branch: 'Transport', description: 'Negotiating insurance renewals for college buses.', date: '05 Mar 2026', participants: 7, year: '2026', section: 'N/A', tags: 'Transport, Insurance', type: 'previous', meetingLink: 'https://meet.google.com/prev-ghi' },
-];
+const getCurrentTime12Hour = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${String(hours).padStart(2, "0")}:${minutes} ${period}`;
+};
 
 export default function MeetingsPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -60,22 +55,23 @@ export default function MeetingsPage() {
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
     const currentCategory = 'Student';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
-
-    // 1. Logic to check if the modal should be open based on the URL
     const isCreateModalOpen = searchParams.get('create') === 'true';
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { collegeHrId, collegeId } = useCollegeHr()
+    const itemsPerPage = 10;
 
-    // 2. Function to open the modal by adding ?create=true to the URL
     const openCreateModal = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.set('create', 'true');
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    // 3. Function to close the modal by removing the params from the URL
     const closeCreateModal = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.delete('create');
-        params.delete('selectRole'); // Also clean up the sub-modal state
+        params.delete('selectRole');
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
@@ -101,36 +97,71 @@ export default function MeetingsPage() {
     ];
 
     useEffect(() => {
-        if (!currentCategory) {
+        if (!currentCategory || !collegeHrId) {
             setMeetings([]);
             return;
         }
         loadMeetings();
-    }, [currentType, page]);
+    }, [currentType, page, collegeHrId, collegeId]);
 
     const loadMeetings = async () => {
+        if (!collegeHrId || !collegeId) return;
         try {
             setIsLoading(true);
-            setTimeout(() => {
-                const filteredMeetings = MOCK_MEETINGS.filter(m => m.type === currentType);
+            const now = new Date();
+            const currentDate = now.toISOString().split("T")[0];
+            const currentTime = getCurrentTime12Hour();
 
-                const finalMeetings: Meeting[] = filteredMeetings.map((meeting: any) => ({
-                    ...meeting,
-                    section: meeting.section || "N/A",
-                    date: formatMeetingDate(meeting.date),
-                }));
+            const res = await fetchHrMeetings({
+                createdBy: collegeHrId!,
+                collegeId: collegeId!,
+                type: currentType,
+                page,
+                limit: itemsPerPage,
+                currentDate,
+                currentTime
+            });
 
-                setMeetings(finalMeetings);
-                setTotalPages(1);
-                setIsLoading(false);
-            }, 500);
+            const formattedMeetings: Meeting[] = res.data.map((m: any) => ({
+                ...m,
+                type: currentType,
+                date: formatMeetingDate(m.date)
+            }));
+
+            setMeetings(formattedMeetings);
+            setTotalPages(res.totalPages);
 
         } catch (err) {
+            console.error(err);
             toast.error(`Failed to fetch ${currentType} meetings`);
+        } finally {
             setIsLoading(false);
         }
-        finally {
-            setIsLoading(false);
+    };
+
+    const handleDeleteClick = (meeting: Meeting) => {
+        setSelectedMeeting(meeting);
+        setDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!selectedMeeting) return;
+        try {
+            setIsDeleting(true);
+            const res = await deactivateHrMeeting(selectedMeeting.hrMeetingId);
+            if (!res.success) {
+                toast.error("Failed to delete meeting");
+                return;
+            }
+            toast.success("Meeting deleted successfully");
+            loadMeetings();
+            setDeleteModalOpen(false);
+            setSelectedMeeting(null);
+        } catch (error) {
+            console.error(error);
+            toast.error("Something went wrong");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -150,9 +181,7 @@ export default function MeetingsPage() {
                 </div>
 
                 <div className="bg-red-00">
-                    {/* Filter and Create Row */}
                     <div className="w-full relative flex items-center justify-center mb-4 mt-2">
-                        {/* Tabs Container - Perfectly Centered */}
                         <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto">
                             {typeTabs.map((tab) => {
                                 const isActive = currentType === tab.id;
@@ -160,7 +189,8 @@ export default function MeetingsPage() {
                                     <button
                                         key={tab.id}
                                         onClick={() => updateFilter('type', tab.id)}
-                                        className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
+                                        disabled={isActive}
+                                        className={`relative z-10 focus:outline-none cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive
                                             ? 'text-[#E9E9E9]'
                                             : 'text-[#414141]'
                                             }`}
@@ -174,18 +204,17 @@ export default function MeetingsPage() {
                                             />
                                         )}
                                         {!isActive && (
-                                            <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                                            <div className="absolute focus:outline-none inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
                                         )}
                                     </button>
                                 )
                             })}
                         </div>
 
-                        {/* Create Button - Locked to the far right of this specific row */}
                         <div className="absolute right-0 top-1/2 -translate-y-1/2">
                             <button
                                 onClick={openCreateModal}
-                                className="bg-[#43C17A] text-white px-3 py-2 rounded-lg font-semibold hover:bg-[#38a869] transition-colors shadow-sm cursor-pointer"
+                                className="bg-[#43C17A] focus:outline-none text-white px-3 py-2 rounded-lg font-semibold hover:bg-[#38a869] transition-colors shadow-sm cursor-pointer"
                             >
                                 Create Meeting
                             </button>
@@ -194,13 +223,13 @@ export default function MeetingsPage() {
 
                     <div className="flex-1 overflow-y-auto p-2 mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
-                            {isLoading ? (
+                            {(isLoading || !collegeHrId) ? (
                                 <div className="col-span-full flex justify-center items-center h-[400px]">
                                     <Loader />
                                 </div>
                             ) : meetings.length > 0 ? (
                                 meetings.map((meeting) => (
-                                    <NewMeetingCard key={meeting.id} data={meeting} role={"Finance"} />
+                                    <NewMeetingCard key={meeting.id} data={meeting} role={"Finance"} onDelete={handleDeleteClick} />
                                 ))
                             ) : (
                                 <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
@@ -219,8 +248,8 @@ export default function MeetingsPage() {
                                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                                     disabled={page === 1}
                                     className={`p-2 rounded-md ${page === 1
-                                        ? 'bg-gray-100 text-gray-400'
-                                        : 'bg-gray-200 hover:bg-gray-300'
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-gray-200 hover:bg-gray-300 cursor-pointer'
                                         }`}
                                 >
                                     <CaretLeft size={16} weight="bold" />
@@ -231,7 +260,7 @@ export default function MeetingsPage() {
                                         <button
                                             key={p}
                                             onClick={() => setPage(p)}
-                                            className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
+                                            className={`px-3 py-1 cursor-pointer rounded-md text-sm font-medium ${page === p
                                                 ? 'bg-[#16284F] text-white'
                                                 : 'bg-gray-200 hover:bg-gray-300'
                                                 }`}
@@ -245,8 +274,8 @@ export default function MeetingsPage() {
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                     disabled={page === totalPages}
                                     className={`p-2 rounded-md ${page === totalPages
-                                        ? 'bg-gray-100 text-gray-400'
-                                        : 'bg-gray-200 hover:bg-gray-300'
+                                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : 'bg-gray-200 hover:bg-gray-300 cursor-pointer'
                                         }`}
                                 >
                                     <CaretRight size={16} weight="bold" />
@@ -255,6 +284,13 @@ export default function MeetingsPage() {
                         </div>
                     )}
                 </div>
+                <ConfirmDeleteModal
+                    open={deleteModalOpen}
+                    onConfirm={handleConfirmDelete}
+                    onCancel={() => setDeleteModalOpen(false)}
+                    isDeleting={isDeleting}
+                    name="meeting"
+                />
             </div>
             <CreateMeetingModal
                 isOpen={isCreateModalOpen}
