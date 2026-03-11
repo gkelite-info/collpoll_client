@@ -9,8 +9,8 @@ type MeetingCategory = 'Hr';
 
 interface Meeting {
     id: string;
-    financeMeetingId: number;
-    financeMeetingSectionsId: number;
+    hrMeetingId: number;
+    hrMeetingSectionsId: number;
     category: MeetingCategory;
     title: string;
     timeRange: string;
@@ -31,9 +31,9 @@ const formatToAMPM = (timeStr: string) => {
     if (!timeStr) return "";
     const [hourStr, minuteStr] = timeStr.split(":");
     let hour = parseInt(hourStr, 10);
-    const ampm = hour >= 12 ? "PM" : "AM";
+    // const ampm = hour >= 12 ? "PM" : "AM";
     hour = hour % 12 || 12;
-    return `${String(hour).padStart(2, '0')}:${minuteStr} ${ampm}`;
+    return `${String(hour).padStart(2, '0')}:${minuteStr}`;
 };
 
 const DetailPill = ({ label }: { label: string | number }) => (
@@ -87,7 +87,7 @@ export default function NewMeetingCard({
                                 className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEdit?.(data.financeMeetingId, data.financeMeetingSectionsId);
+                                    onEdit?.(data.hrMeetingId, data.hrMeetingSectionsId);
                                 }}
                             >
                                 <PencilSimple size={16} weight="fill" className="text-[#43C17A]" />
@@ -120,11 +120,13 @@ export default function NewMeetingCard({
                         )}
                     </div>
 
-                    <div className="flex items-start gap-2">
+                    <div className="flex gap-2 items-center">
                         <span className="text-[#303030] font-normal text-sm whitespace-nowrap">Description :</span>
-                        <p className="text-sm text-[#16284F] line-clamp-2 leading-relaxed">
-                            {data.description}
-                        </p>
+                        <div className="overflow-x-auto whitespace-nowrap max-w-full scrollbar-hide">
+                            <p className="text-sm text-[#16284F] leading-relaxed inline-block">
+                                {data.description}
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -144,9 +146,12 @@ export default function NewMeetingCard({
                                     />
                                 ))}
                             </div>
-                            <span className="text-sm text-[#303030] ml-1.5 font-medium">
-                                + {data.participants} Faculties
-                            </span>
+
+                            {data.participants > 3 ? (
+                                <span className="text-sm text-[#303030] ml-1 font-medium">
+                                    + {data.participants - 3}
+                                </span>
+                            ) : null}
                         </div>
 
                         <button
