@@ -36,10 +36,6 @@ export default async function getBranchYearWiseFinanceSummaryV2(
     const academicYearIds = academicYears.map(
         (y) => Number(y.collegeAcademicYearId)
     );
-
-    /* -------------------------------------------------
-       2️⃣ Get Students in This Branch + Education
-    --------------------------------------------------*/
     const { data: students } = await supabase
         .from("students")
         .select("studentId")
@@ -50,8 +46,6 @@ export default async function getBranchYearWiseFinanceSummaryV2(
         .eq("isActive", true);
 
     if (!students?.length) {
-        console.log("⚠ No students found. Returning academic years with zero values.");
-
         return {
             years: academicYears.map((year) => ({
                 academicYearId: year.collegeAcademicYearId,
@@ -69,10 +63,6 @@ export default async function getBranchYearWiseFinanceSummaryV2(
     }
 
     const studentIds = students.map((s) => Number(s.studentId));
-
-    /* -------------------------------------------------
-       3️⃣ Filter by Student Academic History (Year)
-    --------------------------------------------------*/
     const { data: academicHistory, error } = await supabase
         .from("student_academic_history")
         .select("studentId, collegeAcademicYearId")
@@ -81,21 +71,13 @@ export default async function getBranchYearWiseFinanceSummaryV2(
         .is("deletedAt", null);
 
     if (error) {
-        console.error("❌ Academic History Error:", error);
+        console.error(" Academic History Error:", error);
     }
-
-    console.log("📖 Academic History Raw:", academicHistory);
-
     const validStudentIds = (academicHistory || [])
         .filter((a) =>
             academicYearIds.includes(a.collegeAcademicYearId)
         )
         .map((a) => a.studentId);
-
-    console.log("✅ Valid StudentIds:", validStudentIds);
-    /* -------------------------------------------------
-       4️⃣ Fetch Obligations
-    --------------------------------------------------*/
     const { data: obligations } = await supabase
         .from("student_fee_obligation")
         .select(

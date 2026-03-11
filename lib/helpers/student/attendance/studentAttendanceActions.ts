@@ -21,20 +21,13 @@ export async function getStudentDashboardData(
   isInter: boolean
 ) {
 
-  console.log("📥 getStudentDashboardData called", { userId, dateStr });
-
-  /* ---------- 1️⃣ Student context ---------- */
-
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
   const ctx = await fetchStudentContext(userId);
-
-  console.log("🧠 Student Context:", ctx);
-
   const {
     studentId,
-    collegeId, // ✅ ADDED
+    collegeId, 
     collegeEducationId,
     collegeBranchId,
     collegeAcademicYearId,
@@ -58,33 +51,20 @@ export async function getStudentDashboardData(
 
   if (sahErr) throw sahErr;
 
-  console.log("📚 student_academic_history rows:", sahRows);
-
   const sahStudentIds = (sahRows ?? []).map(r => r.studentId);
-
-  console.log("👨‍🎓 SAH Student IDs:", sahStudentIds);
-
   if (!sahStudentIds.length) return emptyDashboard();
-
-  /* ---------- 2️⃣ Students table ---------- */
-
   const { data: classStudents, error: classErr } = await supabase
     .from("students")
     .select("studentId")
     .in("studentId", sahStudentIds)
-    .eq("collegeId", collegeId) // ✅ ADDED
+    .eq("collegeId", collegeId) 
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
     .is("deletedAt", null);
 
   if (classErr) throw classErr;
 
-  console.log("🏫 Class Students:", classStudents);
-
   const classStudentIds = (classStudents ?? []).map(s => s.studentId);
-
-  console.log("👥 Final Class Student IDs:", classStudentIds);
-
   if (!classStudentIds.length) return emptyDashboard();
 
   const { data: todayAll, error: todayErr } = await supabase
@@ -135,9 +115,6 @@ export async function getStudentDashboardData(
     .eq("is_deleted", false);
 
   if (eventErr) throw eventErr;
-
-  console.log("📚 Calendar Events:", events);
-
   const eventMap = new Map(
     (events ?? []).map(e => [e.calendarEventId, e])
   );
@@ -145,32 +122,21 @@ export async function getStudentDashboardData(
   const subjectIds = [
     ...new Set((events ?? []).map(e => e.subject).filter(Boolean)),
   ];
-
-  console.log("📘 Subject IDs:", subjectIds);
-
   const { data: subjects } = await supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
-    .eq("collegeId", collegeId) // ✅ ADDED
+    .eq("collegeId", collegeId) 
     .in("collegeSubjectId", subjectIds);
-
-  console.log("📖 Subjects:", subjects);
-
   const subjectMap = new Map(
     (subjects ?? []).map(s => [s.collegeSubjectId, s.subjectName])
   );
 
   const facultyIds = [...new Set((events ?? []).map(e => e.facultyId))];
-
-  console.log("👨‍🏫 Faculty IDs:", facultyIds);
-
   const { data: faculty } = await supabase
     .from("faculty")
     .select("facultyId, fullName")
-    .eq("collegeId", collegeId) // ✅ ADDED
+    .eq("collegeId", collegeId)
     .in("facultyId", facultyIds);
-
-  console.log("👩‍🏫 Faculty:", faculty);
 
   const facultyMap = new Map(
     (faculty ?? []).map(f => [f.facultyId, f.fullName])
@@ -237,8 +203,6 @@ export async function getStudentDashboardData(
   for (const r of semAll ?? []) {
 
     const ev = eventMap.get(r.calendarEventId);
-
-    // ❌ skip deleted events
     if (!ev) continue;
 
     if (isConductedStatus(r.status)) {
@@ -260,8 +224,6 @@ export async function getStudentDashboardData(
   for (const r of semAll ?? []) {
 
     const ev = eventMap.get(r.calendarEventId);
-
-    // ❌ skip deleted events
     if (!ev) continue;
 
     if (r.studentId !== studentId) continue;
@@ -272,12 +234,6 @@ export async function getStudentDashboardData(
   }
 
   const totalDist = semPresent.size + semAbsent.size + semLate.size;
-
-  console.log("📊 Semester Distribution", {
-    present: semPresent.size,
-    absent: semAbsent.size,
-    late: semLate.size
-  });
 
   const paginatedRows = tableData.slice(from, to + 1);
 
@@ -314,17 +270,14 @@ export async function getStudentDashboardData(
           : Math.round((semLate.size / totalDist) * 100),
     },
 
-    tableData: paginatedRows,   // ✅ UI expects this
-    totalCount: tableData.length, // ✅ pagination needs this
+    tableData: paginatedRows,   
+    totalCount: tableData.length, 
 
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
 }
 
 function emptyDashboard() {
-
-  console.log("⚠️ Empty dashboard returned");
-
   return {
     todayStats: { attended: 0, total: 0 },
     cards: { attended: 0, totalClasses: 0, percentage: 0 },

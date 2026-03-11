@@ -17,10 +17,6 @@ export async function getFinanceYearSemesterCollectionSummary(
     selectedYear,
   } = filters;
 
-  console.log("🔎 Filters:", filters);
-
-  /* 1️⃣ Get Active Students */
-
   let studentQuery = supabase
     .from("students")
     .select("studentId")
@@ -39,9 +35,6 @@ export async function getFinanceYearSemesterCollectionSummary(
   if (!students?.length) return emptyYearResponse();
 
   const studentIds = students.map((s) => s.studentId);
-
-  /* 2️⃣ Get Obligations */
-
   const { data: obligations } = await supabase
     .from("student_fee_obligation")
     .select("studentFeeObligationId")
@@ -55,9 +48,6 @@ export async function getFinanceYearSemesterCollectionSummary(
   const obligationIds = obligations.map(
     (o) => o.studentFeeObligationId
   );
-
-  /* 3️⃣ Get SUCCESS Transactions */
-
   const { data: transactions } = await supabase
     .from("student_payment_transaction")
     .select("studentPaymentTransactionId")
@@ -69,8 +59,6 @@ export async function getFinanceYearSemesterCollectionSummary(
   const transactionIds = transactions.map(
     (t) => t.studentPaymentTransactionId
   );
-  /* 4️⃣ Get Semester-wise Collection (Correct Source) */
-
   const { data: collections } = await supabase
     .from("student_fee_collection")
     .select(`
@@ -82,9 +70,6 @@ export async function getFinanceYearSemesterCollectionSummary(
     .in("studentPaymentTransactionId", transactionIds);
 
   if (!collections?.length) return emptyYearResponse();
-
-  /* 5️⃣ Get All Semesters (for mapping) */
-
   const { data: semesters } = await supabase
     .from("college_semester")
     .select("collegeSemesterId, collegeSemester")
@@ -100,8 +85,6 @@ export async function getFinanceYearSemesterCollectionSummary(
     ]) || []
   );
 
-  /* 6️⃣ Filter by Payment Year */
-
   let filteredCollections = collections;
 
   if (selectedYear && /^\d{4}$/.test(selectedYear)) {
@@ -112,10 +95,6 @@ export async function getFinanceYearSemesterCollectionSummary(
       return year === selectedYear;
     });
   }
-
-  /* 7️⃣ Group by Study Year */
-
-  /* 7️⃣ Group by Study Year */
 
   let academicYearTotal = 0;
 
@@ -133,23 +112,12 @@ export async function getFinanceYearSemesterCollectionSummary(
 
     const semesterLabelRaw = semesterMap.get(semesterId);
     if (semesterLabelRaw == null) return;
-
-    // Convert to string so match() never crashes
     const semesterLabel = String(semesterLabelRaw);
 
     if (typeof semesterLabelRaw !== "string") {
-      console.log("⚠️ semesterLabel not string:", {
-        semesterId,
-        semesterLabelRaw,
-        type: typeof semesterLabelRaw,
-      });
     }
-
-    // Extract semester number (works for "Sem 1", "1", "Semester-1", etc.)
     const semesterNumber = parseInt(semesterLabel.replace(/\D/g, ""), 10);
     if (!semesterNumber || Number.isNaN(semesterNumber)) return;
-
-    // Study year: Sem 1 & 2 → Year 1, 3 & 4 → Year 2 etc
     const studyYear = Math.ceil(semesterNumber / 2);
 
     if (!yearMap.has(studyYear)) {
@@ -230,9 +198,6 @@ export async function getFinanceYearSemesterCollectionSummary(
       total: data.total,
     };
   });
-
-  console.log("✅ Final Result:", yearWiseData);
-
   return {
     academicYearTotal,
     yearWiseData,

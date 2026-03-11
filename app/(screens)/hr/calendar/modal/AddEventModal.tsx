@@ -43,6 +43,7 @@ export default function AddEventModal({
   const [loading, setLoading] = useState(false);
   const TODAY = getTodayDateString();
 
+<<<<<<< Updated upstream
   useEffect(() => {
     if (isOpen && editData) {
       setEventTitle(editData.title);
@@ -120,6 +121,26 @@ export default function AddEventModal({
     } finally {
       setLoading(false);
     }
+=======
+  const handleSave = () => {
+    const event = {
+      eventTitle,
+      eventTopic,
+      eventDate,
+      roomNo,
+      fromHour,
+      fromMinute,
+      fromAmPm,
+      toHour,
+      toMinute,
+      toAmPm,
+      branch,
+      year,
+      section,
+      assignTo,
+    };
+    onClose();
+>>>>>>> Stashed changes
   };
 
   if (!isOpen) return null;

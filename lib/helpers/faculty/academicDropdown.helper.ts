@@ -151,14 +151,6 @@ export async function fetchAcademicDropdowns(
  
         case "semester": {
             if (!educationId || !academicYearId) return [];
- 
-            console.log("🟡 SEMESTER FETCH PARAMS", {
-                collegeId,
-                educationId,
-                branchId,
-                academicYearId,
-            });
- 
             const { data, error } = await supabase
                 .from("college_semester")
                 .select("collegeSemesterId, collegeSemester")
@@ -167,11 +159,10 @@ export async function fetchAcademicDropdowns(
                 .eq("collegeAcademicYearId", academicYearId)
                 .eq("isActive", true)
                 .order("collegeSemester");
- 
-            console.log("🟢 SEMESTER DATA FROM DB:", data);
+
  
             if (error) {
-                console.error("❌ SEMESTER FETCH ERROR:", error);
+                console.error("SEMESTER FETCH ERROR:", error);
                 throw error;
             }
  
@@ -210,7 +201,6 @@ export async function fetchAcademicDropdowns(
  
             const { data, error } = await supabase
                 .from("college_sections")
-                // 🔴 CHANGED: fetch ID + NAME
                 .select("collegeSectionsId, collegeSections")
                 .eq("collegeId", collegeId)
                 .eq("collegeEducationId", educationId)

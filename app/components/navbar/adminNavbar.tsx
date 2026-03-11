@@ -118,6 +118,13 @@ export default function AdminNavbar() {
     },
     {
       icon: (isActive) => (
+        <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "My Attendance",
+      path: "/admin/MyAttendance",
+    },
+    {
+      icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Settings",

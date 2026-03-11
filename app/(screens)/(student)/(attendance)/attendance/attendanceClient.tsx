@@ -85,20 +85,11 @@ export default function AttendanceClient() {
 
 
   useEffect(() => {
-    console.log("Attendance useEffect triggered", {
-      userId,
-      userLoading,
-      viewDate,
-      currentPage,
-    });
-
     if (userLoading) {
-      console.log("User context still loading...");
       return;
     }
 
     if (!userId) {
-      console.warn("No User ID found: Student not logged in");
       setDataLoading(false);
       return;
     }
@@ -116,7 +107,6 @@ export default function AttendanceClient() {
         const dateStr = `${year}-${month}-${day}`;
 
         if (!userId) {
-          console.warn("User ID became null before helper call");
           setDataLoading(false);
           return;
         }
@@ -137,12 +127,10 @@ export default function AttendanceClient() {
           setTotalRecords(data.totalCount || 0);
         }
       } catch (err) {
-        console.error("Failed to fetch attendance dashboard", err);
       } finally {
         if (isMounted) {
           setDataLoading(false);
           setTableLoading(false);
-          console.log("✅ Attendance dashboard loading finished");
         }
       }
     }
@@ -150,7 +138,6 @@ export default function AttendanceClient() {
     fetchData();
 
     return () => {
-      console.log("Attendance useEffect cleanup");
       isMounted = false;
     };
   }, [userId, viewDate, currentPage]);

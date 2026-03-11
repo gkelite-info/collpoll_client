@@ -22,7 +22,6 @@ async function downloadFile(filePath: string) {
             .download(filePath);
 
         if (error) {
-            console.error("DOWNLOAD ERROR:", error);
             return;
         }
 
@@ -35,7 +34,6 @@ async function downloadFile(filePath: string) {
         a.remove();
         URL.revokeObjectURL(url);
     } catch (err) {
-        console.error("DOWNLOAD ERROR:", err);
     }
 }
 
@@ -48,13 +46,11 @@ async function updateFile(oldPath: string, newFile: File) {
             .upload(oldPath, newFile, { upsert: true });
 
         if (uploadErr) {
-            console.error("UPDATE ERROR:", uploadErr);
             return false;
         }
 
         return true;
     } catch (err) {
-        console.error("UPDATE ERROR:", err);
         return false;
     }
 }
@@ -150,7 +146,6 @@ export default function AssignmentCard({
             toast.success("File downloaded successfully!", { id: "download" });
 
         } catch (error) {
-            console.error("DOWNLOAD ERROR:", error);
             toast.error("Download failed!");
         }
     };

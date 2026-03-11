@@ -129,7 +129,6 @@ export default function AssignmentsLeft() {
                 formatted.filter((a) => a.toDateInt < todayInt)
             );
         } catch (err) {
-            console.error("❌ Failed to load assignments:", err);
         } finally {
             setLoading(false);
         }

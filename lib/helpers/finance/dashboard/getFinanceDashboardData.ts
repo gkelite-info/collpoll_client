@@ -15,8 +15,6 @@ export async function getFinanceDashboardData(
     page: number,
     limit: number
 ) {
-    console.log("🚀 getFinanceDashboardData called with:", filters);
-
     const {
         collegeId,
         collegeEducationId,
@@ -24,10 +22,6 @@ export async function getFinanceDashboardData(
         // collegeAcademicYearId,
         selectedYear,
     } = filters;
-
-    /* =========================
-       1️⃣ STUDENTS
-    ========================= */
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -61,23 +55,14 @@ export async function getFinanceDashboardData(
     // .is("student_academic_history.deletedAt", null);
 
     if (studentError) {
-        console.error("❌ Student Query Error:", studentError);
         return emptyDashboard();
     }
 
-    console.log("👨‍🎓 Students Found:", students?.length || 0);
-
     if (!students?.length) {
-        console.log("⚠️ No students matched filters");
         return emptyDashboard();
     }
 
     const studentIds = students.map((s) => s.studentId);
-    console.log("🆔 Student IDs:", studentIds);
-
-    /* =========================
-       2️⃣ OBLIGATIONS
-    ========================= */
     const { data: obligations, error: obligationError } = await supabase
         .from("student_fee_obligation")
         .select("studentFeeObligationId, studentId, totalAmount")
@@ -88,14 +73,10 @@ export async function getFinanceDashboardData(
         .is("deletedAt", null);
 
     if (obligationError) {
-        console.error("❌ Obligation Query Error:", obligationError);
         return emptyDashboard();
     }
 
-    console.log("📑 Obligations Found:", obligations?.length || 0);
-
     if (!obligations?.length) {
-        console.log("⚠️ No obligations found");
         return emptyDashboard();
     }
 
@@ -105,12 +86,6 @@ export async function getFinanceDashboardData(
     const obligationIds = obligations.map(
         (o) => o.studentFeeObligationId
     );
-
-    console.log("🧾 Obligation IDs:", obligationIds);
-
-    /* =========================
-       3️⃣ TRANSACTIONS
-    ========================= */
     const { data: transactions, error: transactionError } = await supabase
         .from("student_payment_transaction")
         .select("studentPaymentTransactionId, studentFeeObligationId")
@@ -118,26 +93,16 @@ export async function getFinanceDashboardData(
         .eq("paymentStatus", "success");
 
     if (transactionError) {
-        console.error("❌ Transaction Query Error:", transactionError);
         return emptyDashboard();
     }
 
-    console.log("💳 Successful Transactions:", transactions?.length || 0);
-
     if (!transactions?.length) {
-        console.log("⚠️ No successful transactions found");
         return emptyDashboard();
     }
 
     const transactionIds = transactions.map(
         (t) => t.studentPaymentTransactionId
     );
-
-    console.log("🪙 Transaction IDs:", transactionIds);
-
-    /* =========================
-       4️⃣ LEDGER
-    ========================= */
     const { data: ledgers, error: ledgerError } = await supabase
         .from("student_fee_ledger")
         .select(`
@@ -148,11 +113,8 @@ export async function getFinanceDashboardData(
         .in("studentPaymentTransactionId", transactionIds);
 
     if (ledgerError) {
-        console.error("❌ Ledger Query Error:", ledgerError);
         return emptyDashboard();
     }
-
-    console.log("📘 Ledger Entries Found:", ledgers?.length || 0);
 
     const overallPaidMap = new Map<number, number>();
     const lastPayMap = new Map<number, string>();
@@ -167,23 +129,12 @@ export async function getFinanceDashboardData(
 
     const today = new Date();
     const currentYear = selectedYear || today.getFullYear();
-
-    console.log("📅 Selected Calendar Year:", currentYear);
-
     const startOfYear = new Date(currentYear, 0, 1);
     const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59, 999);
 
     (ledgers || []).forEach((l) => {
         const amount = Number(l.amount) || 0;
         const created = new Date(l.createdAt);
-
-        console.log("🧾 Ledger Entry:", {
-            amount,
-            createdAt: l.createdAt,
-            year: created.getFullYear(),
-        });
-
-        // Overall paid
         overallPaidMap.set(
             l.studentFeeObligationId,
             (overallPaidMap.get(l.studentFeeObligationId) || 0) + amount
@@ -198,10 +149,6 @@ export async function getFinanceDashboardData(
             rangePaidMap.thisYear += amount;
         }
     });
-
-    /* =========================
-       5️⃣ BUILD TABLE DATA
-    ========================= */
 
     let expected = 0;
     let collected = 0;
@@ -234,7 +181,6 @@ export async function getFinanceDashboardData(
 
         if (status === "Paid") paidStudents++;
         else pendingStudents++;
-        console.log("Student Row:", student);
         return {
             studentId: student.studentId,
             fullName: (student.user as any)?.fullName ?? "N/A",
@@ -250,17 +196,6 @@ export async function getFinanceDashboardData(
                 : null,
         };
     });
-
-    console.log("📊 Final Summary:", {
-        totalStudents: tableData.length,
-        expected,
-        collected,
-        pending,
-        paidStudents,
-        pendingStudents,
-    });
-
-    console.log("⚡ Quick Insights:", rangePaidMap);
 
     return {
         tableData,
@@ -278,8 +213,6 @@ export async function getFinanceDashboardData(
 }
 
 function emptyDashboard() {
-  console.log("📭 Returning Empty Dashboard");
-
   return {
     tableData: [],
     totalCount: 0,  

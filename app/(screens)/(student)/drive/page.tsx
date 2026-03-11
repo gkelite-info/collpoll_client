@@ -70,7 +70,6 @@ const Page = () => {
   };
 
   const handleDownloadFile = (file: FileItemProps) => {
-    console.log("Download", file.name);
   };
 
   const handleSaveFolderName = (newName: string) => {

@@ -114,7 +114,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             toast.success("Assignment submitted successfully 🎉");
             onClose();
         } catch (err) {
-            console.error(err);
             toast.error("Upload failed");
         } finally {
             setIsUploading(false);
@@ -123,10 +122,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
     const handleDeleteExistingFile = async () => {
 
         if (!existingFilePath || !card) {
-            console.log("⛔ Missing existingFilePath or card", {
-                existingFilePath,
-                card,
-            });
             return;
         }
 
@@ -136,14 +131,12 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
                 .remove([existingFilePath]);
 
             if (storageErr) {
-                console.error("❌ Storage delete failed:", storageErr);
                 throw storageErr;
             }
 
             const { data: authData, error: authErr } = await supabase.auth.getUser();
 
             if (authErr || !authData?.user) {
-                console.error("❌ Auth user fetch failed:", authErr);
                 throw new Error("No auth user");
             }
 
@@ -185,9 +178,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             }
 
             if (!updatedRow || updatedRow.length === 0) {
-                console.warn("⚠️ [5] No rows updated — WHERE clause matched nothing");
             } else {
-                console.log("🟢 [5] DB row updated successfully");
             }
 
             setSelectedFiles([]);
@@ -196,7 +187,6 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
             toast.success("File deleted. You can upload a new file now.");
 
         } catch (err) {
-            console.error("❌ DELETE ERROR (FINAL):", err);
             toast.error("Failed to delete uploaded file");
         }
     };

@@ -3,12 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 export async function getOverallStudentsSummary(
   collegeId: number,
   collegeEducationId: number
-) {
-  console.log("📊 Cards Summary Scoped Query:", {
-    collegeId,
-    collegeEducationId,
-  });
-
+) { 
   const { data, error } = await supabase
     .from("student_fee_obligation")
     .select(
@@ -46,21 +41,13 @@ export async function getOverallStudentsSummary(
     throw error;
   }
 
-  console.log(
-    "🔍 Obligations Found:",
-    data?.map((d) => ({
-      studentId: d.studentId,
-      educationId: d.collegeEducationId,
-    }))
-  );
-
   let total = 0;
   let paid = 0;
   let partial = 0;
   let pending = 0;
 
   for (const row of data ?? []) {
-    total++; // count obligation students only
+    total++;
 
     const totalAmount = Number(row.totalAmount ?? 0);
 

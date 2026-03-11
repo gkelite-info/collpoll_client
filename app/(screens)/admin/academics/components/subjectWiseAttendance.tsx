@@ -163,7 +163,6 @@ export const SubjectWiseAttendance = ({
   };
 
   const handleViewDetails = (rollNo: string) => {
-    console.log("View details for:", rollNo);
   };
 
   const filteredData = useMemo(() => {
