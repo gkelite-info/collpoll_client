@@ -55,7 +55,6 @@ export async function fetchHrMeetingsForLoggedInAdmin(userId: number) {
 
 export async function saveHrMeeting(
     payload: {
-        hrMeetingId?: number;
         title: string;
         agenda: string;
         meetingDate: string;
@@ -71,7 +70,6 @@ export async function saveHrMeeting(
         .from("hr_meetings")
         .upsert(
             {
-                hrMeetingId: payload.hrMeetingId,
                 title: payload.title.trim(),
                 agenda: payload.agenda.trim(),
                 meetingDate: payload.meetingDate,

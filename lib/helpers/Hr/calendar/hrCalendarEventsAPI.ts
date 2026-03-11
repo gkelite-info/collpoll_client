@@ -11,12 +11,13 @@ export type HrCalendarEventRow = {
     roomNo: string;
     collegeId: number;
     createdBy: number;
+    role: string;
     isActive: boolean;
+    is_deleted: boolean;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
 };
-
 
 export async function fetchHrCalendarEvents(collegeId: number) {
     const { data, error } = await supabase
@@ -31,13 +32,16 @@ export async function fetchHrCalendarEvents(collegeId: number) {
             roomNo,
             collegeId,
             createdBy,
+            role,
             isActive,
+            is_deleted,
             createdAt,
             updatedAt,
             deletedAt
         `)
         .eq("collegeId", collegeId)
         .eq("isActive", true)
+        .eq("is_deleted", false)
         .is("deletedAt", null)
         .order("eventDate", { ascending: true });
 
@@ -54,7 +58,6 @@ export async function fetchHrCalendarEventsForLoggedInAdmin(userId: number) {
     return fetchHrCalendarEvents(collegeId);
 }
 
-
 export async function saveHrCalendarEvent(
     payload: {
         hrCalendarEventId?: number;
@@ -65,6 +68,7 @@ export async function saveHrCalendarEvent(
         toTime: string;
         roomNo: string;
         collegeId: number;
+        role: string;
     },
     collegeHrId: number,
 ) {
@@ -83,8 +87,10 @@ export async function saveHrCalendarEvent(
                 roomNo: payload.roomNo.trim(),
                 collegeId: payload.collegeId,
                 createdBy: collegeHrId,
-                createdAt: now,
+                role: payload.role,
+                isActive: true,
                 updatedAt: now,
+                ...(payload.hrCalendarEventId ? {} : { createdAt: now }),
             },
             { onConflict: "hrCalendarEventId" },
         )
@@ -102,13 +108,16 @@ export async function saveHrCalendarEvent(
     };
 }
 
-
 export async function deactivateHrCalendarEvent(hrCalendarEventId: number) {
+    const now = new Date().toISOString();
+
     const { error } = await supabase
         .from("hr_calendar_events")
         .update({
             isActive: false,
-            deletedAt: new Date().toISOString(),
+            is_deleted: true,
+            deletedAt: now,
+            updatedAt: now,
         })
         .eq("hrCalendarEventId", hrCalendarEventId);
 
