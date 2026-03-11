@@ -85,9 +85,9 @@ export default function EventDetailsModal({
           <Detail label="Type" value={event.type} />
           <Detail label="Date" value={dateStr} />
           <Detail label="Time" value={timeStr} />
-          <Detail label="Branch" value={event.branch} />
+          {/* <Detail label="Branch" value={event.branch} />
           <Detail label="Year" value={event.year} />
-          <Detail label="Section" value={event.section} />
+          <Detail label="Section" value={event.section} /> */}
         </div>
       </div>
     </div>

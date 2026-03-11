@@ -1,97 +1,103 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { Trash } from "@phosphor-icons/react";
+import { Trash, CircleNotch } from "@phosphor-icons/react"; // NEW: Imported CircleNotch for the spinner
 import CalendarToolbar from "./components/calenderToolbar";
 import CalendarHeader from "./components/calenderHeader";
 import AddEventModal from "./modal/AddEventModal";
 import CalendarGrid from "./components/CalenderGrid";
 import EventDetailsModal from "./components/eventDetailsModal";
 
+import toast from "react-hot-toast";
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import {
+  deactivateHrCalendarEvent,
+  fetchHrCalendarEvents,
+} from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
+
+const convertTo24Hour = (time12h: string) => {
+  const [time, modifier] = time12h.split(" ");
+  let [hours, minutes] = time.split(":");
+  if (hours === "12") hours = "00";
+  if (modifier === "PM") hours = String(parseInt(hours, 10) + 12);
+  return `${hours.padStart(2, "0")}:${minutes}:00`;
+};
+
 export default function FinanceCalendarPage() {
+  const { collegeId, loading: ctxLoading } = useCollegeHr();
+
   const [activeTab, setActiveTab] = useState("All Scheduled");
   const [currentDate, setCurrentDate] = useState(new Date());
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [eventToEdit, setEventToEdit] = useState<any>(null);
-
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
-
   const [eventToDelete, setEventToDelete] = useState<any>(null);
+  const [events, setEvents] = useState<any[]>([]);
 
- const weekDays = [
-  { day: "MON", date: 18, fullDate: "2026-02-18" },
-  { day: "TUE", date: 19, fullDate: "2026-02-19" },
-  { day: "WED", date: 20, fullDate: "2026-02-20" },
-  { day: "THU", date: 21, fullDate: "2026-02-21" },
-  { day: "FRI", date: 22, fullDate: "2026-02-22" },
-  { day: "SAT", date: 23, fullDate: "2026-02-23" },
-];
- 
-  const [events] = useState([
-    {
-      id: "1",
-      calendarEventId: 1,
-      title: "Faculty Meeting",
-      type: "meeting",
-      rawTopic: "Meeting",
-      date: "2026-02-18",
-      fromTime: "09:00",
-      toTime: "10:00",
-      startTime: "2026-02-18T09:00:00",
-      endTime: "2026-02-18T10:00:00",
-      branch: "CSE",
-      year: "3",
-      section: "A",
-    },
-    {
-      id: "2",
-      calendarEventId: 2,
-      title: "Data Structures Class",
-      type: "class",
-      rawTopic: "Class",
-      date: "2026-02-19",
-      fromTime: "11:00",
-      toTime: "12:30",
-      startTime: "2026-02-19T11:00:00",
-      endTime: "2026-02-19T12:30:00",
-      branch: "CSE",
-      year: "2",
-      section: "B",
-    },
-    {
-      id: "3",
-      calendarEventId: 3,
-      title: "Mid Term Exam",
-      type: "exam",
-      rawTopic: "Exam",
-      date: "2026-02-20",
-      fromTime: "10:00",
-      toTime: "12:00",
-      startTime: "2026-02-20T10:00:00",
-      endTime: "2026-02-20T12:00:00",
-      branch: "ECE",
-      year: "3",
-      section: "A",
-    },
-    {
-      id: "4",
-      calendarEventId: 4,
-      title: "Java Quiz",
-      type: "quiz",
-      rawTopic: "Quiz",
-      date: "2026-02-21",
-      fromTime: "14:00",
-      toTime: "15:00",
-      startTime: "2026-02-21T14:00:00",
-      endTime: "2026-02-21T15:00:00",
-      branch: "IT",
-      year: "1",
-      section: "C",
-    },
-  ]);
+  // NEW: State to track when events are being fetched from the database
+  const [isFetchingEvents, setIsFetchingEvents] = useState(true);
+
+  const weekDays = useMemo(() => {
+    const week = [];
+    const current = new Date(currentDate);
+    const day = current.getDay();
+    const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(current.setDate(diff));
+
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      week.push({
+        day: d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+        date: d.getDate(),
+        fullDate: d.toISOString().split("T")[0],
+      });
+    }
+    return week;
+  }, [currentDate]);
+
+  const loadEvents = async () => {
+    if (!collegeId) return;
+
+    setIsFetchingEvents(true); // NEW: Start loading
+
+    try {
+      const dbEvents = await fetchHrCalendarEvents(collegeId);
+      const formatted = dbEvents.map((e) => ({
+        ...e,
+        id: String(e.hrCalendarEventId),
+        calendarEventId: e.hrCalendarEventId,
+        type: e.role,
+        startTime: `${e.eventDate}T${convertTo24Hour(e.fromTime)}`,
+        endTime: `${e.eventDate}T${convertTo24Hour(e.toTime)}`,
+      }));
+      setEvents(formatted);
+    } catch (err) {
+      toast.error("Failed to load events");
+    } finally {
+      setIsFetchingEvents(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!ctxLoading) loadEvents();
+  }, [collegeId, ctxLoading]);
+
+  const handleDelete = async () => {
+    if (!eventToDelete) return;
+    const res = await deactivateHrCalendarEvent(
+      eventToDelete.hrCalendarEventId,
+    );
+    if (res.success) {
+      toast.success("Event deleted");
+      setEventToDelete(null);
+      loadEvents();
+    } else {
+      toast.error("Failed to delete event");
+    }
+  };
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);
@@ -116,18 +122,16 @@ export default function FinanceCalendarPage() {
             Stay Organized And On Track With Your Personalised Calendar
           </p>
         </div>
-
         <CourseScheduleCard style="w-[320px]" />
       </section>
 
       <div className="flex justify-between items-center">
         <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
-
         <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
-
         <AddEventModal
           isOpen={isModalOpen}
           editData={eventToEdit}
+          onSuccess={loadEvents}
           onClose={() => {
             setIsModalOpen(false);
             setEventToEdit(null);
@@ -135,7 +139,22 @@ export default function FinanceCalendarPage() {
         />
       </div>
 
-      <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
+      {/* NEW: Added relative positioning here to contain the absolute loader */}
+      <div className="relative bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
+        {/* NEW: Loader Overlay */}
+        {(ctxLoading || isFetchingEvents) && (
+          <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+            <CircleNotch
+              size={40}
+              className="text-[#43C17A] animate-spin mb-2"
+              weight="bold"
+            />
+            <span className="text-sm font-medium text-gray-600">
+              Loading events...
+            </span>
+          </div>
+        )}
+
         <CalendarGrid
           events={events}
           weekDays={weekDays}
@@ -153,6 +172,7 @@ export default function FinanceCalendarPage() {
           }}
         />
       </div>
+
       <EventDetailsModal
         open={showDetails}
         event={selectedEvent}
@@ -161,13 +181,13 @@ export default function FinanceCalendarPage() {
           setSelectedEvent(null);
         }}
       />
+
       {eventToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white w-[400px] rounded-xl flex flex-col p-6 text-center shadow-2xl">
             <div className="mx-auto bg-red-100 rounded-full p-3 mb-4">
               <Trash size={32} className="text-red-600" weight="fill" />
             </div>
-
             <h2 className="text-xl font-bold text-gray-800 mb-2">
               Delete Event
             </h2>
@@ -178,7 +198,6 @@ export default function FinanceCalendarPage() {
               </span>
               ?
             </p>
-
             <div className="flex gap-3 w-full">
               <button
                 onClick={() => setEventToDelete(null)}
@@ -186,9 +205,8 @@ export default function FinanceCalendarPage() {
               >
                 Cancel
               </button>
-
               <button
-                onClick={() => setEventToDelete(null)}
+                onClick={handleDelete}
                 className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-sm cursor-pointer"
               >
                 Delete

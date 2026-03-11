@@ -1,83 +1,53 @@
 "use client";
 
 import {
+  Briefcase,
   ChalkboardTeacher,
-  Exam,
-  Question,
-  VideoConference,
-  Trash,
+  CurrencyDollar,
   PencilSimple,
+  ShieldCheckIcon,
+  Trash,
 } from "@phosphor-icons/react";
 
 const EVENT_STYLES = {
-  meeting: {
+  faculty: {
     solidBg: "#E2DAFF",
     lightBg: "#E2DAFF8F",
     text: "#6C20CA",
-    Icon: VideoConference,
+    Icon: ChalkboardTeacher,
   },
-  class: {
+  admin: {
     solidBg: "#96CAFF",
     lightBg: "#D9EBFF",
     text: "#0056AD",
-    Icon: ChalkboardTeacher,
+    Icon: ShieldCheckIcon,
   },
-  exam: {
+  finance: {
     solidBg: "#FFD8AF",
     lightBg: "#FFEDDA",
     text: "#FB8000",
-    Icon: Exam,
+    Icon: CurrencyDollar,
   },
-  quiz: {
+  placement: {
     solidBg: "#BFE8D5",
     lightBg: "#E6F6EF",
     text: "#1E7F5C",
-    Icon: Question,
+    Icon: Briefcase,
   },
 };
 
-const EventCard = ({
-  event,
-  onDelete,
-  onEdit,
-  onClick,
-}: {
-  event: any;
-  onDelete?: () => void;
-  onEdit?: () => void;
-  onClick?: () => void;
-}) => {
-  const rawType = event.type?.toLowerCase();
-
+const EventCard = ({ event, onDelete, onEdit, onClick }: any) => {
+  const rawRole = event.role?.toLowerCase();
   const eventType = (
-    rawType in EVENT_STYLES ? rawType : "meeting"
+    rawRole in EVENT_STYLES ? rawRole : "admin"
   ) as keyof typeof EVENT_STYLES;
 
   const style = EVENT_STYLES[eventType];
   const Icon = style.Icon;
 
-  // const start = new Date(event.startTime);
-  // const end = new Date(event.endTime);
-  // const timeStr = `${start.toLocaleTimeString([], {
-  //   hour: "numeric",
-  //   minute: "2-digit",
-  // })} - ${end.toLocaleTimeString([], {
-  //   hour: "numeric",
-  //   minute: "2-digit",
-  // })}`;
-
-
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-  const timeStr = `${start.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })} - ${end.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  })}`;
+  const timeStr = `${start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })} - ${end.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })}`;
 
   return (
     <div
@@ -95,7 +65,6 @@ const EventCard = ({
           <Trash size={14} className="text-red-600" />
         </button>
       )}
-
       {onEdit && (
         <button
           onClick={(e) => {
@@ -107,7 +76,6 @@ const EventCard = ({
           <PencilSimple size={14} className="text-blue-600" />
         </button>
       )}
-
       <div
         className="flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed shrink-0"
         style={{
@@ -122,36 +90,39 @@ const EventCard = ({
         >
           <Icon size={14} weight="fill" color="#ffffff" />
         </div>
-
         <span className="tracking-wide uppercase">{timeStr}</span>
       </div>
-
       <div
         className="flex-1 min-h-0 pt-3 flex flex-col overflow-y-auto"
         style={{ backgroundColor: style.lightBg }}
       >
         <div className="px-3 shrink-0">
           <p
-            className="text-base font-semibold leading-snug mb-3"
+            className="text-base font-semibold leading-snug mb-1"
             style={{ color: style.text }}
           >
             {event.title}
           </p>
         </div>
-
+        <div className="px-3 pb-2 shrink-0">
+          <p
+            className="text-sm font-medium opacity-80"
+            style={{ color: style.text }}
+          >
+            {event.topic}
+          </p>
+        </div>
         <div
-          className="w-full border-t shrink-0"
+          className="w-full border-t shrink-0 mt-auto"
           style={{ borderColor: style.text }}
         />
-
         <div className="px-3 py-2 shrink-0">
           <p className="text-sm font-medium" style={{ color: style.text }}>
-            {event.branch} - {event.year} - {event.section}
+            Room: {event.roomNo}
           </p>
         </div>
       </div>
     </div>
   );
 };
-
 export default EventCard;

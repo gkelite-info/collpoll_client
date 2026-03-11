@@ -1,18 +1,33 @@
 "use client";
 
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { saveHrCalendarEvent } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
 import { X } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 
-interface AddEventModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  editData?: any;
-}
+const INPUT =
+  "w-full py-2 border border-[#C9C9C9] rounded-lg px-3 text-sm bg-white text-gray-900 outline-none transition-all";
 
-const INPUT = "w-full py-2 border border-[#C9C9C9] rounded-lg px-3 text-sm bg-white text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all";
+// Helper to convert 12hr to 24hr for time comparisons
+const convertTo24Hour = (hour: string, min: string, ampm: string) => {
+  let h = parseInt(hour, 10);
+  if (ampm === "PM" && h !== 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${min}:00`;
+};
+const getTodayDateString = () => {
+  const d = new Date();
+  return d.toISOString().split("T")[0];
+};
 
-
-export default function AddEventModal({ isOpen, onClose, editData }: AddEventModalProps) {
+export default function AddEventModal({
+  isOpen,
+  onClose,
+  editData,
+  onSuccess,
+}: any) {
+  const { collegeId, collegeHrId } = useCollegeHr();
 
   const [eventTitle, setEventTitle] = useState("");
   const [eventTopic, setEventTopic] = useState("");
@@ -24,32 +39,87 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
   const [toHour, setToHour] = useState("09");
   const [toMinute, setToMinute] = useState("00");
   const [toAmPm, setToAmPm] = useState("AM");
-  const [branch, setBranch] = useState("");
-  const [year, setYear] = useState("");
-  const [section, setSection] = useState("");
   const [assignTo, setAssignTo] = useState("");
   const [loading, setLoading] = useState(false);
+  const TODAY = getTodayDateString();
 
-  const handleSave = () => {
-    const event = {
-      eventTitle,
-      eventTopic,
-      eventDate,
-      roomNo,
-      fromHour,
-      fromMinute,
-      fromAmPm,
-      toHour,
-      toMinute,
-      toAmPm,
-      branch,
-      year,
-      section,
-      assignTo,
-    };
+  useEffect(() => {
+    if (isOpen && editData) {
+      setEventTitle(editData.title);
+      setEventTopic(editData.topic);
+      setEventDate(editData.eventDate);
+      setRoomNo(editData.roomNo);
+      setAssignTo(editData.role);
 
-    console.log("STATIC EVENT DATA:", event);
-    onClose();
+      const [fTime, fMod] = editData.fromTime.split(" ");
+      const [fH, fM] = fTime.split(":");
+      setFromHour(fH);
+      setFromMinute(fM);
+      setFromAmPm(fMod);
+
+      const [tTime, tMod] = editData.toTime.split(" ");
+      const [tH, tM] = tTime.split(":");
+      setToHour(tH);
+      setToMinute(tM);
+      setToAmPm(tMod);
+    } else {
+      setEventTitle("");
+      setEventTopic("");
+      setEventDate("");
+      setRoomNo("");
+      setAssignTo("");
+    }
+  }, [isOpen, editData]);
+
+  const handleSave = async () => {
+    if (!eventTitle || !eventTopic || !eventDate || !roomNo || !assignTo) {
+      return toast.error("All fields are required.");
+    }
+
+    const selectedDate = new Date(eventDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return toast.error("Cannot schedule an event in the past.");
+    }
+
+    const from24 = convertTo24Hour(fromHour, fromMinute, fromAmPm);
+    const to24 = convertTo24Hour(toHour, toMinute, toAmPm);
+
+    if (from24 >= to24) {
+      return toast.error("'From' time must be before 'To' time.");
+    }
+
+    if (!collegeId || !collegeHrId) return toast.error("HR Context missing");
+
+    setLoading(true);
+    try {
+      const payload = {
+        hrCalendarEventId: editData?.hrCalendarEventId,
+        title: eventTitle,
+        topic: eventTopic,
+        eventDate,
+        fromTime: `${fromHour}:${fromMinute} ${fromAmPm}`,
+        toTime: `${toHour}:${toMinute} ${toAmPm}`,
+        roomNo,
+        collegeId,
+        role: assignTo,
+      };
+
+      const res = await saveHrCalendarEvent(payload, collegeHrId);
+      if (res.success) {
+        toast.success(editData ? "Event updated" : "Event created");
+        onSuccess();
+        onClose();
+      } else {
+        toast.error("Failed to save event");
+      }
+    } catch (err) {
+      toast.error("An error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -59,15 +129,18 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
       <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col">
         <div className="flex justify-between items-center p-5 pb-3">
           <h2 className="text-lg font-semibold text-gray-800">
-            Add Event
+            {editData ? "Edit Event" : "Add Event"}
           </h2>
-
           <button onClick={onClose}>
-            <X size={20} className="text-gray-500 hover:text-gray-800 cursor-pointer" />
+            <X
+              size={20}
+              className="text-gray-500 hover:text-gray-800 cursor-pointer"
+            />
           </button>
         </div>
 
         <div className="p-5 pt-0 space-y-4 overflow-y-auto">
+          {/* Form fields stay exactly the same as your code */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
               Event title
@@ -94,17 +167,15 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Date
-              </label>
+              <label className="text-sm font-medium text-gray-700">Date</label>
               <input
                 type="date"
                 className={INPUT}
                 value={eventDate}
+                min={TODAY}
                 onChange={(e) => setEventDate(e.target.value)}
               />
             </div>
-
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
                 Room no.
@@ -117,53 +188,107 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
                 onChange={(e) => setRoomNo(e.target.value)}
               />
             </div>
-
           </div>
           <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700">
-              Time
-            </label>
+            <label className="text-sm font-medium text-gray-700">Time</label>
             <div className="flex gap-4 mt-2">
               <div className="flex-1">
                 <span className="block text-gray-500 text-xs mb-1">From</span>
                 <div className="flex gap-2">
-                  <select className={`${INPUT} w-16`} value={fromHour} onChange={(e) => setFromHour(e.target.value)}>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={fromHour}
+                    onChange={(e) => setFromHour(e.target.value)}
+                  >
                     {Array.from({ length: 12 }, (_, i) => {
                       const h = String(i + 1).padStart(2, "0");
-                      return <option key={h} value={h}>{h}</option>;
+                      return (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      );
                     })}
                   </select>
-
-                  <select className={`${INPUT} w-16`} value={fromMinute} onChange={(e) => setFromMinute(e.target.value)}>
-                    {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={fromMinute}
+                    onChange={(e) => setFromMinute(e.target.value)}
+                  >
+                    {[
+                      "00",
+                      "05",
+                      "10",
+                      "15",
+                      "20",
+                      "25",
+                      "30",
+                      "35",
+                      "40",
+                      "45",
+                      "50",
+                      "55",
+                    ].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
                     ))}
                   </select>
-
-                  <select className={`${INPUT} w-16`} value={fromAmPm} onChange={(e) => setFromAmPm(e.target.value)}>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={fromAmPm}
+                    onChange={(e) => setFromAmPm(e.target.value)}
+                  >
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
                   </select>
                 </div>
               </div>
-
               <div className="flex-1">
                 <span className="block text-gray-500 text-xs mb-1">To</span>
                 <div className="flex gap-2">
-                  <select className={`${INPUT} w-16`} value={toHour} onChange={(e) => setToHour(e.target.value)}>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={toHour}
+                    onChange={(e) => setToHour(e.target.value)}
+                  >
                     {Array.from({ length: 12 }, (_, i) => {
                       const h = String(i + 1).padStart(2, "0");
-                      return <option key={h} value={h}>{h}</option>;
+                      return (
+                        <option key={h} value={h}>
+                          {h}
+                        </option>
+                      );
                     })}
                   </select>
-
-                  <select className={`${INPUT} w-16`} value={toMinute} onChange={(e) => setToMinute(e.target.value)}>
-                    {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
-                      <option key={m} value={m}>{m}</option>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={toMinute}
+                    onChange={(e) => setToMinute(e.target.value)}
+                  >
+                    {[
+                      "00",
+                      "05",
+                      "10",
+                      "15",
+                      "20",
+                      "25",
+                      "30",
+                      "35",
+                      "40",
+                      "45",
+                      "50",
+                      "55",
+                    ].map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
                     ))}
                   </select>
-
-                  <select className={`${INPUT} w-16`} value={toAmPm} onChange={(e) => setToAmPm(e.target.value)}>
+                  <select
+                    className={`${INPUT} w-16`}
+                    value={toAmPm}
+                    onChange={(e) => setToAmPm(e.target.value)}
+                  >
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
                   </select>
@@ -171,69 +296,22 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
               </div>
             </div>
           </div>
-          {/* <div className="grid grid-cols-2 gap-4"> */}
-          {/* <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Branch
-              </label>
 
-              <select className={INPUT} value={branch} onChange={(e) => setBranch(e.target.value)}>
-                <option value="">Select Branch</option>
-
-                {BRANCHES.map((b) => (
-                  <option key={b.id} value={b.name}>{b.name}</option>
-                ))}
-              </select>
-            </div> */}
-
-          {/* <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Year
-              </label>
-
-              <select className={INPUT} value={year} onChange={(e) => setYear(e.target.value)}>
-                <option value="">Select Year</option>
-
-                {YEARS.map((y) => (
-                  <option key={y.id} value={y.name}>{y.name}</option>
-                ))}
-              </select>
-            </div> */}
-          {/* </div> */}
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Section
-              </label>
-
-              <select className={INPUT} value={section} onChange={(e) => setSection(e.target.value)}>
-                <option value="">Select Section</option>
-
-                {SECTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div> */}
-
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Assign to
-              </label>
-              <select
-                value={assignTo}
-                onChange={(e) => setAssignTo(e.target.value)}
-                className="w-full py-2 border border-[#C9C9C9] rounded-lg px-3 text-sm bg-white text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all cursor-pointer"
-              >
-                <option value="">Select user type</option>
-                {/* <option value="all">All</option> */}
-                <option value="Faculty">Faculty</option>
-                <option value="Students">Students</option>
-                <option value="Finance">Finance</option>
-                <option value="Admin">Admin</option>
-              </select>
-            </div>
-
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Assign to
+            </label>
+            <select
+              value={assignTo}
+              onChange={(e) => setAssignTo(e.target.value)}
+              className="w-full py-2 border border-[#C9C9C9] rounded-lg px-3 text-sm bg-white text-gray-900 outline-none transition-all cursor-pointer"
+            >
+              <option value="">Select user type</option>
+              <option value="Faculty">Faculty</option>
+              <option value="Placement">Placement</option>
+              <option value="Finance">Finance</option>
+              <option value="Admin">Admin</option>
+            </select>
           </div>
 
           <button
@@ -245,6 +323,6 @@ export default function AddEventModal({ isOpen, onClose, editData }: AddEventMod
           </button>
         </div>
       </div>
-    </div >
+    </div>
   );
 }
