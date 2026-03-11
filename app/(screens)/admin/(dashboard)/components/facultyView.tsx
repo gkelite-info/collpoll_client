@@ -23,7 +23,6 @@ interface FacultyViewProps {
   onBack: () => void;
 }
 
-// Added 'loading' prop to handle UX gracefully
 const FilterDropdownChip = ({
   label,
   selectedValue,
@@ -34,17 +33,16 @@ const FilterDropdownChip = ({
 }: any) => {
   return (
     <div className="flex items-center gap-1.5 text-xs text-[#525252]">
-      <span>{label}</span>
+      <span className="text-sm">{label}</span>
       <Listbox value={selectedValue} onChange={onChange} disabled={loading}>
         <div className="relative">
           <Listbox.Button
-            className={`relative flex items-center justify-between gap-2.5 pl-4 pr-3 py-1.5 text-white bg-[#3EAD6F] rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
+            className={`relative flex items-center justify-between gap-2.5 pl-4 pr-3 py-1 text-white bg-[#3EAD6F] rounded-full transition-all  ${
               loading
                 ? "opacity-70 cursor-not-allowed"
                 : "cursor-pointer hover:bg-emerald-600"
             }`}
           >
-            {/* Show Loading text natively inside the chip */}
             <span className="block truncate font-medium">
               {loading ? "Loading..." : valueText}
             </span>

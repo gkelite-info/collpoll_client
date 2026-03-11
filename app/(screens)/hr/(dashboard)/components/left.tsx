@@ -39,7 +39,7 @@ function HrDashContent() {
   const cardData = [
     {
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
-      icon: <UsersThree size={21} weight="fill" color="#714EF2" />,
+      icon: <UsersThree size={21} weight="fill" color="#6C20CA" />,
       value: "05",
       label: "Total Faculties",
     },
@@ -50,13 +50,13 @@ function HrDashContent() {
       label: "Present Today",
     },
     {
-      style: "bg-[#FFEDED] h-[126.35px] w-[182px]",
-      icon: <User size={21} weight="fill" color="#FF5A5A" />,
+      style: "bg-[#FFE0E0] h-[126.35px] w-[182px]",
+      icon: <User size={21} weight="fill" color="#FF0000" />,
       value: "14",
       label: "Absent Today",
     },
     {
-      style: "bg-[#D9EFFF] h-[126.35px] w-[182px]",
+      style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
       icon: <Clock size={21} weight="fill" color="#60AEFF" />,
       value: "5,480",
       label: "Late Check-ins",
