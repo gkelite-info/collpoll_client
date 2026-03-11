@@ -56,14 +56,27 @@ const EventCard = ({
   const style = EVENT_STYLES[eventType];
   const Icon = style.Icon;
 
+  // const start = new Date(event.startTime);
+  // const end = new Date(event.endTime);
+  // const timeStr = `${start.toLocaleTimeString([], {
+  //   hour: "numeric",
+  //   minute: "2-digit",
+  // })} - ${end.toLocaleTimeString([], {
+  //   hour: "numeric",
+  //   minute: "2-digit",
+  // })}`;
+
+
   const start = new Date(event.startTime);
   const end = new Date(event.endTime);
-  const timeStr = `${start.toLocaleTimeString([], {
+  const timeStr = `${start.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-  })} - ${end.toLocaleTimeString([], {
+    hour12: true,
+  })} - ${end.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   })}`;
 
   return (
