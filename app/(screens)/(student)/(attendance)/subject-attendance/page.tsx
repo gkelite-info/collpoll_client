@@ -191,7 +191,7 @@ export default function SubjectAttendance() {
               <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
             </div>
             <p className="text-[#282828]">
-              Track, Manage, and Maintain Your Attendance Effortlessly
+              Track, manage, and maintain your attendance effortlessly
             </p>
           </div>
 

@@ -89,6 +89,8 @@ export default function AssignmentsLeft() {
                 activeView
             );
 
+            console.log("what is res", res);
+
             if (!res.success) {
                 throw new Error(res.error);
             }
@@ -129,6 +131,7 @@ export default function AssignmentsLeft() {
                 formatted.filter((a) => a.toDateInt < todayInt)
             );
         } catch (err) {
+            console.error("Failed to load assignments:", err);
         } finally {
             setLoading(false);
         }
@@ -154,8 +157,8 @@ export default function AssignmentsLeft() {
             <div className="w-[68%] p-2 flex flex-col h-full">
                 <div className="mb-4">
                     <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
-                    <p className="text-[#282828]">View, track, and submit your work with ease</p>
-                </div>
+                    <p className="text-[#282828] text-sm">View, track, and submit your work with ease</p>
+                </div >
 
                 <div className="w-full flex flex-col flex-1 min-h-0">
                     <div className="flex gap-4 pb-1">
@@ -260,7 +263,7 @@ export default function AssignmentsLeft() {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
         </>
     )
 }

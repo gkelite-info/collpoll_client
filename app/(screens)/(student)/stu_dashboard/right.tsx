@@ -73,50 +73,50 @@ export default function StuDashRight() {
   }, [studentId]);
 
 
-  useEffect(() => {
-    if (!collegeId) return;
+  // useEffect(() => {
+  //   if (!collegeId) return;
 
-    const loadFacultyTasks = async () => {
-      try {
-        const { data: facultyUsers, error } = await supabase
-          .from("users")
-          // .select("userId")
-          .select("userId, collegeId")
-          .eq("collegeId", collegeId)
-          .ilike("role", "faculty")
-          .eq("is_deleted", false);
+  //   const loadFacultyTasks = async () => {
+  //     try {
+  //       const { data: facultyUsers, error } = await supabase
+  //         .from("users")
+  //         // .select("userId")
+  //         .select("userId, collegeId")
+  //         .eq("collegeId", collegeId)
+  //         .ilike("role", "faculty")
+  //         .eq("is_deleted", false);
 
-        if (error || !facultyUsers?.length) {
-          console.error("No faculty found");
-          return;
-        }
+  //       if (error || !facultyUsers?.length) {
+  //         console.error("No faculty found");
+  //         return;
+  //       }
 
-        const allTasks: any[] = [];
+  //       const allTasks: any[] = [];
 
-        for (const faculty of facultyUsers) {
-          const res = await fetchFacultyTasks(faculty.userId);
+  //       for (const faculty of facultyUsers) {
+  //         const res = await fetchFacultyTasks(faculty.userId);
 
-          if (res.success && res.tasks?.length) {
-            allTasks.push(
-              ...res.tasks.map((task: any) => ({
-                facultytaskId: task.facultytaskId,
-                title: task.facultytaskTitle,
-                description: task.facultytaskDescription,
-                time: task.facultytaskassignedTime,
-                facultytaskcreatedDate: task.facultytaskcreatedDate,
-              }))
-            );
-          }
-        }
+  //         if (res.success && res.tasks?.length) {
+  //           allTasks.push(
+  //             ...res.tasks.map((task: any) => ({
+  //               facultytaskId: task.facultytaskId,
+  //               title: task.facultytaskTitle,
+  //               description: task.facultytaskDescription,
+  //               time: task.facultytaskassignedTime,
+  //               facultytaskcreatedDate: task.facultytaskcreatedDate,
+  //             }))
+  //           );
+  //         }
+  //       }
 
-        setFacultyTasks(allTasks);
-      } catch (err) {
-        console.error("Load faculty tasks failed", err);
-      }
-    };
+  //       setFacultyTasks(allTasks);
+  //     } catch (err) {
+  //       console.error("Load faculty tasks failed", err);
+  //     }
+  //   };
 
-    loadFacultyTasks();
-  }, [collegeId]);
+  //   loadFacultyTasks();
+  // }, [collegeId]);
 
 
   const handleSaveStudentTask = async (

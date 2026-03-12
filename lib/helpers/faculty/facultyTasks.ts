@@ -1,122 +1,164 @@
 import { supabase } from "@/lib/supabaseClient";
 
-type FacultyTaskPayload = {
-  facultytaskTitle: string;
-  facultytaskDescription: string;
-  facultytaskcreatedDate: string; // YYYY-MM-DD
-  facultytaskassignedTime: string; // HH:mm (24-hour)
+export type FacultyTaskRow = {
+  facultyTaskId: number;
+  collegeSubjectId: number;
+  taskTitle: string;
+  description: string;
+  date: string;
+  time: string;
+  createdBy: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 };
 
-export const insertFacultyTask = async (
-  payload: FacultyTaskPayload
-) => {
-  try {
-    // 1️⃣ Get authenticated user
-    const { data: authData } = await supabase.auth.getUser();
-    const auth_id = authData?.user?.id;
-
-    if (!auth_id) throw new Error("User not authenticated");
-
-    // 2️⃣ Get facultyId from users table
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("userId")
-      .eq("auth_id", auth_id)
-      .single();
-
-    if (userError || !userData)
-      throw new Error("Faculty not found");
-
-    const facultyId = userData.userId;
-
-    const now = new Date().toISOString();
-
-    // 3️⃣ Insert faculty task
-    const { data, error } = await supabase
-      .from("facultyTasks")
-      .insert({
-        facultyId,
-        facultytaskTitle: payload.facultytaskTitle,
-        facultytaskDescription: payload.facultytaskDescription,
-        facultytaskcreatedDate: payload.facultytaskcreatedDate,
-        facultytaskassignedTime: payload.facultytaskassignedTime,
-        is_deleted: false,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    return {
-      success: true,
-      message: "Faculty task created successfully",
-      data,
-    };
-  } catch (err: any) {
-    console.error("INSERT FACULTY TASK ERROR:", err.message);
-    return {
-      success: false,
-      error: err.message,
-    };
-  }
-};
-
-
-export const fetchFacultyTasks = async (facultyId: number) => {
-  try {
-    const { data, error } = await supabase
-      .from("facultyTasks")
-      .select(`
-        facultytaskId,
-        facultytaskTitle,
-        facultytaskDescription,
-        facultytaskcreatedDate,
-        facultytaskassignedTime,
-        is_deleted
-      `)
-      .eq("facultyId", facultyId)
-      .eq("is_deleted", false)
-      .order("facultytaskcreatedDate", { ascending: false });
-
-    if (error) throw error;
-
-    return {
-      success: true,
-      tasks: data ?? [],
-    };
-  } catch (err: any) {
-    console.error("FETCH FACULTY TASKS ERROR:", err.message);
-    return {
-      success: false,
-      error: err.message,
-    };
-  }
-};
-
-
-export const updateFacultyTask = async (
-  facultytaskId: number,
-  data: {
-    facultytaskTitle: string;
-    facultytaskDescription: string;
-    facultytaskcreatedDate: string;
-    facultytaskassignedTime: string;
-  }
-) => {
-  const { error } = await supabase
-    .from("facultyTasks")
-    .update({
-      ...data,
-      updatedAt: new Date().toISOString(), // 👈 keep DB consistent
-    })
-    .eq("facultytaskId", facultytaskId)
-    .eq("is_deleted", false);
+export async function fetchFacultyTasks(collegeSubjectId: number) {
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .select(`
+      facultyTaskId,
+      collegeSubjectId,
+      taskTitle,
+      description,
+      date,
+      time,
+      createdBy,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("date", { ascending: true });
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("fetchFacultyTasks error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+
+export async function fetchExistingFacultyTask(
+  collegeSubjectId: number,
+  taskTitle: string,
+  date: string,
+) {
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .select("facultyTaskId")
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("taskTitle", taskTitle.trim())
+    .eq("date", date)
+    .is("deletedAt", null)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return { success: true, data: null };
+    }
+    throw error;
+  }
+
+  return { success: true, data };
+}
+
+
+export async function saveFacultyTask(
+  payload: {
+    facultyTaskId?: number;
+    collegeSubjectId: number;
+    taskTitle: string;
+    description: string;
+    date: string;
+    time: string;
+  },
+  facultyId: number,
+) {
+  const now = new Date().toISOString();
+
+  const upsertPayload: any = {
+    collegeSubjectId: payload.collegeSubjectId,
+    taskTitle: payload.taskTitle.trim(),
+    description: payload.description.trim(),
+    date: payload.date,
+    time: payload.time,
+    updatedAt: now,
+  };
+
+  if (!payload.facultyTaskId) {
+    upsertPayload.createdBy = facultyId;
+    upsertPayload.createdAt = now;
+  } else {
+    upsertPayload.facultyTaskId = payload.facultyTaskId;
+  }
+
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .upsert(upsertPayload, {
+      onConflict: "facultyTaskId",
+    })
+    .select("facultyTaskId")
+    .single();
+
+  if (error) {
+    console.error("saveFacultyTask error:", error);
+    return { success: false, error };
+  }
+
+  return {
+    success: true,
+    facultyTaskId: data.facultyTaskId,
+  };
+}
+
+
+export async function deactivateFacultyTask(facultyTaskId: number) {
+  const { error } = await supabase
+    .from("faculty_tasks")
+    .update({
+      isActive: false,
+      deletedAt: new Date().toISOString(),
+    })
+    .eq("facultyTaskId", facultyTaskId);
+
+  if (error) {
+    console.error("deactivateFacultyTask error:", error);
+    return { success: false };
   }
 
   return { success: true };
-};
+}
+
+
+export async function fetchFacultyTasksForLoggedInFaculty(
+  facultyId: number,
+  collegeSubjectId: number,
+) {
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .select(`
+      facultyTaskId,
+      taskTitle,
+      description,
+      date,
+      time
+    `)
+    .eq("createdBy", facultyId)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("date", { ascending: true });
+
+  if (error) {
+    console.error("fetchFacultyTasksForLoggedInFaculty error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}

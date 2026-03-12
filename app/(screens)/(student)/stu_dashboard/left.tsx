@@ -12,10 +12,8 @@ import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
-import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useRouter } from "next/navigation";
-
-
+import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 
 const formatTimeToAMPM = (time24: string) => {
     const [h, m] = time24.split(":");
@@ -27,59 +25,97 @@ const formatTimeToAMPM = (time24: string) => {
     return `${hour}:${m} ${period}`;
 };
 
-
 export default function StuDashLeft() {
 
     const [view, setView] = useState<"dashboard" | "exams">("dashboard");
     const [loadingLectures, setLoadingLectures] = useState(true);
     const [lectures, setLectures] = useState<any[]>([]);
     const router = useRouter();
+    const [dueAssignmentsCount, setDueAssignmentsCount] = useState(0);
 
     useEffect(() => {
-        const loadUpcomingClasses = async () => {
-            try {
-                setLoadingLectures(true);
+        loadUpcomingClasses();
+        loadAssignmentCount();
+    }, []);
 
-                const {
-                    data: { user },
-                } = await supabase.auth.getUser();
+    const loadAssignmentCount = async () => {
+        try {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
 
-                if (!user) {
-                    throw new Error("No auth user found");
-                }
+            if (!user) return;
 
-                const { data: userRow, error: userErr } = await supabase
-                    .from("users")
-                    .select("userId")
-                    .eq("auth_id", user.id)
-                    .single();
+            const { data: userRow } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .single();
 
-                if (userErr || !userRow) {
-                    throw new Error("Internal user not found");
-                }
+            if (!userRow) return;
 
-                const internalUserId = userRow.userId;
+            const studentContext = await fetchStudentContext(userRow.userId);
 
-                const studentContext = await fetchStudentContext(internalUserId);
-
-                const data = await fetchUpcomingClassesForStudent({
-                    collegeEducationId: studentContext.collegeEducationId,
+            const res = await fetchAssignmentsForStudent(
+                {
                     collegeBranchId: studentContext.collegeBranchId,
                     collegeAcademicYearId: studentContext.collegeAcademicYearId,
-                    collegeSemesterId: studentContext.collegeSemesterId,
-                    collegeSectionId: studentContext.collegeSectionsId,
-                });
+                    collegeSectionsId: studentContext.collegeSectionsId,
+                },
+                1,
+                1,
+                "active"
+            );
 
-                setLectures(data);
-            } catch (err) {
-                console.error("Failed to load classes", err);
-            } finally {
-                setLoadingLectures(false);
+            if (res.success) {
+                setDueAssignmentsCount(res.totalCount);
             }
-        };
+        } catch (err) {
+            console.error("Failed to load assignment count", err);
+        }
+    };
 
-        loadUpcomingClasses();
-    }, []);
+    const loadUpcomingClasses = async () => {
+        try {
+            setLoadingLectures(true);
+
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            if (!user) {
+                throw new Error("No auth user found");
+            }
+
+            const { data: userRow, error: userErr } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .single();
+
+            if (userErr || !userRow) {
+                throw new Error("Internal user not found");
+            }
+
+            const internalUserId = userRow.userId;
+
+            const studentContext = await fetchStudentContext(internalUserId);
+
+            const data = await fetchUpcomingClassesForStudent({
+                collegeEducationId: studentContext.collegeEducationId,
+                collegeBranchId: studentContext.collegeBranchId,
+                collegeAcademicYearId: studentContext.collegeAcademicYearId,
+                collegeSemesterId: studentContext.collegeSemesterId,
+                collegeSectionId: studentContext.collegeSectionsId,
+            });
+
+            setLectures(data);
+        } catch (err) {
+            console.error("Failed to load classes", err);
+        } finally {
+            setLoadingLectures(false);
+        }
+    };
 
     const cardData = [
         {
@@ -92,9 +128,9 @@ export default function StuDashLeft() {
         {
             style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
             icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
-            value: "2 Due",
+            value: `${dueAssignmentsCount} Due`,
             label: "Assignments",
-            to: "/assignments"
+            to: "/assignments",
         },
         {
             style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
@@ -107,7 +143,7 @@ export default function StuDashLeft() {
             style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
             icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
             value: "Fee Due",
-            label: "$5600",
+            label: "₹5600",
             to: "/payments"
         }
     ];
@@ -210,6 +246,10 @@ export default function StuDashLeft() {
                                             <div className="flex justify-center items-center h-[120px]">
                                                 <div className="w-8 h-8 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
                                             </div>
+                                        ) : lectures.length === 0 ? (
+                                            <div className="bg-red-00 min-h-[25vh] flex items-center justify-center">
+                                                <p className="text-[#282828] text-sm">No classes yet..</p>
+                                            </div>
                                         ) : (
                                             lectures.map((lec) => (
                                                 <LectureCard
@@ -222,17 +262,6 @@ export default function StuDashLeft() {
                                                 />
                                             ))
                                         )}
-                                        {/* {lectures.map((lec, index) => (
-                                            <LectureCard
-                                                key={index}
-                                                time={lec.time}
-                                                title={lec.title}
-                                                professor={lec.professor}
-                                        {/* />
-                                        ))} */
-
-
-                                        }
                                     </div>
                                 </div>
                             </div>

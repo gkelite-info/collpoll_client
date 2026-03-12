@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
-import { CaretLeft, Chalkboard, FilePdf } from "@phosphor-icons/react";
+import { Chalkboard, FilePdf } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
@@ -122,20 +122,20 @@ export default function ParentSubjectAttendance() {
   }
 
   return (
-    <div className="flex flex-col pb-3">
-      <div className="flex justify-between items-center">
-        <div className="flex flex-col w-[50%]">
-          <div className="flex gap-0 items-center">
-            <button
-              onClick={() => handleCardClick(1)}
-              className="cursor-pointer"
-            >
-              <CaretLeft
-                size={23}
-                className="cursor-pointer text-black -ml-1.5"
-              />
-            </button>
-            <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+    <>
+      <div className="flex flex-col pb-3">
+        <div className="flex justify-between items-center">
+          <div className="flex flex-col w-[50%]">
+            <h1 className="text-[#282828] font-bold text-2xl mb-1">
+              Attendance
+            </h1>
+            <p className="text-[#282828]">
+              Track, manage, and maintain your attendance effortlessly
+            </p>
+          </div>
+
+          <div className="flex justify-end w-[32%]">
+            <CourseScheduleCard style="w-[320px]" />
           </div>
           <p className="text-[#282828]">
             Track, Manage, and Maintain Your Attendance Effortlessly
@@ -207,6 +207,6 @@ export default function ParentSubjectAttendance() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

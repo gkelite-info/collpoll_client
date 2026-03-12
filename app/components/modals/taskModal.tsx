@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
-import { insertFacultyTask, updateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 
 
 export type TaskPayload = {
@@ -47,7 +46,7 @@ export default function TaskModal({
 
   useEffect(() => {
     if (defaultValues?.facultytaskId) {
-     
+
       setTitle(defaultValues.title);
       setDescription(defaultValues.description);
       setDueTime(defaultValues.time);
@@ -57,7 +56,7 @@ export default function TaskModal({
         new Date().toISOString().split("T")[0]
       );
     } else {
-      
+
       setTitle("");
       setDescription("");
       setDueDate("");
@@ -76,57 +75,8 @@ export default function TaskModal({
       return;
     }
 
-   
-    if (defaultValues?.facultytaskId) {
-      const response = await updateFacultyTask(defaultValues.facultytaskId, {
-        facultytaskTitle: title,
-        facultytaskDescription: description,
-        facultytaskcreatedDate: dueDate,
-        facultytaskassignedTime: dueTime,
-      });
 
-      if (!response.success) {
-        alert(response.error || "Update failed");
-        return;
-      }
 
-     
-      const payload: TaskPayload = {
-        title,
-        description,
-        dueDate,
-        dueTime,
-      };
-
-      
-      onSave(payload);
-      onClose();
-
-      return; 
-    }
-
-    const response = await insertFacultyTask({
-      facultytaskTitle: title,
-      facultytaskDescription: description,
-      facultytaskcreatedDate: dueDate,
-      facultytaskassignedTime: dueTime,
-    });
-
-    if (!response.success) {
-      alert(response.error || "Insert failed");
-      return;
-    }
-
-    
-    const payload: TaskPayload = {
-      title,
-      description,
-      dueDate,
-      dueTime,
-    };
-
-    
-    onSave(payload);
     onClose();
   };
 
