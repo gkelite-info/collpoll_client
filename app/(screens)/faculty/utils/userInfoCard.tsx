@@ -13,6 +13,7 @@ export type UserInfoCardProps = {
   studentsTaskPercentage?: number;
   childPerformance?: string;
   image?: string;
+  studentAcademicYear?: string;
   imageHeight?: string;
   imageAlign?: "center" | "bottom";
   top?: string;
@@ -22,7 +23,6 @@ export type UserInfoCardProps = {
 type UserInfoProps = {
   cardProps: UserInfoCardProps[];
 };
-
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
   const [today, setToday] = useState("");
@@ -49,20 +49,21 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
         >
           <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
-              {item.show && "ID:"} {item.studentId}
-              {item.show && ","} {item.studentBranch}
+              {item.show && "StudentID:"} {item.studentId}
+              {item.show && ", "} {item.studentBranch}
+              {item.show && ", "} {item.studentAcademicYear}
             </p>
 
             <p className="text-lg text-[#282828] leading-tight mt-3">
               Welcome Back,
             </p>
 
-            <div className="bg-red-00 flex items-baseline flex-wrap gap-2">
+            <div className="bg-red-00 flex items-baseline flex-wrap">
               <h1 className="text-lg font-semibold text-[#089144] leading-tight">
                 {!item.show && "Prof."} {item.user}
               </h1>
               <span className="text-[#454545] lg:ml-3 text-md font-medium">
-                {faculty_subject.map(s => s.subjectName).join(", ")}
+                {faculty_subject.map((s) => s.subjectName).join(", ")}
               </span>
               <p className="text-[#454545] italic text-sm font-medium">
                 {item.show && "Parent of"}{" "}
@@ -92,7 +93,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               className={`${item.imageHeight ?? "110px"} ${item.top} relative ${item.right}`}
             />
           )}
-
         </div>
       ))}
 
