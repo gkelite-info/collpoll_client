@@ -14,7 +14,6 @@ export type FacultyTaskRow = {
   deletedAt: string | null;
 };
 
-
 export async function fetchFacultyTasks(collegeSubjectId: number) {
   const { data, error } = await supabase
     .from("faculty_tasks")
