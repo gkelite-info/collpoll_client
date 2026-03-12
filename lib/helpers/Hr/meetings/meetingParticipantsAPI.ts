@@ -12,30 +12,6 @@ export type HrMeetingParticipantRow = {
 };
 
 
-// export async function fetchMeetingParticipants(hrMeetingId: number) {
-//     const { data, error } = await supabase
-//         .from("hr_meeting_participants")
-//         .select(`
-//             hrMeetingParticipantId,
-//             hrMeetingId,
-//             userId,
-//             role,
-//             notifiedInApp,
-//             notifiedEmail,
-//             createdAt,
-//             updatedAt
-//         `)
-//         .eq("hrMeetingId", hrMeetingId)
-//         .order("hrMeetingParticipantId", { ascending: true });
-
-//     if (error) {
-//         console.error("fetchMeetingParticipants error:", error);
-//         throw error;
-//     }
-
-//     return data ?? [];
-// }
-
 export async function fetchMeetingParticipants(meetingId: number) {
 
   const { data, error } = await supabase
@@ -43,24 +19,8 @@ export async function fetchMeetingParticipants(meetingId: number) {
     .select(`
       userId,
       role,
-
       users (
-        fullName,
-
-        faculty (
-          college_branch (
-            collegeBranchCode
-          ),
-
-          faculty_sections (
-            college_academic_year (
-              collegeAcademicYear
-            ),
-            college_sections (
-              collegeSections
-            )
-          )
-        )
+        fullName
       )
     `)
     .eq("hrMeetingId", meetingId);
@@ -69,37 +29,41 @@ export async function fetchMeetingParticipants(meetingId: number) {
 
   return (data ?? []).map((p: any) => {
 
-    const faculty = p.users?.faculty;
+    // const faculty = p.users?.faculty;
 
-    const facultyData =
-      Array.isArray(faculty) ? faculty[0] : faculty;
+    // const facultyData =
+    //   Array.isArray(faculty) ? faculty[0] : faculty;
 
-    const section =
-      facultyData?.faculty_sections
-        ? Array.isArray(facultyData.faculty_sections)
-          ? facultyData.faculty_sections[0]
-          : facultyData.faculty_sections
-        : null;
+    // const section =
+    //   facultyData?.faculty_sections
+    //     ? Array.isArray(facultyData.faculty_sections)
+    //       ? facultyData.faculty_sections[0]
+    //       : facultyData.faculty_sections
+    //     : null;
 
     return {
       id: p.userId,
       name: p.users?.fullName ?? "Unknown",
       role: p.role,
 
-      branch:
-        p.role === "Faculty"
-          ? facultyData?.college_branch?.collegeBranchCode ?? ""
-          : "",
+      // branch:
+      //   p.role === "Faculty"
+      //     ? facultyData?.college_branch?.collegeBranchCode ?? ""
+      //     : "",
 
-      year:
-        p.role === "Faculty"
-          ? section?.college_academic_year?.collegeAcademicYear ?? ""
-          : "",
+      // year:
+      //   p.role === "Faculty"
+      //     ? section?.college_academic_year?.collegeAcademicYear ?? ""
+      //     : "",
 
-      section:
-        p.role === "Faculty"
-          ? section?.college_sections?.collegeSections ?? ""
-          : ""
+      // section:
+      //   p.role === "Faculty"
+      //     ? section?.college_sections?.collegeSections ?? ""
+      //     : ""
+
+      branch: "",
+      year: "",
+      section: ""
     };
   });
 }

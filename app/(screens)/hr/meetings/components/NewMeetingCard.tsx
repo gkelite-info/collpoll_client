@@ -4,6 +4,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Laptop, PencilSimple, Trash, X } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { fetchMeetingParticipants } from "@/lib/helpers/Hr/meetings/meetingParticipantsAPI";
+import toast from "react-hot-toast";
+import MeetingCardSkeleton from "./MeetingCardSkeleton";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Hr';
@@ -32,9 +35,9 @@ const formatToAMPM = (timeStr: string) => {
     if (!timeStr) return "";
     const [hourStr, minuteStr] = timeStr.split(":");
     let hour = parseInt(hourStr, 10);
-    // const ampm = hour >= 12 ? "PM" : "AM";
+    const ampm = hour >= 12 ? "PM" : "AM";
     hour = hour % 12 || 12;
-    return `${String(hour).padStart(2, '0')}:${minuteStr}`;
+    return `${String(hour).padStart(2, '0')}:${minuteStr} ${ampm}`;
 };
 
 const DetailPill = ({ label }: { label: string | number }) => (
@@ -63,16 +66,33 @@ export default function NewMeetingCard({
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
+    const [participants, setParticipants] = useState<any[]>([]);
+    const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
     const mockFaculties = Array.from({ length: Math.min(data.participants, 4) }).map((_, i) => ({
         id: i,
         name: i === 0 ? "Sameer Shaik" : `Faculty ${i + 1}`,
         avatar: `https://i.pravatar.cc/100?u=${data.id}-${i}`
     }));
 
+    const loadParticipants = async () => {
+        try {
+            setIsParticipantsLoading(true);
+            const res = await fetchMeetingParticipants(data.hrMeetingId);
+            setParticipants(res);
+        } catch (error) {
+            toast.error("Failed to load participants");
+        } finally {
+            setIsParticipantsLoading(false);
+        }
+    };
+
     return (
         <>
             <div
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                    setIsModalOpen(true);
+                    loadParticipants();
+                }}
                 className="bg-[#FFFFFF] rounded-t-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow cursor-pointer"
             >
                 <div className="bg-[#43C17A26] px-4 py-3 flex items-center justify-between gap-3 border-b-2 border-dashed border-[#43C17A]">
@@ -189,93 +209,99 @@ export default function NewMeetingCard({
                         onClick={() => setIsModalOpen(false)}
                         className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
                     >
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0, y: 10 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-xl shadow-xl w-full max-w-xl overflow-hidden p-5 relative"
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <h2 className="text-lg font-bold text-[#282828]">
-                                    {data.title}
-                                </h2>
-                                <button
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="p-1 hover:bg-gray-100 cursor-pointer rounded-full transition-colors"
-                                >
-                                    <X size={24} className="text-[#555555]" />
-                                </button>
-                            </div>
-
-                            <p className="text-sm text-[#555555] mb-6 leading-relaxed">
-                                {data.description.toLowerCase()}
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-y-4 gap-x-8">
-                                <div className="flex flex-col gap-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Date :</span>
-                                        <DetailPill label={data.date || "N/A"} />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Time :</span>
-                                        <DetailPill label={formattedTimeRange} />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Branch :</span>
-                                        <DetailPill label={data.branch || "N/A"} />
-                                    </div>
+                        {isParticipantsLoading ? (
+                            <MeetingCardSkeleton />
+                        ) :
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-xl shadow-xl w-full max-w-xl max-h-[80vh] flex flex-col p-5 relative"
+                            >
+                                <div className="flex justify-between items-start pb-2 sticky top-0 bg-white z-10">
+                                    <h2 className="text-lg font-bold text-[#282828]">
+                                        {data.title}
+                                    </h2>
+                                    <button
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="p-1 hover:bg-gray-100 cursor-pointer rounded-full transition-colors"
+                                    >
+                                        <X size={24} className="text-[#555555]" />
+                                    </button>
                                 </div>
+                                <div className=" pb-5 overflow-y-auto flex-1">
+                                    <p className="text-sm text-[#555555] mb-6 leading-relaxed">
+                                        {data.description.toLowerCase()}
+                                    </p>
 
-                                <div className="flex flex-col gap-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Year :</span>
-                                        <DetailPill label={data.year || "N/A"} />
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Section :</span>
-                                        <DetailPill label={data.section || "N/A"} />
-                                    </div>
+                                    <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                                        <div className="flex flex-col gap-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">Date :</span>
+                                                <DetailPill label={data.date || "N/A"} />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">Time :</span>
+                                                <DetailPill label={formattedTimeRange} />
+                                            </div>
+                                            {/* <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">Branch :</span>
+                                                <DetailPill label={data.branch || "N/A"} />
+                                            </div> */}
+                                        </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[#414141] text-sm">Faculties :</span>
-                                        <div className="flex items-center">
-                                            {data.participants === 1 ? (
-                                                <div className="flex items-center gap-2">
-                                                    <img
-                                                        src={mockFaculties[0].avatar}
-                                                        alt={mockFaculties[0].name}
-                                                        className="w-7 h-7 rounded-full object-cover"
-                                                    />
-                                                    <span className="text-sm text-[#16284F] font-medium">
-                                                        {mockFaculties[0].name}
-                                                    </span>
-                                                </div>
-                                            ) : (
+                                        <div className="flex flex-col gap-y-4">
+                                            {/* <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">Year :</span>
+                                                <DetailPill label={data.year || "N/A"} />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">Section :</span>
+                                                <DetailPill label={data.section || "N/A"} />
+                                            </div> */}
+
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[#414141] text-sm">{participants?.[0]?.role || "Participants"} :</span>
                                                 <div className="flex items-center">
-                                                    <div className="flex -space-x-2">
-                                                        {mockFaculties.slice(0, 3).map((f) => (
+                                                    {participants?.length === 1 ? (
+                                                        <div className="flex items-center gap-2" title={participants?.[0]?.name}>
                                                             <img
-                                                                key={f.id}
-                                                                src={f.avatar}
-                                                                alt={f.name}
-                                                                className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                                                                src={participants?.[0]?.avatar || `https://i.pravatar.cc/100?u=${participants[0].name}`}
+                                                                alt={participants?.[0]?.name}
+                                                                className="w-7 h-7 rounded-full object-cover"
                                                             />
-                                                        ))}
-                                                    </div>
-                                                    {data.participants > 3 && (
-                                                        <span className="text-sm text-[#16284F] font-medium ml-2">
-                                                            + {data.participants - 3}
-                                                        </span>
+                                                            <span className="text-sm text-[#16284F] font-medium">
+                                                                {participants?.[0].name}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center">
+                                                            <div className="flex -space-x-2" >
+                                                                {participants?.slice(0, 3).map((p: any, i: number) => (
+                                                                    <img
+                                                                        key={p?.userId || i}
+                                                                        src={p?.avatar || `https://i.pravatar.cc/100?u=${p?.name}`}
+                                                                        alt={p?.name}
+                                                                        title={p?.name}
+                                                                        className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                            {data.participants > 3 && (
+                                                                <span className="text-sm text-[#16284F] font-medium ml-2">
+                                                                    + {data?.participants - 3}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </motion.div>
+                            </motion.div>
+                        }
                     </motion.div>
                 )}
             </AnimatePresence>
