@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Laptop, PencilSimple, Trash, X } from "@phosphor-icons/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Hr';
@@ -58,6 +59,9 @@ export default function NewMeetingCard({
     const [fromTime, toTime] = data.timeRange.split(" - ");
     const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const mockFaculties = Array.from({ length: Math.min(data.participants, 4) }).map((_, i) => ({
         id: i,
@@ -87,7 +91,11 @@ export default function NewMeetingCard({
                                 className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onEdit?.(data.hrMeetingId, data.hrMeetingSectionsId);
+
+                                    const params = new URLSearchParams(searchParams.toString());
+                                    params.set("editMeetingId", String(data.hrMeetingId));
+
+                                    router.push(`${pathname}?${params.toString()}`, { scroll: false });
                                 }}
                             >
                                 <PencilSimple size={16} weight="fill" className="text-[#43C17A]" />

@@ -154,7 +154,7 @@ export default function AssignmentsLeft() {
             <div className="w-[68%] p-2 flex flex-col h-full">
                 <div className="mb-4">
                     <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
-                    <p className="text-[#282828]">View, Track, and Submit Your Work With Ease</p>
+                    <p className="text-[#282828]">View, track, and submit your work with ease</p>
                 </div>
 
                 <div className="w-full flex flex-col flex-1 min-h-0">
