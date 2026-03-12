@@ -1,11 +1,18 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
+import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
-import { useState } from "react";
+import { getParentAttendanceDetails } from "@/lib/helpers/parent/attendance/parentAttendanceActions";
+import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  SubjectAttendanceDetailsSkeleton,
+  TableSkeleton,
+} from "../shimmer/attendanceSkeletons";
 
 interface CardItem {
   id: number;
@@ -19,10 +26,26 @@ interface CardItem {
   totalPercentage?: string | number;
 }
 
-const StatusBadge = ({ status }: { status: string }) => {
-  let bg = "";
-  let color = "";
+type AttendanceTableRow = {
+  date: string;
+  time: string;
+  rawStatus: "PRESENT" | "ABSENT" | "LATE" | "LEAVE";
+  status: React.ReactNode;
+  reason: string;
+  notes: React.ReactNode;
+};
 
+function normalizeStatus(status: string) {
+  if (status === "PRESENT") return "Present";
+  if (status === "ABSENT") return "Absent";
+  if (status === "LATE") return "Late";
+  if (status === "LEAVE") return "Leave";
+  return status;
+}
+
+const StatusBadge = ({ status }: { status: string }) => {
+  let bg = "",
+    color = "";
   switch (status) {
     case "Present":
       bg = "#43C17A3D";
@@ -53,15 +76,53 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function ParentSubjectAttendanceDetails() {
-  const [activeView, setActiveView] = useState<"table" | "present" | "absent">(
-    "table"
-  );
+  type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
+
+  const [activeView, setActiveView] = useState<ViewFilter>("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const router = useRouter();
+  const { userId } = useUser();
+  const searchParams = useSearchParams();
+  const subjectId = Number(searchParams.get("subjectId"));
+
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    if (!userId || !subjectId) return;
+
+    async function loadDetails() {
+      try {
+        setLoading(true);
+        const res = await getParentAttendanceDetails({
+          userId: userId!,
+          subjectId,
+          statusFilter: activeView,
+          page: currentPage,
+          limit: rowsPerPage,
+        });
+        setData(res);
+        setTotalRecords(res.totalCount || 0);
+      } catch (err) {
+        console.error("Failed to load attendance details:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDetails();
+  }, [userId, subjectId, activeView, currentPage]);
 
   const cards: CardItem[] = [
     {
       id: 1,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: "32",
+      value: data?.headerStats.total ?? 0,
       label: "Total Classes",
       style: "bg-[#E2DAFF] w-[182px]",
       iconBgColor: "#714EF2",
@@ -70,7 +131,7 @@ export default function ParentSubjectAttendanceDetails() {
     {
       id: 2,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: "28",
+      value: data?.headerStats.attended ?? 0,
       label: "Attended",
       style: "bg-[#FFEDDA] w-[182px]",
       iconBgColor: "#FFBC72",
@@ -79,8 +140,8 @@ export default function ParentSubjectAttendanceDetails() {
     {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: "1",
-      label: "Leave",
+      value: data?.headerStats.absent ?? 0,
+      label: "Absent",
       style: "bg-[#FFE6E6] w-[182px]",
       iconBgColor: "#F62D2D",
       iconColor: "#EFEFEF",
@@ -88,7 +149,7 @@ export default function ParentSubjectAttendanceDetails() {
     {
       id: 4,
       icon: <Percent size={30} weight="fill" />,
-      value: "87%",
+      value: `${data?.headerStats.percentage ?? 0}%`,
       label: "Attendance",
       style: "bg-[#CEE6FF] w-[182px]",
       iconBgColor: "#60AEFF",
@@ -96,13 +157,7 @@ export default function ParentSubjectAttendanceDetails() {
     },
   ];
 
-  const detailCard = [
-    {
-      subject: "Data Structures",
-      faculty: "Prof. Sindhu Sharma",
-      attendance: "Classes Held: 32 | Attended: 28 | Missed: 3 | %: 87%",
-    },
-  ];
+  const attendanceText = `Classes Held: ${data?.headerStats.total ?? 0} | Attended: ${data?.headerStats.attended ?? 0} | Missed: ${data?.headerStats.absent ?? 0} | ${data?.headerStats.percentage ?? 0}%`;
 
   const columns = [
     { title: "Date", key: "date" },
@@ -112,12 +167,13 @@ export default function ParentSubjectAttendanceDetails() {
     { title: "Notes", key: "notes" },
   ];
 
-  const tableData = [
-    {
-      date: "22/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
+  const tableData: AttendanceTableRow[] =
+    data?.rows.map((r: any) => ({
+      date: r.date,
+      time: r.time,
+      rawStatus: r.status,
+      status: <StatusBadge status={normalizeStatus(r.status)} />,
+      reason: r.reason,
       notes: (
         <div className="w-full flex justify-center">
           <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
@@ -125,224 +181,145 @@ export default function ParentSubjectAttendanceDetails() {
           </div>
         </div>
       ),
-    },
-    {
-      date: "20/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      date: "18/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Absent" />,
-      reason: "Sick Leave",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-  ];
+    })) ?? [];
 
-  const present = [
-    { title: "Date", key: "date" },
-    { title: "Time", key: "time" },
-    { title: "Status", key: "status" },
-    { title: "Reason", key: "reason" },
-    { title: "Notes", key: "notes" },
-  ];
+  const filteredTableData = (() => {
+    if (activeView === "ATTENDED")
+      return tableData.filter(
+        (r) => r.rawStatus === "PRESENT" || r.rawStatus === "LATE",
+      );
+    if (activeView === "ABSENT")
+      return tableData.filter((r) => r.rawStatus === "ABSENT");
+    return tableData;
+  })();
 
-  const presentTableData = [
-    {
-      date: "22/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      date: "20/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      date: "18/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      date: "17/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-    {
-      date: "16/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Present" />,
-      reason: "-",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-  ];
+  const handleBack = () => {
+    router.push("/parent/attendance?tab=subject-attendance");
+  };
 
-  const absent = [
-    { title: "Date", key: "date" },
-    { title: "Time", key: "time" },
-    { title: "Status", key: "status" },
-    { title: "Reason", key: "reason" },
-    { title: "Notes", key: "notes" },
-  ];
-
-  const absentTableData = [
-    {
-      date: "22/10/2025",
-      time: "01:00 PM - 04:00 PM",
-      status: <StatusBadge status="Absent" />,
-      reason: "Sick Leave",
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
-    },
-  ];
+  if (loading && !data) {
+    return <SubjectAttendanceDetailsSkeleton />;
+  }
 
   return (
     <div className="flex flex-col pb-3">
       <div className="flex justify-between items-center">
         <div className="flex flex-col w-[50%]">
-          <h1 className="text-[#282828] font-bold text-2xl mb-1">Attendance</h1>
+          <div className="flex gap-0 items-center">
+            <button onClick={handleBack} className="cursor-pointer">
+              <CaretLeft
+                size={23}
+                className="cursor-pointer text-black -ml-1.5"
+              />
+            </button>
+            <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+          </div>
           <p className="text-[#282828]">
             Track, Manage, and Maintain Your Attendance Effortlessly
           </p>
         </div>
-
         <div className="flex justify-end w-[32%]">
-          <CourseScheduleCard style="w-[320px]" />
+          <CourseScheduleCard style="w-[320px]" isVisibile={false} />
         </div>
       </div>
 
       <div className="w-full h-[170px] mt-4 flex items-start gap-3">
-        {cards.map((card, index) => {
-          return (
-            <div
-              key={index}
-              onClick={() => {
-                if (index === 0) setActiveView("table");
-                if (index === 1) setActiveView("present");
-                if (index === 2) setActiveView("absent");
-              }}
-            >
-              <CardComponent
-                style={card.style}
-                icon={card.icon}
-                value={card.value}
-                label={card.label}
-                iconBgColor={card.iconBgColor}
-                iconColor={card.iconColor}
-                underlineValue={card.underlineValue}
-                totalPercentage={card.totalPercentage}
-              />
-            </div>
-          );
-        })}
+        {cards.map((card, index) => (
+          <div
+            key={index}
+            className="cursor-pointer"
+            onClick={() => {
+              if (index === 0) setActiveView("ALL");
+              if (index === 1) setActiveView("ATTENDED");
+              if (index === 2) setActiveView("ABSENT");
+            }}
+          >
+            <CardComponent
+              style={card.style}
+              icon={card.icon}
+              value={card.value}
+              label={card.label}
+              iconBgColor={card.iconBgColor}
+              iconColor={card.iconColor}
+              underlineValue={card.underlineValue}
+              totalPercentage={card.totalPercentage}
+            />
+          </div>
+        ))}
         <WorkWeekCalendar style="w-[345px] mt-0" />
       </div>
 
       <div className="mt-4 flex flex-col items-center">
         <div className="w-full flex flex-col items-start">
           <h4 className="text-[#282828] font-medium">Subject Detail View</h4>
-          {detailCard.map((item, index) => (
-            <div
-              className="bg-blue-00 w-full mt-2 flex items-center"
-              key={index}
-            >
-              <div className="flex items-center gap-1">
-                <h5 className="text-[#525252] text-sm">Subject :</h5>
-                <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                  <p className="text-sm text-[#43C17A] font-medium">
-                    {item.subject}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 ml-6">
-                <h5 className="text-[#525252] text-sm">Faculty :</h5>
-                <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                  <p className="text-sm text-[#43C17A] font-medium">
-                    {item.faculty}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 ml-6">
-                <h5 className="text-[#525252] text-sm">Attendance :</h5>
-                <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                  <p className="text-sm text-[#43C17A] font-medium">
-                    {item.attendance}
-                  </p>
-                </div>
+          <div className="bg-blue-00 w-full mt-2 flex items-center">
+            <div className="flex items-center gap-1">
+              <h5 className="text-[#525252] text-sm">Subject :</h5>
+              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+                <p className="text-sm text-[#43C17A] font-medium">
+                  {data?.subjectName ?? "-"}
+                </p>
               </div>
             </div>
-          ))}
+            <div className="flex items-center gap-1 ml-6">
+              <h5 className="text-[#525252] text-sm">Faculty :</h5>
+              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+                <p className="text-sm text-[#43C17A] font-medium">
+                  {data?.facultyName ?? "-"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 ml-6">
+              <h5 className="text-[#525252] text-sm">Attendance :</h5>
+              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+                <p className="text-sm text-[#43C17A] font-medium">
+                  {attendanceText}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-
         <div className="mt-4 w-[85%]">
-          {activeView === "table" && (
-            <TableComponent columns={columns} tableData={tableData} />
-          )}
+          {loading ? (
+            <TableSkeleton rows={5} />
+          ) : (
+            <>
+              <TableComponent
+                columns={columns}
+                tableData={filteredTableData}
+                isLoading={false}
+              />
 
-          {activeView === "present" && (
-            <TableComponent columns={present} tableData={presentTableData} />
-          )}
-
-          {activeView === "absent" && (
-            <TableComponent columns={absent} tableData={absentTableData} />
+              {totalPages > 1 && (
+                <div className="flex justify-end items-center gap-3 mt-6">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+                  >
+                    ‹
+                  </button>
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-10 h-10 rounded-lg font-semibold ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p - 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg border ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

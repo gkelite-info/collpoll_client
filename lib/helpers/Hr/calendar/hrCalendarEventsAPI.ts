@@ -76,38 +76,59 @@ export async function saveHrCalendarEvent(
 ) {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("hr_calendar_events")
-    .upsert(
-      {
-        hrCalendarEventId: payload.hrCalendarEventId,
-        title: payload.title.trim(),
-        topic: payload.topic.trim(),
-        eventDate: payload.eventDate,
-        fromTime: payload.fromTime,
-        toTime: payload.toTime,
-        roomNo: payload.roomNo.trim(),
-        collegeId: payload.collegeId,
-        createdBy: collegeHrId,
-        role: payload.role,
-        isActive: true,
-        updatedAt: now,
-        ...(payload.hrCalendarEventId ? {} : { createdAt: now }),
-      },
-      { onConflict: "hrCalendarEventId" },
-    )
-    .select("hrCalendarEventId")
-    .single();
-
-  if (error) {
-    console.error("saveHrCalendarEvent error:", error);
-    return { success: false, error };
-  }
-
-  return {
-    success: true,
-    hrCalendarEventId: data.hrCalendarEventId,
+  const commonData = {
+    title: payload.title.trim(),
+    topic: payload.topic.trim(),
+    eventDate: payload.eventDate,
+    fromTime: payload.fromTime,
+    toTime: payload.toTime,
+    roomNo: payload.roomNo.trim(),
+    collegeId: payload.collegeId,
+    role: payload.role,
+    isActive: true,
+    updatedAt: now,
   };
+
+  if (payload.hrCalendarEventId) {
+    const { data, error } = await supabase
+      .from("hr_calendar_events")
+      .update(commonData)
+      .eq("hrCalendarEventId", payload.hrCalendarEventId)
+      .select("hrCalendarEventId")
+      .single();
+
+    if (error) {
+      console.error("saveHrCalendarEvent Update Error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      hrCalendarEventId: data.hrCalendarEventId,
+    };
+  } else {
+    const { data, error } = await supabase
+      .from("hr_calendar_events")
+      .insert([
+        {
+          ...commonData,
+          createdBy: collegeHrId,
+          createdAt: now,
+        },
+      ])
+      .select("hrCalendarEventId")
+      .single();
+
+    if (error) {
+      console.error("saveHrCalendarEvent Insert Error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      hrCalendarEventId: data.hrCalendarEventId,
+    };
+  }
 }
 
 export async function deactivateHrCalendarEvent(hrCalendarEventId: number) {

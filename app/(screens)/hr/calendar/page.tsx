@@ -15,6 +15,7 @@ import {
   deactivateHrCalendarEvent,
   fetchHrCalendarEvents,
 } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 const convertTo24Hour = (time12h: string) => {
   const [time, modifier] = time12h.split(" ");
@@ -36,7 +37,6 @@ export default function FinanceCalendarPage() {
   const [eventToDelete, setEventToDelete] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
 
-  // NEW: State to track when events are being fetched from the database
   const [isFetchingEvents, setIsFetchingEvents] = useState(true);
 
   const weekDays = useMemo(() => {
@@ -61,7 +61,7 @@ export default function FinanceCalendarPage() {
   const loadEvents = async () => {
     if (!collegeId) return;
 
-    setIsFetchingEvents(true); // NEW: Start loading
+    setIsFetchingEvents(true);
 
     try {
       const dbEvents = await fetchHrCalendarEvents(collegeId);
@@ -139,16 +139,10 @@ export default function FinanceCalendarPage() {
         />
       </div>
 
-      {/* NEW: Added relative positioning here to contain the absolute loader */}
       <div className="relative bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden rounded-lg">
-        {/* NEW: Loader Overlay */}
         {(ctxLoading || isFetchingEvents) && (
           <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
-            <CircleNotch
-              size={40}
-              className="text-[#43C17A] animate-spin mb-2"
-              weight="bold"
-            />
+            <Loader />
             <span className="text-sm font-medium text-gray-600">
               Loading events...
             </span>

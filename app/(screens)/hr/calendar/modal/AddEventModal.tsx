@@ -9,7 +9,6 @@ import toast from "react-hot-toast";
 const INPUT =
   "w-full py-2 border border-[#C9C9C9] rounded-lg px-3 text-sm bg-white text-gray-900 outline-none transition-all";
 
-// Helper to convert 12hr to 24hr for time comparisons
 const convertTo24Hour = (hour: string, min: string, ampm: string) => {
   let h = parseInt(hour, 10);
   if (ampm === "PM" && h !== 12) h += 12;
@@ -72,8 +71,34 @@ export default function AddEventModal({
   }, [isOpen, editData]);
 
   const handleSave = async () => {
-    if (!eventTitle || !eventTopic || !eventDate || !roomNo || !assignTo) {
-      return toast.error("All fields are required.");
+    const title = eventTitle?.trim();
+    const topic = eventTopic?.trim();
+
+    if (!title) {
+      return toast.error("Event title is required.");
+    }
+
+    if (!topic) {
+      return toast.error("Event topic is required.");
+    }
+
+    if (!eventDate) {
+      return toast.error("Event date is required.");
+    }
+
+    if (!assignTo) {
+      return toast.error("Please select a role.");
+    }
+
+    if (
+      !fromHour ||
+      !fromMinute ||
+      !fromAmPm ||
+      !toHour ||
+      !toMinute ||
+      !toAmPm
+    ) {
+      return toast.error("Please select both start and end time.");
     }
 
     const selectedDate = new Date(eventDate);
@@ -88,35 +113,43 @@ export default function AddEventModal({
     const to24 = convertTo24Hour(toHour, toMinute, toAmPm);
 
     if (from24 >= to24) {
-      return toast.error("'From' time must be before 'To' time.");
+      return toast.error("End time must be after start time.");
     }
 
-    if (!collegeId || !collegeHrId) return toast.error("HR Context missing");
+    if (!collegeId || !collegeHrId) {
+      return toast.error("HR context missing.");
+    }
 
     setLoading(true);
+
     try {
       const payload = {
         hrCalendarEventId: editData?.hrCalendarEventId,
-        title: eventTitle,
-        topic: eventTopic,
+        title,
+        topic,
         eventDate,
         fromTime: `${fromHour}:${fromMinute} ${fromAmPm}`,
         toTime: `${toHour}:${toMinute} ${toAmPm}`,
-        roomNo,
+        roomNo, // optional
         collegeId,
         role: assignTo,
       };
 
       const res = await saveHrCalendarEvent(payload, collegeHrId);
+
       if (res.success) {
-        toast.success(editData ? "Event updated" : "Event created");
+        toast.success(
+          editData
+            ? "Event updated successfully"
+            : "Event created successfully",
+        );
         onSuccess();
         onClose();
       } else {
-        toast.error("Failed to save event");
+        toast.error("Failed to save event.");
       }
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
@@ -140,7 +173,6 @@ export default function AddEventModal({
         </div>
 
         <div className="p-5 pt-0 space-y-4 overflow-y-auto">
-          {/* Form fields stay exactly the same as your code */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
               Event title
