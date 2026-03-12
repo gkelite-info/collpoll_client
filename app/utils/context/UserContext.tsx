@@ -191,7 +191,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         .from("faculty")
         .select("facultyId")
         .eq("userId", userId)
-        .is("deletedAt", null)  // better than is_deleted
+        .is("deletedAt", null)
         .maybeSingle();
 
       if (!error && data) {
@@ -215,7 +215,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         mobile,
         email,
         gender,
-         adminId,  
+        adminId,
         role,
         collegePublicId,
         collegeId,

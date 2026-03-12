@@ -13,7 +13,6 @@ import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-deta
 import { useUser } from "@/app/utils/context/UserContext";
 import { DashboardSkeleton, TableSkeleton } from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
-import { Loader } from "../../calendar/right/timetable";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 
 interface TableRow {
@@ -45,14 +44,6 @@ const columns = [
   "Percentage %",
   "Notes",
 ];
-
-const STATUS_COLOR_CLASS: Record<string, string> = {
-  Present: "text-green-600",
-  Late: "text-yellow-600",
-  Absent: "text-red-600",
-  Leave: "text-blue-600",
-  "Class Cancel": "text-gray-600",
-};
 
 
 function formatAttendanceStatus(status: string) {
@@ -209,7 +200,7 @@ export default function AttendanceClient() {
                   Attendance
                 </h1>
                 <p className="text-[#282828] text-sm">
-                  Track, Manage, and Maintain Your Attendance Effortlessly
+                  Track, manage, and maintain your attendance effortlessly
                 </p>
               </div>
 
@@ -268,7 +259,6 @@ export default function AttendanceClient() {
                     {totalPages > 1 && (
                       <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
 
-                        {/* Prev */}
                         <button
                           onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
@@ -295,7 +285,6 @@ export default function AttendanceClient() {
                           </button>
                         ))}
 
-                        {/* Next */}
                         <button
                           onClick={() =>
                             setCurrentPage((p) => Math.min(totalPages, p + 1))

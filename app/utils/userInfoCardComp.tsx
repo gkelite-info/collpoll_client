@@ -3,21 +3,17 @@
 import { useEffect, useState } from "react";
 import { useUser } from "./context/UserContext";
 import { extractAcademicYearNumber } from "./academicYear";
+import { useStudent } from "./context/student/useStudent";
 
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
-    const { studentId, fullName, gender, loading, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+    const { studentId, fullName, gender, collegeEducationType, collegeBranchCode } = useUser();
+    const { collegeAcademicYear } = useStudent();
+    console.log("what is year", collegeAcademicYear);
+    
 
     const academicYear = extractAcademicYearNumber(collegeAcademicYear);
-
-    const studentImage =
-        !loading && gender === "Female"
-            ? "/student-f.png"
-            : !loading && gender === "Male"
-                ? "/maleuser.png"
-                : null;
-
 
     useEffect(() => {
         const currentDate = new Date();
@@ -34,14 +30,14 @@ export default function UserInfoCard() {
                 <div className="flex flex-col justify-between w-[60%] p-3 gap-1 bg-yellow-00 rounded-l-lg h-[100%]">
                     <div className="flex items-center gap-3">
                         <p className="text-[#714EF2] text-sm font-medium">{collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} - {academicYear ? `${academicYear}` : "—"}</p>
-                        <p className="text-[#089144] text-sm font-medium">ID - <span className="text-[#282828] text-sm">{studentId}</span></p>
+                        <p className="text-[#089144] text-sm font-medium">Student Id - <span className="text-[#282828] text-sm">{studentId}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <p className="text-sm text-[#282828]">Welcome Back, <span className="text-[#089144] text-sm font-medium">{fullName}</span></p>
+                        <p className="text-md text-[#282828]">Welcome Back, <span className="text-[#089144] text-md font-medium">{fullName}</span></p>
                     </div>
                     <div className="flex flex-col">
-                        <p className="text-xs text-[#454545]">You’ve completed <span className="text-[#089144] font-semibold">5</span> of your tasks.</p>
-                        <p className="text-xs text-[#454545]">Keep up the great progress!</p>
+                        <p className="text-sm text-[#454545]">You’ve completed <span className="text-[#089144] font-semibold">5</span> of your tasks.</p>
+                        <p className="text-sm text-[#454545]">Keep up the great progress!</p>
                     </div>
                     <div className="bg-[#A3FFCB] w-[25%] p-1 flex items-center justify-center rounded-sm text-[#007533] font-semibold text-sm">
                         {today ? today : "Loading date..."}
@@ -58,7 +54,7 @@ export default function UserInfoCard() {
                 </div> */}
 
                 <div className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
-                    {!loading && gender && (
+                    {gender && (
                         <img
                             src={gender === "Female" ? "/student-f.png" : "/maleuser.png"}
                             className="lg:relative lg:top-[-6] z-50 h-[180px]"
