@@ -113,7 +113,7 @@ export default function MeetingsPage() {
             setIsLoading(true);
             const now = new Date();
             const currentDate = now.toISOString().split("T")[0];
-            const currentTime = getCurrentTime12Hour();
+            const currentTime = now.toTimeString().slice(0, 8);
 
             const res = await fetchHrMeetings({
                 createdBy: collegeHrId!,
@@ -135,8 +135,8 @@ export default function MeetingsPage() {
             setTotalPages(res.totalPages);
 
         } catch (err) {
-            console.error(err);
             toast.error(`Failed to fetch ${currentType} meetings`);
+            setMeetings([]);
         } finally {
             setIsLoading(false);
         }
@@ -161,7 +161,6 @@ export default function MeetingsPage() {
             setDeleteModalOpen(false);
             setSelectedMeeting(null);
         } catch (error) {
-            console.error(error);
             toast.error("Something went wrong");
         } finally {
             setIsDeleting(false);
@@ -171,7 +170,7 @@ export default function MeetingsPage() {
     return (
         <>
             <div className="bg-red-00 h-screen p-2 flex flex-col">
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex justify-between items-start mb-6 shrink-0">
                     <div>
                         <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
                         <p className="text-[#282828] text-sm mt-1">
@@ -183,9 +182,9 @@ export default function MeetingsPage() {
                     </div>
                 </div>
 
-                <div className="bg-red-00">
-                    <div className="w-full relative flex items-center justify-center mb-4 mt-2">
-                        <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto">
+                <div className="bg-red-00 flex flex-col h-full overflow-hidden">
+                    <div className="w-full relative flex items-center justify-center mb-4 mt-2 shrink-0">
+                        <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto  items-center overflow-hidden">
                             {typeTabs.map((tab) => {
                                 const isActive = currentType === tab.id;
                                 return (
@@ -202,7 +201,7 @@ export default function MeetingsPage() {
                                         {isActive && (
                                             <motion.div
                                                 layoutId="type-pill"
-                                                className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
+                                                className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10 flex items-center justify-center"
                                                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                             />
                                         )}
@@ -224,7 +223,7 @@ export default function MeetingsPage() {
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-2 mt-4">
+                    <div className="flex-1 overflow-y-auto p-2 mt-4 min-h-0">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
                             {(isLoading || !collegeHrId) ? (
                                 <div className="col-span-full flex justify-center items-center h-[400px]">
@@ -245,7 +244,8 @@ export default function MeetingsPage() {
                     </div>
 
                     {totalPages > 1 && (
-                        <div className="flex justify-center pb-4">
+                        <div className="flex justify-center pb-4 shrink-0 pt-2">
+                            {/* <div className="flex items-center gap-2"> */}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -257,21 +257,22 @@ export default function MeetingsPage() {
                                 >
                                     <CaretLeft size={16} weight="bold" />
                                 </button>
-
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                                    (p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPage(p)}
-                                            className={`px-3 py-1 cursor-pointer rounded-md text-sm font-medium ${page === p
-                                                ? 'bg-[#16284F] text-white'
-                                                : 'bg-gray-200 hover:bg-gray-300'
-                                                }`}
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
+                                <div className="flex items-center gap-2 max-w-[60vw] overflow-x-auto scrollbar-hide">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                                        (p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setPage(p)}
+                                                className={`px-3 py-1 cursor-pointer rounded-md text-sm font-medium ${page === p
+                                                    ? 'bg-[#16284F] text-white'
+                                                    : 'bg-gray-200 hover:bg-gray-300'
+                                                    }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        )
+                                    )}
+                                </div>
 
                                 <button
                                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

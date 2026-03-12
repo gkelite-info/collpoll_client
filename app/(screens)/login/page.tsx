@@ -247,7 +247,7 @@ export default function LoginPage() {
           </p>
 
           <div className="mt-6">
-            <label className="block text-[13px] text-[#414141] mb-1">
+            <label className="block text-[13px] text-[#414141] mb-1 ">
               Email
             </label>
             <input
