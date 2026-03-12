@@ -214,9 +214,9 @@ const AddUserModal: React.FC<{
     () =>
       selectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId === selectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId === selectedEducation.collegeEducationId,
+        )
         : [],
     [dbData.branches, selectedEducation],
   );
@@ -250,10 +250,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId ===
-              studentSelectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId ===
+            studentSelectedEducation.collegeEducationId,
+        )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -270,8 +270,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-          )
+          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+        )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -288,10 +288,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -300,10 +300,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -613,13 +613,9 @@ const AddUserModal: React.FC<{
 
       if (isParent && targetUserId) {
         await upsertParentEntry({
+          userId: targetUserId,
           studentId: parseInt(basicData.studentId),
-          fullName: basicData.fullName,
-          email: basicData.email,
-          mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-          gender: basicData.gender,
-          collegeId: basicData.collegeId,
-          collegeCode: basicData.collegeId.replace(/\d+/g, ""),
+          collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
         });
       }
@@ -1154,11 +1150,10 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
-                isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

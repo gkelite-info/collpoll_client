@@ -4,31 +4,12 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import {
-  CaretLeft,
-  ChartLineDown,
-  Check,
-  Prohibit,
-  UserCircle,
-  UsersThree,
-  X,
-} from "@phosphor-icons/react";
+import { CaretLeft, ChartLineDown, Check, Prohibit, UserCircle, UsersThree, X } from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./components/stuAttendanceCard";
 import StuAttendanceTable from "./components/stuAttendanceTable";
-import {
-  getClassDetails,
-  UpcomingLesson,
-} from "@/lib/helpers/faculty/attendance/getClasses";
+import { getClassDetails, UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import toast, { Toaster } from "react-hot-toast";
-import {
-  getStudentsForClass,
-  saveAttendance,
-  UIStudent,
-  ClassOption,
-  SectionOption,
-  getFacultyClasses,
-  getClassSections,
-} from "@/lib/helpers/faculty/attendance/attendanceActions";
+import { getStudentsForClass, saveAttendance, UIStudent, ClassOption, SectionOption, getFacultyClasses, getClassSections } from "@/lib/helpers/faculty/attendance/attendanceActions";
 import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
@@ -38,20 +19,17 @@ function AttendanceContent() {
   const router = useRouter();
   const { facultyId, loading: contextLoading } = useFaculty();
 
-  // Data
   const [classData, setClassData] = useState<UpcomingLesson | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Filters
   const [classOptions, setClassOptions] = useState<ClassOption[]>([]);
   const [sectionOptions, setSectionOptions] = useState<SectionOption[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedSectionId, setSelectedSectionId] = useState<string>("");
 
-  // UI State
   const [isEditing, setIsEditing] = useState(false);
   const [isCancellingMode, setIsCancellingMode] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -144,7 +122,7 @@ function AttendanceContent() {
           console.error(e);
         } finally {
           setLoading(false);
-          setInitialized(true); // ⭐ important
+          setInitialized(true);
         }
       }
       initFilters();
@@ -273,7 +251,7 @@ function AttendanceContent() {
               <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
             </div>
             <p className="text-sm text-[#282828] mt-1">
-              Track, Verify, and Manage Attendance.
+              Track, verify, and manage attendance.
             </p>
           </div>
         </div>
