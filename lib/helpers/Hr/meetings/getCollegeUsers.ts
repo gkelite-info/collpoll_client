@@ -9,13 +9,18 @@ export type SelectUser = {
 
 export async function getCollegeUsers(
   role: "Admin" | "Faculty" | "Finance",
-  collegeId: number
+  collegeId: number,
+  educationTypeId?: number
 ): Promise<SelectUser[]> {
+
   if (!collegeId) {
     return [];
   }
+
+  // ================= ADMIN =================
   if (role === "Admin") {
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("admins")
       .select(`
         adminId,
@@ -27,6 +32,12 @@ export async function getCollegeUsers(
       `)
       .eq("collegeId", collegeId)
       .eq("is_deleted", false);
+
+    if (educationTypeId) {
+      query = query.eq("collegeEducationId", educationTypeId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error(" Admin fetch error:", error);
@@ -43,11 +54,12 @@ export async function getCollegeUsers(
     return mapped;
   }
 
+  // ================= FINANCE =================
   if (role === "Finance") {
 
     console.log("Fetching finance managers...");
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("finance_manager")
       .select(`
         financeManagerId,
@@ -61,6 +73,12 @@ export async function getCollegeUsers(
       `)
       .eq("collegeId", collegeId)
       .eq("is_deleted", false);
+
+    if (educationTypeId) {
+      query = query.eq("collegeEducationId", educationTypeId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error(" Finance fetch error:", error);
@@ -77,8 +95,10 @@ export async function getCollegeUsers(
     return mapped;
   }
 
+  // ================= FACULTY =================
   if (role === "Faculty") {
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("faculty")
       .select(`
         facultyId,
@@ -98,6 +118,12 @@ export async function getCollegeUsers(
       `)
       .eq("collegeId", collegeId)
       .eq("isActive", true);
+
+    if (educationTypeId) {
+      query = query.eq("collegeEducationId", educationTypeId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error(" Faculty fetch error:", error);
@@ -126,5 +152,6 @@ export async function getCollegeUsers(
 
     return mapped;
   }
+
   return [];
 }

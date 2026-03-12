@@ -7,9 +7,12 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useUser } from '@/app/utils/context/UserContext';
-import { saveHrMeeting } from '@/lib/helpers/Hr/meetings/meetingsAPI';
+import { saveHrMeeting, updateHrMeeting } from '@/lib/helpers/Hr/meetings/meetingsAPI';
 import { addMeetingParticipants } from '@/lib/helpers/Hr/meetings/meetingParticipantsAPI';
 import { useCollegeHr } from '@/app/utils/context/hr/useCollegeHr';
+import { supabase } from '@/lib/supabaseClient';
+import ConflictErrorModal from './ConflictErrorModal';
+import { fetchEducationTypes } from '@/lib/helpers/Hr/meetings/educationAPI';
 
 
 const convertTo24Hour = (hour: string, minute: string, period: "AM" | "PM") => {
@@ -88,6 +91,7 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
     const [title, setTitle] = useState("");
     const [agenda, setAgenda] = useState("");
     const [date, setDate] = useState("");
+    const [educationTypes, setEducationTypes] = useState<any[]>([]);
     const [inAppNotification, setInAppNotification] = useState(false);
     const [emailNotification, setEmailNotification] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
@@ -99,14 +103,32 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
     const [endMinute, setEndMinute] = useState("00");
     const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
     const [isScheduling, setIsScheduling] = useState(false);
+    const [showConflictModal, setShowConflictModal] = useState(false);
+    const [selectedEducationType, setSelectedEducationType] = useState("Select Education Type");
+    const [conflictData, setConflictData] = useState<{
+        title: string;
+        role: string;
+    } | null>(null);
     const selectModalRoleParam = searchParams.get('selectRole');
     const isSelectModalOpen = !!selectModalRoleParam;
+    const editMeetingId = searchParams.get("editMeetingId");
 
     useEffect(() => {
         if (isOpen) {
             resetForm();
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        const loadEducationTypes = async () => {
+            if (!collegeId) return;
+
+            const data = await fetchEducationTypes(collegeId);
+            setEducationTypes(data);
+        };
+
+        loadEducationTypes();
+    }, [collegeId]);
 
     const resetForm = () => {
         setTitle("");
@@ -206,6 +228,66 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
         "gotomeeting.com",
         "skype.com"
     ];
+
+    useEffect(() => {
+
+        const loadMeeting = async () => {
+
+            if (!editMeetingId) return;
+
+            try {
+                const { data: meeting } = await supabase
+                    .from("hr_meetings")
+                    .select("*")
+                    .eq("hrMeetingId", Number(editMeetingId))
+                    .single();
+                if (!meeting) return;
+
+                setTitle(meeting.title);
+                setAgenda(meeting.agenda);
+                setDate(meeting.meetingDate);
+                setMeetingLink(meeting.meetingLink);
+
+                const parseTime = (time: string) => {
+                    const [t, period] = time.split(" ");
+                    const [h, m] = t.split(":");
+                    return { hour: h, minute: m, period };
+                };
+
+                const start = parseTime(meeting.fromTime);
+                const end = parseTime(meeting.toTime);
+
+                setStartHour(start.hour);
+                setStartMinute(start.minute);
+                setStartPeriod(start.period as "AM" | "PM");
+
+                setEndHour(end.hour);
+                setEndMinute(end.minute);
+                setEndPeriod(end.period as "AM" | "PM");
+                const { data: participants } = await supabase
+                    .from("hr_meeting_participants")
+                    .select("*")
+                    .eq("hrMeetingId", Number(editMeetingId));
+                if (participants && participants.length > 0) {
+                    setSelectedUsers(participants.map(p => ({
+                        userId: p.userId
+                    })));
+
+                    setSelectedRole(participants[0].role);
+                    setInAppNotification(participants[0].notifiedInApp);
+                    setEmailNotification(participants[0].notifiedEmail);
+
+                }
+
+            } catch (err) {
+                console.error("Load meeting failed:", err);
+
+            }
+
+        };
+       loadMeeting();
+    }, [editMeetingId]);
+
     const validateMeetingUrl = (url: string): boolean => {
         try {
             setIsScheduling(true);
@@ -225,6 +307,23 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
             return false;
         }
     };
+
+    const convertTo24HourString = (
+        hour: string,
+        minute: string,
+        period: "AM" | "PM"
+    ) => {
+        let h = parseInt(hour);
+
+        if (period === "PM" && h !== 12) h += 12;
+        if (period === "AM" && h === 12) h = 0;
+
+        return `${String(h).padStart(2, "0")}:${minute}:00`;
+    };
+
+    const fromTime = `${startHour}:${startMinute} ${startPeriod}`;
+    const toTime = `${endHour}:${endMinute} ${endPeriod}`;
+
     const handleOpenSelectModal = () => {
 
         if (selectedRole === "Select Role") {
@@ -241,6 +340,7 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
         params.delete('selectRole');
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
+
     const handleSubmit = async () => {
 
         if (!collegeId || !collegeHrId) {
@@ -263,19 +363,25 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
             endMinute,
             endPeriod
         )) return;
+
         const trimmedLink = meetingLink.trim();
+
         if (!trimmedLink) {
             toast.error("Meeting link is required", { id: "meeting-link-error" });
             return;
         }
+
         let parsedUrl: URL;
+
         try {
             parsedUrl = new URL(trimmedLink);
         } catch {
             toast.error("Please enter a valid meeting URL", { id: "meeting-link-error" });
             return;
         }
+
         const isValidProvider = validateMeetingUrl(trimmedLink);
+
         if (!isValidProvider) {
             toast.error(
                 "Only valid meeting platforms are allowed (Google Meet, Zoom, Microsoft Teams, Webex, Skype, GoToMeeting)",
@@ -283,38 +389,119 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
             );
             return;
         }
+
         if (selectedUsers.length === 0) {
             toast.error(`Please select at least one ${selectedRole.toLowerCase()}`, { id: "participant-error" });
             return;
         }
+
         if (!inAppNotification && !emailNotification) {
             toast.error("Please select at least one notification option", { id: "notification-error" });
             return;
         }
+
         try {
 
             setIsScheduling(true);
-            toast.loading("Scheduling meeting...", { id: "schedule-loading" });
+            toast.loading(editMeetingId ? "Updating meeting..." : "Scheduling meeting...", { id: "schedule-loading" });
 
-            const meetingRes = await saveHrMeeting(
-                {
-                    title,
-                    agenda,
-                    meetingDate: date,
-                    fromTime,
-                    toTime,
-                    meetingLink: trimmedLink,
-                    collegeId
-                },
-                collegeHrId
-            );
+            let hrMeetingId;
 
-            if (!meetingRes.success) {
-                toast.error(meetingRes.message || "Failed to create meeting", { id: "schedule-loading" });
-                return;
+            // ✅ EDIT MEETING
+            if (editMeetingId) {
+
+                const updateRes = await updateHrMeeting(
+                    Number(editMeetingId),
+                    {
+                        title,
+                        agenda,
+                        meetingDate: date,
+                        fromTime,
+                        toTime,
+                        meetingLink: trimmedLink
+                    }
+                );
+
+                if (!updateRes.success) {
+
+                    // Detect duplicate meeting slot
+                    if (updateRes.error?.code === "23505") {
+
+                        setConflictData({
+                            title: title,
+                            role: selectedRole
+                        });
+
+                        setShowConflictModal(true);
+
+                        toast.dismiss("schedule-loading");
+
+                        return;
+                    }
+
+                    toast.error(updateRes.message || "Failed to update meeting", { id: "schedule-loading" });
+                    return;
+                }
+
+                hrMeetingId = Number(editMeetingId);
+
             }
 
-            const hrMeetingId = meetingRes.hrMeetingId;
+            // ✅ CREATE MEETING
+            else {
+
+                // ✅ CREATE MEETING
+
+
+                // convert to 24-hour format ONLY for insert
+                const fromTime24 = convertTo24HourString(
+                    startHour,
+                    startMinute,
+                    startPeriod
+                );
+
+                const toTime24 = convertTo24HourString(
+                    endHour,
+                    endMinute,
+                    endPeriod
+                );
+
+                const meetingRes = await saveHrMeeting(
+                    {
+                        title,
+                        agenda,
+                        meetingDate: date,
+                        fromTime: fromTime24,
+                        toTime: toTime24,
+                        meetingLink: trimmedLink,
+                        collegeId
+                    },
+                    collegeHrId
+                );
+
+                if (!meetingRes.success) {
+
+                    toast.dismiss("schedule-loading");
+
+                    // ✅ Detect duplicate meeting slot
+                    if (meetingRes.message?.includes("already scheduled")) {
+
+                        setConflictData({
+                            title,
+                            role: selectedRole
+                        });
+
+                        setShowConflictModal(true);
+
+                        return;
+                    }
+
+                    toast.error(meetingRes.message || "Failed to create meeting");
+                    return;
+                }
+
+                hrMeetingId = meetingRes.hrMeetingId;
+            }
 
             const participants = selectedUsers.map((u) => ({
                 userId: u.userId,
@@ -323,17 +510,35 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                 notifiedEmail: emailNotification
             }));
 
+            if (editMeetingId) {
+
+                const { error: deleteError } = await supabase
+                    .from("hr_meeting_participants")
+                    .delete()
+                    .eq("hrMeetingId", hrMeetingId);
+
+                if (deleteError) {
+                    console.error("Delete participants failed:", deleteError);
+                }
+
+            }
+
             const participantRes = await addMeetingParticipants(
                 hrMeetingId,
                 participants
             );
 
             if (!participantRes.success) {
-                toast.error("Meeting created but participants failed", { id: "schedule-loading" });
+                toast.error("Meeting saved but participants failed", { id: "schedule-loading" });
                 return;
             }
 
-            toast.success("Meeting scheduled successfully", { id: "schedule-loading" });
+            toast.success(
+                editMeetingId
+                    ? "Meeting updated successfully"
+                    : "Meeting scheduled successfully",
+                { id: "schedule-loading" }
+            );
 
             resetForm();
             onClose();
@@ -349,13 +554,11 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
 
         }
     };
-    const fromTime = `${startHour}:${startMinute} ${startPeriod}`;
-    const toTime = `${endHour}:${endMinute} ${endPeriod}`;
 
     return (
         <>
             <AnimatePresence>
-                {isOpen && (
+                {(isOpen || !!editMeetingId) && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -401,35 +604,19 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                         className="w-full border border-[#E0E0E0] rounded-lg px-3 py-1 text-sm font-regular outline-none resize-none text-[#282828]"
                                     />
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Date<span className="text-red-500">*</span></label>
-                                        <input
-                                            type="date"
-                                            value={date}
-                                            min={getTodayDateString()}
-                                            onChange={(e) => setDate(e.target.value)}
-                                            className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-regular outline-none text-[#555555] cursor-pointer"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Role<span className="text-red-500">*</span></label>
-                                        <div className="relative">
-                                            <select
-                                                value={selectedRole}
-                                                onChange={(e) => setSelectedRole(e.target.value)}
-                                                className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm outline-none appearance-none bg-white text-[#555555] cursor-pointer"
-                                            >
-                                                <option disabled value="Select Role">Select Role</option>
-                                                <option value="Admin">Admin</option>
-                                                <option value="Faculty">Faculty</option>
-                                                <option value="Placement">Placement</option>
-                                                <option value="Finance">Finance</option>
-                                            </select>
-                                            <CaretDown size={14} className="absolute right-3 top-3.5 text-[#555555] pointer-events-none" />
-                                        </div>
-                                    </div>
+
+                                <div>
+                                    <label className="block text-base font-semibold text-[#282828] mb-1.5">Date<span className="text-red-500">*</span></label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        min={getTodayDateString()}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-regular outline-none text-[#555555] cursor-pointer"
+                                    />
                                 </div>
+
+
                                 <div>
                                     <label className="block text-base font-semibold text-[#282828] mb-1.5">Time</label>
                                     <div className="grid grid-cols-2 gap-6">
@@ -532,6 +719,56 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">Role<span className="text-red-500">*</span></label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedRole}
+                                                onChange={(e) => setSelectedRole(e.target.value)}
+                                                className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm outline-none appearance-none bg-white text-[#555555] cursor-pointer"
+                                            >
+                                                <option disabled value="Select Role">Select Role</option>
+                                                <option value="Admin">Admin</option>
+                                                <option value="Faculty">Faculty</option>
+                                                <option value="Placement">Placement</option>
+                                                <option value="Finance">Finance</option>
+                                            </select>
+                                            <CaretDown size={14} className="absolute right-3 top-3.5 text-[#555555] pointer-events-none" />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-base font-semibold text-[#282828] mb-1.5">
+                                            Education Type<span className="text-red-500">*</span>
+                                        </label>
+
+                                        <div className="relative">
+                                            <select
+                                                value={selectedEducationType}
+                                                onChange={(e) => setSelectedEducationType(e.target.value)}
+                                                className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm outline-none appearance-none bg-white text-[#555555] cursor-pointer"
+                                            >
+                                                <option value="">Select Education Type</option>
+
+                                                {educationTypes.map((edu) => (
+                                                    <option
+                                                        key={edu.collegeEducationId}
+                                                        value={edu.collegeEducationId}
+                                                    >
+                                                        {edu.collegeEducationType}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <CaretDown
+                                                size={14}
+                                                className="absolute right-3 top-3.5 text-[#555555] pointer-events-none"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-base font-semibold text-[#282828] mb-1.5">
@@ -609,8 +846,15 @@ export default function CreateMeetingModal({ isOpen, onClose }: { isOpen: boolea
                 isOpen={isSelectModalOpen}
                 onClose={handleCloseSelectModal}
                 onSelect={(users) => setSelectedUsers(users)}
+                selectedUsers={selectedUsers}
                 title={getModalTitleFromUrl()}
                 roleName={(selectModalRoleParam as "Admin" | "Faculty" | "Finance") || "Faculty"}
+                educationTypeId={Number(selectedEducationType)}
+            />
+            <ConflictErrorModal
+                open={showConflictModal}
+                conflictDetails={conflictData}
+                onClose={() => setShowConflictModal(false)}
             />
         </>
     );

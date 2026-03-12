@@ -82,12 +82,10 @@ export default function AssignmentCard({
     cardProp,
     activeView,
 }: AssignmentCardProps) {
-    // ✅ KEEP this (you said don't remove working things)
     const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>(
         {}
     );
 
-    // ✅ SYNC backend file path into uploadedFiles so your old logic still works
     useEffect(() => {
         const map: { [key: number]: string } = {};
         cardProp.forEach((item, idx) => {
@@ -95,6 +93,7 @@ export default function AssignmentCard({
         });
         setUploadedFiles((prev) => ({ ...prev, ...map }));
     }, [cardProp]);
+
 
     const [showModal, setShowModal] = useState(false);
     const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);

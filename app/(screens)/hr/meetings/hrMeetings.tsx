@@ -70,9 +70,12 @@ export default function MeetingsPage() {
 
     const closeCreateModal = () => {
         const params = new URLSearchParams(searchParams.toString());
+
         params.delete('create');
         params.delete('selectRole');
-        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+        params.delete('editMeetingId'); // ⭐ FIX
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
     const updateFilter = (key: string, value: string) => {

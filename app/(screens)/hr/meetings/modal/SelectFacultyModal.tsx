@@ -12,14 +12,19 @@ export default function SelectFacultyModal({
     isOpen,
     onClose,
     onSelect,
+    selectedUsers = [],
     title = "Select Faculties",
     roleName = "Faculty",
+     educationTypeId
 }: {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (f: any[]) => void;
+    selectedUsers?: any[];
     title?: string;
     roleName?: "Admin" | "Faculty" | "Finance";
+    educationTypeId?: number;
+
 }) {
     const { collegeId } = useCollegeHr();
 
@@ -36,7 +41,7 @@ export default function SelectFacultyModal({
             setIsLoadingUsers(true);
 
             try {
-                const data = await getCollegeUsers(roleName, collegeId);
+                const data = await getCollegeUsers(roleName, collegeId, educationTypeId);
                 setFacultyList(data);
             } catch (err) {
                 console.error(err);
@@ -46,7 +51,13 @@ export default function SelectFacultyModal({
         };
 
         if (isOpen) loadUsers();
-    }, [collegeId, roleName, isOpen]);
+    }, [collegeId, roleName,educationTypeId, isOpen]);
+
+    useEffect(() => {
+        if (isOpen && selectedUsers?.length) {
+            setSelectedIds(selectedUsers.map((u) => u.userId));
+        }
+    }, [isOpen, selectedUsers]);
 
     const filteredFaculty = facultyList.filter((f) =>
         f.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -55,13 +66,11 @@ export default function SelectFacultyModal({
     const isAllSelected =
         filteredFaculty.length > 0 &&
         filteredFaculty.every((f) =>
-            selectedIds.includes(f.id)
+            selectedIds.includes(f.userId)
         );
 
     const handleSelectAll = () => {
-        const filteredIds = filteredFaculty.map(
-            (f) => f.id
-        );
+        const filteredIds = filteredFaculty.map(f => f.userId)
 
         if (isAllSelected) {
             setSelectedIds((prev) =>
@@ -91,14 +100,14 @@ export default function SelectFacultyModal({
         try {
 
             const selectedObjects = facultyList.filter((f) =>
-                selectedIds.includes(f.id)
+                selectedIds.includes(f.userId)
             );
 
             onSelect(selectedObjects);
 
             toast.success("Participants selected", { id: "select-loading" });
 
-            setSelectedIds([]); 
+            setSelectedIds([]);
             onClose();
 
         } catch (err) {
@@ -176,7 +185,7 @@ export default function SelectFacultyModal({
 
                             ) : filteredFaculty.length > 0 ? (
                                 filteredFaculty.map((f) => {
-                                    const id = f.id;
+                                    const id = f.userId;
                                     return (
                                         <div
                                             key={id}
