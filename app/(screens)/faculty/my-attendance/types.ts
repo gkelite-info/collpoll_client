@@ -1,8 +1,8 @@
 export interface FacultyProfile {
   name: string;
   image: string;
-  id: string;
-  department: string;
+  facultyId: number | null;
+  branch: string;
   mobile: string;
   email: string;
   joiningDate: string;

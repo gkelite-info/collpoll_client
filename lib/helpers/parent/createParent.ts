@@ -1,13 +1,9 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export const upsertParentEntry = async (payload: {
+  userId: number;
   studentId: number;
-  fullName: string;
-  email: string;
-  mobile: string;
-  gender: "Male" | "Female";
-  collegeId: string;
-  collegeCode?: string | null;
+  collegeId: number;
   createdBy: number;
 }) => {
   try {
@@ -17,19 +13,17 @@ export const upsertParentEntry = async (payload: {
       .from("parents")
       .upsert(
         {
+          userId: payload.userId,
           studentId: payload.studentId,
-          fullName: payload.fullName,
-          email: payload.email,
-          mobile: payload.mobile,
-          gender: payload.gender,
           collegeId: payload.collegeId,
-          collegeCode: payload.collegeCode ?? null,
           createdBy: payload.createdBy,
-          updatedAt: now,
+          isActive: true,
+          is_deleted: false,
           createdAt: now,
+          updatedAt: now,
         },
         {
-          onConflict: "studentId",
+          onConflict: "userId,collegeId,studentId",
         }
       )
       .select()
@@ -39,22 +33,16 @@ export const upsertParentEntry = async (payload: {
 
     return {
       success: true,
-      message: "Parent saved successfully",
+      message: "Parent linked to student successfully",
       data,
     };
   } catch (err: any) {
-    console.error("PARENT UPSERT ERROR:", err.message);
+    console.error("PARENT UPSERT ERROR:", err);
 
     let message = "Something went wrong";
 
     if (err.code === "23505") {
-      if (err.message.includes("studentId")) {
-        message = "Parent already exists for this student";
-      } else if (err.message.includes("mobile")) {
-        message = "This mobile number is already registered to another user.";
-      } else {
-        message = "Duplicate parent record";
-      }
+      message = "Parent already linked to this student";
     }
 
     return {
@@ -72,16 +60,18 @@ export const fetchParentDetails = async (studentId: number) => {
         `
         parentId,
         studentId,
-        fullName,
-        email,
-        mobile,
-        gender,
         collegeId,
-        collegeCode,
-        createdBy
+        users (
+          userId,
+          fullName,
+          email,
+          mobile,
+          gender
+        )
         `
       )
       .eq("studentId", studentId)
+      .eq("is_deleted", false)
       .single();
 
     if (error) throw error;
