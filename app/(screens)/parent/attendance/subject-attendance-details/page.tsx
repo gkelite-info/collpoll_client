@@ -8,11 +8,12 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { getParentAttendanceDetails } from "@/lib/helpers/parent/attendance/parentAttendanceActions";
 import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   SubjectAttendanceDetailsSkeleton,
   TableSkeleton,
 } from "../shimmer/attendanceSkeletons";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 interface CardItem {
   id: number;
@@ -75,7 +76,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
-export default function ParentSubjectAttendanceDetails() {
+function ParentSubjectAttendanceDetails() {
   type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
 
   const [activeView, setActiveView] = useState<ViewFilter>("ALL");
@@ -324,5 +325,13 @@ export default function ParentSubjectAttendanceDetails() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SubjectAttendanceDetails() {
+  return (
+    <Suspense fallback={<Loader />}>
+      <ParentSubjectAttendanceDetails />
+    </Suspense>
   );
 }
