@@ -1,5 +1,4 @@
 import { supabase } from "@/lib/supabaseClient";
-import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 
 export type HrMeetingRow = {
     hrMeetingId: number;
@@ -17,49 +16,6 @@ export type HrMeetingRow = {
     deletedAt: string | null;
 };
 
-const convertToMinutes = (time: string) => {
-    const [timePart, period] = time.split(" ");
-    let [hours, minutes] = timePart.split(":").map(Number);
-    if (period === "PM" && hours !== 12) hours += 12;
-    if (period === "AM" && hours === 12) hours = 0;
-    return hours * 60 + minutes;
-};
-
-
-// export async function fetchHrMeetings(collegeId: number) {
-//     const { data, error } = await supabase
-//         .from("hr_meetings")
-//         .select(`
-//             hrMeetingId,
-//             title,
-//             agenda,
-//             meetingDate,
-//             fromTime,
-//             toTime,
-//             collegeId,
-//             createdBy,
-//             isActive,
-//             createdAt,
-//             updatedAt,
-//             deletedAt
-//         `)
-//         .eq("collegeId", collegeId)
-//         .eq("isActive", true)
-//         .is("deletedAt", null)
-//         .order("meetingDate", { ascending: false });
-
-//     if (error) {
-//         console.error("fetchHrMeetings error:", error);
-//         throw error;
-//     }
-
-//     return data ?? [];
-// }
-
-// export async function fetchHrMeetingsForLoggedInAdmin(userId: number) {
-//     const { collegeId } = await fetchAdminContext(userId);
-//     return fetchHrMeetings(collegeId);
-// }
 
 export async function fetchHrMeetings({
     createdBy,
@@ -92,12 +48,8 @@ export async function fetchHrMeetings({
       fromTime,
       toTime,
       meetingLink,
-
       hr_meeting_participants (
-        userId,
-        users (
-          fullName
-        )
+        userId
       )
     `, { count: "exact" })
         .eq("createdBy", createdBy)
@@ -107,6 +59,17 @@ export async function fetchHrMeetings({
 
     query = query
 
+    if (type === "upcoming") {
+        query = query.or(
+            `meetingDate.gt.${currentDate},and(meetingDate.eq.${currentDate},toTime.gt.${currentTime})`
+        );
+    }
+    if (type === "previous") {
+        query = query.or(
+            `meetingDate.lt.${currentDate},and(meetingDate.eq.${currentDate},toTime.lte.${currentTime})`
+        );
+    }
+
     const { data, error, count } = await query
         .order("meetingDate", { ascending: type === "upcoming" })
         .order("fromTime", { ascending: type === "upcoming" })
@@ -114,26 +77,7 @@ export async function fetchHrMeetings({
 
     if (error) throw error;
 
-    const currentMinutes = convertToMinutes(currentTime);
-
-    const filteredMeetings = (data ?? []).filter((meeting: any) => {
-        const meetingDate = meeting.meetingDate;
-        const meetingEndMinutes = convertToMinutes(meeting.toTime);
-        if (type === "upcoming") {
-            if (meetingDate > currentDate) return true;
-            if (meetingDate === currentDate && meetingEndMinutes > currentMinutes) return true;
-            return false;
-        }
-        if (type === "previous") {
-            if (meetingDate < currentDate) return true;
-            if (meetingDate === currentDate && meetingEndMinutes <= currentMinutes) return true;
-            return false;
-        }
-
-        return true;
-    });
-
-    const formatted = filteredMeetings.map((meeting: any) => {
+    const formatted = (data ?? []).map((meeting: any) => {
         const participants = meeting.hr_meeting_participants || [];
         const participantCount = participants.length;
         return {
@@ -152,10 +96,7 @@ export async function fetchHrMeetings({
             year: "",
             section: "",
             tags: "",
-            participantName:
-                participantCount === 1
-                    ? participants[0]?.users?.fullName ?? ""
-                    : null
+            participantName: null
         };
     });
 
