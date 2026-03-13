@@ -4,12 +4,31 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { CaretLeft, ChartLineDown, Check, Prohibit, UserCircle, UsersThree, X } from "@phosphor-icons/react";
+import {
+  CaretLeft,
+  ChartLineDown,
+  Check,
+  Prohibit,
+  UserCircle,
+  UsersThree,
+  X,
+} from "@phosphor-icons/react";
 import CardComponent, { CardProps } from "./components/stuAttendanceCard";
 import StuAttendanceTable from "./components/stuAttendanceTable";
-import { getClassDetails, UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
+import {
+  getClassDetails,
+  UpcomingLesson,
+} from "@/lib/helpers/faculty/attendance/getClasses";
 import toast, { Toaster } from "react-hot-toast";
-import { getStudentsForClass, saveAttendance, UIStudent, ClassOption, SectionOption, getFacultyClasses, getClassSections } from "@/lib/helpers/faculty/attendance/attendanceActions";
+import {
+  getStudentsForClass,
+  saveAttendance,
+  UIStudent,
+  ClassOption,
+  SectionOption,
+  getFacultyClasses,
+  getClassSections,
+} from "@/lib/helpers/faculty/attendance/attendanceActions";
 import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
@@ -22,6 +41,7 @@ function AttendanceContent() {
   const [classData, setClassData] = useState<UpcomingLesson | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -68,7 +88,8 @@ function AttendanceContent() {
   // };
 
   const loadStudents = async (cId: string, sId?: string) => {
-    setLoading(true);
+    setTableLoading(true);
+
     try {
       const students = await getStudentsForClass(cId, sId);
 
@@ -85,7 +106,7 @@ function AttendanceContent() {
       toast.error("Failed to load students");
       setStudentsList([]);
     } finally {
-      setLoading(false);
+      setTableLoading(false);
     }
   };
 
@@ -332,11 +353,7 @@ function AttendanceContent() {
       </section>
 
       <section>
-        {studentsList.length === 0 ? (
-          <div className="flex justify-center items-center py-16 text-gray-500">
-            No students found
-          </div>
-        ) : (
+        {urlClassId || classOptions.length > 0 || sectionOptions.length > 0 ? (
           <StuAttendanceTable
             students={studentsList}
             setStudents={setStudentsList}
@@ -348,10 +365,14 @@ function AttendanceContent() {
             selectedClass={selectedClassId}
             selectedSection={selectedSectionId}
             onFilterChange={urlClassId ? undefined : handleFilterChange}
-            loadingFilters={loading}
+            loadingFilters={tableLoading}
             isEditing={isEditing}
             onEditClick={() => setIsEditing(true)}
           />
+        ) : (
+          <div className="flex justify-center items-center py-16 text-gray-500">
+            No students found
+          </div>
         )}
       </section>
     </main>

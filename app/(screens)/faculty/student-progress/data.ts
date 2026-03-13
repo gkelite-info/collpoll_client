@@ -1,6 +1,5 @@
 import { ScheduledLesson } from "../utils/scheduledLessonsStrip";
 import { StudentPerformance } from "../utils/studentPerformanceCard";
-import { UpcomingLesson } from "../utils/upcomingClasses";
 import { TopPerformer } from "./components/topFivePerformers";
 
 export interface ParentInfo {
