@@ -1,5 +1,6 @@
 import React from "react";
 import { FacultyProfile } from "../types";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 interface Props {
   profile: FacultyProfile;
@@ -7,6 +8,9 @@ interface Props {
 }
 
 const FacultyInfoCard: React.FC<Props> = ({ profile, loading }) => {
+  const {role} = useFaculty()
+  if(!role) return null;
+  const isInter = ["Inter"].includes(role)
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
       <div className="flex flex-col items-center gap-2 pl-2">
@@ -28,7 +32,7 @@ const FacultyInfoCard: React.FC<Props> = ({ profile, loading }) => {
           <div className="text-gray-500">{profile.facultyId}</div>
         )}
 
-        <div className="text-[#282828] font-semibold">Department</div>
+        <div className="text-[#282828] font-semibold">{isInter ? "Group" : "Branch"}</div>
         <div className="text-gray-500">{profile.branch}</div>
 
         <div className="text-[#282828] font-semibold">Mobile</div>

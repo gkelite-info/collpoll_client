@@ -1,11 +1,15 @@
 import React from "react";
 import { AnalyticsFacultyProfile } from "../types";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 interface Props {
   profile: AnalyticsFacultyProfile;
 }
 
 const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
+  const {role} = useFaculty()
+  if(!role) return null;
+  const isInter = ["Inter"].includes(role)
   return (
     <div className="w-full mb-5 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
@@ -18,7 +22,7 @@ const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
           <span className="text-[#525252]">{profile.name}</span>
         </div>
         <div>
-          <span className="font-semibold text-[#282828]">Department : </span>
+          <span className="font-semibold text-[#282828]">{isInter ? "Group" : "Branch"} : </span>
           <span className="text-[#525252]">{profile.department}</span>
         </div>
         <div>

@@ -57,8 +57,6 @@ export async function fetchHrMeetings({
         .eq("isActive", true)
         .is("is_deleted", false);
 
-    query = query
-
     if (type === "upcoming") {
         query = query.or(
             `meetingDate.gt.${currentDate},and(meetingDate.eq.${currentDate},toTime.gt.${currentTime})`
