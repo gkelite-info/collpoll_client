@@ -33,7 +33,7 @@ export default function AssignmentsRight() {
       title: "Complete Python Lab",
       description: "Finish all 10 lab programs and upload to portal.",
       time: "12:40 PM",
-      date: new Date().toString()
+      date : new Date().toLocaleString(),
     },
     {
       facultyTaskId: 2,
@@ -41,7 +41,7 @@ export default function AssignmentsRight() {
       description:
         "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
       time: "02:40 PM",
-      date: new Date().toString()
+      date : new Date().toLocaleString(),
     },
     {
       facultyTaskId: 3,
@@ -49,7 +49,7 @@ export default function AssignmentsRight() {
       description:
         "Add latest internship experience to resume builder section.",
       time: "03:40 PM",
-      date: new Date().toString()
+      date : new Date().toLocaleString(),
     },
   ];
 

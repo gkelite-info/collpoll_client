@@ -28,27 +28,27 @@ export default function MyAttendanceRight() {
 
   const myTasks: Task[] = [
     {
-      facultytaskId: 1,
+      facultyTaskId: 1,
       title: "Complete Python Lab",
       description: "Finish all 10 lab programs and upload to portal.",
       time: "12:40 PM",
-      facultytaskcreatedDate: null,
+      date: new Date().toLocaleString()
     },
     {
-      facultytaskId: 2,
+      facultyTaskId: 2,
       title: "Group Discussion Prep",
       description:
         "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
       time: "02:40 PM",
-      facultytaskcreatedDate: null,
+      date: new Date().toLocaleString()
     },
     {
-      facultytaskId: 3,
+      facultyTaskId: 3,
       title: "Resume Update",
       description:
         "Add latest internship experience to resume builder section.",
       time: "03:40 PM",
-      facultytaskcreatedDate: null,
+      date: new Date().toLocaleString()
     },
   ];
 
