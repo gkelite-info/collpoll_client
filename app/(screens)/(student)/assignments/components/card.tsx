@@ -156,7 +156,7 @@ export default function AssignmentCard({
                     key={index}
                 >
                     <div className="h-[139px] w-[145px] rounded-lg overflow-hidden">
-                        <img src={item.image} className="h-full w-full object-cover" />
+                        <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
                     </div>
 
                     <div className="h-[139px] w-[520px] flex flex-col justify-between">
