@@ -19,8 +19,8 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
 
       const response = await groq.chat.completions.create({
         model,
-        max_tokens: 600,   
-        temperature: 0.6,  
+        max_tokens: 600,
+        temperature: 0.6,
         messages: [
           {
             role: "system",
@@ -28,27 +28,37 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
 You are a senior university curriculum architect specializing in detailed academic unit design.
 
 TASK:
-Generate comprehensive syllabus-ready topic titles for a single academic unit.
+Generate syllabus-ready topic suggestions for a unit.
 
-STRICT RULES (Non-Negotiable):
-- Generate EXACTLY 12 distinct topics.
-- Do NOT generate fewer than 12.
-- Continue writing until all 12 are complete.
-- Each topic must be 3–8 academic words.
+VALIDATION RULES:
+- First check whether the Unit Name logically matches the given Education Type, Branch, and Subject Name.
+- If the Unit Name does not match, do NOT generate topics.
+- In that case, return ONLY this exact JSON array:
+["The unit name does not match the selected subject."]
+- Do not reinterpret the unit.
+- Do not adapt an unrelated unit into the subject.
+
+TOPIC RULES:
+- If the unit is valid, generate EXACTLY 8 distinct topics.
+- Each topic must be 6–10 academic words.
 - Use precise academic terminology.
 - Avoid generic words like "Overview" or "Introduction".
+- Return ONLY a valid JSON array.
 - No numbering.
 - No bullet points.
 - No explanations.
-- Return ONLY plain topic titles separated by new lines.
 `
           },
           {
             role: "user",
+
             content: `${prompt}
 
 IMPORTANT:
-Generate exactly 12 topics. Do not stop early.`
+- Validate Education Type, Branch, Subject Name, and Unit Name first.
+- If invalid, return ONLY:
+["The unit name does not match the selected subject."]
+- If valid, return EXACTLY 8 topics in a JSON array.`
           },
         ],
       });

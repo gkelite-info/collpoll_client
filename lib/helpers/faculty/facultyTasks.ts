@@ -15,7 +15,26 @@ export type FacultyTaskRow = {
 };
 
 export async function fetchFacultyTasks(collegeSubjectId: number) {
+
   const today = new Date().toISOString().split("T")[0];
+
+  // 1️⃣ Deactivate past tasks (date < today)
+  const { error: deactivateError } = await supabase
+    .from("faculty_tasks")
+    .update({
+      isActive: false,
+      is_deleted: true,
+      deletedAt: new Date().toISOString(),
+    })
+    .lt("date", today)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("isActive", true);
+
+  if (deactivateError) {
+    console.error("auto deactivate tasks error:", deactivateError);
+  }
+
+  // 2️⃣ Fetch today's active tasks
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
@@ -32,10 +51,10 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
       deletedAt
     `)
     .eq("collegeSubjectId", collegeSubjectId)
-      .eq("date", today)  
+    .eq("date", today)
     .eq("isActive", true)
     .is("deletedAt", null)
-    .order("date", { ascending: true });
+    .order("time", { ascending: true });
 
   if (error) {
     console.error("fetchFacultyTasks error:", error);
@@ -136,7 +155,7 @@ export async function saveFacultyTask(
 
 
 export async function deactivateFacultyTask(facultyTaskId: number) {
-  
+
   const { error } = await supabase
     .from("faculty_tasks")
     .update({
