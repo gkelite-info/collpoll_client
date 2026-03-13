@@ -186,3 +186,9 @@ input[list]::-webkit-calendar-picker-indicator {
   opacity: 0;
   display: none;
 }
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}

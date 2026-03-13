@@ -46,31 +46,31 @@ export default function StuDashRight() {
   }, []);
 
 
-  useEffect(() => {
-    if (studentId === null) return;
+  // useEffect(() => {
+  //   if (studentId === null) return;
 
-    async function fetchStudentTasks() {
-      try {
-        const data = await getStudentTasks(studentId as number);
+  //   async function fetchStudentTasks() {
+  //     try {
+  //       const data = await getStudentTasks(studentId as number);
 
-        const formatted = data.map((task: any) => ({
-          facultytaskId: task.studenttaskId,
-          title: task.studenttaskTitle,
-          description: task.studenttaskDescription,
-          time: task.studenttaskassignedTime,
-          facultytaskcreatedDate: task.studenttaskcreateDate,
-        }));
+  //       const formatted = data.map((task: any) => ({
+  //         facultytaskId: task.studenttaskId,
+  //         title: task.studenttaskTitle,
+  //         description: task.studenttaskDescription,
+  //         time: task.studenttaskassignedTime,
+  //         facultytaskcreatedDate: task.studenttaskcreateDate,
+  //       }));
 
-        setStudentTasks(formatted);
-      } catch (err: any) {
-        console.error("Add student task failed");
-        console.error(err?.message ?? err);
-      }
+  //       setStudentTasks(formatted);
+  //     } catch (err: any) {
+  //       console.error("Add student task failed");
+  //       console.error(err?.message ?? err);
+  //     }
 
-    }
+  //   }
 
-    fetchStudentTasks();
-  }, [studentId]);
+  //   fetchStudentTasks();
+  // }, [studentId]);
 
 
   // useEffect(() => {

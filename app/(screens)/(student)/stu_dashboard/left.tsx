@@ -14,6 +14,9 @@ import { fetchStudentContext } from "@/app/utils/context/student/studentContextA
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
+import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
+import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
+import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
 
 const formatTimeToAMPM = (time24: string) => {
     const [h, m] = time24.split(":");
@@ -32,11 +35,74 @@ export default function StuDashLeft() {
     const [lectures, setLectures] = useState<any[]>([]);
     const router = useRouter();
     const [dueAssignmentsCount, setDueAssignmentsCount] = useState(0);
+    const [attendancePercent, setAttendancePercent] = useState<number | null>(null);
+    const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+    const [pendingFeeAmount, setPendingFeeAmount] = useState<number | null>(null);
+    const [feeLoading, setFeeLoading] = useState(true);
 
     useEffect(() => {
         loadUpcomingClasses();
         loadAssignmentCount();
+        loadAttendancePercent();
+        loadPendingFee();
+        
     }, []);
+
+    const loadPendingFee = async () => {
+        try {
+            setFeeLoading(true);
+
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: userRow } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .single();
+            if (!userRow) return;
+
+            const plan = await fetchStudentFeePlan(userRow.userId);
+
+            setPendingFeeAmount(plan?.pendingAmount ?? 0);
+        } catch (err) {
+            console.error("Failed to load pending fee", err);
+        } finally {
+            setFeeLoading(false);
+        }
+    };
+
+    const loadAttendancePercent = async () => {
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        const { data: userRow } = await supabase
+            .from("users")
+            .select("userId")
+            .eq("auth_id", user.id)
+            .single();
+
+        if (!userRow) return;
+
+        const studentContext = await fetchStudentContext(userRow.userId);
+
+        const today = new Date().toISOString().split("T")[0];
+
+        const res = await getStudentDashboardData(
+            userRow.userId,
+            today,
+            1,
+            1,
+            studentContext.collegeEducationType === "Inter"
+        );
+
+        setAttendancePercent(res?.cards?.percentage ?? 0);
+    };
 
     const loadAssignmentCount = async () => {
         try {
@@ -72,6 +138,9 @@ export default function StuDashLeft() {
             }
         } catch (err) {
             console.error("Failed to load assignment count", err);
+        }
+        finally {
+            setAssignmentsLoading(false);
         }
     };
 
@@ -121,14 +190,22 @@ export default function StuDashLeft() {
         {
             style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
             icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
-            value: "92%",
+            value: attendancePercent === null ? (
+                <ValueShimmer />
+            ) : (
+                `${attendancePercent}%`
+            ),
             label: "Attendance",
             to: "/attendance",
         },
         {
             style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
             icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
-            value: `${dueAssignmentsCount} Due`,
+            value: assignmentsLoading ? (
+                <ValueShimmer />
+            ) : (
+                `${dueAssignmentsCount} Due`
+            ),
             label: "Assignments",
             to: "/assignments",
         },
@@ -142,8 +219,12 @@ export default function StuDashLeft() {
         {
             style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
             icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
-            value: "Fee Due",
-            label: "₹5600",
+            value: feeLoading ? (
+                <ValueShimmer />
+            ) : (
+                `₹${pendingFeeAmount?.toLocaleString("en-IN")}`
+            ),
+            label: "Fee Due",
             to: "/payments"
         }
     ];
