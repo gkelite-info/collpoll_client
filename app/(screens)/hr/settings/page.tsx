@@ -2,7 +2,7 @@
 import { Suspense } from "react";
 import SettingsClient from "./SettingsClient";
 
-export default function StudentSettings() {
+export default function HRSettings() {
 
   return (
     <Suspense fallback={<div className="p-4">Loading settings...</div>}>

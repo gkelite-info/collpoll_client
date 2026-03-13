@@ -8,65 +8,50 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { supabase } from "@/lib/supabaseClient";
 import TaskModal from "@/app/components/modals/taskModal";
-
-type Task = {
-  facultytaskId: number;
-  title: string;
-  description: string;
-  time: string;
-  facultytaskcreatedDate: string | null;
-};
+import type { Task } from "@/app/utils/taskPanel";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 export default function FacultyDashRight() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const { facultyId, subjectIds, loading: facultyLoading } = useFaculty();
+  const collegeSubjectId = subjectIds?.[0] ?? null;
 
-  // useEffect(() => {
-  //   const loadTasks = async () => {
-  //     try {
-  //       const { data: authData } = await supabase.auth.getUser();
-  //       const auth_id = authData?.user?.id;
-  //       if (!auth_id) return;
+  const loadTasks = async () => {
 
-  //       const { data: user, error: userError } = await supabase
-  //         .from("users")
-  //         .select("userId")
-  //         .eq("auth_id", auth_id)
-  //         .single();
+    if (!collegeSubjectId) return;
 
-  //       if (userError || !user) {
-  //         console.error("USER FETCH ERROR", userError);
-  //         return;
-  //       }
+    try {
 
-  //       const res = await fetchFacultyTasks(user.userId);
+      const data = await fetchFacultyTasks(collegeSubjectId);
 
-  //       if (!res.success || !res.tasks) {
-  //         setTasks([]);
-  //         return;
-  //       }
-  //       setTasks(
-  //         res.tasks.map((t: any) => ({
-  //           facultytaskId: t.facultytaskId,
-  //           title: t.facultytaskTitle,
-  //           description: t.facultytaskDescription,
-  //           time: t.facultytaskassignedTime,
-  //           facultytaskcreatedDate: t.facultytaskcreatedDate,
-  //         }))
-  //       );
+      setTasks(
+        data.map((t: any) => ({
+          facultyTaskId: t.facultyTaskId,
+          title: t.taskTitle,
+          description: t.description,
+          time: t.time,
+          date: t.date,
+        }))
+      );
 
+    } catch (err) {
+      console.error("LOAD TASK ERROR", err);
+    } finally {
+      setLoading(false);
+    }
 
-  //     } catch (err) {
-  //       console.error("LOAD TASKS ERROR", err);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
+  };
 
-  //   loadTasks();
-  // }, []);
+  useEffect(() => {
+
+    if (!facultyLoading && collegeSubjectId) {
+      loadTasks();
+    }
+
+  }, [facultyLoading, collegeSubjectId]);
 
   const card = [
     {
@@ -98,6 +83,9 @@ export default function FacultyDashRight() {
         role="faculty"
         facultyTasks={loading ? [] : tasks}
         studentTasks={[]}
+        loading={loading}
+        collegeSubjectId={collegeSubjectId ?? undefined}
+        facultyId={facultyId ?? undefined}
         onAddTask={() => {
           setEditingTask(null);
           setOpenModal(true);
@@ -108,15 +96,20 @@ export default function FacultyDashRight() {
         }}
       />
 
+
       {openModal && (
+
         <TaskModal
           open={openModal}
+          collegeSubjectId={collegeSubjectId!}
+          facultyId={facultyId!}
           onClose={() => {
             setOpenModal(false);
             setEditingTask(null);
           }}
           defaultValues={editingTask}
           onSave={() => {
+            loadTasks();
             setOpenModal(false);
             setEditingTask(null);
           }}

@@ -24,7 +24,8 @@ export default function CalendarRight() {
 
     return (
         <>
-            <TaskModal open={openModal} onClose={() => setOpenModal(false)} onSave={addTask} />
+            {/*Need to change the TaskModel props like facultyId, collegeSubjectId (studentId)*/}
+            <TaskModal open={openModal} facultyId={1} collegeSubjectId={2} onClose={() => setOpenModal(false)} onSave={() => addTask(1)} />
 
             <div className="bg-pink-00 h-full flex flex-col justify-between">
                 <CalendarTimeTable />

@@ -13,10 +13,7 @@ type AssignmentDetailsModalProps = {
 
 export default function ViewDetailModal({ isOpen, onClose, card, submissionFileName }: AssignmentDetailsModalProps) {
     if (!isOpen || !card) return null;
-
-    console.log("what is submission file", submissionFileName);
     
-
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[999]">
             <div className="bg-white lg:w-fit lg:h-fit lg:p-5 lg:rounded-xl lg:relative lg:shadow-lg">

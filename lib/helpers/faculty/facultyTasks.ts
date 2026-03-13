@@ -15,6 +15,7 @@ export type FacultyTaskRow = {
 };
 
 export async function fetchFacultyTasks(collegeSubjectId: number) {
+  const today = new Date().toISOString().split("T")[0];
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
@@ -31,6 +32,7 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
       deletedAt
     `)
     .eq("collegeSubjectId", collegeSubjectId)
+      .eq("date", today)  
     .eq("isActive", true)
     .is("deletedAt", null)
     .order("date", { ascending: true });
@@ -91,20 +93,35 @@ export async function saveFacultyTask(
     updatedAt: now,
   };
 
+  // INSERT (keep same behaviour)
   if (!payload.facultyTaskId) {
+
     upsertPayload.createdBy = facultyId;
     upsertPayload.createdAt = now;
-  } else {
-    upsertPayload.facultyTaskId = payload.facultyTaskId;
+
+    const { data, error } = await supabase
+      .from("faculty_tasks")
+      .insert([upsertPayload])
+      .select("facultyTaskId")
+      .single();
+
+    if (error) {
+      console.error("saveFacultyTask error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      facultyTaskId: data.facultyTaskId,
+    };
+
   }
 
-  const { data, error } = await supabase
+  // UPDATE (only update that row)
+  const { error } = await supabase
     .from("faculty_tasks")
-    .upsert(upsertPayload, {
-      onConflict: "facultyTaskId",
-    })
-    .select("facultyTaskId")
-    .single();
+    .update(upsertPayload)
+    .eq("facultyTaskId", payload.facultyTaskId);
 
   if (error) {
     console.error("saveFacultyTask error:", error);
@@ -113,16 +130,18 @@ export async function saveFacultyTask(
 
   return {
     success: true,
-    facultyTaskId: data.facultyTaskId,
+    facultyTaskId: payload.facultyTaskId,
   };
 }
 
 
 export async function deactivateFacultyTask(facultyTaskId: number) {
+  
   const { error } = await supabase
     .from("faculty_tasks")
     .update({
       isActive: false,
+      is_deleted: true,
       deletedAt: new Date().toISOString(),
     })
     .eq("facultyTaskId", facultyTaskId);

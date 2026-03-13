@@ -7,25 +7,25 @@ export default function AssignmentsRight() {
 
   const myTasks = [
     {
-      facultytaskId: 1,
+      facultyTaskId: 1,
       title: "Complete Python Lab",
       description: "Finish all 10 lab programs and upload to portal.",
       time: "12:40 PM",
-      facultytaskcreatedDate: null,
+      date : new Date().toLocaleString(),
     },
     {
-      facultytaskId: 2,
+      facultyTaskId: 2,
       title: "Group Discussion Prep",
       description: "Research topic “Impact of AI on Education”.",
       time: "02:40 PM",
-      facultytaskcreatedDate: null,
+      date : new Date().toLocaleString(),
     },
     {
-      facultytaskId: 3,
+      facultyTaskId: 3,
       title: "Resume Update",
       description: "Add latest internship experience.",
       time: "03:40 PM",
-      facultytaskcreatedDate: null,
+      date : new Date().toLocaleString(),
     },
   ];
 

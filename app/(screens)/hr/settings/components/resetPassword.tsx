@@ -15,7 +15,7 @@ export default function ResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleUpdate = () => {
-    router.push("/settings?done");
+    router.push("/hr/settings?done");
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
-
+import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 
 export type TaskPayload = {
   title: string;
@@ -11,20 +11,20 @@ export type TaskPayload = {
   dueTime: string;
 };
 
-
 type TaskModalProps = {
   open: boolean;
+  collegeSubjectId: number;
+  facultyId: number;
   onClose: () => void;
   defaultValues?: {
-    facultytaskId: number;
+    facultyTaskId: number;
     title: string;
     description: string;
     time: string;
-    facultytaskcreatedDate: string | null;
+    date: string;
   } | null;
-  onSave: (task: TaskPayload) => void;
+  onSave: () => void;
 };
-
 
 const getWordCount = (text: string) => {
   return text.trim().split(/\s+/).filter(Boolean).length;
@@ -32,6 +32,8 @@ const getWordCount = (text: string) => {
 
 export default function TaskModal({
   open,
+  collegeSubjectId,
+  facultyId,
   onClose,
   onSave,
   defaultValues,
@@ -45,26 +47,29 @@ export default function TaskModal({
   const [dueTime, setDueTime] = useState("");
 
   useEffect(() => {
-    if (defaultValues?.facultytaskId) {
+    if (defaultValues?.facultyTaskId) {
 
       setTitle(defaultValues.title);
       setDescription(defaultValues.description);
       setDueTime(defaultValues.time);
 
       setDueDate(
-        defaultValues.facultytaskcreatedDate ??
+        defaultValues.date ??
         new Date().toISOString().split("T")[0]
       );
+
     } else {
 
       setTitle("");
       setDescription("");
       setDueDate("");
       setDueTime("");
+
     }
   }, [defaultValues]);
 
   const handleSave = async () => {
+
     if (!title || !description || !dueDate || !dueTime) {
       alert("Please fill all fields!");
       return;
@@ -75,15 +80,56 @@ export default function TaskModal({
       return;
     }
 
+    // UPDATE TASK
+    if (defaultValues?.facultyTaskId) {
 
+      const response = await saveFacultyTask(
+        {
+          facultyTaskId: defaultValues.facultyTaskId,
+          collegeSubjectId,
+          taskTitle: title,
+          description: description,
+          date: dueDate,
+          time: dueTime
+        },
+        facultyId
+      );
 
+      if (!response.success) {
+        alert("Update failed");
+        return;
+      }
+
+      onSave();
+      onClose();
+      return;
+    }
+
+    // INSERT TASK
+    const response = await saveFacultyTask(
+      {
+        collegeSubjectId,
+        taskTitle: title,
+        description: description,
+        date: dueDate,
+        time: dueTime
+      },
+      facultyId
+    );
+
+    if (!response.success) {
+      alert("Insert failed");
+      return;
+    }
+
+    onSave();
     onClose();
   };
-
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-[450px] animate-fadeIn relative">
+
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-[#282828]">
             {defaultValues ? "Edit Task" : "Add Task"}

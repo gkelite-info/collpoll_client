@@ -11,18 +11,19 @@ export default function AssignmentsRight() {
 
   const [facultyTasks, setFacultyTasks] = useState<Task[]>([
     {
-      facultytaskId: 1,
+      facultyTaskId: 1,
       title: "Complete Python Lab",
       description: "Finish all 10 lab programs and upload to portal.",
       time: "12:40 PM",
-      facultytaskcreatedDate: null,
+      date: new Date().toLocaleString()
+
     },
     {
-      facultytaskId: 2,
+      facultyTaskId: 2,
       title: "Prepare Unit Test Question Bank",
       description: "Prepare questions covering all important topics.",
       time: "10:21 AM",
-      facultytaskcreatedDate: null,
+      date: new Date().toLocaleString()
     },
   ]);
 
@@ -37,25 +38,25 @@ export default function AssignmentsRight() {
   ) => {
     if (taskId) {
       setFacultyTasks((prev) =>
-        prev.map((t) =>
-          t.facultytaskId === taskId
-            ? {
-              ...t,
-              title: payload.title,
-              description: payload.description,
-              time: payload.dueTime,
-            }
-            : t
+        prev.map((t) => 
+          t.facultyTaskId === taskId
+          ? {
+            ...t,
+            title: payload.title,
+            description: payload.description,
+            time: payload.dueTime,
+            date : ""
+          } : t
         )
       );
     } else {
       setFacultyTasks((prev) => [
         {
-          facultytaskId: Date.now(),
+          facultyTaskId: Date.now(),
           title: payload.title,
           description: payload.description,
           time: payload.dueTime,
-          facultytaskcreatedDate: payload.dueDate,
+          date: new Date().toLocaleString()
         },
         ...prev,
       ]);
