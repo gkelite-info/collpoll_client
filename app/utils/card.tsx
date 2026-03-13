@@ -9,7 +9,7 @@ type CardProps = {
   isActive?: boolean;
   textSize?: string;
   icon: ReactNode;
-  value: string | number;
+  value: React.ReactNode;
   label: string;
   iconBgColor?: string;
   iconColor?: string;
@@ -70,11 +70,11 @@ export default function CardComponent({
         )}
       </div>
 
-      <p
+      <div
         className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}
       >
         {value}
-      </p>
+      </div>
 
       <span
         className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}

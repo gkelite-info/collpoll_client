@@ -113,9 +113,6 @@ export async function fetchStudentFeePlan(
 
     if (!feeStruct) return null;
 
-    /**
-     *  Fetch fee components
-     */
     const { data: comps } = await supabase
       .from("college_fee_components")
       .select(
@@ -149,9 +146,6 @@ export async function fetchStudentFeePlan(
       }
     });
 
-    /**
-     *  Fetch total paid from ledger
-     */
     const { data: ledgerRows } = await supabase
       .from("student_fee_ledger")
       .select("amount")
@@ -160,9 +154,6 @@ export async function fetchStudentFeePlan(
     const paidAmount =
       ledgerRows?.reduce((sum, row) => sum + Number(row.amount), 0) ?? 0;
 
-    /**
-     *  Final calculations
-     */
     const gstPercent =
       subTotal > 0 ? Math.round((gstAmount / subTotal) * 100) : 0;
 
@@ -170,9 +161,6 @@ export async function fetchStudentFeePlan(
 
     const pendingAmount = totalFee - paidAmount;
 
-    /**
-     *  Return final result
-     */
     return {
       studentFeeObligationId: obligation.studentFeeObligationId,
 
