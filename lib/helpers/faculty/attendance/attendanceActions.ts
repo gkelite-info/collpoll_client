@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { saveFacultyClassSession } from "../facultyClassSessionsAPI";
 
 export interface ClassOption {
   id: string;
@@ -389,5 +390,96 @@ export async function saveAttendance(classId: string, payload: any[]) {
     .upsert(dbRecords, { onConflict: "studentId,calendarEventId" });
 
   if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+export async function handleMissionClassStatus(
+  classIdStr: string,
+  facultyId: number,
+  status: "Accepted" | "Cancel" | "Scheduled",
+  reason?: string,
+) {
+  const supabase = await createClient();
+  const eventId = parseInt(classIdStr.split("-")[0]);
+  const timeNow = new Date().toTimeString().split(" ")[0];
+
+  const { data: existingSessions } = await supabase
+    .from("faculty_class_sessions")
+    .select("facultyClassSessionsId")
+    .eq("calendarEventId", eventId)
+    .eq("facultyId", facultyId)
+    .is("deletedAt", null);
+
+  if (existingSessions && existingSessions.length > 0) {
+    const [primary, ...duplicates] = existingSessions;
+    if (duplicates.length > 0) {
+      await supabase
+        .from("faculty_class_sessions")
+        .delete()
+        .in(
+          "facultyClassSessionsId",
+          duplicates.map((d) => d.facultyClassSessionsId),
+        );
+    }
+    await supabase
+      .from("faculty_class_sessions")
+      .update({
+        status: status,
+        acceptedAt: status === "Accepted" ? timeNow : undefined,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq("facultyClassSessionsId", primary.facultyClassSessionsId);
+  } else {
+    await supabase.from("faculty_class_sessions").insert({
+      calendarEventId: eventId,
+      facultyId: facultyId,
+      status: status,
+      acceptedAt: status === "Accepted" ? timeNow : "00:00:00",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  if (status === "Cancel") {
+    const { data: eventData } = await supabase
+      .from("calendar_event")
+      .select("date")
+      .eq("calendarEventId", eventId)
+      .single();
+    const { data: sections } = await supabase
+      .from("calendar_event_section")
+      .select("collegeSectionId")
+      .eq("calendarEventId", eventId);
+
+    const sectionIds = sections?.map((s) => s.collegeSectionId) || [];
+
+    if (sectionIds.length > 0) {
+      const { data: history } = await supabase
+        .from("student_academic_history")
+        .select("studentId")
+        .in("collegeSectionsId", sectionIds)
+        .eq("isCurrent", true);
+
+      const studentIds = history?.map((h) => h.studentId) || [];
+
+      if (studentIds.length > 0) {
+        const attendanceRecords = studentIds.map((sId) => ({
+          studentId: sId,
+          calendarEventId: eventId,
+          status: "CLASS_CANCEL",
+          reason: reason || "Cancelled by faculty",
+          markedAt: eventData?.date,
+          facultyMark: facultyId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+
+        await supabase.from("attendance_record").upsert(attendanceRecords, {
+          onConflict: "studentId,calendarEventId",
+        });
+      }
+    }
+  }
+
   return { success: true };
 }

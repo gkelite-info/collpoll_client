@@ -8,35 +8,40 @@ import {
   UsersThree,
 } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+import ScheduledLessonsStrip, {
+  ScheduledLesson,
+} from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses from "../../utils/upcomingClasses";
 import { INITIAL_SCHEDULED_LESSONS, STUDENT_DATA } from "./data";
 import { UserInfoCard } from "../../utils/userInfoCard";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 import {
   getUpcomingClasses,
   UpcomingLesson,
 } from "@/lib/helpers/faculty/attendance/getClasses";
+import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
 
 export default function FacultyDashLeft() {
-  const { userId, fullName, gender, loading } = useUser();
+  const { userId, fullName, gender, loading: userLoading } = useUser();
+  const { facultyId, loading: facultyLoading } = useFaculty();
+  const router = useRouter();
 
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
-
   const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(
     INITIAL_SCHEDULED_LESSONS,
   );
 
   useEffect(() => {
     const fetchClasses = async () => {
-      if (loading || !userId) return;
-
+      if (userLoading || facultyLoading || !userId) return;
       try {
         setIsLoadingClasses(true);
-
         const data = await getUpcomingClasses(Number(userId));
         setUpcomingClasses(data);
       } catch (error) {
@@ -45,12 +50,11 @@ export default function FacultyDashLeft() {
         setIsLoadingClasses(false);
       }
     };
-
     fetchClasses();
-  }, [userId, loading]);
+  }, [userId, userLoading, facultyLoading]);
 
-  const facultyImage = gender
-    && (gender === "Female" ? "/faculty-f.png" : "/faculty-male.png")
+  const facultyImage =
+    gender && (gender === "Female" ? "/faculty-f.png" : "/faculty-male.png");
 
   const cardData = [
     {
@@ -88,19 +92,9 @@ export default function FacultyDashLeft() {
       image: facultyImage ?? undefined,
       top: "lg:top-[-5px]",
       imageHeight: "h-45",
-      right: "right-[-25]"
+      right: "right-[-25]",
     },
   ];
-
-  const handleAddUpcomingClass = (
-    newLessonData: Omit<UpcomingLesson, "id">,
-  ) => {
-    const newClass = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newLessonData,
-    };
-    setUpcomingClasses((prev) => [newClass, ...prev]);
-  };
 
   const handleAddScheduledLesson = (
     newLessonData: Omit<ScheduledLesson, "id">,
@@ -141,7 +135,8 @@ export default function FacultyDashLeft() {
                 ) : (
                   <UpcomingClasses
                     lessons={upcomingClasses}
-                    onAddLesson={handleAddUpcomingClass}
+                    onAddLesson={() => {}}
+                    facultyId={Number(facultyId)}
                   />
                 )}
               </div>
