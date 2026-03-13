@@ -1,24 +1,30 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, PencilSimple } from "@phosphor-icons/react";
+import { CheckCircle, PencilSimple, Trash } from "@phosphor-icons/react";
 import TaskModal from "@/app/components/modals/taskModal";
+import { deactivateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import TaskCardShimmer from "../(screens)/faculty/shimmers/TaskCardShimmer";
 
 
 export type Task = {
-  facultytaskId: number;
+  facultyTaskId: number;
   title: string;
   description: string;
   time: string;
-  facultytaskcreatedDate: string | null;
+  date: string;
 };
+
 
 export type TaskPanelProps = {
   role?: "faculty" | "student";
   tasks?: Task[];
   style?: boolean;
+  loading?: boolean;
   facultyTasks?: Task[];
   studentTasks?: Task[];
+  collegeSubjectId?: number;
+  facultyId?: number;
   onEditTask?: (task: Task) => void;
   onAddTask?: () => void;
   onSaveTask?: (
@@ -30,15 +36,17 @@ export type TaskPanelProps = {
     },
     taskId?: number
   ) => void;
-
 };
 
 export default function TaskPanel({
   role = "student",
   tasks,
-  style=false,
+  style = false,
   facultyTasks = [],
   studentTasks = [],
+  collegeSubjectId,
+  facultyId,
+  loading = false,
   onEditTask,
   onAddTask,
   onSaveTask,
@@ -68,18 +76,22 @@ export default function TaskPanel({
 
   return (
     <>
-      
-      <div className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px] overflow-y-auto`}>
-      {role === "faculty" && (
-        <h2 className="text-lg font-semibold text-[#16284F] mb-2">
-          My Tasks
-        </h2>
-      )}
+
+      <div className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px]`}>
+        {/* {role === "faculty" && (
+          <h2 className="text-lg font-semibold text-[#16284F] mb-2">
+            My Tasks
+          </h2>
+        )} */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-[#E7F7EE] rounded-full p-1">
               <CheckCircle size={22} weight="fill" color="#43C17A" />
             </div>
+            {role === "faculty" && (
+              <p className="text-[#282828] font-medium">My Tasks</p>
+            )}
+
             {role === "student" && (
               <div className="flex items-center gap-0 text-sm font-semibold ">
                 <button
@@ -92,7 +104,7 @@ export default function TaskPanel({
                 >
                   My Tasks
                 </button>
-                <span className="text-gray-300">/</span>
+                <span className="text-gray-300 ml-1 mr-1">/</span>
 
                 <button
                   onClick={() => setActiveView("faculty")}
@@ -127,64 +139,88 @@ export default function TaskPanel({
 
             )}
         </div>
-        {tasksToShow.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center mt-10">
-            No tasks available
-          </p>
-        ) : (
-          tasksToShow.map((task) => (
-            <div
-              key={task.facultytaskId}
-              className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between"
-            >
-              <div className="w-[80%]">
-                <h5 className="text-sm font-semibold text-[#16284F]">
-                  {task.title}
-                </h5>
-                <p className="text-xs text-[#454545]">
-                  {task.description}
-                </p>
-              </div>
+        <div className="max-h-[240px] overflow-y-auto pr-1">
+          {loading && tasksToShow.length === 0 ? (
+            <>
+              <TaskCardShimmer />
+              <TaskCardShimmer />
+              <TaskCardShimmer />
+            </>
+          ) : tasksToShow.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center mt-10">
+              No tasks available
+            </p>
+          ) : (
+            tasksToShow.map((task) => (
+              <div
+                key={task.facultyTaskId}
+                className="bg-[#E8F8EF] rounded-md mt-3 p-2 flex justify-between"
+              >
+                <div className="w-[80%]">
+                  <h5 className="text-sm font-semibold text-[#16284F]">
+                    {task.title}
+                  </h5>
+                  <p className="text-xs text-[#454545]">
+                    {task.description}
+                  </p>
+                </div>
 
-              <div className="w-[20%] flex flex-col items-center justify-between">
-                <p className="text-xs font-medium text-[#6B7280]">
-                  {formatTime(task.time)}
-                </p>
+                <div className="w-[20%] flex flex-col items-center justify-between">
+                  <p className="text-xs font-medium text-[#6B7280]">
+                    {formatTime(task.time)}
+                  </p>
 
-                <div className="flex gap-2">
-                  {((role === "faculty") ||
-                    (role === "student" && activeView === "student")) && (
-                      <button
-                        onClick={() => {
-                          setEditTask(task);
-                          setOpenModal(true);
-                        }}
-                        className="p-1 rounded-full hover:bg-[#DFF3E9]"
-                      >
-                        <PencilSimple size={18} color="#16284F" />
-                      </button>
-                    )}
-                  <CheckCircle size={22} color="#282828" />
+                  <div className="flex gap-2">
+
+                    {((role === "faculty") ||
+                      (role === "student" && activeView === "student")) && (
+                        <button
+                          onClick={() => {
+                            onEditTask?.(task);
+                          }}
+                          className="p-1 rounded-full hover:bg-[#DFF3E9] cursor-pointer"
+                        >
+                          <PencilSimple size={18} color="#16284F" />
+                        </button>
+                      )}
+
+                    <button
+                      onClick={async () => {
+                        if (!confirm("Delete this task?")) return;
+
+                        const res = await deactivateFacultyTask(task.facultyTaskId);
+
+                        if (!res.success) {
+                          alert("Failed to delete task");
+                          return;
+                        }
+
+                        window.location.reload();
+                      }}
+                      className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
+                    >
+                      <Trash size={18} color="#EF4444" />
+                    </button>
+
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
+            ))
+          )}
+        </div>
       </div>
 
       {onSaveTask && (
         <TaskModal
           open={openModal}
+          collegeSubjectId={collegeSubjectId!}
+          facultyId={facultyId!}
           defaultValues={editTask}
           onClose={() => {
             setOpenModal(false);
             setEditTask(null);
           }}
-          onSave={(payload) => {
-            if (!payload) return;
-
-            onSaveTask(payload, editTask?.facultytaskId);
-
+          onSave={() => {
             setOpenModal(false);
             setEditTask(null);
           }}

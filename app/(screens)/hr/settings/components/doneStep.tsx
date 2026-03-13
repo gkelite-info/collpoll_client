@@ -31,7 +31,7 @@ export default function DoneStep() {
           </p>
 
           <button
-            onClick={() => router.push("/settings")}
+            onClick={() => router.push("/hr/settings")}
             className="bg-[#43C17A] text-white px-6 py-2 rounded font-semibold"
           >
             Back to Settings

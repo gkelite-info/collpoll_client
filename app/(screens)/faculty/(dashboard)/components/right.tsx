@@ -8,21 +8,44 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { supabase } from "@/lib/supabaseClient";
 import TaskModal from "@/app/components/modals/taskModal";
-
-type Task = {
-  facultytaskId: number;
-  title: string;
-  description: string;
-  time: string;
-  facultytaskcreatedDate: string | null;
-};
+import type { Task } from "@/app/utils/taskPanel";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 export default function FacultyDashRight() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const { facultyId, subjectIds, loading: facultyLoading } = useFaculty();
+  const collegeSubjectId = subjectIds?.[0] ?? null;
 
+  const loadTasks = async () => {
+
+    if (!collegeSubjectId) return;
+
+    try {
+
+      const data = await fetchFacultyTasks(collegeSubjectId);
+
+      setTasks(
+        data.map((t: any) => ({
+          facultyTaskId: t.facultyTaskId,
+          title: t.taskTitle,
+          description: t.description,
+          time: t.time,
+          date: t.date,
+        }))
+      );
+
+    } catch (err) {
+      console.error("LOAD TASK ERROR", err);
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
+<<<<<<< Updated upstream
   // useEffect(() => {
   //   const loadTasks = async () => {
   //     try {
@@ -67,6 +90,15 @@ export default function FacultyDashRight() {
 
   //   loadTasks();
   // }, []);
+=======
+  useEffect(() => {
+
+    if (!facultyLoading && collegeSubjectId) {
+      loadTasks();
+    }
+
+  }, [facultyLoading, collegeSubjectId]);
+>>>>>>> Stashed changes
 
   const card = [
     {
@@ -98,6 +130,9 @@ export default function FacultyDashRight() {
         role="faculty"
         facultyTasks={loading ? [] : tasks}
         studentTasks={[]}
+        loading={loading}
+        collegeSubjectId={collegeSubjectId ?? undefined}
+        facultyId={facultyId ?? undefined}
         onAddTask={() => {
           setEditingTask(null);
           setOpenModal(true);
@@ -108,15 +143,20 @@ export default function FacultyDashRight() {
         }}
       />
 
+
       {openModal && (
+
         <TaskModal
           open={openModal}
+          collegeSubjectId={collegeSubjectId!}
+          facultyId={facultyId!}
           onClose={() => {
             setOpenModal(false);
             setEditingTask(null);
           }}
           defaultValues={editingTask}
           onSave={() => {
+            loadTasks();
             setOpenModal(false);
             setEditingTask(null);
           }}

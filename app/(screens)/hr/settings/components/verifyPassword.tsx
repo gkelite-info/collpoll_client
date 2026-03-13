@@ -12,7 +12,7 @@ export default function CurrentPassword() {
   const [show, setShow] = useState(false);
 
   const handleContinue = () => {
-    router.push("/settings?reset");
+    router.push("/hr/settings?reset");
   };
 
   return (

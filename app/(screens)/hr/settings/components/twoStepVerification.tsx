@@ -73,7 +73,7 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
     if (method.status === "toggle") {
       onToggleOrNavigate(method.id);
     } else if (method.status === "navigate" && method.id === "devices") {
-      router.push("/settings?trusted-devices");
+      router.push("/hr/settings?trusted-devices");
     }
   };
 

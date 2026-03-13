@@ -130,7 +130,7 @@ export default function SettingsClient() {
                 </div>
 
                 <div className="bg-white shadow-md rounded-xl p-4 space-y-6">
-                    <Link href="/settings?current-password" className="block">
+                    <Link href="/hr/settings?current-password" className="block">
                         <div className="flex items-center justify-between cursor-pointer">
                             <div className="flex gap-3 items-start">
                                 <div className="p-2 rounded-full bg-[#43C17A26]">
@@ -249,7 +249,7 @@ export default function SettingsClient() {
 
                     <hr className="text-[#CECECE]" />
 
-                    <Link href="/settings?linked-accounts" className="block">
+                    <Link href="/hr/settings?linked-accounts" className="block">
                         <div className="flex items-center justify-between">
                             <div className="flex gap-3 items-start">
                                 <div className="p-2 rounded-full bg-[#43C17A26]">
@@ -276,7 +276,7 @@ export default function SettingsClient() {
 
                     <hr className="text-[#CECECE]" />
 
-                    <Link href="/settings?2fa" className="block">
+                    <Link href="/hr/settings?2fa" className="block">
                         <div className="flex items-center justify-between">
                             <div className="flex gap-3 items-start">
                                 <div className="p-2 rounded-full bg-[#43C17A26]">
