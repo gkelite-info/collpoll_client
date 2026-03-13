@@ -1,4 +1,5 @@
 
+import { useFaculty } from '@/app/utils/context/faculty/useFaculty';
 import React from 'react';
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
@@ -11,6 +12,9 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 );
 
 export default function SummaryPage() {
+  const {role} = useFaculty()
+  if(!role) return null;
+  const isInter = ["Inter"].includes(role)
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
@@ -24,7 +28,7 @@ export default function SummaryPage() {
         </div>
         <div className="flex flex-col space-y-0.5">
           <InfoRow label="ID" value="9046928764" />
-          <InfoRow label="Department" value="CSE" />
+          <InfoRow label={isInter ? "Group" : "Branch"} value="CSE" />
           <InfoRow label="Mobile" value="9876432134" />
           <InfoRow label="Email" value="sai@gmail.com" />
           <InfoRow label="Date of Joining" value="12 July 2019" />
@@ -71,7 +75,7 @@ export default function SummaryPage() {
           <InfoRow label="Address:" value="Flat 502, Sun...." />
           <InfoRow label="Enrollment Number:" value="49087579678" />
           <InfoRow label="Name:" value="Alexander" />
-          <InfoRow label="Gender:" value="Female" />
+          <InfoRow label="Gender:" value="Male" />
         </div>
       </div>
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">

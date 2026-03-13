@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 
- function MyPayPage() {
+function MyPayPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mainParam = searchParams.get("main") || "payroll";
@@ -41,14 +41,14 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col h-[550px] text-left">
       <div className="flex-shrink-0 text-[14px] font-bold mb-4">
-        <span 
+        <span
           onClick={() => handleTabSwitch("salary")}
           className={`cursor-pointer transition-colors ${activeTab === "salary" ? "text-[#43C17A] underline decoration-2 underline-offset-4" : "text-[#333333] hover:text-[#43C17A]"}`}
         >
           My Salary & Pay Slips
         </span>
         <span className="text-gray-400 mx-2">/</span>
-        <span 
+        <span
           onClick={() => handleTabSwitch("tax")}
           className={`cursor-pointer transition-colors ${activeTab === "tax" ? "text-[#43C17A] underline decoration-2 underline-offset-4" : "text-[#333333] hover:text-[#43C17A]"}`}
         >
@@ -59,14 +59,14 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
         <>
           <div className="flex-shrink-0 ">
             <h2 className="text-[16px] font-extrabold text-[#333333] mb-3">My Salary</h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="col-span-1 flex flex-col gap-4">
                 <div className="bg-white rounded-xl p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
                   <p className="text-[#666666] text-[13px] font-semibold">Current Compensation</p>
                   <p className="text-[#333333] font-bold text-[16px] mt-1">INR 8,50,000/Annum</p>
                 </div>
-                
+
                 <div className="bg-white rounded-xl p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 flex justify-between items-center">
                   <div>
                     <p className="text-[#666666] text-[13px] font-semibold">Payroll</p>
@@ -79,21 +79,22 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
               <div className="col-span-1 md:col-span-2 bg-white rounded-xl p-5 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 flex flex-col justify-between">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-[#333333] font-extrabold text-[15px]">Salary Timeline</h3>
+                    {/* <h3 className="text-[#333333] font-extrabold text-[15px]">Salary Timeline</h3>
                     <p className="text-[#666666] text-[11px] mt-1 font-bold">
                       SALARY REVISION : <span className="font-medium">Effective Jan 23, 2025</span>
-                    </p>
+                    </p> */}
+                    <div>
+                      <p className="text-[#333333] font-bold text-lg">Regular Salary</p>
+                      <p className="text-[#666666] text-base font-medium mt-1">INR 8,50,000</p>
+                    </div>
                   </div>
                   <span className="bg-[#43C17A] text-white text-[10px] px-2 py-0.5 rounded-[4px] font-bold tracking-wide">
                     CURRENT
                   </span>
                 </div>
-                
+
                 <div className="grid grid-cols-4 gap-2 mt-5">
-                  <div>
-                    <p className="text-[#333333] font-bold text-[13px]">Regular Salary</p>
-                    <p className="text-[#666666] text-[13px] font-medium mt-1">INR 8,50,000</p>
-                  </div>
+
                   <div>
                     <p className="text-[#333333] font-bold text-[13px]">Other</p>
                     <p className="text-[#666666] text-[13px] font-medium mt-1">INR 5</p>
@@ -129,7 +130,7 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
                     </button>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-8 text-[13px]">
                   <div className="flex items-center">
                     <span className="w-[100px] font-bold text-[#333333]">Pay Date :</span>
@@ -219,10 +220,10 @@ import { Loader } from '@/app/(screens)/(student)/calendar/right/timetable';
 }
 
 export default function Page() {
-    return (
-        <Suspense fallback={<div className="p-6 text-sm "> <Loader /> </div>}>
-            <MyPayPage />
-        </Suspense>
-    );
+  return (
+    <Suspense fallback={<div className="p-6 text-sm "> <Loader /> </div>}>
+      <MyPayPage />
+    </Suspense>
+  );
 
-  }
+}
