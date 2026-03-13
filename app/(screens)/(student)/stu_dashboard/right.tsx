@@ -1,5 +1,6 @@
 "use client";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
@@ -7,6 +8,7 @@ import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { addStudentTask, getStudentTasks, updateStudentTask, } from "@/lib/helpers/profile/Task/studentTasks";
 import { supabase } from "@/lib/supabaseClient";
 import { useEffect, useState } from "react";
+import { date } from "yup";
 
 export default function StuDashRight() {
 
@@ -14,36 +16,37 @@ export default function StuDashRight() {
   const [studentId, setStudentId] = useState<number | null>(null);
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
   const [collegeId, setCollegeId] = useState<number | null>(null);
+  const { subjects } = useStudent();
 
-  useEffect(() => {
-    async function fetchStudentId() {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+  // useEffect(() => {
+  //   async function fetchStudentId() {
+  //     const {
+  //       data: { user },
+  //       error,
+  //     } = await supabase.auth.getUser();
 
-      if (error || !user) {
-        console.error("Auth error", error);
-        return;
-      }
+  //     if (error || !user) {
+  //       console.error("Auth error", error);
+  //       return;
+  //     }
 
-      const { data, error: userErr } = await supabase
-        .from("users")
-        .select("userId, collegeId")
-        .eq("auth_id", user.id)
-        .single();
+  //     const { data, error: userErr } = await supabase
+  //       .from("users")
+  //       .select("userId, collegeId")
+  //       .eq("auth_id", user.id)
+  //       .single();
 
-      if (userErr) {
-        console.error("Failed to get studentId", userErr);
-        return;
-      }
-      setStudentId(data.userId);
-      setCollegeId(data.collegeId);
+  //     if (userErr) {
+  //       console.error("Failed to get studentId", userErr);
+  //       return;
+  //     }
+  //     setStudentId(data.userId);
+  //     setCollegeId(data.collegeId);
 
-    }
+  //   }
 
-    fetchStudentId();
-  }, []);
+  //   fetchStudentId();
+  // }, []);
 
 
   // useEffect(() => {
@@ -58,7 +61,7 @@ export default function StuDashRight() {
   //         title: task.studenttaskTitle,
   //         description: task.studenttaskDescription,
   //         time: task.studenttaskassignedTime,
-  //         facultytaskcreatedDate: task.studenttaskcreateDate,
+  //         date: task.studenttaskcreateDate,
   //       }));
 
   //       setStudentTasks(formatted);
@@ -73,51 +76,43 @@ export default function StuDashRight() {
   // }, [studentId]);
 
 
-  // useEffect(() => {
-  //   if (!collegeId) return;
+  useEffect(() => {
 
-  //   const loadFacultyTasks = async () => {
-  //     try {
-  //       const { data: facultyUsers, error } = await supabase
-  //         .from("users")
-  //         // .select("userId")
-  //         .select("userId, collegeId")
-  //         .eq("collegeId", collegeId)
-  //         .ilike("role", "faculty")
-  //         .eq("is_deleted", false);
+    if (!subjects?.length) return;
 
-  //       if (error || !facultyUsers?.length) {
-  //         console.error("No faculty found");
-  //         return;
-  //       }
+    const loadFacultyTasks = async () => {
+      try {
 
-  //       const allTasks: any[] = [];
+        const allTasks: any[] = [];
 
-  //       for (const faculty of facultyUsers) {
-  //         const res = await fetchFacultyTasks(faculty.userId);
+        for (const subject of subjects) {
 
-  //         if (res.success && res.tasks?.length) {
-  //           allTasks.push(
-  //             ...res.tasks.map((task: any) => ({
-  //               facultytaskId: task.facultytaskId,
-  //               title: task.facultytaskTitle,
-  //               description: task.facultytaskDescription,
-  //               time: task.facultytaskassignedTime,
-  //               facultytaskcreatedDate: task.facultytaskcreatedDate,
-  //             }))
-  //           );
-  //         }
-  //       }
+          const tasks = await fetchFacultyTasks(subject.collegeSubjectId);
 
-  //       setFacultyTasks(allTasks);
-  //     } catch (err) {
-  //       console.error("Load faculty tasks failed", err);
-  //     }
-  //   };
+          if (tasks?.length) {
+            allTasks.push(
+              ...tasks.map((task: any) => ({
+                facultyTaskId: task.facultyTaskId,
+                title: task.taskTitle,
+                description: task.description,
+                time: task.time,
+                date: task.date,
+              }))
+            );
+          }
+        }
 
-  //   loadFacultyTasks();
-  // }, [collegeId]);
+        setFacultyTasks(allTasks);
 
+      } catch (err) {
+        console.error("Load faculty tasks failed", err);
+      }
+
+    };
+
+    loadFacultyTasks();
+
+  }, [subjects]);
 
   const handleSaveStudentTask = async (
     payload: {

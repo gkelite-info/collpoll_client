@@ -184,24 +184,26 @@ export default function TaskPanel({
                         </button>
                       )}
 
-                    <button
-                      onClick={async () => {
-                        if (!confirm("Delete this task?")) return;
+                    {((role === "faculty") ||
+                      (role === "student" && activeView === "student")) && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm("Delete this task?")) return;
 
-                        const res = await deactivateFacultyTask(task.facultyTaskId);
+                            const res = await deactivateFacultyTask(task.facultyTaskId);
 
-                        if (!res.success) {
-                          alert("Failed to delete task");
-                          return;
-                        }
+                            if (!res.success) {
+                              alert("Failed to delete task");
+                              return;
+                            }
 
-                        window.location.reload();
-                      }}
-                      className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
-                    >
-                      <Trash size={18} color="#EF4444" />
-                    </button>
-
+                            window.location.reload();
+                          }}
+                          className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
+                        >
+                          <Trash size={18} color="#EF4444" />
+                        </button>
+                      )}
                   </div>
                 </div>
               </div>

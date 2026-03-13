@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import toast from "react-hot-toast";
 
 export type TaskPayload = {
   title: string;
@@ -45,6 +46,7 @@ export default function TaskModal({
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (defaultValues?.facultyTaskId) {
@@ -70,22 +72,60 @@ export default function TaskModal({
 
   const handleSave = async () => {
 
+    const titleRegex = /^[A-Za-z\s]+$/;
+    const today = new Date().toISOString().split("T")[0];
+
     if (!title || !description || !dueDate || !dueTime) {
-      alert("Please fill all fields!");
+      toast.error("Please fill all fields!");
+      return;
+    }
+
+    if (!titleRegex.test(title.trim())) {
+      toast.error("Title should contain only letters");
       return;
     }
 
     if (getWordCount(description) > 30) {
-      alert("Description should not exceed 30 words.");
+      toast.error("Description should not exceed 30 words.");
       return;
     }
 
-    // UPDATE TASK
-    if (defaultValues?.facultyTaskId) {
+    if (dueDate < today) {
+      toast.error("Past dates are not allowed");
+      return;
+    }
 
+    try {
+      setSaving(true);
+
+      // UPDATE TASK
+      if (defaultValues?.facultyTaskId) {
+        const response = await saveFacultyTask(
+          {
+            facultyTaskId: defaultValues.facultyTaskId,
+            collegeSubjectId,
+            taskTitle: title,
+            description: description,
+            date: dueDate,
+            time: dueTime
+          },
+          facultyId
+        );
+
+        if (!response.success) {
+          toast.error("Failed to update task");
+          return;
+        }
+
+        toast.success("Task updated successfully");
+        onSave();
+        onClose();
+        return;
+      }
+
+      // INSERT TASK
       const response = await saveFacultyTask(
         {
-          facultyTaskId: defaultValues.facultyTaskId,
           collegeSubjectId,
           taskTitle: title,
           description: description,
@@ -96,34 +136,16 @@ export default function TaskModal({
       );
 
       if (!response.success) {
-        alert("Update failed");
+        toast.error("Failed to create task");
         return;
       }
 
+      toast.success("Task created successfully");
       onSave();
       onClose();
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    // INSERT TASK
-    const response = await saveFacultyTask(
-      {
-        collegeSubjectId,
-        taskTitle: title,
-        description: description,
-        date: dueDate,
-        time: dueTime
-      },
-      facultyId
-    );
-
-    if (!response.success) {
-      alert("Insert failed");
-      return;
-    }
-
-    onSave();
-    onClose();
   };
 
   return (
@@ -148,7 +170,12 @@ export default function TaskModal({
             type="text"
             placeholder="Enter task title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (/^[A-Za-z\s]*$/.test(value)) {
+                setTitle(value);
+              }
+            }}
             className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828]"
           />
         </div>
@@ -174,6 +201,7 @@ export default function TaskModal({
             </label>
             <input
               type="date"
+              min={new Date().toISOString().split("T")[0]}
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               className="border rounded-md px-3 py-2 text-sm outline-none text-[#282828]"
@@ -196,9 +224,13 @@ export default function TaskModal({
         <div className="flex justify-between gap-3">
           <button
             onClick={handleSave}
-            className="w-1/2 bg-[#43C17A] text-white py-2 rounded-md text-sm hover:bg-[#3AAA6B] cursor-pointer"
+            disabled={saving}
+            className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${saving
+                ? "bg-[#A7DDBE] text-white cursor-not-allowed"
+                : "bg-[#43C17A] text-white hover:bg-[#3AAA6B]"
+              }`}
           >
-            Save Task
+            {saving ? "Saving..." : "Save Task"}
           </button>
 
           <button

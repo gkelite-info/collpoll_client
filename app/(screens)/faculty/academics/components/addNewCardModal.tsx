@@ -50,11 +50,14 @@ type FacultyAcademicForm = {
 function toPascalCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
+const INVALID_UNIT_MESSAGE =
+  "The unit name does not match the selected subject.";
 // // 🔹 AI unit name suggestion helper
 // function suggestUnitName(subject: string, unitNumber: number) {
 //   if (!subject) return "";
 //   return `Unit ${unitNumber}: Introduction to ${subject}`;
 // }
+
 export default function AddNewCardModal({
   isOpen,
   onClose,
@@ -697,7 +700,7 @@ export default function AddNewCardModal({
                 placeholder="Enter unit name"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
               />
-              {(availableTopics.length > 0 || selectedTopics.length > 0) && (
+              {formData.unitName && (availableTopics.length > 0 || selectedTopics.length > 0) && (
                 <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-[#43C17A]">
@@ -797,25 +800,38 @@ export default function AddNewCardModal({
                       .filter(t =>
                         t.toLowerCase().includes(searchQuery.toLowerCase())
                       )
-                      .map(topic => (
-                        <div
-                          key={topic}
-                          className="flex items-center gap-2 bg-white border border-[#D1FAE5]rounded-full px-3 py-1 text-xs  text-[#065F46]"
-                        >
-                          <span>{topic}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedTopics(prev => [...prev, topic]);
-                              setAvailableTopics(prev => prev.filter(t => t !== topic));
-                              setSelectAll(false);
-                            }}
-                            className="text-[#43C17A] font-bold"
+                      .map(topic => {
+                        const isInvalidMessage = topic === INVALID_UNIT_MESSAGE;
+
+                        return (
+                          <div
+                            key={topic}
+                            className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs
+        ${isInvalidMessage
+                                ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                                : "bg-white border-[#D1FAE5] text-[#065F46]"
+                              }`}
                           >
-                            +
-                          </button>
-                        </div>
-                      ))}
+                            <span>{topic}</span>
+
+                            {!isInvalidMessage && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTopics(prev => [...prev, topic]);
+                                  setAvailableTopics(prev =>
+                                    prev.filter(t => t !== topic)
+                                  );
+                                  setSelectAll(false);
+                                }}
+                                className="text-[#43C17A] font-bold"
+                              >
+                                +
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}
