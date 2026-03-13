@@ -1,31 +1,62 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import AssignmentCard from "./components/card";
 import { supabase } from "@/lib/supabaseClient";
-// import { fetchAssignments, fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
 import { getSubmissionForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import { Loader } from "../calendar/right/timetable";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
+import { CaretLeft, CaretRight, } from "@phosphor-icons/react";
+import AssignmentsRight from "./right";
+import QuizCard, { AttemptedQuizCard, QuizAttemptScreen, STATIC_ATTEMPTED_QUIZZES, STATIC_ONGOING_QUIZZES } from "./components/quizCard";
 
-
-export default function AssignmentsLeft() {
-    const [activeView, setActiveView] =
-        useState<"active" | "previous">("active");
+function AssignmentsLeftContent() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const action = searchParams.get("action");
+    const activeQuizId = searchParams.get("quizId");
+    const activeTab = searchParams.get("tab") || "assignments";
+    const activeView = (searchParams.get("view") as "active" | "previous") || "active";
+    const quizView = (searchParams.get("quizView") as "ongoing" | "attempted") || "ongoing";
 
     const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
     const [previousAssignments, setPreviousAssignments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [assignments, setAssignments] = useState<any[]>([]);
-    const [totalCount, setTotalCount] = useState(0);
-    const [studentContext, setStudentContext] = useState<any>(null);
 
     const rowsPerPage = 8;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+    const handleTabChange = (tab: "assignments" | "quiz") => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", tab);
+        params.delete("action");
+        params.delete("quizId");
+
+        params.set("tab", tab);
+        if (tab === "assignments") {
+            params.set("view", "active");
+        }
+        if (tab === "quiz") {
+            params.set("quizView", "ongoing");
+        }
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleViewChange = (view: "active" | "previous") => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("view", view);
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleQuizViewChange = (view: "ongoing" | "attempted") => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("quizView", view);
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     useEffect(() => {
         loadAssignments();
@@ -89,7 +120,6 @@ export default function AssignmentsLeft() {
                 activeView
             );
 
-            console.log("what is res", res);
 
             if (!res.success) {
                 throw new Error(res.error);
@@ -152,46 +182,87 @@ export default function AssignmentsLeft() {
         return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
     }
 
-    return (
-        <>
+    if (activeTab === "quiz" && action === "attempt" && activeQuizId) {
+        const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
+        return (
             <div className="w-[68%] p-2 flex flex-col h-full">
-                <div className="mb-4">
-                    <h1 className="text-[#282828] font-bold text-2xl mb-1">Assignments</h1>
-                    <p className="text-[#282828] text-sm">View, track, and submit your work with ease</p>
-                </div >
+                <QuizAttemptScreen quiz={activeQuizData} />
+            </div>
+        );
+    }
 
-                <div className="w-full flex flex-col flex-1 min-h-0">
-                    <div className="flex gap-4 pb-1">
-                        <h5
-                            className={`
-                                text-xs cursor-pointer pb-1
-                                ${activeView === "active"
-                                    ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]"
-                                    : "text-[#282828]"
-                                }
-                            `}
-                            onClick={() => setActiveView("active")}
-                        >
-                            Active Assignments
-                        </h5>
+    return (
+        <div className="w-[68%] p-2 flex flex-col h-full">
+            <div className="mb-4">
+                <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
+                    <span
+                        onClick={() => handleTabChange("assignments")}
+                        className={`cursor-pointer transition-colors ${activeTab === "assignments"
+                            ? "text-[#43C17A]"
+                            : "text-[#282828]"
+                            }`}
+                    >
+                        Assignments
+                    </span>
 
-                        <h5
-                            className={`
-                                text-xs cursor-pointer pb-1
-                                ${activeView === "previous"
-                                    ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]"
-                                    : "text-[#282828]"
-                                }
-                            `}
-                            onClick={() => setActiveView("previous")}
-                        >
-                            Previous Assignments
-                        </h5>
+                    <span className="text-[#282828]">/</span>
 
-                    </div>
+                    <span
+                        onClick={() => handleTabChange("quiz")}
+                        className={`cursor-pointer transition-colors ${activeTab === "quiz"
+                            ? "text-[#43C17A]"
+                            : "text-[#282828]"
+                            }`}
+                    >
+                        Quiz
+                    </span>
+                </h1>
+                <p className="text-[#282828] text-sm">
+                    {activeTab === "assignments"
+                        ? "View, track, and submit your work with ease"
+                        : "Attempt, Track, and Review Your Quiz Performance with Ease"}
+                </p>
+            </div>
 
-                    <div className="mt-4 h-[151vh] overflow-y-auto ">
-                        {loading ? (
+            <div className="w-full flex flex-col flex-1 min-h-0">
+
+                <div className="flex gap-4 pb-1">
+                    {activeTab === "assignments" ? (
+                        <>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${activeView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleViewChange("active")}
+                            >
+                                Active Assignments
+                            </h5>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${activeView === "previous" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleViewChange("previous")}
+                            >
+                                Previous Assignments
+                            </h5>
+                        </>
+                    ) : (
+                        <>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${quizView === "ongoing" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleQuizViewChange("ongoing")}
+                            >
+                                Ongoing Quizzes
+                            </h5>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${quizView === "attempted" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleQuizViewChange("attempted")}
+                            >
+                                Attempted Quizzes
+                            </h5>
+                        </>
+                    )}
+                </div>
+
+                <div className="mt-4 h-[151vh] overflow-y-auto pr-1">
+                    {activeTab === "assignments" && (
+                        loading ? (
                             <Loader />
                         ) : (
                             <>
@@ -219,51 +290,89 @@ export default function AssignmentsLeft() {
                                     )
                                 )}
                             </>
-                        )}
-                    </div>
-                    {totalPages > 1 && (
-                        <div className="flex justify-end items-center gap-3 mt-6">
-                            <button
-                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === 1
-                                    ? "opacity-40 cursor-not-allowed"
-                                    : "hover:bg-gray-100"
-                                    }`}
-                            >
-                                <CaretLeft size={18} weight="bold" className="text-[#282828]" />
-                            </button>
+                        )
+                    )}
 
-                            {[...Array(totalPages)].map((_, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    className={`px-3 py-1 rounded ${currentPage === i + 1
-                                        ? "bg-[#16284F] text-white"
-                                        : "border text-[#282828] hover:bg-gray-100"
-                                        }`}
-                                >
-                                    {i + 1}
-                                </button>
-                            ))}
+                    {activeTab === "quiz" && (
+                        <>
+                            {quizView === "ongoing" && (
+                                <div className="flex flex-col">
+                                    {STATIC_ONGOING_QUIZZES.map((quiz) => (
+                                        <QuizCard key={quiz.id} data={quiz} />
+                                    ))}
+                                </div>
+                            )}
 
-                            {/* Next */}
-                            <button
-                                onClick={() =>
-                                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                                }
-                                disabled={currentPage === totalPages}
-                                className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === totalPages
-                                    ? "opacity-40 cursor-not-allowed"
-                                    : "hover:bg-gray-100"
-                                    }`}
-                            >
-                                <CaretRight size={18} weight="bold" className="text-[#282828]" />
-                            </button>
-                        </div>
+                            {quizView === "attempted" && (
+                                <div className="flex flex-col">
+                                    {STATIC_ATTEMPTED_QUIZZES.map((quiz) => (
+                                        <AttemptedQuizCard key={quiz.id} data={quiz} />
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
-            </div >
-        </>
+
+                {activeTab === "assignments" && totalPages > 1 && (
+                    <div className="flex justify-end items-center gap-3 mt-6">
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === 1
+                                ? "opacity-40 cursor-not-allowed"
+                                : "hover:bg-gray-100"
+                                }`}
+                        >
+                            <CaretLeft size={18} weight="bold" className="text-[#282828]" />
+                        </button>
+
+                        {[...Array(totalPages)].map((_, i) => (
+                            <button
+                                key={i}
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={`px-3 py-1 cursor-pointer rounded ${currentPage === i + 1
+                                    ? "bg-[#16284F] text-white"
+                                    : "border text-[#282828] hover:bg-gray-100"
+                                    }`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+
+                        <button
+                            onClick={() =>
+                                setCurrentPage((p) => Math.min(totalPages, p + 1))
+                            }
+                            disabled={currentPage === totalPages}
+                            className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === totalPages
+                                ? "opacity-40 cursor-not-allowed"
+                                : "hover:bg-gray-100"
+                                }`}
+                        >
+                            <CaretRight size={18} weight="bold" className="text-[#282828]" />
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+export default function AssignmentsLeft() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center w-full py-10"><Loader /></div>}>
+            <AssignmentsLeftContent />
+        </Suspense>
+    );
+}
+
+
+export function Assignments() {
+    return (
+        <div className="flex items-start justify-between">
+            <AssignmentsLeft />
+            <AssignmentsRight />
+        </div>
     )
 }
