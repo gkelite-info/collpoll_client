@@ -45,52 +45,6 @@ export default function FacultyDashRight() {
 
   };
 
-<<<<<<< Updated upstream
-  // useEffect(() => {
-  //   const loadTasks = async () => {
-  //     try {
-  //       const { data: authData } = await supabase.auth.getUser();
-  //       const auth_id = authData?.user?.id;
-  //       if (!auth_id) return;
-
-  //       const { data: user, error: userError } = await supabase
-  //         .from("users")
-  //         .select("userId")
-  //         .eq("auth_id", auth_id)
-  //         .single();
-
-  //       if (userError || !user) {
-  //         console.error("USER FETCH ERROR", userError);
-  //         return;
-  //       }
-
-  //       const res = await fetchFacultyTasks(user.userId);
-
-  //       if (!res.success || !res.tasks) {
-  //         setTasks([]);
-  //         return;
-  //       }
-  //       setTasks(
-  //         res.tasks.map((t: any) => ({
-  //           facultytaskId: t.facultytaskId,
-  //           title: t.facultytaskTitle,
-  //           description: t.facultytaskDescription,
-  //           time: t.facultytaskassignedTime,
-  //           facultytaskcreatedDate: t.facultytaskcreatedDate,
-  //         }))
-  //       );
-
-
-  //     } catch (err) {
-  //       console.error("LOAD TASKS ERROR", err);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   loadTasks();
-  // }, []);
-=======
   useEffect(() => {
 
     if (!facultyLoading && collegeSubjectId) {
@@ -98,7 +52,6 @@ export default function FacultyDashRight() {
     }
 
   }, [facultyLoading, collegeSubjectId]);
->>>>>>> Stashed changes
 
   const card = [
     {

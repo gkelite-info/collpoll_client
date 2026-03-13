@@ -15,10 +15,7 @@ export type FacultyTaskRow = {
 };
 
 export async function fetchFacultyTasks(collegeSubjectId: number) {
-<<<<<<< Updated upstream
-=======
   const today = new Date().toISOString().split("T")[0];
->>>>>>> Stashed changes
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
@@ -35,10 +32,7 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
       deletedAt
     `)
     .eq("collegeSubjectId", collegeSubjectId)
-<<<<<<< Updated upstream
-=======
       .eq("date", today)  
->>>>>>> Stashed changes
     .eq("isActive", true)
     .is("deletedAt", null)
     .order("date", { ascending: true });
@@ -99,22 +93,6 @@ export async function saveFacultyTask(
     updatedAt: now,
   };
 
-<<<<<<< Updated upstream
-  if (!payload.facultyTaskId) {
-    upsertPayload.createdBy = facultyId;
-    upsertPayload.createdAt = now;
-  } else {
-    upsertPayload.facultyTaskId = payload.facultyTaskId;
-  }
-
-  const { data, error } = await supabase
-    .from("faculty_tasks")
-    .upsert(upsertPayload, {
-      onConflict: "facultyTaskId",
-    })
-    .select("facultyTaskId")
-    .single();
-=======
   // INSERT (keep same behaviour)
   if (!payload.facultyTaskId) {
 
@@ -144,7 +122,6 @@ export async function saveFacultyTask(
     .from("faculty_tasks")
     .update(upsertPayload)
     .eq("facultyTaskId", payload.facultyTaskId);
->>>>>>> Stashed changes
 
   if (error) {
     console.error("saveFacultyTask error:", error);
@@ -153,28 +130,18 @@ export async function saveFacultyTask(
 
   return {
     success: true,
-<<<<<<< Updated upstream
-    facultyTaskId: data.facultyTaskId,
-=======
     facultyTaskId: payload.facultyTaskId,
->>>>>>> Stashed changes
   };
 }
 
 
 export async function deactivateFacultyTask(facultyTaskId: number) {
-<<<<<<< Updated upstream
-=======
   
->>>>>>> Stashed changes
   const { error } = await supabase
     .from("faculty_tasks")
     .update({
       isActive: false,
-<<<<<<< Updated upstream
-=======
       is_deleted: true,
->>>>>>> Stashed changes
       deletedAt: new Date().toISOString(),
     })
     .eq("facultyTaskId", facultyTaskId);
@@ -213,8 +180,4 @@ export async function fetchFacultyTasksForLoggedInFaculty(
   }
 
   return data ?? [];
-<<<<<<< Updated upstream
 }
-=======
-}
->>>>>>> Stashed changes

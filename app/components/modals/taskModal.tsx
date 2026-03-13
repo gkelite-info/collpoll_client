@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
-<<<<<<< Updated upstream
-
-=======
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
->>>>>>> Stashed changes
 
 export type TaskPayload = {
   title: string;
@@ -51,11 +47,7 @@ export default function TaskModal({
   const [dueTime, setDueTime] = useState("");
 
   useEffect(() => {
-<<<<<<< Updated upstream
-    if (defaultValues?.facultytaskId) {
-=======
     if (defaultValues?.facultyTaskId) {
->>>>>>> Stashed changes
 
       setTitle(defaultValues.title);
       setDescription(defaultValues.description);
@@ -88,10 +80,6 @@ export default function TaskModal({
       return;
     }
 
-<<<<<<< Updated upstream
-
-
-=======
     // UPDATE TASK
     if (defaultValues?.facultyTaskId) {
 
@@ -135,7 +123,6 @@ export default function TaskModal({
     }
 
     onSave();
->>>>>>> Stashed changes
     onClose();
   };
 
