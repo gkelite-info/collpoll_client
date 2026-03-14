@@ -101,6 +101,7 @@ export default function FacultyDashRight() {
 
         <TaskModal
           open={openModal}
+          role="faculty"
           collegeSubjectId={collegeSubjectId!}
           facultyId={facultyId!}
           onClose={() => {
@@ -114,6 +115,7 @@ export default function FacultyDashRight() {
             setEditingTask(null);
           }}
         />
+
       )}
 
       <AnnouncementsCard announceCard={card} />

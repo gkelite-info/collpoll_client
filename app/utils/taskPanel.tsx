@@ -5,6 +5,7 @@ import { CheckCircle, PencilSimple, Trash } from "@phosphor-icons/react";
 import TaskModal from "@/app/components/modals/taskModal";
 import { deactivateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import TaskCardShimmer from "../(screens)/faculty/shimmers/TaskCardShimmer";
+import { deactivateStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 
 
 export type Task = {
@@ -25,6 +26,7 @@ export type TaskPanelProps = {
   studentTasks?: Task[];
   collegeSubjectId?: number;
   facultyId?: number;
+  studentId?: number;
   onEditTask?: (task: Task) => void;
   onAddTask?: () => void;
   onSaveTask?: (
@@ -46,6 +48,7 @@ export default function TaskPanel({
   studentTasks = [],
   collegeSubjectId,
   facultyId,
+  studentId,
   loading = false,
   onEditTask,
   onAddTask,
@@ -176,7 +179,12 @@ export default function TaskPanel({
                       (role === "student" && activeView === "student")) && (
                         <button
                           onClick={() => {
-                            onEditTask?.(task);
+                            if (onEditTask) {
+                              onEditTask(task);   // faculty edit handled by parent
+                            } else {
+                              setEditTask(task);  // student edit handled locally
+                              setOpenModal(true);
+                            }
                           }}
                           className="p-1 rounded-full hover:bg-[#DFF3E9] cursor-pointer"
                         >
@@ -190,7 +198,10 @@ export default function TaskPanel({
                           onClick={async () => {
                             if (!confirm("Delete this task?")) return;
 
-                            const res = await deactivateFacultyTask(task.facultyTaskId);
+                            const res =
+                              role === "student"
+                                ? await deactivateStudentTask(task.facultyTaskId)
+                                : await deactivateFacultyTask(task.facultyTaskId);
 
                             if (!res.success) {
                               alert("Failed to delete task");
@@ -215,8 +226,10 @@ export default function TaskPanel({
       {onSaveTask && (
         <TaskModal
           open={openModal}
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
+          role={role}
+          collegeSubjectId={collegeSubjectId}
+          facultyId={facultyId}
+          studentId={studentId}
           defaultValues={editTask}
           onClose={() => {
             setOpenModal(false);
