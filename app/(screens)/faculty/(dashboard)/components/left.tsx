@@ -25,6 +25,8 @@ import {
   UpcomingLesson,
 } from "@/lib/helpers/faculty/attendance/getClasses";
 import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
+import { getFacultyDashboardStats } from "@/lib/helpers/faculty/dashboard/getFacultyDashboardStats";
+import { UpcomingClassesSkeleton } from "./shimmer/UpcomingClassesSkeleton";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
@@ -37,48 +39,68 @@ export default function FacultyDashLeft() {
     INITIAL_SCHEDULED_LESSONS,
   );
 
+  const [stats, setStats] = useState({
+    totalClasses: 0,
+    acceptedClasses: 0,
+    totalHours: 0,
+    acceptedHours: 0,
+    totalStudents: 0,
+    presentStudents: 0,
+    totalLessons: 0,
+    completedLessons: 0,
+  });
+
+  const loadData = async () => {
+    if (userLoading || facultyLoading || !userId || !facultyId) return;
+    try {
+      setIsLoadingClasses(true);
+      // Run both fetches concurrently for speed
+      const [classesData, statsData] = await Promise.all([
+        getUpcomingClasses(Number(userId)),
+        getFacultyDashboardStats(Number(facultyId)),
+      ]);
+      setUpcomingClasses(classesData);
+      setStats(statsData);
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error);
+    } finally {
+      setIsLoadingClasses(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchClasses = async () => {
-      if (userLoading || facultyLoading || !userId) return;
-      try {
-        setIsLoadingClasses(true);
-        const data = await getUpcomingClasses(Number(userId));
-        setUpcomingClasses(data);
-      } catch (error) {
-        console.error("Failed to fetch classes:", error);
-      } finally {
-        setIsLoadingClasses(false);
-      }
-    };
-    fetchClasses();
-  }, [userId, userLoading, facultyLoading]);
+    loadData();
+  }, [userId, facultyId, userLoading, facultyLoading]);
 
   const facultyImage =
     gender && (gender === "Female" ? "/faculty-f.png" : "/faculty-male.png");
 
+  const pad = (num: number) => num.toString().padStart(2, "0");
+
+  // ---> DYNAMIC CARDS <---
   const cardData = [
     {
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
-      value: "02/08",
+      value: `${pad(stats.acceptedClasses)}/${pad(stats.totalClasses)}`,
       label: "Total Classes",
     },
     {
       style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
       icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
-      value: "30/35",
+      value: `${pad(stats.presentStudents)}/${pad(stats.totalStudents)}`,
       label: "Total Students",
     },
     {
       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-      value: "12/15",
+      value: `${pad(stats.completedLessons)}/${pad(stats.totalLessons)}`,
       label: "Total Lessons",
     },
     {
       style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
       icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
-      value: "05/09",
+      value: `${pad(stats.acceptedHours)}/${pad(stats.totalHours)}`,
       label: "Total Hours",
     },
   ];
@@ -106,6 +128,13 @@ export default function FacultyDashLeft() {
     setScheduledLessons((prev) => [newLesson, ...prev]);
   };
 
+  const handleAcceptSuccess = async () => {
+    if (facultyId) {
+      const newStats = await getFacultyDashboardStats(Number(facultyId));
+      setStats(newStats);
+    }
+  };
+
   return (
     <>
       <div className="w-[68%] p-2">
@@ -128,17 +157,12 @@ export default function FacultyDashLeft() {
                 <StudentPerformanceCard students={STUDENT_DATA} />
               </div>
               <div className="overflow-y-auto shadow-md rounded-2xl bg-white min-h-75">
-                {isLoadingClasses ? (
-                  <div className="flex justify-center items-center h-full text-gray-400">
-                    Loading classes...
-                  </div>
-                ) : (
-                  <UpcomingClasses
-                    lessons={upcomingClasses}
-                    onAddLesson={() => {}}
-                    facultyId={Number(facultyId)}
-                  />
-                )}
+                <UpcomingClasses
+                  lessons={upcomingClasses}
+                  onAddLesson={() => {}}
+                  facultyId={Number(facultyId)}
+                  loading={isLoadingClasses}
+                />
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-3">

@@ -296,12 +296,17 @@ import toast from "react-hot-toast";
 import { UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
 import { ClassActionModal } from "../(dashboard)/components/ClassActionModal";
+import {
+  LessonShimmer,
+  UpcomingClassesSkeleton,
+} from "../(dashboard)/components/shimmer/UpcomingClassesSkeleton";
 
 interface UpcomingClassesProps {
   lessons: UpcomingLesson[];
   onAddLesson: (newLesson: Omit<UpcomingLesson, "id">) => void;
   facultyId: number;
   className?: string;
+  loading?: boolean;
 }
 
 interface ModalProps {
@@ -488,6 +493,7 @@ export default function UpcomingClasses({
   lessons,
   onAddLesson,
   facultyId,
+  loading,
 }: UpcomingClassesProps) {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -565,19 +571,26 @@ export default function UpcomingClasses({
         </div>
 
         <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 max-h-[350px]">
-          {localLessons.map((lesson) => (
-            <div
-              key={lesson.id}
-              onClick={() => handleLessonClick(lesson)}
-              className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
-            >
-              <LessonCard lesson={lesson} />
-            </div>
-          ))}
-          {localLessons.length === 0 && (
-            <div className="text-center py-10 text-gray-400 text-sm italic">
-              No upcoming classes scheduled.
-            </div>
+          {loading ? (
+            <UpcomingClassesSkeleton />
+          ) : (
+            <>
+              {localLessons.map((lesson) => (
+                <div
+                  key={lesson.id}
+                  onClick={() => handleLessonClick(lesson)}
+                  className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg lesson-card-wrapper"
+                  data-lesson-id={lesson.id}
+                >
+                  <LessonCard lesson={lesson} />
+                </div>
+              ))}
+              {localLessons.length === 0 && (
+                <div className="text-center py-10 text-gray-400 text-sm italic">
+                  No upcoming classes scheduled.
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
