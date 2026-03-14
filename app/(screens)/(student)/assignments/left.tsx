@@ -9,7 +9,11 @@ import { getSubmissionForAssignment } from "@/lib/helpers/student/assignments/in
 import { Loader } from "../calendar/right/timetable";
 import { CaretLeft, CaretRight, } from "@phosphor-icons/react";
 import AssignmentsRight from "./right";
-import QuizCard, { AttemptedQuizCard, QuizAttemptScreen, STATIC_ATTEMPTED_QUIZZES, STATIC_ONGOING_QUIZZES } from "./components/quizCard";
+import QuizCard, { AttemptedQuizCard } from "./components/quizCard";
+import { STATIC_ATTEMPTED_QUIZZES, STATIC_ONGOING_QUIZZES } from "./components/quizData";
+import QuizViewAnswersScreen from "./components/quizViewAnswersScreen";
+import QuizPerformanceModal from "./components/quizPerformanceModal";
+import QuizAttemptScreen from "./components/QuizAttemptScreen";
 
 function AssignmentsLeftContent() {
     const router = useRouter();
@@ -17,6 +21,7 @@ function AssignmentsLeftContent() {
     const searchParams = useSearchParams();
     const action = searchParams.get("action");
     const activeQuizId = searchParams.get("quizId");
+    const activeModal = searchParams.get("modal");
     const activeTab = searchParams.get("tab") || "assignments";
     const activeView = (searchParams.get("view") as "active" | "previous") || "active";
     const quizView = (searchParams.get("quizView") as "ongoing" | "attempted") || "ongoing";
@@ -182,17 +187,34 @@ function AssignmentsLeftContent() {
         return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
     }
 
-    if (activeTab === "quiz" && action === "attempt" && activeQuizId) {
-        const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
-        return (
-            <div className="w-[68%] p-2 flex flex-col h-full">
-                <QuizAttemptScreen quiz={activeQuizData} />
-            </div>
-        );
+    // if (activeTab === "quiz" && action === "attempt" && activeQuizId) {
+    //     const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
+    //     return (
+    //         <div className="w-[68%] p-2 flex flex-col h-full">
+    //             <QuizAttemptScreen quiz={activeQuizData} />
+    //         </div>
+    //     );
+    // }
+
+    if (activeTab === "quiz" && activeQuizId) {
+        if (action === "attempt") {
+            const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
+            return <div className="w-[68%] p-2 flex flex-col h-full"><QuizAttemptScreen quiz={activeQuizData} /></div>;
+        }
+        if (action === "viewAnswers") {
+            const activeQuizData = STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId);
+            return <div className="w-[68%] p-2 flex flex-col h-full"><QuizViewAnswersScreen quiz={activeQuizData} /></div>;
+        }
     }
+
+    // Fetch the target modal quiz data if the performance modal should be open
+    const targetModalQuiz = activeModal === "performance" && activeQuizId
+        ? STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId)
+        : null;
 
     return (
         <div className="w-[68%] p-2 flex flex-col h-full">
+            {targetModalQuiz && <QuizPerformanceModal quiz={targetModalQuiz} />}
             <div className="mb-4">
                 <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
                     <span
