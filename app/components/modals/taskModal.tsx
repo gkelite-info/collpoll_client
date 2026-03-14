@@ -217,7 +217,6 @@ export default function TaskModal({
             className="border rounded-md px-3 py-2 text-sm h-[80px] resize-none outline-none text-[#282828]"
           />
         </div>
-
         <h3 className="text-sm font-semibold text-[#282828] mb-2">Schedule</h3>
 
         <div className="flex gap-3 mb-5">
