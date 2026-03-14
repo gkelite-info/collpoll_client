@@ -5,18 +5,18 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
-import { addStudentTask, getStudentTasks, updateStudentTask, } from "@/lib/helpers/profile/Task/studentTasks";
-import { supabase } from "@/lib/supabaseClient";
+import { fetchStudentTasks, saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 import { useEffect, useState } from "react";
-import { date } from "yup";
+
 
 export default function StuDashRight() {
 
   const [studentTasks, setStudentTasks] = useState<any[]>([]);
-  const [studentId, setStudentId] = useState<number | null>(null);
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
   const [collegeId, setCollegeId] = useState<number | null>(null);
-  const { subjects } = useStudent();
+  const { subjects, studentId } = useStudent();
+  const [loading, setLoading] = useState(true);
+
 
   // useEffect(() => {
   //   async function fetchStudentId() {
@@ -74,6 +74,40 @@ export default function StuDashRight() {
 
   //   fetchStudentTasks();
   // }, [studentId]);
+  useEffect(() => {
+
+    console.log("Student ID:", studentId);
+
+    if (!studentId) {
+      console.log("Student ID not available yet");
+      return;
+    }
+
+    const loadStudentTasks = async () => {
+
+      setLoading(true);   // ✅ start shimmer
+
+      const data = await fetchStudentTasks(studentId);
+
+      console.log("Student tasks from DB:", data);
+
+      const formatted = data.map((task) => ({
+        facultyTaskId: task.studentTaskId,
+        title: task.taskTitle,
+        description: task.description,
+        time: task.time,
+        date: task.date,
+      }));
+
+      setStudentTasks(formatted);
+
+      setLoading(false);  // ✅ stop shimmer
+    };
+
+    loadStudentTasks();
+
+  }, [studentId]);
+
 
 
   useEffect(() => {
@@ -123,53 +157,44 @@ export default function StuDashRight() {
     },
     taskId?: number
   ) => {
+
     if (!studentId) return;
 
     try {
-      if (taskId) {
-        const updated = await updateStudentTask(taskId, {
-          studenttaskTitle: payload.title,
-          studenttaskDescription: payload.description,
-          studenttaskcreateDate: payload.dueDate,
-          studenttaskassignedTime: payload.dueTime,
-        });
 
-        setStudentTasks((prev) =>
-          prev.map((t) =>
-            t.facultytaskId === taskId
-              ? {
-                ...t,
-                title: updated.studenttaskTitle,
-                description: updated.studenttaskDescription,
-                time: updated.studenttaskassignedTime,
-                facultytaskcreatedDate: updated.studenttaskcreateDate,
-              }
-              : t
-          )
-        );
-      } else {
-        const inserted = await addStudentTask({
-          studentId,
-          studenttaskTitle: payload.title,
-          studenttaskDescription: payload.description,
-          studenttaskcreateDate: payload.dueDate,
-          studenttaskassignedTime: payload.dueTime,
-        });
+      const response = await saveStudentTask(
+        {
+          studentTaskId: taskId,
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime
+        },
+        studentId
+      );
 
-        setStudentTasks((prev) => [
-          {
-            facultytaskId: inserted.studenttaskId,
-            title: inserted.studenttaskTitle,
-            description: inserted.studenttaskDescription,
-            time: inserted.studenttaskassignedTime,
-            facultytaskcreatedDate: inserted.studenttaskcreateDate,
-          },
-          ...prev,
-        ]);
+      if (!response.success) {
+        console.error("Save student task failed");
+        return;
       }
+
+      // reload tasks
+      const updatedTasks = await fetchStudentTasks(studentId);
+
+      const formatted = updatedTasks.map((task: any) => ({
+        facultyTaskId: task.studentTaskId,
+        title: task.taskTitle,
+        description: task.description,
+        time: task.time,
+        date: task.date,
+      }));
+
+      setStudentTasks(formatted);
+
     } catch (err) {
       console.error("Save student task failed", err);
     }
+
   };
 
   const myTasks = [
@@ -251,6 +276,8 @@ export default function StuDashRight() {
         <WorkWeekCalendar />
         <TaskPanel
           role="student"
+          loading={loading}
+          studentId={studentId ?? undefined}
           studentTasks={studentTasks}
           facultyTasks={facultyTasks}
           onAddTask={() => { }}

@@ -14,6 +14,26 @@ export type StudentTaskRow = {
 };
 
 export async function fetchStudentTasks(studentId: number) {
+
+    const today = new Date().toLocaleDateString("en-CA");
+
+    // 1️⃣ Deactivate past tasks
+    const { error: deactivateError } = await supabase
+        .from("student_tasks")
+        .update({
+            isActive: false,
+            is_deleted: true,
+            deletedAt: new Date().toISOString(),
+        })
+        .lt("date", today)
+        .eq("createdBy", studentId)
+        .eq("isActive", true);
+
+    if (deactivateError) {
+        console.error("auto deactivate student tasks error:", deactivateError);
+    }
+
+    // 2️⃣ Fetch today's tasks
     const { data, error } = await supabase
         .from("student_tasks")
         .select(`
@@ -29,9 +49,10 @@ export async function fetchStudentTasks(studentId: number) {
       deletedAt
     `)
         .eq("createdBy", studentId)
+        .eq("date", today)
         .eq("isActive", true)
         .is("deletedAt", null)
-        .order("date", { ascending: true });
+        .order("time", { ascending: true });
 
     if (error) {
         console.error("fetchStudentTasks error:", error);
@@ -73,31 +94,50 @@ export async function saveStudentTask(
         date: string;
         time: string;
     },
-    studentId: number,
+    studentId: number
 ) {
+
     const now = new Date().toISOString();
 
-    const upsertPayload: any = {
-        taskTitle: payload.taskTitle.trim(),
-        description: payload.description.trim(),
-        date: payload.date,
-        time: payload.time,
-        updatedAt: now,
-    };
+    // UPDATE TASK
+    if (payload.studentTaskId) {
 
-    if (!payload.studentTaskId) {
-        upsertPayload.createdBy = studentId;
-        upsertPayload.createdAt = now;
-    } else {
-        upsertPayload.studentTaskId = payload.studentTaskId;
+        const { data, error } = await supabase
+            .from("student_tasks")
+            .update({
+                taskTitle: payload.taskTitle.trim(),
+                description: payload.description.trim(),
+                date: payload.date,
+                time: payload.time,
+                updatedAt: now,
+            })
+            .eq("studentTaskId", payload.studentTaskId)
+            .eq("createdBy", studentId)
+            .is("deletedAt", null)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("updateStudentTask error:", error);
+            return { success: false, error };
+        }
+
+        return { success: true, data };
     }
 
+    // INSERT TASK
     const { data, error } = await supabase
         .from("student_tasks")
-        .upsert(upsertPayload, {
-            onConflict: "studentTaskId",
+        .insert({
+            taskTitle: payload.taskTitle.trim(),
+            description: payload.description.trim(),
+            date: payload.date,
+            time: payload.time,
+            createdBy: studentId,
+            createdAt: now,
+            updatedAt: now,
         })
-        .select("studentTaskId")
+        .select()
         .single();
 
     if (error) {
@@ -105,10 +145,7 @@ export async function saveStudentTask(
         return { success: false, error };
     }
 
-    return {
-        success: true,
-        studentTaskId: data.studentTaskId,
-    };
+    return { success: true, data };
 }
 
 export async function deactivateStudentTask(studentTaskId: number) {
@@ -151,4 +188,37 @@ export async function fetchStudentTasksForLoggedInStudent(
     }
 
     return data ?? [];
+}
+
+export async function updateStudentTask(
+    payload: {
+        studentTaskId: number;
+        taskTitle: string;
+        description: string;
+        date: string;
+        time: string;
+    },
+    studentId: number
+) {
+    const { data, error } = await supabase
+        .from("student_tasks")
+        .update({
+            taskTitle: payload.taskTitle.trim(),
+            description: payload.description.trim(),
+            date: payload.date,
+            time: payload.time,
+            updatedAt: new Date().toISOString(),
+        })
+        .eq("studentTaskId", payload.studentTaskId)
+        .eq("createdBy", studentId)
+        .is("deletedAt", null)   // ✅ correct filter
+        .select()
+        .single();
+
+    if (error) {
+        console.error("updateStudentTask error:", error);
+        return { success: false, error };
+    }
+
+    return { success: true, data };
 }

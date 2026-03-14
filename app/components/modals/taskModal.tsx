@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import toast from "react-hot-toast";
+import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 
 export type TaskPayload = {
   title: string;
@@ -14,8 +15,10 @@ export type TaskPayload = {
 
 type TaskModalProps = {
   open: boolean;
-  collegeSubjectId: number;
-  facultyId: number;
+  role: "faculty" | "student";
+  collegeSubjectId?: number;
+  facultyId?: number;
+  studentId?: number;
   onClose: () => void;
   defaultValues?: {
     facultyTaskId: number;
@@ -33,14 +36,16 @@ const getWordCount = (text: string) => {
 
 export default function TaskModal({
   open,
+  role,
   collegeSubjectId,
   facultyId,
+  studentId,
   onClose,
   onSave,
   defaultValues,
 }: TaskModalProps) {
 
-  if (!open) return null;
+ 
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -48,6 +53,7 @@ export default function TaskModal({
   const [dueTime, setDueTime] = useState("");
   const [saving, setSaving] = useState(false);
 
+  
   useEffect(() => {
     if (defaultValues?.facultyTaskId) {
 
@@ -69,6 +75,9 @@ export default function TaskModal({
 
     }
   }, [defaultValues]);
+
+   if (!open) return null;
+
 
   const handleSave = async () => {
 
@@ -98,14 +107,20 @@ export default function TaskModal({
     try {
       setSaving(true);
 
-      // UPDATE TASK
-      if (defaultValues?.facultyTaskId) {
+      // FACULTY TASK
+      if (role === "faculty") {
+
+        if (!collegeSubjectId || !facultyId) {
+          toast.error("Invalid subject or faculty");
+          return;
+        }
+
         const response = await saveFacultyTask(
           {
-            facultyTaskId: defaultValues.facultyTaskId,
+            facultyTaskId: defaultValues?.facultyTaskId,
             collegeSubjectId,
             taskTitle: title,
-            description: description,
+            description,
             date: dueDate,
             time: dueTime
           },
@@ -113,36 +128,47 @@ export default function TaskModal({
         );
 
         if (!response.success) {
-          toast.error("Failed to update task");
+          toast.error("Failed to save task");
           return;
         }
 
-        toast.success("Task updated successfully");
-        onSave();
-        onClose();
-        return;
+        toast.success(
+          defaultValues ? "Task updated successfully" : "Task created successfully"
+        );
       }
 
-      // INSERT TASK
-      const response = await saveFacultyTask(
-        {
-          collegeSubjectId,
-          taskTitle: title,
-          description: description,
-          date: dueDate,
-          time: dueTime
-        },
-        facultyId
-      );
+      // STUDENT TASK
+      if (role === "student") {
 
-      if (!response.success) {
-        toast.error("Failed to create task");
-        return;
+        if (!studentId) {
+          toast.error("Invalid student");
+          return;
+        }
+
+        const response = await saveStudentTask(
+          {
+            studentTaskId: defaultValues?.facultyTaskId,
+            taskTitle: title,
+            description,
+            date: dueDate,
+            time: dueTime
+          },
+          studentId
+        );
+
+        if (!response.success) {
+          toast.error("Failed to save task");
+          return;
+        }
+
+        toast.success(
+          defaultValues ? "Task updated successfully" : "Task created successfully"
+        );
       }
 
-      toast.success("Task created successfully");
       onSave();
       onClose();
+
     } finally {
       setSaving(false);
     }
@@ -226,8 +252,8 @@ export default function TaskModal({
             onClick={handleSave}
             disabled={saving}
             className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${saving
-                ? "bg-[#A7DDBE] text-white cursor-not-allowed"
-                : "bg-[#43C17A] text-white hover:bg-[#3AAA6B]"
+              ? "bg-[#A7DDBE] text-white cursor-not-allowed"
+              : "bg-[#43C17A] text-white hover:bg-[#3AAA6B]"
               }`}
           >
             {saving ? "Saving..." : "Save Task"}

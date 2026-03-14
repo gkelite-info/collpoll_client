@@ -4,11 +4,15 @@ import CalendarTimeTable from "./timetable";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 import TaskModal from "@/app/components/modals/taskModal";
+import { useUser } from "@/app/utils/context/UserContext";
 
 
 export default function CalendarRight() {
+    const { role, facultyId, studentId } = useUser();
 
     const [openModal, setOpenModal] = useState(false);
+
+
     const [card, setCard] = useState([
         {
             title: "AI Lab",
@@ -24,8 +28,23 @@ export default function CalendarRight() {
 
     return (
         <>
-            {/*Need to change the TaskModel props like facultyId, collegeSubjectId (studentId)*/}
-            <TaskModal open={openModal} facultyId={1} collegeSubjectId={2} onClose={() => setOpenModal(false)} onSave={() => addTask(1)} />
+
+            <TaskModal
+                open={openModal}
+                role={role === "Faculty" ? "faculty" : "student"}
+                facultyId={facultyId ?? undefined}
+                studentId={studentId ?? undefined}
+                collegeSubjectId={2}
+                onClose={() => setOpenModal(false)}
+                onSave={() =>
+                    addTask({
+                        title: "New Task",
+                        description: "Task added",
+                        dueDate: new Date().toISOString().split("T")[0],
+                        dueTime: "12:00"
+                    })
+                }
+            />
 
             <div className="bg-pink-00 h-full flex flex-col justify-between">
                 <CalendarTimeTable />
