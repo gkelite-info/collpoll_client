@@ -1,4 +1,4 @@
-import { Alarm, ArrowLeft, ArrowsClockwise, CalendarBlank, CalendarDotsIcon, Clock, ClockCountdownIcon, Question, RepeatIcon, UserCircle } from "@phosphor-icons/react";
+import { Alarm, ArrowLeft, CalendarDotsIcon, ClockCountdownIcon, Question, RepeatIcon, UserCircle } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -201,8 +201,19 @@ export default function QuizCard({ data }: { data: any }) {
 
 
 export function AttemptedQuizCard({ data }: { data: any }) {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const handleOpenModal = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("modal", "performance");
+        params.set("quizId", data.id.toString());
+        router.push(`${pathname}?${params.toString()}`);
+    };
     return (
-        <div className="flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
+        <div
+            onClick={handleOpenModal}
+            className="flex items-stretch cursor-pointer justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
             <div className="flex items-stretch gap-5 h-full w-full">
                 <div className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}>
                     <img src="/ds.jpg" alt="Course Cover" className="object-cover w-full h-full opacity-80 mix-blend-overlay" />
@@ -253,7 +264,7 @@ export function AttemptedQuizCard({ data }: { data: any }) {
     );
 }
 
-export function QuizAttemptScreen({ quiz }: { quiz: any }) {
+export function QuizAttemptScreenOld({ quiz }: { quiz: any }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -265,7 +276,7 @@ export function QuizAttemptScreen({ quiz }: { quiz: any }) {
     }));
 
     const [answers, setAnswers] = useState<Record<number, string>>({});
-    
+
     const initialMinutes = parseInt(quiz?.timeLimit.split(" ")[0]) || 30;
     const [timeLeft, setTimeLeft] = useState(initialMinutes * 60);
 
@@ -309,16 +320,16 @@ export function QuizAttemptScreen({ quiz }: { quiz: any }) {
         <div className="flex flex-col h-full bg-[#f4f4f4] rounded-lg -m-2 p-4 relative">
             <div className="flex justify-between items-start mb-2">
                 <div className="flex flex-col gap-1">
-                    <ArrowLeft 
-                        size={24} 
-                        className="text-[#282828] cursor-pointer hover:text-gray-600 mb-2" 
-                        weight="bold" 
+                    <ArrowLeft
+                        size={24}
+                        className="text-[#282828] cursor-pointer hover:text-gray-600 mb-2"
+                        weight="bold"
                         onClick={handleBack}
                     />
                     <h2 className="text-xl font-bold text-[#282828]">{quiz?.courseName || "Operating Systems"}</h2>
                     <p className="text-sm font-medium text-[#282828]">{quiz?.topic || "Process Scheduling & Deadlocks"}</p>
                 </div>
-                
+
                 <div className="flex items-center gap-2 bg-[#182142] text-white px-4 py-2 rounded-md">
                     <Alarm size={20} weight="fill" className="text-[#87cefa]" />
                     <span className="font-bold text-lg">{formatTime(timeLeft)}</span>
@@ -332,7 +343,7 @@ export function QuizAttemptScreen({ quiz }: { quiz: any }) {
                     </span>
                 </div>
                 <div className="h-2.5 w-full bg-[#43C17A2B] rounded-full overflow-hidden">
-                    <div 
+                    <div
                         className="h-full bg-[#43C17A] transition-all duration-300 ease-in-out"
                         style={{ width: `${progressPercentage}%` }}
                     />
@@ -354,9 +365,9 @@ export function QuizAttemptScreen({ quiz }: { quiz: any }) {
                                         <span className={`text-sm ${isSelected ? "text-[#282828]" : "text-gray-500"}`}>
                                             {opt}
                                         </span>
-                                        <input 
-                                            type="radio" 
-                                            name={`question-${q.id}`} 
+                                        <input
+                                            type="radio"
+                                            name={`question-${q.id}`}
                                             value={opt}
                                             checked={isSelected}
                                             onChange={() => handleOptionChange(q.id, opt)}
@@ -371,7 +382,7 @@ export function QuizAttemptScreen({ quiz }: { quiz: any }) {
             </div>
 
             <div className="pt-4 flex justify-end">
-                <button 
+                <button
                     onClick={handleSubmit}
                     className="bg-[#43C17A] cursor-pointer text-white px-6 py-2.5 rounded-md font-bold text-sm"
                 >
