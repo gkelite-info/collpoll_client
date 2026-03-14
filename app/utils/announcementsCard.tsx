@@ -1,3 +1,5 @@
+"use client";
+
 import { Plus } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 
