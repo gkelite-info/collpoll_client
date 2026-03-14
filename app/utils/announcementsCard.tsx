@@ -1,3 +1,8 @@
+"use client";
+
+import { Plus } from "@phosphor-icons/react";
+import { usePathname } from "next/navigation";
+
 type AnnounceCard = {
   image: string;
   imgHeight: string;
@@ -11,15 +16,33 @@ type AnnounceCard = {
 type AnnouncementsCardProps = {
   announceCard: AnnounceCard[];
   height?: string;
+  onAddClick?: () => void;
 };
 
 export default function AnnouncementsCard({
   announceCard,
   height,
+  onAddClick,
 }: AnnouncementsCardProps) {
+  const pathname = usePathname();
+  const isFinanceDashboard = pathname.startsWith("/finance");
+
   return (
     <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-fit">
-      <h4 className="text-[#282828] font-semibold mb-3 ml-1">Announcements</h4>
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h4 className="text-[#282828] font-semibold">
+          Announcements
+        </h4>
+
+        {isFinanceDashboard && (
+          <button
+            onClick={() => onAddClick?.()}
+            className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer"
+          >
+            <Plus size={14} weight="bold" />
+          </button>
+        )}
+      </div>
       <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
         {announceCard.map((card, index) => (
           <div

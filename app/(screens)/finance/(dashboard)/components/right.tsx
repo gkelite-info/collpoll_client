@@ -1,6 +1,8 @@
+import AddAnnouncementModal from "@/app/components/modals/AddAnnouncementModal";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { useState } from "react";
 
 const card = [
   {
@@ -132,11 +134,17 @@ const card = [
 ];
 
 export default function SemwiseDetailsRight() {
+  const [openModal, setOpenModal] = useState(false);
+
   return (
     <div className="w-[32%] p-2 flex flex-col">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
-      <AnnouncementsCard announceCard={card} height="80vh" />
+      <AnnouncementsCard announceCard={card} height="80vh" onAddClick={() => setOpenModal(true)} />
+      <AddAnnouncementModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+      />
     </div>
   );
 }

@@ -213,7 +213,7 @@ export function AttemptedQuizCard({ data }: { data: any }) {
     return (
         <div
             onClick={handleOpenModal}
-            className="flex items-stretch cursor-pointer justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
+            className="flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
             <div className="flex items-stretch gap-5 h-full w-full">
                 <div className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}>
                     <img src="/ds.jpg" alt="Course Cover" className="object-cover w-full h-full opacity-80 mix-blend-overlay" />

@@ -31,7 +31,7 @@ export default function QuizPerformanceModal({ quiz }: { quiz: any }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="absolute inset-0" onClick={handleClose} />
             
-            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-[90vw] overflow-hidden flex flex-col">
+            <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-[90vw] max-h-[90vh] overflow-y-auto flex flex-col">
                 <div className="p-6 pb-2 border-b border-gray-100 pointer-events-none">
                      <AttemptedQuizCard data={quiz} />
                 </div>
