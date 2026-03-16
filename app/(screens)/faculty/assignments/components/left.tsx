@@ -15,6 +15,10 @@ import { STATIC_ACTIVE_QUIZZES, STATIC_DRAFT_QUIZZES, STATIC_COMPLETED_QUIZZES }
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
+import FacultyDiscussionCard from "./facultyDiscussionCard";
+import FacultyDiscussionForm from "./facultyDiscussionForm";
+import { STATIC_ACTIVE_DISCUSSIONS, STATIC_COMPLETED_DISCUSSIONS } from "./facultyDiscussionData";
+
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
   assignmentId?: number;
@@ -36,8 +40,12 @@ function AssignmentsLeftContent() {
   const searchParams = useSearchParams();
 
   const activeTab = searchParams.get("tab") || "assignments";
+  const action = searchParams.get("action");
+  const discussionId = searchParams.get("discussionId");
+
   const activeView = (searchParams.get("view") as "active" | "previous") || "active";
   const quizView = (searchParams.get("quizView") as "active" | "drafts" | "completed") || "active";
+  const discussionView = (searchParams.get("discussionView") as "active" | "completed") || "active";
 
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
@@ -49,15 +57,16 @@ function AssignmentsLeftContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const handleMainTabChange = (tab: "assignments" | "quiz") => {
+  const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
-    if (tab === "assignments") {
-      params.set("view", "active");
-    }
-    if (tab === "quiz") {
-      params.set("quizView", "active");
-    }
+    params.delete("action");
+    params.delete("discussionId");
+
+    if (tab === "assignments") params.set("view", "active");
+    if (tab === "quiz") params.set("quizView", "active");
+    if (tab === "discussion") params.set("discussionView", "active");
+
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -73,6 +82,12 @@ function AssignmentsLeftContent() {
   const handleQuizViewChange = (view: "active" | "drafts" | "completed") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("quizView", view);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleDiscussionViewChange = (view: "active" | "completed") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("discussionView", view);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -161,6 +176,20 @@ function AssignmentsLeftContent() {
     }
   };
 
+  if (activeTab === "discussion" && (action === "editDiscussion" || action === "createDiscussion")) {
+    const editData =
+      action === "editDiscussion" && discussionId
+        ? [...STATIC_ACTIVE_DISCUSSIONS, ...STATIC_COMPLETED_DISCUSSIONS]
+          .find(d => String(d.id) === String(discussionId))
+        : null;
+
+    return (
+      <div className="w-[68%] h-full p-2 flex flex-col">
+        <FacultyDiscussionForm initialData={editData} />
+      </div>
+    );
+  }
+
   if (view === "add" || view === "edit") {
     return (
       <AssignmentForm
@@ -180,7 +209,7 @@ function AssignmentsLeftContent() {
   }
 
   return (
-    <div className="w-[68%] p-2 flex flex-col">
+    <div className="w-[68%] h-full p-2 flex flex-col">
       <div className="mb-4">
         <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
           <span
@@ -196,18 +225,25 @@ function AssignmentsLeftContent() {
           >
             Quiz
           </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleMainTabChange("discussion")}
+            className={`cursor-pointer transition-colors ${activeTab === "discussion" ? "text-[#43C17A]" : "text-[#282828]"}`}
+          >
+            Discussion forum
+          </span>
         </h1>
         <p className="text-[#282828] text-sm">
-          {activeTab === "assignments"
-            ? "Create, manage, and evaluate assignments for your students efficiently."
-            : "Design, organize, and publish quizzes to assess your students effectively."}
+          {activeTab === "assignments" && "Create, manage, and evaluate assignments for your students efficiently."}
+          {activeTab === "quiz" && "Design, organize, and publish quizzes to assess your students effectively."}
+          {activeTab === "discussion" && "Create and manage project discussions for students."}
         </p>
       </div>
 
-      <div className="w-full flex flex-col flex-1 min-h-[500px]">
+      <div className="w-full flex flex-col flex-1 min-h-[500px] h-full">
         <div className="flex flex-col gap-3 items-start h-full w-full">
-          <div className="flex justify-between w-full">
-            {activeTab === "assignments" ? (
+          <div className="flex justify-between w-full h-full">
+            {activeTab === "assignments" && (
               <>
                 <div className="flex gap-4 pb-1">
                   <h5
@@ -230,8 +266,10 @@ function AssignmentsLeftContent() {
                   Add Assignment
                 </button>
               </>
-            ) : (
-              <div className="flex w-full gap-3 mt-1 items-center">
+            )}
+
+            {activeTab === "quiz" && (
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
                 <button
                   onClick={() => handleQuizViewChange("active")}
                   className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "active" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
@@ -251,15 +289,44 @@ function AssignmentsLeftContent() {
                   Completed Quizzes
                 </button>
                 <button
-                  className="ml-auto text-sm text-white cursor-pointer bg-[#16284F] px-6 py-2 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  className=" text-sm text-white cursor-pointer bg-[#16284F] px-6 py-2 rounded-md font-bold hover:bg-[#102040] transition-colors"
                 >
                   Create Quiz
                 </button>
               </div>
             )}
+
+            {activeTab === "discussion" && (
+              <>
+                <div className="flex gap-4 pb-1">
+                  <h5
+                    className={`text-sm cursor-pointer pb-1 transition-all ${discussionView === "active" ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                    onClick={() => handleDiscussionViewChange("active")}
+                  >
+                    Active Discussions
+                  </h5>
+                  <h5
+                    className={`text-sm cursor-pointer pb-1 transition-all ${discussionView === "completed" ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                    onClick={() => handleDiscussionViewChange("completed")}
+                  >
+                    Completed Discussions
+                  </h5>
+                </div>
+                <button
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("action", "createDiscussion");
+                    router.push(`${pathname}?${params.toString()}`);
+                  }}
+                >
+                  Create Discussion
+                </button>
+              </>
+            )}
           </div>
 
-          <div className="h-[164vh] overflow-y-auto w-full">
+          <div className="max-h-[115vh] overflow-y-auto w-full">
             {activeTab === "assignments" && (
               isLoading ? (
                 <div className="w-full">
@@ -302,7 +369,7 @@ function AssignmentsLeftContent() {
             )}
 
             {activeTab === "quiz" && (
-              <div className="grid grid-cols-2 gap-4 pb-10">
+              <div className="grid grid-cols-2 gap-4 pb-10 h-full">
                 {quizView === "active" && STATIC_ACTIVE_QUIZZES.map((quiz) => (
                   <FacultyQuizCard key={quiz.id} data={quiz} />
                 ))}
@@ -313,6 +380,18 @@ function AssignmentsLeftContent() {
 
                 {quizView === "completed" && STATIC_COMPLETED_QUIZZES.map((quiz) => (
                   <FacultyQuizCard key={quiz.id} data={quiz} />
+                ))}
+              </div>
+            )}
+
+            {activeTab === "discussion" && (
+              <div className="flex flex-col gap-4 pb-10">
+                {discussionView === "active" && STATIC_ACTIVE_DISCUSSIONS.map((discussion) => (
+                  <FacultyDiscussionCard key={discussion.id} data={discussion} />
+                ))}
+
+                {discussionView === "completed" && STATIC_COMPLETED_DISCUSSIONS.map((discussion) => (
+                  <FacultyDiscussionCard key={discussion.id} data={discussion} discussionView={discussionView}/>
                 ))}
               </div>
             )}
