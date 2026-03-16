@@ -28,27 +28,8 @@ export default function CalendarRight() {
 
     return (
         <>
-
-            <TaskModal
-                open={openModal}
-                role={role === "Faculty" ? "faculty" : "student"}
-                facultyId={facultyId ?? undefined}
-                studentId={studentId ?? undefined}
-                collegeSubjectId={2}
-                onClose={() => setOpenModal(false)}
-                onSave={() =>
-                    addTask({
-                        title: "New Task",
-                        description: "Task added",
-                        dueDate: new Date().toISOString().split("T")[0],
-                        dueTime: "12:00"
-                    })
-                }
-            />
-
             <div className="bg-pink-00 h-full flex flex-col justify-between">
                 <CalendarTimeTable />
-
                 <div className="bg-white h-[158px] w-[647px] rounded-lg p-3 shadow-md">
                     <div className="bg-red-00 w-full flex justify-between">
                         <h4 className="text-[#282828] font-medium">Assignments / Tasks</h4>
