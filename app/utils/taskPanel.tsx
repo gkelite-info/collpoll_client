@@ -6,6 +6,8 @@ import TaskModal from "@/app/components/modals/taskModal";
 import { deactivateFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import TaskCardShimmer from "../(screens)/faculty/shimmers/TaskCardShimmer";
 import { deactivateStudentTask } from "@/lib/helpers/student/studentTaskAPI";
+import ConfirmDeleteModal from "../(screens)/admin/calendar/components/ConfirmDeleteModal";
+import toast from "react-hot-toast";
 
 
 export type Task = {
@@ -19,7 +21,6 @@ export type Task = {
 
 export type TaskPanelProps = {
   role?: "faculty" | "student";
-  tasks?: Task[];
   style?: boolean;
   loading?: boolean;
   facultyTasks?: Task[];
@@ -37,12 +38,12 @@ export type TaskPanelProps = {
       dueTime: string;
     },
     taskId?: number
-  ) => void;
+  ) => Promise<void>;
+  onDeleteTask?: (taskId: number) => Promise<void>;
 };
 
 export default function TaskPanel({
   role = "student",
-  tasks,
   style = false,
   facultyTasks = [],
   studentTasks = [],
@@ -53,6 +54,7 @@ export default function TaskPanel({
   onEditTask,
   onAddTask,
   onSaveTask,
+  onDeleteTask
 }: TaskPanelProps) {
 
   const [openModal, setOpenModal] = useState(false);
@@ -60,6 +62,34 @@ export default function TaskPanel({
   const [activeView, setActiveView] = useState<"student" | "faculty">(
     role === "student" ? "student" : "faculty"
   );
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (taskToDeleteId === null) return;
+
+    setIsDeleting(true);
+    try {
+      const res = role === "student"
+        ? await deactivateStudentTask(taskToDeleteId)
+        : await deactivateFacultyTask(taskToDeleteId);
+
+      if (res.success) {
+        await onDeleteTask?.(taskToDeleteId);
+        toast.success("Task deleted successfully");
+        setIsDeleteDialogOpen(false);
+      } else {
+        toast.error("Failed to delete task");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
+      setTaskToDeleteId(null);
+    }
+  };
 
   const tasksToShow =
     role === "faculty"
@@ -81,11 +111,6 @@ export default function TaskPanel({
     <>
 
       <div className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px]`}>
-        {/* {role === "faculty" && (
-          <h2 className="text-lg font-semibold text-[#16284F] mb-2">
-            My Tasks
-          </h2>
-        )} */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-[#E7F7EE] rounded-full p-1">
@@ -101,8 +126,8 @@ export default function TaskPanel({
                   onClick={() => setActiveView("student")}
                   className={
                     activeView === "student"
-                      ? "text-[#16284F]"
-                      : "text-gray-400"
+                      ? "text-[#16284F] cursor-pointer"
+                      : "text-gray-400 cursor-pointer"
                   }
                 >
                   My Tasks
@@ -113,8 +138,8 @@ export default function TaskPanel({
                   onClick={() => setActiveView("faculty")}
                   className={
                     activeView === "faculty"
-                      ? "text-[#16284F]"
-                      : "text-gray-400"
+                      ? "text-[#16284F] cursor-pointer"
+                      : "text-gray-400 cursor-pointer"
                   }
                 >
                   Faculty Tasks
@@ -135,7 +160,7 @@ export default function TaskPanel({
                 }}
                 className="flex items-center gap-2 px-3 py-1 rounded-full
    border border-[#43C17A] text-[#43C17A] text-xs font-medium
-   hover:bg-[#43C17A] hover:text-white transition"
+   hover:bg-[#43C17A] hover:text-white transition cursor-pointer"
               >
                 + Add Task
               </button>
@@ -180,9 +205,9 @@ export default function TaskPanel({
                         <button
                           onClick={() => {
                             if (onEditTask) {
-                              onEditTask(task);   // faculty edit handled by parent
+                              onEditTask(task);
                             } else {
-                              setEditTask(task);  // student edit handled locally
+                              setEditTask(task);
                               setOpenModal(true);
                             }
                           }}
@@ -195,20 +220,9 @@ export default function TaskPanel({
                     {((role === "faculty") ||
                       (role === "student" && activeView === "student")) && (
                         <button
-                          onClick={async () => {
-                            if (!confirm("Delete this task?")) return;
-
-                            const res =
-                              role === "student"
-                                ? await deactivateStudentTask(task.facultyTaskId)
-                                : await deactivateFacultyTask(task.facultyTaskId);
-
-                            if (!res.success) {
-                              alert("Failed to delete task");
-                              return;
-                            }
-
-                            window.location.reload();
+                          onClick={() => {
+                            setTaskToDeleteId(task.facultyTaskId);
+                            setIsDeleteDialogOpen(true);
                           }}
                           className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
                         >
@@ -235,12 +249,19 @@ export default function TaskPanel({
             setOpenModal(false);
             setEditTask(null);
           }}
-          onSave={() => {
-            setOpenModal(false);
-            setEditTask(null);
-          }}
+          onSave={onSaveTask!}
         />
       )}
+      <ConfirmDeleteModal
+        open={isDeleteDialogOpen}
+        name="Task"
+        isDeleting={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          setIsDeleteDialogOpen(false);
+          setTaskToDeleteId(null);
+        }}
+      />
     </>
   );
 }

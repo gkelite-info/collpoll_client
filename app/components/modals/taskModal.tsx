@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X } from "@phosphor-icons/react";
-import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import toast from "react-hot-toast";
-import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 
 export type TaskPayload = {
   title: string;
@@ -27,33 +25,29 @@ type TaskModalProps = {
     time: string;
     date: string;
   } | null;
-  onSave: () => void;
+  onSave: (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number
+  ) => Promise<void>;
 };
 
 const getWordCount = (text: string) => {
   return text.trim().split(/\s+/).filter(Boolean).length;
 };
 
-export default function TaskModal({
-  open,
-  role,
-  collegeSubjectId,
-  facultyId,
-  studentId,
-  onClose,
-  onSave,
-  defaultValues,
-}: TaskModalProps) {
-
- 
-
+export default function TaskModal({ open, role, collegeSubjectId, facultyId, studentId, onClose, onSave, defaultValues }: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [saving, setSaving] = useState(false);
 
-  
+
   useEffect(() => {
     if (defaultValues?.facultyTaskId) {
 
@@ -65,9 +59,7 @@ export default function TaskModal({
         defaultValues.date ??
         new Date().toISOString().split("T")[0]
       );
-
     } else {
-
       setTitle("");
       setDescription("");
       setDueDate("");
@@ -76,99 +68,29 @@ export default function TaskModal({
     }
   }, [defaultValues]);
 
-   if (!open) return null;
-
+  if (!open) return null;
 
   const handleSave = async () => {
-
-    const titleRegex = /^[A-Za-z\s]+$/;
-    const today = new Date().toISOString().split("T")[0];
-
-    if (!title || !description || !dueDate || !dueTime) {
-      toast.error("Please fill all fields!");
-      return;
-    }
-
-    if (!titleRegex.test(title.trim())) {
-      toast.error("Title should contain only letters");
-      return;
-    }
-
-    if (getWordCount(description) > 30) {
-      toast.error("Description should not exceed 30 words.");
-      return;
-    }
-
-    if (dueDate < today) {
-      toast.error("Past dates are not allowed");
-      return;
-    }
-
     try {
       setSaving(true);
 
-      // FACULTY TASK
-      if (role === "faculty") {
+      await onSave(
+        {
+          title,
+          description,
+          dueDate,
+          dueTime,
+        },
+        defaultValues?.facultyTaskId
+      );
 
-        if (!collegeSubjectId || !facultyId) {
-          toast.error("Invalid subject or faculty");
-          return;
-        }
+      toast.success(
+        defaultValues ? "Task updated successfully" : "Task created successfully"
+      );
 
-        const response = await saveFacultyTask(
-          {
-            facultyTaskId: defaultValues?.facultyTaskId,
-            collegeSubjectId,
-            taskTitle: title,
-            description,
-            date: dueDate,
-            time: dueTime
-          },
-          facultyId
-        );
-
-        if (!response.success) {
-          toast.error("Failed to save task");
-          return;
-        }
-
-        toast.success(
-          defaultValues ? "Task updated successfully" : "Task created successfully"
-        );
-      }
-
-      // STUDENT TASK
-      if (role === "student") {
-
-        if (!studentId) {
-          toast.error("Invalid student");
-          return;
-        }
-
-        const response = await saveStudentTask(
-          {
-            studentTaskId: defaultValues?.facultyTaskId,
-            taskTitle: title,
-            description,
-            date: dueDate,
-            time: dueTime
-          },
-          studentId
-        );
-
-        if (!response.success) {
-          toast.error("Failed to save task");
-          return;
-        }
-
-        toast.success(
-          defaultValues ? "Task updated successfully" : "Task created successfully"
-        );
-      }
-
-      onSave();
       onClose();
-
+    } catch (e) {
+      toast.error("Failed to save task");
     } finally {
       setSaving(false);
     }
@@ -198,7 +120,7 @@ export default function TaskModal({
             value={title}
             onChange={(e) => {
               const value = e.target.value;
-              if (/^[A-Za-z\s]*$/.test(value)) {
+              if (/^[A-Za-z0-9\s]*$/.test(value)) {
                 setTitle(value);
               }
             }}
@@ -253,10 +175,10 @@ export default function TaskModal({
             disabled={saving}
             className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${saving
               ? "bg-[#A7DDBE] text-white cursor-not-allowed"
-              : "bg-[#43C17A] text-white hover:bg-[#3AAA6B]"
+              : "bg-[#43C17A] text-white"
               }`}
           >
-            {saving ? "Saving..." : "Save Task"}
+            {saving ? "Saving..." : "Save task"}
           </button>
 
           <button
