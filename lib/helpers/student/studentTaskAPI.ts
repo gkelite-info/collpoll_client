@@ -17,7 +17,6 @@ export async function fetchStudentTasks(studentId: number) {
 
     const today = new Date().toLocaleDateString("en-CA");
 
-    // 1️⃣ Deactivate past tasks
     const { error: deactivateError } = await supabase
         .from("student_tasks")
         .update({
@@ -33,7 +32,6 @@ export async function fetchStudentTasks(studentId: number) {
         console.error("auto deactivate student tasks error:", deactivateError);
     }
 
-    // 2️⃣ Fetch today's tasks
     const { data, error } = await supabase
         .from("student_tasks")
         .select(`
@@ -99,7 +97,6 @@ export async function saveStudentTask(
 
     const now = new Date().toISOString();
 
-    // UPDATE TASK
     if (payload.studentTaskId) {
 
         const { data, error } = await supabase
@@ -125,7 +122,6 @@ export async function saveStudentTask(
         return { success: true, data };
     }
 
-    // INSERT TASK
     const { data, error } = await supabase
         .from("student_tasks")
         .insert({
@@ -211,7 +207,7 @@ export async function updateStudentTask(
         })
         .eq("studentTaskId", payload.studentTaskId)
         .eq("createdBy", studentId)
-        .is("deletedAt", null)   // ✅ correct filter
+        .is("deletedAt", null)
         .select()
         .single();
 
