@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import MidExams from "./midExams";
 import UserInfoCard from "@/app/utils/userInfoCardComp";
 import LectureCard from "@/app/utils/lectureCard";
-import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
+import SubjectProgressCards from "../../faculty/utils/subjectProgressCard/subjectProgressCards";
 import { fetchUpcomingClassesForStudent } from "@/lib/helpers/profile/calender/fetchUpcomingClassesForStudent";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
@@ -17,6 +17,8 @@ import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/as
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
+import { fetchSubjects } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { Loader } from "../calendar/right/timetable";
 
 const formatTimeToAMPM = (time24: string) => {
     const [h, m] = time24.split(":");
@@ -39,14 +41,76 @@ export default function StuDashLeft() {
     const [assignmentsLoading, setAssignmentsLoading] = useState(true);
     const [pendingFeeAmount, setPendingFeeAmount] = useState<number | null>(null);
     const [feeLoading, setFeeLoading] = useState(true);
+    const [subjects, setSubjects] = useState<any[]>([]);
+    const [subjectsLoading, setSubjectsLoading] = useState(true);
 
     useEffect(() => {
         loadUpcomingClasses();
         loadAssignmentCount();
         loadAttendancePercent();
         loadPendingFee();
-        
+        loadSubjects();
     }, []);
+
+    const loadSubjects = async () => {
+        try {
+            setSubjectsLoading(true);
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: userRow } = await supabase
+                .from("users")
+                .select("userId")
+                .eq("auth_id", user.id)
+                .single();
+            if (!userRow) return;
+
+            const studentContext = await fetchStudentContext(userRow.userId);
+
+            const today = new Date().toISOString().split("T")[0];
+            const attendanceRes = await getStudentDashboardData(
+                userRow.userId,
+                today,
+                1,
+                1,
+                studentContext.collegeEducationType === "Inter"
+            );
+
+            const attendanceBySubject = attendanceRes?.subjectWiseAttendance ?? [];
+
+            const subjectData = await fetchSubjects(
+                studentContext.collegeId,
+                studentContext.collegeEducationId,
+                studentContext.collegeBranchId,
+                studentContext.collegeAcademicYearId,
+                studentContext.collegeSemesterId
+            );
+
+            const mappedSubjects = subjectData.map((sub: any) => {
+                const attendance = attendanceBySubject.find(
+                    (row: any) => row.subjectName === sub.subjectName
+                );
+
+                return {
+                    title: sub.subjectName,
+                    professor: "Faculty Assigned",
+                    image: "/subject-default.png",
+                    percentage: attendance?.percentage ?? 0,
+                    radialStart: "#10FD77",
+                    radialEnd: "#1C6B3F",
+                    remainingColor: "#A1FFCA",
+                };
+            });
+
+
+            setSubjects(mappedSubjects);
+        } catch (err) {
+            console.error("Failed to load subjects", err);
+        } finally {
+            setSubjectsLoading(false);
+        }
+    };
 
     const loadPendingFee = async () => {
         try {
@@ -229,7 +293,7 @@ export default function StuDashLeft() {
         }
     ];
 
-    const subjects = [
+    const subjectss = [
         {
             title: "Data Structures and Algorithms",
             professor: "Prof. Ramesh Kumar",
@@ -311,7 +375,8 @@ export default function StuDashLeft() {
                         </div>
                         <div className="mt-5 flex items-center justify-between rounded-lg">
                             <SubjectProgressCards
-                                props={subjects}
+                                props={subjectsLoading ? [] : subjects}
+                                isLoading={subjectsLoading}
                                 onViewMore={handleSubjectProgress}
                             />
                             <div className="bg-red-400 h-64 rounded-lg w-[49%] shadow-md">

@@ -18,7 +18,7 @@ function AcademicsContent() {
             Academics
           </h1>
           <p className="text-[#282828] text-sm">
-            Track syllabus Progress and manage notes by semester
+            Track syllabus progress and manage notes by semester
           </p>
         </div>
         <div className="flex justify-end w-[32%]">

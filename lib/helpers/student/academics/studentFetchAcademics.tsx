@@ -265,6 +265,9 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       const firstUnit = units[0];
       const lecturerInfo = firstUnit ? facultyMap[firstUnit.createdBy] : null;
 
+      console.log(subjectTotalTopics, "Here it is");
+
+
       return {
         profileIcon:
           lecturerInfo?.gender === "Female" ? "/lec-1.png" : "/lec-2.png",

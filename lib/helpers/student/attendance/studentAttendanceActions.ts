@@ -13,13 +13,40 @@ function isConductedStatus(s: string) {
   return (CONDUCTED_STATUSES as readonly string[]).includes(s);
 }
 
+export interface SubjectWiseAttendance {
+  subjectId: number;
+  subjectName: string;
+  percentage: number;
+}
+
+export interface StudentDashboardResponse {
+  todayStats: {
+    attended: number;
+    total: number;
+  };
+  cards: {
+    attended: number;
+    totalClasses: number;
+    percentage: number;
+  };
+  semesterStats: {
+    present: number;
+    absent: number;
+    late: number;
+  };
+  tableData: any[];
+  totalCount: number;
+  subjectWiseAttendance: SubjectWiseAttendance[];
+  weeklyData: number[];
+}
+
 export async function getStudentDashboardData(
   userId: number,
   dateStr: string,
   page: number,
   limit: number,
   isInter: boolean
-) {
+): Promise<StudentDashboardResponse> {
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -27,7 +54,7 @@ export async function getStudentDashboardData(
   const ctx = await fetchStudentContext(userId);
   const {
     studentId,
-    collegeId, 
+    collegeId,
     collegeEducationId,
     collegeBranchId,
     collegeAcademicYearId,
@@ -57,7 +84,7 @@ export async function getStudentDashboardData(
     .from("students")
     .select("studentId")
     .in("studentId", sahStudentIds)
-    .eq("collegeId", collegeId) 
+    .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
     .eq("collegeBranchId", collegeBranchId)
     .is("deletedAt", null);
@@ -125,7 +152,7 @@ export async function getStudentDashboardData(
   const { data: subjects } = await supabase
     .from("college_subjects")
     .select("collegeSubjectId, subjectName")
-    .eq("collegeId", collegeId) 
+    .eq("collegeId", collegeId)
     .in("collegeSubjectId", subjectIds);
   const subjectMap = new Map(
     (subjects ?? []).map(s => [s.collegeSubjectId, s.subjectName])
@@ -168,6 +195,19 @@ export async function getStudentDashboardData(
       semesterSubjectStats[ev.subject].attendedSet.add(r.calendarEventId);
     }
   }
+
+  const subjectWiseAttendance = Object.entries(semesterSubjectStats).map(
+    ([subjectId, stats]) => {
+      const total = stats.totalSet.size;
+      const attended = stats.attendedSet.size;
+
+      return {
+        subjectId: Number(subjectId),
+        subjectName: subjectMap.get(Number(subjectId)) ?? "Unknown",
+        percentage: total === 0 ? 0 : Math.round((attended / total) * 100),
+      };
+    }
+  );
 
   const tableData = todayStudentRows.map(row => {
     const ev = eventMap.get(row.calendarEventId);
@@ -270,8 +310,10 @@ export async function getStudentDashboardData(
           : Math.round((semLate.size / totalDist) * 100),
     },
 
-    tableData: paginatedRows,   
-    totalCount: tableData.length, 
+    tableData: paginatedRows,
+    totalCount: tableData.length,
+
+    subjectWiseAttendance,
 
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
@@ -285,6 +327,8 @@ function emptyDashboard() {
 
     tableData: [],
     totalCount: 0,
+
+    subjectWiseAttendance: [],
 
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
