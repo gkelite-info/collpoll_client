@@ -18,6 +18,7 @@ import ActiveAutomations from "./activeAutomations";
 import PolicyManagement from "./policyManagement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminDashboard } from "../../hooks/useAdminDashboard";
+import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 
 type ViewState =
   | "MAIN"
@@ -72,7 +73,7 @@ export default function AdminDashLeft({
       id: "TOTAL_USERS",
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <UsersThree size={32} weight="fill" color="#714EF2" />,
-      value: loading ? "..." : cards?.totalUsers,
+      value: loading ? <ValueShimmer /> : cards?.totalUsers,
       label: "Total Users",
     },
     {
@@ -122,7 +123,7 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
       </div>
     );
   }

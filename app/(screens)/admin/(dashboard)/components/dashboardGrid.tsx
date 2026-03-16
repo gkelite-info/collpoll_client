@@ -40,30 +40,30 @@ const RowItem: React.FC<{
   valueClassName = "text-gray-500",
   onClick,
 }) => (
-  <div className="flex items-center justify-between py-1">
-    <div className="flex items-center gap-2.5">
-      {icon && (
-        <div className="w-8 h-8 rounded-lg bg-[#EAF7F1] flex items-center justify-center text-[#4BB583]">
-          {React.isValidElement(icon)
-            ? React.cloneElement(icon as React.ReactElement<{ size: number }>, {
+    <div className="flex items-center justify-between py-1">
+      <div className="flex items-center gap-2.5">
+        {icon && (
+          <div className="w-8 h-8 rounded-lg bg-[#EAF7F1] flex items-center justify-center text-[#4BB583]">
+            {React.isValidElement(icon)
+              ? React.cloneElement(icon as React.ReactElement<{ size: number }>, {
                 size: 18,
               })
-            : icon}
-        </div>
-      )}
-      <span className="text-gray-700 font-medium text-[13px]">{label}</span>
+              : icon}
+          </div>
+        )}
+        <span className="text-gray-700 font-medium text-[13px]">{label}</span>
+      </div>
+      <div className="flex cursor-pointer items-center gap-1.5">
+        <span
+          onClick={onClick}
+          className={`text-[13px]  font-semibold ${valueClassName}`}
+        >
+          {value}
+        </span>
+        {hasArrow && <CaretRight size={12} className="text-gray-400" />}
+      </div>
     </div>
-    <div className="flex cursor-pointer items-center gap-1.5">
-      <span
-        onClick={onClick}
-        className={`text-[13px]  font-semibold ${valueClassName}`}
-      >
-        {value}
-      </span>
-      {hasArrow && <CaretRight size={12} className="text-gray-400" />}
-    </div>
-  </div>
-);
+  );
 
 const Toggle: React.FC<{
   checked?: boolean;
@@ -71,14 +71,12 @@ const Toggle: React.FC<{
 }> = ({ checked = true, onChange }) => (
   <div
     onClick={() => onChange?.(!checked)}
-    className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${
-      checked ? "bg-[#4BB583]" : "bg-gray-200"
-    }`}
+    className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${checked ? "bg-[#4BB583]" : "bg-gray-200"
+      }`}
   >
     <div
-      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-200 ${
-        checked ? "translate-x-4.5" : "translate-x-0.5"
-      }`}
+      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-200 ${checked ? "translate-x-4.5" : "translate-x-0.5"
+        }`}
       style={{ left: 0 }}
     />
   </div>
