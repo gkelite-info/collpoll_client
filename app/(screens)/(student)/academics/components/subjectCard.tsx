@@ -1,5 +1,4 @@
 "use client";
-import { Timer } from "@phosphor-icons/react";
 import { SubjectDetailsCard } from "./subjectDetails";
 import { useCallback, useState, useMemo } from "react";
 import { FaChevronDown } from "react-icons/fa6";
@@ -78,6 +77,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
     return subjectProps.filter((s) => s.subjectTitle === selectedSubject);
   }, [subjectProps, selectedSubject]);
 
+
   const uniqueSubjects = useMemo(() => {
     const titles = new Set(subjectProps.map((s) => s.subjectTitle));
     return Array.from(titles);
@@ -140,6 +140,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
         {filteredSubjects.length > 0 ? (
           filteredSubjects.map((item, index) => {
             const percentage = item.percentage ?? 0;
+
             return (
               <div
                 key={index}
@@ -234,7 +235,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                               : "translateX(-50%)",
                       }}
                     >
-                      {percentage}%
+                      {item.percentage === null ? "No data" : `${percentage}%`}
                     </span>
                   </div>
                   {/* <div className="flex items-center gap-1.5">

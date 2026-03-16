@@ -9,7 +9,7 @@ import AttendanceCard from "./cards/attendanceCard";
 import NextExamCard from "./cards/nextExamCard";
 import AcademicPerformanceSmall from "./components/academicPerformanceSmall";
 import FeeDueCard from "./cards/feeDueCard";
-import SubjectProgressCards from "../../faculty/utils/subjectProgressCards";
+import SubjectProgressCards from "../../faculty/utils/subjectProgressCard/subjectProgressCards";
 import FacultyChat from "./cards/facultyChat";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getParentDashboardWidgets } from "@/lib/helpers/parent/dashboard/parentDashboardActions";
