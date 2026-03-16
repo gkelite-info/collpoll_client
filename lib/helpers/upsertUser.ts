@@ -105,6 +105,33 @@ export const fetchUserDetails = async (auth_id: string) => {
   }
 };
 
+export const fetchCollegeUsersCount = async (collegeId: number) => {
+  try {
+    const { count, error } = await supabase
+      .from("users")
+      .select("userId", {
+        count: "exact",
+        head: true,
+      })
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      totalUsers: count ?? 0,
+    };
+  } catch (err: any) {
+    console.error("FETCH COLLEGE USERS COUNT ERROR:", err.message);
+    return {
+      success: false,
+      error: err.message,
+    };
+  }
+};
+
 export const upsertAdminEntry = async (payload: {
   userId: number;
   fullName: string;

@@ -90,12 +90,12 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
   return (
     <div className="flex flex-col w-full min-h-screen">
       <div className="mb-3">
-        <div className="flex items-center gap-2 group w-fit">
+        <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
             size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
           <h1 className="text-2xl font-bold text-[#282828]">Total Users</h1>
         </div>
@@ -168,7 +168,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
                       params.set("tab", "Faculty");
                       router.push(`?${params.toString()}`);
                     }}
-                    className="text-[#2D3748] cursor-pointer font-bold underline decoration-2 underline-offset-4 hover:text-black transition-colors"
+                    className="text-green-500 cursor-pointer font-bold hover:underline decoration-2 underline-offset-4 transition-colors"
                   >
                     View
                   </button>
