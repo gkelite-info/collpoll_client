@@ -56,7 +56,7 @@ export default function Employment() {
           </button>
 
           <button
-            onClick={() => router.push("/profile?academic-achievements")}
+            onClick={() => router.push("/profile?resume=academic-achievements&Step=11")}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
           >
             Next

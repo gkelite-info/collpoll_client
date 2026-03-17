@@ -134,7 +134,7 @@ export default function ProfileLanguages() {
                 <div className="flex justify-between">
                     <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
                     <button
-                        onClick={() => router.push("/profile?internships")}
+                        onClick={() => router.push("/profile?profile=profile-summary&Step=5")}
                         className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
                         Next
                     </button>

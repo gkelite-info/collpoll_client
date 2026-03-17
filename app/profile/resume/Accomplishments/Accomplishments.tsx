@@ -68,7 +68,7 @@ export default function Accomplishments() {
                     </button>
                     <button
                         type="button"
-                        onClick={() => router.push('/profile?competitive-exams')}
+                        onClick={() => router.push('/profile?resume=competitive-exams&Step=9')}
                         className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
                     >
                         Next

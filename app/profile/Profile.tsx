@@ -5,7 +5,9 @@ import ProfilePersonalDetails from "./profilePersonalDetails";
 import PersonalDetails from "./resume/personalDetails";
 import ProfileEducationSection from "./profileEducation/Education";
 import EducationSection from "./resume/Education/Education";
+import ProfileKeySkills from "./profileKeySkills/keySkills";
 import KeySkillsWithModal from "./resume/KeySkills/keySkills";
+import ProfileLanguages from "./profileLanguages";
 import Languages from "./resume/languages";
 import Internships from "./resume/Internships/internships";
 import ProjectsForm from "./resume/Projects/ProjectsForm";
@@ -31,13 +33,20 @@ export default function ProfileClient() {
   const showResumeTabs = canAccessResume(role as any);
 
   useEffect(() => {
-    // If page loads without query params and user can access resume, default to resume
-    // Otherwise, if no resume access, allow profile mode to be the default
     const hasQueryParams = searchParams.toString().length > 0;
-    if (!hasQueryParams && showResumeTabs && role) {
-      const params = new URLSearchParams();
-      params.set("resume", "personal-details");
-      router.push(`${pathname}?${params.toString()}&Step=1`);
+    
+    if (!hasQueryParams && role) {
+      // If user can access resume, default to resume mode
+      if (showResumeTabs) {
+        const params = new URLSearchParams();
+        params.set("resume", "personal-details");
+        router.push(`${pathname}?${params.toString()}&Step=1`);
+      } else {
+        // If user cannot access resume, default to profile mode
+        const params = new URLSearchParams();
+        params.set("profile", "personal-details");
+        router.push(`${pathname}?${params.toString()}&Step=1`);
+      }
     }
   }, [role, showResumeTabs, pathname, router])
 
@@ -57,10 +66,10 @@ export default function ProfileClient() {
         return isProfileMode ? <ProfileEducationSection /> : <EducationSection />;
 
       case "key-skills":
-        return <KeySkillsWithModal />;
+        return isProfileMode ? <ProfileKeySkills /> : <KeySkillsWithModal />;
 
       case "languages":
-        return <Languages />;
+        return isProfileMode ? <ProfileLanguages /> : <Languages />;
 
       case "internships":
         return <Internships />;

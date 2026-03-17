@@ -127,7 +127,7 @@ export default function EducationSection() {
                     )}
 
                     <button
-                        onClick={() => router.push('/profile?key-skills')}
+                        onClick={() => router.push('/profile?resume=key-skills&Step=3')}
                         className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
                         Next
                     </button>

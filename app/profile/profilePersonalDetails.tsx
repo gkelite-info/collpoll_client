@@ -139,7 +139,7 @@ export default function ProfilePersonalDetails() {
                         Personal Details by vamshi
                     </h2>
                     <button
-                        onClick={() => router.push('/profile?education')}
+                        onClick={() => router.push('/profile?profile=education&Step=2')}
                         className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium">
                         Next
                     </button>
