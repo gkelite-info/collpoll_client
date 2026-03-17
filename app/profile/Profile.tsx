@@ -1,5 +1,6 @@
 "use client";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 import ProfileSteps from "./profileSteps";
 import ProfilePersonalDetails from "./profilePersonalDetails";
 import PersonalDetails from "./resume/personalDetails";
@@ -20,6 +21,7 @@ import ResumeSteps from "./resumeSteps";
 import { useUser } from "../utils/context/UserContext";
 import { useEffect } from "react";
 import { canAccessResume } from "@/lib/helpers/profile/profileRouteConfig";
+import { Loader } from "../(screens)/(student)/calendar/right/timetable";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
@@ -31,24 +33,37 @@ export default function ProfileClient() {
 
   const { role } = useUser();
   const showResumeTabs = canAccessResume(role as any);
+  const [roleChecked, setRoleChecked] = useState(false);
 
   useEffect(() => {
-    const hasQueryParams = searchParams.toString().length > 0;
-    
-    if (!hasQueryParams && role) {
-      // If user can access resume, default to resume mode
-      if (showResumeTabs) {
-        const params = new URLSearchParams();
-        params.set("resume", "personal-details");
-        router.push(`${pathname}?${params.toString()}&Step=1`);
-      } else {
-        // If user cannot access resume, default to profile mode
-        const params = new URLSearchParams();
-        params.set("profile", "personal-details");
-        router.push(`${pathname}?${params.toString()}&Step=1`);
-      }
+    if (role !== undefined) {
+      setRoleChecked(true);
     }
-  }, [role, showResumeTabs, pathname, router])
+  }, [role]);
+
+  useEffect(() => {
+    if (!roleChecked || role === undefined) return;
+    const resumeParam = searchParams.get("resume");
+    
+    const isStudent = role === "Student";
+    if (resumeParam && !isStudent) {
+      const params = new URLSearchParams();
+      params.set("profile", "personal-details");
+      router.push(`${pathname}?${params.toString()}&Step=1`);
+    }
+  }, [roleChecked, role, pathname, router, searchParams.get("resume")]);
+
+  useEffect(() => {
+    if (!roleChecked || role === undefined) return;
+    const hasQueryParams = searchParams.toString().length > 0;
+    if (!hasQueryParams) {
+      const isStudent = role === "Student";
+      const defaultMode = isStudent ? "resume" : "profile";
+      const params = new URLSearchParams();
+      params.set(defaultMode, "personal-details");
+      router.push(`${pathname}?${params.toString()}&Step=1`);
+    }
+  }, [roleChecked, role, pathname, router, searchParams.toString()]);
 
   const handleViewToggle = (targetView: string) => {
     const params = new URLSearchParams();
@@ -96,6 +111,16 @@ export default function ProfileClient() {
         return isProfileMode ? <ProfilePersonalDetails /> : <PersonalDetails />;
     }
   };
+
+  if (!roleChecked) {
+    return (
+      <div className="flex justify-center items-center h-[85vh]">
+        <div className="text-center">
+          <Loader />
+        </div>
+      </div>
+    );
+  }
 
   if (!role) return null;
 

@@ -54,7 +54,7 @@ export default function ResumeSteps() {
             // Default to first step if no query params
             setCurrentStep(1);
         }
-    }, [searchParams]);
+    }, [searchParams.toString()]);
 
     const addRef = (el: HTMLDivElement | null, index: number) => {
         if (!el) return;

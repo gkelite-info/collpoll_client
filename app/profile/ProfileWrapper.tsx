@@ -3,7 +3,7 @@ import { useState } from "react";
 import ProfileDrawer from "./ProfileDrawer";
 import TermsModal from "./TermsAndConditions";
 import ProfileQuickMenu from "./ProfileQuickMenu";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 
 export default function ProfileWrapper({
     openProfile,

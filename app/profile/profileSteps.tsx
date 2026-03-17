@@ -44,7 +44,7 @@ export default function ProfileSteps() {
         if (matchedStep) {
             setCurrentStep(matchedStep.id);
         }
-    }, [searchParams]);
+    }, [searchParams.toString()]);
 
     const handleStepClick = (stepQuery: string, stepId: number) => {
         setCurrentStep(stepId);
