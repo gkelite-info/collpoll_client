@@ -564,9 +564,6 @@ export default function UpcomingClasses({
                 onClick={handleAddUpcomingClass}
               />
             </button>
-            <button className="text-gray-800 hover:text-black">
-              <DotsThreeVertical weight="bold" size={24} />
-            </button>
           </div>
         </div>
 

@@ -1,0 +1,186 @@
+import { supabase } from "@/lib/supabaseClient";
+
+
+export type DiscussionForumRow = {
+    discussionId: number;
+    title: string;
+    description: string;
+    deadline: string;
+    createdBy: number | null;
+    adminId: number | null;
+    isActive: boolean;
+    is_deleted: boolean | null;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt: string | null;
+};
+
+
+export async function fetchActiveDiscussions() {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { error: deactivateError } = await supabase
+        .from("discussion_forum")
+        .update({
+            isActive: false,
+            is_deleted: true,
+            deletedAt: new Date().toISOString(),
+        })
+        .lt("deadline", today)
+        .eq("isActive", true);
+
+    if (deactivateError) {
+        console.error("auto deactivate discussions error:", deactivateError);
+    }
+
+    const { data, error } = await supabase
+        .from("discussion_forum")
+        .select(`
+      discussionId,
+      title,
+      description,
+      deadline,
+      createdBy,
+      adminId,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("deadline", { ascending: true });
+
+    if (error) {
+        console.error("fetchActiveDiscussions error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+
+export async function fetchExistingDiscussion(
+    title: string,
+    deadline: string,
+) {
+    const { data, error } = await supabase
+        .from("discussion_forum")
+        .select("discussionId")
+        .eq("title", title.trim())
+        .eq("deadline", deadline)
+        .is("deletedAt", null)
+        .single();
+
+    if (error) {
+        if (error.code === "PGRST116") {
+            return { success: true, data: null };
+        }
+        throw error;
+    }
+
+    return { success: true, data };
+}
+
+
+export async function saveDiscussionForum(
+    payload: {
+        discussionId?: number;
+        title: string;
+        description: string;
+        deadline: string;
+    },
+    options: {
+        facultyId?: number;
+        adminId?: number;
+    },
+) {
+    const now = new Date().toISOString();
+
+    const upsertPayload: any = {
+        title: payload.title.trim(),
+        description: payload.description.trim(),
+        deadline: payload.deadline,
+        updatedAt: now,
+    };
+
+    if (!payload.discussionId) {
+        upsertPayload.createdAt = now;
+        upsertPayload.createdBy = options.facultyId ?? null;
+        upsertPayload.adminId = options.adminId ?? null;
+
+        const { data, error } = await supabase
+            .from("discussion_forum")
+            .insert([upsertPayload])
+            .select("discussionId")
+            .single();
+
+        if (error) {
+            console.error("saveDiscussionForum error:", error);
+            return { success: false, error };
+        }
+
+        return {
+            success: true,
+            discussionId: data.discussionId,
+        };
+    }
+
+    const { error } = await supabase
+        .from("discussion_forum")
+        .update(upsertPayload)
+        .eq("discussionId", payload.discussionId);
+
+    if (error) {
+        console.error("updateDiscussionForum error:", error);
+        return { success: false, error };
+    }
+
+    return {
+        success: true,
+        discussionId: payload.discussionId,
+    };
+}
+
+
+export async function deactivateDiscussionForum(discussionId: number) {
+    const { error } = await supabase
+        .from("discussion_forum")
+        .update({
+            isActive: false,
+            is_deleted: true,
+            deletedAt: new Date().toISOString(),
+        })
+        .eq("discussionId", discussionId);
+
+    if (error) {
+        console.error("deactivateDiscussionForum error:", error);
+        return { success: false };
+    }
+
+    return { success: true };
+}
+
+
+export async function fetchDiscussionsByFacultyId(facultyId: number) {
+    const { data, error } = await supabase
+        .from("discussion_forum")
+        .select(`
+      discussionId,
+      title,
+      description,
+      deadline,
+      createdAt
+    `)
+        .eq("createdBy", facultyId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("deadline", { ascending: true });
+
+    if (error) {
+        console.error("fetchDiscussionsByFacultyId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
