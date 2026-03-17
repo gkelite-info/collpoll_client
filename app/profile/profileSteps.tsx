@@ -10,11 +10,11 @@ type StepItem = {
 };
 
 const STEP_DATA: StepItem[] = [
-    { id: 1, title: "Personal Details", query: "profile=personal-details" },
-    { id: 2, title: "Education", query: "profile=education" },
-    { id: 3, title: "Key Skills", query: "profile=key-skills" },
-    { id: 4, title: "Languages", query: "profile=languages" },
-    { id: 5, title: "Profile Summary", query: "profile=profile-summary" },
+    { id: 1, title: "Personal Details", query: "personal-details" },
+    { id: 2, title: "Education", query: "education" },
+    { id: 3, title: "Key Skills", query: "key-skills" },
+    { id: 4, title: "Languages", query: "languages" },
+    { id: 5, title: "Profile Summary", query: "profile-summary" },
 ];
 
 export default function ProfileSteps() {
@@ -77,7 +77,7 @@ export default function ProfileSteps() {
                                 ref={(el) => addRef(el, index)}
                                 onClick={() => {
                                     setCurrentStep(step.id);
-                                    router.push(`/profile?${step.query}`, {
+                                    router.push(`/profile?profile=${step.query}&Step=${step.id}`, {
                                         scroll: false,
                                     });
                                 }}

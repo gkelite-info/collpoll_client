@@ -17,7 +17,7 @@ export default function ProfileSummary() {
   const studentId = 1;
 
   const handleNext = () => {
-    router.push("/profile?accomplishments");
+    router.push("/profile?resume=accomplishments&Step=8");
   };
 
   const handleSubmit = async () => {

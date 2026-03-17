@@ -75,7 +75,7 @@ export default function CompetetiveExams() {
   };
 
   const handleNext = () => {
-    router.push("/profile?employment");
+    router.push("/profile?resume=employment&Step=10");
   };
 
   const handleSubmit = async () => {

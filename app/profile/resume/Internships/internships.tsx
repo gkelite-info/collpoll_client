@@ -167,7 +167,7 @@ export default function Internships() {
 
             <button
               type="button"
-              onClick={() => router.push("/profile?projects")}
+              onClick={() => router.push("/profile?resume=projects&Step=6")}
               className="inline-flex items-center cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors"
             >
               Next

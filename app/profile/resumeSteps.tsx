@@ -45,16 +45,16 @@ export default function ResumeSteps() {
     }, [currentStep]);
 
     useEffect(() => {
-        const query = searchParams.toString().replace("=", "");
-        const matchedStep = STEP_DATA.find((s) => s.query === query);
+        const stepQuery = searchParams.get("resume");
+        const matchedStep = STEP_DATA.find((s) => s.query === stepQuery);
 
         if (matchedStep) {
             setCurrentStep(matchedStep.id);
-        } else {
-            router.replace("/profile?personal-details", { scroll: false });
+        } else if (stepQuery === null && !searchParams.toString()) {
+            // Default to first step if no query params
             setCurrentStep(1);
         }
-    }, [searchParams, router]);
+    }, [searchParams]);
 
     const addRef = (el: HTMLDivElement | null, index: number) => {
         if (!el) return;
@@ -79,7 +79,7 @@ export default function ResumeSteps() {
                                 ref={(el) => addRef(el, index)}
                                 onClick={() => {
                                     setCurrentStep(step.id);
-                                    router.push(`/profile?${step.query}`, {
+                                    router.push(`/profile?resume=${step.query}&Step=${step.id}`, {
                                         scroll: false,
                                     });
                                 }}

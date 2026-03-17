@@ -130,7 +130,7 @@ export default function KeySkillsWithModal() {
             </button>
 
             <button
-              onClick={() => router.push('/profile?languages')}
+              onClick={() => router.push('/profile?resume=languages&Step=4')}
               className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
               Next
             </button>
