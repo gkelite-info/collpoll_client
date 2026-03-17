@@ -13,27 +13,27 @@ export default function ProfileWrapper({
     onCloseProfile: () => void;
 }) {
     const [isTermsOpen, setIsTermsOpen] = useState(false);
-    const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
-    const router = useRouter();
+    // const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+    // const router = useRouter();
 
-    const closeAllAndNavigate = (url: string) => {
-        setIsTermsOpen(false);
-        setIsQuickMenuOpen(false);
-        onCloseProfile();
-        router.push(url);
-    };
+    // const closeAllAndNavigate = (url: string) => {
+    //     setIsTermsOpen(false);
+    //     setIsQuickMenuOpen(false);
+    //     onCloseProfile();
+    //     router.push(url);
+    // };
 
     return (
         <>
             <ProfileDrawer
-                open={openProfile && !isTermsOpen && !isQuickMenuOpen}
+                open={openProfile && !isTermsOpen}
                 onClose={onCloseProfile}
                 onOpenTerms={() => {
                     setIsTermsOpen(true);
                 }}
-                onOpenQuickMenu={() => {
-                    setIsQuickMenuOpen(true);
-                }}
+                // onOpenQuickMenu={() => {
+                //     setIsQuickMenuOpen(true);
+                // }}
             />
 
             <TermsModal
@@ -43,12 +43,12 @@ export default function ProfileWrapper({
                 }}
             />
 
-            <ProfileQuickMenu
+            {/* <ProfileQuickMenu
                 open={isQuickMenuOpen}
                 onClose={() => setIsQuickMenuOpen(false)}
                 onProfileClick={() => closeAllAndNavigate("/profile")}
                 onResumeClick={() => closeAllAndNavigate("/resume")}
-            />
+            /> */}
         </>
     );
 }

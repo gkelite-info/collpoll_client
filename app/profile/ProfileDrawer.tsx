@@ -17,7 +17,7 @@ type Props = {
     open: boolean;
     onClose: () => void;
     onOpenTerms: () => void;
-    onOpenQuickMenu: () => void;
+    // onOpenQuickMenu: () => void;
 };
 
 interface ProfileOptions {
@@ -28,7 +28,7 @@ interface ProfileOptions {
 }
 
 
-export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickMenu }: Props) {
+export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
@@ -124,12 +124,25 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms, onOpenQuickM
                                 {role === "Parent" && (
                                     <span className="text-xs text-[#282828]">ID - {parentId}</span>
                                 )}
-                                {role === "Student" && (
+                                {/* {role === "Student" && (
                                     <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                         e.stopPropagation();
                                         onOpenQuickMenu();
                                     }} />
-                                )}
+                                )} */}
+                                <CaretRight
+                                    size={20}
+                                    className="text-[#000000] cursor-pointer"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onClose();
+                                        if (role === "Student") {
+                                            router.push("/profile?profile=personal-details");
+                                        } else {
+                                            router.push(`/${role?.toLocaleLowerCase()}?profile=personal-details`);
+                                        }
+                                    }}
+                                />
                             </div>
                         </div>
                         {role === "Student" && (

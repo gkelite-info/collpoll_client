@@ -15,6 +15,8 @@ import CompetetiveExams from "./resume/CompetetiveExams";
 import Employment from "./resume/Employment/Employment";
 import AcademicAchievements from "./resume/AcademicAchievements";
 import ResumeSteps from "./resumeSteps";
+import { useUser } from "../utils/context/UserContext";
+import { useEffect } from "react";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
@@ -23,6 +25,11 @@ export default function ProfileClient() {
   const isProfileMode = searchParams.has("profile");
   const currentView = isProfileMode ? "profile" : "resume";
   const currentStep = searchParams.get(currentView) || "personal-details";
+
+  const { role } = useUser();
+
+  useEffect(() => {
+  }, [role, currentStep])
 
   const handleViewToggle = (targetView: string) => {
     const params = new URLSearchParams();
@@ -71,9 +78,10 @@ export default function ProfileClient() {
     }
   };
 
+  if (!role) return null;
+
   return (
     <div className="flex flex-col flex-1 h-[85vh] p-2">
-
       <div className="flex-none mb-4">
         {isProfileMode ? (
           <ProfileSteps key="profile-stepper" />
@@ -81,16 +89,20 @@ export default function ProfileClient() {
           <ResumeSteps key="resume-stepper" />
         )}
       </div>
-
       <p className="mt-3 mb-1 text-[#282828] font-normal">
-        <span
-          onClick={() => handleViewToggle("resume")}
-          className={`cursor-pointer transition-colors ${!isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
-            }`}
-        >
-          Resume
-        </span>
-        <span className="mx-1 text-gray-400"> / </span>
+        {role === "Student" &&
+          <>
+            <span
+              onClick={() => handleViewToggle("resume")}
+              className={`cursor-pointer transition-colors ${!isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
+                }`}
+            >
+              Resume
+            </span>
+
+            <span className="mx-1 text-gray-400"> / </span>
+          </>
+        }
         <span
           onClick={() => handleViewToggle("profile")}
           className={`cursor-pointer transition-colors ${isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
