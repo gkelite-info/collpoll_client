@@ -18,6 +18,7 @@ import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
 import { STATIC_ACTIVE_DISCUSSIONS, STATIC_COMPLETED_DISCUSSIONS } from "./facultyDiscussionData";
+import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -186,6 +187,14 @@ function AssignmentsLeftContent() {
     return (
       <div className="w-[68%] h-full p-2 flex flex-col">
         <FacultyDiscussionForm initialData={editData} />
+      </div>
+    );
+  }
+
+  if (activeTab === "discussion" && action === "viewSubmissions") {
+    return (
+      <div className="w-[68%] h-full p-2 flex flex-col">
+        <FacultyDiscussionSubmissions discussionId={discussionId} />
       </div>
     );
   }
@@ -391,7 +400,7 @@ function AssignmentsLeftContent() {
                 ))}
 
                 {discussionView === "completed" && STATIC_COMPLETED_DISCUSSIONS.map((discussion) => (
-                  <FacultyDiscussionCard key={discussion.id} data={discussion} discussionView={discussionView}/>
+                  <FacultyDiscussionCard key={discussion.id} data={discussion} discussionView={discussionView} />
                 ))}
               </div>
             )}
