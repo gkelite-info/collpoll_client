@@ -76,7 +76,6 @@ export default function AssignmentCard({
           key={index}
           className="bg-white relative w-full rounded-xl flex p-4 gap-4 shadow-sm"
         >
-          {/* Image */}
           <div className="h-[140px] w-[150px] rounded-lg overflow-hidden shrink-0">
             <img
               src={item.image}
@@ -85,7 +84,6 @@ export default function AssignmentCard({
             />
           </div>
 
-          {/* Content */}
           <div className="flex flex-1 flex-col justify-between">
             <div className="flex justify-between">
               <div className="flex flex-col gap-1 max-w-[65%]">
@@ -108,7 +106,6 @@ export default function AssignmentCard({
                 </div>
               </div>
 
-              {/* Right actions */}
               <div className="flex flex-col items-end pt-1 pr-1">
                 <div className="flex items-center gap-4">
                   <div
@@ -119,7 +116,7 @@ export default function AssignmentCard({
                   </div>
 
                   <h4
-                    className="text-[#43C17A] text-sm cursor-pointer underline"
+                    className="text-[#43C17A] text-sm cursor-pointer hover:underline"
                     onClick={() =>
                       item.assignmentId !== undefined &&
                       handleViewSubmissions(item.assignmentId)
@@ -131,7 +128,6 @@ export default function AssignmentCard({
               </div>
             </div>
 
-            {/* Bottom section */}
             <div className="flex items-center justify-between mt-3">
               <div className="flex items-center gap-2">
                 <div className="rounded-full bg-[#E2F3E9] p-1.5">
@@ -147,7 +143,6 @@ export default function AssignmentCard({
                 <CaretRight className="text-[#454545]" size={16} />
               </div>
 
-              {/* Marks */}
               <div className="flex overflow-hidden rounded-md">
                 <div className="bg-[#16284F] text-white px-3 py-2 flex items-center text-sm font-bold">
                   {item.marks}

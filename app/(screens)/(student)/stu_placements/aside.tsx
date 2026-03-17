@@ -1,34 +1,117 @@
 "use client";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
+import { fetchStudentTasks, saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
+import { useEffect, useState } from "react";
 
 export default function AssignmentsRight() {
+  const [studentTasks, setStudentTasks] = useState<any[]>([]);
+  const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
+  const { subjects, studentId } = useStudent();
+  const [loading, setLoading] = useState(true);
 
-  const myTasks = [
-    {
-      facultyTaskId: 1,
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-      date : new Date().toLocaleString(),
-    },
-    {
-      facultyTaskId: 2,
-      title: "Group Discussion Prep",
-      description: "Research topic “Impact of AI on Education”.",
-      time: "02:40 PM",
-      date : new Date().toLocaleString(),
-    },
-    {
-      facultyTaskId: 3,
-      title: "Resume Update",
-      description: "Add latest internship experience.",
-      time: "03:40 PM",
-      date : new Date().toLocaleString(),
-    },
-  ];
+  useEffect(() => {
+    if (!studentId) return;
+    loadStudentTasks();
+  }, [studentId]);
 
+  const loadStudentTasks = async () => {
+    if (!studentId) return;
+
+    setLoading(true);
+
+    const data = await fetchStudentTasks(studentId);
+
+    const formatted = data.map((task) => ({
+      facultyTaskId: task.studentTaskId,
+      title: task.taskTitle,
+      description: task.description,
+      time: task.time,
+      date: task.date,
+    }));
+
+    setStudentTasks(formatted);
+    setLoading(false);
+  };
+
+
+  useEffect(() => {
+    if (!subjects?.length) return;
+
+    const loadFacultyTasks = async () => {
+      setLoading(true);
+      try {
+        const allTasks: any[] = [];
+
+        for (const subject of subjects) {
+
+          const tasks = await fetchFacultyTasks(subject.collegeSubjectId);
+
+          if (tasks?.length) {
+            allTasks.push(
+              ...tasks.map((task: any) => ({
+                facultyTaskId: task.facultyTaskId,
+                title: task.taskTitle,
+                description: task.description,
+                time: task.time,
+                date: task.date,
+              }))
+            );
+          }
+        }
+
+        setFacultyTasks(allTasks);
+
+      } catch (err) {
+        console.error("Load faculty tasks failed", err);
+      }
+      finally {
+        setLoading(false);
+      }
+
+    };
+
+    loadFacultyTasks();
+
+  }, [subjects]);
+
+  const handleSaveStudentTask = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number
+  ): Promise<void> => {
+    if (!studentId) return;
+    try {
+
+      const response = await saveStudentTask({
+        studentTaskId: taskId,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime
+      },
+        studentId
+      );
+
+      if (!response.success) {
+        console.error("Save student task failed");
+        return;
+      }
+
+      await loadStudentTasks();
+
+    } catch (err) {
+      console.error("Save student task failed", err);
+    }
+
+  };
 
   const card = [
     {
@@ -84,9 +167,15 @@ export default function AssignmentsRight() {
         <WorkWeekCalendar />
         <TaskPanel
           role="student"
-          studentTasks={myTasks}
+          loading={loading}
+          studentId={studentId ?? undefined}
+          studentTasks={studentTasks}
+          facultyTasks={facultyTasks}
           onAddTask={() => { }}
-          onSaveTask={() => { }}
+          onSaveTask={handleSaveStudentTask}
+          onDeleteTask={async () => {
+            await loadStudentTasks();
+          }}
         />
         <AnnouncementsCard announceCard={card} />
       </div>

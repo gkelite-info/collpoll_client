@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   UsersThree,
   CaretRight,
@@ -13,6 +13,9 @@ import { dashboardData } from "../data";
 import RolePermissionsModal from "./modal/rolePermissionsModal";
 import { useRouter, useSearchParams } from "next/navigation";
 import PolicyManagement from "./policyManagement";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { fetchCollegeUsersCount } from "@/lib/helpers/upsertUser";
+import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 
 const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
   children,
@@ -81,36 +84,6 @@ const Toggle: React.FC<{
     />
   </div>
 );
-
-const UserManagementSummary: React.FC<{
-  data: typeof dashboardData.summary;
-}> = ({ data }) => {
-  const router = useRouter();
-  return (
-    <Card>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-bold text-gray-800">
-          User Management Summary
-        </h2>
-      </div>
-      <div className="space-y-2">
-        <RowItem
-          label="Total Users"
-          value={data.totalUsers}
-          hasArrow
-          icon={<UsersThree weight="fill" />}
-        />
-        <RowItem
-          label="Pending User Registration"
-          value={data.pendingRegistrations}
-          hasArrow
-          icon={<UsersThree weight="fill" />}
-          onClick={() => router.push("?view=pending-registration")}
-        />
-      </div>
-    </Card>
-  );
-};
 
 const ActiveAutomations: React.FC<{
   data: typeof dashboardData.automations;
@@ -198,52 +171,6 @@ const BackupRetention: React.FC<{ data: typeof dashboardData.backup }> = ({
   </Card>
 );
 
-const SystemHealth: React.FC<{ data: typeof dashboardData.health }> = ({
-  data,
-}) => (
-  <Card>
-    <div className="flex items-center justify-between mb-3">
-      <h2 className="text-sm font-bold text-gray-800">System Health</h2>
-      <CaretRight size={14} className="text-gray-400" />
-    </div>
-    <div className="space-y-3.5">
-      <div>
-        <div className="flex justify-between text-[12px] mb-1.5">
-          <span className="font-semibold text-gray-700">Storage Usage</span>
-          <span className="font-medium text-gray-400">
-            {data.storagePercentage}%
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <div className="w-full bg-[#E6FBEA] rounded-full h-2.5 overflow-hidden">
-            <div
-              className="bg-[#43C17A] h-full rounded-full"
-              style={{ width: `${data.storagePercentage}%` }}
-            />
-          </div>
-          <span className="text-[11px] w-15 text-right font-bold text-gray-800">
-            {data.totalStorage}
-          </span>
-        </div>
-      </div>
-      <div className="flex justify-between text-[12px] py-1 border-t border-gray-50 pt-2.5">
-        <span className="font-semibold text-gray-700">Server Uptime</span>
-        <span className="font-medium text-gray-400">{data.uptime}</span>
-      </div>
-      <div className="flex justify-between text-[12px] py-0.5">
-        <span className="font-semibold text-gray-700">Response Time</span>
-        <span className="font-medium text-gray-400">{data.responseTime}</span>
-      </div>
-      <div className="flex justify-between text-[12px] py-0.5">
-        <span className="font-semibold text-gray-700">System Health</span>
-        <div className="flex items-center gap-1.5 font-bold text-[#4BB583] text-[11px]">
-          <Circle weight="fill" size={6} />
-          {data.status}
-        </div>
-      </div>
-    </div>
-  </Card>
-);
 
 const RolesPermissions: React.FC<{
   data: typeof dashboardData.roles;
@@ -274,55 +201,6 @@ const RolesPermissions: React.FC<{
   </Card>
 );
 
-const PolicySetup: React.FC<{ data: any }> = ({ data }) => {
-  const router = useRouter();
-
-  const handleManagePolicies = () => {
-    router.push("?view=policy-setup");
-  };
-
-  return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-bold text-gray-800">Policy Setup</h2>
-        <button
-          onClick={handleManagePolicies}
-          className="bg-[#16284F] hover:bg-[#1a3161] transition-colors text-white text-[12px] px-3 py-1 mb-1 rounded-md flex items-center gap-1 tracking-wider"
-        >
-          Manage Policies <CaretRight size={8} weight="bold" />
-        </button>
-      </div>
-      <div className="space-y-3.5">
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-gray-700 text-[12px]">
-            Attendance Policy
-          </span>
-          <span className="text-gray-400 font-medium text-[12px]">
-            {data.attendance}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-gray-700 text-[12px]">
-            Assignment Window
-          </span>
-          <span className="text-gray-400 font-medium text-[12px]">
-            {data.assignment}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="font-semibold text-gray-700 text-[12px]">
-            Leave Limit
-          </span>
-          <span className="text-gray-400 font-medium text-[12px]">
-            {data.leave}
-          </span>
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-export default PolicySetup;
 
 interface DashboardGridProps {
   data: typeof dashboardData;
@@ -342,18 +220,15 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ data }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full items-stretch">
       <div className="flex flex-col gap-3">
-        <UserManagementSummary data={data.summary} />
         <ActiveAutomations data={data.automations} />
         <BackupRetention data={data.backup} />
       </div>
 
       <div className="flex flex-col gap-3">
-        <SystemHealth data={data.health} />
         <RolesPermissions
           data={data.roles}
           onConfigure={() => setIsModalOpen(true)}
         />
-        <PolicySetup data={data.policies} />
       </div>
 
       <RolePermissionsModal

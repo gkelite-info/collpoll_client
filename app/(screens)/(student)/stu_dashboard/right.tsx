@@ -13,110 +13,39 @@ export default function StuDashRight() {
 
   const [studentTasks, setStudentTasks] = useState<any[]>([]);
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
-  const [collegeId, setCollegeId] = useState<number | null>(null);
   const { subjects, studentId } = useStudent();
   const [loading, setLoading] = useState(true);
 
-
-  // useEffect(() => {
-  //   async function fetchStudentId() {
-  //     const {
-  //       data: { user },
-  //       error,
-  //     } = await supabase.auth.getUser();
-
-  //     if (error || !user) {
-  //       console.error("Auth error", error);
-  //       return;
-  //     }
-
-  //     const { data, error: userErr } = await supabase
-  //       .from("users")
-  //       .select("userId, collegeId")
-  //       .eq("auth_id", user.id)
-  //       .single();
-
-  //     if (userErr) {
-  //       console.error("Failed to get studentId", userErr);
-  //       return;
-  //     }
-  //     setStudentId(data.userId);
-  //     setCollegeId(data.collegeId);
-
-  //   }
-
-  //   fetchStudentId();
-  // }, []);
-
-
-  // useEffect(() => {
-  //   if (studentId === null) return;
-
-  //   async function fetchStudentTasks() {
-  //     try {
-  //       const data = await getStudentTasks(studentId as number);
-
-  //       const formatted = data.map((task: any) => ({
-  //         facultytaskId: task.studenttaskId,
-  //         title: task.studenttaskTitle,
-  //         description: task.studenttaskDescription,
-  //         time: task.studenttaskassignedTime,
-  //         date: task.studenttaskcreateDate,
-  //       }));
-
-  //       setStudentTasks(formatted);
-  //     } catch (err: any) {
-  //       console.error("Add student task failed");
-  //       console.error(err?.message ?? err);
-  //     }
-
-  //   }
-
-  //   fetchStudentTasks();
-  // }, [studentId]);
   useEffect(() => {
-
-    console.log("Student ID:", studentId);
-
-    if (!studentId) {
-      console.log("Student ID not available yet");
-      return;
-    }
-
-    const loadStudentTasks = async () => {
-
-      setLoading(true);   // ✅ start shimmer
-
-      const data = await fetchStudentTasks(studentId);
-
-      console.log("Student tasks from DB:", data);
-
-      const formatted = data.map((task) => ({
-        facultyTaskId: task.studentTaskId,
-        title: task.taskTitle,
-        description: task.description,
-        time: task.time,
-        date: task.date,
-      }));
-
-      setStudentTasks(formatted);
-
-      setLoading(false);  // ✅ stop shimmer
-    };
-
+    if (!studentId) return;
     loadStudentTasks();
-
   }, [studentId]);
 
+  const loadStudentTasks = async () => {
+    if (!studentId) return;
 
+    setLoading(true);
+
+    const data = await fetchStudentTasks(studentId);
+
+    const formatted = data.map((task) => ({
+      facultyTaskId: task.studentTaskId,
+      title: task.taskTitle,
+      description: task.description,
+      time: task.time,
+      date: task.date,
+    }));
+
+    setStudentTasks(formatted);
+    setLoading(false);
+  };
 
   useEffect(() => {
-
     if (!subjects?.length) return;
 
     const loadFacultyTasks = async () => {
+      setLoading(true);
       try {
-
         const allTasks: any[] = [];
 
         for (const subject of subjects) {
@@ -141,6 +70,9 @@ export default function StuDashRight() {
       } catch (err) {
         console.error("Load faculty tasks failed", err);
       }
+      finally {
+        setLoading(false);
+      }
 
     };
 
@@ -156,20 +88,17 @@ export default function StuDashRight() {
       dueTime: string;
     },
     taskId?: number
-  ) => {
-
+  ): Promise<void> => {
     if (!studentId) return;
-
     try {
 
-      const response = await saveStudentTask(
-        {
-          studentTaskId: taskId,
-          taskTitle: payload.title,
-          description: payload.description,
-          date: payload.dueDate,
-          time: payload.dueTime
-        },
+      const response = await saveStudentTask({
+        studentTaskId: taskId,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime
+      },
         studentId
       );
 
@@ -178,48 +107,13 @@ export default function StuDashRight() {
         return;
       }
 
-      // reload tasks
-      const updatedTasks = await fetchStudentTasks(studentId);
-
-      const formatted = updatedTasks.map((task: any) => ({
-        facultyTaskId: task.studentTaskId,
-        title: task.taskTitle,
-        description: task.description,
-        time: task.time,
-        date: task.date,
-      }));
-
-      setStudentTasks(formatted);
+      await loadStudentTasks();
 
     } catch (err) {
       console.error("Save student task failed", err);
     }
 
   };
-
-  const myTasks = [
-    {
-      facultytaskId: 1,              // ✅ REQUIRED
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-      facultytaskcreatedDate: null,  // ✅ REQUIRED
-    },
-    {
-      facultytaskId: 2,
-      title: "Group Discussion Prep",
-      description: "Research topic “Impact of AI on Education”.",
-      time: "02:40 PM",
-      facultytaskcreatedDate: null,
-    },
-    {
-      facultytaskId: 3,
-      title: "Resume Update",
-      description: "Add latest internship experience.",
-      time: "03:40 PM",
-      facultytaskcreatedDate: null,
-    },
-  ];
 
   const card = [
     {
@@ -282,6 +176,9 @@ export default function StuDashRight() {
           facultyTasks={facultyTasks}
           onAddTask={() => { }}
           onSaveTask={handleSaveStudentTask}
+          onDeleteTask={async () => {
+            await loadStudentTasks();
+          }}
         />
         <AnnouncementsCard announceCard={card} />
       </div>

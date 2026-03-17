@@ -1,43 +1,26 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
-import {
-  BookOpen,
-  Chalkboard,
-  ClockAfternoon,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { BookOpen, Chalkboard, ClockAfternoon, UsersThree } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import ScheduledLessonsStrip, {
-  ScheduledLesson,
-} from "../../utils/scheduledLessonsStrip";
+import ScheduledLessonsStrip, { ScheduledLesson } from "../../utils/scheduledLessonsStrip";
 import StudentPerformanceCard from "../../utils/studentPerformanceCard";
 import UpcomingClasses from "../../utils/upcomingClasses";
 import { INITIAL_SCHEDULED_LESSONS, STUDENT_DATA } from "./data";
 import { UserInfoCard } from "../../utils/userInfoCard";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-
-import {
-  getUpcomingClasses,
-  UpcomingLesson,
-} from "@/lib/helpers/faculty/attendance/getClasses";
-import { handleMissionClassStatus } from "@/lib/helpers/faculty/attendance/attendanceActions";
+import { getUpcomingClasses, UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { getFacultyDashboardStats } from "@/lib/helpers/faculty/dashboard/getFacultyDashboardStats";
-import { UpcomingClassesSkeleton } from "./shimmer/UpcomingClassesSkeleton";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
   const { facultyId, loading: facultyLoading } = useFaculty();
-  const router = useRouter();
 
   const [upcomingClasses, setUpcomingClasses] = useState<UpcomingLesson[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
-  const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(
-    INITIAL_SCHEDULED_LESSONS,
-  );
+  const [scheduledLessons, setScheduledLessons] = useState<ScheduledLesson[]>(INITIAL_SCHEDULED_LESSONS);
 
   const [stats, setStats] = useState({
     totalClasses: 0,
@@ -54,7 +37,6 @@ export default function FacultyDashLeft() {
     if (userLoading || facultyLoading || !userId || !facultyId) return;
     try {
       setIsLoadingClasses(true);
-      // Run both fetches concurrently for speed
       const [classesData, statsData] = await Promise.all([
         getUpcomingClasses(Number(userId)),
         getFacultyDashboardStats(Number(facultyId)),
@@ -73,11 +55,10 @@ export default function FacultyDashLeft() {
   }, [userId, facultyId, userLoading, facultyLoading]);
 
   const facultyImage =
-    gender && (gender === "Female" ? "/faculty-f.png" : "/faculty-male.png");
+    gender && (gender === "Female" ? "/faculty-female.png" : "/faculty-male.png");
 
   const pad = (num: number) => num.toString().padStart(2, "0");
 
-  // ---> DYNAMIC CARDS <---
   const cardData = [
     {
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
@@ -114,7 +95,7 @@ export default function FacultyDashLeft() {
       image: facultyImage ?? undefined,
       top: "lg:top-[-5px]",
       imageHeight: "h-45",
-      right: "right-[-25]",
+      right: "lg:right-[-100]",
     },
   ];
 
@@ -126,13 +107,6 @@ export default function FacultyDashLeft() {
       ...newLessonData,
     };
     setScheduledLessons((prev) => [newLesson, ...prev]);
-  };
-
-  const handleAcceptSuccess = async () => {
-    if (facultyId) {
-      const newStats = await getFacultyDashboardStats(Number(facultyId));
-      setStats(newStats);
-    }
   };
 
   return (
@@ -159,18 +133,11 @@ export default function FacultyDashLeft() {
               <div className="overflow-y-auto shadow-md rounded-2xl bg-white min-h-75">
                 <UpcomingClasses
                   lessons={upcomingClasses}
-                  onAddLesson={() => {}}
+                  onAddLesson={() => { }}
                   facultyId={Number(facultyId)}
                   loading={isLoadingClasses}
                 />
               </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-3">
-              <ScheduledLessonsStrip
-                lessons={scheduledLessons}
-                onAddLesson={handleAddScheduledLesson}
-                subjectName="Data Structures and algorithms"
-              />
             </div>
           </div>
         </div>

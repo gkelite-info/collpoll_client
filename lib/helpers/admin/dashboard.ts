@@ -31,7 +31,6 @@ export async function getAdminDashboardSummary(
       .eq("collegeEducationId", collegeEducationId)
       .eq("is_deleted", false),
 
-    // Parents don't have collegeEducationId, so we inner join students to filter them securely
     supabase
       .from("parents")
       .select("parentId, students!inner(collegeEducationId)", {
@@ -51,8 +50,8 @@ export async function getAdminDashboardSummary(
 
   return {
     totalUsers,
-    pendingApprovals: 34, // placeholder for now
-    systemHealth: "Good", // placeholder for now
-    automations: 12, // placeholder for now
+    pendingApprovals: 34,
+    systemHealth: "Good",
+    automations: 12,
   };
 }

@@ -5,22 +5,19 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
-import { supabase } from "@/lib/supabaseClient";
-import TaskModal from "@/app/components/modals/taskModal";
+import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import toast from "react-hot-toast";
 
 export default function FacultyDashRight() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [openModal, setOpenModal] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { facultyId, subjectIds, loading: facultyLoading } = useFaculty();
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
-  const loadTasks = async () => {
 
+  const loadTasks = async () => {
     if (!collegeSubjectId) return;
 
     try {
@@ -36,6 +33,7 @@ export default function FacultyDashRight() {
           date: t.date,
         }))
       );
+      console.log("sorry data", data);
 
     } catch (err) {
       console.error("LOAD TASK ERROR", err);
@@ -45,6 +43,7 @@ export default function FacultyDashRight() {
 
   };
 
+
   useEffect(() => {
 
     if (!facultyLoading && collegeSubjectId) {
@@ -52,6 +51,40 @@ export default function FacultyDashRight() {
     }
 
   }, [facultyLoading, collegeSubjectId]);
+
+  const handleSave = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number
+  ) => {
+    try {
+      const res = await saveFacultyTask(
+        {
+          facultyTaskId: taskId,
+          collegeSubjectId: collegeSubjectId!,
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime,
+        },
+        facultyId!
+      );
+
+      if (!res.success) {
+        throw new Error("Save failed");
+      }
+
+      await loadTasks();
+    } catch (error) {
+      console.error("HANDLE SAVE ERROR:", error);
+      toast.error("Failed to save task");
+      throw error;
+    }
+  };
 
   const card = [
     {
@@ -82,41 +115,15 @@ export default function FacultyDashRight() {
       <TaskPanel
         role="faculty"
         facultyTasks={loading ? [] : tasks}
-        studentTasks={[]}
         loading={loading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => {
-          setEditingTask(null);
-          setOpenModal(true);
-        }}
-        onEditTask={(task) => {
-          setEditingTask(task);
-          setOpenModal(true);
+        onAddTask={() => { }}
+        onSaveTask={handleSave}
+        onDeleteTask={async () => {
+          await loadTasks();
         }}
       />
-
-
-      {openModal && (
-
-        <TaskModal
-          open={openModal}
-          role="faculty"
-          collegeSubjectId={collegeSubjectId!}
-          facultyId={facultyId!}
-          onClose={() => {
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-          defaultValues={editingTask}
-          onSave={() => {
-            loadTasks();
-            setOpenModal(false);
-            setEditingTask(null);
-          }}
-        />
-
-      )}
 
       <AnnouncementsCard announceCard={card} />
     </div>

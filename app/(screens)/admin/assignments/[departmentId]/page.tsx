@@ -109,7 +109,7 @@ const DepartmentSubjectPage = () => {
 
         {courses.length === 0 ? (
           <div className="bg-white p-20 rounded-xl text-center text-gray-400 border border-dashed">
-            No active subjects found for this department and year.
+            No active subjects found for this branch and year.
           </div>
         ) : (
           <>

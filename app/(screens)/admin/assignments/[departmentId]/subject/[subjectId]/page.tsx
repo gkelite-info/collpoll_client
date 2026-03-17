@@ -18,7 +18,7 @@ export default function AdminSubjectAssignmentPage() {
         facultyId={facultyId}
         isAdminView={true}
       />
-      <AssignmentsRight />
+      <AssignmentsRight facultyId={facultyId} collegeSubjectId={subjectId} />
     </main>
   );
 }
