@@ -1,10 +1,17 @@
 import { PencilSimple, FilePdf, CalendarDotsIcon } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-export default function FacultyDiscussionCard({ data, discussionView="active" }: { data: any, discussionView?: "active" | "completed"; }) {
+export default function FacultyDiscussionCard({ data, discussionView = "active" }: { data: any, discussionView?: "active" | "completed"; }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+
+    const handleViewSubmissions = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("action", "viewSubmissions");
+        params.set("discussionId", data.id);
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     const handleEdit = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -29,7 +36,9 @@ export default function FacultyDiscussionCard({ data, discussionView="active" }:
                             <PencilSimple size={18} weight="fill" className="text-[#16284F]" />
                         </button>
                     )}
-                    <button className="bg-[#43C17A] cursor-pointer text-[#EFEFEF] px-5 py-2.5 rounded-md text-sm font-bold hover:bg-[#38a366] transition-colors">
+                    <button
+                        onClick={handleViewSubmissions}
+                        className="bg-[#43C17A] cursor-pointer text-[#EFEFEF] px-5 py-2.5 rounded-md text-sm font-bold hover:bg-[#38a366] transition-colors">
                         View Submissions
                     </button>
 
