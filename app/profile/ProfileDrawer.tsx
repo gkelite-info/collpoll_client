@@ -95,7 +95,13 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                     </button> */}
                 </div>
                 <h2 className="text-base font-medium pl-4 text-[#282828]">Profile</h2>
-                <div className="m-4 p-4 rounded-xl bg-[#43C17A26] flex gap-3 items-center">
+                <div
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onClose();
+                        router.push("/profile?profile=personal-details&Step=1");
+                    }}
+                    className="m-4 p-4 cursor-pointer rounded-xl bg-[#43C17A26] flex gap-3 items-center">
                     <img
                         src="https://randomuser.me/api/portraits/women/44.jpg"
                         alt="profile"
@@ -130,19 +136,15 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                                         onOpenQuickMenu();
                                     }} />
                                 )} */}
-                                <CaretRight
+                                {/* <CaretRight
                                     size={20}
                                     className="text-[#000000] cursor-pointer"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         onClose();
-                                        if (role === "Student") {
-                                            router.push("/profile?profile=personal-details");
-                                        } else {
-                                            router.push(`/${role?.toLocaleLowerCase()}?profile=personal-details`);
-                                        }
+                                        router.push("/profile?profile=personal-details&Step=1");
                                     }}
-                                />
+                                /> */}
                             </div>
                         </div>
                         {role === "Student" && (

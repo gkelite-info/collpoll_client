@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Header from "./header/page";
 import { Toaster } from "react-hot-toast";
+import { useUser } from "@/app/utils/context/UserContext";
 
 import StudentNavbar from "./navbar/studentNavbar";
 import AdminNavbar from "./navbar/adminNavbar";
@@ -20,6 +21,7 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { role } = useUser();
 
   const hideLayoutRoutes = [
     "/login",
@@ -35,6 +37,32 @@ export default function ClientLayout({
   );
 
   const renderNavbar = () => {
+    // Handle profile page - render navbar based on user's role
+    if (pathname === "/profile" || pathname.startsWith("/profile?")) {
+      switch (role) {
+        case "Student":
+          return <StudentNavbar />;
+        case "Faculty":
+          return <FacultyNavbar />;
+        case "Admin":
+          return <AdminNavbar />;
+        case "CollegeHr":
+          return <HrNavbar />;
+        case "Finance":
+          return <FinanceNavbar />;
+        case "CollegeAdmin":
+          return <CollegeAdminNavbar />;
+        case "Parent":
+          return <ParentNavbar />;
+        case "SuperAdmin":
+          return <SuperAdminNavbar />;
+        case "Placement":
+          return <PlacementNavbar />;
+        default:
+          return <StudentNavbar />;
+      }
+    }
+
     if (pathname.startsWith("/admin")) return <AdminNavbar />;
     if (pathname.startsWith("/faculty")) return <FacultyNavbar />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;

@@ -1,7 +1,20 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { BuildingOffice, Calendar, CheckCircle, ClipboardText, CurrencyCircleDollar, FolderOpen, Gear, GraduationCap, House, Laptop, Note, Student } from "@phosphor-icons/react";
+import {
+  BuildingOffice,
+  Calendar,
+  CheckCircle,
+  ClipboardText,
+  CurrencyCircleDollar,
+  FolderOpen,
+  Gear,
+  GraduationCap,
+  House,
+  Laptop,
+  Note,
+  Student,
+} from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 
 type NavItem = {
