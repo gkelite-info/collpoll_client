@@ -18,7 +18,6 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // 1️⃣ Deactivate past tasks (date < today)
   const { error: deactivateError } = await supabase
     .from("faculty_tasks")
     .update({
@@ -34,7 +33,6 @@ export async function fetchFacultyTasks(collegeSubjectId: number) {
     console.error("auto deactivate tasks error:", deactivateError);
   }
 
-  // 2️⃣ Fetch today's active tasks
   const { data, error } = await supabase
     .from("faculty_tasks")
     .select(`
@@ -112,7 +110,6 @@ export async function saveFacultyTask(
     updatedAt: now,
   };
 
-  // INSERT (keep same behaviour)
   if (!payload.facultyTaskId) {
 
     upsertPayload.createdBy = facultyId;
@@ -136,7 +133,6 @@ export async function saveFacultyTask(
 
   }
 
-  // UPDATE (only update that row)
   const { error } = await supabase
     .from("faculty_tasks")
     .update(upsertPayload)
@@ -200,3 +196,34 @@ export async function fetchFacultyTasksForLoggedInFaculty(
 
   return data ?? [];
 }
+
+
+export const fetchFacultyTasksByFacultyId = async (facultyId: number) => {
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .select(`
+      facultyTaskId,
+      collegeSubjectId,
+      taskTitle,
+      description,
+      date,
+      time,
+      createdBy,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `)
+    .eq("createdBy", facultyId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("date", { ascending: true })
+    .order("time", { ascending: true });
+
+  if (error) {
+    console.error("fetchFacultyTasksByFacultyId error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+};

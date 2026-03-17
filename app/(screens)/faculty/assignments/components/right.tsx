@@ -3,31 +3,54 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Task } from "@/app/utils/taskPanel";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import toast from "react-hot-toast";
 
 
 export default function AssignmentsRight() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { facultyId, subjectIds, loading: facultyLoading } = useFaculty();
+  const collegeSubjectId = subjectIds?.[0] ?? null;
 
-  const [facultyTasks, setFacultyTasks] = useState<Task[]>([
-    {
-      facultyTaskId: 1,
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-      date: new Date().toLocaleString()
+  const loadTasks = async () => {
+    if (!collegeSubjectId) return;
 
-    },
-    {
-      facultyTaskId: 2,
-      title: "Prepare Unit Test Question Bank",
-      description: "Prepare questions covering all important topics.",
-      time: "10:21 AM",
-      date: new Date().toLocaleString()
-    },
-  ]);
+    try {
 
-  const handleSaveFacultyTask = (
+      const data = await fetchFacultyTasks(collegeSubjectId);
+
+      setTasks(
+        data.map((t: any) => ({
+          facultyTaskId: t.facultyTaskId,
+          title: t.taskTitle,
+          description: t.description,
+          time: t.time,
+          date: t.date,
+        }))
+      );
+      console.log("sorry data", data);
+
+    } catch (err) {
+      console.error("LOAD TASK ERROR", err);
+    } finally {
+      setLoading(false);
+    }
+
+  };
+
+  useEffect(() => {
+
+    if (!facultyLoading && collegeSubjectId) {
+      loadTasks();
+    }
+
+  }, [facultyLoading, collegeSubjectId]);
+
+  const handleSave = async (
     payload: {
       title: string;
       description: string;
@@ -36,30 +59,28 @@ export default function AssignmentsRight() {
     },
     taskId?: number
   ) => {
-    if (taskId) {
-      setFacultyTasks((prev) =>
-        prev.map((t) => 
-          t.facultyTaskId === taskId
-          ? {
-            ...t,
-            title: payload.title,
-            description: payload.description,
-            time: payload.dueTime,
-            date : ""
-          } : t
-        )
-      );
-    } else {
-      setFacultyTasks((prev) => [
+    try {
+      const res = await saveFacultyTask(
         {
-          facultyTaskId: Date.now(),
-          title: payload.title,
+          facultyTaskId: taskId,
+          collegeSubjectId: collegeSubjectId!,
+          taskTitle: payload.title,
           description: payload.description,
+          date: payload.dueDate,
           time: payload.dueTime,
-          date: new Date().toLocaleString()
         },
-        ...prev,
-      ]);
+        facultyId!
+      );
+
+      if (!res.success) {
+        throw new Error("Save failed");
+      }
+
+      await loadTasks();
+    } catch (error) {
+      console.error("HANDLE SAVE ERROR:", error);
+      toast.error("Failed to save task");
+      throw error;
     }
   };
 
@@ -118,9 +139,15 @@ export default function AssignmentsRight() {
         <WorkWeekCalendar />
         <TaskPanel
           role="faculty"
-          facultyTasks={facultyTasks}
+          facultyTasks={loading ? [] : tasks}
+          loading={loading}
+          collegeSubjectId={collegeSubjectId ?? undefined}
+          facultyId={facultyId ?? undefined}
           onAddTask={() => { }}
-          onSaveTask={handleSaveFacultyTask}
+          onSaveTask={handleSave}
+          onDeleteTask={async () => {
+            await loadTasks();
+          }}
         />
         <AnnouncementsCard announceCard={card} />
       </div>
