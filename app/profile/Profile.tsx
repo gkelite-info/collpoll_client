@@ -17,6 +17,7 @@ import AcademicAchievements from "./resume/AcademicAchievements";
 import ResumeSteps from "./resumeSteps";
 import { useUser } from "../utils/context/UserContext";
 import { useEffect } from "react";
+import { canAccessResume } from "@/lib/helpers/profile/profileRouteConfig";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
@@ -27,9 +28,18 @@ export default function ProfileClient() {
   const currentStep = searchParams.get(currentView) || "personal-details";
 
   const { role } = useUser();
+  const showResumeTabs = canAccessResume(role as any);
 
   useEffect(() => {
-  }, [role, currentStep])
+    // If page loads without query params and user can access resume, default to resume
+    // Otherwise, if no resume access, allow profile mode to be the default
+    const hasQueryParams = searchParams.toString().length > 0;
+    if (!hasQueryParams && showResumeTabs && role) {
+      const params = new URLSearchParams();
+      params.set("resume", "personal-details");
+      router.push(`${pathname}?${params.toString()}&Step=1`);
+    }
+  }, [role, showResumeTabs, pathname, router])
 
   const handleViewToggle = (targetView: string) => {
     const params = new URLSearchParams();
@@ -90,26 +100,30 @@ export default function ProfileClient() {
         )}
       </div>
       <p className="mt-3 mb-1 text-[#282828] font-normal">
-        {role === "Student" &&
-          <>
-            <span
-              onClick={() => handleViewToggle("resume")}
-              className={`cursor-pointer transition-colors ${!isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
-                }`}
-            >
-              Resume
-            </span>
-
-            <span className="mx-1 text-gray-400"> / </span>
-          </>
-        }
         <span
           onClick={() => handleViewToggle("profile")}
-          className={`cursor-pointer transition-colors ${isProfileMode ? "text-[#43C17A] font-medium" : "text-gray-400 hover:text-gray-600"
+          className={`cursor-pointer transition-colors ${isProfileMode
+            ? "text-[#43C17A] font-medium"
+            : "text-gray-400 hover:text-gray-600"
             }`}
         >
           Profile
         </span>
+        {showResumeTabs && (
+          <>
+            <span className="mx-1 text-gray-400"> / </span>
+            <span
+              onClick={() => handleViewToggle("resume")}
+              className={`cursor-pointer transition-colors ${!isProfileMode
+                ? "text-[#43C17A] font-medium"
+                : "text-gray-400 hover:text-gray-600"
+                }`}
+            >
+              Resume
+            </span>
+          </>
+        )}
+
       </p>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar pt-2">

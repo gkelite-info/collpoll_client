@@ -59,7 +59,7 @@ export default function ParentNavbar() {
                 <Gear size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Settings",
-            path: "/settings",
+            path: "/parent/settings",
         },
     ];
 
