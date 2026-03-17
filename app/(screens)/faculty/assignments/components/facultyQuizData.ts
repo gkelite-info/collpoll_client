@@ -1,4 +1,4 @@
-export const STATIC_ACTIVE_QUIZZES = Array.from({ length: 8 }, (_, i) => ({
+export const STATIC_ACTIVE_QUIZZES = Array.from({ length: 18 }, (_, i) => ({
     id: `active-${i + 1}`,
     title: "Deadlocks",
     subtitle: "Avoidance & Detection Techniques",

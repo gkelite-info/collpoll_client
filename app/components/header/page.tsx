@@ -1,5 +1,12 @@
 "use client";
-import { BellSimple, CaretDown, EnvelopeSimple, MagnifyingGlass, Megaphone, Newspaper } from "@phosphor-icons/react";
+import {
+  BellSimple,
+  CaretDown,
+  EnvelopeSimple,
+  MagnifyingGlass,
+  Megaphone,
+  Newspaper,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
 import NewsModal from "../modals/NewsModal";
@@ -12,11 +19,13 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 import { useParent } from "@/app/utils/context/parent/useParent";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
-
+import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnreadNotificationCount";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Header() {
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isNewsOpen, setIsNewsOpen] = useState(false);
   const [isEmailOpen, setIsEmailOpen] = useState(false);
@@ -24,10 +33,20 @@ export default function Header() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
 
-  const { fullName, role, collegeEducationType, collegeBranchCode, studentId, facultyId, adminId } = useUser();
+  const {
+    fullName,
+    role,
+    collegeEducationType,
+    collegeBranchCode,
+    studentId,
+    facultyId,
+    adminId,
+    userId,
+  } = useUser();
+
   const { financeManagerId } = useFinanceManager();
   const { collegeAdminId } = useCollegeAdmin();
-  const { collegeHrId } = useCollegeHr()
+  const { collegeHrId } = useCollegeHr();
   const { parentId } = useParent();
 
   function openPDFModal() {
@@ -47,11 +66,46 @@ export default function Header() {
   };
 
   useEffect(() => {
+    if (!userId) return;
+
+    async function fetchNotificationCount() {
+      const count = await getUnreadNotificationCount(userId!);
+      setUnreadCount(count);
+    }
+
+    fetchNotificationCount();
+
+    const notificationChannel = supabase
+      .channel("custom-notification-channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          const record = (payload.new as any) || (payload.old as any);
+
+          if (record && record.userId === userId) {
+            setTimeout(() => {
+              fetchNotificationCount();
+            }, 100);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationChannel);
+    };
+  }, [userId]);
+
+  useEffect(() => {
     const handler = () => setOpenProfile(true);
     document.addEventListener("open-profile", handler);
     return () => document.removeEventListener("open-profile", handler);
   }, []);
-
 
   return (
     <>
@@ -76,27 +130,32 @@ export default function Header() {
 
         <div className="w-[40%] flex justify-between">
           <div className="w-[40%] h-[100%] flex items-center justify-center gap-3">
-            <button
-              onClick={() => setIsNewsOpen(true)}
-              className="relative"
-            >
+            <button onClick={() => setIsNewsOpen(true)} className="relative">
               <Newspaper size={21} color="#282828" className="cursor-pointer" />
             </button>
 
-            <button
-              onClick={() => setIsEmailOpen(true)}
-              className="relative"
-            >
-              <EnvelopeSimple size={21} color="#282828" className="cursor-pointer" />
+            <button onClick={() => setIsEmailOpen(true)} className="relative">
+              <EnvelopeSimple
+                size={21}
+                color="#282828"
+                className="cursor-pointer"
+              />
             </button>
-
 
             <button
               onClick={() => setIsNotificationsOpen(true)}
               className="relative"
             >
-              <BellSimple size={21} color="#282828" className="cursor-pointer" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
+              <BellSimple
+                size={21}
+                color="#282828"
+                className="cursor-pointer"
+              />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 border border-white rounded-full">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -105,11 +164,10 @@ export default function Header() {
             >
               <Megaphone size={20} color="#282828" className="cursor-pointer" />
             </button>
-
           </div>
 
-          <div className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
-            //  onClick={()=>router.push('/profile')}
+          <div
+            className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
             onClick={() => setOpenProfile(true)}
           >
             <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
@@ -159,35 +217,41 @@ export default function Header() {
                 {role === "Admin" && (
                   <>
                     <p>{role}</p>
-                    <p>ID - <span>{adminId}</span></p>
+                    <p>
+                      ID - <span>{adminId}</span>
+                    </p>
                   </>
                 )}
                 {role === "CollegeAdmin" && (
                   <>
                     <p>{role}</p>
-                    <p>ID - <span>{collegeAdminId}</span></p>
+                    <p>
+                      ID - <span>{collegeAdminId}</span>
+                    </p>
                   </>
                 )}
                 {role === "Parent" && (
                   <>
                     <p>{role}</p>
-                    <p>ID - <span>{parentId}</span></p>
+                    <p>
+                      ID - <span>{parentId}</span>
+                    </p>
                   </>
                 )}
                 {role === "CollegeHr" && (
                   <>
                     <p>{role}</p>
-                    <p>ID - <span>{collegeHrId}</span></p>
+                    <p>
+                      ID - <span>{collegeHrId}</span>
+                    </p>
                   </>
                 )}
-                {["SuperAdmin"].includes(role as string) && (
-                  <p>{role}</p>
-                )}
+                {["SuperAdmin"].includes(role as string) && <p>{role}</p>}
               </div>
             </div>
-          </div >
-        </div >
-      </div >
+          </div>
+        </div>
+      </div>
 
       <NotificationsModal
         isOpen={isNotificationsOpen}
@@ -198,22 +262,7 @@ export default function Header() {
         onClose={() => setIsNewsOpen(false)}
         onOpenPDF={openPDFModal}
       />
-      <EmailModal
-        isOpen={isEmailOpen}
-        onClose={() => setIsEmailOpen(false)}
-        mail={{
-          initials: "",
-          color: "",
-          sender: "",
-          email: "",
-          subject: "",
-          desc: "",
-          time: "",
-          date: "",
-          body: "",
-          Subject: "",
-        }}
-      />
+      <EmailModal isOpen={isEmailOpen} onClose={() => setIsEmailOpen(false)} />
       <AnnouncementModal
         isOpen={isAnnouncementOpen}
         onClose={() => setIsAnnouncementOpen(false)}

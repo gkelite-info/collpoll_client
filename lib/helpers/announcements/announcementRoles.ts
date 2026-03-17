@@ -60,30 +60,24 @@ export async function saveAnnouncementRole(
     payload: {
         collegeAnnouncementId: number;
         role: string;
-    },
-) {
-    const now = new Date().toISOString();
-
-    const existing = await fetchExistingAnnouncementRole(
-        payload.collegeAnnouncementId,
-        payload.role,
-    );
-
-    const upsertPayload: any = {
-        collegeAnnouncementId: payload.collegeAnnouncementId,
-        role: payload.role,
-        updatedAt: now,
-    };
-
-    if (!existing.data) {
-        upsertPayload.createdAt = now;
     }
+) {
+
+    const now = new Date().toISOString();
 
     const { data, error } = await supabase
         .from("college_announcements_roles")
-        .upsert(upsertPayload, {
-            onConflict: "collegeAnnouncementId, role",
-        })
+        .upsert(
+            {
+                collegeAnnouncementId: payload.collegeAnnouncementId,
+                role: payload.role,
+                createdAt: now,
+                updatedAt: now
+            },
+            {
+                onConflict: "collegeAnnouncementId,role"
+            }
+        )
         .select("collegeAnnouncementRolesId")
         .single();
 
@@ -94,7 +88,7 @@ export async function saveAnnouncementRole(
 
     return {
         success: true,
-        collegeAnnouncementRolesId: data.collegeAnnouncementRolesId,
+        collegeAnnouncementRolesId: data.collegeAnnouncementRolesId
     };
 }
 

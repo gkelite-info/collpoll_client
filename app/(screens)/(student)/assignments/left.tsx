@@ -15,16 +15,23 @@ import QuizViewAnswersScreen from "./components/quizViewAnswersScreen";
 import QuizPerformanceModal from "./components/quizPerformanceModal";
 import QuizAttemptScreen from "./components/QuizAttemptScreen";
 
+import StudentDiscussionCard from "./components/studentDiscussionCard";
+import { STATIC_STUDENT_ACTIVE_DISCUSSIONS, STATIC_STUDENT_COMPLETED_DISCUSSIONS } from "./components/studentDiscussionData";
+import { StudentDiscussionUploadModal, StudentDiscussionDetailsModal } from "./components/studentDiscussionModals";
+
 function AssignmentsLeftContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const action = searchParams.get("action");
     const activeQuizId = searchParams.get("quizId");
+    const activeDiscussionId = searchParams.get("discussionId");
     const activeModal = searchParams.get("modal");
+
     const activeTab = searchParams.get("tab") || "assignments";
     const activeView = (searchParams.get("view") as "active" | "previous") || "active";
     const quizView = (searchParams.get("quizView") as "ongoing" | "attempted") || "ongoing";
+    const discussionView = (searchParams.get("discussionView") as "active" | "completed") || "active";
 
     const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
     const [previousAssignments, setPreviousAssignments] = useState<any[]>([]);
@@ -34,20 +41,20 @@ function AssignmentsLeftContent() {
 
     const rowsPerPage = 8;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
+    const [discussionUploads, setDiscussionUploads] = useState<Record<string, any[]>>({});
 
-    const handleTabChange = (tab: "assignments" | "quiz") => {
+    const handleTabChange = (tab: "assignments" | "quiz" | "discussion") => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("tab", tab);
         params.delete("action");
         params.delete("quizId");
+        params.delete("discussionId");
+        params.delete("modal");
 
-        params.set("tab", tab);
-        if (tab === "assignments") {
-            params.set("view", "active");
-        }
-        if (tab === "quiz") {
-            params.set("quizView", "ongoing");
-        }
+        if (tab === "assignments") params.set("view", "active");
+        if (tab === "quiz") params.set("quizView", "ongoing");
+        if (tab === "discussion") params.set("discussionView", "active");
+
         router.push(`${pathname}?${params.toString()}`);
     };
 
@@ -60,6 +67,12 @@ function AssignmentsLeftContent() {
     const handleQuizViewChange = (view: "ongoing" | "attempted") => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("quizView", view);
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    const handleDiscussionViewChange = (view: "active" | "completed") => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("discussionView", view);
         router.push(`${pathname}?${params.toString()}`);
     };
 
@@ -207,14 +220,29 @@ function AssignmentsLeftContent() {
         }
     }
 
-    // Fetch the target modal quiz data if the performance modal should be open
     const targetModalQuiz = activeModal === "performance" && activeQuizId
         ? STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId)
         : null;
 
+    const activeDiscussionData = activeDiscussionId ? [...STATIC_STUDENT_ACTIVE_DISCUSSIONS, ...STATIC_STUDENT_COMPLETED_DISCUSSIONS].find(d => d.id === activeDiscussionId) : null;
+
     return (
         <div className="w-[68%] p-2 flex flex-col h-full">
             {targetModalQuiz && <QuizPerformanceModal quiz={targetModalQuiz} />}
+            {activeModal === "uploadDiscussion" && activeDiscussionData && (
+                <StudentDiscussionUploadModal
+                    discussion={activeDiscussionData}
+                    onUpload={(files) => {
+                        setDiscussionUploads(prev => ({
+                            ...prev,
+                            [activeDiscussionData.id]: files
+                        }));
+                    }}
+                />
+            )}
+            {activeModal === "viewDiscussion" && activeDiscussionData && (
+                <StudentDiscussionDetailsModal discussion={activeDiscussionData} />
+            )}
             <div className="mb-4">
                 <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
                     <span
@@ -238,18 +266,27 @@ function AssignmentsLeftContent() {
                     >
                         Quiz
                     </span>
+                    <span className="text-[#282828]">/</span>
+                    <span onClick={() => handleTabChange("discussion")} className={`cursor-pointer transition-colors ${activeTab === "discussion" ? "text-[#43C17A]" : "text-[#282828]"}`}>
+                        Discussion forum
+                    </span>
                 </h1>
-                <p className="text-[#282828] text-sm">
+                {/* <p className="text-[#282828] text-sm">
                     {activeTab === "assignments"
                         ? "View, track, and submit your work with ease"
                         : "Attempt, Track, and Review Your Quiz Performance with Ease"}
+                </p> */}
+                <p className="text-[#282828] text-sm">
+                    {activeTab === "assignments" && "View, track, and submit your work with ease"}
+                    {activeTab === "quiz" && "Attempt, Track, and Review Your Quiz Performance with Ease"}
+                    {activeTab === "discussion" && "Explore project discussions, guides, and resources shared by faculty."}
                 </p>
             </div>
 
             <div className="w-full flex flex-col flex-1 min-h-0">
 
                 <div className="flex gap-4 pb-1">
-                    {activeTab === "assignments" ? (
+                    {/* {activeTab === "assignments" ? (
                         <>
                             <h5
                                 className={`text-xs cursor-pointer pb-1 ${activeView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
@@ -278,6 +315,24 @@ function AssignmentsLeftContent() {
                             >
                                 Attempted Quizzes
                             </h5>
+                        </>
+                    )} */}
+                    {activeTab === "assignments" && (
+                        <>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${activeView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleViewChange("active")}>Active Assignments</h5>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${activeView === "previous" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleViewChange("previous")}>Previous Assignments</h5>
+                        </>
+                    )}
+                    {activeTab === "quiz" && (
+                        <>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${quizView === "ongoing" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleQuizViewChange("ongoing")}>Ongoing Quizzes</h5>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${quizView === "attempted" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleQuizViewChange("attempted")}>Attempted Quizzes</h5>
+                        </>
+                    )}
+                    {activeTab === "discussion" && (
+                        <>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${discussionView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleDiscussionViewChange("active")}>Active Discussions</h5>
+                            <h5 className={`text-xs cursor-pointer pb-1 ${discussionView === "completed" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleDiscussionViewChange("completed")}>Completed Discussions</h5>
                         </>
                     )}
                 </div>
@@ -333,6 +388,32 @@ function AssignmentsLeftContent() {
                                 </div>
                             )}
                         </>
+                    )}
+
+                    {activeTab === "discussion" && (
+                        <div className="flex flex-col gap-4 pb-10">
+                            {discussionView === "active" && STATIC_STUDENT_ACTIVE_DISCUSSIONS.map((discussion) => (
+                                <StudentDiscussionCard
+                                    key={discussion.id}
+                                    data={discussion}
+                                    uploadedFiles={discussionUploads[discussion.id] || []}
+                                    onRemoveFile={(idx) => {
+                                        setDiscussionUploads(prev => ({
+                                            ...prev,
+                                            [discussion.id]: prev[discussion.id].filter((_, i) => i !== idx)
+                                        }));
+                                    }}
+                                />
+                            ))}
+                            {discussionView === "completed" && STATIC_STUDENT_COMPLETED_DISCUSSIONS.map((discussion) => (
+                                <StudentDiscussionCard
+                                    key={discussion.id}
+                                    data={discussion}
+                                    isCompleted={true}
+                                    uploadedFiles={discussionUploads[discussion.id] || []}
+                                />
+                            ))}
+                        </div>
                     )}
                 </div>
 

@@ -238,12 +238,6 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                       {item.percentage === null ? "No data" : `${percentage}%`}
                     </span>
                   </div>
-                  {/* <div className="flex items-center gap-1.5">
-                    <Timer size={15} weight="fill" className="text-[#9880F3]" />
-                    <p className="text-xs text-[#7153E1]">
-                      {item.fromDate} - {item.toDate}
-                    </p>
-                  </div> */}
                 </div>
               </div>
             );
