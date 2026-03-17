@@ -6,13 +6,23 @@ export type CampusBuzzPostRow = {
     title: string;
     category: "achievements" | "announcements" | "clubactivities";
     description: string;
-    tags?: string | null;
+    tags?: string[] | null;
     imageUrl?: string | null;
     createdBy: number;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
+};
+
+const normalizeTags = (tags?: string[]) => {
+    if (!tags || tags.length === 0) return null;
+
+    return [...new Set(
+        tags
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean)
+    )];
 };
 
 export async function fetchCampusBuzzFeed(collegeId: number) {
@@ -117,7 +127,7 @@ export async function saveCampusBuzzPost(
         title: string;
         category: "achievements" | "announcements" | "clubactivities";
         description: string;
-        tags?: string;
+        tags?: string[];
         imageUrl?: string;
     },
     userId: number
@@ -129,7 +139,7 @@ export async function saveCampusBuzzPost(
         title: payload.title.trim(),
         category: payload.category,
         description: payload.description.trim(),
-        tags: payload.tags ?? null,
+        tags: normalizeTags(payload.tags),
         imageUrl: payload.imageUrl ?? null,
         updatedAt: now,
     };
@@ -209,5 +219,23 @@ export async function fetchCampusBuzzByUser(userId: number) {
         throw error;
     }
 
+    return data ?? [];
+}
+
+export async function fetchCampusBuzzByTag(
+    collegeId: number,
+    tag: string
+) {
+    const { data, error } = await supabase
+        .from("campus_buzz_post")
+        .select("*")
+        .eq("collegeId", collegeId)
+        .contains("tags", [tag.toLowerCase()])
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("createdAt", { ascending: false });
+
+    if (error) throw error;
     return data ?? [];
 }
