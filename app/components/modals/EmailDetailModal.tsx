@@ -2,7 +2,6 @@
 
 import { Smile, X } from "lucide-react";
 
-
 export type EmailDetailItem = {
   initials: string;
   email: string;
@@ -21,8 +20,6 @@ type Props = {
   onClose: () => void;
 };
 
-
-
 export default function EmailDetailModal({ mail, onClose }: Props) {
   return (
     <div
@@ -34,21 +31,12 @@ export default function EmailDetailModal({ mail, onClose }: Props) {
         shadow-xl overflow-hidden
       "
     >
-      {/* Header */}
       <div className="px-4 pt-4 pb-0 relative">
-
-        {/* Close Button – more left */}
-        <button
-          onClick={onClose}
-          className="absolute left-4 top-2"
-        >
+        <button onClick={onClose} className="absolute left-4 top-2">
           <X size={22} className="text-[#6B7280]" />
         </button>
 
-        {/* Avatar + Name + Email + Time */}
         <div className="flex items-center justify-between mt-6">
-
-          {/* LEFT SIDE */}
           <div className="flex items-center gap-3 ml-2">
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center text-[15px] text-[#414141] font-semibold shadow-sm"
@@ -61,22 +49,16 @@ export default function EmailDetailModal({ mail, onClose }: Props) {
               <p className="text-[17px] font-semibold text-[#111827]">
                 {mail.sender}
               </p>
-              <p className="text-[14px] text-[#6B7280]">
-                {mail.email}
-              </p>
+              <p className="text-[14px] text-[#6B7280]">{mail.email}</p>
             </div>
           </div>
 
-          {/* RIGHT SIDE – TIME */}
           <p className="text-[12px] text-[#6B7280] whitespace-nowrap mr-2">
             {mail.time}, {mail.date}
           </p>
-
         </div>
       </div>
 
-
-      {/* Body */}
       <div className="p-5 flex flex-col h-full">
         <p className="text-[13px] text-[#111827] mb-3 leading-[100%]">
           <span className="font-medium">Subject :</span>

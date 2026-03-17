@@ -1,186 +1,144 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
-import { BellSimpleIcon, BookIcon } from "@phosphor-icons/react";
-import { title } from "process";
-import { desc } from "framer-motion/client";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useEffect } from "react";
-
-function Portal({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  return createPortal(children, document.body);
-}
+import { X } from "lucide-react";
+import { BellSimple } from "@phosphor-icons/react";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  getUserNotifications,
+  markNotificationRead,
+} from "@/lib/helpers/notifications/notificationAPI";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
 };
 
-const notifications = {
-  Academics: [
-    {
-      title: "New Assignment Posted",
-      desc: "Data Structures – Assignment 3 uploaded. Submit before Nov 5.",
-      time: "Just now",
-    },
-    {
-      title: "Unit Test Results Released",
-      desc: "Operating Systems marks are now live on the portal.",
-      time: "4 hours ago",
-    },
-    {
-      title: "Class Schedule Updated",
-      desc: "Tomorrow’s AI lecture is rescheduled to 11:30 AM.",
-      time: "1 day ago",
-    },
-    {
-      title: "Mid-Sem Exam Notification",
-      desc: "Timetable for mid-sem exams(Nov 15-20) is now available.",
-      time: "5 days ago",
-    },
-    {
-      title: "New Study Material added",
-      desc: 'Lecture notes for "Database Management Sysytem" uploaded.',
-      time: "5 days ago",
-    },
-    {
-      title: "Project Evaluation Date Announced",
-      desc: "CSE mini project review scheduled on Nov 12",
-      time: "5 days ago",
-    },
-    {
-      title: "Attendance Reminder",
-      desc: "Your attendance in Theory of Computation is below 75%.",
-      time: "5 days ago",
-    },
-  ],
-  Placements: [],
-};
+function Portal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 export default function NotificationsModal({ isOpen, onClose }: Props) {
-  const [activeTab, setActiveTab] = useState<"Academics" | "Placements">(
-    "Academics",
-  );
+  const { userId } = useUser();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadNotifications() {
+      if (!isOpen || !userId) return;
+      setIsLoading(true);
+      const data = await getUserNotifications(userId);
+      setNotifications(data);
+      setIsLoading(false);
+    }
+    loadNotifications();
+  }, [isOpen, userId]);
+
+  const handleNotificationClick = async (notif: any) => {
+    // Only fire if it's currently unread
+    if (!notif.isRead) {
+      // 1. Optimistically update the UI inside the modal so the color changes instantly
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.notificationId === notif.notificationId
+            ? { ...n, isRead: true }
+            : n,
+        ),
+      );
+
+      // 2. Update the Database
+      // This will trigger an 'UPDATE' event in Supabase Realtime,
+      // which the Header will catch, and the red dot count will instantly drop!
+      await markNotificationRead(notif.notificationId);
+    }
+  };
+
+  // const handleNotificationClick = async (
+  //   notificationId: number,
+  //   isRead: boolean,
+  // ) => {
+  //   if (!isRead) {
+  //     // Optimistically update UI
+  //     setNotifications((prev) =>
+  //       prev.map((n) =>
+  //         n.notificationId === notificationId ? { ...n, isRead: true } : n,
+  //       ),
+  //     );
+  //     // Update DB
+  //     await markNotificationRead(notificationId);
+  //     // Trigger custom event to update the bell icon count in Header
+  //     document.dispatchEvent(new Event("notification-read"));
+  //   }
+  // };
+
+  if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <Portal>
-          <>
-            <motion.div
-              onClick={onClose}
-              className="fixed inset-0 z-[999] bg-black/20 backdrop-blur-[2px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
+    <Portal>
+      <div
+        onClick={onClose}
+        className="fixed inset-0 z-[999] bg-black/20 backdrop-blur-[3px]"
+      />
 
-            {/* Modal */}
-            <motion.div
-              className="
-            fixed top-16 right-7 z-[1000]
-            translate-x-3
-            w-[320px] max-h-[420px]
-            bg-white
-            rounded-lg
-            border border-[#E5E7EB]
-            shadow-lg
-            overflow-hidden
-          "
-              initial={{ opacity: 0, y: -12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E7EB]">
-                <div className="flex items-center gap-2">
-                  <BellSimpleIcon size={18} weight="fill" color="#3FAA6E" />
-                  <h2 className="text-base font-semibold text-[#1F2937]">
-                    Notifications
-                  </h2>
-                </div>
+      <div className="fixed bottom-10 right-10 z-[1000] top-20 translate-x-6 w-[400px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <BellSimple size={25} weight="fill" color="#43C17A" />
+            <h2 className="text-[16px] font-semibold text-[#282828]">
+              Notifications
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="cursor-pointer hover:bg-gray-100 p-1 rounded-full"
+          >
+            <X size={18} className="text-[#6B7280]" />
+          </button>
+        </div>
 
-                <button onClick={onClose}>
-                  <X className="w-4 h-4 text-[#6B7280]" />
-                </button>
-              </div>
-
-              <div className="flex px-4 pt-3 border-b border-[#E5E7EB]">
-                {(["Academics", "Placements"] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`pb-2 mr-6 text-sm font-medium relative ${
-                      activeTab === tab ? "text-[#43C17A]" : "text-[#6B7280]"
-                    }`}
+        <div className="overflow-y-auto flex-1 custom-scrollbar p-2">
+          {isLoading ? (
+            <div className="p-5 text-center text-sm text-gray-500">
+              Loading notifications...
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-5 text-center text-sm text-gray-500">
+              No notifications.
+            </div>
+          ) : (
+            notifications.map((notif) => (
+              <div
+                key={notif.notificationId}
+                onClick={() => handleNotificationClick(notif)}
+                className={`p-3 mb-2 rounded-lg cursor-pointer transition-colors ${notif.isRead ? "bg-white hover:bg-gray-50" : "bg-green-50 hover:bg-green-100 border border-green-100"}`}
+              >
+                <div className="flex justify-between items-start">
+                  <h3
+                    className={`text-sm ${notif.isRead ? "text-gray-800 font-medium" : "text-green-900 font-semibold"}`}
                   >
-                    {tab}
-                    {activeTab === tab && (
-                      <motion.span
-                        layoutId="tab-underline"
-                        className="absolute left-0 -bottom-[1px] w-full h-[2px] bg-[#43C17A]"
-                      />
-                    )}
-                  </button>
-                ))}
+                    {notif.title}
+                  </h3>
+                  <span className="text-[10px] text-gray-500 shrink-0 mt-0.5">
+                    {new Date(notif.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <p
+                  className={`text-xs mt-1 ${notif.isRead ? "text-gray-500" : "text-gray-700"}`}
+                >
+                  {notif.message}
+                </p>
               </div>
-
-              <div className="max-h-[280px] overflow-y-auto">
-                {notifications[activeTab].length === 0 ? (
-                  <p className="text-center text-sm text-[#6B7280] py-10">
-                    No notifications available
-                  </p>
-                ) : (
-                  notifications[activeTab].map((item, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04 }}
-                      className="flex gap-2 px-3 py-2 border-b border-[#F3F4F6] last:border-none"
-                    >
-                      <div
-                        className="flex items-center justify-center rounded-full"
-                        style={{
-                          width: 36,
-                          height: 36,
-                          backgroundColor: "#3FAA6E26",
-                        }}
-                      >
-                        <BookIcon size={16} weight="fill" color="#3FAA6E" />
-                      </div>
-
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-[#1F2937]">
-                          {item.title}
-                        </p>
-                        <p className="text-[11px] text-[#6B7280] leading-snug">
-                          {item.desc}
-                        </p>
-                      </div>
-
-                      <span className="text-[10px] text-[#9CA3AF] whitespace-nowrap">
-                        {item.time}
-                      </span>
-                    </motion.div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          </>
-        </Portal>
-      )}
-    </AnimatePresence>
+            ))
+          )}
+        </div>
+      </div>
+    </Portal>
   );
 }
