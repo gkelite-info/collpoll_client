@@ -10,6 +10,7 @@ type UserContextType = {
   loading: boolean;
   studentId: number | null;
   fullName: string | null;
+  setFullName: React.Dispatch<React.SetStateAction<string | null>>;
   mobile: string | null;
   email: string | null;
   gender: string | null;
@@ -29,6 +30,7 @@ const StudentContext = createContext<UserContextType>({
   loading: true,
   studentId: null,
   fullName: null,
+  setFullName: () => {},
   mobile: null,
   email: null,
   gender: null,
@@ -212,6 +214,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         facultyId,
         financeManagerId,
         fullName,
+        setFullName,
         mobile,
         email,
         gender,
