@@ -28,7 +28,6 @@ const formatRole = (role: string) =>
 
 export default function HrDashRight() {
   const { userId, collegeId, role } = useUser();
-
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
 

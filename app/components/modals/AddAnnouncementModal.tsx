@@ -174,7 +174,8 @@ export default function AddAnnouncementModal({
           {
             announcementTitle: title,
             date,
-            type
+            type,
+            targetRoles,
           }
         );
 

@@ -27,7 +27,6 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-// ✅ role formatter
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -36,16 +35,16 @@ export default function FacultyDashRight() {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  
 
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
 
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
-  // ✅ ANNOUNCEMENTS STATE
+ 
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
 
-  // ================= TASKS =================
   const loadTasks = async () => {
     if (!collegeSubjectId) return;
 
@@ -68,7 +67,6 @@ export default function FacultyDashRight() {
     }
   };
 
-  // ================= ANNOUNCEMENTS =================
   const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
@@ -107,7 +105,6 @@ export default function FacultyDashRight() {
     }
   };
 
-  // ================= EFFECTS =================
   useEffect(() => {
     if (!facultyLoading && collegeSubjectId) {
       loadTasks();
@@ -153,7 +150,6 @@ export default function FacultyDashRight() {
     fetchAnnouncements();
   }, [collegeId, userId, role, view]);
 
-  // ================= UI =================
   return (
     <div className="w-[32%] p-2 flex flex-col">
       <CourseScheduleCard />

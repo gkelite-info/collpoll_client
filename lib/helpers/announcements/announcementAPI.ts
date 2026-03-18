@@ -103,7 +103,7 @@ export async function fetchCollegeAnnouncements({
     const formatted = (data ?? [])
         .map((item: any) => {
             const targetRoles =
-                 item.college_announcements_roles?.map((r: any) => r.role) || [];
+                item.college_announcements_roles?.map((r: any) => r.role) || [];
 
             const formattedDate = new Date(item.date).toLocaleDateString("en-GB", {
                 day: "2-digit",
@@ -245,9 +245,10 @@ export async function updateCollegeAnnouncement(
         announcementTitle: string;
         date: string;
         type: string;
+        targetRoles: string[]; // ✅ added
     }
 ) {
-
+    // ✅ Your existing update — unchanged
     const updatePayload = {
         announcementTitle: payload.announcementTitle.trim(),
         date: payload.date,
@@ -263,7 +264,6 @@ export async function updateCollegeAnnouncement(
 
     if (error) {
         console.error("updateCollegeAnnouncement error:", error);
-
         return {
             success: false,
             message: "Failed to update announcement",
@@ -271,9 +271,68 @@ export async function updateCollegeAnnouncement(
         };
     }
 
+    // ✅ Fetch existing roles from DB
+    const { data: existingRoles, error: fetchError } = await supabase
+        .from("college_announcements_roles")
+        .select("collegeAnnouncementRolesId, role")
+        .eq("collegeAnnouncementId", collegeAnnouncementId);
+
+    if (fetchError) {
+        console.error("fetch existing roles error:", fetchError);
+        return { success: false, message: "Failed to fetch existing roles" };
+    }
+
+    const existingRoleNames = existingRoles.map((r: any) => r.role);
+    const incomingRoles = payload.targetRoles;
+
+    // ✅ Roles to delete (unchecked)
+    const rolesToDelete = existingRoles.filter(
+        (r: any) => !incomingRoles.includes(r.role)
+    );
+
+    // ✅ Roles to insert (newly checked)
+    const rolesToInsert = incomingRoles.filter(
+        (role) => !existingRoleNames.includes(role)
+    );
+
+    // ✅ Delete removed roles
+    if (rolesToDelete.length > 0) {
+        const idsToDelete = rolesToDelete.map((r: any) => r.collegeAnnouncementRolesId);
+
+        const { error: deleteError } = await supabase
+            .from("college_announcements_roles")
+            .delete()
+            .in("collegeAnnouncementRolesId", idsToDelete);
+
+        if (deleteError) {
+            console.error("delete roles error:", deleteError);
+            return { success: false, message: "Failed to remove roles" };
+        }
+    }
+
+    // ✅ Insert new roles
+    if (rolesToInsert.length > 0) {
+        const now = new Date().toISOString();
+
+        const { error: insertError } = await supabase
+            .from("college_announcements_roles")
+            .insert(
+                rolesToInsert.map((role) => ({
+                    collegeAnnouncementId,
+                    role,
+                    createdAt: now,
+                    updatedAt: now,
+                }))
+            );
+
+        if (insertError) {
+            console.error("insert roles error:", insertError);
+            return { success: false, message: "Failed to add new roles" };
+        }
+    }
+
     return { success: true };
 }
-
 
 
 /* =====================================================

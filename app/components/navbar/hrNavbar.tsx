@@ -66,6 +66,13 @@ export default function HrNavbar() {
       path: "/hr/drive",
     },
     {
+          icon: (isActive) => (
+            <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+          ),
+          label: "My Attendance",
+          path: "/hr/MyAttendance",
+        },
+    {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),

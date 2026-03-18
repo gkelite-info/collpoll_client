@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { UsersThree, User, Clock } from "@phosphor-icons/react";
 
@@ -10,6 +10,8 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const columns = [
   { title: "Name", key: "name" },
@@ -31,6 +33,24 @@ const getStatusBadge = (status: string) => {
 
   return <span className={`${colorClass} font-semibold`}>{status}</span>;
 };
+
+const typeIcons: Record<string, string> = {
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
+};
+
+const formatRole = (role: string) =>
+  role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 const ALL_DATA = {
   total: [
@@ -375,140 +395,60 @@ const ALL_DATA = {
   ],
 };
 
-const card = [
-  {
-    image: "/clip.png",
-    imgHeight: "h-10",
-    title: "Submit internal marks for all subjects before 25 Oct 2025.",
-    professor: "By Justin Orom",
-    time: "Just now",
-    cardBg: "#E8F8EF",
-    imageBg: "#D3F1E0",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/clip.png",
-    imgHeight: "h-10",
-    title: "Submit internal marks for all subjects before 25 Oct 2025.",
-    professor: "By Justin Orom",
-    time: "Just now",
-    cardBg: "#E8F8EF",
-    imageBg: "#D3F1E0",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/clip.png",
-    imgHeight: "h-10",
-    title: "Submit internal marks for all subjects before 25 Oct 2025.",
-    professor: "By Justin Orom",
-    time: "Just now",
-    cardBg: "#E8F8EF",
-    imageBg: "#D3F1E0",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-  {
-    image: "/class.png",
-    imgHeight: "h-10",
-    title: "Upload your mini project abstracts by 12 Nov 2025.",
-    professor: "By John",
-    time: "12 mins ago.",
-    cardBg: "#EEEDFF",
-    imageBg: "#E3E1FF",
-  },
-];
 
 function FacultyAttendanceDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "total";
+  const { userId, collegeId, role } = useUser();
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [view, setView] = useState<"my" | "others">("my");
+
+  const fetchAnnouncements = async () => {
+    try {
+      if (!collegeId || !userId || !role) return;
+
+      const res = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role,
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      const formatted = res.data.map((item: any) => ({
+        collegeAnnouncementId: item.collegeAnnouncementId,
+        title: item.title,
+        date: item.date,
+        createdAt: item.createdAt,
+        type: item.type,
+        targetRoles: item.targetRoles,
+
+        image: typeIcons[item.type] || "/clip.png",
+        imgHeight: "h-10",
+        cardBg: "#E8F8EF",
+        imageBg: "#D3F1E0",
+
+        professor:
+          view === "my"
+            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+            : `By ${formatRole(item.createdByRole)}`,
+      }));
+
+      setAnnouncements(formatted);
+
+    } catch (err) {
+      console.error("HR announcements error:", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!collegeId || !userId || !role) return;
+    fetchAnnouncements();
+  }, [collegeId, userId, role, view]);
+  
   const handleTabChange = (tabId: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
@@ -628,7 +568,12 @@ function FacultyAttendanceDashboard() {
 
         <div className="w-[32%] flex flex-col -gap-1 -mt-5 pb-4">
           <WorkWeekCalendar />
-          <AnnouncementsCard announceCard={card} height="80vh" />
+         <AnnouncementsCard
+                 announceCard={announcements}
+                 height="80vh"
+                 onViewChange={(v) => setView(v)}
+                 refreshAnnouncements={fetchAnnouncements}
+               />
         </div>
       </div>
     </div>
