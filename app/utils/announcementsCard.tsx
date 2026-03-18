@@ -41,8 +41,16 @@ export default function AnnouncementsCard({
 }: AnnouncementsCardProps) {
   const pathname = usePathname();
   const isFinanceDashboard = pathname.startsWith("/finance");
+  const isCollegeAdminDashboard = pathname.startsWith("/college-admin");
+  const isAdminDashboard = pathname.startsWith("/admin");
+  const isStudentDashboard = pathname.includes("stu_dashboard");
+  const isParentDashboard = pathname.includes("parent");
+  const isFacultyDashboard = pathname.startsWith("/faculty");
+  const isHrDashboard = pathname.startsWith("/hr");
+  const isReadOnlyUser = isStudentDashboard || isParentDashboard;
+  const canManageAnnouncements = !isReadOnlyUser && (isFinanceDashboard || isCollegeAdminDashboard || isAdminDashboard || isFacultyDashboard || isHrDashboard);
 
-  const [activeView, setActiveView] = useState<"my" | "others">("my");
+  const [activeView, setActiveView] = useState<"my" | "others">(isReadOnlyUser ? "others" : "my");
   const [openModal, setOpenModal] = useState(false);
   const [editData, setEditData] = useState<any>(null);
 
@@ -156,9 +164,12 @@ export default function AnnouncementsCard({
             Announcements
           </h4>
 
-          {isFinanceDashboard && activeView === "my" && (
+          {!isReadOnlyUser && canManageAnnouncements && !isReadOnlyUser && activeView === "my" && (
             <button
-              onClick={() => onAddClick?.()}
+              onClick={() => {
+                setEditData(null);
+                setOpenModal(true);
+              }}
               className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer"
             >
               <Plus size={14} weight="bold" />
@@ -167,7 +178,7 @@ export default function AnnouncementsCard({
 
         </div>
 
-        {isFinanceDashboard && (
+        {!isReadOnlyUser && canManageAnnouncements && (
           <div className="flex items-center justify-between">
 
             <div className="flex items-center gap-1 text-sm font-semibold">
@@ -200,20 +211,27 @@ export default function AnnouncementsCard({
                 Shared
               </button>
 
-
             </div>
           </div>
         )}
-
-
       </div>
 
       {/* </div> */}
       <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
         {announceCard.length === 0 ? (
 
-          activeView === "my" ? (
+          isReadOnlyUser ? (
 
+            // ✅ STUDENT / PARENT
+            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+              <p className="text-sm font-medium">
+                You don't have any announcements today
+              </p>
+            </div>
+
+          ) : activeView === "my" ? (
+
+            // ✅ ADMIN / FINANCE / COLLEGE ADMIN (MY)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">No announcements yet</p>
               <p className="text-xs mt-1">Click + to create one</p>
@@ -221,8 +239,11 @@ export default function AnnouncementsCard({
 
           ) : (
 
+            // ✅ ADMIN / FINANCE (SHARED)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <p className="text-sm font-medium">You don't have any announcements today</p>
+              <p className="text-sm font-medium">
+                You don't have any announcements today
+              </p>
             </div>
 
           )
@@ -257,7 +278,7 @@ export default function AnnouncementsCard({
                   </div>
 
                   {/* Show icons ONLY for My Announcements */}
-                  {activeView === "my" && (
+                  {!isReadOnlyUser && activeView === "my" && (
                     <div className="flex items-center gap-2 ml-2">
 
                       <button
@@ -290,19 +311,25 @@ export default function AnnouncementsCard({
                 {/* Role + Date + Time */}
                 <div className="flex items-center justify-between px-1 text-[11px] text-[#454545]">
 
-                  {/* Role + Date (scrollable if long) */}
-                  <div className="flex gap-2 overflow-x-auto whitespace-nowrap max-w-[75%]">
-                    <span>{card.professor}</span>
-                    <span>{formatDate(card.date)}</span>
+                  {/* LEFT → Roles + Date (scrollable) */}
+                  <div className="flex gap-2 overflow-x-auto whitespace-nowrap max-w-[70%] scrollbar-hide">
+
+                    <span className="shrink-0">
+                      {card.professor}
+                    </span>
+
+                    <span className="shrink-0">
+                      {formatDate(card.date)}
+                    </span>
+
                   </div>
 
-                  {/* Time */}
-                  <span className="text-[#6B7280]">
+                  {/* RIGHT → Time (fixed) */}
+                  <span className="text-[#6B7280] shrink-0 ml-2">
                     {formatRelativeTime(card.createdAt)}
                   </span>
 
                 </div>
-
               </div>
             </div>
           )

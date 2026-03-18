@@ -18,6 +18,7 @@ const typeIcons: Record<string, string> = {
   placement: "/placement.png",
   emergency: "/emergency.png",
   finance: "/finance.jpg",
+  other: "/others.png",
 };
 
 
@@ -151,52 +152,54 @@ const typeIcons: Record<string, string> = {
 //   },
 // ];
 
+const formatRole = (role: string) =>
+  role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 
 export default function SemwiseDetailsRight() {
   const [openModal, setOpenModal] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const { collegeId, userId } = useUser();
+  const { collegeId, userId, role } = useUser();
   const [editAnnouncement, setEditAnnouncement] = useState<any | null>(null);
   const [view, setView] = useState<"my" | "others">("my");
 
   const loadAnnouncements = async () => {
-
-    if (!collegeId || !userId) return;
+    // ✅ guard all required values
+    if (!collegeId || !userId || !role) return;
 
     try {
-
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
+        role,
         view,
         page: 1,
-        limit: 10
+        limit: 10,
       });
 
       const formatted = res.data.map((item: any) => ({
         collegeAnnouncementId: item.collegeAnnouncementId,
         type: item.type,
-        targetRole: item.targetRole,
+        targetRoles: item.targetRoles,
 
-        image: typeIcons[item.type],
+
+        image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
         title: item.title,
 
         professor:
           view === "my"
-            ? `For ${item.targetRole}`
-            : `By ${item.targetRole}`,
+            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+            : `By ${formatRole(item.createdByRole)}`,
 
         date: item.date,
         createdAt: item.createdAt,
 
         cardBg: "#E8F8EF",
-        imageBg: "#D3F1E0"
+        imageBg: "#D3F1E0",
       }));
 
       setAnnouncements(formatted);
-
     } catch (error) {
       console.error("Failed to fetch announcements", error);
     }
@@ -204,7 +207,11 @@ export default function SemwiseDetailsRight() {
 
   useEffect(() => {
     loadAnnouncements();
-  }, [collegeId, userId, view]);
+  }, [collegeId, userId, role, view]);
+
+  useEffect(() => {
+    loadAnnouncements();
+  }, [collegeId, userId, view, role]);
 
   return (
     <div className="w-[32%] p-2 flex flex-col">

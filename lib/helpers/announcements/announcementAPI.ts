@@ -13,7 +13,7 @@ export type CollegeAnnouncementRow = {
     updatedAt: string;
     deletedAt: string | null;
     formattedDate?: string;
-    targetRole?: string;
+    targetRoles?: string[];
 };
 
 
@@ -24,16 +24,21 @@ export type CollegeAnnouncementRow = {
 export async function fetchCollegeAnnouncements({
     collegeId,
     userId,
+    role,
     view = "my",
     page = 1,
     limit = 10,
 }: {
     collegeId: number;
     userId: number;
+    role: string;
     view?: "my" | "others";
     page?: number;
     limit?: number;
-}) {
+}): Promise<{
+    data: any[];
+    totalPages: number;
+}> {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -95,29 +100,34 @@ export async function fetchCollegeAnnouncements({
 
     if (error) throw error;
 
-    const formatted = (data ?? []).map((item: any) => {
-        const role =
-            item.college_announcements_roles?.[0]?.role || "";
+    const formatted = (data ?? [])
+        .map((item: any) => {
+            const targetRoles =
+                 item.college_announcements_roles?.map((r: any) => r.role) || [];
 
-        const formattedDate = new Date(item.date).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
+            const formattedDate = new Date(item.date).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+            });
+
+            return {
+                id: item.collegeAnnouncementId,
+                collegeAnnouncementId: item.collegeAnnouncementId,
+                title: item.announcementTitle,
+                date: item.date,
+                formattedDate,
+                type: item.type,
+                createdBy: item.createdBy,
+                createdByRole: item.createdByRole,
+                targetRoles,
+                createdAt: item.createdAt,
+            };
+        })
+        .filter((item: any) => {
+            if (view === "my") return true;
+            return item.targetRoles.includes(role);
         });
-
-        return {
-            id: item.collegeAnnouncementId,
-            collegeAnnouncementId: item.collegeAnnouncementId,
-            title: item.announcementTitle,
-            date: item.date,
-            formattedDate,
-            type: item.type,
-            createdBy: item.createdBy,
-            createdByRole: item.createdByRole,
-            targetRole: role,
-            createdAt: item.createdAt,
-        };
-    });
 
     return {
         data: formatted,
@@ -241,7 +251,7 @@ export async function updateCollegeAnnouncement(
     const updatePayload = {
         announcementTitle: payload.announcementTitle.trim(),
         date: payload.date,
-         type: payload.type,
+        type: payload.type,
         updatedAt: new Date().toISOString()
     };
 
