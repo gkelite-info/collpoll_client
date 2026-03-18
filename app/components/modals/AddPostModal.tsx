@@ -3,327 +3,375 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload } from "lucide-react";
+import { X, Upload, Loader2 } from "lucide-react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
+import { saveCampusBuzzPost } from "@/lib/helpers/campusBuzz/campusBuzzAPI";
 
 function Portal({ children }: { children: React.ReactNode }) {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => setMounted(true), []);
-    if (!mounted) return null;
-    return createPortal(children, document.body);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
 }
 
 type Props = {
-    isOpen: boolean;
-    onClose: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
 };
 
-/* -------------------------------------------
-      TAGS INPUT — CHIP STYLE LIKE FIGMA
-----------------------------------------------*/
-function TagsInputBox() {
-    const [tags, setTags] = useState(["#AI", "#Workshop", "#Faculty"]);
-    const [inputValue, setInputValue] = useState("");
+function TagsInputBox({
+  tags,
+  setTags,
+}: {
+  tags: string[];
+  setTags: (tags: string[]) => void;
+}) {
+  const [inputValue, setInputValue] = useState("");
 
-    const addTag = (e: any) => {
-        if (e.key === "Enter" && inputValue.trim() !== "") {
-            let val = inputValue.trim();
-            if (!val.startsWith("#")) val = "#" + val;
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      let val = inputValue.trim().replace(/,/g, "");
 
-            setTags([...tags, val]);
-            setInputValue("");
+      if (val === "") return;
+
+      if (!val.startsWith("#")) val = "#" + val;
+
+      const prospectiveString = [...tags, val].join(", ");
+      if (!tags.includes(val) && prospectiveString.length < 240) {
+        setTags([...tags, val]);
+      }
+      setInputValue("");
+    } else if (e.key === "Backspace" && inputValue === "" && tags.length > 0) {
+      setTags(tags.slice(0, -1));
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
+  return (
+    <div
+      className="w-full min-h-[50px] mt-2 border border-[#C4C4C4] focus-within:border-[#43C17A] transition-colors rounded-md flex items-center flex-wrap gap-2 px-4 py-2 cursor-text"
+      onClick={() => document.getElementById("tag-input")?.focus()}
+    >
+      <AnimatePresence>
+        {tags.map((tag) => (
+          <motion.div
+            key={tag}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8, width: 0, margin: 0, padding: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-[#EAF7F1] text-[#43C17A] rounded-full px-3 py-[4px] flex items-center gap-1.5 text-[15px] font-medium whitespace-nowrap overflow-hidden origin-left"
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(tag);
+              }}
+              className="hover:bg-[#43C17A] hover:text-white rounded-full p-[2px] transition-colors flex items-center justify-center"
+            >
+              <X size={14} strokeWidth={3} />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <input
+        id="tag-input"
+        type="text"
+        placeholder={
+          tags.length === 0 ? "Add tags (press Enter or comma)..." : ""
         }
-    };
-
-    const removeTag = (tag: string) => {
-        setTags(tags.filter((t) => t !== tag));
-    };
-
-    return (
-        <div
-            className="
-        w-full min-h-[50px] mt-2
-        border border-[#C4C4C4] rounded-md
-        flex items-center flex-wrap gap-2
-        px-4 py-2
-      "
-        >
-            {tags.map((tag) => (
-                <div
-                    key={tag}
-                    className="
-            bg-[#E7F6ED]
-            text-[#2FAD63]
-            rounded-full px-4 py-1
-            flex items-center gap-2
-            text-[16px] font-medium
-          "
-                >
-                    {tag}
-                    <X
-                        size={15}
-                        onClick={() => removeTag(tag)}
-                        className="cursor-pointer text-[#2FAD63]"
-                    />
-                </div>
-            ))}
-
-            <input
-                type="text"
-                placeholder="add tag..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={addTag}
-                className="
-        outline-none flex-1 font-medium rounded-full
-        text-[#2FAD63] text-[16px]
-        placeholder:text-[#2FAD63]      /* <-- ADD THIS */
-    "
-            />
-
-        </div>
-    );
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        className="outline-none flex-1 min-w-[140px] font-medium text-[#282828] text-[16px] placeholder:text-[#898989] bg-transparent"
+      />
+    </div>
+  );
 }
 
+export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
+  const { collegeId, userId } = useUser();
 
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<
+    "achievements" | "announcements" | "clubactivities"
+  >("announcements");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
 
-export default function AddPostModal({ isOpen, onClose }: Props) {
-    const [uploadedImages, setUploadedImages] = useState<string[]>([]);
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <Portal>
-                    {/* BACKDROP */}
-                    <motion.div
-                        className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[4000]"
-                        onClick={onClose}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTitle("");
+      setCategory("announcements");
+      setDescription("");
+      setTags([]);
+      setImageFile(null);
+      setImagePreview(null);
+      setErrorMsg("");
+    }
+  }, [isOpen]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
+      setErrorMsg("Only JPG and PNG allowed!");
+      return;
+    }
+
+    setImageFile(file);
+
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImageToSupabase = async (file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${collegeId}/campus-buzz/${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from("buzz_images")
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("buzz_images").getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const handleSubmit = async () => {
+    setErrorMsg("");
+    if (!title.trim() || !description.trim()) {
+      setErrorMsg("Title and Description are required.");
+      return;
+    }
+
+    if (!collegeId || !userId) {
+      setErrorMsg("User session missing. Please log in again.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      let finalImageUrl = undefined;
+
+      if (imageFile) {
+        finalImageUrl = await uploadImageToSupabase(imageFile);
+      }
+
+      const payload = {
+        collegeId: collegeId,
+        title,
+        category,
+        description,
+        tags: tags.length > 0 ? tags : undefined,
+        imageUrl: finalImageUrl,
+      };
+
+      const result = await saveCampusBuzzPost(payload, userId);
+
+      if (!result.success) throw result.error;
+
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (error: any) {
+      console.error("Failed to post:", error);
+      setErrorMsg(error.message || "Failed to create post. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <Portal>
+          <motion.div
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[4000]"
+            onClick={!isSubmitting ? onClose : undefined}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+
+          <motion.div
+            className="fixed top-[70px] left-1/2 -translate-x-1/2 bg-white w-[700px] max-h-[84vh] rounded-[20px] shadow-xl z-[5000] overflow-hidden flex flex-col"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <div className="px-[40px] pt-[30px] pb-[20px] bg-white shrink-0">
+              <div className="flex justify-between items-center">
+                <h2 className="text-[24px] font-roboto font-semibold text-[#282828]">
+                  Create a New Post
+                </h2>
+                <button
+                  onClick={!isSubmitting ? onClose : undefined}
+                  disabled={isSubmitting}
+                >
+                  <X
+                    size={28}
+                    className="text-[#282828] hover:text-red-500 transition-colors"
+                  />
+                </button>
+              </div>
+              <p className="text-[18px] font-roboto font-normal text-[#282828] mt-[6px]">
+                Share announcements, achievements, or updates with students and
+                faculty.
+              </p>
+              {errorMsg && (
+                <p className="text-red-500 font-medium mt-2">{errorMsg}</p>
+              )}
+            </div>
+
+            <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
+              <div className="mb-6">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                  Post Title *
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Faculty Development Workshop on Generative AI"
+                  className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] placeholder:text-[#898989] outline-none focus:border-[#43C17A]"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                  Category *
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as any)}
+                  className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] outline-none focus:border-[#43C17A] bg-white cursor-pointer"
+                >
+                  <option value="announcements">Announcements</option>
+                  <option value="achievements">Achievements</option>
+                  <option value="clubactivities">Clubs & Activities</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                  Description *
+                </label>
+                <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Provide details about the event..."
+                  className="w-full mt-2 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] outline-none px-4 py-3 focus:border-[#43C17A]"
+                  style={{ resize: "vertical" }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                  Tags
+                </label>
+                <TagsInputBox tags={tags} setTags={setTags} />
+              </div>
+
+              <div className="mb-6">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                  Image Feature (Optional)
+                </label>
+                <input
+                  type="file"
+                  id="imageUploadInput"
+                  accept="image/png, image/jpeg, image/jpg"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+
+                {!imagePreview ? (
+                  <div
+                    onClick={() =>
+                      document.getElementById("imageUploadInput")?.click()
+                    }
+                    className="mt-3 w-full h-[220px] border-2 border-dashed border-[#C4C4C4] rounded-xl flex flex-col items-center justify-center text-gray-500 gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  >
+                    <Upload size={40} className="opacity-70 text-[#282828]" />
+                    <p className="text-[18px] text-[#282828]">
+                      Click to Upload Image
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4 relative inline-block">
+                    <img
+                      src={imagePreview}
+                      alt="preview"
+                      className="w-full max-h-[300px] object-cover rounded-lg border"
                     />
-
-                    {/* MODAL */}
-                    <motion.div
-                        className="
-    fixed top-[70px] left-1/2 -translate-x-1/2
-    bg-white w-[700px] max-h-[84vh]
-    rounded-[20px] shadow-xl z-[5000]
-    overflow-hidden   /* <<< SUPER IMPORTANT */
-    flex flex-col
-  "
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
+                    <button
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(null);
+                        (
+                          document.getElementById(
+                            "imageUploadInput",
+                          ) as HTMLInputElement
+                        ).value = "";
+                      }}
+                      className="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md hover:bg-red-600 transition-colors"
                     >
+                      ×
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-                        {/* HEADER */}
-                        <div className="px-[40px] pt-[30px] pb-[20px] bg-white">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-[24px] font-roboto font-semibold text-[#282828]">
-                                    Create a New Post
-                                </h2>
-
-                                <button onClick={onClose}>
-                                    <X size={28} className="text-[#282828]" />
-                                </button>
-                            </div>
-
-                            <p className="text-[18px] font-roboto font-normal text-[#282828] mt-[6px]">
-                                Share announcements, achievements, or updates with studenetsand faculty.
-                            </p>
-                        </div>
-
-                        {/* SCROLLABLE BODY */}
-                        <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 pb-[20px]">
-
-                            {/* Post Title */}
-                            <div className="mb-6">
-                                <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                                    Post Title
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Faculty Development  Workshop on Generative AI"
-                                    className="
-                    w-full h-[50px] mt-2 px-4
-                    border border-[#C4C4C4] rounded-md
-                    text-[18px] font-roboto text-[#282828]
-                    placeholder:text-[#898989]
-                    outline-none
-                  "
-                                />
-                            </div>
-
-                            {/* Category */}
-                            <div className="mb-6">
-                                <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                                    Category
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="Announcements"
-                                    className="
-                    w-full h-[50px] mt-2 px-4
-                    border border-[#C4C4C4] rounded-md
-                    text-[18px] font-roboto text-[#282828]
-                    placeholder:text-[#898989]
-                    outline-none
-                  "
-                                />
-                            </div>
-
-                            {/* Description */}
-                            <div className="mb-6">
-                                <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                                    Description
-                                </label>
-
-                                <textarea
-                                    rows={4}
-                                    defaultValue={`The Department of computer Science is Organizing a 2 - day workshop on generative AI for all faculty members. Experts from Google and IIIT-H will be joining us. Register before 20th Nov.`}
-                                    className="
-    w-full mt-2
-    border border-[#C4C4C4] rounded-md
-    text-[18px] font-roboto
-    text-[#898989]
-    leading-[100%]
-    outline-none
-    whitespace-normal break-words
-    px-4 py-3   
-  " style={{
-                                        resize: "vertical",
-                                    }}
-                                ></textarea>
-
-
-
-
-                            </div>
-
-                            {/* TAGS (NEW CHIP UI) */}
-                            <div className="mb-6">
-                                <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                                    Tags
-                                </label>
-
-                                <TagsInputBox />
-                            </div>
-                            {/* Image Upload */}
-                            <div className="mb-6">
-                                <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                                    Image
-                                </label>
-
-                                {/* Hidden File Input */}
-                                <input
-                                    type="file"
-                                    id="imageUploadInput"
-                                    accept="image/png, image/jpeg"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-
-                                        // Validate file type
-                                        if (!["image/png", "image/jpeg"].includes(file.type)) {
-                                            alert("Only JPG and PNG allowed!");
-                                            return;
-                                        }
-
-                                        const reader = new FileReader();
-                                        reader.onload = () => {
-                                            setUploadedImages((prev) => [...prev, reader.result as string]);
-                                        };
-                                        reader.readAsDataURL(file);
-                                    }}
-                                />
-
-                                {/* Upload Box */}
-                                <div
-                                    onClick={() => document.getElementById("imageUploadInput")?.click()}
-                                    className="
-      mt-3 w-full h-[220px] border-2 border-dashed border-[#C4C4C4]
-      rounded-xl flex flex-col items-center justify-center
-      text-gray-500 gap-3 cursor-pointer
-    "
-                                >
-                                    <Upload size={40} className="opacity-70 text-[#282828]" />
-                                    <p className="text-[18px] text-[#282828]">Drag & Drop Images</p>
-
-                                    <button
-                                        className="
-        px-6 py-2 bg-[#43C17A] text-white text-[18px]
-        rounded-lg font-medium cursor-pointer
-      "
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            document.getElementById("imageUploadInput")?.click();
-                                        }}
-                                    >
-                                        Upload
-                                    </button>
-                                </div>
-
-                                {/* Image Preview Outside Box */}
-                                {uploadedImages.length > 0 && (
-                                    <div className="mt-4 flex flex-wrap gap-4">
-                                        {uploadedImages.map((img, index) => (
-                                            <div key={index} className="relative">
-                                                <img
-                                                    src={img}
-                                                    alt="preview"
-                                                    className="w-[140px] h-[140px] object-cover rounded-lg border"
-                                                />
-
-                                                {/* Remove button */}
-                                                <button
-                                                    onClick={() =>
-                                                        setUploadedImages(uploadedImages.filter((_, i) => i !== index))
-                                                    }
-                                                    className="
-              absolute -top-2 -right-2 bg-red-500 text-white
-              w-6 h-6 rounded-full flex items-center justify-center text-sm
-            "
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-                        </div>
-
-                        {/* FOOTER BUTTONS */}
-                        <div className="px-[40px] py-[20px] border-t bg-white flex justify-between gap-3">
-
-                            {/* SHARE POST */}
-                            <button
-                                className="
-      flex-1 h-[50px] rounded-lg bg-[#43C17A]
-      text-[18px] text-white font-medium
-      cursor-pointer
-    "
-                                onClick={() => console.log("Share post clicked")}
-                            >
-                                Share Post
-                            </button>
-
-                            {/* CANCEL BUTTON */}
-                            <button
-                                className="
-      flex-1 h-[50px] rounded-lg border border-[#C4C4C4]
-      text-[18px] text-[#282828] font-medium
-      cursor-pointer
-    "
-                                onClick={onClose}   // <-- WORKING CANCEL NOW
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </motion.div>
-                </Portal>
-            )}
-        </AnimatePresence>
-    );
+            <div className="px-[40px] py-[20px] border-t bg-white flex justify-between gap-4 shrink-0">
+              <button
+                className="flex-1 h-[50px] rounded-lg bg-[#43C17A] text-[18px] text-white font-medium cursor-pointer hover:bg-[#3ba869] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={20} />{" "}
+                    Posting...
+                  </>
+                ) : (
+                  "Share Post"
+                )}
+              </button>
+              <button
+                className="flex-1 h-[50px] rounded-lg border border-[#C4C4C4] text-[18px] text-[#282828] font-medium cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        </Portal>
+      )}
+    </AnimatePresence>
+  );
 }

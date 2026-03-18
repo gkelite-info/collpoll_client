@@ -1,8 +1,11 @@
 "use client";
 
-import { Smile, X } from "lucide-react";
+import { X } from "lucide-react";
+import DOMPurify from "dompurify";
 
 export type EmailDetailItem = {
+  id: number;
+  isRead: boolean;
   initials: string;
   email: string;
   color: string;
@@ -32,7 +35,10 @@ export default function EmailDetailModal({ mail, onClose }: Props) {
       "
     >
       <div className="px-4 pt-4 pb-0 relative">
-        <button onClick={onClose} className="absolute left-4 top-2">
+        <button
+          onClick={onClose}
+          className="absolute cursor-pointer left-4 top-2 hover:bg-gray-100 rounded-full p-1 transition-colors"
+        >
           <X size={22} className="text-[#6B7280]" />
         </button>
 
@@ -64,18 +70,11 @@ export default function EmailDetailModal({ mail, onClose }: Props) {
           <span className="font-medium">Subject :</span>
           <span className="font-normal ml-1">{mail.Subject}</span>
         </p>
-        <div className="h-[205px] overflow-y-auto whitespace-pre-line">
-          <p className="text-[13px] text-[#414141] leading-4">{mail.body}</p>
-        </div>
-        <div className="mt-4 bg-[#E7F6ED] relative rounded-full px-4 py-2 flex items-center gap-2">
-          <Smile size={20} className="text-[#414141]" />
-          <input
-            placeholder="Type a message......."
-            className="flex-1 bg-transparent outline-none text-[13px] text-black"
+        <div className="h-[205px] overflow-y-auto custom-scrollbar pr-2">
+          <div
+            className="text-[13px] text-[#414141] leading-relaxed space-y-2"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mail.body) }}
           />
-          <button className="w-8 h-8 bg-[#43C17A] rounded-full text-white">
-            ➤
-          </button>
         </div>
       </div>
     </div>

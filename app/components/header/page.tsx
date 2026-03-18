@@ -1,4 +1,5 @@
 "use client";
+
 import {
   BellSimple,
   CaretDown,
@@ -7,7 +8,7 @@ import {
   Megaphone,
   Newspaper,
 } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
 import NewsModal from "../modals/NewsModal";
 import EmailModal from "../modals/EmailModal";
@@ -21,8 +22,12 @@ import { useParent } from "@/app/utils/context/parent/useParent";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnreadNotificationCount";
 import { supabase } from "@/lib/supabaseClient";
+import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
+import { useSearchParams } from "next/navigation";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-export default function Header() {
+// 1. Rename your main component to HeaderContent
+function HeaderContent() {
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -32,6 +37,8 @@ export default function Header() {
   const [isAnnouncementOpen, setIsAnnouncementOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [dailyMode, setDailyMode] = useState<"article" | "pdf">("article");
+  const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [unreadEmailCount, setUnreadEmailCount] = useState<number>(0);
 
   const {
     fullName,
@@ -49,9 +56,13 @@ export default function Header() {
   const { collegeHrId } = useCollegeHr();
   const { parentId } = useParent();
 
-  function openPDFModal() {
+  const searchParams = useSearchParams();
+  const highlightedPostId = searchParams.get("post");
+
+  function openPDFModal(article: any) {
+    setSelectedArticle(article);
     setIsNewsOpen(false);
-    setDailyMode("pdf");
+
     setTimeout(() => {
       setIsDailyModalOpen(true);
     }, 150);
@@ -66,6 +77,12 @@ export default function Header() {
   };
 
   useEffect(() => {
+    if (highlightedPostId) {
+      setIsAnnouncementOpen(true);
+    }
+  }, [highlightedPostId]);
+
+  useEffect(() => {
     if (!userId) return;
 
     async function fetchNotificationCount() {
@@ -73,24 +90,37 @@ export default function Header() {
       setUnreadCount(count);
     }
 
+    async function fetchEmailCount() {
+      const count = await getUnreadEmailCount(userId!);
+      setUnreadEmailCount(count);
+    }
+
     fetchNotificationCount();
+    fetchEmailCount();
 
     const notificationChannel = supabase
       .channel("custom-notification-channel")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-        },
+        { event: "*", schema: "public", table: "notifications" },
         (payload) => {
           const record = (payload.new as any) || (payload.old as any);
-
           if (record && record.userId === userId) {
-            setTimeout(() => {
-              fetchNotificationCount();
-            }, 100);
+            setTimeout(() => fetchNotificationCount(), 100);
+          }
+        },
+      )
+      .subscribe();
+
+    const emailChannel = supabase
+      .channel("custom-email-channel")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "email_queue" },
+        (payload) => {
+          const record = (payload.new as any) || (payload.old as any);
+          if (record && record.userId === userId) {
+            setTimeout(() => fetchEmailCount(), 100);
           }
         },
       )
@@ -98,6 +128,7 @@ export default function Header() {
 
     return () => {
       supabase.removeChannel(notificationChannel);
+      supabase.removeChannel(emailChannel);
     };
   }, [userId]);
 
@@ -140,6 +171,11 @@ export default function Header() {
                 color="#282828"
                 className="cursor-pointer"
               />
+              {unreadEmailCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 border border-white rounded-full">
+                  {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -263,13 +299,17 @@ export default function Header() {
         onOpenPDF={openPDFModal}
       />
       <EmailModal isOpen={isEmailOpen} onClose={() => setIsEmailOpen(false)} />
+
+      {/* Passing the highlightedPostId to your Modal here */}
       <AnnouncementModal
         isOpen={isAnnouncementOpen}
         onClose={() => setIsAnnouncementOpen(false)}
+        highlightedPostId={highlightedPostId ? Number(highlightedPostId) : null}
       />
+
       <DailyNewsModal
         isOpen={isDailyModalOpen}
-        mode={dailyMode}
+        article={selectedArticle}
         onClose={() => setIsDailyModalOpen(false)}
       />
       <ProfileWrapper
@@ -277,5 +317,19 @@ export default function Header() {
         onCloseProfile={() => setOpenProfile(false)}
       />
     </>
+  );
+}
+
+export default function Header() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full h-full flex items-center justify-center">
+          <Loader />
+        </div>
+      }
+    >
+      <HeaderContent />
+    </Suspense>
   );
 }

@@ -6,6 +6,9 @@ import Image from "next/image";
 import { NewspaperIcon } from "@phosphor-icons/react";
 import { CaretLeft } from "@phosphor-icons/react";
 
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useRef } from "react";
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -17,21 +20,52 @@ function Portal({ children }: { children: React.ReactNode }) {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  mode?: string
+  article: any;
 };
 
-export default function DailyNewsModal({ isOpen, onClose }: Props) {
+export default function DailyNewsModal({ isOpen, onClose, article }: Props) {
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  // const handleDownload = async () => {
+  //   if (!pdfRef.current) return;
+
+  //   const images = pdfRef.current.querySelectorAll("img");
+  //   await Promise.all(
+  //     Array.from(images).map(
+  //       (img) =>
+  //         new Promise((resolve) => {
+  //           if (img.complete) resolve(true);
+  //           else img.onload = () => resolve(true);
+  //         }),
+  //     ),
+  //   );
+
+  //   const canvas = await html2canvas(pdfRef.current, {
+  //     useCORS: true,
+  //     backgroundColor: "#ffffff",
+  //     scale: 1.5,
+  //     logging: false,
+  //   });
+
+  //   console.log(pdfRef.current);
+
+  //   const imgData = canvas.toDataURL("image/jpeg", 0.95);
+
+  //   const pdf = new jsPDF("p", "mm", "a4");
+  //   const width = pdf.internal.pageSize.getWidth();
+  //   const height = (canvas.height * width) / canvas.width;
+  //   pdf.addImage(imgData, "JPEG", 0, 0, width, height);
+  //   pdf.save("news.pdf");
+  // };
+
   if (!isOpen) return null;
 
   return (
     <Portal>
-      {/* BACKDROP */}
       <div
         onClick={onClose}
         className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[2000]"
       />
-
-      {/* CARD aligned like Figma page (below navbar) */}
       <div
         className="
     fixed inset-0 top-0 right-0
@@ -40,6 +74,7 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
   "
       >
         <div
+          ref={pdfRef}
           className="
       bg-[#F7F7F7]
       rounded-2xl
@@ -50,16 +85,17 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
       overflow-y-auto
     "
         >
-
-
-
           {/* HEADER */}
           <div className="flex items-center justify-between px-5 pt-5 pb-2">
             {/* LEFT: back arrow + icon + title */}
             <div className="flex items-center gap-1">
               {/* Just the < icon (no circle) */}
               <button onClick={onClose} className="hover:opacity-70">
-                <CaretLeft size={22} weight="light" className="text-[#454545] cursor-pointer" />
+                <CaretLeft
+                  size={22}
+                  weight="light"
+                  className="text-[#454545] cursor-pointer"
+                />
               </button>
               {/* Green newspaper icon */}
               <NewspaperIcon size={22} weight="fill" color="#43C17A" />
@@ -77,14 +113,14 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
               </h2>
             </div>
 
-            {/* DOWNLOAD BUTTON */}
-            <button
+            {/* <button
               className="
-                flex items-center gap-2 
-                bg-[#43C17A] text-white 
-                px-3 py-2 rounded-full 
+                flex items-center gap-2
+                bg-[#43C17A] text-white
+                px-3 py-2 rounded-full
                 shadow-sm hover:bg-[#3AAD6D] transition cursor-pointer
               "
+              onClick={handleDownload}
             >
               <span className="flex items-center justify-center w-7 h-7 bg-white rounded-full">
                 <svg
@@ -103,7 +139,7 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
                 </svg>
               </span>
               <span className="text-[16px] font-medium">Download</span>
-            </button>
+            </button> */}
           </div>
 
           {/* TAG, TITLE, SUBTITLE */}
@@ -117,33 +153,18 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
                 lineHeight: "100%",
               }}
             >
-              <span className="text-[16px] text-[#111827] font-medium leading-none fontWeight: 500">🗞️</span>
+              <span className="text-[16px] text-[#111827] font-medium leading-none fontWeight: 500">
+                🗞️
+              </span>
               <span>Daily News</span>
             </div>
 
             {/* Main title */}
-            <h3
-              className="mt-3 text-[#111827]"
-              style={{
-                fontSize: "18px",
-                fontWeight: 500,
-                lineHeight: "100%",
-              }}
-            >
-              United Kingdom Marks Historic Milestone
-            </h3>
+            <h3 className="mt-3 text-[#111827]">{article?.title}</h3>
 
             {/* Subtitle */}
-            <p
-              className="mt-2 mb-6 text-[#414141] italic"
-              style={{
-                fontSize: "16px",
-                fontWeight: 400,
-                lineHeight: "100%",
-              }}
-            >
-              The nation reflects on a century of transformation, honoring its
-              enduring legacy and the events that shaped modern Britain.
+            <p className="mt-2 mb-6 text-[#414141] italic">
+              {article?.description}
             </p>
           </div>
 
@@ -154,17 +175,18 @@ export default function DailyNewsModal({ isOpen, onClose }: Props) {
       bg-white
        border-[5px]
       rounded-[14px]
-      p-3
+      p-2
       w-[950px]
     "
             >
-              <Image
-                src="/news.png"
-                alt="Daily News"
-                width={1025}
-                height={661}
+              <img
+                src={
+                  article?.image
+                    ? `/api/image-proxy?url=${encodeURIComponent(article.image)}`
+                    : "/news.png"
+                }
+                alt="news"
                 className="rounded-[10px] w-full h-auto object-contain"
-                unoptimized
               />
             </div>
           </div>
