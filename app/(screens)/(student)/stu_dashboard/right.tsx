@@ -238,7 +238,7 @@ export default function StuDashRight() {
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
-        role, // 🔥 IMPORTANT → "student"
+        role, 
         view,
         page: 1,
         limit: 20,
@@ -294,6 +294,7 @@ export default function StuDashRight() {
           height="60vh"
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
+           readOnly={true}
         />
       </div>
     </>

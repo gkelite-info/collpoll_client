@@ -8,6 +8,25 @@ import { fetchStudentTasks, saveStudentTask } from "@/lib/helpers/student/studen
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { useEffect, useState } from "react";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+
+
+const typeIcons: Record<string, string> = {
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
+};
+
 
 
 export default function AssignmentsRight() {
@@ -15,6 +34,18 @@ export default function AssignmentsRight() {
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);
   const { subjects, studentId } = useStudent();
   const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [view, setView] = useState<"my" | "others">("others");
+  const { collegeId, userId, role } = useUser();
+
+  const allowedCreatorRoles = [
+    "Admin",
+    "Faculty",
+    "Finance",
+    "Placement",
+    "CollegeHr",
+  ];
+
 
   useEffect(() => {
     if (!studentId) return;
@@ -79,6 +110,51 @@ export default function AssignmentsRight() {
     loadFacultyTasks();
 
   }, [subjects]);
+
+  useEffect(() => {
+    if (!collegeId || !userId || !role) return;
+    fetchAnnouncements();
+  }, [collegeId, userId, role, view]);
+
+  const fetchAnnouncements = async () => {
+    try {
+      if (!collegeId || !userId || !role) return;
+
+      const res = await fetchCollegeAnnouncements({
+        collegeId,
+        userId,
+        role, // 🔥 IMPORTANT → "student"
+        view,
+        page: 1,
+        limit: 20,
+      });
+
+      const filtered = res.data.filter((item: any) =>
+        allowedCreatorRoles.includes(item.createdByRole)
+      );
+
+      const formatted = filtered.map((item: any) => ({
+        collegeAnnouncementId: item.collegeAnnouncementId,
+        title: item.title,
+        date: item.date,
+        createdAt: item.createdAt,
+        type: item.type,
+        targetRoles: item.targetRoles,
+
+        image: typeIcons[item.type] || "/clip.png",
+        imgHeight: "h-10",
+        cardBg: "#E8F8EF",
+        imageBg: "#D3F1E0",
+
+        professor: `By ${item.createdByRole}`,
+      }));
+
+      setAnnouncements(formatted);
+    } catch (err) {
+      console.error("Student announcements error:", err);
+    }
+  };
+
 
   const handleSaveStudentTask = async (
     payload: {
@@ -206,7 +282,13 @@ export default function AssignmentsRight() {
             await loadStudentTasks();
           }}
         />
-        <AnnouncementsCard announceCard={card} />
+        <AnnouncementsCard
+          announceCard={announcements}
+          height="60vh"
+          onViewChange={(v) => setView(v)}
+          refreshAnnouncements={fetchAnnouncements}
+           readOnly={true}
+        />
       </div>
     </>
   );

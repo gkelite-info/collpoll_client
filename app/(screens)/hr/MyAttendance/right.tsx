@@ -4,7 +4,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
@@ -26,13 +26,10 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-
 export default function MyAttendanceRight() {
-  const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
-  const collegeSubjectId = subjectIds?.[0] ?? null;
+  const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
-
   const myTasks: Task[] = [
     {
       facultyTaskId: 1,
@@ -59,7 +56,7 @@ export default function MyAttendanceRight() {
     },
   ];
 
-  const fetchAnnouncements = async () => {
+  const fetchData = async () => {
     try {
       if (!collegeId || !userId || !role) return;
 
@@ -93,13 +90,13 @@ export default function MyAttendanceRight() {
 
       setAnnouncements(formatted);
     } catch (err) {
-      console.error("Fetch announcements error:", err);
+      console.error(err);
     }
   };
 
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
-    fetchAnnouncements();
+    fetchData();
   }, [collegeId, userId, role, view]);
 
 
@@ -113,7 +110,7 @@ export default function MyAttendanceRight() {
           announceCard={announcements}
           height="80vh"
           onViewChange={(v) => setView(v)}
-          refreshAnnouncements={fetchAnnouncements}
+          refreshAnnouncements={fetchData}
         />
       </div>
     </>

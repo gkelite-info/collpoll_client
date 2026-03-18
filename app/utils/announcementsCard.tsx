@@ -29,6 +29,7 @@ type AnnouncementsCardProps = {
   onViewChange?: (view: "my" | "others") => void;
   onEditAnnouncement?: (announcement: AnnounceCard) => void;
   refreshAnnouncements?: () => Promise<void>;
+   readOnly?: boolean;
 };
 
 export default function AnnouncementsCard({
@@ -37,7 +38,8 @@ export default function AnnouncementsCard({
   onAddClick,
   onViewChange,
   onEditAnnouncement,
-  refreshAnnouncements
+  refreshAnnouncements,
+    readOnly, 
 }: AnnouncementsCardProps) {
   const pathname = usePathname();
   const isFinanceDashboard = pathname.startsWith("/finance");
@@ -47,7 +49,7 @@ export default function AnnouncementsCard({
   const isParentDashboard = pathname.includes("parent");
   const isFacultyDashboard = pathname.startsWith("/faculty");
   const isHrDashboard = pathname.startsWith("/hr");
-  const isReadOnlyUser = isStudentDashboard || isParentDashboard;
+  const isReadOnlyUser = readOnly ?? (isStudentDashboard || isParentDashboard);
   const canManageAnnouncements = !isReadOnlyUser && (isFinanceDashboard || isCollegeAdminDashboard || isAdminDashboard || isFacultyDashboard || isHrDashboard);
 
   const [activeView, setActiveView] = useState<"my" | "others">(isReadOnlyUser ? "others" : "my");
