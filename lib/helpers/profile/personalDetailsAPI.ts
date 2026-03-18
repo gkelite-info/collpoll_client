@@ -1,16 +1,57 @@
 import { supabase } from "@/lib/supabaseClient";
- 
+
 export type PersonalDetailsRow = {
   personalDetailsId: number;
   userId: number;
   workStatus: "experience" | "fresher";
   currentCity: string;
+  linkedIn?: string;
   is_deleted: boolean | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
 };
- 
+
+export async function updateUserBasic(payload: {
+  userId: number;
+  fullName: string;
+}) {
+  const { data: existing } = await supabase
+    .from("users")
+    .select("fullName")
+    .eq("userId", payload.userId)
+    .single();
+
+  if (existing?.fullName === payload.fullName.trim()) {
+    return { success: true };
+  }
+  const { error } = await supabase
+    .from("users")
+    .update({
+      fullName: payload.fullName.trim(),
+      updatedAt: new Date().toISOString(),
+    })
+    .eq("userId", payload.userId);
+  if (error) return { success: false };
+  return { success: true };
+}
+
+export async function fetchCollegeCode(collegeId: number) {
+  const { data, error } = await supabase
+    .from("colleges")
+    .select("collegeCode")
+    .eq("collegeId", collegeId)
+    .is("deletedAt", null)
+    .single();
+
+  if (error) {
+    console.error("fetchCollegeCode error:", error);
+    return { success: false, data: null };
+  }
+
+  return { success: true, data };
+}
+
 export async function fetchPersonalDetails(userId: number) {
   const { data, error } = await supabase
     .from("personal_details")
@@ -19,6 +60,7 @@ export async function fetchPersonalDetails(userId: number) {
       userId,
       workStatus,
       currentCity,
+      linkedIn,
       is_deleted,
       createdAt,
       updatedAt,
@@ -27,7 +69,7 @@ export async function fetchPersonalDetails(userId: number) {
     .eq("userId", userId)
     .is("deletedAt", null)
     .single();
- 
+
   if (error) {
     if (error.code === "PGRST116") {
       return { success: true, data: null };
@@ -35,10 +77,10 @@ export async function fetchPersonalDetails(userId: number) {
     console.error("fetchPersonalDetails error:", error);
     throw error;
   }
- 
+
   return { success: true, data };
 }
- 
+
 export async function fetchExistingPersonalDetails(userId: number) {
   const { data, error } = await supabase
     .from("personal_details")
@@ -46,70 +88,76 @@ export async function fetchExistingPersonalDetails(userId: number) {
     .eq("userId", userId)
     .is("deletedAt", null)
     .single();
- 
+
   if (error) {
     if (error.code === "PGRST116") {
       return { success: true, data: null };
     }
     throw error;
   }
- 
+
   return { success: true, data };
 }
- 
+
+
+
 export async function savePersonalDetails(
   payload: {
     personalDetailsId?: number;
     userId: number;
     workStatus: "experience" | "fresher";
     currentCity: string;
+    linkedIn?: string;
   }
 ) {
   const now = new Date().toISOString();
- 
+
   const upsertPayload: any = {
     userId: payload.userId,
     workStatus: payload.workStatus,
     currentCity: payload.currentCity.trim(),
+    linkedIn: payload.linkedIn?.trim() ? payload.linkedIn.trim() : null,
     updatedAt: now,
   };
- 
+
   if (!payload.personalDetailsId) {
     upsertPayload.createdAt = now;
- 
+
     const { data, error } = await supabase
       .from("personal_details")
       .insert([upsertPayload])
       .select("personalDetailsId")
       .single();
- 
+
     if (error) {
       console.error("savePersonalDetails create error:", error);
       return { success: false, error };
     }
- 
+
     return {
       success: true,
       personalDetailsId: data.personalDetailsId,
     };
   }
- 
+
   const { error } = await supabase
     .from("personal_details")
     .update(upsertPayload)
-    .eq("personalDetailsId", payload.personalDetailsId);
- 
+    .eq("personalDetailsId", payload.personalDetailsId)
+    .select()
+    .single();
+
   if (error) {
     console.error("savePersonalDetails update error:", error);
     return { success: false, error };
   }
- 
+
   return {
     success: true,
     personalDetailsId: payload.personalDetailsId,
   };
 }
- 
+
 export async function deletePersonalDetails(personalDetailsId: number) {
   const { error } = await supabase
     .from("personal_details")
@@ -118,15 +166,15 @@ export async function deletePersonalDetails(personalDetailsId: number) {
       deletedAt: new Date().toISOString(),
     })
     .eq("personalDetailsId", personalDetailsId);
- 
+
   if (error) {
     console.error("deletePersonalDetails error:", error);
     return { success: false };
   }
- 
+
   return { success: true };
 }
- 
+
 export async function fetchAllPersonalDetails() {
   const { data, error } = await supabase
     .from("personal_details")
@@ -140,11 +188,11 @@ export async function fetchAllPersonalDetails() {
     `)
     .is("deletedAt", null)
     .order("createdAt", { ascending: false });
- 
+
   if (error) {
     console.error("fetchAllPersonalDetails error:", error);
     throw error;
   }
- 
+
   return data ?? [];
 }
