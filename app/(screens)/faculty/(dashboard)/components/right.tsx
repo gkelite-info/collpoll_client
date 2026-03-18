@@ -5,16 +5,11 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-<<<<<<< Updated upstream
 import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import toast from "react-hot-toast";
-=======
-import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import TaskModal from "@/app/components/modals/taskModal";
-import type { Task } from "@/app/utils/taskPanel";
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
 const typeIcons: Record<string, string> = {
@@ -29,23 +24,16 @@ const typeIcons: Record<string, string> = {
   placement: "/placement.png",
   emergency: "/emergency.png",
   finance: "/finance.jpg",
-  other:"/others.png",
+  other: "/others.png",
 };
 
 // ✅ role formatter
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
->>>>>>> Stashed changes
 
 export default function FacultyDashRight() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< Updated upstream
-  const { facultyId, subjectIds, loading: facultyLoading } = useFaculty();
-  const collegeSubjectId = subjectIds?.[0] ?? null;
-
-
-=======
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -58,7 +46,6 @@ export default function FacultyDashRight() {
   const [view, setView] = useState<"my" | "others">("my");
 
   // ================= TASKS =================
->>>>>>> Stashed changes
   const loadTasks = async () => {
     if (!collegeSubjectId) return;
 
@@ -74,11 +61,6 @@ export default function FacultyDashRight() {
           date: t.date,
         }))
       );
-<<<<<<< Updated upstream
-      console.log("sorry data", data);
-
-=======
->>>>>>> Stashed changes
     } catch (err) {
       console.error("LOAD TASK ERROR", err);
     } finally {
@@ -86,15 +68,10 @@ export default function FacultyDashRight() {
     }
   };
 
-<<<<<<< Updated upstream
-
-  useEffect(() => {
-=======
   // ================= ANNOUNCEMENTS =================
   const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
->>>>>>> Stashed changes
 
       const res = await fetchCollegeAnnouncements({
         collegeId,
@@ -137,7 +114,6 @@ export default function FacultyDashRight() {
     }
   }, [facultyLoading, collegeSubjectId]);
 
-<<<<<<< Updated upstream
   const handleSave = async (
     payload: {
       title: string;
@@ -172,32 +148,10 @@ export default function FacultyDashRight() {
     }
   };
 
-  const card = [
-    {
-      image: "/clip.png",
-      imgHeight: "h-10",
-      title: "Submit internal marks for all subjects before 25 Oct 2025.",
-      professor: "By Justin Orom",
-      time: "Just now",
-      cardBg: "#E8F8EF",
-      imageBg: "#D3F1E0",
-    },
-    {
-      image: "/class.png",
-      imgHeight: "h-10",
-      title: "Upload your mini project abstracts by 12 Nov 2025.",
-      professor: "By John",
-      time: "12 mins ago.",
-      cardBg: "#EEEDFF",
-      imageBg: "#E3E1FF",
-    },
-  ];
-=======
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
     fetchAnnouncements();
   }, [collegeId, userId, role, view]);
->>>>>>> Stashed changes
 
   // ================= UI =================
   return (
@@ -218,9 +172,6 @@ export default function FacultyDashRight() {
         }}
       />
 
-<<<<<<< Updated upstream
-      <AnnouncementsCard announceCard={card} />
-=======
       {openModal && (
         <TaskModal
           open={openModal}
@@ -232,22 +183,24 @@ export default function FacultyDashRight() {
             setEditingTask(null);
           }}
           defaultValues={editingTask}
-          onSave={() => {
-            loadTasks();
-            setOpenModal(false);
-            setEditingTask(null);
+          onSave={async (payload, taskId) => {
+            try {
+              await handleSave(payload, taskId);
+              setOpenModal(false);
+              setEditingTask(null);
+            } catch (error) {
+              console.error("Modal Save Error:", error);
+            }
           }}
         />
       )}
 
-      {/* ✅ DYNAMIC ANNOUNCEMENTS */}
       <AnnouncementsCard
         announceCard={announcements}
         height="80vh"
         onViewChange={(v) => setView(v)}
         refreshAnnouncements={fetchAnnouncements}
       />
->>>>>>> Stashed changes
     </div>
   );
 }
