@@ -35,13 +35,13 @@ export default function FacultyDashRight() {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  
+
 
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
 
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
- 
+
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
 

@@ -1,17 +1,126 @@
-// --- CHANGED: Updated imports to include useState, useRef, and useCallback ---
-import React, { useState, useRef, useCallback } from "react";
-import { ArrowLeft, CaretLeftIcon, CloudArrowUp, FilePdf, Trash } from "@phosphor-icons/react";
+'use client'
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { CaretLeftIcon, CloudArrowUp, FilePdf, Trash } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { fetchExistingDiscussion, saveDiscussionForum } from "@/lib/helpers/discussionForum/discussionForumAPI";
+import { saveDiscussionSections } from "@/lib/helpers/discussionForum/discussionForumSectionsAPI";
 
 export default function FacultyDiscussionForm({ initialData }: { initialData?: any }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { facultyId, sections } = useFaculty();
 
-    // --- ADDED: State and refs for file uploading ---
     const [files, setFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [loading, setLoading] = useState(false);
+    const [form, setForm] = useState({
+        title: initialData?.title || "",
+        description: initialData?.description || "",
+        deadline: initialData?.deadline || "",
+        sections: initialData?.sections || [] as string[]
+    });
+    const [sectionOpen, setSectionOpen] = useState(false);
+    const sectionRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (sectionRef.current && !sectionRef.current.contains(e.target as Node)) {
+                setSectionOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const toggleSection = (section: string) => {
+        setForm(prev => ({
+            ...prev,
+            sections: prev.sections.includes(section)
+                ? prev.sections.filter((s: string) => s !== section)
+                : [...prev.sections, section]
+        }));
+    };
+
+    const handleSave = async () => {
+        try {
+
+            if (!form.title) {
+                toast.error("Title is required");
+                return;
+            }
+
+            if (!form.description) {
+                toast.error("Description is required");
+                return;
+            }
+
+            if (!form.deadline) {
+                toast.error("Deadline is required");
+                return;
+            }
+
+            if (!form.sections || form.sections.length === 0) {
+                toast.error("Please select at least one section");
+                return;
+            }
+
+            if (!initialData?.discussionId) {
+                const { data: existing } = await fetchExistingDiscussion(form.title, form.deadline);
+                if (existing) {
+                    toast.error("A discussion with the same title and deadline already exists.");
+                    return;
+                }
+            }
+
+            setLoading(true);
+
+            const payload = await saveDiscussionForum(
+                {
+                    discussionId: initialData?.discussionId,
+                    title: form.title,
+                    description: form.description,
+                    deadline: form.deadline,
+                },
+                {
+                    facultyId: facultyId ?? undefined,
+                }
+            );
+
+            if (!payload.success) {
+                toast.error("Failed to save discussion. Please try again.");
+                return;
+            }
+
+            const sectionsPayload = form.sections.map((collegeSectionsId: string) => ({
+                collegeSectionsId: Number(collegeSectionsId),
+                marks: 0,
+            }));
+
+            const sectionsResult = await saveDiscussionSections(
+                payload.discussionId,
+                sectionsPayload
+            );
+
+            if (!sectionsResult.success) {
+                toast.error("Discussion saved but failed to save sections.");
+                return;
+            }
+
+            toast.success(initialData ? "Discussion updated successfully." : "Discussion created successfully.");
+            handleBack();
+
+        } catch (error) {
+            toast.error("Failed to save discussion");
+            console.error("Failed to save discussion");
+        }
+        finally {
+            setLoading(false);
+        }
+    }
 
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -20,7 +129,6 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    // --- ADDED: File Upload Handlers ---
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
@@ -58,7 +166,6 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
-    // ------------------------------------
 
     return (
         <div className="w-full flex flex-col h-full overflow-y-auto pb-10">
@@ -76,9 +183,10 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
                     <label className="font-bold text-[#282828] text-sm">Discussion Title</label>
                     <input
                         type="text"
+                        value={form.title}
+                        onChange={(e) => setForm({ ...form, title: e.target.value })}
                         placeholder="Enter Discussion Title here"
-                        defaultValue={initialData?.title || ""}
-                        className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A]"
+                        className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
                     />
                 </div>
 
@@ -87,8 +195,9 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
                     <textarea
                         placeholder="Enter Description here"
                         rows={6}
-                        defaultValue={initialData?.description || ""}
-                        className="w-full border border-gray-200 rounded-md px-4 py-3 text-sm outline-none focus:border-[#43C17A] resize-none"
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                        className="w-full border border-gray-200 rounded-md px-4 py-3 text-sm outline-none text-[#807F7F] focus:border-[#43C17A] resize-none"
                     />
                 </div>
 
@@ -97,23 +206,55 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
                         <label className="font-bold text-[#282828] text-sm">Deadline</label>
                         <input
                             type="date"
+                            value={form.deadline}
+                            onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                             className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600"
                         />
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2" ref={sectionRef}>
                         <label className="font-bold text-[#282828] text-sm">Section(s)</label>
-                        <select className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600 bg-white">
-                            <option>Select Section(s)</option>
-                            <option>Section A</option>
-                            <option>Section B</option>
-                        </select>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setSectionOpen(prev => !prev)}
+                                className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600 bg-white flex items-center justify-between"
+                            >
+                                <span className={form.sections.length === 0 ? "text-gray-400" : "text-gray-600"}>
+                                    {form.sections.length === 0 ? "Select Section(s)" : form.sections.join(", ")}
+                                </span>
+                                <svg
+                                    className={`w-4 h-4 text-gray-400 transition-transform ${sectionOpen ? "rotate-180" : ""}`}
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+
+                            {sectionOpen && (
+                                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-md">
+                                    {sections.map(section => (
+                                        <label
+                                            key={section.facultySectionId}
+                                            className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-600"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={form.sections.includes(String(section.collegeSectionsId))}
+                                                onChange={() => toggleSection(String(section.collegeSectionsId))}
+                                                className="accent-[#43C17A] w-4 h-4 cursor-pointer"
+                                            />
+                                            {section.college_sections?.collegeSections ?? `Section ${section.collegeSectionsId}`}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5">
                 <h3 className="font-bold text-[#282828] text-base">Project Files</h3>
-
                 <div className={`grid gap-6 ${files.length > 0 ? "grid-cols-[1.5fr_1fr]" : "grid-cols-1"}`}>
                     <input
                         type="file"
@@ -169,8 +310,12 @@ export default function FacultyDiscussionForm({ initialData }: { initialData?: a
                 <button onClick={handleBack} className="px-6 bg-white cursor-pointer py-2.5 rounded-md font-bold text-sm text-[#7B7B7B] border border-[#7B7B7B]">
                     Cancel
                 </button>
-                <button onClick={handleBack} className="px-8 cursor-pointer py-2.5 rounded-md font-bold text-sm bg-[#43C17A] text-white shadow-sm">
-                    Save
+                <button
+                    onClick={handleSave}
+                    className="px-8 cursor-pointer py-2.5 rounded-md font-bold text-sm bg-[#43C17A] text-white shadow-sm"
+                    disabled={loading}
+                >
+                    {loading ? "Saving.." : "Save"}
                 </button>
             </div>
 

@@ -8,6 +8,19 @@ export type FacultySubject = {
     subjectName: string;
 }
 
+export type FacultySection = {
+    facultySectionId: number;
+    collegeSectionsId: number;
+    collegeSubjectId: number;
+    collegeAcademicYearId: number;
+    faculty_subject: {
+        subjectName: string;
+    } | null;
+    college_sections: {
+        collegeSections: string;
+    } | null;
+};
+
 export type FacultyContextType = {
     loading: boolean;
     facultyId: number | null;
@@ -23,12 +36,13 @@ export type FacultyContextType = {
     collegeBranchId: number | null;
     college_branch: string | null;
     isActive: boolean | null;
-    sections: any[];
+    sections: FacultySection[];
     sectionIds: number[];
     subjectIds: number[];
     academicYearIds: number[];
     faculty_subject: FacultySubject[]
 };
+
 
 const FacultyContext = createContext<FacultyContextType | null>(null);
 

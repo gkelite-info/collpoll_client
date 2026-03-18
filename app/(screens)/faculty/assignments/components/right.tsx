@@ -54,7 +54,6 @@ export default function AssignmentsRight() {
           date: t.date,
         }))
       );
-      console.log("sorry data", data);
 
     } catch (err) {
       console.error("LOAD TASK ERROR", err);
