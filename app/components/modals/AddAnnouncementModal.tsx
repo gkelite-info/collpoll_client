@@ -15,6 +15,8 @@ type Props = {
   editData?: any;
 };
 
+
+
 const typeIcons: Record<string, string> = {
   class: "/class.png",
   exam: "/exam.png",
@@ -27,7 +29,77 @@ const typeIcons: Record<string, string> = {
   placement: "/placement.png",
   emergency: "/emergency.png",
   finance: "/finance.jpg",
+  other: "/others.png",
 };
+
+
+const roleOptionsMap: Record<string, string[]> = {
+  Finance: [
+    "CollegeAdmin",
+    "Faculty",
+    "Admin",
+    "Student",
+    "Parent",
+  ],
+
+  CollegeAdmin: [
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "Finance",
+    "Finance Manager",
+    "Placement",
+    "CollegeHr",
+  ],
+
+  Admin: [
+    "CollegeAdmin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "Finance",
+    "Finance Manager",
+    "Placement",
+    "CollegeHr",
+  ],
+
+  Faculty: [
+    "CollegeAdmin",
+    "Admin",
+    "Student",
+    "Parent",
+  ],
+
+  Student: [
+    "Admin",
+    "Faculty",
+    "Finance",
+    "Placement",
+    "CollegeHr",
+  ],
+
+  Parent: [
+    "Admin",
+    "Faculty",
+    "Finance",
+    "Placement",
+  ],
+
+  CollegeHr: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Placement",
+  ]
+};
+
+const formatRole = (role: string) =>
+  role
+    ?.replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
 
 export default function AddAnnouncementModal({
@@ -39,12 +111,15 @@ export default function AddAnnouncementModal({
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
-  const [targetRole, setTargetRole] = useState<string>("");
+  const [targetRoles, setTargetRoles] = useState<string[]>([]);
   const [customType, setCustomType] = useState("");
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [type, setType] = useState<string>("notice");
   const { userId, collegeId, role } = useUser();
+  const availableRoles = role ? roleOptionsMap[role] || [] : [];
 
-  const roles = ["CollegeAdmin", "Admin", "Student", "Parent"];
+
+  // const roles = ["CollegeAdmin", "Admin", "Student", "Parent"];
   const selectedIcon = typeIcons[type];
 
   useEffect(() => {
@@ -58,7 +133,7 @@ export default function AddAnnouncementModal({
       );
 
       setType(editData.type || "");
-      setTargetRole(editData.targetRole || "");
+      setTargetRoles(editData.targetRoles || []);
     }
   }, [open, editData]);
 
@@ -69,7 +144,7 @@ export default function AddAnnouncementModal({
     const titleRegex = /^[A-Za-z\s]+$/;
     const today = new Date().toISOString().split("T")[0];
 
-    if (!title || !date || !targetRole || !type) {
+    if (!title || !date || targetRoles.length === 0 || !type) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -92,11 +167,6 @@ export default function AddAnnouncementModal({
     try {
 
       setSaving(true);
-
-      /* ==============================
-         UPDATE ANNOUNCEMENT
-      ============================== */
-
       if (editData) {
 
         const updateRes = await updateCollegeAnnouncement(
@@ -112,24 +182,19 @@ export default function AddAnnouncementModal({
           toast.error("Failed to update announcement");
           return;
         }
-
-        // 🔥 UPDATE EXISTING ROLE (NO NEW ROW)
-        const existingRoles = await fetchAnnouncementRoles(
-          editData.collegeAnnouncementId
-        );
-
-        if (existingRoles.length > 0) {
-          await supabase
-            .from("college_announcements_roles")
-            .update({
-              role: targetRole,
-              updatedAt: new Date().toISOString(),
-              deletedAt: null // safety
-            })
-            .eq(
-              "collegeAnnouncementRolesId",
-              existingRoles[0].collegeAnnouncementRolesId
-            );
+        await supabase
+          .from("college_announcements_roles")
+          .update({
+            deletedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .eq("collegeAnnouncementId", editData.collegeAnnouncementId)
+          .is("deletedAt", null);
+        for (const roleItem of targetRoles) {
+          await saveAnnouncementRole({
+            collegeAnnouncementId: editData.collegeAnnouncementId,
+            role: roleItem,
+          });
         }
 
         toast.success("Announcement updated successfully");
@@ -138,34 +203,6 @@ export default function AddAnnouncementModal({
         await refreshAnnouncements?.();
         return;
       }
-
-      // if (editData) {
-
-      //   const updateRes = await updateCollegeAnnouncement(
-      //     editData.collegeAnnouncementId,
-      //     {
-      //       announcementTitle: title,
-      //       date,
-      //        type
-      //     }
-      //   );
-
-      //   if (!updateRes.success) {
-      //     toast.error("Failed to update announcement");
-      //     return;
-      //   }
-
-      //   toast.success("Announcement updated successfully");
-
-      //   resetForm();
-      //   await refreshAnnouncements?.();
-      //   return;
-      // }
-
-      /* ==============================
-         CREATE ANNOUNCEMENT
-      ============================== */
-
       const announcementRes = await saveCollegeAnnouncement(
         {
           announcementTitle: title,
@@ -184,16 +221,17 @@ export default function AddAnnouncementModal({
 
       const announcementId = announcementRes.collegeAnnouncementId;
 
-      const roleRes = await saveAnnouncementRole({
-        collegeAnnouncementId: announcementId,
-        role: targetRole
-      });
+      for (const roleItem of targetRoles) {
+        const roleRes = await saveAnnouncementRole({
+          collegeAnnouncementId: announcementId,
+          role: roleItem,
+        });
 
-      if (!roleRes.success) {
-        toast.error("Failed to assign announcement role");
-        return;
+        if (!roleRes.success) {
+          toast.error("Failed to assign announcement role");
+          return;
+        }
       }
-
       toast.success("Announcement created successfully");
 
       resetForm();
@@ -216,7 +254,7 @@ export default function AddAnnouncementModal({
       setTitle("");
       setDate("");
       setType("");
-      setTargetRole("");
+      setTargetRoles([]);
       setCustomType("");
     }
   }, [open]);
@@ -224,13 +262,29 @@ export default function AddAnnouncementModal({
   const resetForm = () => {
     setTitle("");
     setDate("");
-    setTargetRole("");
+    setTargetRoles([]);
     setType("");
     setCustomType("");
     onClose();
   };
 
   if (!open) return null;
+
+  const handleRoleToggle = (roleValue: string) => {
+    setTargetRoles((prev) =>
+      prev.includes(roleValue)
+        ? prev.filter((r) => r !== roleValue)
+        : [...prev, roleValue]
+    );
+  };
+
+  const handleSelectAll = () => {
+    setTargetRoles(availableRoles);
+  };
+
+  const handleClearAll = () => {
+    setTargetRoles([]);
+  };
 
 
   return (
@@ -249,7 +303,7 @@ export default function AddAnnouncementModal({
 
           <button
             onClick={onClose}
-            className="text-[#6B7280] hover:text-black"
+            className="text-[#6B7280] hover:text-black cursor-pointer"
           >
             <X size={20} weight="bold" />
           </button>
@@ -320,22 +374,22 @@ export default function AddAnnouncementModal({
                 <option value="placement">Placement</option>
                 <option value="emergency">Emergency</option>
                 <option value="finance">Finance</option>
-                <option value="other">Others</option>
+                <option value="other">Other</option>
               </select>
 
               {/* Show custom input when Other selected */}
-              {type === "other" && (
+              {/* {type === "other" && (
                 <input
                   type="text"
-                  placeholder="Enter custom type"
+                  placeholder="Enter type"
                   value={customType}
                   onChange={(e) => setCustomType(e.target.value)}
                   className="mt-2 border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
                 />
-              )}
+              )} */}
 
               {/* Icon Preview (only for predefined types) */}
-              {type && type !== "other" && typeIcons[type] && (
+              {type && typeIcons[type] && (
                 <div className="flex items-center gap-2 mt-3">
                   <div className="w-10 h-10 rounded-md bg-[#F2F6FF] flex items-center justify-center">
                     <img src={typeIcons[type]} alt={type} className="h-6" />
@@ -348,22 +402,77 @@ export default function AddAnnouncementModal({
               )}
             </div>
 
-            {/* Select Roles */}
-            <div className="flex flex-col w-1/2">
+            <div className="flex flex-col w-1/2 relative role-dropdown">
               <label className="text-base font-medium text-[#2F2F2F] mb-1">
                 Select Roles
               </label>
-              <select
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] "
+
+              {/* Trigger */}
+              <div
+                onClick={() => setShowRoleDropdown((prev) => !prev)}
+                className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] cursor-pointer flex justify-between items-center bg-white"
               >
-                <option value="">Select Role</option>
-                <option value="CollegeAdmin">College Admin</option>
-                <option value="Admin">Admin</option>
-                <option value="Student">Student</option>
-                <option value="Parent">Parent</option>
-              </select>
+                <span className="truncate">
+                  {targetRoles.length > 0
+                    ? targetRoles.map(formatRole).join(", ")
+                    : "Select Roles"}
+                </span>
+
+                {/* Caret Down */}
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${showRoleDropdown ? "rotate-180" : ""
+                    }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+
+              {showRoleDropdown && (
+                <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[110px] overflow-y-auto p-3">
+
+                  {/* 🔥 Select All / Clear */}
+                  <div className="flex justify-between items-center mb-2">
+                    <button
+                      onClick={handleSelectAll}
+                      className="text-xs text-[#43C17A] font-medium hover:underline cursor-pointer"
+                    >
+                      Select All
+                    </button>
+
+                    <button
+                      onClick={handleClearAll}
+                      className="text-xs text-red-500 font-medium hover:underline cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 mb-2" />
+
+                  {availableRoles.length === 0 && (
+                    <p className="text-sm text-gray-400">No roles available</p>
+                  )}
+
+                  {availableRoles.map((r: string) => (
+                    <label
+                      key={r}
+                      className="flex items-center gap-2 cursor-pointer text-sm mb-2 text-[#2F2F2F] hover:bg-gray-50 px-1 rounded"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={targetRoles.includes(r)}
+                        onChange={() => handleRoleToggle(r)}
+                        className="accent-[#43C17A] cursor-pointer"
+                      />
+                      {formatRole(r)}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
           </div>
