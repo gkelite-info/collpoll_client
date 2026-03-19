@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { useUser } from "../utils/context/UserContext";
 import { fetchCollegeCode, fetchPersonalDetails, savePersonalDetails, updateUserBasic } from "@/lib/helpers/profile/personalDetailsAPI";
 import PersonalDetailsSkeleton from "./shimmers/PersonalDetailsSkeleton";
+import { Lock } from "@phosphor-icons/react";
 
 export default function ProfilePersonalDetails() {
     const router = useRouter();
@@ -20,6 +21,10 @@ export default function ProfilePersonalDetails() {
     const [isLoading, setIsloading] = useState(false);
     const [isPageLoading, setIsPageLoading] = useState(true);
     const isSuperAdmin = role === "SuperAdmin";
+
+    const inputBaseStyles = "w-full border rounded-md px-3 py-2 outline-none transition-all";
+    const disabledStyles = "bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed pr-10";
+    const enabledStyles = "border-[#CCCCCC] text-[#282828] focus:border-[#43C17A]";
 
     useEffect(() => {
         if (!userId) return;
@@ -167,26 +172,34 @@ export default function ProfilePersonalDetails() {
                         <label className="block text-sm font-medium text-[#282828] mb-1">
                             Mobile Number<span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="text"
-                            placeholder="Enter Mobile Number"
-                            value={mobile!}
-                            disabled
-                            className="w-full border cursor-not-allowed rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
-                        />
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Enter Mobile Number"
+                                value={mobile!}
+                                disabled
+                                className={`${inputBaseStyles} ${disabledStyles}`}
+                            // className="w-full border cursor-not-allowed rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
+                            />
+                            <Lock className="absolute cursor-not-allowed right-2 top-3 text-gray-400" size={16} />
+                        </div>
                     </div>
 
                     <div>
                         <label className="block text-sm font-medium text-[#282828] mb-1">
                             Email ID<span className="text-red-500">*</span>
                         </label>
-                        <input
-                            type="email"
-                            placeholder="Enter Mail ID"
-                            value={email!}
-                            disabled
-                            className="w-full cursor-not-allowed border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
-                        />
+                        <div className="relative">
+                            <input
+                                type="email"
+                                placeholder="Enter Mail ID"
+                                value={email!}
+                                disabled
+                                className={`${inputBaseStyles} ${disabledStyles}`}
+                            // className="w-full cursor-not-allowed border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
+                            />
+                            <Lock className="absolute cursor-not-allowed right-2 top-3 text-gray-400" size={16} />
+                        </div>
                     </div>
 
                     {!isSuperAdmin && (
@@ -194,14 +207,17 @@ export default function ProfilePersonalDetails() {
                             <label className="block text-sm font-medium text-[#282828] mb-1">
                                 College Code
                             </label>
-
-                            <input
-                                type="text"
-                                value={collegeCode}
-                                readOnly
-                                disabled
-                                className="w-full border rounded-md px-3 py-2 text-[#282828] cursor-not-allowed outline-none border-[#CCCCCC]"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    value={collegeCode}
+                                    readOnly
+                                    disabled
+                                    className={`${inputBaseStyles} ${disabledStyles}`}
+                                // className="w-full border rounded-md px-3 py-2 text-[#282828] cursor-not-allowed outline-none border-[#CCCCCC]"
+                                />
+                                <Lock className="absolute cursor-not-allowed right-2 top-3 text-gray-400" size={16} />
+                            </div>
                         </div>
                     )}
 
@@ -235,18 +251,22 @@ export default function ProfilePersonalDetails() {
                             <label className="block text-sm font-medium text-[#282828] mb-1">
                                 College ID<span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
-                                placeholder="Enter College ID"
-                                value={collegeId !== null ? collegeId : ""}
-                                onChange={(e) => {
-                                    let clean = e.target.value.replace(/\D/g, "");
-                                    if (clean === "0") clean = "";
-                                    if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
-                                }}
-                                disabled
-                                className="w-full cursor-not-allowed border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
-                            />
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Enter College ID"
+                                    value={collegeId !== null ? collegeId : ""}
+                                    onChange={(e) => {
+                                        let clean = e.target.value.replace(/\D/g, "");
+                                        if (clean === "0") clean = "";
+                                        if (clean.startsWith("0")) clean = clean.replace(/^0+/, "");
+                                    }}
+                                    disabled
+                                    className={`${inputBaseStyles} ${disabledStyles}`}
+                                // className="w-full cursor-not-allowed border rounded-md px-3 py-2 text-[#282828] outline-none border-[#CCCCCC]"
+                                />
+                                <Lock className="absolute cursor-not-allowed right-2 top-3 text-gray-400" size={16} />
+                            </div>
                         </div>
                     )}
                 </div>
