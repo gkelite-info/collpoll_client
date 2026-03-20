@@ -157,7 +157,7 @@ export default function ProfileKeySkillsWithModal() {
             </button>
 
             <button
-              onClick={() => router.push('/profile?profile=languages&Step=4')}
+              onClick={() => router.push('/profile?profile=languages&Step=5')}
               className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
               Next
             </button>

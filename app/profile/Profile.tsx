@@ -2,6 +2,7 @@
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import ProfileSteps from "./profileSteps";
+import ProfileInfo from "./profileInfo";
 import ProfilePersonalDetails from "./profilePersonalDetails";
 import PersonalDetails from "./resume/personalDetails";
 import ProfileEducationSection from "./profileEducation/Education";
@@ -60,21 +61,26 @@ export default function ProfileClient() {
     if (!hasQueryParams) {
       const isStudent = role === "Student";
       const defaultMode = isStudent ? "resume" : "profile";
+      const defaultStep = defaultMode === "profile" ? "profile" : "personal-details";
       const params = new URLSearchParams();
-      params.set(defaultMode, "personal-details");
-      router.push(`${pathname}?${params.toString()}&Step=1`);
+      params.set(defaultMode, defaultStep);
+      params.set("Step", defaultMode === "profile" ? "1" : "1");
+      router.push(`${pathname}?${params.toString()}`);
     }
   }, [roleChecked, role, pathname, router, searchParams.toString()]);
 
   const handleViewToggle = (targetView: string) => {
     const params = new URLSearchParams();
-
-    params.set(targetView, "personal-details");
-    router.push(`${pathname}?${params.toString()}&Step=1`);
+    const defaultStep = targetView === "profile" ? "profile" : "personal-details";
+    params.set(targetView, defaultStep);
+    router.push(`${pathname}?${params.toString()}&Step=${targetView === "profile" ? "1" : "1"}`);
   };
 
   const renderContent = () => {
     switch (currentStep) {
+      case "profile":
+        return <ProfileInfo />;
+
       case "personal-details":
         return isProfileMode ? <ProfilePersonalDetails /> : <PersonalDetails />;
 
@@ -109,7 +115,7 @@ export default function ProfileClient() {
         return <AcademicAchievements />;
 
       default:
-        return isProfileMode ? <ProfilePersonalDetails /> : <PersonalDetails />;
+        return isProfileMode ? <ProfileInfo /> : <PersonalDetails />;
     }
   };
 
