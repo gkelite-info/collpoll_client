@@ -10,11 +10,12 @@ type StepItem = {
 };
 
 const STEP_DATA: StepItem[] = [
-    { id: 1, title: "Personal Details", query: "personal-details" },
-    { id: 2, title: "Education", query: "education" },
-    { id: 3, title: "Key Skills", query: "key-skills" },
-    { id: 4, title: "Languages", query: "languages" },
-    { id: 5, title: "Profile Summary", query: "profile-summary" },
+    { id: 1, title: "Profile", query: "profile" },
+    { id: 2, title: "Personal Details", query: "personal-details" },
+    { id: 3, title: "Education", query: "education" },
+    { id: 4, title: "Key Skills", query: "key-skills" },
+    { id: 5, title: "Languages", query: "languages" },
+    { id: 6, title: "Profile Summary", query: "profile-summary" },
 ];
 
 export default function ProfileSteps() {
@@ -43,14 +44,16 @@ export default function ProfileSteps() {
 
         if (matchedStep) {
             setCurrentStep(matchedStep.id);
+        } else if (!stepQuery && !searchParams.toString()) {
+            setCurrentStep(1);
         }
     }, [searchParams.toString()]);
 
-    const handleStepClick = (stepQuery: string, stepId: number) => {
-        setCurrentStep(stepId);
+    const handleStepClick = (step: StepItem) => {
+        setCurrentStep(step.id);
         const params = new URLSearchParams(searchParams.toString());
-        params.set("step", stepQuery);
-        params.set("view", "profile");
+        params.set("profile", step.query);
+        params.set("Step", step.id.toString());
         router.push(`${window.location.pathname}?${params.toString()}`, { scroll: false });
     };
 
@@ -75,21 +78,14 @@ export default function ProfileSteps() {
                             <div
                                 key={step.id}
                                 ref={(el) => addRef(el, index)}
-                                onClick={() => {
-                                    setCurrentStep(step.id);
-                                    router.push(`/profile?profile=${step.query}&Step=${step.id}`, {
-                                        scroll: false,
-                                    });
-                                }}
+                                onClick={() => handleStepClick(step)}
                                 className="flex items-center justify-center cursor-pointer relative select-none"
                             >
                                 <div
                                     className={`flex flex-col items-center transition-all ${isActive ? "scale-110" : ""
                                         }`}
                                 >
-                                    <div
-
-                                    >
+                                    <div>
                                         {isCompleted ? (
                                             <CheckCircle size={40} weight="fill" className="text-[#74CB64] rounded-full" />
                                         ) : (

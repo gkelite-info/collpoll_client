@@ -99,7 +99,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                     onClick={(e) => {
                         e.stopPropagation();
                         onClose();
-                        router.push("/profile?profile=personal-details&Step=1");
+                        router.push("/profile?profile=profile&Step=1");
                     }}
                     className="m-4 p-4 cursor-pointer rounded-xl bg-[#43C17A26] flex gap-3 items-center">
                     <img
