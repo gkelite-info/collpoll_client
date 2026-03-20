@@ -70,8 +70,8 @@ export async function fetchDiscussionFilesBySection(
 
 export async function saveDiscussionFiles(
     discussionId: number,
-    discussionSectionId: number,
     fileUrls: string[],
+    discussionSectionId?: number,
 ) {
     if (!fileUrls.length) return { success: true };
 
@@ -79,8 +79,8 @@ export async function saveDiscussionFiles(
 
     const insertPayload = fileUrls.map((fileUrl) => ({
         discussionId,
-        discussionSectionId,
         fileUrl,
+        ...(discussionSectionId ? { discussionSectionId } : {}),
         createdAt: now,
         updatedAt: now,
     }));

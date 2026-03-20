@@ -69,6 +69,23 @@ export async function saveDiscussionSections(
     return { success: true };
 }
 
+export async function fetchDiscussionSectionByDiscussionId(discussionId: number) {
+    const { data, error } = await supabase
+        .from("discussion_forum_sections")
+        .select("discussionSectionId")
+        .eq("discussionId", discussionId)
+        .eq("isActive", true)
+        .order("createdAt", { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        console.error("fetchDiscussionSectionByDiscussionId error:", error);
+        return { success: false, data: null };
+    }
+
+    return { success: true, data };
+}
 
 export async function updateDiscussionSectionMarks(
     discussionSectionId: number,
