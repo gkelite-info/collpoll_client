@@ -176,10 +176,10 @@ export default function ProfileEducationSection() {
             onClick={handleSubmitAll}
             disabled={isSubmitting}
             className={`px-6 py-2 rounded-md text-sm text-white ${
-              isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+              isSubmitting ? "opacity-50 bg-[#43C17A]  cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
             }`}
           >
-            {isSubmitting ? "Saving..." : "Submit"}
+            {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </div>
       </div>

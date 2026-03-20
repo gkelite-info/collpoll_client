@@ -20,7 +20,7 @@ export default function ProfilePill({
             e.stopPropagation();
             onRemove && onRemove();
           }}
-          className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600"
+          className="ml-1 cursor-pointer inline-flex items-center justify-center w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-red-50 hover:text-red-600"
           aria-label="Remove"
         >
           <X size={12} weight="bold" />
