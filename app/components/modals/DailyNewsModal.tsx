@@ -85,11 +85,8 @@ export default function DailyNewsModal({ isOpen, onClose, article }: Props) {
       overflow-y-auto
     "
         >
-          {/* HEADER */}
           <div className="flex items-center justify-between px-5 pt-5 pb-2">
-            {/* LEFT: back arrow + icon + title */}
             <div className="flex items-center gap-1">
-              {/* Just the < icon (no circle) */}
               <button onClick={onClose} className="hover:opacity-70">
                 <CaretLeft
                   size={22}
@@ -97,10 +94,8 @@ export default function DailyNewsModal({ isOpen, onClose, article }: Props) {
                   className="text-[#454545] cursor-pointer"
                 />
               </button>
-              {/* Green newspaper icon */}
               <NewspaperIcon size={22} weight="fill" color="#43C17A" />
 
-              {/* Title */}
               <h2
                 className="text-[#111827]"
                 style={{
@@ -142,9 +137,7 @@ export default function DailyNewsModal({ isOpen, onClose, article }: Props) {
             </button> */}
           </div>
 
-          {/* TAG, TITLE, SUBTITLE */}
           <div className="px-8 mt-3">
-            {/* 🗞️ Daily News */}
             <div
               className="flex items-center gap-2 text-[#111827]"
               style={{
@@ -159,16 +152,13 @@ export default function DailyNewsModal({ isOpen, onClose, article }: Props) {
               <span>Daily News</span>
             </div>
 
-            {/* Main title */}
             <h3 className="mt-3 text-[#111827]">{article?.title}</h3>
 
-            {/* Subtitle */}
             <p className="mt-2 mb-6 text-[#414141] italic">
               {article?.description}
             </p>
           </div>
 
-          {/* IMAGE CARD – Figma accurate */}
           <div className="px-8 pb-8 flex justify-center">
             <div
               className="

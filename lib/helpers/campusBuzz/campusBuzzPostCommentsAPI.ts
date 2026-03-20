@@ -64,7 +64,8 @@ export async function fetchCampusBuzzPostComments(campusBuzzPostId: number) {
             createdAt,
             users (
                 userId,
-                fullName
+                fullName,
+                role
             )
         `,
     )
@@ -73,11 +74,7 @@ export async function fetchCampusBuzzPostComments(campusBuzzPostId: number) {
     .eq("is_deleted", false)
     .order("createdAt", { ascending: true });
 
-  if (error) {
-    console.error("fetchCampusBuzzPostComments error:", error);
-    throw error;
-  }
-
+  if (error) throw error;
   return data ?? [];
 }
 

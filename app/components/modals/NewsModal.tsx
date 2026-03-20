@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { FilePdfIcon, NewspaperIcon } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -21,7 +22,7 @@ function Portal({ children }: { children: React.ReactNode }) {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onOpenPDF: (article: any) => void; // Keeps the dynamic dynamic signature
+  onOpenPDF: (article: any) => void;
 };
 
 export default function NewsModal(props: Props) {
@@ -29,7 +30,6 @@ export default function NewsModal(props: Props) {
   const [news, setNews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Logic from the current version to keep functionality intact
   useEffect(() => {
     async function loadNews() {
       try {
@@ -64,7 +64,6 @@ export default function NewsModal(props: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
           >
-            {/* Header - OG UI Styles */}
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
                 <NewspaperIcon size={22} weight="fill" color="#43C17A" />
@@ -87,11 +86,9 @@ export default function NewsModal(props: Props) {
               </button>
             </div>
 
-            {/* Content Area - OG UI Styles with Dynamic Data mapping */}
             <div className="px-4 pt-3 pb-4 overflow-y-auto space-y-6">
-              {loading && <p className="text-sm text-gray-400">Loading...</p>}
+              {loading && <Loader />}
 
-              {/* Today's News Header - OG UI Style */}
               {!loading && (
                 <div>
                   <p className="text-[18px] font-medium text-[#111827]">
@@ -143,7 +140,6 @@ export default function NewsModal(props: Props) {
                               }}
                               className="flex items-center cursor-pointer gap-1.5 h-[26px] px-3 bg-[#43C17A] rounded-full text-white text-[12px] font-medium transition-opacity hover:opacity-90"
                             >
-                              {/* Re-introducing the white circle icon from OG UI */}
                               <span className="flex items-center justify-center w-5 h-5 bg-white rounded-full">
                                 <FilePdfIcon
                                   size={12}
@@ -162,9 +158,7 @@ export default function NewsModal(props: Props) {
               )}
             </div>
 
-            {/* Commented out block preserved as requested */}
             {/* <div className="w-full h-screen bg-gray-100 flex items-center justify-center p-6">
-              ... preservation of original commented block ...
             </div> */}
           </motion.div>
         </Portal>

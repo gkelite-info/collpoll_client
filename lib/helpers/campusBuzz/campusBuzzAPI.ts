@@ -21,8 +21,16 @@ const normalizeTags = (tags?: string[]) => {
   return [...new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))];
 };
 
-export async function fetchCampusBuzzFeed(collegeId: number) {
-  const { data, error } = await supabase
+export async function fetchCampusBuzzFeed(
+  collegeId: number,
+  page: number = 0,
+  limit: number = 10,
+  searchQuery: string = "",
+) {
+  const from = page * limit;
+  const to = from + limit - 1;
+
+  let query = supabase
     .from("campus_buzz_post")
     .select(
       `
@@ -36,7 +44,8 @@ export async function fetchCampusBuzzFeed(collegeId: number) {
             createdAt,
             users!campus_buzz_post_createdBy_fkey (
                 userId,
-                fullName
+                fullName,
+                role
             )
         `,
     )
@@ -44,8 +53,16 @@ export async function fetchCampusBuzzFeed(collegeId: number) {
     .eq("isActive", true)
     .eq("is_deleted", false)
     .is("deletedAt", null)
-    .order("createdAt", { ascending: false });
+    .order("createdAt", { ascending: false })
+    .range(from, to);
 
+  if (searchQuery) {
+    query = query.or(
+      `title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`,
+    );
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }

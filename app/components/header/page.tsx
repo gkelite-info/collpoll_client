@@ -26,7 +26,6 @@ import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
 import { useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
-// 1. Rename your main component to HeaderContent
 function HeaderContent() {
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -300,7 +299,6 @@ function HeaderContent() {
       />
       <EmailModal isOpen={isEmailOpen} onClose={() => setIsEmailOpen(false)} />
 
-      {/* Passing the highlightedPostId to your Modal here */}
       <AnnouncementModal
         isOpen={isAnnouncementOpen}
         onClose={() => setIsAnnouncementOpen(false)}
@@ -322,13 +320,7 @@ function HeaderContent() {
 
 export default function Header() {
   return (
-    <Suspense
-      fallback={
-        <div className="w-full h-full flex items-center justify-center">
-          <Loader />
-        </div>
-      }
-    >
+    <Suspense>
       <HeaderContent />
     </Suspense>
   );

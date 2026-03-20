@@ -19,6 +19,7 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  editData?: any;
 };
 
 function TagsInputBox({
@@ -249,7 +250,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
             <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
               <div className="mb-6">
                 <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                  Post Title *
+                  Post Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -262,7 +263,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
               <div className="mb-6">
                 <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                  Category *
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={category}
@@ -277,7 +278,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
               <div className="mb-6">
                 <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                  Description *
+                  Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={4}
