@@ -19,6 +19,10 @@ import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
 import { STATIC_ACTIVE_DISCUSSIONS, STATIC_COMPLETED_DISCUSSIONS } from "./facultyDiscussionData";
 import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { deactivateDiscussionForum, fetchCompletedDiscussionsByFacultyId, fetchDiscussionsByFacultyId } from "@/lib/helpers/discussionForum/discussionForumAPI";
+import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
+import ConfirmDeleteModal from "./confirmDeleteModal";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -39,6 +43,7 @@ function AssignmentsLeftContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { facultyId } = useFaculty();
 
   const activeTab = searchParams.get("tab") || "assignments";
   const action = searchParams.get("action");
@@ -57,6 +62,48 @@ function AssignmentsLeftContent() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [discussions, setDiscussions] = useState<any[]>([]);
+  const [discussionsLoading, setDiscussionsLoading] = useState(true);
+  const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
+  const [completedDiscussionsLoading, setCompletedDiscussionsLoading] = useState(true);
+  const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+
+  async function fetchCompletedDiscussions() {
+    if (!facultyId) return;
+    try {
+      setCompletedDiscussionsLoading(true);
+      const data = await fetchCompletedDiscussionsByFacultyId(facultyId);
+      setCompletedDiscussions(data);
+    } catch (err) {
+      toast.error("Failed to fetch completed discussions");
+    } finally {
+      setCompletedDiscussionsLoading(false);
+    }
+  }
+
+  async function fetchDiscussions() {
+    if (!facultyId) return;
+    try {
+      setDiscussionsLoading(true);
+      const data = await fetchDiscussionsByFacultyId(facultyId);
+      setDiscussions(data);
+    } catch (err) {
+      toast.error("Failed to fetch discussions");
+      console.error("fetchDiscussions error:", err);
+    } finally {
+      setDiscussionsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "discussion") {
+      fetchDiscussions();
+      fetchCompletedDiscussions();
+    }
+  }, [activeTab, facultyId, refreshKey]);
 
   const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -161,6 +208,25 @@ function AssignmentsLeftContent() {
     setCurrentPage(page);
   };
 
+  const handleDeleteDiscussion = async () => {
+    if (!deleteDiscussionId) return;
+    try {
+      setIsDeleting(true);
+      const result = await deactivateDiscussionForum(deleteDiscussionId);
+      if (result.success) {
+        toast.success("Discussion deleted successfully.");
+        fetchDiscussions();
+      } else {
+        toast.error("Failed to delete discussion.");
+      }
+    } catch (error) {
+      toast.error("Failed to delete discussion.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDiscussionId(null);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     const res = await deleteFacultyAssignment(id);
     if (!res.success) {
@@ -178,15 +244,12 @@ function AssignmentsLeftContent() {
   };
 
   if (activeTab === "discussion" && (action === "editDiscussion" || action === "createDiscussion")) {
-    const editData =
-      action === "editDiscussion" && discussionId
-        ? [...STATIC_ACTIVE_DISCUSSIONS, ...STATIC_COMPLETED_DISCUSSIONS]
-          .find(d => String(d.id) === String(discussionId))
-        : null;
-
     return (
       <div className="w-[68%] h-full p-2 flex flex-col">
-        <FacultyDiscussionForm initialData={editData} />
+        <FacultyDiscussionForm
+          discussionId={action === "editDiscussion" && discussionId ? Number(discussionId) : undefined}
+          onSaved={() => setRefreshKey(prev => prev + 1)}
+        />
       </div>
     );
   }
@@ -395,18 +458,51 @@ function AssignmentsLeftContent() {
 
             {activeTab === "discussion" && (
               <div className="flex flex-col gap-4 pb-10">
-                {discussionView === "active" && STATIC_ACTIVE_DISCUSSIONS.map((discussion) => (
-                  <FacultyDiscussionCard key={discussion.id} data={discussion} />
-                ))}
+                {discussionView === "active" && (
+                  discussionsLoading ? (
+                    [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
+                  ) : discussions.length === 0 ? (
+                    <div className="w-full py-10 text-center text-gray-500">No active discussions found.</div>
+                  ) : (
+                    discussions.map((discussion) => (
+                      <FacultyDiscussionCard
+                        key={discussion.discussionId}
+                        data={discussion}
+                        discussionView="active"
+                        onDelete={(id) => setDeleteDiscussionId(id)}
+                      />
+                    ))
+                  )
+                )}
 
-                {discussionView === "completed" && STATIC_COMPLETED_DISCUSSIONS.map((discussion) => (
-                  <FacultyDiscussionCard key={discussion.id} data={discussion} discussionView={discussionView} />
-                ))}
+                {discussionView === "completed" && (
+                  completedDiscussionsLoading ? (
+                    [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
+                  ) : completedDiscussions.length === 0 ? (
+                    <div className="w-full py-10 text-center text-gray-500">No completed discussions found.</div>
+                  ) : (
+                    completedDiscussions.map((discussion) => (
+                      <FacultyDiscussionCard
+                        key={discussion.discussionId}
+                        data={discussion}
+                        discussionView="completed"
+                      />
+                    ))
+                  )
+                )}
               </div>
             )}
+
           </div>
         </div>
       </div>
+      <ConfirmDeleteModal
+        open={!!deleteDiscussionId}
+        onConfirm={handleDeleteDiscussion}
+        onCancel={() => setDeleteDiscussionId(null)}
+        isDeleting={isDeleting}
+        name="discussion"
+      />
     </div>
   );
 }

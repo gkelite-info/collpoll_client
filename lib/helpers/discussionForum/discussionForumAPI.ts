@@ -163,6 +163,17 @@ export async function deactivateDiscussionForum(discussionId: number) {
 
 
 export async function fetchDiscussionsByFacultyId(facultyId: number) {
+    const today = new Date().toISOString().split("T")[0];
+    await supabase
+        .from("discussion_forum")
+        .update({
+            isActive: false,
+            is_deleted: true,
+            deletedAt: new Date().toISOString(),
+        })
+        .lt("deadline", today)
+        .eq("isActive", true);
+
     const { data, error } = await supabase
         .from("discussion_forum")
         .select(`
@@ -170,7 +181,10 @@ export async function fetchDiscussionsByFacultyId(facultyId: number) {
       title,
       description,
       deadline,
-      createdAt
+      createdAt,
+      discussion_file_uploads (
+                fileUrl
+            )
     `)
         .eq("createdBy", facultyId)
         .eq("isActive", true)
@@ -183,4 +197,59 @@ export async function fetchDiscussionsByFacultyId(facultyId: number) {
     }
 
     return data ?? [];
+}
+
+export async function fetchCompletedDiscussionsByFacultyId(facultyId: number) {
+    const { data, error } = await supabase
+        .from("discussion_forum")
+        .select(`
+            discussionId,
+            title,
+            description,
+            deadline,
+            createdAt,
+            discussion_file_uploads (
+                fileUrl
+            )
+        `)
+        .eq("createdBy", facultyId)
+        .eq("isActive", false)
+        .order("deadline", { ascending: false });
+
+    if (error) {
+        console.error("fetchCompletedDiscussionsByFacultyId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+export async function fetchDiscussionById(discussionId: number) {
+    const { data, error } = await supabase
+        .from("discussion_forum")
+        .select(`
+            discussionId,
+            title,
+            description,
+            deadline,
+            createdAt,
+            discussion_forum_sections (
+                discussionSectionId,
+                collegeSectionsId,
+                marks
+            ),
+            discussion_file_uploads (
+                discussionFileUploadId,
+                fileUrl
+            )
+        `)
+        .eq("discussionId", discussionId)
+        .single();
+
+    if (error) {
+        console.error("fetchDiscussionById error:", error);
+        throw error;
+    }
+
+    return data;
 }

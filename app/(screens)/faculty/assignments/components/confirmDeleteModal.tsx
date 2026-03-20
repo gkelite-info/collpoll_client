@@ -1,12 +1,21 @@
 "use client";
 
-export default function ConfirmDeleteModal({
-  onConfirm,
-  onCancel,
-}: {
+interface Props {
+  open?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-}) {
+  isDeleting?: boolean;
+  name?: string;
+}
+
+export default function ConfirmDeleteModal({
+  open,
+  onConfirm,
+  onCancel,
+  isDeleting = false,
+  name = "item"
+}: Props) {
+  if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
       <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full transform transition-all border border-gray-100">
