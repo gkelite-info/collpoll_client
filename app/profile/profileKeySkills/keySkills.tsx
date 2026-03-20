@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from "react";
 
-import { Plus, PencilSimple, X } from "@phosphor-icons/react";
+import { PencilSimple } from "@phosphor-icons/react";
 import Pill from "./Pill";
 import { useRouter } from "next/navigation";
 import AddSkillModal from "./addSkillModel";
-import { addUserSkill, getUserSkills, removeUserSkill } from "@/lib/helpers/profile/skillsAPI";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import {
+  createUserSkill,
+  fetchUserSkills,
+  deleteUserSkill,
+} from "@/lib/helpers/profile/keyskills";
+import ProfileSkillsShimmer from "../shimmers/ProfileSkillsShimmer";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 type Skill = { skillId: number; name: string };
 
@@ -18,97 +24,118 @@ export default function ProfileKeySkillsWithModal() {
   const [tools, setTools] = useState<Skill[]>([]);
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
-
   const [editTechnical, setEditTechnical] = useState(false);
   const [editSoft, setEditSoft] = useState(false);
   const [editTools, setEditTools] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
   const router = useRouter();
-  const { userId, studentId } = useUser();
-
-  // const removeFrom = (listName: "technical" | "soft" | "tools", value: string) => {
-  //   if (listName === "technical") setTechnical((s) => s.filter((x) => x !== value));
-  //   if (listName === "soft") setSoft((s) => s.filter((x) => x !== value));
-  //   if (listName === "tools") setTools((s) => s.filter((x) => x !== value));
-  // };
-
-  // const handleAdd = (section: "technical" | "soft" | "tools", value: string) => {
-  //   if (section === "technical") setTechnical((s) => (s.includes(value) ? s : [...s, value]));
-  //   if (section === "soft") setSoft((s) => (s.includes(value) ? s : [...s, value]));
-  //   if (section === "tools") setTools((s) => (s.includes(value) ? s : [...s, value]));
-  // };
+  const { userId } = useUser();
 
   useEffect(() => {
     if (!userId) return;
-
-    getUserSkills(userId)
-      .then(data => {
-        setTechnical(data.filter(d => d.category === "Technical Skills"));
-        setSoft(data.filter(d => d.category === "Soft Skills"));
-        setTools(data.filter(d => d.category === "Tools & Frameworks"));
+    setLoading(true);
+    fetchUserSkills(userId)
+      .then((data) => {
+        setTechnical(data.filter((d) => d.category === "Technical Skills"));
+        setSoft(data.filter((d) => d.category === "Soft Skills"));
+        setTools(data.filter((d) => d.category === "Tools & Frameworks"));
       })
-      .catch(err => {
-        toast.error(err.message || "Failed to load skills");
-      });
+      .catch(() => {
+        toast.error("Failed to load skills");
+      })
+      .finally(() => setLoading(false))
+      ;
   }, [userId]);
 
-  const removeFrom = async (skillId: number) => {
-    if (!userId) {
-      toast.error("User not loaded yet");
-      return;
-    }
 
+  const removeFrom = async (skillId: number) => {
+    if (!userId) return toast.error("User not loaded");
     try {
       setRemoving(true);
-      await removeUserSkill(userId, skillId);
-
-      setTechnical(s => s.filter(x => x.skillId !== skillId));
-      setSoft(s => s.filter(x => x.skillId !== skillId));
-      setTools(s => s.filter(x => x.skillId !== skillId));
+      await deleteUserSkill(userId, skillId);
+      setTechnical((s) => s.filter((x) => x.skillId !== skillId));
+      setSoft((s) => s.filter((x) => x.skillId !== skillId));
+      setTools((s) => s.filter((x) => x.skillId !== skillId));
+      toast.success("Skill removed successfully");
     } catch (err: any) {
-      toast.error(err.message || "Error while removing");
+      toast.error("Failed to remove skill");
     } finally {
       setRemoving(false);
     }
   };
 
-
   const handleAdd = async (
     section: "technical" | "soft" | "tools",
     value: string
-  ) => {
+  ): Promise<boolean> => {
     if (!userId) {
-      toast.error("User not loaded yet");
-      return;
+      toast.error("User not loaded");
+      return false;
     }
-
-    if (!studentId) {
-      toast.error("Student profile not loaded");
-      return;
-    }
-
-    console.log("studentId", studentId);
-
-
     try {
       setSaving(true);
-      await addUserSkill(studentId, section, value);
+      const newSkill = await createUserSkill(userId, section, value);
+      if (section === "technical")
+        setTechnical((prev) =>
+          prev.some((s) => s.skillId === newSkill.skillId)
+            ? prev
+            : [...prev, newSkill]
+        );
 
-      const data = await getUserSkills(userId);
-      setTechnical(data.filter(d => d.category === "Technical Skills"));
-      setSoft(data.filter(d => d.category === "Soft Skills"));
-      setTools(data.filter(d => d.category === "Tools & Frameworks"));
+      if (section === "soft")
+        setSoft((prev) =>
+          prev.some((s) => s.skillId === newSkill.skillId)
+            ? prev
+            : [...prev, newSkill]
+        );
 
-      toast.success("Skill added");
+      if (section === "tools")
+        setTools((prev) =>
+          prev.some((s) => s.skillId === newSkill.skillId)
+            ? prev
+            : [...prev, newSkill]
+        );
+
+      toast.success("Skill added successfully");
+      return true;
     } catch (err: any) {
-      toast.error(err.message || "Error while saving");
+      toast.error("Failed to add skill");
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
+  const handleDeleteClick = (skillId: number) => {
+    setSelectedSkillId(skillId);
+    setDeleteModalOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!userId || !selectedSkillId) return;
 
+    try {
+      setRemoving(true);
+      await deleteUserSkill(userId, selectedSkillId);
+      setTechnical((s) => s.filter((x) => x.skillId !== selectedSkillId));
+      setSoft((s) => s.filter((x) => x.skillId !== selectedSkillId));
+      setTools((s) => s.filter((x) => x.skillId !== selectedSkillId));
+      toast.success("Skill removed successfully");
+      setDeleteModalOpen(false);
+      setSelectedSkillId(null);
+    } catch {
+      toast.error("Failed to remove skill");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  if (loading) {
+    return <ProfileSkillsShimmer />;
+  }
 
   return (
     <div className="mt-4">
@@ -124,7 +151,7 @@ export default function ProfileKeySkillsWithModal() {
               disabled={saving}
               onClick={() => setModalOpen(true)}
               className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium
-    ${saving ? "opacity-50 cursor-not-allowed" : "bg-[#43C17A] text-white"}`}
+    ${saving ? "opacity-50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer text-white"}`}
             >
               {saving ? "Saving..." : "Add +"}
             </button>
@@ -143,7 +170,7 @@ export default function ProfileKeySkillsWithModal() {
               <h4 className="text-lg text-[#43C17A] font-medium">Technical Skills</h4>
             </div>
 
-            <div className="relative rounded-md border border-[#C0C0C0] p-3 flex items-center">
+            <div className="relative rounded-md border border-[#C0C0C0] p-3 pr-12 flex items-center">
               {technical.length > 0 && (
                 <button
                   aria-label="Toggle edit technical"
@@ -161,12 +188,11 @@ export default function ProfileKeySkillsWithModal() {
                   <Pill
                     key={t.skillId}
                     showRemove={editTechnical}
-                    onRemove={() => removeFrom(t.skillId)}
+                    onRemove={() => handleDeleteClick(t.skillId)}
                   >
                     <p className="text-[#525252] font-normal">{t.name}</p>
                   </Pill>
                 ))}
-
 
                 {technical.length === 0 && (
                   <div className="text-sm text-gray-400">No technical skills added.</div>
@@ -180,8 +206,8 @@ export default function ProfileKeySkillsWithModal() {
               <h4 className="text-lg text-[#43C17A] font-medium">Soft Skills</h4>
             </div>
 
-            <div className="relative rounded-md border border-[#C0C0C0] p-3 min-h-[68px] flex">
-              {technical.length > 0 && (
+            <div className="relative rounded-md border border-[#C0C0C0] p-3 pr-12 min-h-[68px] flex">
+              {soft.length > 0 && (
                 <button
                   aria-label="Toggle edit soft"
                   onClick={() => setEditSoft((v) => !v)}
@@ -204,7 +230,6 @@ export default function ProfileKeySkillsWithModal() {
                   </Pill>
                 ))}
 
-
                 {soft.length === 0 && (
                   <div className="text-sm text-gray-400">No soft skills added.</div>
                 )}
@@ -217,8 +242,8 @@ export default function ProfileKeySkillsWithModal() {
               <h4 className="text-lg text-[#43C17A] font-medium">Tools & Frameworks</h4>
             </div>
 
-            <div className="relative rounded-md border border-[#C0C0C0] p-3 flex items-center">
-              {technical.length > 0 && (
+            <div className="relative rounded-md border border-[#C0C0C0] p-3 pr-12 flex items-center">
+              {tools.length > 0 && (
                 <button
                   aria-label="Toggle edit tools"
                   onClick={() => setEditTools((v) => !v)}
@@ -234,12 +259,11 @@ export default function ProfileKeySkillsWithModal() {
                   <Pill
                     key={t.skillId}
                     showRemove={editTools}
-                    onRemove={() => removeFrom(t.skillId)}
+                    onRemove={() => handleDeleteClick(t.skillId)}
                   >
                     <p className="text-[#525252] font-normal">{t.name}</p>
                   </Pill>
                 ))}
-
 
                 {tools.length === 0 && (
                   <div className="text-sm text-gray-400">No tools added.</div>
@@ -254,7 +278,19 @@ export default function ProfileKeySkillsWithModal() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
+        isLoading={saving}
         defaultSection="technical"
+      />
+
+      <ConfirmDeleteModal
+        open={deleteModalOpen}
+        onCancel={() => {
+          setDeleteModalOpen(false);
+          setSelectedSkillId(null);
+        }}
+        onConfirm={confirmDelete}
+        isDeleting={removing}
+        name="skill"
       />
     </div>
   );

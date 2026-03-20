@@ -1,24 +1,41 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
+import toast from "react-hot-toast";
 type AddModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onAdd: (section: "technical" | "soft" | "tools", value: string) => void;
+  onAdd: (section: "technical" | "soft" | "tools", value: string) => Promise<boolean>;
   defaultSection?: "technical" | "soft" | "tools";
+  isLoading?: boolean;
 };
 
-export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSection = "technical" }: AddModalProps) {
+const toPascalCase = (str: string) =>
+  str
+    .split(" ")
+    .map((word) => {
+      if (!word) return "";
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+
+export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSection = "technical", isLoading = false }: AddModalProps) {
   const [section, setSection] = useState<"technical" | "soft" | "tools">(defaultSection);
   const [value, setValue] = useState("");
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const trimmed = value.trim();
-    if (!trimmed) return;
-    onAdd(section, trimmed);
-    setValue("");
-    onClose();
+    if (!trimmed) {
+      toast.error("Skill name is required");
+      return;
+    }
+    const formatted = toPascalCase(trimmed).replace(/\s+/g, " ");;
+    const success = await onAdd(section, formatted);
+    if (success) {
+      setValue("");
+      onClose();
+    }
   };
 
   return (
@@ -31,7 +48,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
           exit={{ opacity: 0 }}
           onClick={onClose}
         >
-          
+
           <motion.div
             className="absolute inset-0 bg-black/40"
             aria-hidden
@@ -53,7 +70,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
               <h3 className="text-lg font-medium text-gray-800">Add Skill</h3>
               <button
                 onClick={onClose}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-full text-gray-600 hover:bg-gray-100"
+                className="inline-flex focus:outline-none cursor-pointer items-center justify-center w-8 h-8 rounded-full text-gray-600 hover:bg-gray-100"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -65,7 +82,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
               <select
                 value={section}
                 onChange={(e) => setSection(e.target.value as any)}
-                className="w-full border rounded px-3 py-2 text-sm"
+                className="w-full cursor-pointer focus:outline-none border rounded px-3 py-2 text-sm"
               >
                 <option value="technical">Technical Skills</option>
                 <option value="soft">Soft Skills</option>
@@ -76,10 +93,16 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
                 <label className="block text-sm text-gray-600">Skill name</label>
                 <input
                   value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  onChange={(e) => setValue(toPascalCase(e.target.value))}
                   type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAdd();
+                    }
+                  }}
                   placeholder="e.g. Next.js"
-                  className="w-full border rounded px-3 py-2 text-sm"
+                  className="w-full focus:outline-none cursor-pointer border rounded px-3 py-2 text-sm"
                 />
               </div>
 
@@ -87,7 +110,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
                 <button
                   onClick={onClose}
                   type="button"
-                  className="px-3 py-2 rounded border text-sm"
+                  className="px-3 focus:outline-none cursor-pointer py-2 rounded border text-sm"
                 >
                   Cancel
                 </button>
@@ -95,9 +118,10 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
                 <button
                   onClick={handleAdd}
                   type="button"
-                  className="px-3 py-2 rounded bg-emerald-500 text-white text-sm"
+                  disabled={isLoading}
+                  className="px-3 py-2 focus:outline-none cursor-pointer rounded bg-emerald-500 text-white text-sm"
                 >
-                  Add Skill
+                  {isLoading ? "Adding..." : "Add Skill"}
                 </button>
               </div>
             </div>
