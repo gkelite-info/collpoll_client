@@ -22,6 +22,7 @@ import { useUser } from "../utils/context/UserContext";
 import { useEffect } from "react";
 import { canAccessResume } from "@/lib/helpers/profile/profileRouteConfig";
 import { Loader } from "../(screens)/(student)/calendar/right/timetable";
+import StudentProfileSummary from "./studentProfileSummary";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
@@ -93,7 +94,7 @@ export default function ProfileClient() {
         return <ProjectsForm />;
 
       case "profile-summary":
-        return <ProfileSummary />;
+        return isProfileMode ? <StudentProfileSummary/> : <ProfileSummary /> 
 
       case "accomplishments":
         return <Accomplishments />;
