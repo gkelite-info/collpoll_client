@@ -5,7 +5,7 @@ import {
   secondaryEducationAPI,
   undergraduateEducationAPI,
   phdEducationAPI,
-} from "@/lib/helpers/profile/educationAPI";
+} from "@/lib/helpers/profile/profileEducationAPI";
 import {
   PrimaryShimmer,
   SecondaryShimmer,

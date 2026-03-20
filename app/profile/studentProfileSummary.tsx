@@ -6,19 +6,15 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useUser } from "../utils/context/UserContext";
 
 export default function StudentProfileSummary() {
   const [description, setDescription] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { userId } = useUser()
 
-  // const user = supabase.auth.getUser();
-  // const studentId = user?.id;
   const studentId = 1;
-
-  const handleNext = () => {
-    router.push("/profile?accomplishments");
-  };
 
   const handleSubmit = async () => {
     if (!description.trim()) {
@@ -38,10 +34,6 @@ export default function StudentProfileSummary() {
       });
 
       toast.success("Profile Summary Submitted Successfully");
-
-      setTimeout(() => {
-        handleNext();
-      }, 500);
     } catch (error) {
       toast.error("Failed to submit summary. Please try again.");
       console.error(error);
@@ -61,18 +53,12 @@ export default function StudentProfileSummary() {
   }, [studentId]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center rounded-xl mt-2 mb-5">
-      <div className="w-full max-w-5xl bg-white rounded-xl shadow-sm p-6">
+    <div className="min-h-[58vh] bg-gray-100 flex justify-center rounded-xl mt-2 mb-5">
+      <div className="w-full bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-medium text-[#282828]">
             Profile Summary
           </h2>
-          <button
-            onClick={handleNext}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
-          >
-            Next
-          </button>
         </div>
 
         <div>
@@ -86,9 +72,9 @@ export default function StudentProfileSummary() {
 
           <div className="relative">
             <textarea
-              rows={4}
+              rows={10}
               required
-              maxLength={500}
+              maxLength={1000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="A passionate Computer Science student with a strong interest in software development and problem-solving. Eager to apply technical skills to real-world projects and grow as a developer."
@@ -96,7 +82,7 @@ export default function StudentProfileSummary() {
             />
 
             <span className="absolute bottom-3 right-4 text-xs text-gray-400">
-              {description.length}/500
+              {description.length}/1000
             </span>
           </div>
           <div className="flex justify-end mt-3">

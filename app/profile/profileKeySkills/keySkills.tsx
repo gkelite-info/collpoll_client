@@ -12,7 +12,7 @@ import {
   createUserSkill,
   fetchUserSkills,
   deleteUserSkill,
-} from "@/lib/helpers/profile/keyskills";
+} from "@/lib/helpers/profile/profileKeyskills";
 import ProfileSkillsShimmer from "../shimmers/ProfileSkillsShimmer";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 

@@ -82,7 +82,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
               <select
                 value={section}
                 onChange={(e) => setSection(e.target.value as any)}
-                className="w-full cursor-pointer focus:outline-none border rounded px-3 py-2 text-sm"
+                className="w-full cursor-pointer focus:outline-none border border-[#CCCCCC] rounded px-3 py-2 text-sm"
               >
                 <option value="technical">Technical Skills</option>
                 <option value="soft">Soft Skills</option>
@@ -102,7 +102,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
                     }
                   }}
                   placeholder="e.g. Next.js"
-                  className="w-full focus:outline-none cursor-pointer border rounded px-3 py-2 text-sm"
+                  className="w-full focus:outline-none cursor-pointer border border-[#CCCCCC] rounded px-3 py-2 text-sm"
                 />
               </div>
 
@@ -110,7 +110,7 @@ export default function ProfileAddSkillModal({ isOpen, onClose, onAdd, defaultSe
                 <button
                   onClick={onClose}
                   type="button"
-                  className="px-3 focus:outline-none cursor-pointer py-2 rounded border text-sm"
+                  className="px-3 focus:outline-none cursor-pointer py-2 rounded border border-[#CCCCCC] text-sm"
                 >
                   Cancel
                 </button>

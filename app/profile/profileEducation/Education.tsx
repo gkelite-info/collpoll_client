@@ -11,7 +11,7 @@ import {
   primaryEducationAPI,
   secondaryEducationAPI,
   undergraduateEducationAPI,
-} from "@/lib/helpers/profile/educationAPI";
+} from "@/lib/helpers/profile/profileEducationAPI";
 
 export type EducationType =
   | "primary"
