@@ -32,7 +32,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const router = useRouter()
-    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear } = useUser();
+    const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear, profilePhoto } = useUser();
     const { financeManagerId } = useFinanceManager();
     const { facultyId, college_branch, faculty_edu_type } = useFaculty();
     const { adminId } = useAdmin();
@@ -102,11 +102,28 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                         router.push("/profile?profile=profile&Step=1");
                     }}
                     className="m-4 p-4 cursor-pointer rounded-xl bg-[#43C17A26] flex gap-3 items-center">
-                    <img
+                    {/* <img
                         src="https://randomuser.me/api/portraits/women/44.jpg"
                         alt="profile"
                         className="w-14 h-14 rounded-full object-cover"
-                    />
+                    /> */}
+                    {profilePhoto ? (
+                        <img
+                            src={profilePhoto}
+                            alt="profile"
+                            className="w-14 h-14 rounded-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+                            <svg
+                                className="w-8 h-8 text-gray-400"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                            </svg>
+                        </div>
+                    )}
 
                     <div className="flex-1">
                         <div className="flex items-center justify-between">
