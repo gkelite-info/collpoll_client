@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const BUCKET = "college-drive";
+
 export type DriveFolderRow = {
     driveFolderId: number;
     collegeId: number;
@@ -21,6 +23,7 @@ export async function fetchRootDriveFolders(collegeId: number) {
       parentFolderId,
       folderName,
       createdBy,
+      is_deleted,
       createdAt,
       updatedAt,
       deletedAt
@@ -50,6 +53,7 @@ export async function fetchSubDriveFolders(
       parentFolderId,
       folderName,
       createdBy,
+      is_deleted,
       createdAt,
       updatedAt,
       deletedAt
@@ -152,7 +156,10 @@ export async function saveDriveFolder(
     };
 }
 
-export async function deleteDriveFolder(driveFolderId: number) {
+export async function deleteDriveFolder(
+    driveFolderId: number,
+    collegeId: number,
+) {
     const { error } = await supabase
         .from("drive_folders")
         .update({
@@ -164,6 +171,23 @@ export async function deleteDriveFolder(driveFolderId: number) {
     if (error) {
         console.error("deleteDriveFolder error:", error);
         return { success: false };
+    }
+
+    // Remove all files inside this folder from bucket
+    const folderPath = `${collegeId}/${driveFolderId}`;
+    const { data: files, error: listError } = await supabase.storage
+        .from(BUCKET)
+        .list(folderPath);
+
+    if (!listError && files && files.length > 0) {
+        const paths = files.map((f) => `${folderPath}/${f.name}`);
+        const { error: removeError } = await supabase.storage
+            .from(BUCKET)
+            .remove(paths);
+
+        if (removeError) {
+            console.error("deleteDriveFolder (storage) error:", removeError);
+        }
     }
 
     return { success: true };

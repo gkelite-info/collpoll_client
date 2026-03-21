@@ -7,28 +7,22 @@ type Props = {
   onSort: (val: string) => void;
   onNew: () => void;
   onFilters: () => void;
+  isVisible?: boolean;
 };
 
-export default function ActionBar({ sortBy, onSort, onNew, onFilters }: Props) {
+export default function ActionBar({ sortBy, onSort, onNew, onFilters, isVisible }: Props) {
   return (
     <div className="flex items-center gap-3">
       <button
         onClick={onNew}
-        className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A] px-2 text-sm font-medium text-white"
+        style={{ cursor: "pointer" }}
+        className="flex h-8 items-center gap-2 rounded-lg bg-[#43C17A] px-3 text-sm font-medium text-white hover:bg-[#3aad6d] transition-colors"
       >
         <Plus size={18} weight="bold" />
         <span>New</span>
       </button>
 
-      <button
-        onClick={onFilters}
-        className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A14] px-2 text-sm font-medium text-[#43C17A]"
-      >
-        <FunnelSimple size={18} weight="bold" />
-        <span>Filters</span>
-      </button>
-
-      <div className="flex h-6 items-center gap-2 rounded-lg bg-[#43C17A14] px-2 text-sm font-medium text-[#43C17A]">
+      <div className="flex h-8 items-center gap-2 rounded-lg bg-[#43C17A14] px-3 text-sm font-medium text-[#43C17A] cursor-pointer">
         <SortDescending size={18} weight="bold" />
         <span>Sort by :</span>
         <select

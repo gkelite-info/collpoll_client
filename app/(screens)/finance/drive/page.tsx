@@ -11,10 +11,11 @@ import { FolderItemProps } from "../../(student)/drive/page";
 type SortOption = "latest" | "name" | "size";
 
 type AdminDriveProps = {
-    education: string
-    totalFiles: number;
-    totalSize: number;
+    education?: string
+    totalFiles?: number;
+    totalSize?: number;
 }
+
 
 export default function Drive({ education, totalFiles, totalSize }: AdminDriveProps) {
 
