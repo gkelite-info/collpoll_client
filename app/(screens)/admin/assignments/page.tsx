@@ -2,10 +2,14 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { CaretDown, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetchAdminDepartmentStats";
 import AssignmentCard from "./components/assignmentCard";
+import QuizBasic from "./components/quizBasic";
+import DiscussionForumBasic from "./components/discussionForumBasic";
+import TabNavigation from "./components/tabNavigation";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
@@ -52,6 +56,9 @@ const FilterDropdown = ({
 };
 
 const AssignmentPage = () => {
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") || "assignments";
+
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("All");
   const [yearFilter, setYearFilter] = useState("All");
@@ -114,33 +121,29 @@ const AssignmentPage = () => {
     [dataList],
   );
 
-  if (loading)
+  if (loading && activeTab === "assignments")
     return (
       <div className="p-10 text-center">
         <Loader />
       </div>
     );
 
+  // Render different content based on active tab
+  if (activeTab === "quiz") {
+    return <QuizBasic />;
+  }
+
+  if (activeTab === "discussion") {
+    return <DiscussionForumBasic />;
+  }
+
+  // Default: Assignments tab
   return (
     <div className="flex flex-col m-4">
-      <div className="mb-6 flex justify-between items-center">
-        <div className="w-50% flex-0.5">
-          <div className="flex items-center gap-2 group w-fit cursor-pointer">
-            <h1 className="text-xl font-bold text-[#282828]">
-              Assignments Overview
-            </h1>
-          </div>
-          <p className="text-[#282828] mt-1 text-sm">
-            Track subjects, faculty who created assignments, raised issues, and
-            submission progress.
-          </p>
-        </div>
-        <div className="w-[30%]">
-          <CourseScheduleCard isVisibile={false} fullWidth={false} />
-        </div>
-      </div>
+      {/* Tab Navigation */}
+      <TabNavigation />
 
-      <div className="mt-0 mb-4 flex flex-col md:flex-row items-center gap-4">
+      <div className="mt-0 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="relative w-full md:w-[69%]">
           <input
             type="text"
