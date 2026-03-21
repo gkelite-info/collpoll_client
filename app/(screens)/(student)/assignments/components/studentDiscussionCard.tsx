@@ -1,6 +1,9 @@
-import { MouseEvent } from "react";
-import { CalendarBlank, CalendarDotsIcon, FilePdf, UserCircle, XCircle } from "@phosphor-icons/react";
+'use client'
+import { MouseEvent, useState } from "react";
+import { CalendarDotsIcon, FileIcon, FilePdf, UserCircle, XCircle } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { deactivateStudentDiscussionUpload, deleteStudentDiscussionFileFromStorage } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 export default function StudentDiscussionCard({
     data,
@@ -16,11 +19,13 @@ export default function StudentDiscussionCard({
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const [deleteUploadId, setDeleteUploadId] = useState<number | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleCardClick = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("modal", "viewDiscussion");
-        params.set("discussionId", data.id);
+        params.set("discussionId", String(data.discussionId));
         router.push(`${pathname}?${params.toString()}`);
     };
 
@@ -28,8 +33,40 @@ export default function StudentDiscussionCard({
         e.stopPropagation();
         const params = new URLSearchParams(searchParams.toString());
         params.set("modal", "uploadDiscussion");
-        params.set("discussionId", data.id);
+        params.set("discussionId", String(data.discussionId));
         router.push(`${pathname}?${params.toString()}`);
+    };
+
+
+    const handleRemoveUpload = async () => {
+        if (!deleteUploadId) return;
+        try {
+            setIsDeleting(true);
+
+            const fileToDelete = uploadedFiles.find(
+                (f: any) => f.studentDiscussionUploadId === deleteUploadId
+            );
+
+            if (fileToDelete?.fileUrl) {
+                await deleteStudentDiscussionFileFromStorage(fileToDelete.fileUrl);
+            }
+
+            const result = await deactivateStudentDiscussionUpload(deleteUploadId);
+            if (result.success) {
+                if (onRemoveFile) onRemoveFile(deleteUploadId);
+            } else {
+                console.error("Failed to deactivate file record");
+            }
+        } catch (error) {
+            console.error("handleRemoveUpload error:", error);
+        } finally {
+            setIsDeleting(false);
+            setDeleteUploadId(null);
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("modal");
+            params.delete("discussionId");
+            router.push(`${pathname}?${params.toString()}`);
+        }
     };
 
     return (
@@ -40,7 +77,7 @@ export default function StudentDiscussionCard({
             <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-1 w-[80%]">
                     <h3 className="text-lg font-bold text-[#282828]">{data.title}</h3>
-                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{data.subtitle}</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">{data.description}</p>
                 </div>
                 <div>
                     {!isCompleted ? (
@@ -72,62 +109,114 @@ export default function StudentDiscussionCard({
                             <CalendarDotsIcon size={18} className="text-[#43C17A]" weight="regular" />
                         </div>
                         <span className="font-bold text-[#282828]">Uploaded On :</span>
-                        <span className="text-gray-600">{data.uploadedOn}</span>
+                        <span className="text-gray-600">{data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                        <div className="bg-[#43C07A24] p-1 rounded-full">
+                            <CalendarDotsIcon size={18} className="text-red-500" weight="regular" />
+                        </div>
+                        <span className="font-bold text-[#282828]">Deadline :</span>
+                        <span className="text-gray-600">
+                            {data.deadline ? new Date(data.deadline).toLocaleDateString() : "—"}
+                        </span>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-2 min-w-0">
                     <span className="font-bold text-[#282828] text-sm">
-                        {isCompleted ? "Faculty Attachments" : "Attachments"}
+                        {isCompleted ? "Faculty Attachments" : "Reference Attachments"}
                     </span>
                     <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
-                        {data.attachments.map((file: string, idx: number) => (
-                            <div key={`fac-${idx}`} className="flex items-center gap-2 bg-[#e2e8f0] text-[#334155] px-3 py-1.5 rounded-md text-xs font-semibold flex-shrink-0">
+                        {(data.attachments ?? []).map((file: { fileUrl: string }, idx: number) => (
+                            <a
+                                key={`fac-${idx}`}
+                                href={file.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 bg-[#e2e8f0] text-[#334155] px-3 py-1.5 rounded-md text-xs font-semibold flex-shrink-0">
                                 <FilePdf size={16} weight="fill" className="text-[#1e293b]" />
-                                {file}
-                            </div>
+                                {file.fileUrl?.split("/").pop()?.split("_").slice(1).join("_") ?? "File"}
+                            </a>
                         ))}
+                    </div>
 
-                        {!isCompleted && uploadedFiles && uploadedFiles.map((file: any, idx: number) => (
-                            <div key={`stu-${idx}`} className="flex items-center gap-2 bg-[#e2e8f0] text-[#334155] pl-3 pr-2 py-1.5 rounded-md text-xs font-semibold flex-shrink-0">
-                                <FilePdf size={16} weight="fill" className="text-[#1e293b]" />
-                                {file.name}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (onRemoveFile) onRemoveFile(idx);
-                                    }}
-                                    className="ml-1 text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                    <span className="font-bold text-[#282828] text-sm mt-2">Your Uploads</span>
+                    <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
+                        {uploadedFiles && uploadedFiles.length > 0 ? (
+                            uploadedFiles.map((file: any, idx: number) => (
+                                <div
+                                    key={`stu-${idx}`}
+                                    className="flex items-center gap-2 bg-[#e2f6ea] text-[#334155] pl-3 pr-2 py-1.5 rounded-md text-xs font-semibold flex-shrink-0"
                                 >
-                                    <XCircle size={16} weight="regular" />
-                                </button>
-                            </div>
-                        ))}
+                                    <a
+                                        href={file.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <FileIcon size={16} weight="fill" className="text-[#43C17A]" />
+                                        {file.fileUrl?.split("/").pop()?.split("_").slice(1).join("_") ?? "File"}
+                                    </a>
+                                    {!isCompleted && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setDeleteUploadId(file.studentDiscussionUploadId);
+                                            }}
+                                            className="ml-1 text-red-500 cursor-pointer hover:text-red-700 transition-colors"
+                                        >
+                                            <XCircle size={16} weight="regular" />
+                                        </button>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-xs text-gray-400 italic">
+                                {isCompleted ? "No files uploaded." : "Upload a file first!"}
+                            </p>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {isCompleted && (uploadedFiles.length > 0 || data.uploadedFiles) && (
-                <div className="flex flex-col gap-3 mt-2 border-t border-gray-100 pt-4">
-                    <span className="font-bold text-[#282828] text-sm">Uploaded Files</span>
-                    <div className="flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
-                        {(uploadedFiles.length > 0 ? uploadedFiles : data.uploadedFiles || []).map((file: any, idx: number) => (
-                            <div
-                                key={`up-${idx}`}
-                                className="flex items-center gap-3 border border-gray-200 rounded-md p-3 w-64 bg-white flex-shrink-0"
-                            >
-                                <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" />
-                                <div className="flex flex-col min-w-0">
-                                    <span className="text-sm font-medium text-[#282828] truncate">
-                                        {file.name}
-                                    </span>
-                                    <span className="text-xs text-gray-400">{file.size}</span>
+            {
+                isCompleted && (uploadedFiles.length > 0 || data.uploadedFiles) && (
+                    <div className="flex flex-col gap-3 mt-2 border-t border-gray-100 pt-4">
+                        <span className="font-bold text-[#282828] text-sm">Uploaded Files</span>
+                        <div className="flex gap-4 overflow-x-auto whitespace-nowrap scrollbar-hide pb-2">
+                            {(uploadedFiles.length > 0 ? uploadedFiles : data.uploadedFiles || []).map((file: any, idx: number) => (
+                                <div
+                                    key={`up-${idx}`}
+                                    className="flex items-center gap-3 border border-gray-200 rounded-md p-3 w-64 bg-white flex-shrink-0"
+                                >
+                                    <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-sm font-medium text-[#282828] truncate">
+                                            {file.name}
+                                        </span>
+                                        <span className="text-xs text-gray-400">{file.size}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+            <ConfirmDeleteModal
+                open={!!deleteUploadId}
+                onConfirm={handleRemoveUpload}
+                onCancel={() => {
+                    setDeleteUploadId(null);
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.delete("modal");
+                    params.delete("discussionId");
+                    router.push(`${pathname}?${params.toString()}`);
+                }}
+                isDeleting={isDeleting}
+                name="uploaded file"
+            />
+        </div >
     );
 }
