@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const BUCKET = "college-drive";
+
 export type DriveFileRow = {
     driveFileId: number;
     driveFolderId: number;
@@ -45,11 +47,40 @@ export async function fetchDriveFilesByFolder(
     return data ?? [];
 }
 
+// Returns file count and total size (raw bytes) grouped by folderId for a college
+export async function fetchFolderStats(
+    collegeId: number,
+): Promise<Record<number, { totalFiles: number; totalSizeBytes: number }>> {
+    const { data, error } = await supabase
+        .from("drive_files")
+        .select("driveFolderId, fileSize")
+        .eq("collegeId", collegeId)
+        .is("deletedAt", null);
+
+    if (error) {
+        console.error("fetchFolderStats error:", error);
+        return {};
+    }
+
+    const stats: Record<number, { totalFiles: number; totalSizeBytes: number }> = {};
+    for (const row of data ?? []) {
+        const id = row.driveFolderId;
+        if (!stats[id]) stats[id] = { totalFiles: 0, totalSizeBytes: 0 };
+        stats[id].totalFiles += 1;
+        stats[id].totalSizeBytes += (row.fileSize ?? 0);
+    }
+    return stats;
+}
+
 export async function fetchRecentDriveFiles(
     collegeId: number,
-    limit = 10,
+    page: number = 1,
+    limit: number = 10,
 ) {
-    const { data, error } = await supabase
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await supabase
         .from("drive_files")
         .select(`
       driveFileId,
@@ -60,18 +91,18 @@ export async function fetchRecentDriveFiles(
       fileUrl,
       uploadedBy,
       createdAt
-    `)
+    `, { count: "exact" })
         .eq("collegeId", collegeId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false })
-        .limit(limit);
+        .range(from, to);
 
     if (error) {
         console.error("fetchRecentDriveFiles error:", error);
         throw error;
     }
 
-    return data ?? [];
+    return { data: data ?? [], totalCount: count ?? 0 };
 }
 
 export async function fetchExistingDriveFile(
@@ -104,11 +135,37 @@ export async function saveDriveFile(
         fileName: string;
         fileType: string;
         fileSize?: number | null;
-        fileUrl: string;
+        fileUrl?: string;
+        file?: File;
     },
     userId: number,
 ) {
     const now = new Date().toISOString();
+
+    let fileUrl = payload.fileUrl ?? "";
+
+    // Upload to bucket for new files
+    if (!payload.driveFileId && payload.file) {
+        const storagePath = `${payload.collegeId}/${payload.driveFolderId}/${payload.fileName.trim()}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from(BUCKET)
+            .upload(storagePath, payload.file, {
+                upsert: false,
+                contentType: payload.fileType,
+            });
+
+        if (uploadError) {
+            console.error("saveDriveFile (storage upload) error:", uploadError);
+            return { success: false, error: uploadError };
+        }
+
+        const { data: urlData } = supabase.storage
+            .from(BUCKET)
+            .getPublicUrl(storagePath);
+
+        fileUrl = urlData.publicUrl;
+    }
 
     const upsertPayload: any = {
         driveFolderId: payload.driveFolderId,
@@ -116,7 +173,7 @@ export async function saveDriveFile(
         fileName: payload.fileName.trim(),
         fileType: payload.fileType,
         fileSize: payload.fileSize ?? null,
-        fileUrl: payload.fileUrl,
+        fileUrl,
         updatedAt: now,
     };
 
@@ -157,7 +214,12 @@ export async function saveDriveFile(
     };
 }
 
-export async function deleteDriveFile(driveFileId: number) {
+export async function deleteDriveFile(
+    driveFileId: number,
+    collegeId: number,
+    driveFolderId: number,
+    fileName: string,
+) {
     const { error } = await supabase
         .from("drive_files")
         .update({
@@ -169,6 +231,16 @@ export async function deleteDriveFile(driveFileId: number) {
     if (error) {
         console.error("deleteDriveFile error:", error);
         return { success: false };
+    }
+
+    // Remove file from bucket
+    const storagePath = `${collegeId}/${driveFolderId}/${fileName.trim()}`;
+    const { error: storageError } = await supabase.storage
+        .from(BUCKET)
+        .remove([storagePath]);
+
+    if (storageError) {
+        console.error("deleteDriveFile (storage) error:", storageError);
     }
 
     return { success: true };
