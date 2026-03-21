@@ -33,6 +33,9 @@ export default function ProfileInfo() {
     collegeEducationType,
     collegeBranchCode,
     collegeAcademicYear,
+    collegeSection,
+    profilePhoto,
+    setProfilePhoto
   } = useUser();
 
   const [profileData, setProfileData] = useState<ProfileInfoData>({
@@ -43,7 +46,7 @@ export default function ProfileInfo() {
     branch: collegeBranchCode || "",
     batchYear: "",
     currentYear: collegeAcademicYear || "",
-    section: "",
+    section: collegeSection || "",
     profilePhoto: null,
   });
 
@@ -60,6 +63,7 @@ export default function ProfileInfo() {
         const data = await getUserProfilePhoto(Number(userId));
         if (data?.profileUrl) {
           setProfileData(prev => ({ ...prev, profilePhoto: data.profileUrl }));
+          setProfilePhoto(data.profileUrl);
         }
       } catch (error) {
         console.error("Failed to load profile photo:", error);
@@ -102,6 +106,7 @@ export default function ProfileInfo() {
       await deleteUserProfilePhoto(Number(userId));
       setProfileData((prev) => ({ ...prev, profilePhoto: null }));
       setIsPhotoChanged(false);
+      setProfilePhoto(null);
       toast.success("Profile photo removed");
       setIsDeleteModalOpen(false);
     } catch (error) {
@@ -121,6 +126,7 @@ export default function ProfileInfo() {
 
       if (isPhotoChanged && profileData.profilePhoto && userId) {
         await upsertUserProfilePhoto(Number(userId), profileData.profilePhoto);
+        setProfilePhoto(profileData.profilePhoto);
         setIsPhotoChanged(false);
       }
 
@@ -220,7 +226,7 @@ export default function ProfileInfo() {
                 <ProfileRow label="Phone" value={profileData.phone} />
                 <ProfileRow label="Education Type" value={profileData.educationType} />
                 <ProfileRow label="Branch" value={profileData.branch} />
-                <ProfileRow label="Batch Year" value={profileData.batchYear} />
+                {/* <ProfileRow label="Batch Year" value={profileData.batchYear} /> */}
                 <ProfileRow label="Current Year" value={profileData.currentYear} />
                 <ProfileRow label="Section" value={profileData.section} />
               </div>

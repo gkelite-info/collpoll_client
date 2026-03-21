@@ -48,6 +48,7 @@ function HeaderContent() {
     facultyId,
     adminId,
     userId,
+    profilePhoto
   } = useUser();
 
   const { financeManagerId } = useFinanceManager();
@@ -206,9 +207,26 @@ function HeaderContent() {
             onClick={() => setOpenProfile(true)}
           >
             <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
-              <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
+              {/* <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
                 V
-              </div>
+              </div> */}
+              {profilePhoto ? (
+                <img
+                  src={profilePhoto}
+                  alt="profile"
+                  className="w-13 h-13 rounded-full object-cover border-2 border-white"
+                />
+              ) : (
+                <div className="w-13 h-13 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center">
+                  <svg
+                    className="w-7 h-7 text-gray-400"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                  </svg>
+                </div>
+              )}
             </div>
             <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
               <div className="flex items-center justify-between w-full bg-gray-00">
