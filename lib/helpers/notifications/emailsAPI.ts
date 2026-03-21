@@ -1,19 +1,17 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function getUserEmails(userId: number) {
+export async function getUserEmails(userId: number, userEmail: string) {
   const { data, error } = await supabase
     .from("email_queue")
     .select("*")
-    .eq("userId", userId)
-    .order("createdAt", { ascending: false })
-    .limit(20);
+    .or(`userId.eq.${userId},senderAddress.eq.${userEmail}`)
+    .order("createdAt", { ascending: false });
 
   if (error) {
-    console.error("getUserEmails error:", error);
+    console.error("Error fetching emails:", error);
     return [];
   }
-
-  return data ?? [];
+  return data || [];
 }
 
 export async function getUnreadEmailCount(userId: number) {
