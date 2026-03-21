@@ -18,6 +18,9 @@ import QuizAttemptScreen from "./components/QuizAttemptScreen";
 import StudentDiscussionCard from "./components/studentDiscussionCard";
 import { STATIC_STUDENT_ACTIVE_DISCUSSIONS, STATIC_STUDENT_COMPLETED_DISCUSSIONS } from "./components/studentDiscussionData";
 import { StudentDiscussionUploadModal, StudentDiscussionDetailsModal } from "./components/studentDiscussionModals";
+import { useStudent } from "@/app/utils/context/student/useStudent";
+import { fetchActiveDiscussionsForStudent, fetchCompletedDiscussionsForStudent } from "@/lib/helpers/student/assignments/discussionForum/studentDiscussionAPI";
+import { fetchStudentDiscussionUploads } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
 
 function AssignmentsLeftContent() {
     const router = useRouter();
@@ -42,6 +45,45 @@ function AssignmentsLeftContent() {
     const rowsPerPage = 8;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
     const [discussionUploads, setDiscussionUploads] = useState<Record<string, any[]>>({});
+    const { collegeSectionsId, collegeId } = useStudent();
+    const [activeDiscussions, setActiveDiscussions] = useState<any[]>([]);
+    const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
+    const [discussionsLoading, setDiscussionsLoading] = useState(true);
+    const { studentId } = useStudent();
+
+    async function loadDiscussions() {
+        if (!collegeSectionsId || !studentId) return;
+        try {
+            setDiscussionsLoading(true);
+            const [active, completed] = await Promise.all([
+                fetchActiveDiscussionsForStudent(collegeSectionsId, studentId),
+                fetchCompletedDiscussionsForStudent(collegeSectionsId)
+            ]);
+
+            const activeWithUploads = await Promise.all(
+                active.map(async (discussion: any) => {
+                    const uploads = await fetchStudentDiscussionUploads(
+                        studentId,
+                        discussion.discussionId
+                    );
+                    return { ...discussion, studentUploads: uploads };
+                })
+            );
+
+            setActiveDiscussions(activeWithUploads);
+            setCompletedDiscussions(completed);
+        } catch (err) {
+            console.error("loadDiscussions error:", err);
+        } finally {
+            setDiscussionsLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (activeTab === "discussion" && collegeSectionsId) {
+            loadDiscussions();
+        }
+    }, [activeTab, collegeSectionsId]);
 
     const handleTabChange = (tab: "assignments" | "quiz" | "discussion") => {
         const params = new URLSearchParams(searchParams.toString());
@@ -200,15 +242,6 @@ function AssignmentsLeftContent() {
         return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
     }
 
-    // if (activeTab === "quiz" && action === "attempt" && activeQuizId) {
-    //     const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
-    //     return (
-    //         <div className="w-[68%] p-2 flex flex-col h-full">
-    //             <QuizAttemptScreen quiz={activeQuizData} />
-    //         </div>
-    //     );
-    // }
-
     if (activeTab === "quiz" && activeQuizId) {
         if (action === "attempt") {
             const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
@@ -224,7 +257,10 @@ function AssignmentsLeftContent() {
         ? STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId)
         : null;
 
-    const activeDiscussionData = activeDiscussionId ? [...STATIC_STUDENT_ACTIVE_DISCUSSIONS, ...STATIC_STUDENT_COMPLETED_DISCUSSIONS].find(d => d.id === activeDiscussionId) : null;
+    const activeDiscussionData = activeDiscussionId
+        ? [...activeDiscussions, ...completedDiscussions]
+            .find(d => String(d.discussionId) === String(activeDiscussionId))
+        : null;
 
     return (
         <div className="w-[68%] p-2 flex flex-col h-full">
@@ -235,9 +271,10 @@ function AssignmentsLeftContent() {
                     onUpload={(files) => {
                         setDiscussionUploads(prev => ({
                             ...prev,
-                            [activeDiscussionData.id]: files
+                            [activeDiscussionData.discussionId]: files
                         }));
                     }}
+                    onSuccess={loadDiscussions}
                 />
             )}
             {activeModal === "viewDiscussion" && activeDiscussionData && (
@@ -271,11 +308,7 @@ function AssignmentsLeftContent() {
                         Discussion forum
                     </span>
                 </h1>
-                {/* <p className="text-[#282828] text-sm">
-                    {activeTab === "assignments"
-                        ? "View, track, and submit your work with ease"
-                        : "Attempt, Track, and Review Your Quiz Performance with Ease"}
-                </p> */}
+
                 <p className="text-[#282828] text-sm">
                     {activeTab === "assignments" && "View, track, and submit your work with ease"}
                     {activeTab === "quiz" && "Attempt, Track, and Review Your Quiz Performance with Ease"}
@@ -286,37 +319,6 @@ function AssignmentsLeftContent() {
             <div className="w-full flex flex-col flex-1 min-h-0">
 
                 <div className="flex gap-4 pb-1">
-                    {/* {activeTab === "assignments" ? (
-                        <>
-                            <h5
-                                className={`text-xs cursor-pointer pb-1 ${activeView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
-                                onClick={() => handleViewChange("active")}
-                            >
-                                Active Assignments
-                            </h5>
-                            <h5
-                                className={`text-xs cursor-pointer pb-1 ${activeView === "previous" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
-                                onClick={() => handleViewChange("previous")}
-                            >
-                                Previous Assignments
-                            </h5>
-                        </>
-                    ) : (
-                        <>
-                            <h5
-                                className={`text-xs cursor-pointer pb-1 ${quizView === "ongoing" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
-                                onClick={() => handleQuizViewChange("ongoing")}
-                            >
-                                Ongoing Quizzes
-                            </h5>
-                            <h5
-                                className={`text-xs cursor-pointer pb-1 ${quizView === "attempted" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
-                                onClick={() => handleQuizViewChange("attempted")}
-                            >
-                                Attempted Quizzes
-                            </h5>
-                        </>
-                    )} */}
                     {activeTab === "assignments" && (
                         <>
                             <h5 className={`text-xs cursor-pointer pb-1 ${activeView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleViewChange("active")}>Active Assignments</h5>
@@ -329,10 +331,21 @@ function AssignmentsLeftContent() {
                             <h5 className={`text-xs cursor-pointer pb-1 ${quizView === "attempted" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleQuizViewChange("attempted")}>Attempted Quizzes</h5>
                         </>
                     )}
+
                     {activeTab === "discussion" && (
                         <>
-                            <h5 className={`text-xs cursor-pointer pb-1 ${discussionView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleDiscussionViewChange("active")}>Active Discussions</h5>
-                            <h5 className={`text-xs cursor-pointer pb-1 ${discussionView === "completed" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`} onClick={() => handleDiscussionViewChange("completed")}>Completed Discussions</h5>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${discussionView === "active" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleDiscussionViewChange("active")}
+                            >
+                                Active Discussions
+                            </h5>
+                            <h5
+                                className={`text-xs cursor-pointer pb-1 ${discussionView === "completed" ? "text-[#43C17A] text-sm font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
+                                onClick={() => handleDiscussionViewChange("completed")}
+                            >
+                                Completed Discussions
+                            </h5>
                         </>
                     )}
                 </div>
@@ -392,27 +405,53 @@ function AssignmentsLeftContent() {
 
                     {activeTab === "discussion" && (
                         <div className="flex flex-col gap-4 pb-10">
-                            {discussionView === "active" && STATIC_STUDENT_ACTIVE_DISCUSSIONS.map((discussion) => (
-                                <StudentDiscussionCard
-                                    key={discussion.id}
-                                    data={discussion}
-                                    uploadedFiles={discussionUploads[discussion.id] || []}
-                                    onRemoveFile={(idx) => {
-                                        setDiscussionUploads(prev => ({
-                                            ...prev,
-                                            [discussion.id]: prev[discussion.id].filter((_, i) => i !== idx)
-                                        }));
-                                    }}
-                                />
-                            ))}
-                            {discussionView === "completed" && STATIC_STUDENT_COMPLETED_DISCUSSIONS.map((discussion) => (
-                                <StudentDiscussionCard
-                                    key={discussion.id}
-                                    data={discussion}
-                                    isCompleted={true}
-                                    uploadedFiles={discussionUploads[discussion.id] || []}
-                                />
-                            ))}
+                            {discussionsLoading ? (
+                                <Loader />
+                            ) : (
+                                <>
+                                    {discussionView === "active" && (
+                                        activeDiscussions.length === 0 ? (
+                                            <p className="text-sm text-gray-500 mt-4">No active discussions found.</p>
+                                        ) : (
+                                            activeDiscussions.map((discussion) => (
+                                                <StudentDiscussionCard
+                                                    key={discussion.discussionId}
+                                                    data={discussion}
+                                                    uploadedFiles={discussion.studentUploads || []}
+                                                    onRemoveFile={(studentDiscussionUploadId) => {
+                                                        setActiveDiscussions(prev =>
+                                                            prev.map(d =>
+                                                                d.discussionId === discussion.discussionId
+                                                                    ? {
+                                                                        ...d,
+                                                                        studentUploads: d.studentUploads.filter(
+                                                                            (f: any) => f.studentDiscussionUploadId !== studentDiscussionUploadId
+                                                                        )
+                                                                    }
+                                                                    : d
+                                                            )
+                                                        );
+                                                    }}
+                                                />
+                                            ))
+                                        )
+                                    )}
+                                    {discussionView === "completed" && (
+                                        completedDiscussions.length === 0 ? (
+                                            <p className="text-sm text-gray-500 mt-4">No completed discussions found.</p>
+                                        ) : (
+                                            completedDiscussions.map((discussion) => (
+                                                <StudentDiscussionCard
+                                                    key={discussion.discussionId}
+                                                    data={discussion}
+                                                    isCompleted={true}
+                                                    uploadedFiles={discussionUploads[discussion.discussionId] || []}
+                                                />
+                                            ))
+                                        )
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
                 </div>

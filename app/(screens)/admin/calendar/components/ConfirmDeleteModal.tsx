@@ -5,7 +5,7 @@ interface Props {
   onConfirm: () => void;
   onCancel: () => void;
   isDeleting?: boolean;
-  name?:string;
+  name?: string;
 }
 
 export default function ConfirmDeleteModal({
@@ -13,7 +13,7 @@ export default function ConfirmDeleteModal({
   onConfirm,
   onCancel,
   isDeleting = false,
-  name="event"
+  name = "event"
 }: Props) {
   if (!open) return null;
 
@@ -40,7 +40,7 @@ export default function ConfirmDeleteModal({
             disabled={isDeleting}
             className="px-4 py-2 cursor-pointer rounded-lg text-sm bg-red-600 text-white"
           >
-            { isDeleting ? "Deleting..." : "Delete" }
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>

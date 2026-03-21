@@ -1,9 +1,12 @@
+'use client'
 import React, { useState, useRef, useCallback } from "react";
 import { X, CloudArrowUp, FilePdf, Trash, DownloadSimple, UserCircle, CalendarBlank, CalendarDotsIcon } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { CalendarDaysIcon } from "lucide-react";
+import { useStudent } from "@/app/utils/context/student/useStudent";
+import toast from "react-hot-toast";
+import { saveStudentDiscussionUpload, uploadStudentDiscussionFiles } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
 
-export function StudentDiscussionUploadModal({ discussion, onUpload }: { discussion: any, onUpload: (files: any[]) => void; }) {
+export function StudentDiscussionUploadModal({ discussion, onUpload, onSuccess }: { discussion: any, onUpload: (files: any[]) => void; onSuccess?: () => void; }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -11,6 +14,8 @@ export function StudentDiscussionUploadModal({ discussion, onUpload }: { discuss
     const [files, setFiles] = useState<File[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { studentId } = useStudent();
+    const [loading, setLoading] = useState(false);
 
     const handleClose = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -19,15 +24,59 @@ export function StudentDiscussionUploadModal({ discussion, onUpload }: { discuss
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    const handleUploadSubmit = () => {
-        onUpload(files.map(f => ({
-            name: f.name,
-            size: (f.size / 1024).toFixed(2) + " KB"
-        })));
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("modal");
-        params.delete("discussionId");
-        router.push(`${pathname}?${params.toString()}`);
+    const handleUploadSubmit = async () => {
+        if (files.length === 0) {
+            toast.error("Please select at least one file");
+            return;
+        }
+
+        if (!studentId) {
+            toast.error("Student not found");
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            const fileUrls = await uploadStudentDiscussionFiles(
+                discussion.discussionId,
+                studentId,
+                files
+            );
+
+            for (const fileUrl of fileUrls) {
+                const result = await saveStudentDiscussionUpload({
+                    studentId,
+                    discussionId: discussion.discussionId,
+                    discussionSectionId: discussion.discussionSectionId,
+                    fileUrl,
+                });
+
+                if (!result.success) {
+                    toast.error("Failed to save file record.");
+                    return;
+                }
+            }
+
+            onUpload(files.map(f => ({
+                name: f.name,
+                size: (f.size / 1024).toFixed(2) + " KB"
+            })));
+
+            toast.success("Files uploaded successfully!");
+            onSuccess?.();
+
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("modal");
+            params.delete("discussionId");
+            router.push(`${pathname}?${params.toString()}`);
+
+        } catch (error) {
+            toast.error("Upload failed. Please try again.");
+            console.error("handleUploadSubmit error:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,7 +96,7 @@ export function StudentDiscussionUploadModal({ discussion, onUpload }: { discuss
                         <h2 className="text-xl font-bold text-[#43C17A]">{discussion.title}</h2>
                         <h3 className="text-lg font-bold text-[#282828] mt-2">Upload</h3>
                     </div>
-                    <button onClick={handleClose} className="p-1 cursor-pointer rounded-md transition-colors"><X size={24} /></button>
+                    <button onClick={handleClose} className="p-1 cursor-pointer rounded-md transition-colors"><X size={24} color="black" /></button>
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -77,7 +126,7 @@ export function StudentDiscussionUploadModal({ discussion, onUpload }: { discuss
                                             <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(2)} KB</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => setFiles(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 text-[#43C17A] bg-[#e2f6ea] rounded hover:bg-[#c9efd9] transition-colors flex-shrink-0">
+                                    <button onClick={() => setFiles(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 text-red-500 bg-red-100 rounded transition-colors flex-shrink-0 cursor-pointer">
                                         <Trash size={18} />
                                     </button>
                                 </div>
@@ -90,8 +139,13 @@ export function StudentDiscussionUploadModal({ discussion, onUpload }: { discuss
                     <button onClick={handleClose} className="w-full cursor-pointer py-3 rounded-md font-bold text-sm text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
-                    <button onClick={handleUploadSubmit} className="w-full cursor-pointer py-3 rounded-md font-bold text-sm bg-[#43C17A] text-white hover:bg-[#38a366] shadow-sm transition-colors">
-                        Upload File
+                    <button
+                        onClick={handleUploadSubmit}
+                        className="w-full cursor-pointer py-3 rounded-md font-bold text-sm bg-[#43C17A] text-white hover:bg-[#38a366] shadow-sm transition-colors"
+                        disabled={loading}
+                    >
+                        {loading ? "Uploading.." : "Upload File"}
+
                     </button>
                 </div>
             </div>
@@ -133,46 +187,67 @@ export function StudentDiscussionDetailsModal({ discussion }: { discussion: any 
                                     <CalendarDotsIcon size={18} className="text-[#43C17A]" weight="regular" />
                                 </div>
                                 <span className="font-bold text-[#282828]">Uploaded On :</span>
-                                <span className="text-gray-600">{discussion.uploadedOn}</span>
+                                <span className="text-gray-600">
+                                    {discussion.createdAt ? new Date(discussion.createdAt).toLocaleDateString() : "—"}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm">
+                        <button
+                            onClick={() => {
+                                const firstFile = discussion.attachments?.[0];
+                                if (firstFile?.fileUrl) {
+                                    window.open(firstFile.fileUrl, "_blank");
+                                }
+                            }} className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm">
                             Download <span className="bg-white rounded-full text-[#43C17A] p-1"><DownloadSimple size={12} weight="bold" /></span>
                         </button>
                         <button onClick={handleClose} className="text-gray-500 p-1 cursor-pointer rounded-md"><X size={24} /></button>
                     </div>
                 </div>
 
-                <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+                <div className="bg-pink-00 flex flex-col lg:px-5 lg:py-4">
                     <div className="flex flex-col gap-2">
-                        <h3 className="text-base font-bold text-[#282828]">Project Overview</h3>
-                        <p className="text-sm text-[#282828] leading-relaxed whitespace-pre-line">{discussion.details.overview}</p>
+                        <h3 className="text-base font-bold text-[#282828]">Description</h3>
+                        <p className="text-sm text-[#282828] leading-relaxed whitespace-pre-line">
+                            {discussion.description ?? "No description provided."}
+                        </p>
                     </div>
-
                     <div className="flex flex-col gap-2">
-                        <h3 className="text-base font-bold text-[#282828]">Learning Objectives</h3>
-                        <ul className="text-sm text-[#282828] flex flex-col gap-1">
-                            {discussion.details.objectives.map((obj: string, i: number) => (
-                                <li key={i}>• {obj}</li>
-                            ))}
-                        </ul>
+                        <h3 className="text-base font-bold text-[#282828]">Deadline</h3>
+                        <p className="text-sm text-[#282828]">
+                            {discussion.deadline ? new Date(discussion.deadline).toLocaleDateString() : "—"}
+                        </p>
                     </div>
-
-                    <div className="flex flex-col gap-4">
-                        <h3 className="text-base font-bold text-[#282828]">Project Requirements</h3>
-                        {discussion.details.requirements.map((req: any, i: number) => (
-                            <div key={i} className="flex flex-col gap-1">
-                                <h4 className="text-sm font-bold text-[#282828]">{req.title}</h4>
-                                <p className="text-sm text-[#282828] leading-relaxed whitespace-pre-line">{req.desc}</p>
+                    <div className="flex flex-col gap-2">
+                        <h3 className="text-base font-bold text-[#282828]">Marks</h3>
+                        <p className="text-sm text-[#282828]">{discussion.marks ?? "—"}</p>
+                    </div>
+                    {discussion.attachments?.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            <h3 className="text-base font-bold text-[#282828]">Attachments</h3>
+                            <div className="flex flex-wrap gap-2">
+                                {discussion.attachments.map((file: { fileUrl: string }, idx: number) => (
+                                    <a
+                                        key={idx}
+                                        href={file.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 bg-[#e2e8f0] text-[#334155] px-3 py-1.5 rounded-md text-xs font-semibold"
+                                    >
+                                        <FilePdf size={16} weight="fill" className="text-[#1e293b]" />
+                                        {file.fileUrl?.split("/").pop()?.split("_").slice(1).join("_") ?? "File"}
+                                    </a>
+                                ))}
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    )}
                 </div>
+
             </div>
             <style jsx>{`.custom-scrollbar::-webkit-scrollbar { width: 6px; } .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }`}</style>
-        </div>
+        </div >
     );
 }
