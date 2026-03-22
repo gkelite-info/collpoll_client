@@ -23,6 +23,8 @@ import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { deactivateDiscussionForum, fetchCompletedDiscussionsByFacultyId, fetchDiscussionsByFacultyId } from "@/lib/helpers/discussionForum/discussionForumAPI";
 import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
 import ConfirmDeleteModal from "./confirmDeleteModal";
+import FacultyQuizForm from "./facultyQuizForm";
+import FacultyAddQuestions from "./FacultyAddQuizQuestions";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -60,7 +62,7 @@ function AssignmentsLeftContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [discussions, setDiscussions] = useState<any[]>([]);
   const [discussionsLoading, setDiscussionsLoading] = useState(true);
@@ -262,6 +264,40 @@ function AssignmentsLeftContent() {
     );
   }
 
+  if (activeTab === "quiz" && action === "createQuiz") {
+    return (
+      <div className="w-[68%] h-full p-2 flex flex-col">
+        <FacultyQuizForm
+          onCancel={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("action");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+          onSaved={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("action");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (activeTab === "quiz" && action === "addQuestions") {
+    return (
+      <div className="w-[68%] h-full p-2 flex flex-col">
+        <FacultyAddQuestions
+          onBack={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("action", "createQuiz");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+          isLoading={isLoading}
+        />
+      </div>
+    );
+  }
+
   if (view === "add" || view === "edit") {
     return (
       <AssignmentForm
@@ -344,7 +380,7 @@ function AssignmentsLeftContent() {
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
                 <button
                   onClick={() => handleQuizViewChange("active")}
-                  className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "active" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
+                  className={`lg:w-fit lg:px-6 lg:py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "active" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
                 >
                   Active Quizzes
                 </button>
@@ -361,12 +397,19 @@ function AssignmentsLeftContent() {
                   Completed Quizzes
                 </button>
                 <button
-                  className=" text-sm text-white cursor-pointer bg-[#16284F] px-6 py-2 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  className="text-sm text-white cursor-pointer bg-[#16284F] lg:w-fit lg:px-3 py-2 rounded-md font-bold transition-colors"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("action", "createQuiz");
+                    router.push(`${pathname}?${params.toString()}`);
+                  }}
                 >
                   Create Quiz
                 </button>
               </div>
             )}
+
+
 
             {activeTab === "discussion" && (
               <>

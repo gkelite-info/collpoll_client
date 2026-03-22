@@ -10,8 +10,8 @@ import AssignmentCard from "./components/assignmentCard";
 import QuizBasic from "./components/quizBasic";
 import DiscussionForumBasic from "./components/discussionForumBasic";
 import TabNavigation from "./components/tabNavigation";
-import { Loader } from "../../(student)/calendar/right/timetable";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 interface FilterProps {
   label: string;
@@ -128,7 +128,6 @@ const AssignmentPage = () => {
       </div>
     );
 
-  // Render different content based on active tab
   if (activeTab === "quiz") {
     return <QuizBasic />;
   }
@@ -216,7 +215,7 @@ const AssignmentPage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<div><Loader /></div>}>
       <AssignmentPage />
     </Suspense>
   );
