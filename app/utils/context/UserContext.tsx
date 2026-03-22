@@ -242,6 +242,9 @@ import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
 import { fetchStudentContext } from "./student/studentContextAPI";
 import { getUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
+import { fetchFacultyContext } from "./faculty/facultyContextAPI";
+import { fetchAdminContext } from "./admin/adminContextAPI";
+import { fetchFinanceManagerContext } from "./financeManager/financeManagerContextAPI";
 
 type UserContextType = {
   userId: number | null;
@@ -357,43 +360,54 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     },
 
     Admin: async (uid) => {
-      const { data } = await supabase
-        .from("admins")
-        .select("adminId")
-        .eq("userId", uid)
-        .is("deletedAt", null)
-        .maybeSingle();
-      setAdminId(data?.adminId ?? null);
-    },
+      const [adminData, adminCtx] = await Promise.all([
+        supabase
+          .from("admins")
+          .select("adminId")
+          .eq("userId", uid)
+          .is("deletedAt", null)
+          .maybeSingle(),
 
-    SuperAdmin: async (uid) => {
-      const { data } = await supabase
-        .from("admins")
-        .select("adminId")
-        .eq("userId", uid)
-        .is("deletedAt", null)
-        .maybeSingle();
-      setAdminId(data?.adminId ?? null);
+        fetchAdminContext(uid)
+      ]);
+      setAdminId(adminData.data?.adminId ?? null);
+      setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
     },
 
     Finance: async (uid) => {
-      const { data } = await supabase
-        .from("finance_manager")
-        .select("financeManagerId")
-        .eq("userId", uid)
-        .eq("is_deleted", false)
-        .maybeSingle();
-      setFinanceManagerId(data?.financeManagerId ?? null);
+      const [financeData, financeCtx] = await Promise.all([
+        supabase
+          .from("finance_manager")
+          .select("financeManagerId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        fetchFinanceManagerContext(uid)
+      ]);
+      setFinanceManagerId(financeData.data?.financeManagerId ?? null);
+      setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
     },
 
     Faculty: async (uid) => {
-      const { data } = await supabase
-        .from("faculty")
-        .select("facultyId")
-        .eq("userId", uid)
-        .is("deletedAt", null)
-        .maybeSingle();
-      setFacultyId(data?.facultyId ?? null);
+      const [facultyData, facultyCtx] = await Promise.all([
+        supabase
+          .from("faculty")
+          .select("facultyId")
+          .eq("userId", uid)
+          .is("deletedAt", null)
+          .maybeSingle(),
+
+        fetchFacultyContext(uid)
+      ]);
+
+      setFacultyId(facultyData.data?.facultyId ?? null);
+      setCollegeEducationType(facultyCtx?.faculty_edu_type ?? null);
+      setCollegeBranchCode(facultyCtx?.college_branch ?? null);
+      setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
+
+      const sections = facultyCtx?.sections?.map((s: any) => s.college_sections.collegeSections).join(", ") ?? null;
+
+      setCollegeSection(sections);
     },
 
     CollegeAdmin: async (uid) => {

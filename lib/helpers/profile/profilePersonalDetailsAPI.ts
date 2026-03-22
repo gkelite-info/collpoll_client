@@ -68,13 +68,12 @@ export async function fetchPersonalDetails(userId: number) {
     `)
     .eq("userId", userId)
     .is("deletedAt", null)
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === "PGRST116") {
       return { success: true, data: null };
     }
-    console.error("fetchPersonalDetails error:", error);
     throw error;
   }
 
@@ -87,7 +86,7 @@ export async function fetchExistingPersonalDetails(userId: number) {
     .select("personalDetailsId")
     .eq("userId", userId)
     .is("deletedAt", null)
-    .single();
+    .maybeSingle();
 
   if (error) {
     if (error.code === "PGRST116") {
