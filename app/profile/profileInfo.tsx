@@ -47,6 +47,15 @@ const getRegistrationIdByRole = ({
   return roleIdMap[role] ?? userId;
 };
 
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/jpg"
+];
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 export default function ProfileInfo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -161,7 +170,12 @@ export default function ProfileInfo() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      toast.error("Only JPG, PNG, WEBP images allowed");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
       toast.error("Image must be less than 5MB");
       return;
     }
