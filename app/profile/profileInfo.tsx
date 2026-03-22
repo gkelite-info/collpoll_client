@@ -21,12 +21,39 @@ interface ProfileInfoData {
   profilePhoto?: string | null;
 }
 
+const getRegistrationIdByRole = ({
+  role,
+  studentId,
+  facultyId,
+  parentId,
+  adminId,
+  collegeAdminId,
+  financeManagerId,
+  collegeHrId,
+  userId
+}: any) => {
+
+  const roleIdMap: Record<string, number | null> = {
+    Student: studentId,
+    Faculty: facultyId,
+    Parent: parentId,
+    Admin: adminId,
+    SuperAdmin: userId,
+    CollegeAdmin: collegeAdminId,
+    Finance: financeManagerId,
+    CollegeHR: collegeHrId
+  };
+
+  return roleIdMap[role] ?? userId;
+};
+
 export default function ProfileInfo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
     userId,
+    role,
     fullName,
     email,
     mobile,
@@ -35,7 +62,14 @@ export default function ProfileInfo() {
     collegeAcademicYear,
     collegeSection,
     profilePhoto,
-    setProfilePhoto
+    setProfilePhoto,
+    studentId,
+    facultyId,
+    parentId,
+    adminId,
+    collegeAdminId,
+    financeManagerId,
+    collegeHrId
   } = useUser();
 
   const [profileData, setProfileData] = useState<ProfileInfoData>({
@@ -56,9 +90,58 @@ export default function ProfileInfo() {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPhotoChanged, setIsPhotoChanged] = useState(false);
 
+  const isStudentOrFaculty = ["Student", "Faculty"].includes(role!)
+  const isSuperAdminOrOther = ["SuperAdmin", "CollegeHr"].includes(role!)
+
+  useEffect(() => {
+    const registrationId = getRegistrationIdByRole({
+      role,
+      studentId,
+      facultyId,
+      parentId,
+      adminId,
+      collegeAdminId,
+      financeManagerId,
+      collegeHrId,
+      userId
+    });
+
+    setProfileData({
+      registrationId: String(registrationId ?? ""),
+      email: email || "",
+      phone: mobile || "",
+      educationType: collegeEducationType || "",
+      branch: collegeBranchCode || "",
+      batchYear: "",
+      currentYear: collegeAcademicYear || "",
+      section: collegeSection || "",
+      profilePhoto: profilePhoto || null
+    });
+
+    setIsInitialLoading(false);
+
+  }, [
+    role,
+    studentId,
+    facultyId,
+    parentId,
+    adminId,
+    collegeAdminId,
+    financeManagerId,
+    collegeHrId,
+    email,
+    mobile,
+    collegeEducationType,
+    collegeBranchCode,
+    collegeAcademicYear,
+    collegeSection,
+    profilePhoto
+  ]);
+
   useEffect(() => {
     async function loadProfilePhoto() {
       if (!userId) return;
+      setIsInitialLoading(true)
       try {
         const data = await getUserProfilePhoto(Number(userId));
         if (data?.profileUrl) {
@@ -124,6 +207,11 @@ export default function ProfileInfo() {
         return;
       }
 
+      if (!profileData.profilePhoto) {
+        toast.error("Please upload a profile photo before saving");
+        return;
+      }
+
       if (isPhotoChanged && profileData.profilePhoto && userId) {
         await upsertUserProfilePhoto(Number(userId), profileData.profilePhoto);
         setProfilePhoto(profileData.profilePhoto);
@@ -152,17 +240,31 @@ export default function ProfileInfo() {
   );
 
 
+  // const ProfileRow = ({ label, value }: { label: string; value: string }) => (
+  //   <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
+  //     <span className="text-gray-700 font-medium text-sm sm:text-base">{label}</span>
+  //     <span className="text-gray-600 text-sm sm:text-base">{value || "—"}</span>
+  //   </div>
+  // );
+
   const ProfileRow = ({ label, value }: { label: string; value: string }) => (
-    <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
-      <span className="text-gray-700 font-medium text-sm sm:text-base">{label}</span>
-      <span className="text-gray-600 text-sm sm:text-base">{value || "—"}</span>
+    <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
+      <span className="text-gray-700 font-medium text-sm sm:text-base">
+        {label}
+      </span>
+
+      <div className="overflow-x-auto">
+        <span className="text-gray-600 text-sm sm:text-base whitespace-nowrap block">
+          {value || "—"}
+        </span>
+      </div>
     </div>
   );
 
   return (
     <div className="w-full min-h-[85vh]">
       <div className="mx-auto bg-white rounded-lg p-6 sm:p-10 shadow-sm">
-        {isInitialLoading ? (
+        {(isInitialLoading || !role) ? (
           <ProfileShimmer />
         ) : <>
           <div className="flex justify-between items-center mb-10">
@@ -224,11 +326,17 @@ export default function ProfileInfo() {
                 <ProfileRow label="Registration ID" value={profileData.registrationId} />
                 <ProfileRow label="Email" value={profileData.email} />
                 <ProfileRow label="Phone" value={profileData.phone} />
-                <ProfileRow label="Education Type" value={profileData.educationType} />
-                <ProfileRow label="Branch" value={profileData.branch} />
-                {/* <ProfileRow label="Batch Year" value={profileData.batchYear} /> */}
-                <ProfileRow label="Current Year" value={profileData.currentYear} />
-                <ProfileRow label="Section" value={profileData.section} />
+                {!isSuperAdminOrOther &&
+                  <ProfileRow label="Education Type" value={profileData.educationType} />
+                }
+                {isStudentOrFaculty &&
+                  <>
+                    <ProfileRow label="Branch" value={profileData.branch} />
+                    {/* <ProfileRow label="Batch Year" value={profileData.batchYear} /> */}
+                    <ProfileRow label="Current Year" value={profileData.currentYear} />
+                    <ProfileRow label="Section" value={profileData.section} />
+                  </>
+                }
               </div>
             </div>
           </div>
@@ -237,7 +345,7 @@ export default function ProfileInfo() {
             <button
               onClick={handleSave}
               disabled={isLoading}
-              className="px-8 py-2.5 bg-[#43C17A] text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-2.5 cursor-pointer bg-[#43C17A] text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Saving..." : "Save"}
             </button>
