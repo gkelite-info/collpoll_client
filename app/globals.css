@@ -192,3 +192,8 @@ input[list]::-webkit-calendar-picker-indicator {
     transform: translateX(100%);
   }
 }
+
+html {
+  font-size: 100%;
+  transition: font-size 0.2s ease; /* smooth scaling */
+}

@@ -10,6 +10,7 @@ import { FinanceManagerProvider } from "./utils/context/financeManager/useFinanc
 import { CollegeAdminProvider } from "./utils/context/college-admin/useCollegeAdmin";
 import { ParentProvider } from "./utils/context/parent/useParent";
 import { HrProvider } from "./utils/context/hr/useCollegeHr";
+import { FontProvider } from "./utils/FontProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,25 +36,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden flex justify-between`}
       >
-        <UserProvider>
-          <AdminProvider>
-            <FacultyProvider>
-              <StudentProvider>
-                <ParentProvider>
-                  <CollegeAdminProvider>
-                    <FinanceManagerProvider>
-                      <HrProvider>
-                        <ClientLayout>
-                          {children}
-                        </ClientLayout>
-                      </HrProvider>
-                    </FinanceManagerProvider>
-                  </CollegeAdminProvider>
-                </ParentProvider>
-              </StudentProvider>
-            </FacultyProvider>
-          </AdminProvider>
-        </UserProvider>
+        <FontProvider>
+          <UserProvider>
+            <AdminProvider>
+              <FacultyProvider>
+                <StudentProvider>
+                  <ParentProvider>
+                    <CollegeAdminProvider>
+                      <FinanceManagerProvider>
+                        <HrProvider>
+                          <ClientLayout>{children}</ClientLayout>
+                        </HrProvider>
+                      </FinanceManagerProvider>
+                    </CollegeAdminProvider>
+                  </ParentProvider>
+                </StudentProvider>
+              </FacultyProvider>
+            </AdminProvider>
+          </UserProvider>
+        </FontProvider>
       </body>
     </html>
   );
