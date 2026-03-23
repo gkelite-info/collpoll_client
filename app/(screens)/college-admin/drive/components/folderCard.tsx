@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DotsThreeOutlineVertical, Folder } from "@phosphor-icons/react";
 import { FolderItemProps } from "../page";
 
+
 type Props = FolderItemProps & {
     onRename: () => void;
     onDelete: () => void;
@@ -44,6 +45,7 @@ export function FolderCard({
                     >
                         <DotsThreeOutlineVertical size={14} weight="fill" />
                     </button>
+
 
                     {openMenu && (
                         <div

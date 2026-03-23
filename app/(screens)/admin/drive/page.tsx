@@ -2,19 +2,28 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useState, useEffect } from "react";
+import ActionBar from "./components/actionBar";
+import FilesTable from "./components/allFilesTable";
+import { FolderCard } from "./components/folderCard";
+import RecentFileCard from "./components/recentFileCard";
 import FolderFilesModal from "@/app/components/modals/FolderFilesModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
-import { DriveFolderRow, fetchRootDriveFolders, saveDriveFolder, deleteDriveFolder } from "@/lib/helpers/drive/driveFolderAPI";
-import { DriveFileRow, fetchFolderStats, fetchRecentDriveFiles } from "@/lib/helpers/drive/driveFilesAPI";
+import {
+    DriveFolderRow,
+    fetchRootDriveFolders,
+    saveDriveFolder,
+    deleteDriveFolder,
+} from "@/lib/helpers/drive/driveFolderAPI";
+import {
+    DriveFileRow,
+    fetchFolderStats,
+    fetchRecentDriveFiles,
+} from "@/lib/helpers/drive/driveFilesAPI";
 import NewFolderModal from "./components/modal/newFolderModal";
-import ActionBar from "./components/actionBar";
-import { FolderCard } from "./components/folderCard";
-import RecentFileCard from "./components/recentFileCard";
-import FilesTable from "./components/allFilesTable";
-import RenameFolderModal from "./components/modal/renameFolderModal";
 import DeleteFolderModal from "./components/modal/deleteFolderModal";
+import RenameFolderModal from "./components/modal/renameFolderModal";
 
 type SortOption = "latest" | "name" | "size";
 
@@ -37,6 +46,7 @@ type RecentFile = {
 };
 
 const MAX_RECENT = 5;
+
 const getRecentKey = (uid: number | null) => `recentlyViewedFiles_${uid ?? "guest"}`;
 
 function formatSize(bytes: number | null): string {
@@ -93,11 +103,13 @@ const Page = () => {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const rowsPerPage = 10;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
     };
 
+    
     useEffect(() => {
         if (userId) setRecentViewed(getRecentFiles(userId));
     }, [userId]);
@@ -108,6 +120,7 @@ const Page = () => {
             .then(({ data }) => { if (data) setCollegeName(data.collegeName); });
     }, [collegeId]);
 
+   
     useEffect(() => {
         if (!collegeId || !userId) return;
         setLoadingFolders(true);
@@ -254,7 +267,7 @@ const Page = () => {
                 onFilesChanged={handleFilesChanged}
             />
 
-            
+           
             <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0">
                 <div className="flex items-center justify-between mb-3">
                     <div>
@@ -262,7 +275,7 @@ const Page = () => {
                         <p className="text-[#282828]">Manage, organize & monitor all academic and administrative files</p>
                     </div>
                     <article className="flex w-[32%] justify-end">
-                        <CourseScheduleCard style="w-[320px]"/>
+                        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
                     </article>
                 </div>
                 <ActionBar
@@ -270,11 +283,10 @@ const Page = () => {
                     onSort={(val) => setSortBy(val as SortOption)}
                     onNew={() => setIsNewFolderOpen(true)}
                     onFilters={() => console.log("Filters")}
-                    isVisible={false}
                 />
             </div>
 
-            
+           
             <div className="flex-1 overflow-y-auto px-4 pb-6">
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Folders</h2>
@@ -324,8 +336,7 @@ const Page = () => {
                     ) : recentViewed.length > 0 ? (
                         <div className="mt-2 flex gap-4 overflow-x-scroll pb-1">
                             {recentViewed.map((file) => (
-                                <RecentFileCard key={file.driveFileId}
-                                    name={file.fileName}
+                                <RecentFileCard key={file.driveFileId} name={file.fileName}
                                     type={file.fileName.split(".").pop()?.toUpperCase() ?? "FILE"}
                                     sizeLabel={formatSize(file.fileSize)}
                                     date={formatDate(file.accessedAt)}

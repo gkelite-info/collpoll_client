@@ -5,6 +5,7 @@ type DeleteFolderModalProps = {
   folderName: string;
   onCancel: () => void;
   onConfirm: () => void;
+  loading?: boolean;
 };
 
 const DeleteFolderModal = ({
@@ -12,6 +13,7 @@ const DeleteFolderModal = ({
   folderName,
   onCancel,
   onConfirm,
+  loading = false,
 }: DeleteFolderModalProps) => {
   if (!open) return null;
 
@@ -33,16 +35,18 @@ const DeleteFolderModal = ({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563]"
+            disabled={loading}
+            className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563] disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-lg bg-red-500 px-4 py-1.5 font-medium text-white"
+            disabled={loading}
+            className="rounded-lg bg-red-500 px-4 py-1.5 font-medium text-white disabled:opacity-60 cursor-pointer"
           >
-            Delete
+            {loading ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>
