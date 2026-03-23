@@ -19,7 +19,8 @@ export async function getUnreadEmailCount(userId: number) {
     .from("email_queue")
     .select("*", { count: "exact", head: true })
     .eq("userId", userId)
-    .eq("isRead", false);
+    .eq("isRead", false)
+    .not("senderName", "is", null);
 
   if (error) {
     console.error("getUnreadEmailCount error:", error);
