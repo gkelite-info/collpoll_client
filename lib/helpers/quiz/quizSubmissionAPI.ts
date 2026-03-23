@@ -103,3 +103,26 @@ export async function deactivateQuizSubmission(submissionId: number) {
 
     return { success: true };
 }
+
+export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
+    const { data, error } = await supabase
+        .from("quiz_submissions")
+        .select(`
+            submissionId,
+            quizId,
+            studentId,
+            totalMarksObtained,
+            submittedAt
+        `)
+        .eq("quizId", quizId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("submittedAt", { ascending: false });
+
+    if (error) {
+        console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}

@@ -2,6 +2,7 @@
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
 import { getTopicsBySubjectId } from "@/lib/helpers/faculty/getFacultySubjects";
+import { saveQuiz } from "@/lib/helpers/quiz/quizAPI";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -21,6 +22,12 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
     const [sections, setSections] = useState<{ collegeSectionsId: number; collegeSections: string }[]>([]);
     const [topics, setTopics] = useState<{ topicTitle: string; collegeSubjectUnitId: number }[]>([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+    const [quizTitle, setQuizTitle] = useState("");
+    const [totalMarks, setTotalMarks] = useState("");
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (!facultyId) return;
@@ -64,6 +71,55 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const handleSave = async (status: "Draft" | "Active") => {
+        if (!quizTitle.trim()) return toast.error("Quiz title is required");
+        if (!totalMarks) return toast.error("Total marks is required");
+        if (!startDate) return toast.error("Start date is required");
+        if (!endDate) return toast.error("End date is required");
+        if (!selectedTopicId) return toast.error("Please select a topic");
+        if (!subjects[0]?.collegeSubjectId) return toast.error("Subject not found");
+        if (!sections[0]?.collegeSectionsId) return toast.error("Section not found");
+        if (!facultyId) return toast.error("Faculty not found");
+
+        try {
+            setIsSaving(true);
+            const result = await saveQuiz({
+                facultyId,
+                collegeSubjectId: subjects[0].collegeSubjectId,
+                collegeSectionsId: sections[0].collegeSectionsId,
+                collegeSubjectUnitId: selectedTopicId,
+                quizTitle: quizTitle.trim(),
+                totalMarks: Number(totalMarks),
+                startDate,
+                endDate,
+                status,
+            });
+
+            console.log("what is result", result);
+
+
+            if (!result.success) {
+                toast.error("Failed to save quiz");
+                return;
+            }
+
+            toast.success(status === "Draft" ? "Quiz saved as draft!" : "Quiz saved successfully!");
+
+            const params = new URLSearchParams();
+            params.set("tab", "quiz");
+            params.set("quizView", "active");
+            params.set("action", "addQuestions");
+            params.set("quizId", String(result.quizId));
+            router.push(`${pathname}?${params.toString()}`);
+
+        } catch (err) {
+            console.error("handleSave error:", err);
+            toast.error("Something went wrong");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div className="w-full h-full flex flex-col">
             <div className="mb-6">
@@ -79,6 +135,8 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                     <label className="text-sm font-bold text-[#282828]">Quiz Title</label>
                     <input
                         type="text"
+                        value={quizTitle}
+                        onChange={(e) => setQuizTitle(e.target.value)}
                         placeholder="CPU Scheduling"
                         className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                     />
@@ -98,7 +156,11 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                     <div className="flex flex-col gap-1">
                         <label className="text-sm font-bold text-[#282828]">Topic</label>
                         <div className="relative">
-                            <select className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors appearance-none bg-white cursor-pointer w-full">
+                            <select
+                                value={selectedTopicId ?? ""}
+                                onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+                                className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors appearance-none bg-white cursor-pointer w-full"
+                            >
                                 <option value="">Select Topic</option>
                                 {topics.map((topic, index) => (
                                     <option key={index} value={topic.collegeSubjectUnitId}>
@@ -130,6 +192,8 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                         <label className="text-sm font-bold text-[#282828]">Total Marks</label>
                         <input
                             type="number"
+                            value={totalMarks}
+                            onChange={(e) => setTotalMarks(e.target.value)}
                             placeholder="Eg: 40"
                             className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                         />
@@ -143,6 +207,8 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                             <span className="text-xs text-[#282828]">Start Date</span>
                             <input
                                 type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
                                 className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                             />
                         </div>
@@ -150,6 +216,8 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                             <span className="text-xs text-[#282828]">End Date</span>
                             <input
                                 type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
                                 className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                             />
                         </div>
@@ -159,20 +227,29 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                 <div className="flex justify-between items-center mt-2">
                     <button
                         onClick={onCancel}
-                        className="px-6 py-2 rounded-md cursor-pointer border border-[#16284F] text-[#16284F] text-sm font-medium hover:bg-gray-50 transition-colors"
+                        disabled={isSaving}
+                        className="px-6 py-2 rounded-md cursor-pointer border border-[#16284F] text-[#16284F] text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
                         Cancel
                     </button>
-                    <button
-                        onClick={() => {
-                            const params = new URLSearchParams(window.location.search);
-                            params.set("action", "addQuestions");
-                            router.push(`${window.location.pathname}?${params.toString()}`);
-                        }}
-                        className="flex items-center cursor-pointer gap-2 px-6 py-2 rounded-md bg-[#43C17A] text-white text-sm font-medium hover:bg-[#35a868] transition-colors"
-                    >
-                        Add Questions <span className="text-base">›</span>
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => handleSave("Draft")}
+                            disabled={isSaving}
+                            className="px-6 py-2 rounded-md cursor-pointer bg-[#16284F] text-white text-sm font-medium hover:bg-[#102040] transition-colors disabled:opacity-50"
+                        >
+                            {isSaving ? "Saving..." : "Save as Draft"}
+                        </button>
+
+                        <button
+                            onClick={() => handleSave("Active")}
+                            disabled={isSaving}
+                            className="flex items-center cursor-pointer gap-2 px-6 py-2 rounded-md bg-[#43C17A] text-white text-sm font-medium hover:bg-[#35a868] transition-colors disabled:opacity-50"
+                        >
+                            {isSaving ? "Saving..." : <> Add Questions <span className="text-base">›</span> </>}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
