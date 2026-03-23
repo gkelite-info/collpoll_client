@@ -136,10 +136,8 @@ const AssignmentPage = () => {
     return <DiscussionForumBasic />;
   }
 
-  // Default: Assignments tab
   return (
     <div className="flex flex-col m-4">
-      {/* Tab Navigation */}
       <TabNavigation />
 
       <div className="mt-0 mb-4 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -215,7 +213,11 @@ const AssignmentPage = () => {
 
 export default function Page() {
   return (
+<<<<<<< Updated upstream
     <Suspense fallback={<div><Loader /></div>}>
+=======
+    <Suspense fallback={<div className="w-full text-center py-10"><Loader/></div>}>
+>>>>>>> Stashed changes
       <AssignmentPage />
     </Suspense>
   );
