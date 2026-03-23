@@ -13,6 +13,10 @@ export default function TabNavigation() {
     params.set("tab", tab);
     params.delete("action");
     params.delete("discussionId");
+    params.delete("dept");
+    params.delete("year");
+    params.delete("subjectId");
+    params.delete("discussionView");
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -23,8 +27,8 @@ export default function TabNavigation() {
           <span
             onClick={() => handleTabChange("assignments")}
             className={`cursor-pointer transition-colors ${activeTab === "assignments"
-                ? "text-[#43C17A]"
-                : "text-[#282828]"
+              ? "text-[#43C17A]"
+              : "text-[#282828]"
               }`}
           >
             Assignments
@@ -33,8 +37,8 @@ export default function TabNavigation() {
           <span
             onClick={() => handleTabChange("quiz")}
             className={`cursor-pointer transition-colors ${activeTab === "quiz"
-                ? "text-[#43C17A]"
-                : "text-[#282828]"
+              ? "text-[#43C17A]"
+              : "text-[#282828]"
               }`}
           >
             Quiz
@@ -43,8 +47,8 @@ export default function TabNavigation() {
           <span
             onClick={() => handleTabChange("discussion")}
             className={`cursor-pointer transition-colors ${activeTab === "discussion"
-                ? "text-[#43C17A]"
-                : "text-[#282828]"
+              ? "text-[#43C17A]"
+              : "text-[#282828]"
               }`}
           >
             Discussion forum
