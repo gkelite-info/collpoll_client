@@ -213,11 +213,7 @@ const AssignmentPage = () => {
 
 export default function Page() {
   return (
-<<<<<<< Updated upstream
-    <Suspense fallback={<div><Loader /></div>}>
-=======
     <Suspense fallback={<div className="w-full text-center py-10"><Loader/></div>}>
->>>>>>> Stashed changes
       <AssignmentPage />
     </Suspense>
   );
