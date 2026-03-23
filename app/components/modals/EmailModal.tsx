@@ -58,6 +58,54 @@ export default function EmailModal({ isOpen, onClose }: Props) {
     setIsComposeOpen(true);
   };
 
+  // useEffect(() => {
+  //   async function loadEmails() {
+  //     if (!isOpen || !userId || !currentUserEmail) return;
+  //     setIsLoading(true);
+
+  //     const dbEmails = await getUserEmails(userId, currentUserEmail);
+
+  //     const formattedEmails: EmailDetailItem[] = dbEmails.map((mail: any) => {
+  //       const dateObj = new Date(mail.createdAt);
+  //       const isSentByMe = mail.senderAddress === currentUserEmail;
+
+  //       const displaySenderName = isSentByMe
+  //         ? "Me"
+  //         : mail.senderName || "System Notifications";
+  //       const displayEmail = isSentByMe
+  //         ? `To: ${mail.email}`
+  //         : mail.senderAddress || "noreply@tektoncampus.edu";
+  //       const initials = displaySenderName.substring(0, 2).toUpperCase();
+
+  //       return {
+  //         id: mail.emailQueueId,
+  //         isRead: mail.isRead,
+  //         initials: initials,
+  //         color: isSentByMe ? "#E5E7EB" : "#DCE2FF",
+  //         sender: displaySenderName,
+  //         email: displayEmail,
+  //         subject: mail.subject,
+  //         Subject: mail.subject,
+  //         desc: mail.body.replace(/<[^>]+>/g, "").substring(0, 50) + "...",
+  //         time: dateObj.toLocaleTimeString([], {
+  //           hour: "2-digit",
+  //           minute: "2-digit",
+  //         }),
+  //         date: dateObj.toLocaleDateString("en-GB", {
+  //           day: "numeric",
+  //           month: "short",
+  //           year: "numeric",
+  //         }),
+  //         body: mail.body,
+  //       };
+  //     });
+
+  //     setEmails(formattedEmails);
+  //     setIsLoading(false);
+  //   }
+  //   loadEmails();
+  // }, [isOpen, userId, currentUserEmail]);
+
   useEffect(() => {
     async function loadEmails() {
       if (!isOpen || !userId || !currentUserEmail) return;
@@ -65,47 +113,50 @@ export default function EmailModal({ isOpen, onClose }: Props) {
 
       const dbEmails = await getUserEmails(userId, currentUserEmail);
 
-      const formattedEmails: EmailDetailItem[] = dbEmails.map((mail: any) => {
-        const dateObj = new Date(mail.createdAt);
-        const isSentByMe = mail.senderAddress === currentUserEmail;
+      const filteredEmails = dbEmails.filter(
+        (mail: any) => mail.senderName !== null,
+      );
 
-        const displaySenderName = isSentByMe
-          ? "Me"
-          : mail.senderName || "System Notifications";
-        const displayEmail = isSentByMe
-          ? `To: ${mail.email}`
-          : mail.senderAddress || "noreply@tektoncampus.edu";
-        const initials = displaySenderName.substring(0, 2).toUpperCase();
+      const formattedEmails: EmailDetailItem[] = filteredEmails.map(
+        (mail: any) => {
+          const dateObj = new Date(mail.createdAt);
+          const isSentByMe = mail.senderAddress === currentUserEmail;
 
-        return {
-          id: mail.emailQueueId,
-          isRead: mail.isRead,
-          initials: initials,
-          color: isSentByMe ? "#E5E7EB" : "#DCE2FF",
-          sender: displaySenderName,
-          email: displayEmail,
-          subject: mail.subject,
-          Subject: mail.subject,
-          desc: mail.body.replace(/<[^>]+>/g, "").substring(0, 50) + "...",
-          time: dateObj.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          date: dateObj.toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          }),
-          body: mail.body,
-        };
-      });
+          const displaySenderName = isSentByMe ? "Me" : mail.senderName;
+          const displayEmail = isSentByMe
+            ? `To: ${mail.email}`
+            : mail.senderAddress;
+          const initials = displaySenderName.substring(0, 2).toUpperCase();
+
+          return {
+            id: mail.emailQueueId,
+            isRead: mail.isRead,
+            initials: initials,
+            color: isSentByMe ? "#E5E7EB" : "#DCE2FF",
+            sender: displaySenderName,
+            email: displayEmail,
+            subject: mail.subject,
+            Subject: mail.subject,
+            desc: mail.body.replace(/<[^>]+>/g, "").substring(0, 50) + "...",
+            time: dateObj.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            date: dateObj.toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
+            body: mail.body,
+          };
+        },
+      );
 
       setEmails(formattedEmails);
       setIsLoading(false);
     }
     loadEmails();
   }, [isOpen, userId, currentUserEmail]);
-
   const displayedEmails = emails.filter((mail) => {
     const isSentByMe = mail.sender === "Me";
     if (activeTab === "all") return true;

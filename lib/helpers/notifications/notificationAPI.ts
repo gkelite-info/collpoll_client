@@ -44,3 +44,38 @@ export async function markNotificationRead(notificationId: number) {
 
   return { success: true };
 }
+
+export async function sendUniversalNotifications(payload: {
+  userIds: number[];
+  title: string;
+  message: string;
+  type: "Meeting" | "Announcement" | "System";
+  referenceId?: number | null;
+}) {
+  if (!payload.userIds || payload.userIds.length === 0)
+    return { success: true };
+
+  const now = new Date().toISOString();
+
+  const uniqueUsers = Array.from(new Set(payload.userIds));
+
+  const rows = uniqueUsers.map((uid) => ({
+    userId: uid,
+    title: payload.title,
+    message: payload.message,
+    type: payload.type,
+    referenceId: payload.referenceId || null,
+    isRead: false,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const { error } = await supabase.from("notifications").insert(rows);
+
+  if (error) {
+    console.error("Error inserting universal notifications:", error);
+    return { success: false, error };
+  }
+
+  return { success: true };
+}

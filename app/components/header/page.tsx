@@ -48,8 +48,10 @@ function HeaderContent() {
     facultyId,
     adminId,
     userId,
-    profilePhoto
+    profilePhoto,
   } = useUser();
+
+  console.log("Testing the userId fro mheader.tsx: ", userId);
 
   const { financeManagerId } = useFinanceManager();
   const { collegeAdminId } = useCollegeAdmin();
@@ -105,7 +107,8 @@ function HeaderContent() {
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
           const record = (payload.new as any) || (payload.old as any);
-          if (record && record.userId === userId) {
+
+          if (record && Number(record.userId) === Number(userId)) {
             setTimeout(() => fetchNotificationCount(), 100);
           }
         },
@@ -116,12 +119,14 @@ function HeaderContent() {
       .channel("custom-email-channel")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "email_queue" },
+        {
+          event: "*",
+          schema: "public",
+          table: "email_queue",
+          filter: `userId=eq.${userId}`,
+        },
         (payload) => {
-          const record = (payload.new as any) || (payload.old as any);
-          if (record && record.userId === userId) {
-            setTimeout(() => fetchEmailCount(), 100);
-          }
+          setTimeout(() => fetchEmailCount(), 100);
         },
       )
       .subscribe();

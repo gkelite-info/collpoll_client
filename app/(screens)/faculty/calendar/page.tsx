@@ -16,6 +16,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import {
   deleteCalendarEvent,
   fetchCalendarEvents,
+  notifyStudentsOfEvent,
   saveCalendarEvent,
 } from "@/lib/helpers/calendar/calendarEventAPI";
 import {
@@ -364,6 +365,10 @@ export default function Page() {
         collegeSemesterId: payload.collegeSemesterId,
         sectionIds: payload.sectionIds,
       });
+
+      if (!editingEventId) {
+        await notifyStudentsOfEvent(calendarEventId, payload);
+      }
 
       setIsModalOpen(false);
       setEditingEventId(null);

@@ -83,97 +83,6 @@ export async function fetchCalendarEvents(
   return data ?? [];
 }
 
-// export async function saveCalendarEvent(payload: {
-//     calendarEventId?: number;
-//     facultyId: number;
-//     subjectId: number | null;
-//     eventTopic: number | null;
-//     type: "class" | "meeting" | "exam" | "quiz";
-//     date: string;
-//     roomNo: string;
-//     fromTime: string;
-//     toTime: string;
-//     meetingLink?: string | null;
-// }) {
-//     const now = new Date().toISOString();
-
-//     // 🔁 EDIT
-//     if (payload.calendarEventId) {
-//         const { error } = await supabase
-//             .from("calendar_event")
-//             .update({
-//                 subject: payload.subjectId,
-//                 eventTopic: payload.eventTopic,
-//                 type: payload.type,
-//                 date: payload.date,
-//                 roomNo: payload.roomNo,
-//                 fromTime: payload.fromTime,
-//                 toTime: payload.toTime,
-//                 meetingLink: payload.meetingLink ?? null,
-//                 updatedAt: now,
-//             })
-//             .eq("calendarEventId", payload.calendarEventId);
-
-//         if (error) {
-//             console.error("updateCalendarEvent error:", error);
-//             return { success: false, error };
-//         }
-
-//         return {
-//             success: true,
-//             calendarEventId: payload.calendarEventId,
-//         };
-//     }
-
-//     // ➕ CREATE
-//     const { data, error } = await supabase
-//         .from("calendar_event")
-//         .insert({
-//             facultyId: payload.facultyId,
-//             subject: payload.subjectId,
-//             eventTopic: payload.eventTopic,
-//             type: payload.type,
-//             date: payload.date,
-//             roomNo: payload.roomNo,
-//             fromTime: payload.fromTime,
-//             toTime: payload.toTime,
-//             meetingLink: payload.meetingLink ?? null,
-//             createdAt: now,
-//             updatedAt: now,
-//         })
-//         .select("calendarEventId")
-//         .single();
-
-//     if (error) {
-//         console.error("insertCalendarEvent error:", error);
-//         return { success: false, error };
-//     }
-
-//     return {
-//         success: true,
-//         calendarEventId: data.calendarEventId,
-//     };
-// }
-
-// export async function deleteCalendarEvent(calendarEventId: number) {
-//     const { error } = await supabase
-//         .from("calendar_event")
-//         .update({
-//             is_deleted: true,
-//             deletedAt: new Date().toISOString(),
-//         })
-//         .eq("calendarEventId", calendarEventId);
-
-//     if (error) {
-//         console.error("deleteCalendarEvent error:", error);
-//         return { success: false };
-//     }
-
-//     return { success: true };
-// }
-
-// ... (keep fetchCalendarEvents as is)
-
 export async function saveCalendarEvent(payload: {
   calendarEventId?: number;
   facultyId: number;
@@ -188,7 +97,6 @@ export async function saveCalendarEvent(payload: {
 }) {
   const now = new Date().toISOString();
 
-  // 🔁 EDIT
   if (payload.calendarEventId) {
     const { error } = await supabase
       .from("calendar_event")
@@ -213,7 +121,6 @@ export async function saveCalendarEvent(payload: {
     return { success: true, calendarEventId: payload.calendarEventId };
   }
 
-  // ➕ CREATE
   const { data, error } = await supabase
     .from("calendar_event")
     .insert({
@@ -237,13 +144,12 @@ export async function saveCalendarEvent(payload: {
     return { success: false, error };
   }
 
-  // --- NEW: CREATE DEFAULT SCHEDULED SESSION ---
   if (payload.type === "class") {
     await supabase.from("faculty_class_sessions").insert({
       calendarEventId: data.calendarEventId,
       facultyId: payload.facultyId,
       status: "Scheduled",
-      acceptedAt: "00:00:00", // Required by DB
+      acceptedAt: "00:00:00",
       createdAt: now,
       updatedAt: now,
     });
@@ -255,7 +161,6 @@ export async function saveCalendarEvent(payload: {
 export async function deleteCalendarEvent(calendarEventId: number) {
   const now = new Date().toISOString();
 
-  // Soft Delete Event
   const { error } = await supabase
     .from("calendar_event")
     .update({
@@ -269,7 +174,6 @@ export async function deleteCalendarEvent(calendarEventId: number) {
     return { success: false };
   }
 
-  // --- NEW: CASCADE SOFT DELETE TO SESSIONS ---
   await supabase
     .from("faculty_class_sessions")
     .update({
@@ -279,4 +183,66 @@ export async function deleteCalendarEvent(calendarEventId: number) {
     .eq("calendarEventId", calendarEventId);
 
   return { success: true };
+}
+
+import { sendUniversalNotifications } from "@/lib/helpers/notifications/notificationAPI";
+
+export async function notifyStudentsOfEvent(
+  calendarEventId: number,
+  payload: any,
+) {
+  if (!payload.sectionIds || payload.sectionIds.length === 0) return;
+
+  const { data: historyData, error: histError } = await supabase
+    .from("student_academic_history")
+    .select("studentId")
+    .in("collegeSectionsId", payload.sectionIds)
+    .eq("isCurrent", true);
+
+  if (histError || !historyData) {
+    console.error("Error fetching student history:", histError);
+    return;
+  }
+
+  const studentIds = historyData.map((h: any) => h.studentId).filter(Boolean);
+  if (studentIds.length === 0) return;
+
+  const { data: studentsData, error: stuError } = await supabase
+    .from("students")
+    .select("userId")
+    .in("studentId", studentIds);
+
+  if (stuError || !studentsData) {
+    console.error("Error fetching student user IDs:", stuError);
+    return;
+  }
+
+  const userIds = studentsData.map((s: any) => s.userId).filter(Boolean);
+  if (userIds.length === 0) return;
+
+  const typeLabel =
+    payload.type.charAt(0).toUpperCase() + payload.type.slice(1);
+  const title = `New ${typeLabel} Scheduled`;
+
+  let message = `A new ${typeLabel} `;
+
+  if (payload.eventTitle && payload.type !== "meeting") {
+    message += `(${payload.eventTitle}) `;
+  }
+
+  message += `has been scheduled for ${payload.date} from ${payload.fromTime.slice(0, 5)} to ${payload.toTime.slice(0, 5)} in Room ${payload.roomNo}.`;
+
+  if (payload.meetingLink) {
+    message += ` Link: ${payload.meetingLink}`;
+  }
+
+  console.log(`Sending calendar notification to ${userIds.length} students...`);
+
+  await sendUniversalNotifications({
+    userIds,
+    title,
+    message,
+    type: "Announcement",
+    referenceId: calendarEventId,
+  });
 }
