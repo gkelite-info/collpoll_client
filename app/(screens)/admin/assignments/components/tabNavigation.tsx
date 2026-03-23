@@ -1,4 +1,5 @@
 'use client';
+import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 export default function TabNavigation() {
@@ -16,43 +17,48 @@ export default function TabNavigation() {
   };
 
   return (
-    <div className="mb-4">
-      <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
-        <span
-          onClick={() => handleTabChange("assignments")}
-          className={`cursor-pointer transition-colors ${activeTab === "assignments"
-              ? "text-[#43C17A]"
-              : "text-[#282828]"
-            }`}
-        >
-          Assignments
-        </span>
-        <span className="text-[#282828]">/</span>
-        <span
-          onClick={() => handleTabChange("quiz")}
-          className={`cursor-pointer transition-colors ${activeTab === "quiz"
-              ? "text-[#43C17A]"
-              : "text-[#282828]"
-            }`}
-        >
-          Quiz
-        </span>
-        <span className="text-[#282828]">/</span>
-        <span
-          onClick={() => handleTabChange("discussion")}
-          className={`cursor-pointer transition-colors ${activeTab === "discussion"
-              ? "text-[#43C17A]"
-              : "text-[#282828]"
-            }`}
-        >
-          Discussion forum
-        </span>
-      </h1>
-      <p className="text-[#282828] text-sm">
-        {activeTab === "assignments" && "Track subjects, faculty who created assignments, raised issues, and submission progress."}
-        {activeTab === "quiz" && "Monitor and manage quizzes across all departments."}
-        {activeTab === "discussion" && "Manage project discussions and forums across all departments."}
-      </p>
+    <div className="mb-4 flex justify-between items-center">
+      <div>
+        <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
+          <span
+            onClick={() => handleTabChange("assignments")}
+            className={`cursor-pointer transition-colors ${activeTab === "assignments"
+                ? "text-[#43C17A]"
+                : "text-[#282828]"
+              }`}
+          >
+            Assignments
+          </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleTabChange("quiz")}
+            className={`cursor-pointer transition-colors ${activeTab === "quiz"
+                ? "text-[#43C17A]"
+                : "text-[#282828]"
+              }`}
+          >
+            Quiz
+          </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleTabChange("discussion")}
+            className={`cursor-pointer transition-colors ${activeTab === "discussion"
+                ? "text-[#43C17A]"
+                : "text-[#282828]"
+              }`}
+          >
+            Discussion forum
+          </span>
+        </h1>
+        <p className="text-[#282828] text-sm">
+          {activeTab === "assignments" && "Track subjects, faculty who created assignments, raised issues, and submission progress."}
+          {activeTab === "quiz" && "Monitor and manage quizzes across all departments."}
+          {activeTab === "discussion" && "Manage project discussions and forums across all departments."}
+        </p>
+      </div>
+      <div className="w-[320px]">
+        <CourseScheduleCard isVisibile={false} />
+      </div>
     </div>
   );
 }
