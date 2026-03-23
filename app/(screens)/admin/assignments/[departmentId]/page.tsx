@@ -84,7 +84,7 @@ const DepartmentSubjectPage = () => {
           <div className="flex items-center gap-1">
             <CaretLeftIcon
               size={20}
-              className="text-[#282828] cursor-pointer -ml-1 hover:text-[#43C17A] transition-colors"
+              className="text-[#282828] cursor-pointer -ml-1 active:scale-90 transition-colors"
               onClick={() => router.back()}
             />
             <h1 className="text-xl font-bold text-[#282828]">

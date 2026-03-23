@@ -25,6 +25,10 @@ import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
 import ConfirmDeleteModal from "./confirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
 import FacultyAddQuestions from "./FacultyAddQuizQuestions";
+import FacultyQuizResumeBanner from "./FacultyQuizResumeBanner";
+import { fetchQuizzesByStatus } from "@/lib/helpers/quiz/quizAPI";
+import FacultyQuizShimmer from "../shimmer/FacultyQuizShimmer";
+import FacultyQuizSubmissions from "./quizSubmissions";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -37,6 +41,15 @@ export interface Assignment {
   totalSubmissions: string;
   totalSubmitted: string;
   marks: string | number;
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
 }
 
 const ITEMS_PER_PAGE = 10;
@@ -71,7 +84,35 @@ function AssignmentsLeftContent() {
   const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeQuizzes, setActiveQuizzes] = useState<any[]>([]);
+  const [draftQuizzes, setDraftQuizzes] = useState<any[]>([]);
+  const [completedQuizzes, setCompletedQuizzes] = useState<any[]>([]);
+  const [quizzesLoading, setQuizzesLoading] = useState(false);
 
+  async function fetchQuizzes() {
+    if (!facultyId) return;
+    try {
+      setQuizzesLoading(true);
+      const [active, drafts, completed] = await Promise.all([
+        fetchQuizzesByStatus(facultyId, "Active"),
+        fetchQuizzesByStatus(facultyId, "Draft"),
+        fetchQuizzesByStatus(facultyId, "Completed"),
+      ]);
+      setActiveQuizzes(active);
+      setDraftQuizzes(drafts);
+      setCompletedQuizzes(completed);
+    } catch (err) {
+      toast.error("Failed to fetch quizzes");
+    } finally {
+      setQuizzesLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "quiz") {
+      fetchQuizzes();
+    }
+  }, [activeTab, facultyId]);
 
   async function fetchCompletedDiscussions() {
     if (!facultyId) return;
@@ -279,20 +320,26 @@ function AssignmentsLeftContent() {
             router.push(`${pathname}?${params.toString()}`);
           }}
         />
+        <FacultyQuizResumeBanner
+          margintop="lg:mt-5"
+        />
       </div>
     );
   }
 
-  if (activeTab === "quiz" && action === "addQuestions") {
+  const quizId = searchParams.get("quizId");
+
+  if (activeTab === "quiz" && action === "viewQuizSubmissions") {
     return (
       <div className="w-[68%] h-full p-2 flex flex-col">
-        <FacultyAddQuestions
+        <FacultyQuizSubmissions
+          quizId={quizId ? Number(quizId) : 0}
           onBack={() => {
             const params = new URLSearchParams(searchParams.toString());
-            params.set("action", "createQuiz");
+            params.delete("action");
+            params.delete("quizId");
             router.push(`${pathname}?${params.toString()}`);
           }}
-          isLoading={isLoading}
         />
       </div>
     );
@@ -485,17 +532,106 @@ function AssignmentsLeftContent() {
 
             {activeTab === "quiz" && (
               <div className="grid grid-cols-2 gap-4 pb-10 h-full">
-                {quizView === "active" && STATIC_ACTIVE_QUIZZES.map((quiz) => (
-                  <FacultyQuizCard key={quiz.id} data={quiz} />
-                ))}
+                <div className="col-span-2">
+                  <FacultyQuizResumeBanner />
+                </div>
 
-                {quizView === "drafts" && STATIC_DRAFT_QUIZZES.map((quiz) => (
-                  <FacultyQuizCard key={quiz.id} data={quiz} />
-                ))}
+                {quizzesLoading ? (
+                  <>
+                    {[1, 2, 3, 4].map((i) => (
+                      <FacultyQuizShimmer key={i} />
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    {quizView === "active" && (
+                      activeQuizzes.length === 0 ? (
+                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
+                          No active quizzes found.
+                        </div>
+                      ) : (
+                        activeQuizzes.map((quiz) => (
+                          <FacultyQuizCard
+                            key={quiz.quizId}
+                            data={{
+                              quizId: quiz.quizId,
+                              title: quiz.quizTitle,
+                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
+                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
+                              totalQuestions: quiz.quiz_questions?.length ?? 0,
+                              totalMarks: quiz.totalMarks,
+                              status: quiz.status,
+                            }}
+                            onViewSubmissions={(quizId) => {
+                              const params = new URLSearchParams(searchParams.toString());
+                              params.set("action", "viewQuizSubmissions");
+                              params.set("quizId", String(quizId));
+                              router.push(`${pathname}?${params.toString()}`);
+                            }}
+                          />
+                        ))
+                      )
+                    )}
 
-                {quizView === "completed" && STATIC_COMPLETED_QUIZZES.map((quiz) => (
-                  <FacultyQuizCard key={quiz.id} data={quiz} />
-                ))}
+                    {quizView === "drafts" && (
+                      draftQuizzes.length === 0 ? (
+                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
+                          No draft quizzes found.
+                        </div>
+                      ) : (
+                        draftQuizzes.map((quiz) => (
+                          <FacultyQuizCard
+                            key={quiz.quizId}
+                            data={{
+                              quizId: quiz.quizId,
+                              title: quiz.quizTitle,
+                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
+                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
+                              totalQuestions: quiz.quiz_questions?.length ?? 0,
+                              totalMarks: quiz.totalMarks,
+                              status: quiz.status,
+                            }}
+                            onViewSubmissions={(quizId) => {
+                              const params = new URLSearchParams(searchParams.toString());
+                              params.set("action", "viewQuizSubmissions");
+                              params.set("quizId", String(quizId));
+                              router.push(`${pathname}?${params.toString()}`);
+                            }}
+                          />
+                        ))
+                      )
+                    )}
+
+                    {quizView === "completed" && (
+                      completedQuizzes.length === 0 ? (
+                        <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
+                          No completed quizzes found.
+                        </div>
+                      ) : (
+                        completedQuizzes.map((quiz) => (
+                          <FacultyQuizCard
+                            key={quiz.quizId}
+                            data={{
+                              quizId: quiz.quizId,
+                              title: quiz.quizTitle,
+                              subtitle: `${quiz.college_subjects?.subjectName || "-"} • ${quiz.college_sections?.collegeSections || "-"}`,
+                              duration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
+                              totalQuestions: quiz.quiz_questions?.length ?? 0,
+                              totalMarks: quiz.totalMarks,
+                              status: quiz.status,
+                            }}
+                            onViewSubmissions={(quizId) => {
+                              const params = new URLSearchParams(searchParams.toString());
+                              params.set("action", "viewQuizSubmissions");
+                              params.set("quizId", String(quizId));
+                              router.push(`${pathname}?${params.toString()}`);
+                            }}
+                          />
+                        ))
+                      )
+                    )}
+                  </>
+                )}
               </div>
             )}
 

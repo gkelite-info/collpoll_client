@@ -94,13 +94,13 @@ export default function AssignmentsLeft({
   return (
     <div className="w-[68%] p-2 flex flex-col h-full">
       <div className="mb-4">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 lg:mb-1">
           <CaretLeftIcon
             size={22}
             className="text-[#282828] cursor-pointer -ml-1"
             onClick={() => window.history.back()}
           />
-          <h1 className="text-[#282828] font-bold text-2xl mb-1">
+          <h1 className="text-[#282828] font-bold text-2xl">
             Subject Assignments
           </h1>
         </div>

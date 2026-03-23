@@ -56,21 +56,22 @@ export async function fetchQuizzesByStatus(
     const { data, error } = await supabase
         .from("quizzes")
         .select(`
-      quizId,
-      facultyId,
-      collegeSubjectId,
-      collegeSectionsId,
-      collegeSubjectUnitId,
-      quizTitle,
-      totalMarks,
-      startDate,
-      endDate,
-      status,
-      isActive,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `)
+            quizId,
+            quizTitle,
+            totalMarks,
+            startDate,
+            endDate,
+            status,
+            college_subjects (
+                subjectName
+            ),
+            college_sections (
+                collegeSections
+            ),
+            quiz_questions (
+                questionId
+            )
+        `)
         .eq("facultyId", facultyId)
         .eq("status", status)
         .eq("isActive", true)
@@ -209,3 +210,62 @@ export async function deactivateQuiz(quizId: number) {
 
     return { success: true };
 }
+
+export async function autoCompleteExpiredQuizzes(facultyId: number) {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { error } = await supabase
+        .from("quizzes")
+        .update({
+            status: "Completed",
+            updatedAt: new Date().toISOString(),
+        })
+        .lt("endDate", today)
+        .eq("facultyId", facultyId)
+        .eq("isActive", true)
+        .neq("status", "Completed");
+
+    if (error) {
+        console.error("autoCompleteExpiredQuizzes error:", error);
+    }
+}
+
+export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
+    const { data: quizzesWithQuestions } = await supabase
+        .from("quiz_questions")
+        .select("quizId")
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+    const quizIdsWithQuestions = quizzesWithQuestions?.map((q: any) => q.quizId) ?? [];
+
+    let query = supabase
+        .from("quizzes")
+        .select(`
+            quizId,
+            quizTitle,
+            totalMarks,
+            startDate,
+            endDate,
+            status
+        `)
+        .eq("facultyId", facultyId)
+        .in("status", ["Draft", "Active"])
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("createdAt", { ascending: false });
+
+    if (quizIdsWithQuestions.length > 0) {
+        query = query.not("quizId", "in", `(${quizIdsWithQuestions.join(",")})`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("fetchIncompleteQuizzesByFacultyId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+

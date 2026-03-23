@@ -1,11 +1,16 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CaretLeftIcon, PlusCircleIcon } from "@phosphor-icons/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
+import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
+import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
 
 interface Option {
     id: number;
     text: string;
+    isCorrect: boolean;
 }
 
 interface Question {
@@ -13,6 +18,7 @@ interface Question {
     title: string;
     type: "Multiple Choice" | "Fill in the Blanks";
     options: Option[];
+    correctAnswer: string;
 }
 
 interface FacultyAddQuestionsProps {
@@ -20,27 +26,49 @@ interface FacultyAddQuestionsProps {
     quizTitle?: string;
     quizTopic?: string;
     isLoading?: boolean;
+    quizId?: number;
 }
 
 export default function FacultyAddQuestions({
     onBack,
     quizTitle = "CPU Scheduling",
     quizTopic = "Process Scheduling & Deadblocks",
-    isLoading
+    isLoading,
+    quizId
 }: FacultyAddQuestionsProps) {
     const [questions, setQuestions] = useState<Question[]>([
         {
             id: 1,
             title: "",
             type: "Multiple Choice",
+            correctAnswer: "",
             options: [
-                { id: 1, text: "Option 1" },
-                { id: 2, text: "Option 2" },
-                { id: 3, text: "Option 3" },
-                { id: 4, text: "Option 4" },
+                { id: 1, text: "Option 1", isCorrect: false },
+                { id: 2, text: "Option 2", isCorrect: false },
+                { id: 3, text: "Option 3", isCorrect: false },
+                { id: 4, text: "Option 4", isCorrect: false },
             ],
         },
     ]);
+
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [quizDetails, setQuizDetails] = useState<{ quizTitle: string; topicTitle: string } | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDrafting, setIsDrafting] = useState(false);
+
+    useEffect(() => {
+        if (!quizId) return;
+        fetchQuizById(quizId)
+            .then((data) => {
+                setQuizDetails({
+                    quizTitle: data.quizTitle,
+                    topicTitle: data.quizTitle,
+                });
+            })
+            .catch(() => toast.error("Failed to fetch quiz details"));
+    }, [quizId]);
 
     const addQuestion = () => {
         const lastType = questions[questions.length - 1]?.type || "Multiple Choice";
@@ -48,11 +76,12 @@ export default function FacultyAddQuestions({
             id: Date.now(),
             title: "",
             type: lastType,
+            correctAnswer: "",
             options: [
-                { id: 1, text: "Option 1" },
-                { id: 2, text: "Option 2" },
-                { id: 3, text: "Option 3" },
-                { id: 4, text: "Option 4" },
+                { id: 1, text: "Option 1", isCorrect: false },
+                { id: 2, text: "Option 2", isCorrect: false },
+                { id: 3, text: "Option 3", isCorrect: false },
+                { id: 4, text: "Option 4", isCorrect: false },
             ],
         };
         setQuestions((prev) => [...prev, newQuestion]);
@@ -89,6 +118,22 @@ export default function FacultyAddQuestions({
         );
     };
 
+    const setCorrectOption = (qId: number, optId: number) => {
+        setQuestions((prev) =>
+            prev.map((q) =>
+                q.id === qId
+                    ? {
+                        ...q,
+                        options: q.options.map((o) => ({
+                            ...o,
+                            isCorrect: o.id === optId,
+                        })),
+                    }
+                    : q
+            )
+        );
+    };
+
     const addOption = (qId: number) => {
         setQuestions((prev) =>
             prev.map((q) =>
@@ -97,12 +142,79 @@ export default function FacultyAddQuestions({
                         ...q,
                         options: [
                             ...q.options,
-                            { id: Date.now(), text: `Option ${q.options.length + 1}` },
+                            { id: Date.now(), text: `Option ${q.options.length + 1}`, isCorrect: false },
                         ],
                     }
                     : q
             )
         );
+    };
+
+    const handleSave = async (status: "Draft" | "Active") => {
+        if (!quizId) return toast.error("Quiz ID not found");
+        for (const q of questions) {
+            if (!q.title.trim()) return toast.error("All questions must have a title");
+            if (q.type === "Multiple Choice") {
+                const hasCorrect = q.options.some((o) => o.isCorrect);
+                if (!hasCorrect) return toast.error(`Please mark a correct answer for: "${q.title}"`);
+            }
+            if (q.type === "Fill in the Blanks" && !q.correctAnswer.trim()) {
+                return toast.error(`Please enter correct answer for: "${q.title}"`);
+            }
+        }
+        try {
+            setIsSaving(true);
+            setIsDrafting(true);
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                const qResult = await saveQuizQuestion({
+                    quizId,
+                    questionText: q.title,
+                    questionType: q.type,
+                    marks: 1,
+                    displayOrder: i,
+                });
+                if (!qResult.success || !qResult.questionId) {
+                    toast.error("Failed to save question");
+                    return;
+                }
+                if (q.type === "Multiple Choice") {
+                    await saveBulkOptions(
+                        qResult.questionId,
+                        q.options.map((o, idx) => ({
+                            optionText: o.text,
+                            isCorrect: o.isCorrect,
+                            displayOrder: idx,
+                        }))
+                    );
+                } else {
+                    const allOptions = [
+                        ...q.options.map((o, idx) => ({
+                            optionText: o.text,
+                            isCorrect: false,
+                            displayOrder: idx,
+                        })),
+                        {
+                            optionText: q.correctAnswer.trim(),
+                            isCorrect: true,
+                            displayOrder: q.options.length,
+                        },
+                    ];
+                    await saveBulkOptions(qResult.questionId, allOptions);
+                }
+            }
+            toast.success(status === "Draft" ? "Quiz saved as draft!" : "Quiz saved successfully!");
+            const params = new URLSearchParams();
+            params.set("tab", "quiz");
+            params.set("quizView", status === "Draft" ? "drafts" : "active");
+            router.push(`${pathname}?${params.toString()}`);
+        } catch (err) {
+            console.error("handleSave error:", err);
+            toast.error("Something went wrong");
+        } finally {
+            setIsSaving(false);
+            setIsDrafting(false);
+        }
     };
 
     return (
@@ -118,8 +230,12 @@ export default function FacultyAddQuestions({
             </div>
 
             <div className="bg-white rounded-md px-4 py-3 mb-3">
-                <p className="font-bold text-[#282828] text-sm">{quizTitle}</p>
-                <p className="text-[#282828] text-xs mt-0.5">{quizTopic}</p>
+                <p className="font-bold text-[#282828] text-sm">
+                    {quizDetails?.quizTitle || quizTitle}
+                </p>
+                <p className="text-[#282828] text-xs mt-0.5">
+                    {quizDetails?.topicTitle || quizTopic}
+                </p>
             </div>
 
             <div className="flex justify-end mb-3">
@@ -165,8 +281,9 @@ export default function FacultyAddQuestions({
                                         <input
                                             type="radio"
                                             name={`question-${question.id}`}
+                                            checked={option.isCorrect}
+                                            onChange={() => setCorrectOption(question.id, option.id)}
                                             className="accent-[#43C17A] w-4 h-4 cursor-pointer"
-                                            readOnly
                                         />
                                         <input
                                             type="text"
@@ -179,18 +296,38 @@ export default function FacultyAddQuestions({
                                     </div>
                                 ))
                             ) : (
-                                <div className="flex flex-wrap gap-4">
-                                    {question.options.map((option) => (
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex flex-wrap gap-4">
+                                        {question.options.map((option) => (
+                                            <input
+                                                key={option.id}
+                                                type="text"
+                                                value={option.text}
+                                                onChange={(e) =>
+                                                    updateOptionText(question.id, option.id, e.target.value)
+                                                }
+                                                className="text-sm text-[#282828] outline-none border-b border-gray-300 bg-transparent w-20 text-center"
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-xs text-gray-500 font-medium">Correct Answer:</span>
                                         <input
-                                            key={option.id}
                                             type="text"
-                                            value={option.text}
+                                            value={question.correctAnswer}
                                             onChange={(e) =>
-                                                updateOptionText(question.id, option.id, e.target.value)
+                                                setQuestions((prev) =>
+                                                    prev.map((q) =>
+                                                        q.id === question.id
+                                                            ? { ...q, correctAnswer: e.target.value }
+                                                            : q
+                                                    )
+                                                )
                                             }
-                                            className="text-sm text-[#282828] outline-none border-b border-gray-300 bg-transparent w-20 text-center"
+                                            placeholder="Type correct answer..."
+                                            className="text-sm text-[#282828] outline-none border-b border-[#43C17A] bg-transparent flex-1"
                                         />
-                                    ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -226,16 +363,18 @@ export default function FacultyAddQuestions({
 
             <div className="flex justify-end gap-3 pt-3">
                 <button
-                    onClick={onBack}
-                    className="px-8 py-2 rounded-md bg-[#16284F] text-white text-sm font-bold cursor-pointer hover:bg-[#102040] transition-colors"
+                    onClick={() => handleSave("Draft")}
+                    disabled={isDrafting}
+                    className="px-8 py-2 rounded-md bg-[#16284F] text-white text-sm font-bold cursor-pointer hover:bg-[#102040] transition-colors disabled:opacity-50"
                 >
-                    Draft
+                    {isSaving ? "Saving..." : "Draft"}
                 </button>
                 <button
-                    className="px-8 py-2 rounded-md bg-[#43C17A] text-white text-sm font-bold cursor-pointer hover:bg-[#35a868] transition-colors"
-                    disabled={isLoading}
+                    onClick={() => handleSave("Active")}
+                    disabled={isSaving}
+                    className="px-8 py-2 rounded-md bg-[#43C17A] text-white text-sm font-bold cursor-pointer hover:bg-[#35a868] transition-colors disabled:opacity-50"
                 >
-                    {isLoading ? "Saving.." : "Save"}
+                    {isSaving ? "Saving..." : "Save"}
                 </button>
             </div>
         </div>
