@@ -15,7 +15,8 @@ export default function ActionBar({ sortBy, onSort, onNew, onFilters, isVisible 
     <div className="flex items-center gap-3">
       <button
         onClick={onNew}
-        className="flex h-8 items-center gap-2 rounded-lg bg-[#43C17A] px-3 text-sm font-medium text-white cursor-pointer hover:bg-[#3aad6d] transition-colors"
+        style={{ cursor: "pointer" }}
+        className="flex h-8 items-center gap-2 rounded-lg bg-[#43C17A] px-3 text-sm font-medium text-white hover:bg-[#3aad6d] transition-colors"
       >
         <Plus size={18} weight="bold" />
         <span>New</span>

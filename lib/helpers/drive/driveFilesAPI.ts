@@ -50,12 +50,15 @@ export async function fetchDriveFilesByFolder(
 // Returns file count and total size (raw bytes) grouped by folderId for a college
 export async function fetchFolderStats(
     collegeId: number,
+    userId?: number,
 ): Promise<Record<number, { totalFiles: number; totalSizeBytes: number }>> {
-    const { data, error } = await supabase
+    const query = supabase
         .from("drive_files")
         .select("driveFolderId, fileSize")
         .eq("collegeId", collegeId)
         .is("deletedAt", null);
+
+    const { data, error } = await (userId ? query.eq("uploadedBy", userId) : query);
 
     if (error) {
         console.error("fetchFolderStats error:", error);
@@ -76,11 +79,12 @@ export async function fetchRecentDriveFiles(
     collegeId: number,
     page: number = 1,
     limit: number = 10,
+    userId?: number,
 ) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data, error, count } = await supabase
+    const query = supabase
         .from("drive_files")
         .select(`
       driveFileId,
@@ -96,6 +100,8 @@ export async function fetchRecentDriveFiles(
         .is("deletedAt", null)
         .order("createdAt", { ascending: false })
         .range(from, to);
+
+    const { data, error, count } = await (userId ? query.eq("uploadedBy", userId) : query);
 
     if (error) {
         console.error("fetchRecentDriveFiles error:", error);
@@ -151,7 +157,7 @@ export async function saveDriveFile(
         const { error: uploadError } = await supabase.storage
             .from(BUCKET)
             .upload(storagePath, payload.file, {
-                upsert: false,
+                upsert: true,
                 contentType: payload.fileType,
             });
 
@@ -181,6 +187,30 @@ export async function saveDriveFile(
         upsertPayload.uploadedBy = userId;
         upsertPayload.createdAt = now;
 
+        // Check if a soft-deleted row exists for same folder + fileName
+        // If yes — restore it via update instead of insert
+        // This avoids RLS insert policy + unique constraint issues
+        const { data: deleted } = await supabase
+            .from("drive_files")
+            .select("driveFileId")
+            .eq("driveFolderId", payload.driveFolderId)
+            .eq("fileName", payload.fileName.trim())
+            .eq("is_deleted", true)
+            .maybeSingle();
+
+        if (deleted?.driveFileId) {
+            const { error } = await supabase
+                .from("drive_files")
+                .update({ ...upsertPayload, is_deleted: false, deletedAt: null })
+                .eq("driveFileId", deleted.driveFileId);
+
+            if (error) {
+                console.error("saveDriveFile (restore) error:", error);
+                return { success: false, error };
+            }
+            return { success: true, driveFileId: deleted.driveFileId };
+        }
+
         const { data, error } = await supabase
             .from("drive_files")
             .insert([upsertPayload])
@@ -192,10 +222,7 @@ export async function saveDriveFile(
             return { success: false, error };
         }
 
-        return {
-            success: true,
-            driveFileId: data.driveFileId,
-        };
+        return { success: true, driveFileId: data.driveFileId };
     }
 
     const { error } = await supabase

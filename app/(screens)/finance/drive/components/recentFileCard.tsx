@@ -26,7 +26,6 @@ export default function RecentFileCard({ name, type, sizeLabel, date }: Props) {
           <span>{sizeLabel}</span>
         </div>
       </div>
-      {/* </div> */}
     </div>
   );
 }

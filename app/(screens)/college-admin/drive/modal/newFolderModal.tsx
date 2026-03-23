@@ -49,6 +49,7 @@ export default function NewFolderModal({
         <h3 className="mb-4 text-lg font-semibold text-[#111827]">
           New Folder
         </h3>
+
         
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-[#111827]">
@@ -95,7 +96,7 @@ export default function NewFolderModal({
             type="button"
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 rounded bg-[#43C17A] py-2 text-sm font-semibold text-white disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            className="flex-1 rounded bg-[#43C17A] py-2 text-sm font-semibold text-white disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
               <>

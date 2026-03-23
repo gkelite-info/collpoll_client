@@ -46,7 +46,6 @@ export default function FilesTable({ files, onDelete, onDownload }: Props) {
 
                 <tbody className="divide-y divide-[#F1F5F9]">
                     {filtered.map((file) => {
-                        if (!file?.fileName) return null;
                         const ext = file.fileName.split(".").pop()?.toUpperCase() ?? "FILE";
                         const sizeLabel = file.fileSize
                             ? file.fileSize < 1024 * 1024

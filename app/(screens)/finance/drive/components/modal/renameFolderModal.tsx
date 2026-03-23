@@ -7,6 +7,7 @@ type RenameFolderModalProps = {
   currentName: string;
   onCancel: () => void;
   onSave: (newName: string) => void;
+  loading?: boolean;
 };
 
 const RenameFolderModal = ({
@@ -14,6 +15,7 @@ const RenameFolderModal = ({
   currentName,
   onCancel,
   onSave,
+  loading = false,
 }: RenameFolderModalProps) => {
   const [name, setName] = useState(currentName);
 
@@ -35,7 +37,9 @@ const RenameFolderModal = ({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#43C17A]"
+            disabled={loading}
+            onKeyDown={(e) => e.key === "Enter" && name.trim() && onSave(name.trim())}
+            className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#43C17A] disabled:opacity-50"
           />
         </label>
 
@@ -43,19 +47,18 @@ const RenameFolderModal = ({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563]"
+            disabled={loading}
+            className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563] disabled:opacity-50 cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => {
-              if (!name.trim()) return;
-              onSave(name.trim());
-            }}
-            className="rounded-lg bg-[#43C17A] px-4 py-1.5 font-medium text-white"
+            disabled={loading || !name.trim()}
+            onClick={() => { if (!name.trim()) return; onSave(name.trim()); }}
+            className="rounded-lg bg-[#43C17A] px-4 py-1.5 font-medium text-white disabled:opacity-60 cursor-pointer"
           >
-            Save
+            {loading ? "Saving..." : "Save"}
           </button>
         </div>
       </div>

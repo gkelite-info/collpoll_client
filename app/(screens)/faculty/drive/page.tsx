@@ -2,6 +2,7 @@
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useState, useEffect } from "react";
+
 import FolderFilesModal from "@/app/components/modals/FolderFilesModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
@@ -73,6 +74,7 @@ function addToRecent(file: DriveFileRow, userId: number | null) {
 
 const Page = () => {
     const { collegeId, userId } = useUser();
+
     const [collegeName, setCollegeName] = useState<string | null>(null);
     const [folders, setFolders] = useState<FolderItemProps[]>([]);
     const [recentFiles, setRecentFiles] = useState<DriveFileRow[]>([]);
@@ -93,6 +95,7 @@ const Page = () => {
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
     const rowsPerPage = 10;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
     const showToast = (message: string, type: "success" | "error") => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
@@ -253,8 +256,6 @@ const Page = () => {
                 collegeId={collegeId}
                 onFilesChanged={handleFilesChanged}
             />
-
-            
             <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0">
                 <div className="flex items-center justify-between mb-3">
                     <div>
@@ -262,7 +263,7 @@ const Page = () => {
                         <p className="text-[#282828]">Manage, organize & monitor all academic and administrative files</p>
                     </div>
                     <article className="flex w-[32%] justify-end">
-                        <CourseScheduleCard style="w-[320px]"/>
+                        <CourseScheduleCard style="w-[320px]" />
                     </article>
                 </div>
                 <ActionBar
@@ -274,7 +275,6 @@ const Page = () => {
                 />
             </div>
 
-            
             <div className="flex-1 overflow-y-auto px-4 pb-6">
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Folders</h2>
@@ -307,6 +307,7 @@ const Page = () => {
                     )}
                 </section>
 
+                
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Recent</h2>
                     {loadingFiles ? (
