@@ -24,7 +24,6 @@ import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnrea
 import { supabase } from "@/lib/supabaseClient";
 import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
 import { useSearchParams } from "next/navigation";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function HeaderContent() {
   const [openProfile, setOpenProfile] = useState(false);
@@ -50,8 +49,6 @@ function HeaderContent() {
     userId,
     profilePhoto,
   } = useUser();
-
-  console.log("Testing the userId fro mheader.tsx: ", userId);
 
   const { financeManagerId } = useFinanceManager();
   const { collegeAdminId } = useCollegeAdmin();

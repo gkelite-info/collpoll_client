@@ -137,8 +137,6 @@ export default function AddAnnouncementModal({
     }
   }, [open, editData]);
 
-  console.log("User Context:", { userId, collegeId, role });
-
   const handleSave = async () => {
 
     const titleRegex = /^[A-Za-z\s]+$/;

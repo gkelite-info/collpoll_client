@@ -56,6 +56,8 @@ export default function FacultyQuizResumeBanner({ margintop }: props) {
 
     const handleResume = (quizId: number) => {
         const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", "quiz");
+        params.set("quizView", "active");
         params.set("action", "addQuestions");
         params.set("quizId", String(quizId));
         router.push(`${pathname}?${params.toString()}`);

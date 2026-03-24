@@ -269,3 +269,103 @@ export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
     return data ?? [];
 }
 
+export async function fetchActiveQuizzesForStudent(collegeSectionsId: number) {
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data, error } = await supabase
+        .from("quizzes")
+        .select(`
+            quizId,
+            quizTitle,
+            totalMarks,
+            startDate,
+            endDate,
+            status,
+            facultyId,
+            college_subjects (
+                subjectName
+            ),
+            faculty (
+                fullName
+            )
+        `)
+        .eq("collegeSectionsId", collegeSectionsId)
+        .eq("status", "Active")
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .lte("startDate", today)
+        .gte("endDate", today)
+        .order("createdAt", { ascending: false });
+
+    if (error) {
+        console.error("fetchActiveQuizzesForStudent error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+export async function fetchAttemptedQuizzesForStudent(studentId: number) {
+    const { data, error } = await supabase
+        .from("quiz_submissions")
+        .select(`
+            submissionId,
+            totalMarksObtained,
+            submittedAt,
+            attemptNumber,
+            quizId
+        `)
+        .eq("studentId", studentId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("submittedAt", { ascending: false });
+
+    if (error) {
+        console.error("fetchAttemptedQuizzesForStudent error:", error);
+        throw error;
+    }
+
+    const enriched = await Promise.all(
+        (data ?? []).map(async (submission: any) => {
+
+            const { data: quizData } = await supabase
+                .from("quizzes")
+                .select(`
+                    quizId,
+                    quizTitle,
+                    totalMarks,
+                    startDate,
+                    endDate,
+                    college_subjects (
+                        subjectName
+                    ),
+                    faculty (
+                        fullName
+                    )
+                `)
+                .eq("quizId", submission.quizId)
+                .single();
+
+            const { count: answersCount } = await supabase
+                .from("quiz_submission_answers")
+                .select("answerId", { count: "exact", head: true })
+                .eq("submissionId", submission.submissionId);
+
+            const { count: questionsCount } = await supabase
+                .from("quiz_questions")
+                .select("questionId", { count: "exact", head: true })
+                .eq("quizId", submission.quizId)
+                .eq("isActive", true)
+                .is("deletedAt", null);
+
+            return {
+                ...submission,
+                quizzes: quizData,
+                answersCount: answersCount ?? 0,
+                totalQuestionsCount: questionsCount ?? 0,
+            };
+        })
+    );
+
+    return enriched;
+}

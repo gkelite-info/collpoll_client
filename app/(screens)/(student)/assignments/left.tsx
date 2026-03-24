@@ -10,17 +10,26 @@ import { Loader } from "../calendar/right/timetable";
 import { CaretLeft, CaretRight, } from "@phosphor-icons/react";
 import AssignmentsRight from "./right";
 import QuizCard, { AttemptedQuizCard } from "./components/quizCard";
-import { STATIC_ATTEMPTED_QUIZZES, STATIC_ONGOING_QUIZZES } from "./components/quizData";
+import { STATIC_ATTEMPTED_QUIZZES } from "./components/quizData";
 import QuizViewAnswersScreen from "./components/quizViewAnswersScreen";
 import QuizPerformanceModal from "./components/quizPerformanceModal";
 import QuizAttemptScreen from "./components/QuizAttemptScreen";
-
 import StudentDiscussionCard from "./components/studentDiscussionCard";
-import { STATIC_STUDENT_ACTIVE_DISCUSSIONS, STATIC_STUDENT_COMPLETED_DISCUSSIONS } from "./components/studentDiscussionData";
 import { StudentDiscussionUploadModal, StudentDiscussionDetailsModal } from "./components/studentDiscussionModals";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { fetchActiveDiscussionsForStudent, fetchCompletedDiscussionsForStudent } from "@/lib/helpers/student/assignments/discussionForum/studentDiscussionAPI";
 import { fetchStudentDiscussionUploads } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
+import { fetchActiveQuizzesForStudent, fetchAttemptedQuizzesForStudent } from "@/lib/helpers/quiz/quizAPI";
+import { fetchSubmissionDetails, getStudentAttemptCount } from "@/lib/helpers/quiz/quizSubmissionAPI";
+
+function formatDate(dateStr: string) {
+    if (!dateStr) return "-";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+}
 
 function AssignmentsLeftContent() {
     const router = useRouter();
@@ -50,6 +59,98 @@ function AssignmentsLeftContent() {
     const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
     const [discussionsLoading, setDiscussionsLoading] = useState(true);
     const { studentId } = useStudent();
+    const [ongoingQuizzes, setOngoingQuizzes] = useState<any[]>([]);
+    const [attemptedQuizzes, setAttemptedQuizzes] = useState<any[]>([]);
+    const [quizzesLoading, setQuizzesLoading] = useState(false);
+    const [quizRefreshKey, setQuizRefreshKey] = useState(0);
+    const MAX_ATTEMPTS = 3;
+    const [performanceData, setPerformanceData] = useState<any>(null);
+    const [performanceLoading, setPerformanceLoading] = useState(false);
+    const submissionId = searchParams.get("submissionId");
+
+    useEffect(() => {
+        if (activeModal === "performance" && submissionId) {
+            loadPerformanceData(Number(submissionId));
+        }
+    }, [activeModal, submissionId]);
+
+    async function loadPerformanceData(submissionId: number) {
+        try {
+            setPerformanceLoading(true);
+            const answers = await fetchSubmissionDetails(submissionId);
+
+            const correct = answers.filter((a: any) => a.isCorrect).length;
+            const wrong = answers.filter((a: any) => !a.isCorrect && (a.selectedOptionId || a.writtenAnswer)).length;
+            const unanswered = answers.filter((a: any) => !a.selectedOptionId && !a.writtenAnswer).length;
+            const total = answers.length;
+
+            const submission = attemptedQuizzes.find(
+                (s: any) => s.submissionId === submissionId
+            );
+            const quiz = submission?.quizzes;
+
+            const marksObtained = submission?.totalMarksObtained ?? 0;
+            const totalMarks = quiz?.totalMarks ?? 0;
+            const percentage = totalMarks > 0 ? Math.round((marksObtained / totalMarks) * 100) : 0;
+
+            setPerformanceData({
+                id: quiz?.quizId,
+                courseName: quiz?.college_subjects?.subjectName || "-",
+                topic: quiz?.quizTitle || "-",
+                facultyName: quiz?.faculty?.fullName || "-",
+                attemptedOn: formatDate(submission?.submittedAt),
+                questionsAttempted: `${submission?.answersCount ?? 0} / ${submission?.totalQuestionsCount ?? 0}`,
+                attemptsUsed: `${submission?.attemptNumber} of ${MAX_ATTEMPTS}`,
+                score: `${marksObtained} / ${totalMarks}`,
+                bgColor: "bg-[#481451]",
+                percentage,
+                correct,
+                wrong,
+                unanswered,
+                total,
+                allAttemptsUsed: (submission?.attemptNumber ?? 0) >= MAX_ATTEMPTS,
+            });
+        } catch (err) {
+            console.error("loadPerformanceData error:", err);
+        } finally {
+            setPerformanceLoading(false);
+        }
+    }
+
+    async function loadQuizzes() {
+        if (!collegeSectionsId || !studentId) return;
+        try {
+            setQuizzesLoading(true);
+            const [ongoing, attempted] = await Promise.all([
+                fetchActiveQuizzesForStudent(collegeSectionsId),
+                fetchAttemptedQuizzesForStudent(studentId),
+            ]);
+
+            const ongoingWithAttempts = await Promise.all(
+                ongoing.map(async (quiz: any) => {
+                    const count = await getStudentAttemptCount(quiz.quizId, studentId as number);
+                    return { ...quiz, attemptsLeft: MAX_ATTEMPTS - count };
+                })
+            );
+
+            const filteredOngoing = ongoingWithAttempts.filter(
+                (q: any) => q.attemptsLeft > 0
+            );
+
+            setOngoingQuizzes(filteredOngoing);
+            setAttemptedQuizzes(attempted);
+        } catch (err) {
+            console.error("loadQuizzes error:", err);
+        } finally {
+            setQuizzesLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        if (activeTab === "quiz") {
+            loadQuizzes();
+        }
+    }, [activeTab, collegeSectionsId, studentId, quizRefreshKey]);
 
     async function loadDiscussions() {
         if (!collegeSectionsId || !studentId) return;
@@ -242,20 +343,50 @@ function AssignmentsLeftContent() {
         return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
     }
 
-    if (activeTab === "quiz" && activeQuizId) {
-        if (action === "attempt") {
-            const activeQuizData = STATIC_ONGOING_QUIZZES.find(q => q.id.toString() === activeQuizId);
-            return <div className="w-[68%] p-2 flex flex-col h-full"><QuizAttemptScreen quiz={activeQuizData} /></div>;
-        }
-        if (action === "viewAnswers") {
-            const activeQuizData = STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId);
-            return <div className="w-[68%] p-2 flex flex-col h-full"><QuizViewAnswersScreen quiz={activeQuizData} /></div>;
-        }
+    if (activeTab === "quiz" && activeQuizId && action === "attempt") {
+        const activeQuizData = ongoingQuizzes.find(q => q.quizId.toString() === activeQuizId);
+        return (
+            <div className="w-[68%] p-2 flex flex-col h-full">
+                <QuizAttemptScreen
+                    quiz={{
+                        id: activeQuizData?.quizId,
+                        courseName: activeQuizData?.college_subjects?.subjectName || "-",
+                        topic: activeQuizData?.quizTitle || "-",
+                    }}
+                    onSubmitSuccess={async () => {
+                        await loadQuizzes();
+                        setQuizRefreshKey(prev => prev + 1);
+                        const params = new URLSearchParams(searchParams.toString());
+                        params.delete("action");
+                        params.delete("quizId");
+                        params.set("tab", "quiz");
+                        params.set("quizView", "attempted");
+                        router.push(`${pathname}?${params.toString()}`);
+                    }}
+                />
+            </div>
+        );
     }
 
-    const targetModalQuiz = activeModal === "performance" && activeQuizId
-        ? STATIC_ATTEMPTED_QUIZZES.find(q => q.id.toString() === activeQuizId)
-        : null;
+    if (activeTab === "quiz" && action === "viewAnswers") {
+        const submission = attemptedQuizzes.find(
+            (s: any) => s.quizzes?.quizId?.toString() === activeQuizId
+        );
+        const quiz = submission?.quizzes;
+        return (
+            <div className="w-[68%] p-2 flex flex-col h-full">
+                <QuizViewAnswersScreen
+                    quiz={{
+                        courseName: quiz?.college_subjects?.subjectName || "-",
+                        topic: quiz?.quizTitle || "-",
+                        score: `${submission?.totalMarksObtained ?? 0}/${quiz?.totalMarks ?? 0}`,
+                        totalMarks: quiz?.totalMarks ?? 0,
+                        totalMarksObtained: submission?.totalMarksObtained ?? 0,
+                    }}
+                />
+            </div>
+        );
+    }
 
     const activeDiscussionData = activeDiscussionId
         ? [...activeDiscussions, ...completedDiscussions]
@@ -264,7 +395,15 @@ function AssignmentsLeftContent() {
 
     return (
         <div className="w-[68%] p-2 flex flex-col h-full">
-            {targetModalQuiz && <QuizPerformanceModal quiz={targetModalQuiz} />}
+            {activeModal === "performance" && activeQuizId && (
+                performanceLoading ? (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <Loader />
+                    </div>
+                ) : performanceData ? (
+                    <QuizPerformanceModal quiz={performanceData} />
+                ) : null
+            )}
             {activeModal === "uploadDiscussion" && activeDiscussionData && (
                 <StudentDiscussionUploadModal
                     discussion={activeDiscussionData}
@@ -311,7 +450,7 @@ function AssignmentsLeftContent() {
 
                 <p className="text-[#282828] text-sm">
                     {activeTab === "assignments" && "View, track, and submit your work with ease"}
-                    {activeTab === "quiz" && "Attempt, Track, and Review Your Quiz Performance with Ease"}
+                    {activeTab === "quiz" && "Attempt, track, and review your quiz performance with ease"}
                     {activeTab === "discussion" && "Explore project discussions, guides, and resources shared by faculty."}
                 </p>
             </div>
@@ -387,17 +526,67 @@ function AssignmentsLeftContent() {
                         <>
                             {quizView === "ongoing" && (
                                 <div className="flex flex-col">
-                                    {STATIC_ONGOING_QUIZZES.map((quiz) => (
-                                        <QuizCard key={quiz.id} data={quiz} />
-                                    ))}
+                                    {quizzesLoading ? (
+                                        <Loader />
+                                    ) : ongoingQuizzes.length === 0 ? (
+                                        <p className="text-sm text-gray-500 mt-4">No ongoing quizzes available</p>
+                                    ) : (
+                                        ongoingQuizzes.map((quiz, index) => {
+                                            const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
+                                            return (
+                                                <QuizCard
+                                                    key={quiz.quizId}
+                                                    data={{
+                                                        id: quiz.quizId,
+                                                        courseName: quiz.college_subjects?.subjectName || "-",
+                                                        topic: quiz.quizTitle,
+                                                        facultyName: quiz.faculty?.fullName || "-",
+                                                        attemptsLeft: quiz.attemptsLeft,
+                                                        quizDuration: `${formatDate(quiz.startDate)} → ${formatDate(quiz.endDate)}`,
+                                                        // timeLimit: "-",
+                                                        bgColor: bgColors[index % bgColors.length],
+                                                    }}
+                                                />
+                                            );
+                                        })
+                                    )}
                                 </div>
                             )}
 
                             {quizView === "attempted" && (
                                 <div className="flex flex-col">
-                                    {STATIC_ATTEMPTED_QUIZZES.map((quiz) => (
-                                        <AttemptedQuizCard key={quiz.id} data={quiz} />
-                                    ))}
+                                    {quizzesLoading ? (
+                                        <Loader />
+                                    ) : attemptedQuizzes.length === 0 ? (
+                                        <p className="text-sm text-gray-500 mt-4">No attempted quizzes yet</p>
+                                    ) : (
+                                        attemptedQuizzes.map((submission, index) => {
+                                            console.log("submission:", submission);
+                                            const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
+                                            const quiz = submission.quizzes;
+                                            return (
+                                                <AttemptedQuizCard
+                                                    key={submission.submissionId}
+                                                    data={{
+                                                        id: quiz?.quizId,
+                                                        submissionId: submission.submissionId,
+                                                        courseName: quiz?.college_subjects?.subjectName || "-",
+                                                        topic: quiz?.quizTitle || "-",
+                                                        facultyName: quiz?.faculty?.fullName || "-",
+                                                        attemptedOn: formatDate(submission.submittedAt),
+                                                        questionsAttempted: `${submission.answersCount ?? 0} / ${submission.totalQuestionsCount ?? 0}`,
+                                                        attemptsUsed: `${submission.attemptNumber} of ${MAX_ATTEMPTS}`,
+                                                        score: `${submission.totalMarksObtained} / ${quiz?.totalMarks ?? "-"}`,
+                                                        bgColor: bgColors[index % bgColors.length],
+                                                        totalMarksObtained: submission.totalMarksObtained,
+                                                        totalMarks: quiz?.totalMarks,
+                                                        totalQuestionsCount: submission.totalQuestionsCount,
+                                                        answersCount: submission.answersCount,
+                                                    }}
+                                                />
+                                            );
+                                        })
+                                    )}
                                 </div>
                             )}
                         </>
