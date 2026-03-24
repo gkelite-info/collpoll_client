@@ -41,7 +41,7 @@ function HrDashContent() {
       style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
       icon: <UsersThree size={21} weight="fill" color="#6C20CA" />,
       value: "05",
-      label: "Total Faculties",
+      label: "Total Staff",
     },
     {
       style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
