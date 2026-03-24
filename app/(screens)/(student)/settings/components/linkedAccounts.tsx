@@ -1,4 +1,7 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   GoogleLogo,
   FacebookLogo,
@@ -6,8 +9,18 @@ import {
   LinkedinLogo,
   IconProps,
   MicrosoftWordLogoIcon,
+  CaretLeft,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { useUser } from "@/app/utils/context/UserContext";
+import toast from "react-hot-toast";
+import {
+  syncAndFetchLinkedAccounts,
+  linkUserIdentity,
+  unlinkUserIdentity,
+} from "@/lib/helpers/settings/linkedAccountsAPI";
+import { supabase } from "@/lib/supabaseClient";
 
 export interface LinkedAccount {
   id: string;
@@ -21,32 +34,28 @@ export interface LinkedAccount {
 interface AccountRowProps {
   account: LinkedAccount;
   onToggle: (id: string) => void;
+  isProcessing: boolean;
 }
 
-interface LinkedAccountsProps {
-  accounts: LinkedAccount[];
-  onToggle: (id: string) => void;
-}
-
-export const mockAccountData: LinkedAccount[] = [
+export const initialAccountData: LinkedAccount[] = [
   {
     id: "google",
     name: "Google",
     icon: GoogleLogo,
-    connected: true,
-    description: "Connected to your account",
+    connected: false,
+    description: "Not Connected",
     color: "text-red-500",
   },
   {
     id: "facebook",
     name: "Facebook",
     icon: FacebookLogo,
-    connected: true,
-    description: "Connected to your account",
+    connected: false,
+    description: "Not Connected",
     color: "text-blue-600",
   },
   {
-    id: "microsoft",
+    id: "azure",
     name: "Microsoft",
     icon: MicrosoftWordLogoIcon,
     connected: false,
@@ -62,7 +71,7 @@ export const mockAccountData: LinkedAccount[] = [
     color: "text-gray-900",
   },
   {
-    id: "linkedin",
+    id: "linkedin_oidc",
     name: "LinkedIn",
     icon: LinkedinLogo,
     connected: false,
@@ -71,7 +80,11 @@ export const mockAccountData: LinkedAccount[] = [
   },
 ];
 
-const AccountRow: React.FC<AccountRowProps> = ({ account, onToggle }) => {
+const AccountRow: React.FC<AccountRowProps> = ({
+  account,
+  onToggle,
+  isProcessing,
+}) => {
   const Icon = account.icon;
 
   return (
@@ -85,31 +98,142 @@ const AccountRow: React.FC<AccountRowProps> = ({ account, onToggle }) => {
           <h3 className="text-lg font-semibold text-gray-800">
             {account.name}
           </h3>
-          <p className="text-sm text-gray-500">{account.description}</p>
+          <p className="text-sm text-gray-500">
+            {isProcessing ? "Updating..." : account.description}
+          </p>
         </div>
       </div>
 
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input
-          type="checkbox"
-          checked={account.connected}
-          onChange={() => onToggle(account.id)}
-          className="sr-only peer"
-        />
-        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
-      </label>
+      <div className="flex items-center gap-3">
+        {isProcessing && (
+          <CircleNotch
+            size={20}
+            className="animate-spin text-[#43C17A]"
+            weight="bold"
+          />
+        )}
+
+        <label
+          className={`relative inline-flex items-center ${
+            isProcessing
+              ? "cursor-not-allowed opacity-60 pointer-events-none"
+              : "cursor-pointer"
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={account.connected}
+            onChange={() => {
+              if (!isProcessing) onToggle(account.id);
+            }}
+            className="sr-only peer"
+          />
+          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#43C17A]"></div>
+        </label>
+      </div>
     </div>
   );
 };
 
-const LinkedAccounts: React.FC<LinkedAccountsProps> = ({
-  accounts,
-  onToggle,
-}) => {
-  const headerData = {
-    course: "B.Tech CSE – Year 2",
-    date: "23 OCT",
-    time: "08:23 am",
+export default function LinkedAccounts() {
+  const { userId } = useUser();
+  const [accounts, setAccounts] = useState<LinkedAccount[]>(initialAccountData);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const loadFromSession = async (user: any) => {
+    if (!user) return;
+
+    const activeProviders =
+      user.identities?.map((id: any) => id.provider) || [];
+    setAccounts((prev) =>
+      prev.map((acc) => ({
+        ...acc,
+        connected: activeProviders.includes(acc.id),
+        description: activeProviders.includes(acc.id)
+          ? "Connected"
+          : "Not Connected",
+      })),
+    );
+
+    if (userId) {
+      const { syncedProviders, updatedDbAccounts } =
+        await syncAndFetchLinkedAccounts(userId);
+
+      setAccounts((prev) =>
+        prev.map((acc) => {
+          const isConnected = syncedProviders.includes(acc.id);
+          const dbRecord = updatedDbAccounts.find(
+            (d: any) => d.provider === acc.id,
+          );
+          return {
+            ...acc,
+            connected: isConnected,
+            description: isConnected
+              ? `Connected to ${dbRecord?.email || "your account"}`
+              : "Not Connected",
+          };
+        }),
+      );
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (isMounted && data.user) loadFromSession(data.user);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (isMounted && session?.user) {
+        loadFromSession(session.user);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [userId]);
+
+  const handleToggleLinkedAccount = async (accountId: string) => {
+    const targetAccount = accounts.find((acc) => acc.id === accountId);
+    if (!targetAccount) return;
+
+    setProcessingId(accountId);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    if (targetAccount.connected) {
+      try {
+        await unlinkUserIdentity(accountId, userId!);
+
+        setAccounts((prev) =>
+          prev.map((a) =>
+            a.id === accountId
+              ? { ...a, connected: false, description: "Not Connected" }
+              : a,
+          ),
+        );
+        toast.success(`${targetAccount.name} disconnected!`);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to disconnect.");
+      } finally {
+        setProcessingId(null);
+      }
+    } else {
+      toast.loading(`Connecting ${targetAccount.name}...`);
+      try {
+        const redirectUrl = `${window.location.origin}/settings?linked-accounts`;
+        await linkUserIdentity(accountId, redirectUrl);
+      } catch (error: any) {
+        toast.dismiss();
+        toast.error(error.message || "Failed to initialize connection.");
+        setProcessingId(null);
+      }
+    }
   };
 
   return (
@@ -117,9 +241,15 @@ const LinkedAccounts: React.FC<LinkedAccountsProps> = ({
       <div className="flex justify-between">
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2">
+            <Link
+              href="/settings"
+              className="hover:bg-gray-200 p-1 rounded-full transition-colors"
+            >
+              <CaretLeft size={24} className="text-[#282828]" weight="bold" />
+            </Link>
             <span className="text-[#282828]">Manage Linked Accounts</span>
           </div>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-sm ml-9">
             Connect or disconnect your third party accounts
           </p>
         </div>
@@ -133,13 +263,12 @@ const LinkedAccounts: React.FC<LinkedAccountsProps> = ({
             <AccountRow
               key={account.id}
               account={account}
-              onToggle={onToggle}
+              onToggle={handleToggleLinkedAccount}
+              isProcessing={processingId === account.id}
             />
           ))}
         </div>
       </div>
     </div>
   );
-};
-
-export default LinkedAccounts;
+}
