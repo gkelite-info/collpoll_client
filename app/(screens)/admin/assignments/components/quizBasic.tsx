@@ -7,9 +7,15 @@ import DiscussionDeptCard from "./discussionDeptCard";
 import DiscussionCourseCard from "./discussionCourseCard";
 import { FilterDropdown, MOCK_COURSES, MOCK_DEPTS } from "./filterDropdown";
 
+import AdminQuizList from "./adminQuizList";
+import AdminQuizForm from "./adminQuizForm";
+import AdminAddQuestions from "./adminAddQuestions";
+import AdminQuizSubmissions from "./adminQuizSubmissions";
+
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+import AdminQuizResumeBanner from "./adminQuizResumeBanner";
 
 const MOCK_TASKS = [
   { facultyTaskId: 1, title: "Complete Python Lab", description: "Finish all 10 lab programs and upload to portal.", time: "12:40 PM", date: "2026-03-25" },
@@ -47,17 +53,40 @@ export default function QuizBasic() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const isInnerScreen = action === "createQuiz" || action === "editQuiz" || action === "viewQuizSubmissions" || !!subjectId;
+  // const isInnerScreen = action === "createQuiz" || action === "editQuiz" || action === "viewQuizSubmissions" || !!subjectId;
+  const isInnerScreen = action === "createQuiz" || action === "editQuiz" || action === "addQuestions" || action === "viewQuizSubmissions" || !!subjectId;
 
   const renderInnerContent = () => {
     if (action === "createQuiz" || action === "editQuiz") {
-      return <div>Quiz Form Component Coming Soon...</div>;
+      return (
+        <div className="flex flex-col h-full">
+          <AdminQuizForm onCancel={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("action");
+            router.push(`${pathname}?${params.toString()}`);
+          }} />
+
+          <AdminQuizResumeBanner margintop="lg:mt-5" />
+        </div>
+      );
+    }
+    if (action === "addQuestions") {
+      return <AdminAddQuestions quizId={Number(quizId)} onBack={() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("action", "createQuiz");
+        router.push(`${pathname}?${params.toString()}`);
+      }} />;
     }
     if (action === "viewQuizSubmissions") {
-      return <div>Quiz Submissions Component Coming Soon...</div>;
+      return <AdminQuizSubmissions quizId={Number(quizId)} onBack={() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("action");
+        params.delete("quizId");
+        router.push(`${pathname}?${params.toString()}`);
+      }} />;
     }
     if (subjectId) {
-      return <div>Quiz List Component Coming Soon... (Subject ID: {subjectId})</div>;
+      return <AdminQuizList subjectId={subjectId} />;
     }
     return null;
   };
