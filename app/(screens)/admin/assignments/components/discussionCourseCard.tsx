@@ -10,6 +10,8 @@ interface Props {
     avatar: string;
     activeQuiz: number;
     pendingSubmissions: number;
+    buttonText?: string;
+    activeLabel?: string;
 }
 
 export default function DiscussionCourseCard({
@@ -20,6 +22,8 @@ export default function DiscussionCourseCard({
     avatar,
     activeQuiz,
     pendingSubmissions,
+    buttonText,
+    activeLabel,
 }: Props) {
     const router = useRouter();
     const pathname = usePathname();
@@ -47,7 +51,7 @@ export default function DiscussionCourseCard({
                     className="w-12 h-12 rounded-full object-cover"
                 />
                 <div className="flex flex-col text-left">
-                    <span className="text-[#282828] font-bold text-[14px]">
+                    <span className="text-[#282828] font-bold text-sm">
                         {facultyName}
                     </span>
                     <span className="text-[#8B8B8B] text-[12px]">ID - {facultyId}</span>
@@ -56,7 +60,7 @@ export default function DiscussionCourseCard({
 
             <div className="flex flex-col gap-3 mb-6 px-1">
                 <div className="flex gap-2 items-center">
-                    <span className="text-[#282828] text-[13px]">Active Discussions</span>
+                    <span className="text-[#282828] text-sm">{activeLabel || "Active Discussions"}</span>
                     <span className="bg-[#D0EFDE] text-[#43C17A] text-[12px] font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
                         {activeQuiz}
                     </span>
@@ -74,7 +78,7 @@ export default function DiscussionCourseCard({
             <button
                 onClick={handleViewDiscussion}
                 className="w-full bg-[#16284F] hover:bg-[#1a2f5c] transition-colors cursor-pointer text-white py-2.5 rounded-full text-[13px] font-medium mt-auto">
-                View Discussion
+                {buttonText || "View Discussion"}
             </button>
         </div>
     );

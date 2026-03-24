@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { CaretLeft } from "@phosphor-icons/react";
 import TabNavigation from "./tabNavigation";
 import DiscussionDeptCard from "./discussionDeptCard";
@@ -38,12 +38,10 @@ export default function DiscussionForumBasic() {
   const discussionId = searchParams.get("discussionId");
 
   const [yearFilter, setYearFilter] = useState("2nd Year");
-  const [sectionFilter, setSectionFilter] = useState("All");
-  const [semFilter, setSemFilter] = useState("All");
-  const [subjectFilter, setSubjectFilter] = useState("All");
+  const [branchFilter, setBranchFilter] = useState("All");
 
   const yearOptions = ["1st Year", "2nd Year", "3rd Year", "4th Year", "All"];
-  const generalOptions = ["All"];
+  const branchOptions = ["All", ...new Set(MOCK_DEPTS.map(d => d.name))];
 
   const handleBackToDepartments = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -75,10 +73,8 @@ export default function DiscussionForumBasic() {
         !dept ? (
           <>
             <div className="flex flex-wrap items-center gap-6 mt-1 mb-5">
+              <FilterDropdown label="Branch" value={branchFilter} options={branchOptions} onChange={setBranchFilter} />
               <FilterDropdown label="Year" value={yearFilter} options={yearOptions} onChange={setYearFilter} />
-              <FilterDropdown label="Section" value={sectionFilter} options={generalOptions} onChange={setSectionFilter} />
-              <FilterDropdown label="Sem" value={semFilter} options={generalOptions} onChange={setSemFilter} />
-              <FilterDropdown label="Subject" value={subjectFilter} options={generalOptions} onChange={setSubjectFilter} />
             </div>
 
             <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col ">
@@ -106,7 +102,7 @@ export default function DiscussionForumBasic() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
                 {MOCK_COURSES.map((course) => (
                   <DiscussionCourseCard key={course.id} {...course} />
                 ))}
@@ -116,7 +112,6 @@ export default function DiscussionForumBasic() {
         )
       ) : (
         <div className="flex w-full gap-4 mt-2">
-
           <div className="flex-1 min-w-0">
             {renderInnerContent()}
           </div>
