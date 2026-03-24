@@ -345,6 +345,21 @@ function AssignmentsLeftContent() {
     );
   }
 
+  if (activeTab === "quiz" && action === "addQuestions") {
+    return (
+      <div className="w-[68%] h-full p-2 flex flex-col">
+        <FacultyAddQuestions
+          quizId={quizId ? Number(quizId) : undefined}
+          onBack={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("action", "createQuiz");
+            router.push(`${pathname}?${params.toString()}`);
+          }}
+        />
+      </div>
+    );
+  }
+
   if (view === "add" || view === "edit") {
     return (
       <AssignmentForm

@@ -148,7 +148,7 @@ export default function QuizCard({ data }: { data: any }) {
         <div className="flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
             <div className="flex items-stretch gap-5 h-full w-full">
                 <div className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}>
-                    <img src="/ds.jpg" alt="Course Cover" className="object-cover w-full h-full opacity-80 mix-blend-overlay" />
+                    <img src="/quiz.png" alt="Course Cover" className="object-cover w-full h-full opacity-80 " />
                 </div>
 
                 <div className="flex flex-col justify-between h-full w-full">
@@ -184,12 +184,12 @@ export default function QuizCard({ data }: { data: any }) {
                             </div>
                             <span className="font-semibold text-sm text-[#282828]">Quiz Duration :</span> <span className="text-[#282828]">{data.quizDuration}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-[#282828]">
+                        {/* <div className="flex items-center gap-2 text-xs text-[#282828]">
                             <div className="bg-[#43C07A24] rounded-full p-1">
                                 <ClockCountdownIcon size={16} className="text-[#43C17A]" weight="regular" />
                             </div>
                             <span className="font-semibold text-sm text-[#282828]">Time Limit :</span> <span className="text-[#282828]">{data.timeLimit}</span>
-                        </div>
+                        </div> */}
                     </div>
                 </div>
             </div>
@@ -204,19 +204,26 @@ export function AttemptedQuizCard({ data }: { data: any }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+
     const handleOpenModal = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("modal", "performance");
         params.set("quizId", data.id.toString());
+        params.set("submissionId", data.submissionId.toString());
         router.push(`${pathname}?${params.toString()}`);
     };
+
+    const attemptsUsedNumber = parseInt(data.attemptsUsed?.split(" of ")[0]) || 0;
+    const maxAttempts = parseInt(data.attemptsUsed?.split(" of ")[1]) || 3;
+    const allAttemptsUsed = attemptsUsedNumber >= maxAttempts;
+
     return (
         <div
             onClick={handleOpenModal}
             className="flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
             <div className="flex items-stretch gap-5 h-full w-full">
                 <div className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}>
-                    <img src="/ds.jpg" alt="Course Cover" className="object-cover w-full h-full opacity-80 mix-blend-overlay" />
+                    <img src="/quiz.png" alt="Course Cover" className="object-cover w-full h-full opacity-80" />
                 </div>
 
                 <div className="flex flex-col justify-between h-full w-full">

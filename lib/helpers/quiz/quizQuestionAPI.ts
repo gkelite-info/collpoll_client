@@ -108,3 +108,32 @@ export async function deactivateQuizQuestion(questionId: number) {
 
     return { success: true };
 }
+
+export async function fetchQuestionsWithOptionsByQuizId(quizId: number) {
+    const { data, error } = await supabase
+        .from("quiz_questions")
+        .select(`
+            questionId,
+            questionText,
+            questionType,
+            marks,
+            displayOrder,
+            quiz_question_options (
+                optionId,
+                optionText,
+                isCorrect,
+                displayOrder
+            )
+        `)
+        .eq("quizId", quizId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .order("displayOrder", { ascending: true });
+
+    if (error) {
+        console.error("fetchQuestionsWithOptionsByQuizId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}

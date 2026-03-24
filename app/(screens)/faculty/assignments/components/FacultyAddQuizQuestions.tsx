@@ -367,7 +367,7 @@ export default function FacultyAddQuestions({
                     disabled={isDrafting}
                     className="px-8 py-2 rounded-md bg-[#16284F] text-white text-sm font-bold cursor-pointer hover:bg-[#102040] transition-colors disabled:opacity-50"
                 >
-                    {isSaving ? "Saving..." : "Draft"}
+                    {isDrafting ? "Saving..." : "Draft"}
                 </button>
                 <button
                     onClick={() => handleSave("Active")}

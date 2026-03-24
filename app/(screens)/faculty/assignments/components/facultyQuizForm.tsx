@@ -28,6 +28,7 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
     const [endDate, setEndDate] = useState("");
     const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDraftSaving, setIsDraftSaving] = useState(false);
 
     useEffect(() => {
         if (!facultyId) return;
@@ -83,6 +84,7 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
 
         try {
             setIsSaving(true);
+            setIsDraftSaving(true);
             const result = await saveQuiz({
                 facultyId,
                 collegeSubjectId: subjects[0].collegeSubjectId,
@@ -94,9 +96,6 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                 endDate,
                 status,
             });
-
-            console.log("what is result", result);
-
 
             if (!result.success) {
                 toast.error("Failed to save quiz");
@@ -117,6 +116,7 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
             toast.error("Something went wrong");
         } finally {
             setIsSaving(false);
+            setIsDraftSaving(false);
         }
     };
 
@@ -195,6 +195,7 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                             value={totalMarks}
                             onChange={(e) => setTotalMarks(e.target.value)}
                             placeholder="Eg: 40"
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                         />
                     </div>
@@ -236,10 +237,10 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => handleSave("Draft")}
-                            disabled={isSaving}
+                            disabled={isDraftSaving}
                             className="px-6 py-2 rounded-md cursor-pointer bg-[#16284F] text-white text-sm font-medium hover:bg-[#102040] transition-colors disabled:opacity-50"
                         >
-                            {isSaving ? "Saving..." : "Save as Draft"}
+                            {isDraftSaving ? "Saving..." : "Save as Draft"}
                         </button>
 
                         <button

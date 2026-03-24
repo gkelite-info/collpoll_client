@@ -63,6 +63,7 @@ export async function saveQuizSubmission(payload: {
     quizId: number;
     studentId: number;
     totalMarksObtained: number;
+    attemptNumber: number;
 }) {
     const now = new Date().toISOString();
 
@@ -72,6 +73,7 @@ export async function saveQuizSubmission(payload: {
             quizId: payload.quizId,
             studentId: payload.studentId,
             totalMarksObtained: payload.totalMarksObtained,
+            attemptNumber: payload.attemptNumber,
             submittedAt: now,
             createdAt: now,
             updatedAt: now,
@@ -121,6 +123,48 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
 
     if (error) {
         console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
+        throw error;
+    }
+
+    return data ?? [];
+}
+
+export async function getStudentAttemptCount(
+    quizId: number,
+    studentId: number
+): Promise<number> {
+    const { data, error } = await supabase
+        .from("quiz_submissions")
+        .select("submissionId")
+        .eq("quizId", quizId)
+        .eq("studentId", studentId)
+        .is("deletedAt", null);
+
+    if (error) {
+        if (error.code === "PGRST116") return 0;
+        throw error;
+    }
+
+    return data?.length ?? 0;
+}
+
+export async function fetchSubmissionDetails(submissionId: number) {
+    const { data, error } = await supabase
+        .from("quiz_submission_answers")
+        .select(`
+            answerId,
+            questionId,
+            selectedOptionId,
+            writtenAnswer,
+            isCorrect,
+            marksObtained
+        `)
+        .eq("submissionId", submissionId)
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+    if (error) {
+        console.error("fetchSubmissionDetails error:", error);
         throw error;
     }
 
