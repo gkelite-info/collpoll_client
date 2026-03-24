@@ -18,7 +18,6 @@ export function FontProvider({ children }: { children: ReactNode }) {
   const MIN = 85;
   const MAX = 115;
 
-  // Initial state safely read from localStorage only in browser
   const [scale, setScale] = useState(() => {
     if (typeof window !== "undefined") {
       return Number(localStorage.getItem("fontScale") ?? 100);
@@ -26,7 +25,6 @@ export function FontProvider({ children }: { children: ReactNode }) {
     return 100;
   });
 
-  // Apply scale to <html> whenever it changes
   useEffect(() => {
     document.documentElement.style.fontSize = `${scale}%`;
     localStorage.setItem("fontScale", scale.toString());

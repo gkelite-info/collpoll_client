@@ -337,10 +337,7 @@ import DoneStep from "./components/doneStep";
 import ResetPassword from "./components/resetPassword";
 import CurrentPassword from "./components/verifyPassword";
 
-import LinkedAccounts, {
-  LinkedAccount,
-  mockAccountData,
-} from "./components/linkedAccounts";
+import LinkedAccounts, { LinkedAccount } from "./components/linkedAccounts";
 
 import TwoStepVerification, {
   mockVerificationData,
@@ -352,23 +349,48 @@ import TrustedDevicesListUI, {
   TrustedDevice,
 } from "./components/trustedDevices";
 import { useFont } from "@/app/utils/FontProvider";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  getUserPreferences,
+  updateUserPreferences,
+} from "@/lib/helpers/settings/preferencesAPI";
 
 export default function SettingsClient() {
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [reminders, setReminders] = useState(true);
+  const [isLoadingPrefs, setIsLoadingPrefs] = useState(true);
   const searchParams = useSearchParams();
 
   const step = searchParams.toString().split("=")[0];
 
-  const [linkedAccounts, setLinkedAccounts] =
-    useState<LinkedAccount[]>(mockAccountData);
-
   const { scale, setScale } = useFont();
 
-  // Define min and max for your slider
+  const { userId } = useUser();
+
   const MIN = 85;
   const MAX = 115;
 
-  // Inverted value helper
-  const invertedValue = MAX + MIN - scale; //
+  const invertedValue = MAX + MIN - scale;
+
+  useEffect(() => {
+    async function loadPreferences() {
+      if (!userId) return;
+
+      const prefs = await getUserPreferences(userId);
+
+      if (prefs) {
+        setEmailAlerts(prefs.email_alerts);
+        setReminders(
+          prefs.assignment_reminders ||
+            prefs.event_reminders ||
+            prefs.class_reminders,
+        );
+        if (prefs.font_scale) setScale(prefs.font_scale);
+      }
+      setIsLoadingPrefs(false);
+    }
+    loadPreferences();
+  }, [userId, setScale]);
 
   useEffect(() => {
     const saved = localStorage.getItem("fontScale");
@@ -380,21 +402,43 @@ export default function SettingsClient() {
     localStorage.setItem("fontScale", String(scale));
   }, [scale]);
 
-  const handleToggleLinkedAccount = (accountId: string) => {
-    setLinkedAccounts((prevAccounts) =>
-      prevAccounts.map((account) =>
-        account.id === accountId
-          ? {
-              ...account,
-              connected: !account.connected,
-              description: !account.connected
-                ? "Connected to your account"
-                : "Not Connected",
-            }
-          : account,
-      ),
-    );
+  const handleToggleEmailAlerts = async () => {
+    const newValue = !emailAlerts;
+    setEmailAlerts(newValue);
+
+    if (userId) {
+      await updateUserPreferences(userId, { email_alerts: newValue });
+    }
   };
+
+  const handleToggleReminders = async () => {
+    const newValue = !reminders;
+    setReminders(newValue);
+
+    if (userId) {
+      await updateUserPreferences(userId, {
+        assignment_reminders: newValue,
+        event_reminders: newValue,
+        class_reminders: newValue,
+      });
+    }
+  };
+
+  //   const handleToggleLinkedAccount = (accountId: string) => {
+  //     setLinkedAccounts((prevAccounts) =>
+  //       prevAccounts.map((account) =>
+  //         account.id === accountId
+  //           ? {
+  //               ...account,
+  //               connected: !account.connected,
+  //               description: !account.connected
+  //                 ? "Connected to your account"
+  //                 : "Not Connected",
+  //             }
+  //           : account,
+  //       ),
+  //     );
+  //   };
 
   const [verificationMethods, setVerificationMethods] =
     useState<VerificationMethod[]>(mockVerificationData);
@@ -420,13 +464,7 @@ export default function SettingsClient() {
   if (step === "reset") return <ResetPassword />;
   if (step === "done") return <DoneStep />;
 
-  if (step === "linked-accounts")
-    return (
-      <LinkedAccounts
-        accounts={linkedAccounts}
-        onToggle={handleToggleLinkedAccount}
-      />
-    );
+  if (step === "linked-accounts") return <LinkedAccounts />;
 
   if (step === "2fa")
     return (
@@ -499,7 +537,9 @@ export default function SettingsClient() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                defaultChecked
+                checked={emailAlerts}
+                onChange={handleToggleEmailAlerts}
+                disabled={isLoadingPrefs}
                 aria-label="Toggle email alerts"
                 className="sr-only peer"
               />
@@ -531,7 +571,9 @@ export default function SettingsClient() {
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                defaultChecked
+                checked={reminders}
+                onChange={handleToggleReminders}
+                disabled={isLoadingPrefs}
                 aria-label="Toggle reminders"
                 className="sr-only peer"
               />

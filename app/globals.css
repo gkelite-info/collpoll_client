@@ -195,5 +195,5 @@ input[list]::-webkit-calendar-picker-indicator {
 
 html {
   font-size: 100%;
-  transition: font-size 0.2s ease; /* smooth scaling */
+  transition: font-size 0.2s ease;
 }
