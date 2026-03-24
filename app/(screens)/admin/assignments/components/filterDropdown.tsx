@@ -29,12 +29,12 @@ export const FilterDropdown = ({ label, value, options, onChange }: any) => {
 };
 
 export const MOCK_DEPTS = [
-  { id: 1, name: "CSE", year: "2", text: "#FF4B4B", color: "#FF4B4B", bgColor: "#FFE5E5", activeText: "Active Subjects with Quiz", activeCount: "08", students: 320 },
-  { id: 2, name: "ECE", year: "2", text: "#FF8A00", color: "#FF8A00", bgColor: "#FFEFE5", activeText: "Active Subjects with Quiz", activeCount: "06", students: 320 },
-  { id: 3, name: "MECH", year: "2", text: "#FFC700", color: "#FFC700", bgColor: "#FFF9E5", activeText: "Active Subjects with Quiz", activeCount: "08", students: 320 },
-  { id: 4, name: "CSE", year: "2", text: "#FF4B4B", color: "#FF4B4B", bgColor: "#FFE5E5", activeText: "Active Subjects with Quiz", activeCount: "08", students: 320 },
-  { id: 5, name: "ECE", year: "2", text: "#FF8A00", color: "#FF8A00", bgColor: "#FFEFE5", activeText: "Active Subjects with Quiz", activeCount: "06", students: 320 },
-  { id: 6, name: "MECH", year: "2", text: "#FFC700", color: "#FFC700", bgColor: "#FFF9E5", activeText: "Active Subjects with Quiz", activeCount: "08", students: 320 },
+  { id: 1, name: "CSE", year: "2", text: "#FF4B4B", color: "#FF4B4B", bgColor: "#FFE5E5", activeText: "Active Subjects with discussion", activeCount: "08", students: 320 },
+  { id: 2, name: "ECE", year: "2", text: "#FF8A00", color: "#FF8A00", bgColor: "#FFEFE5", activeText: "Active Subjects with discussion", activeCount: "06", students: 320 },
+  { id: 3, name: "MECH", year: "2", text: "#FFC700", color: "#FFC700", bgColor: "#FFF9E5", activeText: "Active Subjects with discussion", activeCount: "08", students: 320 },
+  { id: 4, name: "CSE", year: "2", text: "#FF4B4B", color: "#FF4B4B", bgColor: "#FFE5E5", activeText: "Active Subjects with discussion", activeCount: "08", students: 320 },
+  { id: 5, name: "ECE", year: "2", text: "#FF8A00", color: "#FF8A00", bgColor: "#FFEFE5", activeText: "Active Subjects with discussion", activeCount: "06", students: 320 },
+  { id: 6, name: "MECH", year: "2", text: "#FFC700", color: "#FFC700", bgColor: "#FFF9E5", activeText: "Active Subjects with discussion", activeCount: "08", students: 320 },
   { id: 7, name: "AI & DS", year: "2", text: "#43C17A", color: "#43C17A", bgColor: "#E5F6ED", activeText: "Active Subjects with Assignments", activeCount: "08", students: 320 },
   { id: 8, name: "Biotech", year: "2", text: "#00D1FF", color: "#00D1FF", bgColor: "#E5FAFF", activeText: "Active Subjects with Assignments", activeCount: "06", students: 320 },
   { id: 9, name: "MBA", year: "2", text: "#6C8DFF", color: "#6C8DFF", bgColor: "#EAEFFF", activeText: "Active Subjects with Assignments", activeCount: "08", students: 320 },
