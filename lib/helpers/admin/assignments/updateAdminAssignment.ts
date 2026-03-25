@@ -6,7 +6,6 @@ export const updateAdminAssignment = async (
   status: string,
 ) => {
   try {
-    // Convert YYYY-MM-DD to YYYYMMDD integer
     const deadlineInt = parseInt(deadline.replace(/-/g, ""));
 
     const { error } = await supabase

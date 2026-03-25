@@ -1,6 +1,11 @@
 "use client";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { CaretDown, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -84,7 +89,10 @@ const AssignmentPage = () => {
 
         const adminCtx = await fetchAdminContext(userRecord.userId);
 
-        const { data } = await fetchAdminDepartmentStats(adminCtx.collegeId, adminCtx.collegeEducationId);
+        const { data } = await fetchAdminDepartmentStats(
+          adminCtx.collegeId,
+          adminCtx.collegeEducationId,
+        );
         setDataList(data || []);
       } catch (err) {
         console.error(err);
@@ -187,7 +195,10 @@ const AssignmentPage = () => {
               disabled={currentPage === 1}
               className="p-2 rounded-lg border bg-white disabled:opacity-30"
             >
-              <CaretLeft size={18} />
+              <CaretLeft
+                size={18}
+                className="text-[#282828] cursor-pointer active:scale-90"
+              />
             </button>
             <span className="text-sm">
               Page {currentPage} of {totalPages}
@@ -213,7 +224,13 @@ const AssignmentPage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="w-full text-center py-10"><Loader/></div>}>
+    <Suspense
+      fallback={
+        <div className="w-full text-center py-10">
+          <Loader />
+        </div>
+      }
+    >
       <AssignmentPage />
     </Suspense>
   );
