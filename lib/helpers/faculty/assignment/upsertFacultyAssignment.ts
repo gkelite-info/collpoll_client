@@ -4,11 +4,11 @@ export const upsertFacultyAssignment = async (payload: any) => {
   try {
     const {
       assignmentId,
-      facultyId, // Maps to 'createdBy'
+      facultyId,
       subjectId,
       topicName,
-      dateAssigned, // String 'YYYY-MM-DD'
-      submissionDeadline, // String 'YYYY-MM-DD'
+      dateAssigned,
+      submissionDeadline,
       collegeBranchId,
       collegeAcademicYearId,
       collegeSectionsId,
@@ -17,7 +17,6 @@ export const upsertFacultyAssignment = async (payload: any) => {
 
     const now = new Date().toISOString();
 
-    // Prepare the DB object strictly according to schema
     const dbPayload = {
       createdBy: facultyId,
       subjectId: Number(subjectId),
@@ -32,12 +31,9 @@ export const upsertFacultyAssignment = async (payload: any) => {
       updatedAt: now,
     };
 
-    // -----------------------------------------------
-    // ✔ CASE 1: UPDATE EXISTING ASSIGNMENT
-    // -----------------------------------------------
     if (assignmentId) {
       const { data, error } = await supabase
-        .from("assignments") // Correct Table Name
+        .from("assignments")
         .update(dbPayload)
         .eq("assignmentId", assignmentId)
         .select();
@@ -51,11 +47,8 @@ export const upsertFacultyAssignment = async (payload: any) => {
       };
     }
 
-    // -----------------------------------------------
-    // ✔ CASE 2: CREATE NEW ASSIGNMENT
-    // -----------------------------------------------
     const { data, error } = await supabase
-      .from("assignments") // Correct Table Name
+      .from("assignments")
       .insert({
         ...dbPayload,
         is_deleted: false,
@@ -78,6 +71,5 @@ export const upsertFacultyAssignment = async (payload: any) => {
 
 function convertToInt(dateStr: string) {
   if (!dateStr) return 0;
-  // Converts "2026-01-27" -> 20260127
   return Number(dateStr.replace(/-/g, ""));
 }
