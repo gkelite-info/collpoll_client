@@ -1,4 +1,5 @@
-import React from "react";
+"use client";
+import { useRouter } from "next/navigation";
 
 export interface FacultyRecord {
   name: string;
@@ -14,6 +15,16 @@ interface Props {
 }
 
 export default function FacultyOverviewTable({ records }: Props) {
+  const router = useRouter();
+
+  const handleViewProfile = (name: string) => {
+    // Correctly routes to the HR's view of the attendance page
+    // Passing the faculty name so the page knows whose data to load
+    router.push(
+      `/hr/MyAttendance?main=attendance&faculty=${encodeURIComponent(name)}`,
+    );
+  };
+
   return (
     <div className="w-full">
       <h3 className="text-[#282828] font-medium text-[15px] mb-2 px-2">
@@ -42,6 +53,9 @@ export default function FacultyOverviewTable({ records }: Props) {
               <th className="py-3 px-4 font-semibold whitespace-nowrap">
                 Attendance %
               </th>
+              <th className="py-3 px-4 font-semibold whitespace-nowrap">
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -58,6 +72,12 @@ export default function FacultyOverviewTable({ records }: Props) {
                 <td className="py-2.5 px-4">{row.status}</td>
                 <td className="py-2.5 px-4 text-center">{row.classesTaken}</td>
                 <td className="py-2.5 px-4">{row.attendance}</td>
+                <td
+                  className="py-2.5 px-4 hover:text-emerald-500 cursor-pointer font-medium"
+                  onClick={() => handleViewProfile(row.name)}
+                >
+                  View
+                </td>
               </tr>
             ))}
           </tbody>
