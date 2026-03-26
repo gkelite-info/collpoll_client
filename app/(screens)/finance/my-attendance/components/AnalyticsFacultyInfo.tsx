@@ -1,15 +1,15 @@
-import React from "react";
+import { FC } from "react";
 import { AnalyticsFacultyProfile } from "../types";
 
 interface Props {
   profile: AnalyticsFacultyProfile;
 }
 
-const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
+const AnalyticsFacultyInfo: FC<Props> = ({ profile }) => {
   return (
     <div className="w-full mb-5 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
-        Faculty Information
+        Finance Information
       </h2>
 
       <div className="grid grid-cols-3 gap-y-3.5 w-full">
@@ -18,8 +18,8 @@ const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
           <span className="text-[#525252]">{profile.name}</span>
         </div>
         <div>
-          <span className="font-semibold text-[#282828]">Department : </span>
-          <span className="text-[#525252]">{profile.department}</span>
+          <span className="font-semibold text-[#282828]">Education Type : </span>
+          <span className="text-[#525252]">{profile.collegeEducationType}</span>
         </div>
         <div>
           <span className="font-semibold text-[#282828]">Employee ID : </span>
