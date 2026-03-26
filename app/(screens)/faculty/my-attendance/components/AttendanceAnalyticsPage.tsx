@@ -7,52 +7,152 @@ import {
 import AttendancePerformanceChart from "../charts/AttendancePerformanceChart";
 import AttendanceTable from "../tables/attendanceTable";
 
-// Mock Data
+import { useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { getAttendanceData } from "@/lib/helpers/myAttendance/getAttendanceData";
+import { getAttendanceYearlyStats } from "@/lib/helpers/myAttendance/getAttendanceYearlyStats";
+import AttendanceTableShimmer from "../shimmers/AttendanceTableShimmer";
+import AttendancePerformanceChartShimmer from "../shimmers/AttendancePerformanceChartShimmer";
+import AnalyticsFacultyInfoShimmer from "../shimmers/AnalyticsFacultyInfoShimmer";
+import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttendanceMonthlyStats";
+
 const mockProfile: AnalyticsFacultyProfile = {
-  name: "Harsha Sharma",
-  department: "CSE",
-  employeeId: "989539",
-  experience: "6 Years",
-  leavesTaken: 2,
-  workingDays: 18,
+  name: "",
+  department: "",
+  employeeId: "",
+  experience: "6 years",
+  leavesTaken: 0,
+  workingDays: 0,
 };
 
-const mockChartData: ChartDataPoint[] = [
-  { month: "Jan", performance: 71, attendance: 10 },
-  { month: "Feb", performance: 96, attendance: 15 },
-  { month: "Mar", performance: 31, attendance: 18 },
-  { month: "Apr", performance: 40, attendance: 14 },
-  { month: "May", performance: 35, attendance: 23 },
-  { month: "Jun", performance: 42, attendance: 14 },
-  { month: "July", performance: 47, attendance: 32 },
-];
-
-const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map(
-  (_, i) => ({
-    date: `${(12 - i).toString().padStart(2, "0")}/02/2026`,
-    checkIn: "09:04 AM",
-    checkOut: "05:12 PM",
-    totalHours: "8h 08m",
-    status: "Present",
-    lateBy: "04m",
-    earlyOut: "—",
-    classDetail: "04",
-  }),
-);
 
 const AttendanceAnalyticsPage = () => {
+
+  const { userId, collegeBranchCode, fullName, facultyId, collegeEducationType, professionalExperienceYears } = useUser();
+  const [profile, setProfile] = useState<AnalyticsFacultyProfile | null>(null);
+  const [infoLoading, setInfoLoading] = useState(true);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tableLoading, setTableLoading] = useState(true)
+  const [chartLoading, setChartLoading] = useState(true);
+  const [workingDays, setWorkingDays] = useState(0);
+  const [workingDaysLoading, setWorkingDaysLoading] = useState(true);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchWorkingDays = async () => {
+      setWorkingDaysLoading(true);
+      try {
+        const res = await getAttendanceMonthlyStats({
+          userId,
+          month: selectedMonth,
+          year: selectedYear
+        });
+
+        setWorkingDays(res.totalWorkingDays);
+      } catch (err) {
+        setWorkingDays(0);
+      } finally {
+        setWorkingDaysLoading(false);
+      }
+    };
+
+    fetchWorkingDays();
+  }, [userId, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (!facultyId || !fullName) return;
+    setInfoLoading(true);
+    try {
+      const updatedProfile: AnalyticsFacultyProfile = {
+        ...mockProfile,
+        name: fullName,
+        department: collegeBranchCode || "",
+        employeeId: facultyId,
+        collegeEducationType: collegeEducationType || "",
+        experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
+        workingDays
+      };
+      setProfile(updatedProfile);
+    } finally {
+      setInfoLoading(false)
+    }
+  }, [facultyId, collegeBranchCode, fullName, collegeEducationType, workingDays]);
+
+  useEffect(() => {
+    if (!userId) return;
+    setTableLoading(true)
+    getAttendanceData({
+      userId,
+      month: selectedMonth,
+      year: selectedYear,
+      page: currentPage,
+      limit: itemsPerPage
+    })
+      .then(res => {
+        setRecords(res.records);
+        setTotalItems(res.total);
+      }).catch(() => {
+        setRecords([]);
+        setTotalItems(0)
+      }).finally(() => setTableLoading(false));
+
+  }, [userId, selectedMonth, selectedYear, currentPage]);
+
+  useEffect(() => {
+    if (!userId) return;
+    setChartLoading(true);
+    getAttendanceYearlyStats(
+      userId,
+      selectedYear
+    )
+      .then(setChartData)
+      .catch(() => setChartData([]))
+      .finally(() => setChartLoading(false));
+  }, [userId, selectedYear]);
+
   return (
     <div className="flex flex-col w-full">
-      <AnalyticsFacultyInfo profile={mockProfile} />
-
-      <AttendancePerformanceChart data={mockChartData} />
-
-      <AttendanceTable
-        title="Daily Attendance Record"
-        records={mockRecords}
-        month="JAN"
-        year="2026"
-      />
+      <div className="p-1 w-full">
+        {infoLoading || workingDaysLoading || !profile ? (
+          <AnalyticsFacultyInfoShimmer />
+        ) : (
+          <AnalyticsFacultyInfo profile={profile} />
+        )}
+      </div>
+      {chartLoading ?
+        <AttendancePerformanceChartShimmer />
+        :
+        <AttendancePerformanceChart data={chartData} />
+      }
+      {tableLoading
+        ? <AttendanceTableShimmer />
+        :
+        <AttendanceTable
+          title="Daily Attendance Record"
+          records={records}
+          month={[
+            "JAN", "FEB", "MAR", "APR",
+            "MAY", "JUN", "JUL", "AUG",
+            "SEP", "OCT", "NOV", "DEC"
+          ][selectedMonth - 1]}
+          year={String(selectedYear)}
+          totalItems={totalItems}
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          onMonthYearChange={(m, y) => {
+            setSelectedMonth(m);
+            setSelectedYear(y);
+            setCurrentPage(1);
+          }}
+        />
+      }
     </div>
   );
 };

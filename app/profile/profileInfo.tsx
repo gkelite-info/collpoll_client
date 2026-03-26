@@ -56,6 +56,19 @@ const ALLOWED_IMAGE_TYPES = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
+export const DefaultAvatar = () => (
+  <div className="w-40 h-40 rounded-full border-2 border-[#43C17A] bg-gray-200 flex items-center justify-center text-gray-400">
+    <svg
+      className="w-24 h-24"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+    </svg>
+  </div>
+);
+
 export default function ProfileInfo() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -240,18 +253,7 @@ export default function ProfileInfo() {
     }
   };
 
-  const DefaultAvatar = () => (
-    <div className="w-40 h-40 rounded-full border-2 border-[#43C17A] bg-gray-200 flex items-center justify-center text-gray-400">
-      <svg
-        className="w-24 h-24"
-        fill="currentColor"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-      </svg>
-    </div>
-  );
+
 
 
   // const ProfileRow = ({ label, value }: { label: string; value: string }) => (

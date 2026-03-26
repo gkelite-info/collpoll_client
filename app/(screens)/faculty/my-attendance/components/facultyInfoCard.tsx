@@ -1,25 +1,34 @@
-import React from "react";
+import {FC} from "react";
 import { FacultyProfile } from "../types";
-import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
 interface Props {
   profile: FacultyProfile;
   loading: boolean
 }
 
-const FacultyInfoCard: React.FC<Props> = ({ profile, loading }) => {
-  const {role} = useFaculty()
-  if(!role) return null;
-  const isInter = ["Inter"].includes(role)
+const DefaultAvatar = () => (
+  <div className="w-full h-full rounded-full border-2 border-[#43C17A] bg-gray-200 flex items-center justify-center text-gray-400"> {/* ✅ FIXED */}
+    <svg
+      className="w-1/2 h-1/2"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+    </svg>
+  </div>
+);
+
+const FacultyInfoCard: FC<Props> = ({ profile, loading }) => {
+  const isInter = ["Inter"].includes(profile.collegeEducationType!)
   return (
-    <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
+    <div className="flex bg-white rounded-xl p-4 w-[70%] overflow-auto shadow-sm items-center gap-8 border border-gray-100/50">
       <div className="flex flex-col items-center gap-2 pl-2">
-        <div className="w-[85px] h-[85px] rounded-full overflow-hidden bg-teal-500">
-          <img
-            src={profile.image}
-            alt={profile.name}
-            className="w-full h-full object-cover"
-          />
+        <div className="w-[85px] h-[85px] object-cover rounded-full overflow-hidden bg-teal-500">
+          {profile.image ? (
+            <img src={profile.image} alt="profile" className="w-[85px] h-[85px] object-cover" />
+          ) : (
+            <DefaultAvatar />
+          )}
         </div>
         <p className="text-[#282828] font-bold text-[15px] whitespace-nowrap">
           {profile.name}

@@ -270,6 +270,8 @@ type UserContextType = {
   collegeSection: string | null;
   profilePhoto: string | null;
   setProfilePhoto: React.Dispatch<React.SetStateAction<string | null>>;
+  dateOfJoining: string | null;
+  professionalExperienceYears: number | null;
 };
 
 const UserContext = createContext<UserContextType>({
@@ -295,7 +297,9 @@ const UserContext = createContext<UserContextType>({
   collegeAcademicYear: null,
   collegeSection: null,
   profilePhoto: null,
-  setProfilePhoto: () => { }
+  setProfilePhoto: () => { },
+  dateOfJoining: null,
+  professionalExperienceYears: null,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -321,6 +325,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
   const [collegeSection, setCollegeSection] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [dateOfJoining, setDateOfJoining] = useState<string | null>(null);
+  const [professionalExperienceYears, setProfessionalExperienceYears] = useState<number | null>(null);
 
   const resetState = () => {
     setUserId(null);
@@ -343,6 +349,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setCollegeAcademicYear(null);
     setCollegeSection(null);
     setProfilePhoto(null);
+    setDateOfJoining(null);
+    setProfessionalExperienceYears(null);
   };
 
   const roleLoaders: Record<string, (userId: number) => Promise<void>> = {
@@ -457,7 +465,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
         const { data: userData, error } = await supabase
           .from("users")
-          .select("userId, fullName, mobile, email, gender, role, collegePublicId, collegeId")
+          .select("userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears")
           .eq("auth_id", auth.user.id)
           .maybeSingle();
 
@@ -467,6 +475,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
+        setDateOfJoining(userData.dateOfJoining ?? null);
+        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
         setUserId(userData.userId);
         setFullName(userData.fullName);
         setMobile(userData.mobile);
@@ -535,14 +545,16 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     collegeAcademicYear,
     collegeSection,
     profilePhoto,
-    setProfilePhoto
+    setProfilePhoto,
+    dateOfJoining,
+    professionalExperienceYears,
   }), [
     userId, loading, fullName, mobile, email, gender, role,
     collegePublicId, collegeId,
     studentId, adminId, financeManagerId, facultyId,
     collegeAdminId, parentId, collegeHrId,
     collegeEducationType, collegeBranchCode, collegeAcademicYear,
-    collegeSection, profilePhoto
+    collegeSection, profilePhoto, dateOfJoining, professionalExperienceYears,
   ]);
 
   return (
