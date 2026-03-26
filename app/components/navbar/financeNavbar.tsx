@@ -67,7 +67,7 @@ export default function FinanceNavbar() {
             <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
           ),
           label: "My Attendance",
-          path: "/finance/MyAttendance",
+          path: "/finance/my-attendance",
         },
     {
       icon: (isActive) => (
