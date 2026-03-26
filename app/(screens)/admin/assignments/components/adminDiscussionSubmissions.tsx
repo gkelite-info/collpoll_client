@@ -37,8 +37,6 @@ export default function AdminDiscussionSubmissions({ discussionId: propDiscussio
         if (!discussionId) return;
 
         fetchDiscussionById(Number(discussionId)).then((data) => {
-            console.log("discussion data", data);
-
             if (!data) return;
 
             setDiscussion({
