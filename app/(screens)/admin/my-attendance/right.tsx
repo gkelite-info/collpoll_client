@@ -1,12 +1,10 @@
 "use client";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import type { Task } from "@/app/utils/taskPanel";
-import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { useUser } from "@/app/utils/context/UserContext";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -26,38 +24,13 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function MyAttendanceRight() {
-  const { collegeId, userId, role } = useUser();
 
+export default function MyAttendanceRight() {
+  const { role, collegeId, userId } = useUser()
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
-  const myTasks: Task[] = [
-    {
-      facultyTaskId: 1,
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-      date: new Date().toLocaleString()
-    },
-    {
-      facultyTaskId: 2,
-      title: "Group Discussion Prep",
-      description:
-        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-      time: "02:40 PM",
-      date: new Date().toLocaleString()
-    },
-    {
-      facultyTaskId: 3,
-      title: "Resume Update",
-      description:
-        "Add latest internship experience to resume builder section.",
-      time: "03:40 PM",
-      date: new Date().toLocaleString()
-    },
-  ];
 
-  const fetchData = async () => {
+  const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
 
@@ -91,27 +64,27 @@ export default function MyAttendanceRight() {
 
       setAnnouncements(formatted);
     } catch (err) {
-      console.error(err);
+      console.error("Fetch announcements error:", err);
     }
   };
 
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
-    fetchData();
+    fetchAnnouncements();
   }, [collegeId, userId, role, view]);
 
 
   return (
     <>
       <div className="w-[32%] p-2 flex flex-col">
-        <CourseScheduleCard />
+        <CourseScheduleCard isVisibile={false}/>
         <WorkWeekCalendar />
-        <TaskPanel studentTasks={myTasks} role="student" />
+
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"
           onViewChange={(v) => setView(v)}
-          refreshAnnouncements={fetchData}
+          refreshAnnouncements={fetchAnnouncements}
         />
       </div>
     </>

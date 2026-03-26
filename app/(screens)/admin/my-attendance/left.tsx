@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -154,7 +153,7 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <div className="p-6 text-sm ">
+        <div className="p-6 text-sm w-full text-center">
           <Loader />
         </div>
       }

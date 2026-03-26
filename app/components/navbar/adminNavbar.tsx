@@ -121,7 +121,7 @@ export default function AdminNavbar() {
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "My Attendance",
-      path: "/admin/MyAttendance",
+      path: "/admin/my-attendance",
     },
     {
       icon: (isActive) => (
