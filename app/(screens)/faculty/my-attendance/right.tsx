@@ -7,6 +7,8 @@ import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { useEffect, useState } from "react";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import toast from "react-hot-toast";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -26,38 +28,97 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+const myTasks: Task[] = [
+  {
+    facultyTaskId: 1,
+    title: "Complete Python Lab",
+    description: "Finish all 10 lab programs and upload to portal.",
+    time: "12:40 PM",
+    date: new Date().toLocaleString()
+  },
+  {
+    facultyTaskId: 2,
+    title: "Group Discussion Prep",
+    description:
+      "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
+    time: "02:40 PM",
+    date: new Date().toLocaleString()
+  },
+  {
+    facultyTaskId: 3,
+    title: "Resume Update",
+    description:
+      "Add latest internship experience to resume builder section.",
+    time: "03:40 PM",
+    date: new Date().toLocaleString()
+  },
+];
 
 export default function MyAttendanceRight() {
   const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
   const collegeSubjectId = subjectIds?.[0] ?? null;
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const myTasks: Task[] = [
-    {
-      facultyTaskId: 1,
-      title: "Complete Python Lab",
-      description: "Finish all 10 lab programs and upload to portal.",
-      time: "12:40 PM",
-      date: new Date().toLocaleString()
+  const loadTasks = async () => {
+    if (!collegeSubjectId) return;
+    try {
+      const data = await fetchFacultyTasks(collegeSubjectId);
+      const formattedTasks: Task[] = data.map((t: any) => ({
+        facultyTaskId: t.facultyTaskId,
+        title: t.taskTitle,
+        description: t.description,
+        time: t.time,
+        date: t.date,
+      }));
+
+      setTasks(formattedTasks);
+    } catch (error) {
+      console.error("LOAD TASK ERROR", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
     },
-    {
-      facultyTaskId: 2,
-      title: "Group Discussion Prep",
-      description:
-        "Research topic “Impact of AI on Education” for tomorrow’s discussion.",
-      time: "02:40 PM",
-      date: new Date().toLocaleString()
-    },
-    {
-      facultyTaskId: 3,
-      title: "Resume Update",
-      description:
-        "Add latest internship experience to resume builder section.",
-      time: "03:40 PM",
-      date: new Date().toLocaleString()
-    },
-  ];
+    taskId?: number
+  ) => {
+    try {
+      const res = await saveFacultyTask(
+        {
+          facultyTaskId: taskId,
+          collegeSubjectId: collegeSubjectId!,
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime,
+        },
+        facultyId!
+      );
+
+      if (!res.success) {
+        throw new Error("Save failed");
+      }
+      await loadTasks();
+    } catch (error) {
+      toast.error("Failed to save task");
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    if (!facultyLoading && collegeSubjectId) {
+      loadTasks();
+    }
+  }, [facultyLoading, collegeSubjectId]);
 
   const fetchAnnouncements = async () => {
     try {
@@ -108,7 +169,20 @@ export default function MyAttendanceRight() {
       <div className="w-[32%] p-2 flex flex-col">
         <CourseScheduleCard />
         <WorkWeekCalendar />
-        <TaskPanel studentTasks={myTasks} role="student" />
+
+        <TaskPanel
+          role="faculty"
+          facultyTasks={loading ? [] : tasks}
+          loading={loading}
+          collegeSubjectId={collegeSubjectId ?? undefined}
+          facultyId={facultyId ?? undefined}
+          onAddTask={()=>{}}
+          onSaveTask={handleSave}
+          onDeleteTask={async () => {
+            await loadTasks();
+          }}
+        />
+
         <AnnouncementsCard
           announceCard={announcements}
           height="80vh"

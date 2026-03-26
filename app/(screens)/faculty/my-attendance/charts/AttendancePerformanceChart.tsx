@@ -1,4 +1,4 @@
-import React from "react";
+import { FC } from "react";
 import {
   LineChart,
   Line,
@@ -31,7 +31,7 @@ const mockChartData: ChartDataPoint[] = [
   { month: "Jul", performance: 47, attendance: 32 },
 ];
 
-const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
+const AttendancePerformanceChart: FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
   const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
@@ -42,6 +42,28 @@ const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
       return [`${value}%`, name];
     }
     return [value, name];
+  };
+
+  const renderLegend = (props: any) => {
+    const { payload } = props;
+    return (
+      <div className="flex justify-center items-center gap-6 pt-5">
+        {payload.map((entry: any, index: number) => (
+          <div
+            key={`item-${index}`}
+            className="flex items-center gap-2"
+          >
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-[13px] text-gray-700 leading-none">
+              {entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -84,10 +106,12 @@ const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
               }}
             />
 
-            <Legend
+            {/* <Legend
               iconType="circle"
               wrapperStyle={{ fontSize: "13px", paddingTop: "20px" }}
-            />
+            /> */}
+
+            <Legend content={renderLegend} />
 
             <Line
               type="linear"

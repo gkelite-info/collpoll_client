@@ -7,10 +7,11 @@ export interface FacultyProfile {
   email: string;
   joiningDate: string;
   experience: string;
+  collegeEducationType? : string | null;
 }
 
 export interface AttendanceStats {
-  todayStatus: "Present" | "Absent" | "Half Day";
+  todayStatus: "PRESENT" | "ABSENT" | "LEAVE" | "LATE" | null;
   totalWorkingDays: number;
   leavesTaken: number;
   remainingLeaves: number;
@@ -21,19 +22,21 @@ export interface AttendanceRecord {
   checkIn: string;
   checkOut: string;
   totalHours: string;
-  status: "Present" | "Absent" | "Leave";
+  status: "PRESENT" | "ABSENT" | "LEAVE" | "LATE";
   lateBy: string;
   earlyOut: string;
   classDetail: string;
+  reason?: string;
 }
 
 export interface AnalyticsFacultyProfile {
   name: string;
   department: string;
-  employeeId: string;
+  employeeId: string | number;
   experience: string;
   leavesTaken: number;
   workingDays: number;
+  collegeEducationType? : string;
 }
 
 export interface ChartDataPoint {
