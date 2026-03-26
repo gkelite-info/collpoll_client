@@ -3,33 +3,96 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { CaretLeftIcon, CloudArrowUp, FilePdf, Trash } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
-
-const MOCK_SECTIONS = [
-    { id: "1", name: "Section A" },
-    { id: "2", name: "Section B" },
-    { id: "3", name: "Section C" }
-];
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { fetchDiscussionById, fetchExistingDiscussion, saveDiscussionForum } from "@/lib/helpers/discussionForum/discussionForumAPI";
+import { saveDiscussionSections, replaceDiscussionSections, fetchDiscussionSectionByDiscussionId } from "@/lib/helpers/discussionForum/discussionForumSectionsAPI";
+import { uploadDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadStorageAPI";
+import { deactivateDiscussionFile, saveDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadsAPI";
+import { FacultySectionRow, fetchFacultySections } from "@/lib/helpers/faculty/facultysectionsAPI";
 
 export default function AdminDiscussionForm({ discussionId }: { discussionId?: number }) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { adminId } = useAdmin();
 
+    const [initialLoading, setInitialLoading] = useState(!!discussionId);
+    const [sections, setSections] = useState<{ collegeSectionsId: number; collegeSections: string }[]>([]);
+    const [sectionsLoading, setSectionsLoading] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
-    const [existingFiles, setExistingFiles] = useState<{ id: number; fileUrl: string }[]>([]);
+    const [existingFiles, setExistingFiles] = useState<{ discussionFileUploadId: number; fileUrl: string }[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(false);
-    
-    const [form, setForm] = useState({
-        title: discussionId ? "AI in Education" : "",
-        description: discussionId ? "Research topic Impact of AI on Education" : "",
-        deadline: discussionId ? "2025-01-10" : "",
-        marks: discussionId ? "25" : "",
-        sections: [] as string[]
-    });
     const [sectionOpen, setSectionOpen] = useState(false);
     const sectionRef = useRef<HTMLDivElement>(null);
+
+    const [form, setForm] = useState({
+        title: "",
+        description: "",
+        deadline: "",
+        marks: "",
+        sections: [] as string[]
+    });
+
+    const facultyId = searchParams.get("facultyId");
+
+    useEffect(() => {
+        const loadSections = async () => {
+            if (!facultyId || facultyId === "undefined" || facultyId === "null") return;
+
+            setSectionsLoading(true);
+            try {
+                const data: FacultySectionRow[] = await fetchFacultySections(Number(facultyId));
+
+                if (data && data.length > 0) {
+                    const formattedSections = data
+                        .map((item) => item.college_sections)
+                        .filter((section): section is { collegeSectionsId: number; collegeSections: string } =>
+                            section !== null
+                        );
+
+                    setSections(formattedSections);
+                } else {
+                    setSections([]);
+                }
+            } catch (err) {
+                console.error("Failed to load sections using helper:", err);
+                toast.error("Failed to load sections");
+            } finally {
+                setSectionsLoading(false);
+            }
+        };
+
+        loadSections();
+    }, [facultyId]);
+
+    useEffect(() => {
+        const loadDiscussion = async () => {
+            if (!discussionId) return;
+            try {
+                const data = await fetchDiscussionById(discussionId);
+                if (!data) return;
+
+                setForm({
+                    title: data.title || "",
+                    description: data.description || "",
+                    deadline: data.deadline || "",
+                    marks: data.discussion_forum_sections?.[0]?.marks?.toString() || "",
+                    sections: data.discussion_forum_sections?.map(
+                        (s: any) => String(s.collegeSectionsId)
+                    ) || []
+                });
+
+                setExistingFiles(data.discussion_file_uploads ?? []);
+            } catch (err) {
+                toast.error("Failed to load discussion");
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        loadDiscussion();
+    }, [discussionId]);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -50,24 +113,122 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
         }));
     };
 
+    const removeExistingFile = async (discussionFileUploadId: number) => {
+        try {
+            const result = await deactivateDiscussionFile(discussionFileUploadId);
+            if (result.success) {
+                setExistingFiles(prev => prev.filter(f => f.discussionFileUploadId !== discussionFileUploadId));
+                toast.success("File removed successfully.");
+            } else {
+                toast.error("Failed to remove file.");
+            }
+        } catch (error) {
+            toast.error("Failed to remove file.");
+            console.error("removeExistingFile error:", error);
+        }
+    };
+
+    const handleSave = async () => {
+        const numericFacultyId = facultyId ? Number(facultyId) : undefined;
+
+        if (!form.title) { toast.error("Title is required"); return; }
+        if (!form.description) { toast.error("Description is required"); return; }
+        if (!form.deadline) { toast.error("Deadline is required"); return; }
+        if (!form.marks || Number(form.marks) <= 0) { toast.error("Please enter valid marks"); return; }
+        if (!form.sections || form.sections.length === 0) { toast.error("Please select at least one section"); return; }
+
+        if (!discussionId) {
+            const { data: existing } = await fetchExistingDiscussion(form.title, form.deadline);
+            if (existing) {
+                toast.error("A discussion with the same title and deadline already exists.");
+                return;
+            }
+        }
+
+        setLoading(true);
+        try {
+            const payload = await saveDiscussionForum(
+                {
+                    discussionId: discussionId,
+                    title: form.title,
+                    description: form.description,
+                    deadline: form.deadline,
+                },
+                {
+                    adminId: adminId ?? undefined,
+                    facultyId: numericFacultyId
+                }
+            );
+
+            if (!payload.success || !payload.discussionId) {
+                toast.error("Failed to save discussion. Please try again.");
+                return;
+            }
+
+            const sectionsPayload = form.sections.map((collegeSectionsId: string) => ({
+                collegeSectionsId: Number(collegeSectionsId),
+                marks: Number(form.marks) || 0,
+            }));
+
+            let sectionsResult = { success: true };
+
+            if (!discussionId) {
+                sectionsResult = await saveDiscussionSections(payload.discussionId, sectionsPayload);
+            } else {
+                const existingSectionIds = form.sections.map(Number).sort().join(",");
+                const newSectionIds = sectionsPayload.map(s => s.collegeSectionsId).sort().join(",");
+
+                if (existingSectionIds !== newSectionIds) {
+                    sectionsResult = await replaceDiscussionSections(payload.discussionId, sectionsPayload);
+                }
+            }
+
+            if (!sectionsResult.success) {
+                toast.error("Discussion saved but failed to save sections.");
+                return;
+            }
+
+            if (files.length > 0) {
+                try {
+                    const { success, data: savedSection } = await fetchDiscussionSectionByDiscussionId(payload.discussionId);
+
+                    if (!success || !savedSection) {
+                        toast.error("Discussion saved but failed to fetch section.");
+                        return;
+                    }
+
+                    const fileUrls = await uploadDiscussionFiles(payload.discussionId, files);
+                    const filesResult = await saveDiscussionFiles(payload.discussionId, fileUrls, savedSection.discussionSectionId);
+
+                    if (!filesResult.success) {
+                        toast.error("Discussion saved but failed to save file records.");
+                        return;
+                    }
+                } catch (uploadError) {
+                    toast.error("Discussion saved but file upload failed.");
+                    console.error("File upload error:", uploadError);
+                    return;
+                }
+            }
+
+            toast.success(discussionId ? "Discussion updated successfully." : "Discussion created successfully.");
+            handleBack();
+
+        } catch (error) {
+            toast.error("Failed to save discussion");
+            console.error("Failed to save discussion", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.delete("action");
         params.delete("discussionId");
+        params.set("discussionView", "active");
+        params.set("refresh", Date.now().toString());
         router.push(`${pathname}?${params.toString()}`);
-    };
-
-    const handleSave = () => {
-        if (!form.title || !form.description || !form.deadline || !form.marks || form.sections.length === 0) {
-            toast.error("Please fill all required fields and select a section");
-            return;
-        }
-        setLoading(true);
-        setTimeout(() => {
-            toast.success(discussionId ? "Discussion updated successfully." : "Discussion created successfully.");
-            setLoading(false);
-            handleBack();
-        }, 800);
     };
 
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,15 +236,34 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
             setFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
         }
     };
+
     const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); }, []);
     const onDragLeave = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); }, []);
     const onDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault(); setIsDragging(false);
+        e.preventDefault();
+        setIsDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             setFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
         }
     }, []);
+
     const removeFile = (idx: number) => setFiles(prev => prev.filter((_, i) => i !== idx));
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    if (initialLoading) {
+        return (
+            <div className="w-full flex items-center justify-center h-full">
+                <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto flex flex-col h-full overflow-y-auto pb-10">
@@ -129,6 +309,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                             className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600"
                         />
                     </div>
+
                     <div className="flex flex-col gap-2">
                         <label className="font-bold text-[#282828] text-sm">Marks</label>
                         <input
@@ -137,6 +318,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                             value={form.marks}
                             onChange={(e) => setForm({ ...form, marks: e.target.value })}
                             placeholder="Enter total marks"
+                            onWheel={(e) => e.currentTarget.blur()}
                             className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
                         />
                     </div>
@@ -146,29 +328,48 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                         <div className="relative">
                             <button
                                 type="button"
-                                onClick={() => setSectionOpen(!sectionOpen)}
+                                onClick={() => setSectionOpen(prev => !prev)}
                                 className="w-full border cursor-pointer border-gray-200 rounded-md px-4 py-2.5 text-sm outline-none focus:border-[#43C17A] text-gray-600 bg-white flex items-center justify-between"
                             >
                                 <span className={form.sections.length === 0 ? "text-gray-400" : "text-gray-600"}>
-                                    {form.sections.length === 0 ? "Select Section(s)" : form.sections.map(id => MOCK_SECTIONS.find(s => s.id === id)?.name).join(", ")}
+                                    {sectionsLoading
+                                        ? "Loading..."
+                                        : form.sections.length === 0
+                                            ? "Select Section(s)"
+                                            : form.sections.map((id: string) =>
+                                                sections.find(s => String(s.collegeSectionsId) === id)?.collegeSections ?? id
+                                            ).join(", ")}
                                 </span>
-                                <svg className={`w-4 h-4 text-gray-400 transition-transform ${sectionOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg
+                                    className={`w-4 h-4 text-gray-400 transition-transform ${sectionOpen ? "rotate-180" : ""}`}
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                >
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                             </button>
+
                             {sectionOpen && (
-                                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-md">
-                                    {MOCK_SECTIONS.map(section => (
-                                        <label key={section.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-600">
-                                            <input
-                                                type="checkbox"
-                                                checked={form.sections.includes(section.id)}
-                                                onChange={() => toggleSection(section.id)}
-                                                className="accent-[#43C17A] w-4 h-4 cursor-pointer"
-                                            />
-                                            {section.name}
-                                        </label>
-                                    ))}
+                                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-md max-h-48 overflow-y-auto">
+                                    {sectionsLoading ? (
+                                        <div className="px-4 py-3 text-sm text-gray-400">Loading sections...</div>
+                                    ) : sections.length > 0 ? (
+                                        sections.map(section => (
+                                            <label
+                                                key={section.collegeSectionsId}
+                                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm text-gray-600"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.sections.includes(String(section.collegeSectionsId))}
+                                                    onChange={() => toggleSection(String(section.collegeSectionsId))}
+                                                    className="accent-[#43C17A] w-4 h-4 cursor-pointer"
+                                                />
+                                                {section.collegeSections}
+                                            </label>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-3 text-sm text-gray-400">No sections found</div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -178,33 +379,59 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5">
                 <h3 className="font-bold text-[#282828] text-base">Project Files</h3>
-                <div className={`grid gap-6 ${files.length > 0 ? "grid-cols-[1.5fr_1fr]" : "grid-cols-1"}`}>
+                <div className={`grid gap-6 ${files.length > 0 || existingFiles.length > 0 ? "grid-cols-[1.5fr_1fr]" : "grid-cols-1"}`}>
                     <input type="file" multiple ref={fileInputRef} onChange={onFileSelect} className="hidden" />
                     <div
                         onDragOver={onDragOver}
                         onDragLeave={onDragLeave}
                         onDrop={onDrop}
-                        className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors ${isDragging ? "border-[#43C17A] bg-[#e2f6ea]" : "border-gray-300 bg-gray-50/50"} ${files.length === 0 ? "py-16" : ""}`}
+                        className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors ${isDragging ? "border-[#43C17A] bg-[#e2f6ea]" : "border-gray-300 bg-gray-50/50"} ${files.length === 0 && existingFiles.length === 0 ? "py-16" : ""}`}
                     >
                         <CloudArrowUp size={40} className={isDragging ? "text-[#43C17A]" : "text-gray-400"} />
                         <p className="text-sm text-gray-500">Drag & Drop Your File here or</p>
-                        <button onClick={() => fileInputRef.current?.click()} className="bg-white cursor-pointer border border-gray-200 text-[#282828] px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="bg-white cursor-pointer border border-gray-200 text-[#282828] px-4 py-1.5 rounded-md text-sm font-bold shadow-sm hover:bg-gray-50 transition-colors"
+                        >
                             Browse Files
                         </button>
                     </div>
 
-                    {(files.length > 0) && (
+                    {(files.length > 0 || existingFiles.length > 0) && (
                         <div className="flex flex-col gap-3 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
+                            {existingFiles.map((file) => (
+                                <div key={file.discussionFileUploadId} className="flex items-center gap-1 justify-between border border-blue-100 rounded-md p-3 bg-white shadow-sm">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <FilePdf size={24} weight="fill" className="text-blue-500 flex-shrink-0" />
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                            <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">
+                                                {decodeURIComponent(file.fileUrl.split("/").pop() || "File")}
+                                            </span>
+                                            <span className="text-xs text-gray-400">Existing file</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => removeExistingFile(file.discussionFileUploadId)}
+                                        className="p-1.5 bg-red-50 cursor-pointer text-red-500 rounded-full hover:bg-red-100 transition-colors flex-shrink-0"
+                                    >
+                                        <Trash size={18} />
+                                    </button>
+                                </div>
+                            ))}
+
                             {files.map((file, idx) => (
-                                <div key={idx} className="flex items-center gap-1 justify-between border border-red-100 rounded-md p-3 bg-white shadow-sm">
+                                <div key={`${file.name}-${idx}`} className="flex items-center gap-1 justify-between border border-red-100 rounded-md p-3 bg-white shadow-sm">
                                     <div className="flex items-center gap-3 min-w-0">
                                         <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" />
                                         <div className="flex flex-col flex-1 min-w-0">
                                             <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">{file.name}</span>
-                                            <span className="text-xs text-gray-400">File attached</span>
+                                            <span className="text-xs text-gray-400">{formatFileSize(file.size)}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => removeFile(idx)} className="p-1.5 bg-red-50 cursor-pointer text-red-500 rounded-full hover:bg-red-100 transition-colors flex-shrink-0">
+                                    <button
+                                        onClick={() => removeFile(idx)}
+                                        className="p-1.5 bg-red-50 cursor-pointer text-red-500 rounded-full hover:bg-red-100 transition-colors flex-shrink-0"
+                                    >
                                         <Trash size={18} />
                                     </button>
                                 </div>
@@ -215,11 +442,24 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
             </div>
 
             <div className="flex justify-end mt-6 gap-4">
-                <button onClick={handleBack} className="px-6 bg-white cursor-pointer py-2.5 rounded-md font-bold text-sm text-[#7B7B7B] border border-[#7B7B7B]">Cancel</button>
-                <button onClick={handleSave} disabled={loading} className="px-8 cursor-pointer py-2.5 rounded-md font-bold text-sm bg-[#43C17A] text-white shadow-sm">
-                    {loading ? "Saving.." : "Save"}
+                <button onClick={handleBack} className="px-6 bg-white cursor-pointer py-2.5 rounded-md font-bold text-sm text-[#7B7B7B] border border-[#7B7B7B]">
+                    Cancel
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="px-8 cursor-pointer py-2.5 rounded-md font-bold text-sm bg-[#43C17A] text-white shadow-sm disabled:opacity-60"
+                >
+                    {loading ? "Saving..." : "Save"}
                 </button>
             </div>
+
+            <style jsx>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+            `}</style>
         </div>
     );
 }

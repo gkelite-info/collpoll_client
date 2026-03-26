@@ -1,5 +1,6 @@
 "use client";
 
+import { User } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
     subject: string;
     facultyName: string;
     facultyId: string;
-    avatar: string;
+    avatar: string | null;
     activeQuiz: number;
     pendingSubmissions: number;
     buttonText?: string;
@@ -32,11 +33,12 @@ export default function DiscussionCourseCard({
     const handleViewDiscussion = () => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("subjectId", String(id));
+        params.set("facultyId", String(facultyId));
         router.push(`${pathname}?${params.toString()}`);
     };
 
     return (
-        <div className="bg-white rounded-[10px] p-5 shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col">
+        <div className="bg-white w-auto rounded-[10px] p-5 shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col">
             <div className="text-center mb-4">
                 <h3 className="text-[#43C17A] font-bold text-[15px] tracking-wide uppercase mb-2">
                     {subject}
@@ -45,11 +47,17 @@ export default function DiscussionCourseCard({
             </div>
 
             <div className="flex items-center gap-3 mb-5 px-1">
-                <img
-                    src={avatar}
-                    alt={facultyName}
-                    className="w-12 h-12 rounded-full object-cover"
-                />
+                {avatar ? (
+                    <img
+                        src={avatar}
+                        alt={facultyName}
+                        className="w-12 h-12 rounded-full object-cover border border-gray-100"
+                    />
+                ) : (
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                        <User size={24} weight="bold" className="text-gray-400" />
+                    </div>
+                )}
                 <div className="flex flex-col text-left">
                     <span className="text-[#282828] font-bold text-sm">
                         {facultyName}
@@ -62,7 +70,7 @@ export default function DiscussionCourseCard({
                 <div className="flex gap-2 items-center">
                     <span className="text-[#282828] text-sm">{activeLabel || "Active Discussions"}</span>
                     <span className="bg-[#D0EFDE] text-[#43C17A] text-[12px] font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
-                        {activeQuiz}
+                        {Number(activeQuiz) || 0}
                     </span>
                 </div>
                 <div className="flex gap-2 items-center">

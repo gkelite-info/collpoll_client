@@ -1,5 +1,5 @@
 "use client";
-import { UserCircle } from "@phosphor-icons/react";
+import { User, UserCircle } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 interface FacultyItem {
@@ -8,8 +8,6 @@ interface FacultyItem {
 }
 
 interface Props {
-  branchId?: number;
-  yearId?: number;
   name: string;
   year: string;
   text: string;
@@ -18,12 +16,13 @@ interface Props {
   activeText: string;
   activeCount: string | number;
   students: number;
-  facultyList?: FacultyItem[];
+  yearId: number;
+  branchId: number;
+  facultyCount: number;
+  facultyPhotos?: string[];
 }
 
 export default function DiscussionDeptCard({
-  branchId,
-  yearId,
   name,
   year,
   text,
@@ -32,7 +31,10 @@ export default function DiscussionDeptCard({
   activeText,
   activeCount,
   students,
-  facultyList = [],
+  yearId,
+  branchId,
+  facultyCount,
+  facultyPhotos = []
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,13 +43,17 @@ export default function DiscussionDeptCard({
     const params = new URLSearchParams(searchParams.toString());
     params.set("dept", name);
     params.set("year", year);
-    params.set("branchId", String(branchId));
     params.set("yearId", String(yearId));
+    params.set("branchId", String(branchId));
     router.push(`?${params.toString()}`);
   };
 
-  const displayAvatars = facultyList.slice(0, 4);
-  const extraFaculty = facultyList.length > 4 ? facultyList.length - 4 : 0;
+  // const displayAvatars = facultyList.slice(0, 4);
+  // const extraFaculty = facultyList.length > 4 ? facultyList.length - 4 : 0;
+
+  const displayCount = Math.min(facultyCount, 4);
+
+  const facultyIcons = Array.from({ length: Math.min(facultyCount, 4) }, (_, i) => i + 1);
 
   return (
     <div
@@ -65,42 +71,57 @@ export default function DiscussionDeptCard({
           className="flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold"
           style={{ backgroundColor: bgColor, color: text }}
         >
+          {/* <span>Year</span> */}
           <span className="ml-1">{year}</span>
-        </div>
-      </div>
+        </div >
+      </div >
 
       <div className="flex items-center gap-2 mb-4">
-        <span className="text-[#282828] text-[13px] font-medium">
-          Faculty -
-        </span>
-
-        {facultyList.length > 0 ? (
+        <span className="text-[#282828] text-[13px] font-medium">Faculty -</span>
+        {/* <div className="flex -space-x-2.5">
+          {mockFaculty.map((fac) => (
+            <div
+              key={fac}
+              className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm relative"
+            >
+              <img
+                // src={`https://i.pravatar.cc/100?img=${fac + Math.floor(Math.random() * 10)}`}
+                src={`https://i.pravatar.cc/100?img=${(fac * 3) % 70}`}
+                alt="faculty"
+                className="w-full h-full object-cover contrast-125"
+              />
+            </div>
+          ))}
+        </div> */}
+        {facultyCount > 0 ? (
           <>
             <div className="flex -space-x-2.5">
-              {displayAvatars.map((fac, index) => (
+              {Array.from({ length: displayCount }).map((_, i) => (
                 <div
-                  key={fac.id}
-                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm relative cursor-pointer"
-                  title={fac.name}
+                  key={i}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden shadow-sm relative flex items-center justify-center"
                 >
-                  <img
-                    src={`https://i.pravatar.cc/100?img=${(index * 3 + 12) % 70}`}
-                    alt={fac.name}
-                    className="w-full h-full object-cover contrast-125"
-                  />
+                  {facultyPhotos[i] ? (
+                    <img
+                      src={facultyPhotos[i]}
+                      alt="faculty"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User size={18} weight="bold" className="text-gray-500" />
+                  )}
                 </div>
               ))}
             </div>
-            {extraFaculty > 0 && (
-              <span className="text-gray-700 font-semibold text-sm ml-1">
-                +{extraFaculty}
-              </span>
-            )}
+            <span className="text-gray-700 font-semibold text-sm ml-1">
+              {facultyCount > 4 ? `+${facultyCount - 4}` : facultyCount}
+            </span>
           </>
         ) : (
-          <span className="text-gray-400 text-xs italic">No faculty</span>
+          <span className="text-gray-400 text-[12px] italic">No faculty assigned</span>
         )}
-      </div>
+        {/* <span className="text-gray-700 font-semibold text-sm ml-1">{facultyCount}</span> */}
+      </div >
 
       <div className="flex items-center justify-between mb-6">
         <p className="text-[#282828] text-[13px]">{activeText}</p>
@@ -116,11 +137,11 @@ export default function DiscussionDeptCard({
         </div>
         <button
           onClick={handleViewDetails}
-          className="bg-[#16284F] cursor-pointer text-white px-5 py-1.5 rounded-md text-xs tracking-wide hover:bg-[#1a2f5c] transition-colors"
+          className="bg-[#16284F] cursor-pointer text-white lg:px-3 lg:py-1.5 rounded-md text-xs tracking-wide transition-colors"
         >
           View Details
         </button>
       </div>
-    </div>
+    </div >
   );
 }

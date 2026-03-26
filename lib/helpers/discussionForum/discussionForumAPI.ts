@@ -82,7 +82,6 @@ export async function fetchExistingDiscussion(
     return { success: true, data };
 }
 
-
 export async function saveDiscussionForum(
     payload: {
         discussionId?: number;
@@ -141,7 +140,6 @@ export async function saveDiscussionForum(
         discussionId: payload.discussionId,
     };
 }
-
 
 export async function deactivateDiscussionForum(discussionId: number) {
     const { error } = await supabase

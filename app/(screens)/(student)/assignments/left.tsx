@@ -10,7 +10,6 @@ import { Loader } from "../calendar/right/timetable";
 import { CaretLeft, CaretRight, } from "@phosphor-icons/react";
 import AssignmentsRight from "./right";
 import QuizCard, { AttemptedQuizCard } from "./components/quizCard";
-import { STATIC_ATTEMPTED_QUIZZES } from "./components/quizData";
 import QuizViewAnswersScreen from "./components/quizViewAnswersScreen";
 import QuizPerformanceModal from "./components/quizPerformanceModal";
 import QuizAttemptScreen from "./components/QuizAttemptScreen";
@@ -39,18 +38,15 @@ function AssignmentsLeftContent() {
     const activeQuizId = searchParams.get("quizId");
     const activeDiscussionId = searchParams.get("discussionId");
     const activeModal = searchParams.get("modal");
-
     const activeTab = searchParams.get("tab") || "assignments";
     const activeView = (searchParams.get("view") as "active" | "previous") || "active";
     const quizView = (searchParams.get("quizView") as "ongoing" | "attempted") || "ongoing";
     const discussionView = (searchParams.get("discussionView") as "active" | "completed") || "active";
-
     const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
     const [previousAssignments, setPreviousAssignments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalRecords, setTotalRecords] = useState(0);
-
     const rowsPerPage = 8;
     const totalPages = Math.ceil(totalRecords / rowsPerPage);
     const [discussionUploads, setDiscussionUploads] = useState<Record<string, any[]>>({});

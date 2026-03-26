@@ -1,27 +1,64 @@
 "use client";
 
-import { CaretLeft, FilePdf } from "@phosphor-icons/react";
+import { CaretLeft, FilePdf, User } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import Image from "next/image";
+import { useEffect, useState } from "react";
 import AddMarksModal from "./addMarksModal";
+import { fetchDiscussionUploads } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
+import { formatFileName } from "@/app/utils/formatFileName";
+import { fetchDiscussionById } from "@/lib/helpers/admin/facultyCountAPI";
+import SubmissionShimmer from "@/app/(screens)/admin/assignments/components/shimmers/submissionShimmer";
 
-const MOCK_SUBMISSIONS = [
-    { id: 1, name: "Lily Tano", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project.pdf", marksObtained: null, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=1" },
-    { id: 2, name: "Ananya Sharma", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project.pdf", marksObtained: 20, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=2" },
-    { id: 3, name: "Sophia Lin", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project.pdf", marksObtained: 20, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=3" },
-    { id: 4, name: "Ananya Sharma", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project_Very_Long_Name_File_Test.pdf", marksObtained: 20, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=4" },
-    { id: 5, name: "Reema Sajid", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project.pdf", marksObtained: 20, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=5" },
-    { id: 6, name: "Estelle Bald", studentId: "479210", section: "A", submittedOn: "04/09/2026", file: "AI_Education_Project.pdf", marksObtained: 20, totalMarks: 25, avatar: "https://i.pravatar.cc/100?u=6" },
-];
+interface Props {
+    discussionId: string | null;
+    discussionSectionId?: number;
+}
 
-export default function FacultyDiscussionSubmissions({ discussionId }: { discussionId: string | null }) {
+export default function FacultyDiscussionSubmissions({
+    discussionId,
+    discussionSectionId
+}: Props) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [submissions, setSubmissions] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [discussion, setDiscussion] = useState<{
+        title: string;
+        description: string;
+    } | null>(null);
+
+    useEffect(() => {
+        if (!discussionId) return;
+
+        fetchDiscussionById(Number(discussionId)).then((data) => {
+            if (data) {
+                setDiscussion({
+                    title: data.title,
+                    description: data.description,
+                });
+            }
+        });
+    }, [discussionId]);
+
+    useEffect(() => {
+        if (!discussionId) return;
+
+        setLoading(true);
+        fetchDiscussionUploads(Number(discussionId), discussionSectionId)
+            .then((data) => {
+                setSubmissions(data);
+            })
+            .catch((err) => {
+                console.error(err);
+                setError("Failed to load submissions.");
+            })
+            .finally(() => setLoading(false));
+    }, [discussionId, discussionSectionId]);
 
     const handleBack = () => {
         const params = new URLSearchParams(searchParams.toString());
@@ -36,82 +73,112 @@ export default function FacultyDiscussionSubmissions({ discussionId }: { discuss
     };
 
     return (
-        <div className="flex flex-col w-full h-full pb-10">
-            <div
-                onClick={handleBack}
-                className="flex items-center gap-2 cursor-pointer mb-5 text-[#282828] hover:text-black transition-colors"
-            >
-                <CaretLeft size={24} weight="bold" />
-                <h1 className="font-bold text-xl md:text-2xl">Create and manage project discussions for students.</h1>
+        <div className="flex flex-col mx-auto h-full pb-10 w-full">
+            <div className="flex items-center gap-1 mb-5 text-[#282828] hover:text-black transition-colors">
+                <CaretLeft size={24} weight="bold" onClick={handleBack} className="cursor-pointer" />
+                <h1 className="font-bold text-xl md:text-2xl">Manage student discussion submissions.</h1>
             </div>
+
             <div className="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.06)] flex justify-between items-center mb-6">
                 <div className="flex flex-col gap-1">
-                    <h2 className="text-lg font-bold text-[#282828]">AI in Education</h2>
-                    <p className="text-sm text-gray-600">Research topic &quot;Impact of AI on Education&quot;</p>
+                    <h2 className="text-lg font-bold text-[#282828]">{discussion?.title || "Discussion"}</h2>
+                    <p className="text-sm text-gray-600"> {discussion?.description || "—"}</p>
                 </div>
                 <div className="bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm">
-                    Total Submissions : 23
+                    Total Submissions : {loading ? "…" : submissions.length}
                 </div>
             </div>
 
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] scrollbar-hide pr-1">
-                {MOCK_SUBMISSIONS.map((student) => (
-                    <div key={student.id} className="bg-white rounded-xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex gap-3">
-                        <div className="flex-shrink-0  items-center">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden -mt-1 relative">
-                                <Image src={student.avatar} alt={student.name} fill className="object-cover" />
-                            </div>
-                        </div>
-                        <div className="flex flex-col flex-1">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-[#43C17A] font-bold text-base">{student.name}</h3>
-                                {student.marksObtained !== null ? (
-                                    <div className="bg-[#16284F] text-white text-xs font-bold px-4 py-1.5 rounded-md min-w-[70px] text-center">
-                                        {student.marksObtained} / {student.totalMarks}
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => openMarksModal(student)}
-                                        className="bg-[#16284F] text-white text-xs font-bold px-4 py-1.5 rounded-md cursor-pointer hover:bg-[#102040] transition-colors min-w-[70px]"
-                                    >
-                                        Marks
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="flex justify-between mt-2">
-                                <div className="flex flex-col gap-2 text-sm">
-                                    <div>
-                                        <span className="font-bold text-[#282828]">Student ID : </span>
-                                        <span className="text-gray-600">{student.studentId}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-[#282828]">Section : </span>
-                                        <span className="text-gray-600">{student.section}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 text-[13px] items-end w-[280px]">
-                                    <div className="w-full text-right">
-                                        <span className="font-bold text-[#282828]">Submitted on : </span>
-                                        <span className="text-gray-600">{student.submittedOn}</span>
-                                    </div>
-
-                                    <div className="flex items-center w-full justify-end">
-                                        <span className="font-bold text-[#282828] mr-1 flex-shrink-0">File :</span>
-                                        <div className="p-1 mr-1 rounded-full bg-[#FE000017]">
-                                            <FilePdf size={15} weight="fill" className="text-red-500 flex-shrink-0" />
-                                        </div>
-                                        <div className="max-w-[160px] overflow-x-auto whitespace-nowrap scrollbar-hide">
-                                            <span className="text-gray-600">{student.file}</span>
-                                        </div>
-                                    </div>
+            {loading ? (
+                <SubmissionShimmer />
+            ) : error ? (
+                <div className="text-center py-10 text-red-500 font-medium">
+                    {error}
+                </div>
+            ) : submissions.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 italic">
+                    No submissions yet.
+                </div>
+            ) : (
+                <div className="flex flex-col gap-4 overflow-y-auto max-h-[70vh] scrollbar-hide">
+                    {submissions.map((submission) => (
+                        <div key={submission.studentDiscussionUploadId} className="bg-white overflow-x-auto rounded-xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex gap-3">
+                            <div className="flex-shrink-0 items-center">
+                                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative flex items-center justify-center">
+                                    {submission.profiles?.avatar_url ? (
+                                        <img
+                                            src={submission.profiles.avatar_url}
+                                            alt={submission.profiles.full_name}
+                                            className="object-cover w-full h-full"
+                                        />
+                                    ) : (
+                                        <User size={20} weight="bold" className="text-gray-500" />
+                                    )}
                                 </div>
                             </div>
+
+                            <div className="flex flex-col flex-1">
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-[#43C17A] font-bold text-base">
+                                        {submission.profiles?.full_name || "Unknown Student"}
+                                    </h3>
+
+                                    {submission.marksObtained !== undefined && submission.marksObtained !== null ? (
+                                        <div className="bg-[#43C17A] text-white text-xs font-bold px-4 py-1.5 rounded-md min-w-[70px] text-center">
+                                            {submission.marksObtained} / 25
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => openMarksModal(submission)}
+                                            className="bg-[#16284F] text-white text-xs font-bold px-4 py-1.5 rounded-md cursor-pointer hover:bg-[#102040] transition-colors min-w-[70px]"
+                                        >
+                                            Add Marks
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-between mt-2">
+                                    <div className="flex flex-col gap-2 text-sm">
+                                        <div>
+                                            <span className="font-bold text-[#282828]">Student ID : </span>
+                                            <span className="text-gray-600">{submission.studentId}</span>
+                                        </div>
+                                        <div>
+                                            <span className="font-bold text-[#282828]">Section : </span>
+                                            <span className="text-gray-600">{submission.profiles?.section || "N/A"}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 text-[13px] items-end w-[280px]">
+                                        <div className="w-full text-right">
+                                            <span className="font-bold text-[#282828]">Submitted on : </span>
+                                            <span className="text-gray-600">
+                                                {new Date(submission.submittedAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center w-full justify-end">
+                                            <span className="font-bold text-[#282828] mr-2 flex-shrink-0">File :</span>
+                                            <div className="p-1 mr-1 rounded-full bg-[#FE000017] cursor-pointer">
+                                                <FilePdf size={15} weight="fill" className="text-red-500 flex-shrink-0" />
+                                            </div>
+                                            <div className="max-w-[160px] overflow-x-auto whitespace-nowrap scrollbar-hide">
+                                                <a
+                                                    href={submission.fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-green-600 hover:underline"
+                                                >
+                                                    {formatFileName(submission.fileUrl)}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {isModalOpen && (
                 <AddMarksModal
