@@ -54,6 +54,7 @@ export default function PayrollPage() {
 
       </div>
 
+
       <div className="mt-6">
         {activeTab === 'summary' && <SummaryPage />}
         {activeTab === 'my-pay' && <MyPayPage />}
