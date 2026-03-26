@@ -7,6 +7,7 @@ import { fetchAdminContext } from "./adminContextAPI";
 type AdminContextType = {
     loading: boolean;
     adminId: number | null;
+    userId: number | null;
     collegeId: number | null;
     collegePublicId: string | null;
     collegeCode: string | null;
@@ -17,6 +18,7 @@ type AdminContextType = {
 const AdminContext = createContext<AdminContextType>({
     loading: true,
     adminId: null,
+    userId: null,
     collegeId: null,
     collegePublicId: null,
     collegeCode: null,
@@ -30,6 +32,7 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
     const [state, setState] = useState<AdminContextType>({
         loading: true,
         adminId: null,
+        userId: null,
         collegeId: null,
         collegePublicId: null,
         collegeCode: null,
@@ -52,6 +55,7 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
                 setState({
                     loading: false,
                     adminId: admin.adminId,
+                    userId: admin.userId,
                     collegeId: admin.collegeId,
                     collegePublicId: admin.collegePublicId,
                     collegeCode: admin.collegeCode,

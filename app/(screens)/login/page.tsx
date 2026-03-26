@@ -114,8 +114,6 @@ export default function LoginPage() {
 
       const role = res.user.role?.toLowerCase();
 
-      console.log("what is role", role);
-
       const roleRouteMap: Record<string, string> = {
         admin: "/admin",
         parent: "/parent",

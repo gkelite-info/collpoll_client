@@ -1,23 +1,45 @@
 import { CaretDown } from "@phosphor-icons/react";
 
-export const FilterDropdown = ({ label, value, options, onChange }: any) => {
+type Option = {
+  label: string;
+  value: string;
+};
+
+type FilterDropdownProps = {
+  label: string;
+  value: string;
+  options: Option[];
+  onChange: (value: string) => void;
+  disabled?: boolean;
+};
+
+export const FilterDropdown = ({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: FilterDropdownProps) => {
   return (
     <div className="flex items-center gap-2">
       <label className="text-[13px] text-[#525252] font-medium">
         {label}
       </label>
-      <div className="relative bg-[#43C17A1C] rounded-full pl-3 pr-7 py-1 flex items-center cursor-pointer transition-colors hover:bg-[#d5f0e1]">
+
+      <div className="relative bg-[#43C17A1C] rounded-full pl-3 pr-7 py-1 flex items-center">
         <select
           value={value}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          className="appearance-none bg-transparent text-[13px] font-semibold text-[#43C17A] focus:outline-none cursor-pointer w-full"
+          className="appearance-none bg-transparent text-[13px] font-semibold text-[#43C17A] focus:outline-none cursor-pointer w-full px-2"
         >
-          {options.map((opt: string) => (
-            <option key={opt} value={opt} className="text-gray-800 font-medium">
-              {opt}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>
+
         <CaretDown
           size={12}
           className="absolute right-2.5 text-[#43C17A] pointer-events-none"

@@ -16,33 +16,63 @@ export type StudentDiscussionUploadRow = {
 
 export async function fetchDiscussionUploads(
     discussionId: number,
-    discussionSectionId: number,
+    discussionSectionId?: number
 ) {
-    const { data, error } = await supabase
+    let query = supabase
         .from("student_discussion_uploads")
         .select(`
       studentDiscussionUploadId,
       studentId,
-      discussionId,
-      discussionSectionId,
       fileUrl,
       submittedAt,
-      isActive,
-      createdAt,
-      updatedAt
+      students:studentId (
+        user:userId (
+          fullName,
+          profile:user_profile (
+            profileUrl
+          )
+        ),
+        student_academic_history (
+          isCurrent,
+          college_sections (
+            collegeSections
+          )
+        )
+      )
     `)
         .eq("discussionId", discussionId)
-        .eq("discussionSectionId", discussionSectionId)
         .eq("isActive", true)
-        .eq("is_deleted", false)
-        .order("createdAt", { ascending: true });
+        .eq("is_deleted", false);
+
+    if (discussionSectionId !== undefined) {
+        query = query.eq("discussionSectionId", discussionSectionId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-        console.error("fetchDiscussionUploads error:", error);
         throw error;
     }
 
-    return data ?? [];
+    return (data ?? []).map((row: any) => {
+        const currentHistory =
+            row.students?.student_academic_history?.find(
+                (h: any) => h.isCurrent === true
+            );
+
+        return {
+            studentDiscussionUploadId: row.studentDiscussionUploadId,
+            studentId: row.studentId,
+            fileUrl: row.fileUrl,
+            submittedAt: row.submittedAt,
+            marksObtained: null,
+            profiles: {
+                full_name: row.students?.user?.fullName ?? "Unknown Student",
+                avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,
+                section: currentHistory?.college_sections?.collegeSections ?? "N/A",
+            },
+        };
+    });
 }
 
 export async function fetchStudentDiscussionUploads(
@@ -206,15 +236,15 @@ export async function uploadStudentDiscussionFiles(
 
 export async function deleteStudentDiscussionFileFromStorage(fileUrl: string) {
     console.log("fileUrl", fileUrl);
-    
+
     const urlParts = fileUrl.split("/student-discussion-files/");
     console.log("url paths", urlParts);
-    
+
     if (urlParts.length < 2) return { success: false };
 
     const filePath = decodeURIComponent(urlParts[1]);
     console.log("filePath", filePath);
-    
+
 
     const { error } = await supabase.storage
         .from("student-discussion-files")
