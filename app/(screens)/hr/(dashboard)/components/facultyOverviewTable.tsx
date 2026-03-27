@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-
+ 
 export interface FacultyRecord {
   name: string;
   checkIn: string;
@@ -9,14 +9,14 @@ export interface FacultyRecord {
   classesTaken: number;
   attendance: string;
 }
-
+ 
 interface Props {
   records: FacultyRecord[];
 }
-
+ 
 export default function FacultyOverviewTable({ records }: Props) {
   const router = useRouter();
-
+ 
   const handleViewProfile = (name: string) => {
     // Correctly routes to the HR's view of the attendance page
     // Passing the faculty name so the page knows whose data to load
@@ -24,13 +24,13 @@ export default function FacultyOverviewTable({ records }: Props) {
       `/hr/MyAttendance?main=attendance&faculty=${encodeURIComponent(name)}`,
     );
   };
-
+ 
   return (
     <div className="w-full">
       <h3 className="text-[#282828] font-medium text-[15px] mb-2 px-2">
         Faculty Attendance Overview
       </h3>
-
+ 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-left border-collapse text-[13px]">
           <thead>
@@ -86,3 +86,5 @@ export default function FacultyOverviewTable({ records }: Props) {
     </div>
   );
 }
+ 
+ 

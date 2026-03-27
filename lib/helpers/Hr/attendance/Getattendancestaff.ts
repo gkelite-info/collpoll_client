@@ -367,15 +367,33 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
     checkOutVal
   );
  
-  // ── CASE 1: INSERT — no attendance_daily row exists yet ───────────────────
-  if (params.attendanceDailyId === null) {
+  // ── Resolve actual attendanceDailyId — check DB if not provided ───────────
+  // This handles case where row was just inserted but UI hasn't re-fetched yet
+  let attendanceDailyId = params.attendanceDailyId;
+ 
+  if (!attendanceDailyId) {
+    const { data: existing } = await supabase
+      .from("attendance_daily")
+      .select("attendanceDailyId")
+      .eq("userId", params.userId)
+      .eq("attendanceDate", today)
+      .maybeSingle();
+ 
+    if (existing?.attendanceDailyId) {
+      attendanceDailyId = existing.attendanceDailyId;
+    }
+  }
+ 
+  // ── CASE 1: INSERT — confirmed no row exists ─────────────────────────────
+  if (!attendanceDailyId) {
     const insertStatus = params.status
       ? params.status.toUpperCase()
       : (checkInVal ? (lateByMinutes > 0 ? "LATE" : "PRESENT") : "ABSENT");
  
-    const { data: inserted, error: insertError } = await supabase
+    // Use upsert to avoid duplicate key if row was already created in same session
+    const { data: upserted, error: upsertError } = await supabase
       .from("attendance_daily")
-      .insert({
+      .upsert({
         userId:          params.userId,
         attendanceDate:  today,
         checkIn:         checkInVal,
@@ -390,16 +408,16 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
         markedReason:    params.reason || null,
         createdAt:       now,
         updatedAt:       now,
-      })
+      }, { onConflict: "userId,attendanceDate" })
       .select("attendanceDailyId")
       .single();
  
-    if (insertError) throw new Error(insertError.message);
+    if (upsertError) throw new Error(upsertError.message);
  
     const { error: adjError } = await supabase
       .from("attendance_adjustments")
       .insert({
-        attendanceDailyId: inserted.attendanceDailyId,
+        attendanceDailyId: upserted.attendanceDailyId,
         oldCheckIn:        null,
         oldCheckOut:       null,
         newCheckIn:        checkInVal,
@@ -412,7 +430,7 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
     return;
   }
  
-  // ── CASE 2: EDIT — attendance_daily row already exists ────────────────────
+  // ── CASE 2: EDIT — row confirmed exists ──────────────────────────────────
   const editPayload: Record<string, unknown> = {
     totalMinutes,
     lateByMinutes,
@@ -421,25 +439,21 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
     updatedAt:       now,
   };
  
-  // Always save status when provided
   if (params.status) editPayload.status = params.status.toUpperCase();
- 
-  // Only overwrite checkIn/checkOut if HR actually entered new values
   if (checkInVal  !== null) editPayload.checkIn  = checkInVal;
   if (checkOutVal !== null) editPayload.checkOut = checkOutVal;
  
   const { error: updateError } = await supabase
     .from("attendance_daily")
     .update(editPayload)
-    .eq("attendanceDailyId", params.attendanceDailyId);
+    .eq("attendanceDailyId", attendanceDailyId);
  
   if (updateError) throw new Error(updateError.message);
  
-  // attendance_adjustments: find latest row and UPDATE it (not insert new)
   const { data: existingAdj, error: fetchAdjError } = await supabase
     .from("attendance_adjustments")
     .select("adjustmentId, newCheckIn, newCheckOut")
-    .eq("attendanceDailyId", params.attendanceDailyId)
+    .eq("attendanceDailyId", attendanceDailyId)
     .order("adjustmentId", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -447,9 +461,6 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
   if (fetchAdjError) throw new Error(fetchAdjError.message);
  
   if (existingAdj) {
-    // UPDATE existing adjustment row:
-    // oldCheckIn = previous newCheckIn (what was stored before this edit)
-    // newCheckIn = the new value HR just entered
     const { error: adjUpdateError } = await supabase
       .from("attendance_adjustments")
       .update({
@@ -464,11 +475,10 @@ export async function saveAttendance(params: SaveAttendanceParams): Promise<void
  
     if (adjUpdateError) throw new Error(adjUpdateError.message);
   } else {
-    // No adjustment row yet (biometric/bulk-mark row) — INSERT first adjustment
     const { error: adjInsertError } = await supabase
       .from("attendance_adjustments")
       .insert({
-        attendanceDailyId: params.attendanceDailyId,
+        attendanceDailyId: attendanceDailyId,
         oldCheckIn:        params.rawCheckIn  ?? null,
         oldCheckOut:       params.rawCheckOut ?? null,
         newCheckIn:        checkInVal,
@@ -495,7 +505,7 @@ export async function saveStatusOnly(params: {
   const today = todayDate();
   const now   = new Date().toISOString();
  
-  if (params.attendanceDailyId) {
+  if (params.attendanceDailyId !== null && params.attendanceDailyId > 0) {
     // Row exists → just update status
     const { error } = await supabase
       .from("attendance_daily")
@@ -504,21 +514,21 @@ export async function saveStatusOnly(params: {
  
     if (error) throw new Error(error.message);
   } else {
-    // No row yet → insert with status only, no times
+    // No row yet → upsert with status only, no times
     const { error } = await supabase
       .from("attendance_daily")
-      .insert({
-        userId:         params.userId,
-        attendanceDate: today,
-        status:         params.status.toUpperCase(),
-        isManual:       true,
-        markedBy:       params.collegeHrId,
-        lateByMinutes:  0,
+      .upsert({
+        userId:          params.userId,
+        attendanceDate:  today,
+        status:          params.status.toUpperCase(),
+        isManual:        true,
+        markedBy:        params.collegeHrId,
+        lateByMinutes:   0,
         earlyOutMinutes: 0,
-        classesTaken:   0,
-        createdAt:      now,
-        updatedAt:      now,
-      });
+        classesTaken:    0,
+        createdAt:       now,
+        updatedAt:       now,
+      }, { onConflict: "userId,attendanceDate" });
  
     if (error) throw new Error(error.message);
   }
