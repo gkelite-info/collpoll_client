@@ -1,166 +1,159 @@
-import { CaretDown, CaretLeft } from "@phosphor-icons/react";
+import { MonthDetailRow } from "@/lib/helpers/Hr/dashboard/Hrdashhelper";
+import { CaretDown, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-
-interface FacultyDetailRecord {
-  name: string;
-  presentDays: number;
-  absentDays: number;
-  leaves: number;
-  attendancePercent: number;
-  lateCheckIns: number;
-  status: string;
-}
+import TableComponent from "@/app/utils/table/table";
 
 interface Props {
-  month: string;
-  months: string[];
+  month:         string;
+  months:        string[];
+  rows:          MonthDetailRow[];
+  roleLabel:     string;
+  loading?:      boolean;
+  totalCount:    number;
+  currentPage:   number;
+  onPageChange:  (page: number) => void;
   onMonthChange: (month: string) => void;
-  onBack?: () => void;
+  onBack?:       () => void;
 }
 
-const mockDetailsData: FacultyDetailRecord[] = [
-  {
-    name: "Dr. Meera Sharma",
-    presentDays: 19,
-    absentDays: 1,
-    leaves: 0,
-    attendancePercent: 95,
-    lateCheckIns: 1,
-    status: "Excellent",
-  },
-  {
-    name: "Mr. Rahul Menon",
-    presentDays: 17,
-    absentDays: 2,
-    leaves: 1,
-    attendancePercent: 89,
-    lateCheckIns: 3,
-    status: "Needs Improvement",
-  },
-  {
-    name: "Ms. Divya Rao",
-    presentDays: 15,
-    absentDays: 3,
-    leaves: 2,
-    attendancePercent: 84,
-    lateCheckIns: 2,
-    status: "Low Attendance",
-  },
-  {
-    name: "Dr. Meera Sharma",
-    presentDays: 20,
-    absentDays: 0,
-    leaves: 0,
-    attendancePercent: 100,
-    lateCheckIns: 0,
-    status: "Perfect",
-  },
-  {
-    name: "Mr. Rahul Menon",
-    presentDays: 19,
-    absentDays: 1,
-    leaves: 0,
-    attendancePercent: 95,
-    lateCheckIns: 1,
-    status: "Excellent",
-  },
-  {
-    name: "Ms. Divya Rao",
-    presentDays: 17,
-    absentDays: 2,
-    leaves: 1,
-    attendancePercent: 89,
-    lateCheckIns: 3,
-    status: "Needs Improvement",
-  },
-  {
-    name: "Dr. Meera Sharma",
-    presentDays: 15,
-    absentDays: 3,
-    leaves: 2,
-    attendancePercent: 84,
-    lateCheckIns: 2,
-    status: "Low Attendance",
-  },
-  {
-    name: "Dr. Meera Sharma",
-    presentDays: 20,
-    absentDays: 0,
-    leaves: 0,
-    attendancePercent: 100,
-    lateCheckIns: 0,
-    status: "Perfect",
-  },
-];
+function getPerformanceColor(p: string): string {
+  if (p === "Excellent") return "text-[#00B050]";
+  if (p === "Good")      return "text-[#FFC000]";
+  return "text-[#FF0000]";
+}
+
+function Pagination({ currentPage, totalPages, onPageChange }: {
+  currentPage:  number;
+  totalPages:   number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex justify-end items-center gap-3 mt-4 mb-2">
+      <button
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        className={`w-10 h-10 flex items-center justify-center rounded-lg border
+          ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+      >
+        <CaretLeft size={18} weight="bold" />
+      </button>
+      {[...Array(totalPages)].map((_, i) => (
+        <button key={i} onClick={() => onPageChange(i + 1)}
+          className={`w-10 h-10 rounded-lg font-semibold
+            ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}>
+          {i + 1}
+        </button>
+      ))}
+      <button
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        className={`w-10 h-10 flex items-center justify-center rounded-lg border
+          ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+      >
+        <CaretRight size={18} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+const PAGE_SIZE = 10;
+
+function Shimmer({ className }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-gray-200 rounded ${className}`}>
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    </div>
+  );
+}
+
+function TableShimmer() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mt-2">
+      <div className="p-3 flex flex-col gap-2">
+        <div className="flex gap-3 px-1 pb-2">
+          {[...Array(7)].map((_, i) => <Shimmer key={i} className="h-3 flex-1" />)}
+        </div>
+        {[...Array(5)].map((_, r) => (
+          <div key={r} className="flex gap-3 px-1 py-1">
+            {[...Array(7)].map((_, c) => <Shimmer key={c} className="h-4 flex-1" />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function FacultyMonthDetailTable({
-  month,
-  months,
-  onMonthChange,
-  onBack,
+  month, months, rows, roleLabel, loading,
+  totalCount, currentPage, onPageChange,
+  onMonthChange, onBack,
 }: Props) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
         setIsDropdownOpen(false);
-      }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const getAttendanceColor = (percent: number) => {
-    if (percent >= 95) return "text-[#00B050]";
-    if (percent >= 88) return "text-[#FFC000]";
-    return "text-[#FF0000]";
-  };
+  const columns = [
+    { title: "Name",           key: "name" },
+    { title: "Present Days",   key: "presentDays" },
+    { title: "Absent Days",    key: "absentDays" },
+    { title: "Leaves",         key: "leaves" },
+    { title: "Late Check-ins", key: "lateCheckins" },
+    { title: "Status",         key: "performance" },
+  ];
+
+  const tableData = rows.map(row => ({
+    name:         row.name,
+    presentDays:  row.presentDays,
+    absentDays:   row.absentDays,
+    leaves:       row.leaves,
+    lateCheckins: row.lateCheckins,
+    performance: (
+      <span className={`font-semibold text-xs ${getPerformanceColor(row.performance)}`}>
+        {row.performance}
+      </span>
+    ),
+  }));
 
   return (
-    <div className="w-full bg-[#F5F5F7] min-h-screen p-2 font-sans">
+    <div className="w-full font-sans">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           {onBack && (
-            <button onClick={onBack} className=" cursor-pointer">
+            <button onClick={onBack} className="cursor-pointer">
               <CaretLeft size={22} className="text-[#282828] font-bold" />
             </button>
           )}
-          <h1 className="text-[20px] font-bold text-[#282828]">
-            Faculty Attendance Table
+          <h1 className="text-[16px] font-bold text-[#282828]">
+            {roleLabel} Attendance Table
           </h1>
         </div>
 
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="bg-[#43C17A] cursor-pointer text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 font-medium text-[13px] shadow-sm hover:bg-[#3baf6d] transition-colors"
+            className="bg-[#43C17A] cursor-pointer text-white px-3 py-1.5 rounded-full flex items-center gap-1.5 font-medium text-[13px] shadow-sm hover:bg-[#3baf6d] transition-colors"
           >
-            {month === "Jan" ? "January" : month}
+            {month}
             <CaretDown size={14} weight="bold" />
           </button>
 
           {isDropdownOpen && (
             <div className="absolute right-0 mt-1 w-28 bg-white border border-gray-100 shadow-lg rounded-md py-1 z-50 max-h-48 overflow-y-auto">
               {months.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => {
-                    onMonthChange(m);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 cursor-pointer py-1.5 text-[13px] transition-colors ${
-                    month === m
-                      ? "bg-[#e8f8ef] text-[#43C17A] font-semibold"
-                      : "hover:bg-gray-50 text-gray-700"
-                  }`}
-                >
-                  {m === "Jan" ? "January" : m}
+                <button key={m} onClick={() => { onMonthChange(m); setIsDropdownOpen(false); }}
+                  className={`w-full text-left px-3 cursor-pointer py-1.5 text-[13px] transition-colors
+                    ${month === m ? "bg-[#e8f8ef] text-[#43C17A] font-semibold" : "hover:bg-gray-50 text-gray-700"}`}>
+                  {m}
                 </button>
               ))}
             </div>
@@ -168,47 +161,16 @@ export default function FacultyMonthDetailTable({
         </div>
       </div>
 
-      <div className="bg-[#FAFAFA] rounded-lg overflow-hidden border border-gray-200">
-        <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-gray-300">
-          <table className="w-full text-left border-collapse whitespace-nowrap min-w-[850px]">
-            <thead>
-              <tr className="bg-[#EFEFEF] text-[#454545] text-[13px]">
-                <th className="py-2.5 px-4 font-semibold sticky left-0 bg-[#EFEFEF] z-20 shadow-[1px_0_0_0_#e5e7eb]">
-                  Name
-                </th>
-                <th className="py-2.5 px-4 font-semibold">Present Days</th>
-                <th className="py-2.5 px-4 font-semibold">Absent Days</th>
-                <th className="py-2.5 px-4 font-semibold">Leaves</th>
-                <th className="py-2.5 px-4 font-semibold">Attendance %</th>
-                <th className="py-2.5 px-4 font-semibold">Late Check-ins</th>
-                <th className="py-2.5 px-4 font-semibold">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockDetailsData.map((row, idx) => (
-                <tr
-                  key={idx}
-                  className="text-[#454545] text-[13px] hover:bg-white transition-colors border-b border-gray-100 last:border-none"
-                >
-                  <td className="py-2 px-4 font-medium sticky left-0 bg-[#FAFAFA] z-10 shadow-[1px_0_0_0_#e5e7eb]">
-                    {row.name}
-                  </td>
-                  <td className="py-2 px-4">{row.presentDays}</td>
-                  <td className="py-2 px-4">{row.absentDays}</td>
-                  <td className="py-2 px-4">{row.leaves}</td>
-                  <td
-                    className={`py-2 px-4 font-semibold ${getAttendanceColor(row.attendancePercent)}`}
-                  >
-                    {row.attendancePercent}%
-                  </td>
-                  <td className="py-2 px-4">{row.lateCheckIns}</td>
-                  <td className="py-2 px-4">{row.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {loading ? (
+        <TableShimmer />
+      ) : rows.length === 0 ? (
+        <p className="text-gray-400 text-sm text-center py-8">No records for {month}</p>
+      ) : (
+        <>
+          <TableComponent columns={columns} tableData={tableData} height="50vh" />
+          <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+        </>
+      )}
     </div>
   );
 }

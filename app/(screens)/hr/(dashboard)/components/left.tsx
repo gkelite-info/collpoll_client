@@ -1,159 +1,354 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { CaretLeft, CaretRight, Clock, User, UsersThree } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
-import { CaretDown, Clock, User, UsersThree } from "@phosphor-icons/react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useTransition, useState } from "react";
 import { HrInfoCard } from "./hrInfoCard";
-
 import MonthlyAttendanceChart from "./MonthlyAttendanceChart";
 import FacultyMonthDetailTable from "./facultyAttendanceTable";
-import FacultyOverviewTable, { FacultyRecord } from "./facultyOverviewTable";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import TableComponent from "@/app/utils/table/table";
+import { DEFAULT_ROLE, getHrDashCards, getMonthDetail, getMonthlyAttendance, getTodayAttendance, HR_ROLE_PILLS, HrDashCards, MonthDetailRow, MonthlyBar, TodayRow } from "@/lib/helpers/Hr/dashboard/Hrdashhelper";
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { useRouter } from "next/navigation";
 
-const ROLE_PILLS = ["College Admin", "Admin", "Finance Manager", "Finance Executive", "HR Manager", "Placement", "Faculty"];
-const BRANCHES   = ["CSE", "ECE", "MECH", "CIVIL", "EEE"];
-const YEARS      = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function HrDashContent() {
-  const hrImage = "/hr-fe.png";
-
-  const searchParams = useSearchParams();
-  const pathname     = usePathname();
-  const router       = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  const selectedMonth = searchParams.get("month");
-
-  // ── Local filter state ────────────────────────────────────────────────────
-  const [activeRole,   setActiveRole]   = useState<string | null>(null);
-  const [activeBranch, setActiveBranch] = useState("CSE");
-  const [activeYear,   setActiveYear]   = useState("1st Year");
-
-  const handleMonthRoute = (month: string | null) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (month) { params.set("month", month); } else { params.delete("month"); }
-    startTransition(() => { router.push(`${pathname}?${params.toString()}`, { scroll: false }); });
-  };
-
-  const cardData = [
-    { style: "bg-[#E2DAFF] h-[126.35px] w-[182px]", icon: <UsersThree size={21} weight="fill" color="#6C20CA" />, value: "05", label: "Total Staff" },
-    { style: "bg-[#FFEDDA] h-[126.35px] w-[182px]", icon: <User       size={21} weight="fill" color="#FFBB70" />, value: "05", label: "Present Today" },
-    { style: "bg-[#FFE0E0] h-[126.35px] w-[182px]", icon: <User       size={21} weight="fill" color="#FF0000" />, value: "14", label: "Absent Today" },
-    { style: "bg-[#CEE6FF] h-[126.35px] w-[182px]", icon: <Clock      size={21} weight="fill" color="#60AEFF" />, value: "5,480", label: "Late Check-ins" },
-  ];
-
-  const HrIfocardData = [
-    { show: false, user: "HR", studentsTaskPercentage: 85, facultySubject: "", image: hrImage, top: "-top-5", imageHeight: "h-42", right: "right-8" },
-  ];
-
-  const monthlyChartData = [
-    { month: "Jan", value: 70 }, { month: "Feb", value: 59 }, { month: "Mar", value: 59 },
-    { month: "Apr", value: 59 }, { month: "May", value: 70 }, { month: "Jun", value: 59 },
-    { month: "Jul", value: 59 }, { month: "Aug", value: 65 }, { month: "Sep", value: 72 },
-    { month: "Oct", value: 68 }, { month: "Nov", value: 61 }, { month: "Dec", value: 55 },
-  ];
-
-  const facultyRecordsData: FacultyRecord[] = [
-    { name: "Dr. Meera Sharma",  checkIn: "09:04 AM", checkOut: "05:12 PM", status: "Present", classesTaken: 4, attendance: "95%" },
-    { name: "Mr. Rahul Menon",   checkIn: "09:15 AM", checkOut: "04:59 PM", status: "Late",    classesTaken: 3, attendance: "89%" },
-    { name: "Ms. Divya Rao",     checkIn: "-",        checkOut: "-",        status: "Absent",  classesTaken: 0, attendance: "78%" },
-    { name: "Dr. Meera Sharma",  checkIn: "09:04 AM", checkOut: "05:12 PM", status: "Present", classesTaken: 4, attendance: "95%" },
-    { name: "Mr. Rahul Menon",   checkIn: "09:15 AM", checkOut: "04:59 PM", status: "Late",    classesTaken: 3, attendance: "89%" },
-    { name: "Ms. Divya Rao",     checkIn: "-",        checkOut: "-",        status: "Absent",  classesTaken: 0, attendance: "78%" },
-    { name: "Dr. Meera Sharma",  checkIn: "09:04 AM", checkOut: "05:12 PM", status: "Present", classesTaken: 4, attendance: "95%" },
-  ];
-
-  if (selectedMonth) {
-    return (
-      <div className="w-[68%] p-2">
-        <FacultyMonthDetailTable
-          month={selectedMonth}
-          months={monthlyChartData.map((d) => d.month)}
-          onMonthChange={(m) => handleMonthRoute(m)}
-          onBack={() => handleMonthRoute(null)}
-        />
-      </div>
-    );
-  }
-
+// ── Pagination ────────────────────────────────────────────────────────────────
+function Pagination({ currentPage, totalPages, onPageChange }: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
   return (
-    <div className="w-[68%] p-2">
-      <HrInfoCard cardProps={HrIfocardData} />
+    <div className="flex justify-end items-center gap-3 mt-4 mb-2">
+      <button
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        disabled={currentPage === 1}
+        className={`w-10 h-10 flex items-center justify-center rounded-lg border
+          ${currentPage === 1 ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+      >
+        <CaretLeft size={18} weight="bold" />
+      </button>
+      {[...Array(totalPages)].map((_, i) => (
+        <button key={i} onClick={() => onPageChange(i + 1)}
+          className={`w-10 h-10 rounded-lg font-semibold
+            ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "border border-gray-300 text-gray-600 hover:bg-gray-100"}`}>
+          {i + 1}
+        </button>
+      ))}
+      <button
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        disabled={currentPage === totalPages}
+        className={`w-10 h-10 flex items-center justify-center rounded-lg border
+          ${currentPage === totalPages ? "border-gray-200 text-gray-300" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
+      >
+        <CaretRight size={18} weight="bold" />
+      </button>
+    </div>
+  );
+}
 
-      {/* ── Stat cards ──────────────────────────────────────────────────── */}
-      <div className="mt-5 rounded-lg flex gap-3 text-xs">
-        {cardData.map((item, i) => (
-          <CardComponent key={i} style={item.style} icon={item.icon} value={item.value} label={item.label} />
-        ))}
-      </div>
+// ── Shimmer ───────────────────────────────────────────────────────────────────
+function Shimmer({ className }: { className?: string }) {
+  return (
+    <div className={`relative overflow-hidden bg-gray-200 rounded ${className}`}>
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+    </div>
+  );
+}
 
-      {/* ── Role pills ──────────────────────────────────────────────────── */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {ROLE_PILLS.map((role) => {
-          const isActive = activeRole === role;
-          return (
-            <button
-              key={role}
-              onClick={() => setActiveRole(isActive ? null : role)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer
-                ${isActive
-                  ? "bg-[#22C55E] text-white border-[#22C55E]"
-                  : "bg-white text-[#282828] border-gray-300 hover:bg-[#22C55E] hover:text-white hover:border-[#22C55E]"
-                }`}
-            >
-              {role}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* ── Chart + Branch/Year dropdowns ───────────────────────────────── */}
-      <div className="mt-4 flex flex-col gap-4">
-
-        {/* Branch + Year dropdowns */}
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500 font-medium">Branch :</span>
-          <div className="relative">
-            <select
-              value={activeBranch}
-              onChange={(e) => setActiveBranch(e.target.value)}
-              className="appearance-none bg-[#22C55E] text-white text-xs font-semibold pl-3 pr-7 py-1.5 rounded-full cursor-pointer outline-none"
-            >
-              {BRANCHES.map((b) => <option key={b} value={b}>{b}</option>)}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2"><CaretDown size={11} weight="bold" color="white" /></span>
-          </div>
-
-          <span className="text-xs text-gray-500 font-medium">Year</span>
-          <div className="relative">
-            <select
-              value={activeYear}
-              onChange={(e) => setActiveYear(e.target.value)}
-              className="appearance-none bg-[#22C55E] text-white text-xs font-semibold pl-3 pr-7 py-1.5 rounded-full cursor-pointer outline-none"
-            >
-              {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-            </select>
-            <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2"><CaretDown size={11} weight="bold" color="white" /></span>
-          </div>
+function CardShimmer() {
+  return (
+    <div className="flex gap-3 w-full">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="flex-1 h-[126px] rounded-xl bg-gray-200 relative overflow-hidden">
+          <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
         </div>
+      ))}
+    </div>
+  );
+}
 
-        <MonthlyAttendanceChart
-          title={`Monthly Attendance Overview (${activeBranch})`}
-          data={monthlyChartData}
-          onBarClick={(month) => handleMonthRoute(month)}
-        />
-
-        <FacultyOverviewTable records={facultyRecordsData} />
+function ChartShimmer() {
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-5">
+      <Shimmer className="h-5 w-64 mb-6" />
+      <div className="flex items-end gap-3 h-[160px]">
+        {[70, 55, 55, 55, 70, 55, 55, 60, 70, 65, 60, 50].map((h, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-2">
+            <div className="w-full rounded-t relative overflow-hidden bg-gray-200" style={{ height: `${h}%` }}>
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+            </div>
+            <Shimmer className="h-2 w-6" />
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-export default function HrDashLeft() {
+function TableShimmer({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500"><Loader /></div>}>
-      <HrDashContent />
-    </Suspense>
+    <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mt-2">
+      <div className="p-3 flex flex-col gap-2">
+        <div className="flex gap-3 px-1 pb-2">
+          {[...Array(cols)].map((_, i) => <Shimmer key={i} className="h-3 flex-1" />)}
+        </div>
+        {[...Array(rows)].map((_, r) => (
+          <div key={r} className="flex gap-3 px-1 py-1">
+            {[...Array(cols)].map((_, c) => <Shimmer key={c} className="h-4 flex-1" />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const s = (status ?? "").toUpperCase();
+  const cls =
+    s === "PRESENT" ? "text-[#22C55E]" :
+      s === "LATE" ? "text-[#EAB308]" :
+        s === "ABSENT" ? "text-[#EF4444]" :
+          s === "LEAVE" ? "text-[#60AEFF]" : "text-gray-400";
+  return (
+    <span className={`${cls} font-semibold text-xs`}>
+      {s ? s.charAt(0) + s.slice(1).toLowerCase() : "—"}
+    </span>
+  );
+}
+
+function PctBadge({ pct }: { pct: string }) {
+  const n = parseInt(pct);
+  const cls = isNaN(n) ? "text-gray-400" : n >= 90 ? "text-[#22C55E]" : n >= 75 ? "text-[#EAB308]" : "text-[#EF4444]";
+  return <span className={`${cls} font-semibold text-xs`}>{pct}</span>;
+}
+
+// ── Today table ───────────────────────────────────────────────────────────────
+function TodayTable({ rows, isFaculty, totalCount, currentPage, onPageChange }: {
+  rows: TodayRow[];
+  isFaculty: boolean;
+  totalCount: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+}) {
+   const router = useRouter();
+  const PAGE_SIZE = 10;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  if (rows.length === 0)
+    return <p className="text-gray-400 text-xs text-center py-6">No attendance records for today</p>;
+
+  const columns = [
+    { title: "Name", key: "name" },
+    { title: "Check-In", key: "checkIn" },
+    { title: "Check-Out", key: "checkOut" },
+    { title: "Status", key: "status" },
+    ...(isFaculty ? [{ title: "Classes Taken", key: "classesTaken" }] : []),
+    { title: "Action", key: "action" },
+  ];
+
+  const tableData = rows.map((r) => ({
+    name: r.name,
+    checkIn: r.checkIn,
+    checkOut: r.checkOut,
+    status: <StatusBadge status={r.status} />,
+    classesTaken: r.classesTaken ?? 0,
+
+    // ✅ ADD THIS BLOCK
+    action: (
+      <span
+        className="text-emerald-600 hover:text-emerald-500 cursor-pointer font-medium underline"
+        // onClick={() =>
+        //   router.push(`/hr/MyAttendance?main=attendance&userId=${r.userId}`)
+        // }
+      >
+        View
+      </span>
+    ),
+  }));
+
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-[#282828] mb-1 mt-2">Attendance Overview</h4>
+      <TableComponent columns={columns} tableData={tableData} height="38vh" />
+      <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function HrDashLeft() {
+  const { collegeId, loading: hrLoading } = useCollegeHr();
+  const currentYear = new Date().getFullYear();
+  const topRef = useRef<HTMLDivElement>(null);
+
+  const [activeRole, setActiveRole] = useState(DEFAULT_ROLE);
+  const [cards, setCards] = useState<HrDashCards | null>(null);
+  const [chartData, setChartData] = useState<MonthlyBar[]>([]);
+  const [todayRows, setTodayRows] = useState<TodayRow[]>([]);
+  const [todayTotal, setTodayTotal] = useState(0);
+  const [todayPage, setTodayPage] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [detailRows, setDetailRows] = useState<MonthDetailRow[]>([]);
+  const [detailTotal, setDetailTotal] = useState(0);
+  const [detailPage, setDetailPage] = useState(1);
+  const [loadingCards, setLoadingCards] = useState(true);
+  const [loadingChart, setLoadingChart] = useState(true);
+  const [loadingToday, setLoadingToday] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  const PAGE_SIZE = 10;
+
+  // ── Stat cards ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!collegeId || hrLoading) return;
+    setLoadingCards(true);
+    getHrDashCards(collegeId).then(setCards).finally(() => setLoadingCards(false));
+  }, [collegeId, hrLoading]);
+
+  // ── Monthly chart — refetch when role changes ───────────────────────────────
+  useEffect(() => {
+    if (!collegeId || hrLoading) return;
+    setSelectedMonth(null);
+    setLoadingChart(true);
+    getMonthlyAttendance(collegeId, activeRole, currentYear)
+      .then(setChartData).finally(() => setLoadingChart(false));
+  }, [collegeId, hrLoading, activeRole]);
+
+  // ── Today table — refetch when role OR page changes ─────────────────────────
+  useEffect(() => {
+    if (!collegeId || hrLoading) return;
+    setLoadingToday(true);
+    getTodayAttendance(collegeId, activeRole, todayPage, PAGE_SIZE)
+      .then(res => { setTodayRows(res.data); setTodayTotal(res.totalCount); })
+      .finally(() => setLoadingToday(false));
+  }, [collegeId, hrLoading, activeRole, todayPage]);
+
+  // ── Role change — reset today page ─────────────────────────────────────────
+  const handleRoleChange = (role: string) => {
+    setActiveRole(role);
+    setTodayPage(1);
+    setSelectedMonth(null);
+  };
+
+  // ── Month detail fetch ──────────────────────────────────────────────────────
+  const fetchDetail = async (month: string, page: number) => {
+    if (!collegeId) return;
+    const idx = MONTH_LABELS.indexOf(month);
+    if (idx === -1) return;
+    setLoadingDetail(true);
+    const res = await getMonthDetail(collegeId, activeRole, currentYear, idx, page, PAGE_SIZE);
+    setDetailRows(res.data);
+    setDetailTotal(res.totalCount);
+    setLoadingDetail(false);
+  };
+
+  const handleBarClick = async (month: string) => {
+    setSelectedMonth(month);
+    setDetailPage(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    await fetchDetail(month, 1);
+  };
+
+  const handleMonthChange = async (month: string) => {
+    setSelectedMonth(month);
+    setDetailPage(1);
+    await fetchDetail(month, 1);
+  };
+
+  const handleDetailPageChange = async (page: number) => {
+    setDetailPage(page);
+    if (selectedMonth) await fetchDetail(selectedMonth, page);
+  };
+
+  const isFaculty = activeRole === "Faculty";
+  const roleLabel = HR_ROLE_PILLS.find(p => p.value === activeRole)?.label ?? activeRole;
+
+  const cardData = [
+    { style: "bg-[#E2DAFF] h-[126.35px] w-[182px]", icon: <UsersThree size={21} weight="fill" color="#6C20CA" />, value: String(cards?.totalStaff ?? 0).padStart(2, "0"), label: "Total Staff" },
+    { style: "bg-[#E6FBEA] h-[126.35px] w-[182px]", icon: <User size={21} weight="fill" color="#22C55E" />, value: String(cards?.presentToday ?? 0).padStart(2, "0"), label: "Present Today" },
+    { style: "bg-[#FFE0E0] h-[126.35px] w-[182px]", icon: <User size={21} weight="fill" color="#FF0000" />, value: String(cards?.absentToday ?? 0).padStart(2, "0"), label: "Absent Today" },
+    { style: "bg-[#CEE6FF] h-[126.35px] w-[182px]", icon: <Clock size={21} weight="fill" color="#60AEFF" />, value: String(cards?.lateCheckins ?? 0).padStart(2, "0"), label: "Late Check-ins" },
+  ];
+
+  return (
+    <div ref={topRef} className="w-[68%] p-2">
+      {selectedMonth ? (
+        <FacultyMonthDetailTable
+          month={selectedMonth}
+          months={MONTH_LABELS}
+          rows={detailRows}
+          roleLabel={roleLabel}
+          loading={loadingDetail}
+          totalCount={detailTotal}
+          currentPage={detailPage}
+          onPageChange={handleDetailPageChange}
+          onMonthChange={handleMonthChange}
+          onBack={() => setSelectedMonth(null)}
+        />
+      ) : (
+        <>
+          <HrInfoCard cardProps={[{
+            show: false, user: "HR", studentsTaskPercentage: 85,
+            facultySubject: "", image: "/hr-fe.png",
+            top: "-top-5", imageHeight: "h-42", right: "right-8",
+          }]} />
+
+          {/* Stat cards */}
+          <div className="mt-5">
+            {loadingCards ? <CardShimmer /> : (
+              <div className="flex gap-3 text-xs">
+                {cardData.map((item, i) => (
+                  <CardComponent key={i} style={item.style} icon={item.icon} value={item.value} label={item.label} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Role pills */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {HR_ROLE_PILLS.map((pill) => {
+              const isActive = activeRole === pill.value;
+              return (
+                <button key={pill.value} onClick={() => handleRoleChange(pill.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer
+                    ${isActive
+                      ? "bg-[#22C55E] text-white border-[#22C55E]"
+                      : "bg-white text-[#282828] border-gray-300 hover:bg-[#22C55E] hover:text-white hover:border-[#22C55E]"
+                    }`}>
+                  {pill.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Chart + Today table */}
+          <div className="mt-4 flex flex-col gap-4">
+            {loadingChart
+              ? <ChartShimmer />
+              : <MonthlyAttendanceChart
+                title={`Monthly Attendance Overview — ${roleLabel} (${currentYear})`}
+                data={chartData}
+                onBarClick={handleBarClick}
+              />
+            }
+            {loadingToday
+              ? <TableShimmer rows={5} cols={isFaculty ? 5 : 4} />
+              : <TodayTable
+                rows={todayRows}
+                isFaculty={isFaculty}
+                totalCount={todayTotal}
+                currentPage={todayPage}
+                onPageChange={(p) => setTodayPage(p)}
+              />
+            }
+          </div>
+        </>
+      )}
+    </div>
   );
 }
