@@ -12,7 +12,7 @@ export async function getAttendanceMonthlyStats({
   year,
 }: Props) {
 
-  const startDate = `${year}-${String(month).padStart(2,"0")}-01`;
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const endDate = new Date(year, month, 0).toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
 
@@ -48,3 +48,98 @@ export async function getAttendanceMonthlyStats({
   };
 
 }
+
+
+
+// import { supabase } from "@/lib/supabaseClient";
+
+// interface Props {
+//   userId: number;
+//   month: number;
+//   year: number;
+// }
+
+// export async function getAttendanceMonthlyStats({
+//   userId,
+//   month,
+//   year,
+// }: Props) {
+
+//   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+//   const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+//   const today = new Date().toISOString().split("T")[0];
+
+//   /* -------------------- CHANGED: parallel queries -------------------- */
+
+//   const [
+
+//     /* today status */
+//     { data: todayRow, error: todayError },
+
+//     /* user working days */
+//     { count: userWorkingDays, error: userWorkingError },
+
+//     /* NEW: college working days (count distinct dates efficiently) */
+//     { count: collegeWorkingDaysCount, error: collegeError } // CHANGED
+
+//   ] = await Promise.all([
+
+//     /* today status */
+//     supabase
+//       .from("attendance_daily")
+//       .select("status")
+//       .eq("userId", userId)
+//       .eq("attendanceDate", today)
+//       .maybeSingle(),
+
+//     /* user working days */
+//     supabase
+//       .from("attendance_daily")
+//       .select("*", { count: "exact", head: true })
+//       .eq("userId", userId)
+//       .gte("attendanceDate", startDate)
+//       .lte("attendanceDate", endDate)
+//       .in("status", ["PRESENT", "LATE"]),
+
+//     /* -------------------- NEW --------------------
+//        count DISTINCT attendanceDate without fetching rows
+//        uses index only scan
+//     */
+//     supabase
+//       .from("attendance_daily")
+//       .select("attendanceDate", {
+//         count: "exact",
+//         head: true
+//       })
+//       .gte("attendanceDate", startDate)
+//       .lte("attendanceDate", endDate)
+
+//   ]);
+
+//   if (todayError) throw todayError;
+//   if (userWorkingError) throw userWorkingError;
+//   if (collegeError) throw collegeError;
+
+//   /* -------------------- CHANGED -------------------- */
+
+//   const collegeWorkingDays =
+//     collegeWorkingDaysCount ?? 0;
+
+//   return {
+
+//     todayStatus:
+//       todayRow?.status ?? "Not Marked",
+
+//     userWorkingDays:
+//       userWorkingDays ?? 0,
+
+//     collegeWorkingDays, // NEW
+
+//     attendancePercentage:
+//       collegeWorkingDays === 0
+//         ? 0
+//         : Math.round(
+//             ((userWorkingDays ?? 0) / collegeWorkingDays) * 100
+//           )
+//   };
+// }
