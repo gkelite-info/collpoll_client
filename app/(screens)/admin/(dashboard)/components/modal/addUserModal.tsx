@@ -1,8 +1,5 @@
 "use client";
-import {
-  fetchModalInitialData,
-  persistFaculty,
-} from "@/lib/helpers/admin/upsertFaculty";
+import { fetchModalInitialData, persistFaculty } from "@/lib/helpers/admin/upsertFaculty";
 import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
 import { supabase } from "@/lib/supabaseClient";
@@ -77,6 +74,8 @@ const AddUserModal: React.FC<{
     collegeCode: "",
     collegeIntId: 0,
     adminId: 0,
+    dateOfJoining: "",
+    professionalExperienceYears: undefined as number | undefined,
   };
   const [basicData, setBasicData] = useState<any>(initialBasicData);
 
@@ -322,7 +321,8 @@ const AddUserModal: React.FC<{
     } else if (name === "mobileCode") {
       if (!/^\+?[0-9]*$/.test(value)) return;
       formattedValue = value;
-    } else if (name === "mobileNumber") {
+    }
+    else if (name === "mobileNumber") {
       formattedValue = value.replace(/\D/g, "");
       if (basicData.mobileCode === "+91") {
         if (
@@ -455,6 +455,17 @@ const AddUserModal: React.FC<{
       }
     }
 
+    const normalizedDateOfJoining =
+      basicData.dateOfJoining
+        ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
+        : null;
+
+    const normalizedExperience =
+      basicData.professionalExperienceYears !== undefined &&
+        basicData.professionalExperienceYears !== null
+        ? Number(basicData.professionalExperienceYears)
+        : null;
+
     setLoading(true);
     let createdUserId: number | null = null;
 
@@ -463,7 +474,7 @@ const AddUserModal: React.FC<{
 
       let targetUserId: number | null = null;
 
-      if (isAdmin) {
+      if (isAdmin && !user) {
         const { data: authData, error: authError } = await supabase.auth.signUp(
           {
             email: basicData.email,
@@ -486,6 +497,8 @@ const AddUserModal: React.FC<{
           collegeId: basicData.collegeIntId,
           collegePublicId: basicData.collegeId,
           gender: basicData.gender,
+          dateOfJoining: normalizedDateOfJoining,
+          professionalExperienceYears: normalizedExperience,
         });
 
         if (!userRes.success || !userRes.data) {
@@ -512,7 +525,11 @@ const AddUserModal: React.FC<{
       } else {
         targetUserId = await persistUser(
           !user,
-          { ...basicData, collegePublicId: basicData.collegeId },
+          {
+            ...basicData, collegePublicId: basicData.collegeId,
+            dateOfJoining: normalizedDateOfJoining,
+            professionalExperienceYears: normalizedExperience,
+          },
           user ? user.userId : null,
           timestamp,
         );
@@ -585,17 +602,16 @@ const AddUserModal: React.FC<{
           throw new Error("Invalid academic selection data");
         }
 
-        const studentId = await createStudent(
-          {
-            userId: targetUserId,
-            collegeEducationId: eduId,
-            collegeBranchId: branchId,
-            collegeId: basicData.collegeIntId,
-            collegeSessionId: selectedSessionId,
-            createdBy: basicData.adminId,
-            entryType: selectedEntryType[0] as any,
-            status: "Active",
-          },
+        const studentId = await createStudent({
+          userId: targetUserId,
+          collegeEducationId: eduId,
+          collegeBranchId: branchId,
+          collegeId: basicData.collegeIntId,
+          collegeSessionId: selectedSessionId,
+          createdBy: basicData.adminId,
+          entryType: selectedEntryType[0] as any,
+          status: "Active",
+        },
           timestamp,
         );
 
@@ -639,6 +655,9 @@ const AddUserModal: React.FC<{
       setLoading(false);
     }
   };
+
+  const showEmploymentFields =
+    !isStudent && !isParent && basicData.role !== "";
 
   if (!isOpen) return null;
 
@@ -776,6 +795,7 @@ const AddUserModal: React.FC<{
                   </div>
                 </div>
               )}
+
               {isStudent && (
                 <>
                   <div className="space-y-1">
@@ -1047,6 +1067,41 @@ const AddUserModal: React.FC<{
                   />
                 </div>
               </>
+            )}
+
+            {showEmploymentFields && (
+              <div className="grid grid-cols-2 gap-5 bg-pink-00">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    Date of Joining
+                  </label>
+                  <input
+                    type="date"
+                    name="dateOfJoining"
+                    value={basicData.dateOfJoining || ""}
+                    onChange={handleBasicChange}
+                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    Experience (Years)
+                  </label>
+                  <input
+                    type="number"
+                    name="professionalExperienceYears"
+                    min={0}
+                    max={60}
+                    step="0.1"
+                    placeholder="e.g. 3.5"
+                    value={basicData.professionalExperienceYears || ""}
+                    onChange={handleBasicChange}
+                    onWheel={(e) => e.currentTarget.blur()}
+                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                  />
+                </div>
+              </div>
             )}
 
             <div className="space-y-1">

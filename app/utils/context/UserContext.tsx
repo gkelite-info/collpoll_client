@@ -485,6 +485,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setRole(userData.role);
         setCollegePublicId(userData.collegePublicId);
         setCollegeId(userData.collegeId);
+        setDateOfJoining(userData.dateOfJoining ?? null);
+        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
 
         try {
           const photoData = await getUserProfilePhoto(userData.userId);

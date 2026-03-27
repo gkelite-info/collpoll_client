@@ -13,6 +13,8 @@ export const upsertUser = async (payload: {
   // collegeCode: string;
   collegePublicId?: string;
   gender?: "Male" | "Female";
+  dateOfJoining?: string | null;
+  professionalExperienceYears?: number | null;
 }) => {
   try {
     const {
@@ -28,6 +30,8 @@ export const upsertUser = async (payload: {
       // collegeCode,
       collegePublicId,
       gender,
+      dateOfJoining,
+      professionalExperienceYears,
     } = payload;
 
     const now = new Date().toISOString();
@@ -48,6 +52,8 @@ export const upsertUser = async (payload: {
           // collegeCode,
           collegePublicId,
           gender,
+          dateOfJoining: dateOfJoining ?? null,
+          professionalExperienceYears: professionalExperienceYears ?? null,
           updatedAt: now,
           createdAt: now,
         },
@@ -86,7 +92,7 @@ export const fetchUserDetails = async (auth_id: string) => {
   try {
     const { data, error } = await supabase
       .from("users")
-      .select("fullName, mobile, email, collegeId, role, collegeCode, gender")
+      .select("fullName, mobile, email, collegeId, role, collegeCode, gender, dateOfJoining, professionalExperienceYears")
       .eq("auth_id", auth_id)
       .single();
 
