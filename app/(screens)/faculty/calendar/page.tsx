@@ -502,9 +502,11 @@ export default function Page() {
     const end = parse24To12(end24);
 
     let dbSectionIds: number[] = [];
+    let semesterId: number | null = null;
     try {
       const rows = await fetchCalendarEventSections(event.calendarEventId);
       dbSectionIds = (rows ?? []).map((r: any) => r.collegeSectionId);
+      semesterId = rows?.[0]?.collegeSemesterId ?? null;
     } catch (err) {
       console.warn("⚠️ Sections fetch failed", err);
     }
@@ -525,6 +527,7 @@ export default function Page() {
       endPeriod: end.period,
 
       sectionIds: dbSectionIds,
+      semesterId,
 
       type: event.type,
     });
@@ -550,16 +553,16 @@ export default function Page() {
       <div className="flex gap-3 mb-5">
         <button
           onClick={() => setMainTab("Faculty")}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "Faculty" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "Faculty" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
           Academics Calendar
         </button>
-        <button
+        {/* <button
           onClick={() => setMainTab("HR")}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "HR" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "HR" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
           My Calendar
-        </button>
+        </button> */}
       </div>
 
       <div className="flex justify-between items-end mb-1">
