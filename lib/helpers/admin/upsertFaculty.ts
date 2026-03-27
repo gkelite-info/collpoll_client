@@ -12,6 +12,8 @@ export type UserBasicData = {
   collegeCode: string;
   password?: string;
   adminId: number;
+  dateOfJoining?: string;
+  professionalExperienceYears?: number;
 };
 
 export async function fetchAdminContext(userId: number) {

@@ -42,6 +42,11 @@ export const persistUser = async (
         collegeId: basicData.collegeIntId,
         collegePublicId: basicData.collegePublicId,
         collegeCode: basicData.collegeCode,
+        dateOfJoining: basicData.dateOfJoining ?? null,
+        professionalExperienceYears:
+          basicData.professionalExperienceYears !== undefined
+            ? Number(basicData.professionalExperienceYears)
+            : null,
         isActive: true,
         createdAt: timestamp,
         updatedAt: timestamp,
