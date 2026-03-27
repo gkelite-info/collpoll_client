@@ -38,6 +38,7 @@ export type GetAttendanceStaffParams = {
   search?:   string;
   page?:     number;
   limit?:    number;
+  date?:     string; // ADDED: "YYYY-MM-DD" — defaults to today if omitted
 };
  
 export type GetAttendanceStaffResult = {
@@ -94,8 +95,9 @@ export async function getAttendanceStaff({
   search = "",
   page  = 1,
   limit = 100,
+  date,          // ADDED: optional date param
 }: GetAttendanceStaffParams): Promise<GetAttendanceStaffResult> {
-  const today = todayDate();
+  const today = date || todayDate(); // ADDED: use passed date or fall back to today
   const from  = (page - 1) * limit;
   const to    = from + limit - 1;
  
@@ -131,7 +133,7 @@ export async function getAttendanceStaff({
       totalMinutes, status, lateByMinutes, earlyOutMinutes, markedReason
     `)
     .in("userId", userIds)
-    .eq("attendanceDate", today);
+    .eq("attendanceDate", today); // uses date param if provided
  
   if (dailyError) throw new Error(dailyError.message);
  
@@ -208,7 +210,7 @@ export async function getAttendanceStaff({
         .from("calendar_event")
         .select("calendarEventId, facultyId")
         .in("facultyId", facultyIds)
-        .eq("date", today)
+        .eq("date", today) // uses date param if provided
         .eq("is_deleted", false);
  
       if (evError) throw new Error(evError.message);
@@ -353,10 +355,11 @@ export type SaveAttendanceParams = {
   classesTaken?:     number;
   rawCheckIn:        string | null;
   rawCheckOut:       string | null;
+  date?:             string;         // ADDED: "YYYY-MM-DD" for past-date edits
 };
  
 export async function saveAttendance(params: SaveAttendanceParams): Promise<void> {
-  const today = todayDate();
+  const today = params.date || todayDate(); // ADDED: use passed date for past-date edits
   const now   = new Date().toISOString();
  
   const checkInVal  = params.checkIn  || null;
@@ -501,8 +504,9 @@ export async function saveStatusOnly(params: {
   userId:            number;
   status:            string;
   collegeHrId:       number;
+  date?:             string; // ADDED: "YYYY-MM-DD" for past-date edits
 }): Promise<void> {
-  const today = todayDate();
+  const today = params.date || todayDate(); // ADDED: use passed date for past-date edits
   const now   = new Date().toISOString();
  
   if (params.attendanceDailyId !== null && params.attendanceDailyId > 0) {
