@@ -1,5 +1,5 @@
 "use client";
-
+ 
 import { useEffect, useRef, useState } from "react";
 import { CaretLeft, CaretRight, Clock, User, UsersThree } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
@@ -7,12 +7,24 @@ import { HrInfoCard } from "./hrInfoCard";
 import MonthlyAttendanceChart from "./MonthlyAttendanceChart";
 import FacultyMonthDetailTable from "./facultyAttendanceTable";
 import TableComponent from "@/app/utils/table/table";
-import { DEFAULT_ROLE, getHrDashCards, getMonthDetail, getMonthlyAttendance, getTodayAttendance, HR_ROLE_PILLS, HrDashCards, MonthDetailRow, MonthlyBar, TodayRow } from "@/lib/helpers/Hr/dashboard/Hrdashhelper";
+import {
+  DEFAULT_ROLE,
+  getHrDashCards,
+  getMonthDetail,
+  getMonthlyAttendance,
+  getTodayAttendance,
+  HR_ROLE_PILLS,
+  HrDashCards,
+  MonthDetailRow,
+  MonthlyBar,
+  TodayRow,
+} from "@/lib/helpers/Hr/dashboard/Hrdashhelper";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
-import { useRouter } from "next/navigation";
-
+import { useRouter, useSearchParams } from "next/navigation";
+import HrStaffAttendanceView from "./Hrstaffattendanceview";
+ 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
+ 
 // ── Pagination ────────────────────────────────────────────────────────────────
 function Pagination({ currentPage, totalPages, onPageChange }: {
   currentPage: number;
@@ -48,7 +60,7 @@ function Pagination({ currentPage, totalPages, onPageChange }: {
     </div>
   );
 }
-
+ 
 // ── Shimmer ───────────────────────────────────────────────────────────────────
 function Shimmer({ className }: { className?: string }) {
   return (
@@ -57,7 +69,7 @@ function Shimmer({ className }: { className?: string }) {
     </div>
   );
 }
-
+ 
 function CardShimmer() {
   return (
     <div className="flex gap-3 w-full">
@@ -69,7 +81,7 @@ function CardShimmer() {
     </div>
   );
 }
-
+ 
 function ChartShimmer() {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -87,7 +99,7 @@ function ChartShimmer() {
     </div>
   );
 }
-
+ 
 function TableShimmer({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 overflow-hidden mt-2">
@@ -104,7 +116,7 @@ function TableShimmer({ rows = 5, cols = 6 }: { rows?: number; cols?: number }) 
     </div>
   );
 }
-
+ 
 // ── Status badge ──────────────────────────────────────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const s = (status ?? "").toUpperCase();
@@ -119,28 +131,22 @@ function StatusBadge({ status }: { status: string }) {
     </span>
   );
 }
-
-function PctBadge({ pct }: { pct: string }) {
-  const n = parseInt(pct);
-  const cls = isNaN(n) ? "text-gray-400" : n >= 90 ? "text-[#22C55E]" : n >= 75 ? "text-[#EAB308]" : "text-[#EF4444]";
-  return <span className={`${cls} font-semibold text-xs`}>{pct}</span>;
-}
-
+ 
 // ── Today table ───────────────────────────────────────────────────────────────
-function TodayTable({ rows, isFaculty, totalCount, currentPage, onPageChange }: {
+function TodayTable({ rows, isFaculty, totalCount, currentPage, onPageChange, onViewClick }: {
   rows: TodayRow[];
   isFaculty: boolean;
   totalCount: number;
   currentPage: number;
   onPageChange: (page: number) => void;
+  onViewClick: (userId: number) => void;
 }) {
-   const router = useRouter();
   const PAGE_SIZE = 10;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
+ 
   if (rows.length === 0)
     return <p className="text-gray-400 text-xs text-center py-6">No attendance records for today</p>;
-
+ 
   const columns = [
     { title: "Name", key: "name" },
     { title: "Check-In", key: "checkIn" },
@@ -149,27 +155,23 @@ function TodayTable({ rows, isFaculty, totalCount, currentPage, onPageChange }: 
     ...(isFaculty ? [{ title: "Classes Taken", key: "classesTaken" }] : []),
     { title: "Action", key: "action" },
   ];
-
+ 
   const tableData = rows.map((r) => ({
     name: r.name,
     checkIn: r.checkIn,
     checkOut: r.checkOut,
     status: <StatusBadge status={r.status} />,
     classesTaken: r.classesTaken ?? 0,
-
-    // ✅ ADD THIS BLOCK
     action: (
       <span
         className="text-emerald-600 hover:text-emerald-500 cursor-pointer font-medium underline"
-        // onClick={() =>
-        //   router.push(`/hr/MyAttendance?main=attendance&userId=${r.userId}`)
-        // }
+        onClick={() => onViewClick(r.userId)}
       >
         View
       </span>
     ),
   }));
-
+ 
   return (
     <div>
       <h4 className="text-sm font-semibold text-[#282828] mb-1 mt-2">Attendance Overview</h4>
@@ -178,13 +180,18 @@ function TodayTable({ rows, isFaculty, totalCount, currentPage, onPageChange }: 
     </div>
   );
 }
-
+ 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HrDashLeft() {
   const { collegeId, loading: hrLoading } = useCollegeHr();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const currentYear = new Date().getFullYear();
   const topRef = useRef<HTMLDivElement>(null);
-
+ 
+  // Read userId from URL query param
+  const urlUserId = searchParams.get("userId");
+ 
   const [activeRole, setActiveRole] = useState(DEFAULT_ROLE);
   const [cards, setCards] = useState<HrDashCards | null>(null);
   const [chartData, setChartData] = useState<MonthlyBar[]>([]);
@@ -199,17 +206,34 @@ export default function HrDashLeft() {
   const [loadingChart, setLoadingChart] = useState(true);
   const [loadingToday, setLoadingToday] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
-
+ 
   const PAGE_SIZE = 10;
-
+ 
+  // ── Navigate to staff attendance view via query param ───────────────────────
+  const handleViewClick = (userId: number) => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set("role", activeRole);
+    currentUrl.searchParams.set("userId", String(userId));
+    router.push(currentUrl.pathname + currentUrl.search);
+    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+ 
+  // ── Back from staff view ────────────────────────────────────────────────────
+  const handleBackFromStaffView = () => {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete("role");
+    currentUrl.searchParams.delete("userId");
+    router.push(currentUrl.pathname + currentUrl.search);
+  };
+ 
   // ── Stat cards ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!collegeId || hrLoading) return;
     setLoadingCards(true);
     getHrDashCards(collegeId).then(setCards).finally(() => setLoadingCards(false));
   }, [collegeId, hrLoading]);
-
-  // ── Monthly chart — refetch when role changes ───────────────────────────────
+ 
+  // ── Monthly chart ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!collegeId || hrLoading) return;
     setSelectedMonth(null);
@@ -217,8 +241,8 @@ export default function HrDashLeft() {
     getMonthlyAttendance(collegeId, activeRole, currentYear)
       .then(setChartData).finally(() => setLoadingChart(false));
   }, [collegeId, hrLoading, activeRole]);
-
-  // ── Today table — refetch when role OR page changes ─────────────────────────
+ 
+  // ── Today table ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!collegeId || hrLoading) return;
     setLoadingToday(true);
@@ -226,15 +250,15 @@ export default function HrDashLeft() {
       .then(res => { setTodayRows(res.data); setTodayTotal(res.totalCount); })
       .finally(() => setLoadingToday(false));
   }, [collegeId, hrLoading, activeRole, todayPage]);
-
-  // ── Role change — reset today page ─────────────────────────────────────────
+ 
+  // ── Role change ─────────────────────────────────────────────────────────────
   const handleRoleChange = (role: string) => {
     setActiveRole(role);
     setTodayPage(1);
     setSelectedMonth(null);
   };
-
-  // ── Month detail fetch ──────────────────────────────────────────────────────
+ 
+  // ── Month detail ────────────────────────────────────────────────────────────
   const fetchDetail = async (month: string, page: number) => {
     if (!collegeId) return;
     const idx = MONTH_LABELS.indexOf(month);
@@ -245,36 +269,47 @@ export default function HrDashLeft() {
     setDetailTotal(res.totalCount);
     setLoadingDetail(false);
   };
-
+ 
   const handleBarClick = async (month: string) => {
     setSelectedMonth(month);
     setDetailPage(1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     await fetchDetail(month, 1);
   };
-
+ 
   const handleMonthChange = async (month: string) => {
     setSelectedMonth(month);
     setDetailPage(1);
     await fetchDetail(month, 1);
   };
-
+ 
   const handleDetailPageChange = async (page: number) => {
     setDetailPage(page);
     if (selectedMonth) await fetchDetail(selectedMonth, page);
   };
-
+ 
   const isFaculty = activeRole === "Faculty";
   const roleLabel = HR_ROLE_PILLS.find(p => p.value === activeRole)?.label ?? activeRole;
-
+ 
   const cardData = [
     { style: "bg-[#E2DAFF] h-[126.35px] w-[182px]", icon: <UsersThree size={21} weight="fill" color="#6C20CA" />, value: String(cards?.totalStaff ?? 0).padStart(2, "0"), label: "Total Staff" },
     { style: "bg-[#E6FBEA] h-[126.35px] w-[182px]", icon: <User size={21} weight="fill" color="#22C55E" />, value: String(cards?.presentToday ?? 0).padStart(2, "0"), label: "Present Today" },
     { style: "bg-[#FFE0E0] h-[126.35px] w-[182px]", icon: <User size={21} weight="fill" color="#FF0000" />, value: String(cards?.absentToday ?? 0).padStart(2, "0"), label: "Absent Today" },
     { style: "bg-[#CEE6FF] h-[126.35px] w-[182px]", icon: <Clock size={21} weight="fill" color="#60AEFF" />, value: String(cards?.lateCheckins ?? 0).padStart(2, "0"), label: "Late Check-ins" },
   ];
-
+ 
+  // ── If userId is in URL, show staff attendance view ─────────────────────────
+  if (urlUserId) {
+    return (
+      <div ref={topRef} className="w-[68%] p-2">
+        <HrStaffAttendanceView
+          userId={urlUserId}
+          onBack={handleBackFromStaffView}
+        />
+      </div>
+    );
+  }
+ 
   return (
     <div ref={topRef} className="w-[68%] p-2">
       {selectedMonth ? (
@@ -297,7 +332,7 @@ export default function HrDashLeft() {
             facultySubject: "", image: "/hr-fe.png",
             top: "-top-5", imageHeight: "h-42", right: "right-8",
           }]} />
-
+ 
           {/* Stat cards */}
           <div className="mt-5">
             {loadingCards ? <CardShimmer /> : (
@@ -308,7 +343,7 @@ export default function HrDashLeft() {
               </div>
             )}
           </div>
-
+ 
           {/* Role pills */}
           <div className="mt-3 flex flex-wrap gap-2">
             {HR_ROLE_PILLS.map((pill) => {
@@ -325,7 +360,7 @@ export default function HrDashLeft() {
               );
             })}
           </div>
-
+ 
           {/* Chart + Today table */}
           <div className="mt-4 flex flex-col gap-4">
             {loadingChart
@@ -344,6 +379,7 @@ export default function HrDashLeft() {
                 totalCount={todayTotal}
                 currentPage={todayPage}
                 onPageChange={(p) => setTodayPage(p)}
+                onViewClick={handleViewClick}
               />
             }
           </div>
