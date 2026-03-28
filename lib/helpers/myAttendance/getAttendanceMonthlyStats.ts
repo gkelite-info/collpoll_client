@@ -79,8 +79,8 @@ export async function getAttendanceMonthlyStats({
 //     /* user working days */
 //     { count: userWorkingDays, error: userWorkingError },
 
-//     /* NEW: college working days (count distinct dates efficiently) */
-//     { count: collegeWorkingDaysCount, error: collegeError } // CHANGED
+//     /* NEW: fetch ONLY attendanceDate column */
+//     { data: collegeDates, error: collegeError } // CHANGED
 
 //   ] = await Promise.all([
 
@@ -102,15 +102,12 @@ export async function getAttendanceMonthlyStats({
 //       .in("status", ["PRESENT", "LATE"]),
 
 //     /* -------------------- NEW --------------------
-//        count DISTINCT attendanceDate without fetching rows
-//        uses index only scan
+//        fetch only 1 column (very small payload)
+//        indexed column → fast
 //     */
 //     supabase
 //       .from("attendance_daily")
-//       .select("attendanceDate", {
-//         count: "exact",
-//         head: true
-//       })
+//       .select("attendanceDate")
 //       .gte("attendanceDate", startDate)
 //       .lte("attendanceDate", endDate)
 
@@ -120,20 +117,26 @@ export async function getAttendanceMonthlyStats({
 //   if (userWorkingError) throw userWorkingError;
 //   if (collegeError) throw collegeError;
 
-//   /* -------------------- CHANGED -------------------- */
+//   /* -------------------- NEW --------------------
+//      count DISTINCT dates in JS
+//      payload small because only 1 column fetched
+//   */
 
 //   const collegeWorkingDays =
-//     collegeWorkingDaysCount ?? 0;
+//     new Set(
+//       collegeDates?.map(d => d.attendanceDate)
+//     ).size;
+
 
 //   return {
 
 //     todayStatus:
 //       todayRow?.status ?? "Not Marked",
 
-//     userWorkingDays:
+//     totalWorkingDays:
 //       userWorkingDays ?? 0,
 
-//     collegeWorkingDays, // NEW
+//     collegeWorkingDays,
 
 //     attendancePercentage:
 //       collegeWorkingDays === 0

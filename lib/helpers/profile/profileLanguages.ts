@@ -6,7 +6,7 @@ export async function getUserLanguages(userId: number) {
     .select('"languageId", "languageName"')
     .eq("userId", userId)
     .eq("is_deleted", false)
-    .single();
+    .maybeSingle();
 
   if (error && error.code !== "PGRST116") throw error;
 

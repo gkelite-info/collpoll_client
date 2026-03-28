@@ -229,7 +229,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           </p>
         </div>
         <div className="w-80">
-          <CourseScheduleCard />
+          <CourseScheduleCard isVisibile={false} />
         </div>
       </div>
 
@@ -251,16 +251,18 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
       </div>
 
       <div className="flex gap-4 w-full mb-6">
-        {cardData.map((item, index) => (
-          <CardComponent
-            key={index}
-            style={`${item.style} w-[156px] h-[156px]`}
-            icon={item.icon}
-            iconBgColor={item.iconBgColor}
-            value={item.value}
-            label={item.label}
-          />
-        ))}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full">
+          {cardData.map((item, index) => (
+            <CardComponent
+              key={index}
+              style={`${item.style} h-[156px]`}
+              icon={item.icon}
+              iconBgColor={item.iconBgColor}
+              value={item.value}
+              label={item.label}
+            />
+          ))}
+        </div>
         <div>
           <WorkWeekCalendar style="h-full w-[350px]" />
         </div>
