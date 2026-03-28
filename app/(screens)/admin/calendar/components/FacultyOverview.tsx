@@ -8,6 +8,7 @@ import { fetchAcademicYears, fetchBranches, fetchSemesters, fetchSubjects } from
 import toast from "react-hot-toast"
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
+import FacultyCardSkeleton from "./FacultyCardSkeleton"
 // import { fetchFacultyCalendar } from "@/lib/helpers/admin/calender/fetchFacultyCalendar"
 interface Props {
     onSelect: (faculty: any) => void
@@ -119,12 +120,12 @@ export default function FacultyOverview({ onSelect }: Props) {
         }
     };
 
-    const totalPages = Math.ceil(totalCount  / itemsPerPage);
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
     const paginatedFaculty = facultyList
 
     useEffect(() => {
         loadFaculty();
-    }, [collegeId, educationId, branchId, academicYearId, subjectId]);
+    }, [collegeId, educationId, branchId, academicYearId, subjectId, currentPage]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -267,11 +268,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
             </section>
 
-            {loading && (
-                <div className="flex items-center justify-center min-h-[60vh] w-full -mt-20">
-                    <Loader />
-                </div>
-            )}
+
 
             {!loading && facultyList.length === 0 && (
                 <div className="flex items-center justify-center min-h-[60vh] w-full -mt-20">
@@ -281,7 +278,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
             )}
 
-            {!loading && facultyList.length > 0 && (
+            {/* {!loading && facultyList.length > 0 && (
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {paginatedFaculty.map((faculty) => (
                         <FacultyCard
@@ -291,39 +288,98 @@ export default function FacultyOverview({ onSelect }: Props) {
                         />
                     ))}
 
+                    
+
                     {totalPages > 1 && (
-                        <div className="flex justify-center items-center gap-2 mt-8 mb-4 col-span-full">
-                            <button
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="p-2 rounded-lg border bg-white"
-                            >
-                                ‹
-                            </button>
-
-                            {[...Array(totalPages)].map((_, i) => (
+                        <div className="col-span-full w-full flex justify-center mt-8 mb-4">
+                            <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
                                 <button
-                                    key={i + 1}
-                                    onClick={() => setCurrentPage(i + 1)}
-                                    className={`w-9 h-9 rounded-lg text-sm font-bold ${currentPage === i + 1
-                                        ? "bg-[#16284F] text-white"
-                                        : "bg-white border"
-                                        }`}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                    className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
                                 >
-                                    {i + 1}
+                                    ‹
                                 </button>
-                            ))}
 
-                            <button
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="p-2 rounded-lg border bg-white"
-                            >
-                                ›
-                            </button>
+                                {[...Array(totalPages)].slice(0, 10).map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => setCurrentPage(i + 1)}
+                                        className={`min-w-[36px] cursor-pointer h-9 px-2 rounded-lg text-sm font-bold ${currentPage === i + 1
+                                                ? "bg-[#16284F] text-white"
+                                                : "bg-white border"
+                                            }`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+
+                                <button
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                    className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
+                                >
+                                    ›
+                                </button>
+                            </div>
                         </div>
                     )}
                 </section>
+            )} */}
+
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                {loading && (
+                    [...Array(15)].map((_, index) => (
+                        <FacultyCardSkeleton key={index} />
+                    ))
+                )}
+
+                {!loading && facultyList.length > 0 &&
+                    paginatedFaculty.map((faculty) => (
+                        <FacultyCard
+                            key={faculty.id}
+                            faculty={faculty}
+                            onSelect={onSelect}
+                        />
+                    ))
+                }
+
+            </section>
+
+            {totalPages > 1 && (
+                <div className="w-full flex justify-center mt-8 mb-4">
+                    <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
+                        >
+                            ‹
+                        </button>
+
+                        {[...Array(totalPages)].slice(0, 10).map((_, i) => (
+                            <button
+                                key={i + 1}
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={`min-w-[36px] cursor-pointer h-9 px-2 rounded-lg text-sm font-bold ${currentPage === i + 1
+                                    ? "bg-[#16284F] text-white"
+                                    : "bg-white border"
+                                    }`}
+                            >
+                                {i + 1}
+                            </button>
+                        ))}
+
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
+                        >
+                            ›
+                        </button>
+                    </div>
+                </div>
             )}
 
         </main >

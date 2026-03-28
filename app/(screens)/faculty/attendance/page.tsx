@@ -31,6 +31,7 @@ import {
 } from "@/lib/helpers/faculty/attendance/attendanceActions";
 import AttendanceSkeleton from "./shimmer/attendanceSkeleton";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
 function AttendanceContent() {
   const searchParams = useSearchParams();
@@ -381,7 +382,7 @@ function AttendanceContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+    <Suspense fallback={<div className="p-8 text-center"><Loader/></div>}>
       <AttendanceContent />
     </Suspense>
   );

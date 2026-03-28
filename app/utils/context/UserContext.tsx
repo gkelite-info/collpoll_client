@@ -237,7 +237,7 @@
 
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
 import { fetchStudentContext } from "./student/studentContextAPI";
@@ -327,6 +327,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [dateOfJoining, setDateOfJoining] = useState<string | null>(null);
   const [professionalExperienceYears, setProfessionalExperienceYears] = useState<number | null>(null);
+  const lastAuthUserId = useRef<string | null>(null);
+  const isContextLoaded = useRef(false);
 
   const resetState = () => {
     setUserId(null);
@@ -458,8 +460,20 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(true);
       try {
         const { data: auth } = await supabase.auth.getUser();
+
+        const authId = auth.user?.id ?? null;
+        if (
+          isContextLoaded.current &&
+          lastAuthUserId.current === authId
+        ) {
+          return;
+        }
+
+        lastAuthUserId.current = authId;
+
         if (!auth.user) {
           resetState();
+          isContextLoaded.current = false;
           return;
         }
 
@@ -491,23 +505,18 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           const photoData = await getUserProfilePhoto(userData.userId);
           setProfilePhoto(photoData?.profileUrl ?? null);
-        } catch (err) {
-          console.error("profile photo load failed", err);
-        }
+        } catch { }
 
         const loader = roleLoaders[userData.role];
+
         if (loader) {
-          try {
-            await loader(userData.userId);
-          } catch (roleErr) {
-            console.error(`Role loader failed for "${userData.role}":`, roleErr);
-          }
-        } else {
-          console.warn(`No loader defined for role: "${userData.role}"`);
+          await loader(userData.userId);
         }
+
+        isContextLoaded.current = true;
       } catch (err) {
-        console.error("loadUserContext failed:", err);
         resetState();
+        isContextLoaded.current = false;
       } finally {
         setLoading(false);
       }
@@ -515,8 +524,20 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     loadUserContext();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadUserContext();
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const authId = session?.user?.id ?? null;
+      if (event === "SIGNED_OUT") {
+        resetState();
+        isContextLoaded.current = false;
+        lastAuthUserId.current = null;
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        if (lastAuthUserId.current !== authId) {
+          isContextLoaded.current = false;
+          await loadUserContext();
+        }
+      }
     });
     return () => {
       listener.subscription.unsubscribe();

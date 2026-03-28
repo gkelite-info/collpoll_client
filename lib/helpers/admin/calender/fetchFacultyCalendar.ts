@@ -79,6 +79,121 @@ type FilterParams = {
 //     }));
 // };
 
+// type FacultyFilterParams = {
+//     collegeId: number;
+//     collegeEducationId?: number;
+//     collegeBranchId?: number;
+//     collegeAcademicYearId?: number;
+//     collegeSubjectId?: number;
+//     page?: number;
+//     limit?: number;
+// };
+
+// export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
+//     const page = filters.page ?? 1;
+//     const limit = filters.limit ?? 15;
+//     const from = (page - 1) * limit;
+//     const to = from + limit - 1;
+
+//     let query = supabase
+//         .from("faculty_sections")
+//         .select(`
+//       facultyId,
+//       faculty:facultyId (
+//         facultyId,
+//         fullName,
+//         gender,
+//         updatedAt,
+//         collegeBranchId,
+//         branch:collegeBranchId (
+//         collegeBranchCode
+//         )
+//       ),
+//       subject:collegeSubjectId (
+//         collegeSubjectId,
+//         subjectName
+//       ),
+//       section:collegeSectionsId (
+//     collegeSectionsId,
+//     collegeBranchId,
+//     branch:collegeBranchId (
+//       collegeBranchCode
+//     )
+//   )`,
+//         { count: "exact" }
+// )
+//         .eq("isActive", true)
+//         .eq("faculty.collegeId", filters.collegeId);
+
+//     if (filters.collegeAcademicYearId) {
+//         query = query.eq("collegeAcademicYearId", filters.collegeAcademicYearId);
+//     }
+
+//     if (filters.collegeSubjectId) {
+//         query = query.eq("collegeSubjectId", filters.collegeSubjectId);
+//     }
+
+//     if (filters.collegeBranchId) {
+//         query = query.eq("faculty.collegeBranchId", filters.collegeBranchId);
+//     }
+
+//     if (filters.collegeEducationId) {
+//         query = query.eq("faculty.collegeEducationId", filters.collegeEducationId);
+//     }
+
+//     query = query.range(from, to);
+
+//     const { data, error, count } = await query;
+//     if (error) {
+//         console.error("Faculty filter error:", error);
+//         return {data: [], total: 0};
+//     }
+
+//     const facultyMap = new Map<number, any>();
+
+//     data.forEach((row: any) => {
+//         if (!row.faculty) return;
+
+//         const id = row.faculty.facultyId;
+
+//         if (!facultyMap.has(id)) {
+//             facultyMap.set(id, {
+//                 id: String(id),
+//                 name: row.faculty.fullName,
+//                 gender: row.faculty.gender,
+//                 subjects: [],
+//                 branch: row.faculty.branch?.collegeBranchCode ?? "—",
+//                 lastUpdate: new Date(row.faculty.updatedAt).toLocaleDateString("en-IN", {
+//                     day: "2-digit",
+//                     month: "short",
+//                     year: "numeric",
+//                 }),
+//                 image: `https://i.pravatar.cc/100?u=${row.faculty.facultyId}`,
+//             });
+//         }
+
+//         if (
+//             row.subject?.subjectName &&
+//             (!filters.collegeBranchId ||
+//                 row.section?.collegeBranchId === filters.collegeBranchId)
+//         ) {
+//             facultyMap.get(id).subjects.push(row.subject.subjectName);
+//         }
+
+//     });
+
+//     const result = Array.from(facultyMap.values()).map(f => ({
+//         ...f,
+//         subjects: Array.from(new Set(f.subjects)).join(", "),
+//     }));
+
+//     return {
+//         data: result,
+//         total: count ?? 0,
+//     };
+// }
+
+
 type FacultyFilterParams = {
     collegeId: number;
     collegeEducationId?: number;
@@ -95,96 +210,143 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let query = supabase
-        .from("faculty_sections")
-        .select(`
-      facultyId,
-      faculty:facultyId (
-        facultyId,
-        fullName,
-        gender,
-        updatedAt,
-        collegeBranchId,
-        branch:collegeBranchId (
-        collegeBranchCode
-        )
-      ),
-      subject:collegeSubjectId (
-        collegeSubjectId,
-        subjectName
-      ),
-      section:collegeSectionsId (
-    collegeSectionsId,
-    collegeBranchId,
-    branch:collegeBranchId (
-      collegeBranchCode
-    )
-  )`,
-        { count: "exact" }
-)
-        .eq("isActive", true)
-        .eq("faculty.collegeId", filters.collegeId);
+    let allowedFacultyIds: number[] | null = null;
 
-    if (filters.collegeAcademicYearId) {
-        query = query.eq("collegeAcademicYearId", filters.collegeAcademicYearId);
+    if (filters.collegeAcademicYearId || filters.collegeSubjectId) {
+        let sectionFilterQuery = supabase
+            .from("faculty_sections")
+            .select("facultyId")
+            .eq("isActive", true);
+
+        if (filters.collegeAcademicYearId) {
+            sectionFilterQuery = sectionFilterQuery.eq("collegeAcademicYearId", filters.collegeAcademicYearId);
+        }
+
+        if (filters.collegeSubjectId) {
+            sectionFilterQuery = sectionFilterQuery.eq("collegeSubjectId", filters.collegeSubjectId);
+        }
+
+        const { data: sectionRows, error: sectionFilterError } = await sectionFilterQuery;
+
+        if (sectionFilterError) {
+            console.error("Section pre-filter error:", sectionFilterError);
+            return { data: [], total: 0 };
+        }
+
+        allowedFacultyIds = Array.from(
+            new Set((sectionRows ?? []).map((r: any) => r.facultyId))
+        );
+
+        if (allowedFacultyIds.length === 0) {
+            return { data: [], total: 0 };
+        }
     }
 
-    if (filters.collegeSubjectId) {
-        query = query.eq("collegeSubjectId", filters.collegeSubjectId);
+    let facultyQuery = supabase
+        .from("faculty")
+        .select(
+            `
+            facultyId,
+            fullName,
+            gender,
+            updatedAt,
+            collegeBranchId,
+            branch:collegeBranchId (
+                collegeBranchCode
+            )
+            `,
+            { count: "exact" }
+        )
+        .eq("isActive", true)
+        .eq("collegeId", filters.collegeId);
+
+    if (filters.collegeEducationId) {
+        facultyQuery = facultyQuery.eq("collegeEducationId", filters.collegeEducationId);
     }
 
     if (filters.collegeBranchId) {
-        query = query.eq("faculty.collegeBranchId", filters.collegeBranchId);
+        facultyQuery = facultyQuery.eq("collegeBranchId", filters.collegeBranchId);
     }
 
-    if (filters.collegeEducationId) {
-        query = query.eq("faculty.collegeEducationId", filters.collegeEducationId);
+    if (allowedFacultyIds !== null) {
+        facultyQuery = facultyQuery.in("facultyId", allowedFacultyIds);
     }
 
-    query = query.range(from, to);
+    facultyQuery = facultyQuery.range(from, to);
 
-    const { data, error, count } = await query;
-    if (error) {
-        console.error("Faculty filter error:", error);
-        return {data: [], total: 0};
+    const { data: facultyData, error: facultyError, count } = await facultyQuery;
+
+    if (facultyError) {
+        console.error("Faculty fetch error:", facultyError);
+        return { data: [], total: 0 };
     }
 
-    const facultyMap = new Map<number, any>();
+    if (!facultyData || facultyData.length === 0) {
+        return { data: [], total: 0 };
+    }
 
-    data.forEach((row: any) => {
-        if (!row.faculty) return;
+    const facultyIds = facultyData.map((f: any) => f.facultyId);
 
-        const id = row.faculty.facultyId;
+    let sectionsQuery = supabase
+        .from("faculty_sections")
+        .select(
+            `
+            facultyId,
+            subject:collegeSubjectId (
+                collegeSubjectId,
+                subjectName
+            ),
+            section:collegeSectionsId (
+                collegeSectionsId,
+                collegeBranchId
+            )
+            `
+        )
+        .eq("isActive", true)
+        .in("facultyId", facultyIds);
 
-        if (!facultyMap.has(id)) {
-            facultyMap.set(id, {
-                id: String(id),
-                name: row.faculty.fullName,
-                gender: row.faculty.gender,
-                subjects: [],
-                branch: row.faculty.branch?.collegeBranchCode ?? "—",
-                lastUpdate: new Date(row.faculty.updatedAt).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                }),
-                image: `https://i.pravatar.cc/100?u=${row.faculty.facultyId}`,
-            });
-        }
+    if (filters.collegeAcademicYearId) {
+        sectionsQuery = sectionsQuery.eq("collegeAcademicYearId", filters.collegeAcademicYearId);
+    }
+
+    if (filters.collegeSubjectId) {
+        sectionsQuery = sectionsQuery.eq("collegeSubjectId", filters.collegeSubjectId);
+    }
+
+    const { data: sectionsData, error: sectionsError } = await sectionsQuery;
+
+    if (sectionsError) {
+        console.error("Sections fetch error:", sectionsError);
+    }
+
+    const subjectsByFaculty = new Map<number, Set<string>>();
+
+    (sectionsData ?? []).forEach((row: any) => {
+        if (!row.subject?.subjectName) return;
 
         if (
-            row.subject?.subjectName &&
-            (!filters.collegeBranchId ||
-                row.section?.collegeBranchId === filters.collegeBranchId)
-        ) {
-            facultyMap.get(id).subjects.push(row.subject.subjectName);
-        }
+            filters.collegeBranchId &&
+            row.section?.collegeBranchId !== filters.collegeBranchId
+        ) return;
 
+        if (!subjectsByFaculty.has(row.facultyId)) {
+            subjectsByFaculty.set(row.facultyId, new Set());
+        }
+        subjectsByFaculty.get(row.facultyId)!.add(row.subject.subjectName);
     });
 
-    const result = Array.from(facultyMap.values()).map(f => ({
-        ...f,
-        subjects: Array.from(new Set(f.subjects)).join(", "),
+    const result = facultyData.map((f: any) => ({
+        id: String(f.facultyId),
+        name: f.fullName,
+        gender: f.gender,
+        branch: f.branch?.collegeBranchCode ?? "—",
+        subjects: Array.from(subjectsByFaculty.get(f.facultyId) ?? []).join(", "),
+        lastUpdate: new Date(f.updatedAt).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }),
+        image: `https://i.pravatar.cc/100?u=${f.facultyId}`,
     }));
 
     return {
