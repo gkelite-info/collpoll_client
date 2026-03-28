@@ -31,7 +31,7 @@ interface ProfileOptions {
 export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     const [showThemes, setShowThemes] = useState<boolean>(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const router = useRouter()
+    const router = useRouter();
     const { studentId, fullName, mobile, email, role, collegeEducationType, collegeBranchCode, collegeAcademicYear, profilePhoto } = useUser();
     const { financeManagerId } = useFinanceManager();
     const { facultyId, college_branch, faculty_edu_type } = useFaculty();
@@ -44,14 +44,14 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
 
     const profileOptions: ProfileOptions[] = [
         { id: "terms", name: "Terms And Conditions", icon: <ClipboardText size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: onOpenTerms, },
-        { id: "support", name: "Digi Campus Support", icon: <Headset size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+        { id: "support", name: "Tekton Campus Support", icon: <Headset size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
         {
             id: "change-password", name: "Change Password", icon: <Key size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" />, onClick: () => {
                 onClose();
                 router.push("/settings?current-password");
             },
         },
-        { id: "colour-themes", name: "Colour Themes", icon: <Palette size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
+        // { id: "colour-themes", name: "Colour Themes", icon: <Palette size={30} className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5" /> },
     ]
 
     if (!open) return null;
