@@ -36,7 +36,7 @@ interface MultiSelectProps {
   paddingY?: string;
   closedBorder?: string;
   placeholderColorActive?: string;
-  gap?: string
+  gap?: string;
 }
 
 export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -51,7 +51,7 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   paddingY = "py-2",
   closedBorder = "border-gray-200",
   placeholderColorActive = "text-gray-400",
-  gap = "gap-2"
+  gap = "gap-2",
 
 }) => {
   const [isOpen, setIsOpen] = useState(false);
