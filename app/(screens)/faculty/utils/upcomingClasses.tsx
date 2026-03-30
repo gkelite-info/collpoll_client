@@ -502,10 +502,13 @@ export default function UpcomingClasses({
     null,
   );
 
-  const [localLessons, setLocalLessons] = useState<UpcomingLesson[]>([]);
+  // AFTER
+  const [localLessons, setLocalLessons] = useState<UpcomingLesson[]>(lessons);
 
   useEffect(() => {
-    setLocalLessons(lessons);
+    setLocalLessons(
+      Array.from(new Map(lessons.map((l) => [l.id, l])).values())
+    );
   }, [lessons]);
 
   const handleLessonClick = (lesson: UpcomingLesson) => {
@@ -572,9 +575,9 @@ export default function UpcomingClasses({
             <UpcomingClassesSkeleton />
           ) : (
             <>
-              {localLessons.map((lesson) => (
+              {localLessons.map((lesson, index) => (
                 <div
-                  key={lesson.id}
+                  key={`${lesson.id}-${lesson.fromTime}-${lesson.toTime}-${index}`}
                   onClick={() => handleLessonClick(lesson)}
                   className="cursor-pointer hover:bg-gray-50 transition-colors rounded-lg lesson-card-wrapper"
                   data-lesson-id={lesson.id}
