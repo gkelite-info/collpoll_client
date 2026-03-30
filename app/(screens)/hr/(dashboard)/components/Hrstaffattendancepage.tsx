@@ -1,8 +1,8 @@
 "use client";
- 
+
 import React, { useState, useRef, useEffect } from "react";
 import { CaretDown, CheckSquare } from "@phosphor-icons/react";
- 
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FacultyProfile {
   name: string;
@@ -14,14 +14,14 @@ interface FacultyProfile {
   joiningDate: string;
   experience: string;
 }
- 
+
 interface AttendanceStats {
   todayStatus: "Present" | "Absent" | "Half Day";
   totalWorkingDays: number;
   leavesTaken: number;
   remainingLeaves: number;
 }
- 
+
 interface AttendanceRecord {
   date: string;
   checkIn: string;
@@ -31,7 +31,7 @@ interface AttendanceRecord {
   lateBy: string;
   earlyOut: string;
 }
- 
+
 // ── Static mock data ──────────────────────────────────────────────────────────
 const mockProfile: FacultyProfile = {
   name: "Harsha Sharma",
@@ -43,36 +43,57 @@ const mockProfile: FacultyProfile = {
   joiningDate: "12 July 2019",
   experience: "6 years",
 };
- 
+
 const mockStats: AttendanceStats = {
   todayStatus: "Present",
   totalWorkingDays: 18,
   leavesTaken: 2,
   remainingLeaves: 10,
 };
- 
-const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map((_, i) => ({
-  date: `${(12 - i).toString().padStart(2, "0")}/02/2026`,
-  checkIn: "09:04 AM",
-  checkOut: "05:12 PM",
-  totalHours: "8h 08m",
-  status: "Present",
-  lateBy: "04m",
-  earlyOut: "—",
-}));
- 
-const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const YEARS = ["2024","2025","2026","2027","2028"];
- 
+
+const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map(
+  (_, i) => ({
+    date: `${(12 - i).toString().padStart(2, "0")}/02/2026`,
+    checkIn: "09:04 AM",
+    checkOut: "05:12 PM",
+    totalHours: "8h 08m",
+    status: "Present",
+    lateBy: "04m",
+    earlyOut: "—",
+  }),
+);
+
+const MONTHS = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+const YEARS = ["2024", "2025", "2026", "2027", "2028"];
+
 // ── Faculty Info Card ─────────────────────────────────────────────────────────
 function FacultyInfoCard({ profile }: { profile: FacultyProfile }) {
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
       <div className="flex flex-col items-center gap-2 pl-2">
         <div className="w-[85px] h-[85px] rounded-full overflow-hidden bg-teal-500">
-          <img src={profile.image} alt={profile.name} className="w-full h-full object-cover" />
+          <img
+            src={profile.image}
+            alt={profile.name}
+            className="w-full h-full object-cover"
+          />
         </div>
-        <p className="text-[#282828] font-bold text-[15px] whitespace-nowrap">{profile.name}</p>
+        <p className="text-[#282828] font-bold text-[15px] whitespace-nowrap">
+          {profile.name}
+        </p>
       </div>
       <div className="grid grid-cols-[120px_1fr] gap-y-2 text-[13px]">
         <div className="text-[#282828] font-semibold">ID</div>
@@ -91,7 +112,7 @@ function FacultyInfoCard({ profile }: { profile: FacultyProfile }) {
     </div>
   );
 }
- 
+
 // ── Attendance Status Card ────────────────────────────────────────────────────
 function AttendanceStatusCard({ stats }: { stats: AttendanceStats }) {
   return (
@@ -118,7 +139,7 @@ function AttendanceStatusCard({ stats }: { stats: AttendanceStats }) {
     </div>
   );
 }
- 
+
 // ── Attendance Table ──────────────────────────────────────────────────────────
 function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   const [selectedMonth, setSelectedMonth] = useState("FEB");
@@ -126,10 +147,13 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
- 
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsMonthOpen(false);
         setIsYearOpen(false);
       }
@@ -137,16 +161,21 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
- 
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-end mb-2.5" ref={containerRef}>
-        <h2 className="text-[#282828] text-[17px] font-bold">Attendance Table</h2>
+        <h2 className="text-[#282828] text-[17px] font-bold">
+          Attendance Table
+        </h2>
         <div className="flex gap-2">
           {/* Month dropdown */}
           <div className="relative">
             <button
-              onClick={() => { setIsMonthOpen(!isMonthOpen); setIsYearOpen(false); }}
+              onClick={() => {
+                setIsMonthOpen(!isMonthOpen);
+                setIsYearOpen(false);
+              }}
               className="bg-[#43C17A] cursor-pointer text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors"
             >
               {selectedMonth} <CaretDown size={14} weight="bold" />
@@ -154,8 +183,14 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
             {isMonthOpen && (
               <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 shadow-lg rounded-md py-1 z-10 max-h-48 overflow-y-auto w-full min-w-[80px]">
                 {MONTHS.map((m) => (
-                  <button key={m} onClick={() => { setSelectedMonth(m); setIsMonthOpen(false); }}
-                    className="w-full cursor-pointer text-left px-3 py-1.5 text-[12.5px] hover:bg-gray-50 text-gray-700 transition-colors">
+                  <button
+                    key={m}
+                    onClick={() => {
+                      setSelectedMonth(m);
+                      setIsMonthOpen(false);
+                    }}
+                    className="w-full cursor-pointer text-left px-3 py-1.5 text-[12.5px] hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
                     {m}
                   </button>
                 ))}
@@ -165,7 +200,10 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
           {/* Year dropdown */}
           <div className="relative">
             <button
-              onClick={() => { setIsYearOpen(!isYearOpen); setIsMonthOpen(false); }}
+              onClick={() => {
+                setIsYearOpen(!isYearOpen);
+                setIsMonthOpen(false);
+              }}
               className="bg-[#43C17A] cursor-pointer text-white px-3 py-1.5 rounded flex items-center gap-1.5 font-medium text-[12.5px] shadow-sm hover:bg-[#3baf6d] transition-colors"
             >
               {selectedYear} <CaretDown size={14} weight="bold" />
@@ -173,8 +211,14 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
             {isYearOpen && (
               <div className="absolute top-full right-0 mt-1 bg-white border border-gray-100 shadow-lg rounded-md py-1 z-10 max-h-48 overflow-y-auto w-full min-w-[80px]">
                 {YEARS.map((y) => (
-                  <button key={y} onClick={() => { setSelectedYear(y); setIsYearOpen(false); }}
-                    className="w-full text-left px-3 py-1.5 cursor-pointer text-[12.5px] hover:bg-gray-50 text-gray-700 transition-colors">
+                  <button
+                    key={y}
+                    onClick={() => {
+                      setSelectedYear(y);
+                      setIsYearOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-1.5 cursor-pointer text-[12.5px] hover:bg-gray-50 text-gray-700 transition-colors"
+                  >
                     {y}
                   </button>
                 ))}
@@ -183,7 +227,7 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
           </div>
         </div>
       </div>
- 
+
       <div className="bg-white rounded-lg shadow-sm overflow-x-auto border border-gray-100 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
         <table className="w-full text-left border-collapse whitespace-nowrap min-w-[700px]">
           <thead>
@@ -199,14 +243,21 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
           </thead>
           <tbody>
             {records.map((row, idx) => (
-              <tr key={idx} className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors">
+              <tr
+                key={idx}
+                className="border-b border-gray-100 last:border-none text-gray-500 text-[12.5px] hover:bg-gray-50 transition-colors"
+              >
                 <td className="py-1.5 px-3">{row.date}</td>
                 <td className="py-1.5 px-3">{row.checkIn}</td>
                 <td className="py-1.5 px-3">{row.checkOut}</td>
                 <td className="py-1.5 px-3">{row.totalHours}</td>
                 <td className="py-1.5 px-3">
                   <div className="flex items-center gap-1.5 text-gray-700">
-                    <CheckSquare size={15} weight="fill" className="text-[#43C17A]" />
+                    <CheckSquare
+                      size={15}
+                      weight="fill"
+                      className="text-[#43C17A]"
+                    />
                     <span>{row.status}</span>
                   </div>
                 </td>
@@ -220,10 +271,9 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
     </div>
   );
 }
- 
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HrStaffAttendancePage({ userId }: { userId: string }) {
-  // In production, fetch data using userId. Static for now.
   return (
     <div className="flex flex-col h-full">
       <div className="flex gap-4 mb-4 w-full">
