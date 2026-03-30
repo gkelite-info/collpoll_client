@@ -29,6 +29,7 @@ import { getFacultyIdByUserId } from "@/lib/helpers/faculty/facultyAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import EventDetailsModal from "./modal/EventDetailsModal";
 import { fetchHrCalendarEvents } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
+import { checkSectionConflict, ConflictingSection } from "@/lib/helpers/calendar/checkSectionConflict";
 
 export type CalendarEventPayload = {
   facultyId: number;
@@ -67,10 +68,7 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(
-    null,
-  );
+  const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(
@@ -82,6 +80,7 @@ export default function Page() {
   const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
   const { userId, role, collegeId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
+  const [conflictDetails, setConflictDetails] = useState<ConflictingSection[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,6 +92,7 @@ export default function Page() {
     null,
   );
   const [showDetails, setShowDetails] = useState(false);
+  const [isDeleteLoading, setIsDeleteLoading] = useState<boolean>(false)
 
   useEffect(() => {
     if (!userId || role !== "Faculty") return;
@@ -286,30 +286,33 @@ export default function Page() {
     setCurrentDate(prev);
   };
 
+  // AFTER
   const hasDbConflict = async (
-    date: string,
-    startTime: string,
-    endTime: string,
+    payload: CalendarEventPayload,
     ignoreEventId?: number,
   ): Promise<boolean> => {
-    if (!facultyId) return false;
+    if (!facultyId || !collegeId) return false;
 
-    const rows = await fetchCalendarEvents({ facultyId });
-    if (!rows || rows.length === 0) return false;
-
-    return rows.some((e: any) => {
-      if (ignoreEventId && e.calendarEventId === ignoreEventId) return false;
-      if (e.date !== date) return false;
-
-      const dbStart = combineDateAndTime(e.date, e.fromTime);
-      const dbEnd = combineDateAndTime(e.date, e.toTime);
-
-      return hasTimeConflict(
-        [{ startTime: dbStart, endTime: dbEnd } as CalendarEvent],
-        combineDateAndTime(date, startTime),
-        combineDateAndTime(date, endTime),
-      );
+    const conflicts = await checkSectionConflict({
+      collegeId,
+      date: payload.date,
+      fromTime: payload.fromTime,
+      toTime: payload.toTime,
+      collegeEducationId: payload.collegeEducationId,
+      collegeBranchId: payload.collegeBranchId,
+      collegeAcademicYearId: payload.collegeAcademicYearId,
+      collegeSemesterId: payload.collegeSemesterId,
+      sectionIds: payload.sectionIds,
+      ignoreEventId,
     });
+
+    if (conflicts.length > 0) {
+      setConflictDetails(conflicts);
+      return true;
+    }
+
+    setConflictDetails([]);
+    return false;
   };
 
   const handleSaveEvent = async (
@@ -320,13 +323,11 @@ export default function Page() {
       return { success: false };
     }
 
+    // AFTER
     const conflict = await hasDbConflict(
-      payload.date,
-      payload.fromTime,
-      payload.toTime,
+      payload,
       editingEventId ? Number(editingEventId) : undefined,
     );
-
     if (conflict) {
       setPendingEvent(payload);
       setShowConflictModal(true);
@@ -357,6 +358,16 @@ export default function Page() {
       }
 
       const calendarEventId = eventRes.calendarEventId;
+
+      // On edit, remove all existing sections first to avoid duplicates
+      if (editingEventId) {
+        const existingSections = await fetchCalendarEventSections(calendarEventId);
+        await Promise.all(
+          (existingSections ?? []).map((s: any) =>
+            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId)
+          )
+        );
+      }
 
       await saveCalendarEventSections(calendarEventId, {
         collegeEducationId: payload.collegeEducationId,
@@ -400,6 +411,8 @@ export default function Page() {
 
     try {
       const eventRes = await saveCalendarEvent({
+        // Forward the editing ID so the backend does UPDATE not INSERT
+        calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,
         subjectId:
           pendingEvent.type === "meeting"
@@ -420,6 +433,16 @@ export default function Page() {
       }
 
       const calendarEventId = eventRes.calendarEventId;
+
+      // On edit, remove all existing sections first to avoid duplicates
+      if (editingEventId) {
+        const existingSections = await fetchCalendarEventSections(calendarEventId);
+        await Promise.all(
+          (existingSections ?? []).map((s: any) =>
+            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId)
+          )
+        );
+      }
 
       await saveCalendarEventSections(calendarEventId, {
         collegeEducationId: pendingEvent.collegeEducationId,
@@ -447,6 +470,7 @@ export default function Page() {
   };
 
   const handleDeleteEvent = async (event: CalendarEvent) => {
+    setIsDeleteLoading(true)
     try {
       const calendarEventId = event.calendarEventId;
       const sectionId = event.sectionId;
@@ -464,6 +488,8 @@ export default function Page() {
     } catch (err) {
       toast.error("Failed to delete section");
       console.error(err);
+    } finally {
+      setIsDeleteLoading(false)
     }
   };
 
@@ -502,9 +528,11 @@ export default function Page() {
     const end = parse24To12(end24);
 
     let dbSectionIds: number[] = [];
+    let semesterId: number | null = null;
     try {
       const rows = await fetchCalendarEventSections(event.calendarEventId);
       dbSectionIds = (rows ?? []).map((r: any) => r.collegeSectionId);
+      semesterId = rows?.[0]?.collegeSemesterId ?? null;
     } catch (err) {
       console.warn("⚠️ Sections fetch failed", err);
     }
@@ -525,6 +553,7 @@ export default function Page() {
       endPeriod: end.period,
 
       sectionIds: dbSectionIds,
+      semesterId,
 
       type: event.type,
     });
@@ -550,16 +579,16 @@ export default function Page() {
       <div className="flex gap-3 mb-5">
         <button
           onClick={() => setMainTab("Faculty")}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "Faculty" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "Faculty" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
           Academics Calendar
         </button>
-        <button
+        {/* <button
           onClick={() => setMainTab("HR")}
-          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "HR" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "HR" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
         >
           My Calendar
-        </button>
+        </button> */}
       </div>
 
       <div className="flex justify-between items-end mb-1">
@@ -634,15 +663,17 @@ export default function Page() {
             open={showConflictModal}
             onConfirm={confirmAddEvent}
             onCancel={handleConflictCancel}
+            conflictDetails={conflictDetails}
           />
 
           <ConfirmDeleteModal
             open={!!eventToDelete}
             onCancel={() => setEventToDelete(null)}
-            onConfirm={() => {
-              if (eventToDelete) handleDeleteEvent(eventToDelete);
+            onConfirm={async () => {
+              if (eventToDelete) await handleDeleteEvent(eventToDelete);
               setEventToDelete(null);
             }}
+            isDeleting={isDeleteLoading}
           />
         </div>
       )}

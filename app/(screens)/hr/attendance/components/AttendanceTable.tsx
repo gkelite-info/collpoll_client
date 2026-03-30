@@ -1,13 +1,13 @@
 "use client";
-
+ 
 import { useMemo, useState, useEffect } from "react";
 import TableComponent from "@/app/utils/table/table";
-
+ 
 import { ExtendedColumn } from "./types";
 import { getStatusBadge } from "./statusBadge";
 import TimeInput from "./TimeInput";
 import { AttendanceStaffRow, buildTimeString, formatMinutes, saveAttendance, saveStatusOnly } from "@/lib/helpers/Hr/attendance/Getattendancestaff";
-
+ 
 type Props = {
   isEditMode:     boolean;
   isFetching:     boolean;
@@ -18,26 +18,27 @@ type Props = {
   selectAll:      boolean;
   collegeHrId:    number;
   markedUserIds:  Set<number>;
+  filterDate?:    string | null;          // ADDED: "YYYY-MM-DD" for past-date edits
   onSelectAll:    (checked: boolean) => void;
   onSelectRow:    (index: number, checked: boolean, filteredLength: number) => void;
   onSave:         () => void;
   onCancel:       () => void;
   onRefresh:      () => void;
 };
-
+ 
 type RowEdit = {
   checkIn:  string;
   checkOut: string;
   reason:   string;
 };
-
+ 
 type RowValidation = {
   checkIn?:  string;
   checkOut?: string;
   reason?:   string;
   status?:   string;
 };
-
+ 
 export default function AttendanceTable({
   isEditMode,
   isFetching,
@@ -48,6 +49,7 @@ export default function AttendanceTable({
   selectAll,
   collegeHrId,
   markedUserIds,
+  filterDate,                             // ADDED
   onSelectAll,
   onSelectRow,
   onSave,
@@ -56,7 +58,7 @@ export default function AttendanceTable({
 }: Props) {
   const fullStaffList = fullStaffListProp ?? staffList;
   const isFacultyFilter = activeRole === "Faculty";
-
+ 
   const [rowEdits,       setRowEdits]       = useState<Record<number, RowEdit>>({});
   const [statusChanged,  setStatusChanged]  = useState<Set<number>>(new Set()); // userIds whose status was changed via Mark
   const [savingIds,      setSavingIds]      = useState<Set<number>>(new Set());
@@ -64,20 +66,20 @@ export default function AttendanceTable({
   const [saveErrors,     setSaveErrors]     = useState<Record<number, string>>({});
   const [validationErrs, setValidationErrs] = useState<Record<number, RowValidation>>({});
   const [toast,          setToast]          = useState<{ msg: string; type: "success" | "error" } | null>(null);
-
+ 
   // Auto-dismiss toast after 3s
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
-
+ 
   const resetAll = () => {
     setRowEdits({});
     setSaveErrors({});
     setValidationErrs({});
   };
-
+ 
   // Pre-fill existing values — only the specific field changes, others preserved
   const getEdit = (item: AttendanceStaffRow): RowEdit =>
     rowEdits[item.userId] ?? {
@@ -85,7 +87,7 @@ export default function AttendanceTable({
       checkOut: item.checkOut ?? "",
       reason:   item.reason   ?? "",
     };
-
+ 
   const setEditField = (userId: number, field: keyof RowEdit, value: string, item: AttendanceStaffRow) => {
     setRowEdits((prev) => {
       // Use existing rowEdit if present, else pre-fill from item — never reset other fields
@@ -103,33 +105,33 @@ export default function AttendanceTable({
       return { ...prev, [userId]: e };
     });
   };
-
+ 
   // Validate before save
   const validateRow = (item: AttendanceStaffRow, edit: RowEdit, isStatusOnly: boolean): RowValidation => {
     const errs: RowValidation = {};
     const status = (item.status ?? "").toLowerCase();
-
+ 
     if (!item.status || item.status === "-") {
       errs.status = "Select a status using Mark buttons above";
       return errs;
     }
-
+ 
     // Status-only change (no input fields edited) — no further validation needed
     if (isStatusOnly) return errs;
-
+ 
     // Absent / Leave — only reason required, no times
     if (status === "absent" || status === "leave") {
       if (!edit.reason.trim()) errs.reason = "Reason is required";
       return errs;
     }
-
+ 
     // Present / Late — checkIn required if no existing DB value
     const hasExistingCheckIn = !!item.rawCheckIn;
     if (!hasExistingCheckIn && !edit.checkIn.trim()) errs.checkIn = "Check-In time is required";
     if (!edit.reason.trim()) errs.reason = "Reason is required";
     return errs;
   };
-
+ 
   // ── Columns ───────────────────────────────────────────────────────────────
   const columns: ExtendedColumn[] = [
     ...(isEditMode ? [{
@@ -155,25 +157,25 @@ export default function AttendanceTable({
     { title: "Early Out",   key: "earlyOut" },
     { title: "Reason",      key: "reason" },   // always visible
   ];
-
+ 
   const filtered = useMemo(() =>
     activeRole ? staffList.filter((s) => s.role === activeRole) : staffList,
     [staffList, activeRole]
   );
-
+ 
   // ── Save single row ───────────────────────────────────────────────────────
   const handleSaveRow = async (item: AttendanceStaffRow, isStatusOnly = false): Promise<boolean> => {
     const edit = getEdit(item);
-
+ 
     const errs = validateRow(item, edit, isStatusOnly);
     if (Object.keys(errs).length > 0) {
       setValidationErrs((prev) => ({ ...prev, [item.userId]: errs }));
       return false;
     }
-
+ 
     setSavingIds((p) => new Set(p).add(item.userId));
     setSaveErrors((p) => { const n = { ...p }; delete n[item.userId]; return n; });
-
+ 
     try {
       // Status-only change — just update status in DB, no time logic
       if (isStatusOnly) {
@@ -182,21 +184,22 @@ export default function AttendanceTable({
           userId:            item.userId,
           status:            item.status,
           collegeHrId,
+          date:              filterDate ?? undefined, // ADDED: pass date for past-date edits
         });
         return true;
       }
-
+ 
       const status   = (item.status ?? "").toLowerCase();
       const isNoShow = status === "absent" || status === "leave";
-
+ 
       const newCheckIn  = (!isNoShow && edit.checkIn.trim() && edit.checkIn !== (item.checkIn ?? ""))
         ? buildTimeString(edit.checkIn.trim())
         : (!isNoShow ? (item.rawCheckIn ?? "") : "");
-
+ 
       const newCheckOut = (!isNoShow && edit.checkOut.trim() && edit.checkOut !== (item.checkOut ?? ""))
         ? buildTimeString(edit.checkOut.trim())
         : (!isNoShow ? (item.rawCheckOut ?? "") : "");
-
+ 
       await saveAttendance({
         attendanceDailyId: item.attendanceDailyId,
         userId:            item.userId,
@@ -208,8 +211,9 @@ export default function AttendanceTable({
         classesTaken:      item.classesTaken ?? 0,
         rawCheckIn:        item.rawCheckIn,
         rawCheckOut:       item.rawCheckOut,
+        date:              filterDate ?? undefined, // ADDED: pass date for past-date edits
       });
-
+ 
       setRowEdits((p) => { const n = { ...p }; delete n[item.userId]; return n; });
       return true;
     } catch (err: any) {
@@ -219,24 +223,24 @@ export default function AttendanceTable({
       setSavingIds((p) => { const n = new Set(p); n.delete(item.userId); return n; });
     }
   };
-
+ 
   // ── Table rows ────────────────────────────────────────────────────────────
   const tableData = useMemo(() =>
     filtered.map((item, index) => {
       const edit    = getEdit(item);
       const valErrs = validationErrs[item.userId] ?? {};
       const saveErr = saveErrors[item.userId];
-
+ 
       const displayCheckIn  = item.checkIn  ?? "-";
       const displayCheckOut = item.checkOut ?? "-";
       const displayReason   = item.reason   ?? "-";
       const isNoShow = ["absent", "leave"].includes((item.status ?? "").toLowerCase());
-
+ 
       return {
         id:   item.userId,
         name: item.fullName,
         role: item.role,
-
+ 
         checkIn: isEditMode ? (
           isNoShow ? <span className="text-xs text-gray-400">-</span> : (
             <div className="flex flex-col gap-0.5">
@@ -246,7 +250,7 @@ export default function AttendanceTable({
             </div>
           )
         ) : displayCheckIn,
-
+ 
         checkOut: isEditMode ? (
           isNoShow ? <span className="text-xs text-gray-400">-</span> : (
             <div className="flex flex-col gap-0.5">
@@ -256,21 +260,21 @@ export default function AttendanceTable({
             </div>
           )
         ) : displayCheckOut,
-
+ 
         totalHours:   item.totalHours || "-",
-
+ 
         // Status: show badge if has status, else show validation error hint
         status: item.status && item.status !== "-"
           ? getStatusBadge(item.status)
           : (valErrs.status
               ? <span className="text-[10px] text-red-400">Mark status first</span>
               : "-"),
-
+ 
         classesTaken: item.classesTaken !== null
           ? String(item.classesTaken).padStart(2, "0") : "-",
         lateBy:   formatMinutes(item.lateByMinutes),
         earlyOut: formatMinutes(item.earlyOutMinutes),
-
+ 
         // Reason — input in edit mode, text in read mode
         reason: isEditMode ? (
           <div className="flex flex-col gap-0.5 min-w-[140px]">
@@ -286,7 +290,7 @@ export default function AttendanceTable({
             {saveErr   && <span className="text-[10px] text-red-500">{saveErr}</span>}
           </div>
         ) : displayReason,
-
+ 
         ...(isEditMode && {
           select: (
             <div className="flex justify-center items-center">
@@ -301,7 +305,7 @@ export default function AttendanceTable({
     }),
     [filtered, isEditMode, selectedRows, rowEdits, savingIds, saveErrors, validationErrs]
   );
-
+ 
   const saveButtons = isEditMode ? (
     <div className="flex justify-center gap-4 mt-3 pb-2">
       <button
@@ -309,16 +313,16 @@ export default function AttendanceTable({
         onClick={async () => {
           const editedUserIds = new Set(Object.keys(rowEdits).map(Number));
           const allUserIds    = new Set([...editedUserIds, ...markedUserIds]);
-
+ 
           if (allUserIds.size === 0) { onSave(); return; }
-
+ 
           setIsSavingAll(true);
-
+ 
           const roleFiltered = activeRole
             ? fullStaffList.filter((s) => s.role === activeRole)
             : fullStaffList;
           const staffToSave = roleFiltered.filter((s) => allUserIds.has(s.userId));
-
+ 
           const results = await Promise.all(
             staffToSave.map((s) => {
               const isStatusOnly = markedUserIds.has(s.userId) && !Object.keys(rowEdits).includes(String(s.userId));
@@ -326,7 +330,7 @@ export default function AttendanceTable({
             })
           );
           setIsSavingAll(false);
-
+ 
           if (results.every(Boolean)) {
             setToast({ msg: "Attendance saved successfully!", type: "success" });
             resetAll();
@@ -357,16 +361,16 @@ export default function AttendanceTable({
       </button>
     </div>
   ) : null;
-
+ 
   if (isFetching) return <div className="animate-pulse bg-gray-100 rounded-xl h-48" />;
-
+ 
   if (tableData.length === 0) return (
     <>
       <p className="text-gray-400 text-sm text-center mt-8">No staff found.</p>
       {saveButtons}
     </>
   );
-
+ 
   return (
     <>
       {/* ── Toast notification ─────────────────────────────────────────── */}
@@ -380,15 +384,15 @@ export default function AttendanceTable({
           {toast.msg}
         </div>
       )}
-
+ 
       <TableComponent
         columns={columns as any[]}
         tableData={tableData}
         height={isEditMode ? "38vh" : "48vh"}
       />
-
+ 
       {!isEditMode && <div className="pb-4" />}
-
+ 
       {saveButtons}
     </>
   );

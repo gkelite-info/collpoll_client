@@ -96,7 +96,7 @@ const FacultyAttendanceCard = ({
         <span className="text-[#282828] text-[13px] font-medium">
           Faculty -
         </span>
-        <div className="flex -space-x-2.5">
+        <div className="flex -space-x-2.5 items-center">
           {faculties && faculties.length > 0 ? (
             <>
               {faculties.slice(0, 5).map((f) => (
@@ -114,7 +114,7 @@ const FacultyAttendanceCard = ({
               ))}
 
               {faculties.length > 5 && (
-                <span className="text-gray-700 font-semibold text-sm ml-1">
+                <span className="text-gray-700 font-semibold  text-sm ml-4">
                   +{faculties.length - 5}
                 </span>
               )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import AnnouncementsCard from "@/app/utils/announcementsCard";
@@ -54,12 +54,24 @@ function FacultyAttendanceDashboard() {
   const [isFetching,    setIsFetching]    = useState(false);
   const [markedUserIds, setMarkedUserIds] = useState<Set<number>>(new Set());
 
+  // ── ADDED: filterDate state + ref ────────────────────────────────────────
+  const [filterDate,   setFilterDate]  = useState<string | null>(null);
+  const filterDateRef                  = useRef<string | null>(null);
+  const searchMounted                  = useRef(false);
+  useEffect(() => { filterDateRef.current = filterDate; }, [filterDate]);
+
   // ── Fetch staff — waits for HR context to resolve ────────────────────────
-  const fetchStaff = useCallback(async (search = "") => {
+  const fetchStaff = useCallback(async (search = "", date?: string | null) => {
     if (!collegeId) return;
     setIsFetching(true);
     try {
-      const result = await getAttendanceStaff({ collegeId, search, page: 1, limit: 100 });
+      const result = await getAttendanceStaff({
+        collegeId,
+        search,
+        page: 1,
+        limit: 100,
+        date: date ?? undefined, // ADDED: pass date param
+      });
       setStaffList(result.staff);
       setTotalCount(result.totalCount);
     } catch (err) {
@@ -70,10 +82,16 @@ function FacultyAttendanceDashboard() {
   }, [collegeId]);
 
   // Silent fetch — updates data without showing table loading skeleton
-  const fetchStaffSilent = useCallback(async (search = "") => {
+  const fetchStaffSilent = useCallback(async (search = "", date?: string | null) => {
     if (!collegeId) return;
     try {
-      const result = await getAttendanceStaff({ collegeId, search, page: 1, limit: 100 });
+      const result = await getAttendanceStaff({
+        collegeId,
+        search,
+        page: 1,
+        limit: 100,
+        date: date ?? undefined, // ADDED: pass date param
+      });
       setStaffList(result.staff);
       setTotalCount(result.totalCount);
     } catch (err) {
@@ -86,11 +104,19 @@ function FacultyAttendanceDashboard() {
     if (!hrLoading && collegeId) fetchStaff();
   }, [hrLoading, collegeId]);
 
-  // Debounced search
+  // Debounced search — skips mount run, always reads latest date from ref
   useEffect(() => {
-    const timer = setTimeout(() => fetchStaff(searchQuery), 300);
+    if (!searchMounted.current) { searchMounted.current = true; return; }
+    const timer = setTimeout(() => fetchStaff(searchQuery, filterDateRef.current), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // ── ADDED: date filter handler ────────────────────────────────────────────
+  const handleDateFilter = (date: string | null) => {
+    setFilterDate(date);
+    filterDateRef.current = date;        // sync ref immediately
+    fetchStaff(searchQuery, date);       // fetch right away for selected date
+  };
 
   // ── Counts derived from staffList ────────────────────────────────────────
   const presentCount = staffList.filter(s => s.status?.toLowerCase() === "present").length;
@@ -282,6 +308,7 @@ function FacultyAttendanceDashboard() {
                   : filteredByTab;
                 handleMarkStatus(status, visibleList);
               }}
+              onDateFilter={handleDateFilter}
             />
 
             {/* Role pills + search bar */}
@@ -303,11 +330,12 @@ function FacultyAttendanceDashboard() {
               selectAll={selectAll}
               collegeHrId={collegeHrId ?? 0}
               markedUserIds={markedUserIds}
+              filterDate={filterDate}
               onSelectAll={handleSelectAll}
               onSelectRow={handleSelectRow}
               onSave={handleSave}
               onCancel={handleCancel}
-              onRefresh={() => fetchStaffSilent(searchQuery)}
+              onRefresh={() => fetchStaffSilent(searchQuery, filterDateRef.current)}
             />
 
           </div>

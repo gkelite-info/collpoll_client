@@ -105,13 +105,16 @@ export async function getUpcomingClasses(
       topicData:college_subject_unit_topics (topicTitle),
       subjectData:college_subjects (subjectName, subjectCode),
 
-      calendar_event_section (
-        section:college_sections (collegeSections),
-        branch:college_branch (collegeBranchCode),
-        yearData:college_academic_year (collegeAcademicYear),
-        semester:college_semester (collegeSemester),
-        education:college_education (collegeEducationType)
-      ),
+      
+calendar_event_section (
+  isActive,
+  deletedAt,
+  section:college_sections (collegeSections),
+  branch:college_branch (collegeBranchCode),
+  yearData:college_academic_year (collegeAcademicYear),
+  semester:college_semester (collegeSemester),
+  education:college_education (collegeEducationType)
+),
       
       faculty_class_sessions (status) 
     `,
@@ -128,7 +131,9 @@ export async function getUpcomingClasses(
   if (!events || events.length === 0) return [];
 
   return events.flatMap((event: any) => {
-    const sectionsData = event.calendar_event_section || [];
+    const sectionsData = (event.calendar_event_section || []).filter(
+      (s: any) => s.isActive === true && s.deletedAt === null,
+    );
 
     const sessionRecords = event.faculty_class_sessions || [];
     sessionRecords.sort(
@@ -139,7 +144,7 @@ export async function getUpcomingClasses(
     const sessionStatus =
       sessionRecords.length > 0 ? sessionRecords[0].status : "Scheduled";
 
-    return sectionsData.map((sectionRow: any) => {
+    return sectionsData.map((sectionRow: any, sectionIndex: number) => {
       const department = safeGet(
         sectionRow.branch,
         "collegeBranchCode",
@@ -165,7 +170,7 @@ export async function getUpcomingClasses(
       const topicTitle = safeGet(event.topicData, "topicTitle");
 
       return {
-        id: `${event.calendarEventId}-${sectionRow.section?.collegeSections}`,
+        id: `${event.calendarEventId}-${sectionRow.section?.collegeSections ?? sectionIndex}-${sectionIndex}`,
         title: subjectName,
         description: topicTitle || "Class",
         fromTime: convertTo12HourFormat(event.fromTime),

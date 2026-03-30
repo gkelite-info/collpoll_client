@@ -24,7 +24,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   activeTab,
   onDeleteRequest,
   onEditRequest,
-   onEventClick,
+  onEventClick,
 }) => {
   const matchesFilter = (event: CalendarEvent): boolean => {
     if (activeTab === "All") {
@@ -119,9 +119,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                 className="relative h-full border-r border-[#C6C6C69E] last:border-r-0 z-10"
               >
                 {getOverlappingEvents(
-                  events
-                    .filter((e) => e.startTime.startsWith(dayObj.fullDate))
-                    .filter(matchesFilter)
+                  Array.from(
+                    new Map(
+                      events
+                        .filter((e) => e.startTime.startsWith(dayObj.fullDate))
+                        .filter(matchesFilter)
+                        .map((e) => [
+                          `${e.id}-${e.startTime}-${e.endTime}`,
+                          e,
+                        ])
+                    ).values()
+                  )
                 ).map((event) => {
                   const position = getEventStyle(event);
 
@@ -136,6 +144,7 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       event.startTime,
                       event.endTime
                     );
+
                   const baseWidth = 100 / event.overlapTotal;
                   let width = baseWidth;
                   let left = baseWidth * event.overlapIndex;
@@ -152,16 +161,17 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                       zIndex = 1;
                     }
                   }
+
                   const shouldHide =
                     hoveredEvent &&
                     isSameTimeSlot &&
                     !isHovered;
+
                   return (
                     <div
-                      key={event.id}
+                      key={`${event.id}-${event.startTime}-${event.endTime}`}
                       onMouseEnter={() => setHoveredEvent(event)}
                       onMouseLeave={() => setHoveredEvent(null)}
-
                       style={{
                         top: position.top,
                         height: position.height,
@@ -170,8 +180,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
                         zIndex,
                       }}
                       className={`absolute px-1 transition-all duration-200 ease-out ${shouldHide
-                        ? "opacity-0 pointer-events-none scale-95"
-                        : "opacity-100"
+                          ? "opacity-0 pointer-events-none scale-95"
+                          : "opacity-100"
                         }`}
                     >
                       <EventCard

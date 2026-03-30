@@ -86,13 +86,23 @@ export async function fetchStudentFeePlan(
 
     const { data: obligation, error: obligationError } = await obligationQuery;
 
-    if (obligationError) {
+    // if (obligationError) {
+    //   console.error("Database error during obligation fetch:", obligationError);
+    //   return null;
+    // }
+
+    // if (!obligation) {
+    //   console.warn("No active fee obligation found for this student.");
+    //   return null;
+    // }
+
+    if (obligationError && Object.keys(obligationError).length > 0) {
       console.error("Database error during obligation fetch:", obligationError);
       return null;
     }
 
     if (!obligation) {
-      console.warn("No active fee obligation found for this student.");
+      console.warn("Failed to fetch fee plan: no active obligation found");
       return null;
     }
 

@@ -147,12 +147,12 @@ const AttendancePage = () => {
   };
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedSearch(search);
-  }, 400);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
 
-  return () => clearTimeout(timer);
-}, [search]);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (!userId) return;
@@ -389,16 +389,18 @@ const AttendancePage = () => {
             <Loader />
           </div>
         ) : (
-          cardData.map((item, index) => (
-            <CardComponent
-              key={index}
-              style={`${item.style} w-[156px] h-[156px]`}
-              icon={item.icon}
-              iconBgColor={item.iconBgColor}
-              value={item.value}
-              label={item.label}
-            />
-          ))
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full h-32">
+            {cardData.map((item, index) => (
+              <CardComponent
+                key={index}
+                style={`${item.style} h-[156px]`}
+                icon={item.icon}
+                iconBgColor={item.iconBgColor}
+                value={item.value}
+                label={item.label}
+              />
+            ))}
+          </div>
         )}
         <div>
           <WorkWeekCalendar style="h-full w-[350px]" />
@@ -454,7 +456,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (branches.find((b) => b.collegeBranchId.toString() === val)
-                    ?.collegeBranchCode ?? val)
+                  ?.collegeBranchCode ?? val)
             }
           />
 
@@ -480,7 +482,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (years.find((y) => y.collegeAcademicYearId.toString() === val)
-                    ?.collegeAcademicYear ?? val)
+                  ?.collegeAcademicYear ?? val)
             }
           />
 
@@ -506,7 +508,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (sections.find((s) => s.collegeSectionsId.toString() === val)
-                    ?.collegeSections ?? val)
+                  ?.collegeSections ?? val)
             }
           />
 
@@ -531,7 +533,7 @@ const AttendancePage = () => {
               val === "All"
                 ? "All"
                 : (subjects.find((s) => s.collegeSubjectId.toString() === val)
-                    ?.subjectName ?? val)
+                  ?.subjectName ?? val)
             }
           />
         </div>
@@ -593,11 +595,10 @@ const AttendancePage = () => {
                 <button
                   key={i + 1}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
-                    currentPage === i + 1
-                      ? "bg-[#16284F] text-white"
-                      : "bg-white text-gray-600 border hover:border-gray-300"
-                  }`}
+                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1
+                    ? "bg-[#16284F] text-white"
+                    : "bg-white text-gray-600 border hover:border-gray-300"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -620,7 +621,7 @@ const AttendancePage = () => {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div><Loader/></div>}>
+    <Suspense fallback={<div><Loader /></div>}>
       <AttendancePage />
     </Suspense>
   );
