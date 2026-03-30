@@ -499,26 +499,26 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     };
   }, [collegeId, facultyCtx]);
 
-  // useEffect(() => {
-  //   if (!subjectId) return;
+  useEffect(() => {
+    if (!subjectId) return;
 
-  //   supabase
-  //     .from("college_subjects")
-  //     .select("collegeSemesterId")
-  //     .eq("collegeSubjectId", subjectId)
-  //     .single()
-  //     .then(({ data, error }) => {
-  //       if (error) {
-  //         console.error("Semester auto-fetch failed", error);
-  //         return;
-  //       }
+    supabase
+      .from("college_subjects")
+      .select("collegeSemesterId")
+      .eq("collegeSubjectId", subjectId)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Semester auto-fetch failed", error);
+          return;
+        }
 
-  //       if (data?.collegeSemesterId) {
-  //        setSemester(semesters[0].collegeSemesterId);
-  //         setIsSemesterAuto(true);
-  //       }
-  //     });
-  // }, [subjectId]);
+        if (data?.collegeSemesterId) {
+          setSemester(data.collegeSemesterId); 
+          setIsSemesterAuto(true);             
+        }
+      });
+  }, [subjectId]);
 
   useEffect(() => {
     if (!subjectId) {
