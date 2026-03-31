@@ -270,46 +270,46 @@ export default function ProfilePersonalDetails() {
                         </div>
                     )}
                 </div>
-
-                <div className="mt-6">
-                    <label className="block text-sm font-medium text-[#282828] mb-2">
-                        Work Status
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                        <div
-                            onClick={() => setWorkStatus("experience")}
-                            className={`border rounded-md p-4 cursor-pointer transition-all
+                {!(role === "Parent") && (
+                    <div className="mt-6">
+                        <label className="block text-sm font-medium text-[#282828] mb-2">
+                            Work Status
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div
+                                onClick={() => setWorkStatus("experience")}
+                                className={`border rounded-md p-4 cursor-pointer transition-all
                                 ${workStatus === "experience"
-                                    ? "border-[#43C17A] bg-green-50"
-                                    : "hover:border-[#43C17A] border-[#CCCCCC]"
-                                }`}
-                        >
-                            <p className={`font-medium ${workStatus === "experience" ? "text-[#43C17A]" : "text-[#282828]"}`}>
-                                I’m experienced
-                            </p>
-                            <p className="text-sm mt-1 text-[#525252]">
-                                i have work experience (excluding internships)
-                            </p>
-                        </div>
+                                        ? "border-[#43C17A] bg-green-50"
+                                        : "hover:border-[#43C17A] border-[#CCCCCC]"
+                                    }`}
+                            >
+                                <p className={`font-medium ${workStatus === "experience" ? "text-[#43C17A]" : "text-[#282828]"}`}>
+                                    I’m experienced
+                                </p>
+                                <p className="text-sm mt-1 text-[#525252]">
+                                    i have work experience (excluding internships)
+                                </p>
+                            </div>
 
-                        <div
-                            onClick={() => setWorkStatus("fresher")}
-                            className={`border rounded-md p-4 cursor-pointer transition-all
+                            <div
+                                onClick={() => setWorkStatus("fresher")}
+                                className={`border rounded-md p-4 cursor-pointer transition-all
                                ${workStatus === "fresher"
-                                    ? "border-[#43C17A] bg-green-50"
-                                    : "hover:border-[#43C17A] border-[#CCCCCC]"
-                                }`}
-                        >
-                            <p className={`font-medium ${workStatus === "fresher" ? "text-[#43C17A]" : "text-[#282828]"}`}>
-                                I’m a fresher
-                            </p>
-                            <p className="text-sm mt-1 text-[#525252]">
-                                i am a student/Haven’t worked after graduation
-                            </p>
+                                        ? "border-[#43C17A] bg-green-50"
+                                        : "hover:border-[#43C17A] border-[#CCCCCC]"
+                                    }`}
+                            >
+                                <p className={`font-medium ${workStatus === "fresher" ? "text-[#43C17A]" : "text-[#282828]"}`}>
+                                    I’m a fresher
+                                </p>
+                                <p className="text-sm mt-1 text-[#525252]">
+                                    i am a student/Haven’t worked after graduation
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
                 <div className="mt-6 flex justify-end">
                     <button
                         className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading && "opacity-50 cursor-not-allowed"}`}

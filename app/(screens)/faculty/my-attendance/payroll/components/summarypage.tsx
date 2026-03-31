@@ -55,14 +55,8 @@ const SummaryShimmer = () => (
 );
 
 export default function SummaryPage() {
-  // 1. Fetch Role-Specific Context (Swap these destructured variables based on the portal, e.g., adminId)
-  const { role, fullName, facultyId, college_branch, mobile, email } =
-    useFaculty();
-
-  // 2. Fetch Global User Context
-  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears } =
-    useUser();
-
+  const { role, fullName, facultyId, college_branch, mobile, email } = useFaculty();
+  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears } = useUser();
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -82,7 +76,6 @@ export default function SummaryPage() {
 
   const { bank, aadhaar, pan } = onboardingData || {};
 
-  // Formatter for DB dates
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "Not Provided";
     return new Date(dateStr).toLocaleDateString("en-GB", {
@@ -93,8 +86,6 @@ export default function SummaryPage() {
   };
 
   const isInter = ["Inter"].includes(role);
-
-  // Define the system ID dynamically based on the role's primary key
   const systemId = facultyId ? `ID-${facultyId}` : `ID-${userId}`;
 
   return (
@@ -121,7 +112,7 @@ export default function SummaryPage() {
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label="System ID" value={systemId} />
+          <InfoRow label={`${role} ID`} value={systemId} />
           <InfoRow
             label={isInter ? "Group" : "Branch"}
             value={college_branch}

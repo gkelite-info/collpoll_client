@@ -67,7 +67,7 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
                     </p>
                 )}
 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-2 text-sm text-[#282828]">
                     <Detail label="Type" value={event.type} />
                     <Detail label="Date" value={dateStr} />
                     <Detail label="Room no" value={event.rawFormData?.roomNo || "-"} />

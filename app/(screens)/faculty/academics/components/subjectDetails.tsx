@@ -311,7 +311,7 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
           <button
             onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
             disabled={!isDirty || isSavingThisUnit}
-            className={`border px-4 py-1.5 rounded-lg text-sm transition
+            className={`border px-4 py-1.5 rounded-lg cursor-pointer text-sm transition
     ${!isDirty || isSavingThisUnit
                 ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
                 : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"

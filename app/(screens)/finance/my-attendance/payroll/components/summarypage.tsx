@@ -125,7 +125,7 @@ export default function SummaryPage() {
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label="System ID" value={systemId} />
+          <InfoRow label={`${role} ID`} value={systemId} />
           <InfoRow
             label={isInter ? "Group" : "Education Type"}
             value={collegeEducationType}

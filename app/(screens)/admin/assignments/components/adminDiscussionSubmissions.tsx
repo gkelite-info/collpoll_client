@@ -46,13 +46,26 @@ export default function AdminDiscussionSubmissions({ discussionId: propDiscussio
         });
     }, [discussionId]);
 
+    const uniqueSubmissionsByStudent = (submissions: any[]) => {
+        const map = new Map<number, any>();
+
+        submissions.forEach((sub) => {
+            if (!map.has(sub.studentId)) {
+                map.set(sub.studentId, sub);
+            }
+        });
+
+        return Array.from(map.values());
+    };
+
     useEffect(() => {
         if (!discussionId) return;
 
         setLoading(true);
         fetchDiscussionUploads(Number(discussionId), discussionSectionId)
             .then((data) => {
-                setSubmissions(data)
+                const uniqueByStudent = uniqueSubmissionsByStudent(data);
+                setSubmissions(uniqueByStudent);
             })
             .catch((err) => {
                 console.error(err);
@@ -80,11 +93,11 @@ export default function AdminDiscussionSubmissions({ discussionId: propDiscussio
                 <h1 className="font-bold text-xl md:text-2xl">Create and manage project discussions for students.</h1>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.06)] flex justify-between items-center mb-6">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1 w-[70%]">
                     <h2 className="text-lg font-bold text-[#282828]">{discussion?.title || "Discussion"}</h2>
                     <p className="text-sm text-gray-600"> {discussion?.description || "—"}</p>
                 </div>
-                <div className="bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm">
+                <div className="bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm w-fit">
                     Total Submissions : {loading ? "…" : submissions.length}
                 </div>
             </div>

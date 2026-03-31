@@ -1,11 +1,11 @@
 "use client";
- 
+
 import { PencilSimple, X, CalendarBlank } from "@phosphor-icons/react";
 import { MARK_BUTTONS } from "./types";
 import { useRef, useState } from "react";
- 
+
 type MarkStatus = "Present" | "Absent" | "Leave" | "Late";
- 
+
 type Props = {
   isEditMode: boolean;
   selectedRows: Set<number>;
@@ -13,14 +13,14 @@ type Props = {
   onMarkStatus: (status: MarkStatus) => void;
   onDateFilter?: (date: string | null) => void; // "YYYY-MM-DD" or null to clear
 };
- 
+
 const LABEL_TO_STATUS: Record<string, MarkStatus> = {
   "Mark Present": "Present",
   "Mark Absent": "Absent",
   "Mark Leave": "Leave",
   "Mark Late": "Late",
 };
- 
+
 export default function AttendanceToolbar({
   isEditMode,
   selectedRows,
@@ -29,29 +29,29 @@ export default function AttendanceToolbar({
   onDateFilter,
 }: Props) {
   const hasSelection = selectedRows.size > 0;
- 
+
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const calendarRef = useRef<HTMLDivElement>(null);
- 
+
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value; // "YYYY-MM-DD"
     setSelectedDate(val);
     onDateFilter?.(val || null);
     if (val) setShowCalendar(false);
   };
- 
+
   const handleClear = () => {
     setSelectedDate("");
     onDateFilter?.(null);
     setShowCalendar(false);
   };
- 
+
   return (
     <div className="flex items-center justify-between mb-2">
       <h2 className="text-sm font-bold text-[#282828]">Daily Attendance Records</h2>
       <div className="flex items-center gap-2">
- 
+
         {/* Mark buttons — edit mode only */}
         {isEditMode && MARK_BUTTONS.map((btn) => (
           <button
@@ -64,7 +64,7 @@ export default function AttendanceToolbar({
             {btn.label}
           </button>
         ))}
- 
+
         {/* Edit Attendance toggle */}
         <button
           onClick={onToggleEdit}
@@ -77,7 +77,7 @@ export default function AttendanceToolbar({
             ? <><X size={13} weight="bold" /> Cancel Edit</>
             : <><PencilSimple size={13} weight="bold" /> Edit Attendance</>}
         </button>
- 
+
         {/* Calendar date filter */}
         <div className="relative" ref={calendarRef}>
           <button
@@ -90,7 +90,7 @@ export default function AttendanceToolbar({
           >
             <CalendarBlank size={15} weight="bold" />
           </button>
- 
+
           {showCalendar && (
             <div className="absolute right-0 top-10 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-64">
               <div className="flex items-center justify-between mb-2">
@@ -118,7 +118,7 @@ export default function AttendanceToolbar({
             </div>
           )}
         </div>
- 
+
       </div>
     </div>
   );

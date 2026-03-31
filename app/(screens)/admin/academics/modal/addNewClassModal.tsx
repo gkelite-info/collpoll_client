@@ -45,6 +45,7 @@ export default function AddNewClassModal({
 
   const [adminId, setAdminId] = useState<number | null>(null);
   const { userId, collegeId, loading } = useUser();
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const resetForm = () => {
     setUnitName("");
@@ -97,24 +98,26 @@ export default function AddNewClassModal({
       toast.error("Please enter a valid Unit Number.");
       return;
     }
-    if (!startDate) {
-      toast.error("Please select a Start Date.");
-      return;
-    }
-    if (!endDate) {
-      toast.error("Please select an End Date.");
-      return;
-    }
-    if (new Date(startDate) > new Date(endDate)) {
-      toast.error("Start Date cannot be after the End Date.");
-      return;
-    }
+    // if (!startDate) {
+    //   toast.error("Please select a Start Date.");
+    //   return;
+    // }
+    // if (!endDate) {
+    //   toast.error("Please select an End Date.");
+    //   return;
+    // }
+    // if (new Date(startDate) > new Date(endDate)) {
+    //   toast.error("Start Date cannot be after the End Date.");
+    //   return;
+    // }
     if (selectedTopics.length === 0) {
       toast.error("Please add at least one topic.");
       return;
     }
 
     try {
+      setSaveLoading(true);
+
       const unitResult = await upsertAdminSubjectUnit({
         collegeId,
         collegeSubjectId: prefilledContext.subjectId,
@@ -146,6 +149,9 @@ export default function AddNewClassModal({
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Save failed");
+    }
+    finally {
+      setSaveLoading(false);
     }
   };
 
@@ -332,11 +338,12 @@ export default function AddNewClassModal({
                     e.target.value === "" ? "" : Number(e.target.value),
                   )
                 }
-                className={`w-full border rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 ${
-                  isUnitNumberDuplicate
-                    ? "border-red-500 focus:ring-red-500 bg-red-50"
-                    : "border-gray-300 focus:ring-[#43C17A]"
-                }`}
+                placeholder="Enter unit no"
+                onWheel={(e) => e.currentTarget.blur()}
+                className={`w-full border text-[#282828] rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 ${isUnitNumberDuplicate
+                  ? "border-red-500 focus:ring-red-500 bg-red-50"
+                  : "border-gray-300 focus:ring-[#43C17A]"
+                  }`}
               />
               {isUnitNumberDuplicate && (
                 <span className="text-[11px] font-medium text-red-500 mt-1 block">
@@ -345,7 +352,7 @@ export default function AddNewClassModal({
               )}
             </div>
             <div></div>
-            <div>
+            {/* <div>
               <label className="text-sm font-semibold text-[#282828]">
                 Start Date <span className="text-red-500">*</span>
               </label>
@@ -373,20 +380,19 @@ export default function AddNewClassModal({
                 disabled={!startDate}
                 className={`w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#43C17A] ${!startDate ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
               />
-            </div>
+            </div> */}
           </div>
 
           <div className="flex gap-4 mt-6">
             <button
               onClick={handleSave}
-              disabled={isUnitNumberDuplicate}
-              className={`flex-1 text-white cursor-pointer font-semibold py-2 rounded-xl transition-all ${
-                isUnitNumberDuplicate
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-[#43C17A] hover:bg-[#3bad6d]"
-              }`}
+              disabled={isUnitNumberDuplicate || saveLoading}
+              className={`flex-1 text-white cursor-pointer font-semibold py-2 rounded-xl transition-all ${isUnitNumberDuplicate
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#43C17A] hover:bg-[#3bad6d]"
+                }`}
             >
-              Save Unit
+              {saveLoading ? "Saving.." : "Save Unit"}
             </button>
             <button
               onClick={handleClose}

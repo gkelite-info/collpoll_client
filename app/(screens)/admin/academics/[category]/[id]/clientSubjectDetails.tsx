@@ -217,9 +217,8 @@ function UnitCard({ unit, onSave }: { unit: UiUnit; onSave: any }) {
                     />
                   </button>
                   <span
-                    className={`transition-colors duration-200 select-none ${
-                      topic.isCompleted ? "text-[#3F3F3F]" : "text-gray-400"
-                    }`}
+                    className={`transition-colors duration-200 select-none ${topic.isCompleted ? "text-[#3F3F3F]" : "text-gray-400"
+                      }`}
                   >
                     {topic.title}
                   </span>
@@ -375,7 +374,7 @@ export default function ClientSubjectDetails({
           </p>
         </div>
         <div className="flex justify-end w-[32%] items-center gap-4">
-          <CourseScheduleCard style="w-[320px]" />
+          <CourseScheduleCard style="w-[320px]" isVisibile={false} />
         </div>
       </div>
       <FilterBanner

@@ -225,7 +225,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
           >
             <div className="px-[40px] pt-[30px] pb-[20px] bg-white shrink-0">
               <div className="flex justify-between items-center">
-                <h2 className="text-[24px] font-roboto font-semibold text-[#282828]">
+                <h2 className="text-2xl font-roboto font-semibold text-[#282828]">
                   Create a New Post
                 </h2>
                 <button
@@ -234,11 +234,11 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 >
                   <X
                     size={28}
-                    className="text-[#282828] hover:text-red-500 transition-colors"
+                    className="text-[#282828] hover:text-red-500 transition-colors cursor-pointer"
                   />
                 </button>
               </div>
-              <p className="text-[18px] font-roboto font-normal text-[#282828] mt-[6px]">
+              <p className="text-base font-roboto font-normal text-[#282828] mt-[6px]">
                 Share announcements, achievements, or updates with students and
                 faculty.
               </p>
@@ -249,7 +249,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
             <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
               <div className="mb-6">
-                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                <label className="text-lg font-roboto font-medium text-[#282828]">
                   Post Title <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -257,18 +257,18 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Faculty Development Workshop on Generative AI"
-                  className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] placeholder:text-[#898989] outline-none focus:border-[#43C17A]"
+                  className="w-full h-[50px] mt-2 px-3 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] placeholder:text-[#898989] outline-none focus:border-[#43C17A]"
                 />
               </div>
 
               <div className="mb-6">
-                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                <label className="text-lg font-roboto font-medium text-[#282828]">
                   Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] outline-none focus:border-[#43C17A] bg-white cursor-pointer"
+                  className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] outline-none focus:border-[#43C17A] bg-white cursor-pointer"
                 >
                   <option value="announcements">Announcements</option>
                   <option value="achievements">Achievements</option>
@@ -277,7 +277,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
               </div>
 
               <div className="mb-6">
-                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                <label className="text-lg font-roboto font-medium text-[#282828]">
                   Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -285,20 +285,20 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Provide details about the event..."
-                  className="w-full mt-2 border border-[#C4C4C4] rounded-md text-[18px] font-roboto text-[#282828] outline-none px-4 py-3 focus:border-[#43C17A]"
+                  className="w-full mt-2 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] outline-none px-3 py-3 focus:border-[#43C17A]"
                   style={{ resize: "vertical" }}
                 />
               </div>
 
               <div className="mb-6">
-                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                <label className="text-lg font-roboto font-medium text-[#282828]">
                   Tags
                 </label>
                 <TagsInputBox tags={tags} setTags={setTags} />
               </div>
 
               <div className="mb-6">
-                <label className="text-[20px] font-roboto font-medium text-[#282828]">
+                <label className="text-lg font-roboto font-medium text-[#282828]">
                   Image Feature (Optional)
                 </label>
                 <input
@@ -317,7 +317,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                     className="mt-3 w-full h-[220px] border-2 border-dashed border-[#C4C4C4] rounded-xl flex flex-col items-center justify-center text-gray-500 gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <Upload size={40} className="opacity-70 text-[#282828]" />
-                    <p className="text-[18px] text-[#282828]">
+                    <p className="text-base text-[#282828]">
                       Click to Upload Image
                     </p>
                   </div>
@@ -338,7 +338,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                           ) as HTMLInputElement
                         ).value = "";
                       }}
-                      className="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md hover:bg-red-600 transition-colors"
+                      className="absolute -top-3 -right-3 cursor-pointer bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md hover:bg-red-600 transition-colors"
                     >
                       ×
                     </button>
@@ -349,7 +349,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
             <div className="px-[40px] py-[20px] border-t bg-white flex justify-between gap-4 shrink-0">
               <button
-                className="flex-1 h-[50px] rounded-lg bg-[#43C17A] text-[18px] text-white font-medium cursor-pointer hover:bg-[#3ba869] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 h-[50px] rounded-lg bg-[#43C17A] text-base text-white font-medium cursor-pointer hover:bg-[#3ba869] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -363,7 +363,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 )}
               </button>
               <button
-                className="flex-1 h-[50px] rounded-lg border border-[#C4C4C4] text-[18px] text-[#282828] font-medium cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 h-[50px] rounded-lg border border-[#C4C4C4] text-base text-[#282828] font-medium cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={onClose}
                 disabled={isSubmitting}
               >

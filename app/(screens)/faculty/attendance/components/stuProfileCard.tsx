@@ -135,14 +135,14 @@ export default function StudentProfileCard({
             bg="bg-[#E8F5E9]"
             iconBg="bg-[#4CAF50]"
             title="Total Attendance"
-            value={`${attendanceDays} Days`}
+            value={`${attendanceDays} Present`}
             percent={attendancePercent}
           />
           <StatCard
             bg="bg-[#FFEBEE]"
             iconBg="bg-[#F44336]"
             title="Total Absent"
-            value={`${absentDays} Days`}
+            value={`${absentDays} Absent`}
           />
           <StatCard
             bg="bg-[#E3F2FD]"

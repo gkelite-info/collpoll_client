@@ -93,7 +93,7 @@ export default function CalendarTimeTable() {
                         topic: item.eventTopic,
                         room: item.roomNo,
                         faculty: item.facultyName,
-                        img: "/ai.png",
+                        img: "/stu_class.png",
                         isCancelled: item.isCancelled
                     }))
                 );
@@ -111,7 +111,7 @@ export default function CalendarTimeTable() {
 
     return (
         <>
-            <div className="bg-white h-[606px] w-[647px] rounded-lg p-4 shadow-md flex flex-col overflow-y-auto">
+            <div className="bg-white lg:h-[784px] lg:w-[647px] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto">
                 <div className="bg-red-00">
                     <div className="flex bg-[#E8EAED] w-[191px] h-[54px] rounded-md shadow-md">
                         <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
@@ -141,7 +141,7 @@ export default function CalendarTimeTable() {
 
                                         <div className="bg-[#16284F] w-[527px] rounded-xl flex justify-end">
                                             <div className="w-[98%] h-full bg-[#E8E9ED] gap-3 rounded-r-lg flex items-center px-2">
-                                                <div className="h-[84px] w-[84px] rounded-lg bg-yellow-600 flex items-center justify-center">
+                                                <div className="h-[84px] w-[84px] rounded-lg bg-yellow-00 flex items-center justify-center">
                                                     <img src={item.img} />
                                                 </div>
 

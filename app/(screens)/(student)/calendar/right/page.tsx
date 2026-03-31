@@ -3,12 +3,9 @@ import { FaPlus } from "react-icons/fa6";
 import CalendarTimeTable from "./timetable";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useState } from "react";
-import TaskModal from "@/app/components/modals/taskModal";
-import { useUser } from "@/app/utils/context/UserContext";
 
 
 export default function CalendarRight() {
-    const { role, facultyId, studentId } = useUser();
 
     const [openModal, setOpenModal] = useState(false);
 
@@ -30,7 +27,7 @@ export default function CalendarRight() {
         <>
             <div className="bg-pink-00 h-full flex flex-col justify-between">
                 <CalendarTimeTable />
-                <div className="bg-white h-[158px] w-[647px] rounded-lg p-3 shadow-md">
+                {/* <div className="bg-white h-[158px] w-[647px] rounded-lg p-3 shadow-md">
                     <div className="bg-red-00 w-full flex justify-between">
                         <h4 className="text-[#282828] font-medium">Assignments / Tasks</h4>
 
@@ -65,7 +62,7 @@ export default function CalendarRight() {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div> */}
             </div>
         </>
     );

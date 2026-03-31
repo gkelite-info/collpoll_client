@@ -267,7 +267,7 @@ export default function ProfileLanguages() {
                             className={`px-6 py-2 rounded-md text-sm text-white 
                             ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
                         >
-                            {isSubmitting ? "Saving..." : "Submit"}
+                            {isSubmitting ? "Saving..." : "Save"}
                         </button>
 
                     </div>

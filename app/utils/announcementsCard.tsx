@@ -29,7 +29,7 @@ type AnnouncementsCardProps = {
   onViewChange?: (view: "my" | "others") => void;
   onEditAnnouncement?: (announcement: AnnounceCard) => void;
   refreshAnnouncements?: () => Promise<void>;
-   readOnly?: boolean;
+  readOnly?: boolean;
 };
 
 export default function AnnouncementsCard({
@@ -39,7 +39,7 @@ export default function AnnouncementsCard({
   onViewChange,
   onEditAnnouncement,
   refreshAnnouncements,
-    readOnly, 
+  readOnly,
 }: AnnouncementsCardProps) {
   const pathname = usePathname();
   const isFinanceDashboard = pathname.startsWith("/finance");
@@ -52,7 +52,7 @@ export default function AnnouncementsCard({
   const isReadOnlyUser = readOnly ?? (isStudentDashboard || isParentDashboard);
   const canManageAnnouncements = !isReadOnlyUser && (isFinanceDashboard || isCollegeAdminDashboard || isAdminDashboard || isFacultyDashboard || isHrDashboard);
 
-  const [activeView, setActiveView] = useState<"my" | "others">(isReadOnlyUser ? "others" : "my");
+  const [activeView, setActiveView] = useState<"others" | "my">(isReadOnlyUser ? "my" : "others");
   const [openModal, setOpenModal] = useState(false);
   const [editData, setEditData] = useState<any>(null);
 
@@ -182,24 +182,7 @@ export default function AnnouncementsCard({
 
         {!isReadOnlyUser && canManageAnnouncements && (
           <div className="flex items-center justify-between">
-
             <div className="flex items-center gap-1 text-sm font-semibold">
-
-              <button
-                onClick={() => {
-                  setActiveView("my");
-                  onViewChange?.("my");
-                }}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${activeView === "my"
-                  ? "bg-[#43C17A] text-white shadow-sm"
-                  : "text-gray-400 hover:text-[#16284F]"
-                  }`}
-              >
-                Personal
-              </button>
-
-              <span className="px-1 text-gray-400">/</span>
-
               <button
                 onClick={() => {
                   setActiveView("others");
@@ -213,6 +196,20 @@ export default function AnnouncementsCard({
                 Shared
               </button>
 
+              <span className="px-1 text-gray-400">/</span>
+
+              <button
+                onClick={() => {
+                  setActiveView("my");
+                  onViewChange?.("my");
+                }}
+                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${activeView === "my"
+                  ? "bg-[#43C17A] text-white shadow-sm"
+                  : "text-gray-400 hover:text-[#16284F]"
+                  }`}
+              >
+                Personal
+              </button>
             </div>
           </div>
         )}

@@ -60,7 +60,7 @@ export default function AssignmentTable({
           id: student.studentId,
           photo: `https://i.pravatar.cc/40?u=${user?.email || student.studentId}`,
           name: user?.fullName || "Unknown",
-          roll: String(user?.userId || "N/A"),
+          roll: String(student?.studentId || "N/A"),
           date: sub
             ? new Date(sub.submittedOn).toLocaleDateString("en-GB", {
                 day: "2-digit",

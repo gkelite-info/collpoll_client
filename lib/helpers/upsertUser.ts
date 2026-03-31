@@ -194,3 +194,61 @@ export const upsertAdminEntry = async (payload: {
     return { success: false, error: err.message || "Admin creation failed" };
   }
 };
+
+
+export async function upsertCollegeHR(
+  payload: {
+    collegeHrId?: number;
+    userId: number;
+    collegeId: number;
+    createdBy: number;
+    isActive?: boolean;
+  }
+) {
+  const now = new Date().toISOString();
+
+  const upsertPayload: any = {
+    collegeId: payload.collegeId,
+    isActive: payload.isActive ?? true,
+    is_deleted: false,
+    deletedAt: null,
+    updatedAt: now,
+  };
+
+  if (!payload.collegeHrId) {
+    upsertPayload.userId = payload.userId;
+    upsertPayload.createdBy = payload.createdBy;
+    upsertPayload.createdAt = now;
+
+    const { data, error } = await supabase
+      .from("college_hr")
+      .insert([upsertPayload])
+      .select("collegeHrId")
+      .single();
+
+    if (error) {
+      console.error("upsertCollegeHR insert error:", error);
+      return { success: false, error };
+    }
+
+    return {
+      success: true,
+      collegeHrId: data.collegeHrId,
+    };
+  }
+
+  const { error } = await supabase
+    .from("college_hr")
+    .update(upsertPayload)
+    .eq("collegeHrId", payload.collegeHrId);
+
+  if (error) {
+    console.error("upsertCollegeHR update error:", error);
+    return { success: false, error };
+  }
+
+  return {
+    success: true,
+    collegeHrId: payload.collegeHrId,
+  };
+}
