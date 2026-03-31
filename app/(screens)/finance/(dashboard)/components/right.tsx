@@ -24,7 +24,6 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-
 export default function SemwiseDetailsRight() {
   const [openModal, setOpenModal] = useState(false);
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -49,7 +48,6 @@ export default function SemwiseDetailsRight() {
         collegeAnnouncementId: item.collegeAnnouncementId,
         type: item.type,
         targetRoles: item.targetRoles,
-
 
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",

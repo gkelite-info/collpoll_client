@@ -76,7 +76,7 @@ function TagsInputBox({
                 e.stopPropagation();
                 removeTag(tag);
               }}
-              className="hover:bg-[#43C17A] hover:text-white rounded-full p-[2px] transition-colors flex items-center justify-center"
+              className="hover:bg-[#43C17A] cursor-pointer hover:text-white rounded-full p-[2px] transition-colors flex items-center justify-center"
             >
               <X size={14} strokeWidth={3} />
             </button>
@@ -298,7 +298,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
               </div>
 
               <div className="mb-6">
-                <label className="text-lg font-roboto font-medium text-[#282828]">
+                <label className="text-[20px] font-roboto font-medium text-[#282828]">
                   Image Feature (Optional)
                 </label>
                 <input
@@ -314,19 +314,20 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                     onClick={() =>
                       document.getElementById("imageUploadInput")?.click()
                     }
-                    className="mt-3 w-full h-[220px] border-2 border-dashed border-[#C4C4C4] rounded-xl flex flex-col items-center justify-center text-gray-500 gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                    className="mt-3 w-full h-[200px] border-2 border-dashed border-[#C4C4C4] rounded-xl flex flex-col items-center justify-center text-gray-500 gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
                   >
                     <Upload size={40} className="opacity-70 text-[#282828]" />
-                    <p className="text-base text-[#282828]">
+                    <p className="text-[18px] text-[#282828]">
                       Click to Upload Image
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-4 relative inline-block">
+                  // Fixed: Clean, glitch-free bounding box
+                  <div className="mt-3 relative w-full h-[250px] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center">
                     <img
                       src={imagePreview}
                       alt="preview"
-                      className="w-full max-h-[300px] object-cover rounded-lg border"
+                      className="max-w-full max-h-full object-contain"
                     />
                     <button
                       onClick={() => {
@@ -338,9 +339,9 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                           ) as HTMLInputElement
                         ).value = "";
                       }}
-                      className="absolute -top-3 -right-3 cursor-pointer bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md hover:bg-red-600 transition-colors"
+                      className="absolute top-2 right-2 bg-white/90 backdrop-blur text-red-500 hover:text-white hover:bg-red-500 w-8 h-8 rounded-full flex items-center justify-center text-lg shadow-md transition-colors cursor-pointer"
                     >
-                      ×
+                      <X size={18} />
                     </button>
                   </div>
                 )}
