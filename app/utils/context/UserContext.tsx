@@ -60,9 +60,6 @@
 //   const [facultyId, setFacultyId] = useState<number | null>(null);
 //   const [adminId, setAdminId] = useState<number | null>(null);
 
-
-
-
 //   useEffect(() => {
 //     if (!userId || role !== "Student") return;
 //     getStudentId().then(setStudentId).catch(console.error);
@@ -81,7 +78,6 @@
 
 //     loadStudentContext();
 //   }, [userId, role]);
-
 
 //   useEffect(() => {
 //     async function loadAdminId() {
@@ -102,7 +98,6 @@
 //     loadAdminId();
 //   }, [userId, role]);
 
-
 //   useEffect(() => {
 //     async function loadFinanceId() {
 //       if (!userId || role !== "Finance") return;
@@ -121,7 +116,6 @@
 
 //     loadFinanceId();
 //   }, [userId, role]);
-
 
 //   useEffect(() => {
 //     const resolveStudentId = async () => {
@@ -184,7 +178,6 @@
 //     };
 //   }, []);
 
-
 //   useEffect(() => {
 //     async function loadFacultyId() {
 //       if (!userId || role !== "Faculty") return;
@@ -203,7 +196,6 @@
 
 //     loadFacultyId();
 //   }, [userId, role]);
-
 
 //   return (
 //     <StudentContext.Provider
@@ -234,10 +226,16 @@
 
 // export const useUser = () => useContext(StudentContext);
 
-
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+} from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
 import { fetchStudentContext } from "./student/studentContextAPI";
@@ -278,7 +276,7 @@ const UserContext = createContext<UserContextType>({
   userId: null,
   loading: true,
   fullName: null,
-  setFullName: () => { },
+  setFullName: () => {},
   mobile: null,
   email: null,
   gender: null,
@@ -297,13 +295,12 @@ const UserContext = createContext<UserContextType>({
   collegeAcademicYear: null,
   collegeSection: null,
   profilePhoto: null,
-  setProfilePhoto: () => { },
+  setProfilePhoto: () => {},
   dateOfJoining: null,
   professionalExperienceYears: null,
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
-
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [fullName, setFullName] = useState<string | null>(null);
@@ -320,13 +317,20 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [collegeAdminId, setCollegeAdminId] = useState<number | null>(null);
   const [parentId, setParentId] = useState<number | null>(null);
   const [collegeHrId, setCollegeHrId] = useState<number | null>(null);
-  const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
-  const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
-  const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
+  const [collegeEducationType, setCollegeEducationType] = useState<
+    string | null
+  >(null);
+  const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(
+    null,
+  );
+  const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(
+    null,
+  );
   const [collegeSection, setCollegeSection] = useState<string | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [dateOfJoining, setDateOfJoining] = useState<string | null>(null);
-  const [professionalExperienceYears, setProfessionalExperienceYears] = useState<number | null>(null);
+  const [professionalExperienceYears, setProfessionalExperienceYears] =
+    useState<number | null>(null);
   const lastAuthUserId = useRef<string | null>(null);
   const isContextLoaded = useRef(false);
 
@@ -356,7 +360,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const roleLoaders: Record<string, (userId: number) => Promise<void>> = {
-
     Student: async (uid) => {
       const [sid, studentCtx] = await Promise.all([
         getStudentId(),
@@ -366,7 +369,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setCollegeEducationType(studentCtx?.collegeEducationType ?? null);
       setCollegeBranchCode(studentCtx?.collegeBranchCode ?? null);
       setCollegeAcademicYear(studentCtx?.collegeAcademicYear ?? null);
-      setCollegeSection(studentCtx?.collegeSections ?? null)
+      setCollegeSection(studentCtx?.collegeSections ?? null);
     },
 
     Admin: async (uid) => {
@@ -378,7 +381,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           .is("deletedAt", null)
           .maybeSingle(),
 
-        fetchAdminContext(uid)
+        fetchAdminContext(uid),
       ]);
       setAdminId(adminData.data?.adminId ?? null);
       setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
@@ -392,7 +395,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           .eq("userId", uid)
           .eq("is_deleted", false)
           .maybeSingle(),
-        fetchFinanceManagerContext(uid)
+        fetchFinanceManagerContext(uid),
       ]);
       setFinanceManagerId(financeData.data?.financeManagerId ?? null);
       setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
@@ -407,7 +410,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           .is("deletedAt", null)
           .maybeSingle(),
 
-        fetchFacultyContext(uid)
+        fetchFacultyContext(uid),
       ]);
 
       setFacultyId(facultyData.data?.facultyId ?? null);
@@ -415,7 +418,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       setCollegeBranchCode(facultyCtx?.college_branch ?? null);
       setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
 
-      const sections = facultyCtx?.sections?.map((s: any) => s.college_sections.collegeSections).join(", ") ?? null;
+      const sections =
+        facultyCtx?.sections
+          ?.map((s: any) => s.college_sections.collegeSections)
+          .join(", ") ?? null;
 
       setCollegeSection(sections);
     },
@@ -452,7 +458,6 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     // FUTURE ROLES — add here, nothing else changes:
     // Placement: async (uid) => { ... setPlacementId(...) },
-
   };
 
   useEffect(() => {
@@ -462,10 +467,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: auth } = await supabase.auth.getUser();
 
         const authId = auth.user?.id ?? null;
-        if (
-          isContextLoaded.current &&
-          lastAuthUserId.current === authId
-        ) {
+        if (isContextLoaded.current && lastAuthUserId.current === authId) {
           return;
         }
 
@@ -479,7 +481,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
         const { data: userData, error } = await supabase
           .from("users")
-          .select("userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears")
+          .select(
+            "userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears",
+          )
           .eq("auth_id", auth.user.id)
           .maybeSingle();
 
@@ -490,7 +494,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         setDateOfJoining(userData.dateOfJoining ?? null);
-        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
+        setProfessionalExperienceYears(
+          userData.professionalExperienceYears ?? null,
+        );
         setUserId(userData.userId);
         setFullName(userData.fullName);
         setMobile(userData.mobile);
@@ -500,12 +506,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setCollegePublicId(userData.collegePublicId);
         setCollegeId(userData.collegeId);
         setDateOfJoining(userData.dateOfJoining ?? null);
-        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
+        setProfessionalExperienceYears(
+          userData.professionalExperienceYears ?? null,
+        );
 
         try {
           const photoData = await getUserProfilePhoto(userData.userId);
           setProfilePhoto(photoData?.profileUrl ?? null);
-        } catch { }
+        } catch {}
 
         const loader = roleLoaders[userData.role];
 
@@ -524,68 +532,86 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     loadUserContext();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const authId = session?.user?.id ?? null;
-      if (event === "SIGNED_OUT") {
-        resetState();
-        isContextLoaded.current = false;
-        lastAuthUserId.current = null;
-        return;
-      }
-      if (event === "SIGNED_IN") {
-        if (lastAuthUserId.current !== authId) {
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        const authId = session?.user?.id ?? null;
+        if (event === "SIGNED_OUT") {
+          resetState();
           isContextLoaded.current = false;
-          await loadUserContext();
+          lastAuthUserId.current = null;
+          return;
         }
-      }
-    });
+        if (event === "SIGNED_IN") {
+          if (lastAuthUserId.current !== authId) {
+            isContextLoaded.current = false;
+            await loadUserContext();
+          }
+        }
+      },
+    );
     return () => {
       listener.subscription.unsubscribe();
     };
-
   }, []);
 
-  const contextValue = useMemo<UserContextType>(() => ({
-    userId,
-    loading,
-    fullName,
-    setFullName,
-    mobile,
-    email,
-    gender,
-    role,
-    collegePublicId,
-    collegeId,
-    studentId,
-    adminId,
-    financeManagerId,
-    facultyId,
-    collegeAdminId,
-    parentId,
-    collegeHrId,
-    collegeEducationType,
-    collegeBranchCode,
-    collegeAcademicYear,
-    collegeSection,
-    profilePhoto,
-    setProfilePhoto,
-    dateOfJoining,
-    professionalExperienceYears,
-  }), [
-    userId, loading, fullName, mobile, email, gender, role,
-    collegePublicId, collegeId,
-    studentId, adminId, financeManagerId, facultyId,
-    collegeAdminId, parentId, collegeHrId,
-    collegeEducationType, collegeBranchCode, collegeAcademicYear,
-    collegeSection, profilePhoto, dateOfJoining, professionalExperienceYears,
-  ]);
-
-  return (
-    <UserContext.Provider value={contextValue}>
-      {children}
-    </UserContext.Provider>
+  const contextValue = useMemo<UserContextType>(
+    () => ({
+      userId,
+      loading,
+      fullName,
+      setFullName,
+      mobile,
+      email,
+      gender,
+      role,
+      collegePublicId,
+      collegeId,
+      studentId,
+      adminId,
+      financeManagerId,
+      facultyId,
+      collegeAdminId,
+      parentId,
+      collegeHrId,
+      collegeEducationType,
+      collegeBranchCode,
+      collegeAcademicYear,
+      collegeSection,
+      profilePhoto,
+      setProfilePhoto,
+      dateOfJoining,
+      professionalExperienceYears,
+    }),
+    [
+      userId,
+      loading,
+      fullName,
+      mobile,
+      email,
+      gender,
+      role,
+      collegePublicId,
+      collegeId,
+      studentId,
+      adminId,
+      financeManagerId,
+      facultyId,
+      collegeAdminId,
+      parentId,
+      collegeHrId,
+      collegeEducationType,
+      collegeBranchCode,
+      collegeAcademicYear,
+      collegeSection,
+      profilePhoto,
+      dateOfJoining,
+      professionalExperienceYears,
+    ],
   );
 
+  return (
+    <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>
+  );
 };
 
 export const useUser = () => useContext(UserContext);

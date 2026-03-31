@@ -56,16 +56,10 @@ export async function fetchCampusBuzzPostComments(campusBuzzPostId: number) {
     .from("campus_buzz_post_comments")
     .select(
       `
-            campusBuzzPostCommentId,
-            campusBuzzPostId,
-            comment,
-            parentCommentId,
-            commentedBy,
-            createdAt,
+            campusBuzzPostCommentId, campusBuzzPostId, comment, parentCommentId, commentedBy, createdAt,
             users (
-                userId,
-                fullName,
-                role
+                userId, fullName, role,
+                user_profile ( profileUrl )
             )
         `,
     )

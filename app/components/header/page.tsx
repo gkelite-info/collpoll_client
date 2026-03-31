@@ -12,7 +12,7 @@ import { Suspense, useEffect, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
 import NewsModal from "../modals/NewsModal";
 import EmailModal from "../modals/EmailModal";
-import AnnouncementModal from "../modals/AnnouncementModal";
+import AnnouncementModal from "../campusBuzz/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";

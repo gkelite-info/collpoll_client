@@ -34,18 +34,10 @@ export async function fetchCampusBuzzFeed(
     .from("campus_buzz_post")
     .select(
       `
-            campusBuzzPostId,
-            title,
-            category,
-            description,
-            tags,
-            imageUrl,
-            createdBy,
-            createdAt,
+            campusBuzzPostId, title, category, description, tags, imageUrl, createdBy, createdAt,
             users!campus_buzz_post_createdBy_fkey (
-                userId,
-                fullName,
-                role
+                userId, fullName, role,
+                user_profile ( profileUrl )
             )
         `,
     )
