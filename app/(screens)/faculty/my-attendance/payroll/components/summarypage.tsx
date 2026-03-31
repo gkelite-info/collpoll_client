@@ -25,7 +25,6 @@ const InfoRow = ({
   </div>
 );
 
-// --- UNIVERSAL SHIMMER COMPONENT ---
 const SummaryShimmer = () => (
   <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
     {[...Array(4)].map((_, i) => (
@@ -55,8 +54,10 @@ const SummaryShimmer = () => (
 );
 
 export default function SummaryPage() {
-  const { role, fullName, facultyId, college_branch, mobile, email } = useFaculty();
-  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears } = useUser();
+  const { role, fullName, facultyId, college_branch, mobile, email } =
+    useFaculty();
+  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears } =
+    useUser();
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -90,7 +91,6 @@ export default function SummaryPage() {
 
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
-      {/* 1. PERSONAL INFORMATION */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
           {profilePhoto ? (
@@ -131,7 +131,6 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* 2. PAYMENT INFORMATION */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 pb-4 border-b border-gray-100 text-left">
           Payment Information
@@ -164,7 +163,6 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* 3. AADHAAR INFORMATION */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 text-left">
           Identity Information
@@ -196,7 +194,6 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      {/* 4. PAN INFORMATION */}
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex items-center justify-start space-x-2.5 mb-5 mt-1">
           <img

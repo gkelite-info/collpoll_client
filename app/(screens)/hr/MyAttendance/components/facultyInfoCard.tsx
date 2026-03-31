@@ -22,7 +22,6 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
         </p>
       </div>
 
-      {/* Details Grid - Compact spacing */}
       <div className="grid grid-cols-[120px_1fr] gap-y-2 text-[13px]">
         <div className="text-[#282828] font-semibold">ID</div>
         <div className="text-gray-500">{profile.id}</div>

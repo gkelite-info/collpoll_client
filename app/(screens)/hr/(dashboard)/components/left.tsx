@@ -395,7 +395,6 @@ export default function HrDashLeft() {
     },
   ];
 
-  // ── CONDITIONAL RENDER 1: ONBOARDING VIEW ──────────────────────────────
   if (currentView === "onboarding") {
     return (
       <div ref={topRef} className="w-[68%] p-2">
@@ -404,9 +403,6 @@ export default function HrDashLeft() {
     );
   }
 
-  // ── CONDITIONAL RENDER 2: INDIVIDUAL STAFF VIEW ────────────────────────
-  // This inherently runs `MyAttendanceLeft` using the `urlUserId` prop.
-  // It handles its own internal state, meaning it naturally supports the Summary and MyPay functionality for whichever user is clicked!
   if (urlUserId) {
     return (
       <div ref={topRef} className="w-[68%] p-2">
@@ -415,7 +411,6 @@ export default function HrDashLeft() {
     );
   }
 
-  // ── DEFAULT RENDER: MAIN DASHBOARD ─────────────────────────────────────
   return (
     <div ref={topRef} className="w-[68%] p-2">
       {selectedMonth ? (

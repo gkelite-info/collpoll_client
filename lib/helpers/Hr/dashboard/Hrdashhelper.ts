@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
 
-// ── Role pills config ─────────────────────────────────────────────────────────
 export const HR_ROLE_PILLS = [
   { label: "College Admin", value: "collegeAdmin" },
   { label: "Admin", value: "admin" },
@@ -123,7 +122,6 @@ async function getUsersForRolePaginated(
   return { users: data ?? [], totalCount: count ?? 0 };
 }
 
-// ── 1. Stat cards ─────────────────────────────────────────────────────────────
 export async function getHrDashCards(collegeId: number): Promise<HrDashCards> {
   const today = todayDate();
 
@@ -156,7 +154,6 @@ export async function getHrDashCards(collegeId: number): Promise<HrDashCards> {
   };
 }
 
-// ── 2. Monthly attendance chart % for a role ─────────────────────────────────
 export async function getMonthlyAttendance(
   collegeId: number,
   role: string,
@@ -196,7 +193,6 @@ export async function getMonthlyAttendance(
   });
 }
 
-// ── 3. Today's attendance for a role (server-side paginated) ─────────────────
 export async function getTodayAttendance(
   collegeId: number,
   role: string,
@@ -215,7 +211,6 @@ export async function getTodayAttendance(
   const userIds = users.map((u) => u.userId);
   const isFaculty = role === "Faculty";
 
-  // Fetch today's attendance for this page of users
   const { data: dailyRows } = await supabase
     .from("attendance_daily")
     .select(
@@ -227,7 +222,6 @@ export async function getTodayAttendance(
   const dailyMap = new Map((dailyRows ?? []).map((r) => [r.userId, r]));
   const dailyIds = (dailyRows ?? []).map((r) => r.attendanceDailyId);
 
-  // Fetch adjustments
   const adjMap = new Map<
     number,
     { newCheckIn: string | null; newCheckOut: string | null }
@@ -291,7 +285,6 @@ export async function getTodayAttendance(
   return { data, totalCount };
 }
 
-// ── 4. Month detail — per user summary (server-side paginated) ────────────────
 export async function getMonthDetail(
   collegeId: number,
   role: string,
@@ -319,7 +312,6 @@ export async function getMonthDetail(
     .gte("attendanceDate", start)
     .lte("attendanceDate", end);
 
-  // Working days across ALL users in this role for this month (for fair % calc)
   const workingDays =
     new Set((rows ?? []).map((r) => r.attendanceDate)).size || 1;
 

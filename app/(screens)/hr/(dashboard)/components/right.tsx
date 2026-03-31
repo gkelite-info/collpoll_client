@@ -201,9 +201,9 @@ export default function MyAttendanceRight() {
     const params = new URLSearchParams(searchParams.toString());
 
     if (currentView === "onboarding") {
-      params.delete("view"); // Go back to dashboard
+      params.delete("view");
     } else {
-      params.set("view", "onboarding"); // Switch to onboarding view
+      params.set("view", "onboarding");
     }
 
     router.push(`${pathname}?${params.toString()}`, { scroll: false });

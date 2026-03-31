@@ -46,6 +46,7 @@ function HeaderContent() {
     studentId,
     facultyId,
     adminId,
+    email: currentUserEmail,
     userId,
     profilePhoto,
   } = useUser();
@@ -82,7 +83,7 @@ function HeaderContent() {
   }, [highlightedPostId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !currentUserEmail) return;
 
     async function fetchNotificationCount() {
       const count = await getUnreadNotificationCount(userId!);
@@ -90,7 +91,7 @@ function HeaderContent() {
     }
 
     async function fetchEmailCount() {
-      const count = await getUnreadEmailCount(userId!);
+      const count = await getUnreadEmailCount(userId!, currentUserEmail!);
       setUnreadEmailCount(count);
     }
 

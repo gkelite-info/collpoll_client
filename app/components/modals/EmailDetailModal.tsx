@@ -1,6 +1,7 @@
-"use client";
+// "use client";
 
-import { X, Reply } from "lucide-react";
+import { useState } from "react";
+import { X, Reply, ChevronDown } from "lucide-react";
 import DOMPurify from "dompurify";
 
 export type EmailDetailItem = {
@@ -8,6 +9,7 @@ export type EmailDetailItem = {
   isRead: boolean;
   initials: string;
   email: string;
+  recipients?: string[];
   color: string;
   sender: string;
   subject: string;
@@ -25,6 +27,8 @@ type Props = {
 };
 
 export default function EmailDetailModal({ mail, onClose, onReply }: Props) {
+  const [showRecipients, setShowRecipients] = useState(false);
+
   return (
     <div className="fixed bottom-10 right-[430px] z-[1100] w-[418px] h-[430px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
       <div className="px-4 pt-4 pb-0 relative">
@@ -52,11 +56,40 @@ export default function EmailDetailModal({ mail, onClose, onReply }: Props) {
             >
               {mail.initials}
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col relative">
               <p className="text-[17px] font-semibold text-[#111827]">
                 {mail.sender}
               </p>
-              <p className="text-[14px] text-[#6B7280]">{mail.email}</p>
+
+              {mail.recipients && mail.recipients.length > 1 ? (
+                <div className="relative">
+                  <p
+                    onClick={() => setShowRecipients(!showRecipients)}
+                    className="text-[13px] text-[#43C17A] cursor-pointer hover:underline flex items-center gap-1 font-medium select-none"
+                  >
+                    {mail.email}{" "}
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform ${showRecipients ? "rotate-180" : ""}`}
+                    />
+                  </p>
+
+                  {showRecipients && (
+                    <div className="absolute top-full left-0 mt-1 w-[260px] max-h-[160px] overflow-y-auto custom-scrollbar bg-white border border-gray-200 shadow-xl rounded-md p-1.5 z-50">
+                      {mail.recipients.map((rec, i) => (
+                        <div
+                          key={i}
+                          className="text-[12px] text-gray-700 py-1.5 px-2 hover:bg-gray-50 rounded truncate transition-colors"
+                        >
+                          {rec}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[14px] text-[#6B7280]">{mail.email}</p>
+              )}
             </div>
           </div>
           <p className="text-[12px] text-[#6B7280] whitespace-nowrap mr-2">
