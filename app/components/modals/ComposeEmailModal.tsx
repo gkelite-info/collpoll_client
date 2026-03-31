@@ -23,11 +23,13 @@ import {
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
+import { uploadEmailAttachment } from "@/lib/helpers/email/emailStorageAPI";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   collegeId: number;
+  onSuccess?: () => void;
   replyData?: {
     to: string;
     subject: string;
@@ -63,6 +65,7 @@ export default function ComposeEmailModal({
   onClose,
   collegeId,
   replyData,
+  onSuccess,
 }: Props) {
   const [audience, setAudience] = useState("");
   const [manualEmail, setManualEmail] = useState("");
@@ -88,6 +91,10 @@ export default function ComposeEmailModal({
   const [linkUrl, setLinkUrl] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
+  const [attachments, setAttachments] = useState<
+    { name: string; url: string; isImage: boolean }[]
+  >([]);
+
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -105,7 +112,6 @@ export default function ComposeEmailModal({
     if (isOpen && replyData) {
       setAudience("");
       setManualEmail(replyData.to);
-
       const newSubject = replyData.subject.toLowerCase().startsWith("re:")
         ? replyData.subject
         : `Re: ${replyData.subject}`;
@@ -155,6 +161,7 @@ export default function ComposeEmailModal({
     setManualEmail("");
     setSubject("");
     setDescription("");
+    setAttachments([]);
     setShowLinkInput(false);
     setShowEmojiPicker(false);
     if (editorRef.current) editorRef.current.innerHTML = "";
@@ -179,13 +186,10 @@ export default function ComposeEmailModal({
     if (!text) return;
 
     let newText = text;
-    if (text === text.toLowerCase()) {
-      newText = text.toUpperCase();
-    } else if (text === text.toUpperCase()) {
+    if (text === text.toLowerCase()) newText = text.toUpperCase();
+    else if (text === text.toUpperCase())
       newText = text.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-    } else {
-      newText = text.toLowerCase();
-    }
+    else newText = text.toLowerCase();
 
     document.execCommand("insertText", false, newText);
   };
@@ -229,18 +233,10 @@ export default function ComposeEmailModal({
         data: { publicUrl },
       } = supabase.storage.from("attachments").getPublicUrl(filePath);
 
-      editorRef.current?.focus();
-      if (isImage) {
-        formatText(
-          "insertHTML",
-          `<br/><img src="${publicUrl}" alt="attachment" style="max-width: 100%; max-height: 250px; border-radius: 6px;" /><br/>`,
-        );
-      } else {
-        formatText(
-          "insertHTML",
-          `&nbsp;<a href="${publicUrl}" target="_blank" style="color: #43C17A; text-decoration: underline; font-weight: 500;">📎 ${file.name}</a>&nbsp;`,
-        );
-      }
+      setAttachments((prev) => [
+        ...prev,
+        { name: file.name, url: publicUrl, isImage },
+      ]);
 
       toast.success("Attached successfully!", { id: toastId });
     } catch (error: any) {
@@ -250,7 +246,7 @@ export default function ComposeEmailModal({
   };
 
   const handleSend = async () => {
-    const finalDescription = editorRef.current?.innerHTML || "";
+    let finalDescription = editorRef.current?.innerHTML || "";
 
     if (!subject || !finalDescription || finalDescription === "<br>") {
       toast.error("Subject and description are required.");
@@ -265,6 +261,18 @@ export default function ComposeEmailModal({
     const toastId = toast.loading("Sending email...");
 
     try {
+      if (attachments.length > 0) {
+        finalDescription += `<br/><br/><div style="border-top: 1px solid #eee; padding-top: 10px;"><strong>Attachments:</strong><br/>`;
+        attachments.forEach((att) => {
+          if (att.isImage) {
+            finalDescription += `<img src="${att.url}" alt="${att.name}" style="max-width: 100%; max-height: 300px; border-radius: 8px; margin-top: 10px;" /><br/>`;
+          } else {
+            finalDescription += `<br/><a href="${att.url}" target="_blank" style="color: #43C17A; text-decoration: underline;">📎 ${att.name}</a><br/>`;
+          }
+        });
+        finalDescription += `</div>`;
+      }
+
       const payload = {
         collegeId,
         audience,
@@ -283,23 +291,15 @@ export default function ComposeEmailModal({
         body: JSON.stringify(payload),
       });
 
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Server error. Check your terminal.");
-      }
+      if (!response.ok) throw new Error("Failed to send email");
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Failed to send email");
+      toast.success("Email sent successfully!", { id: toastId });
 
-      toast.success(`Email sent successfully to ${result.count} recipients!`, {
-        id: toastId,
-      });
+      onSuccess?.();
       handleClose();
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Something went wrong. Please try again.", {
-        id: toastId,
-      });
+      toast.error(error.message || "Something went wrong.", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -343,7 +343,7 @@ export default function ComposeEmailModal({
               <input
                 type="email"
                 placeholder="or enter email"
-                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
+                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A]"
                 value={manualEmail}
                 onChange={(e) => setManualEmail(e.target.value)}
               />
@@ -452,6 +452,36 @@ export default function ComposeEmailModal({
                 className="w-full h-[110px] p-3 text-[13px] text-[#111827] overflow-y-auto focus:outline-none bg-white rounded-t-md"
               />
 
+              {attachments.length > 0 && (
+                <div className="p-2 border-t border-gray-100 bg-gray-50 flex flex-wrap gap-2">
+                  {attachments.map((att, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-1.5 bg-white border border-gray-200 px-2 py-1 rounded text-xs"
+                    >
+                      {att.isImage ? (
+                        <ImageIcon size={12} className="text-[#43C17A]" />
+                      ) : (
+                        <Paperclip size={12} className="text-[#43C17A]" />
+                      )}
+                      <span className="truncate max-w-[120px] text-gray-700">
+                        {att.name}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setAttachments((prev) =>
+                            prev.filter((_, idx) => idx !== i),
+                          )
+                        }
+                        className="ml-1 text-gray-400 hover:text-red-500"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {showLinkInput && (
                 <div className="absolute bottom-12 left-2 bg-white border border-gray-200 shadow-lg rounded-md p-2 flex items-center gap-2 z-10">
                   <input
@@ -509,7 +539,6 @@ export default function ComposeEmailModal({
                     title="Underline"
                   />
                   <div className="w-[1px] h-4 bg-gray-300 mx-1"></div>
-
                   <ToolbarIcon
                     onClick={handleToggleCase}
                     icon={
@@ -520,7 +549,6 @@ export default function ComposeEmailModal({
                     title="Toggle Case"
                   />
                   <div className="w-[1px] h-4 bg-gray-300 mx-1"></div>
-
                   <ToolbarIcon
                     onClick={() => fileInputRef.current?.click()}
                     icon={<Paperclip size={14} />}
@@ -542,44 +570,12 @@ export default function ComposeEmailModal({
                     icon={<Smile size={14} />}
                     title="Insert Emoji"
                   />
-
-                  <ToolbarIcon
-                    onClick={() =>
-                      toast("Google Drive integration coming soon.", {
-                        icon: "☁️",
-                      })
-                    }
-                    icon={
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M15.3333 19.3333L22 7.33333H8.66667L2 19.3333H15.3333Z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M8.66667 7.33333L12 1.33333L18.6667 13.3333"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    }
-                    title="Google Drive"
-                  />
                   <ToolbarIcon
                     onClick={() => imageInputRef.current?.click()}
                     icon={<ImageIcon size={14} />}
                     title="Insert Image"
                   />
                 </div>
-
                 <button
                   onClick={handleSend}
                   disabled={isSubmitting}

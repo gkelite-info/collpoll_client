@@ -59,7 +59,7 @@ export const fetchEmployeePaySummary = async (
       variablePay: variable,
       bonus: bonus,
       otherAddons: otherAddons,
-      total: ctc + bonus + otherAddons, // Total CTC + any extra addons
+      total: ctc + bonus + otherAddons,
       revisionDate: new Date(data.updatedAt).toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "short",
