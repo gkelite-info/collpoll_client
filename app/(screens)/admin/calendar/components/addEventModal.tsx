@@ -454,7 +454,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
   }, [isEditMode, value?.year, degree, yearOptions]);
 
   if (!isOpen) return null;
-  const eventTypes = ["class", "meeting", "exam", "quiz"];
+  const eventTypes = ["class", "meeting", "exam"];
   const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
   const handleClose = () => {
     closedByUserRef.current = true;
@@ -693,7 +693,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
               <input
                 readOnly
                 value={branchName}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                className="w-full h-11 text-[#282828] border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
           </div>
@@ -705,7 +705,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
               <input
                 readOnly
                 value={academicYearLabel}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
             <div className="flex-1">
@@ -715,7 +715,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
               <input
                 readOnly
                 value={semesterLabel ? `Semester ${semesterLabel}` : ""}
-                className="w-full h-11 border focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
+                className="w-full h-11 border text-[#282828] focus:outline-none border-[#C9C9C9] rounded-lg px-3 bg-gray-50 cursor-not-allowed"
               />
             </div>
           </div>

@@ -59,9 +59,7 @@ export default function TaskPanel({
 
   const [openModal, setOpenModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const [activeView, setActiveView] = useState<"student" | "faculty">(
-    role === "student" ? "student" : "faculty"
-  );
+  const [activeView, setActiveView] = useState<"student" | "faculty">("faculty");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -123,18 +121,6 @@ export default function TaskPanel({
             {role === "student" && (
               <div className="flex items-center gap-0 text-sm font-semibold ">
                 <button
-                  onClick={() => setActiveView("student")}
-                  className={
-                    activeView === "student"
-                      ? "text-[#16284F] cursor-pointer"
-                      : "text-gray-400 cursor-pointer"
-                  }
-                >
-                  My Tasks
-                </button>
-                <span className="text-gray-300 ml-1 mr-1">/</span>
-
-                <button
                   onClick={() => setActiveView("faculty")}
                   className={
                     activeView === "faculty"
@@ -144,6 +130,20 @@ export default function TaskPanel({
                 >
                   Faculty Tasks
                 </button>
+
+                <span className="text-gray-300 ml-1 mr-1">/</span>
+                
+                <button
+                  onClick={() => setActiveView("student")}
+                  className={
+                    activeView === "student"
+                      ? "text-[#16284F] cursor-pointer"
+                      : "text-gray-400 cursor-pointer"
+                  }
+                >
+                  My Tasks
+                </button>
+
               </div>
             )}
           </div>

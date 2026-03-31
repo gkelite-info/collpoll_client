@@ -90,7 +90,7 @@ export default function FacultyDashLeft() {
     {
       show: false,
       user: fullName ?? "User",
-      studentsTaskPercentage: 85,
+      studentsTaskPercentage: 0,
       facultySubject: "(Data Structures and Algorithms)",
       image: facultyImage ?? undefined,
       top: "lg:top-[-5px]",

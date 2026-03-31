@@ -79,10 +79,10 @@ export default function StudentAttendanceDetailsPage() {
       </section>
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
+          <Info label="Education Type" value={student.degree} />
           <Info label="Branch" value={student.department} />
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />
-          <Info label="Education Type" value={student.degree} />
         </div>
 
         <CourseScheduleCard

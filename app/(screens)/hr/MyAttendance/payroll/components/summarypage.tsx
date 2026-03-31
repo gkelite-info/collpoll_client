@@ -95,6 +95,7 @@
 
 "use client";
 
+import { useUser } from "@/app/utils/context/UserContext";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { User } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -155,10 +156,10 @@ const SummaryShimmer = () => (
 export default function SummaryPage({ profile }: { profile?: any }) {
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { role } = useUser();
 
   useEffect(() => {
     const loadData = async () => {
-      // Profile now definitively contains the userId we need to query the bank/pan tables!
       if (!profile?.userId) return;
       setIsLoading(true);
       const data = await fetchStaffOnboardingSummary(profile.userId);
@@ -208,7 +209,7 @@ export default function SummaryPage({ profile }: { profile?: any }) {
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label="System ID" value={systemId} />
+          <InfoRow label={`${role} ID`} value={systemId} />
           <InfoRow label="Department/Branch" value={profile.department} />
           <InfoRow label="Mobile" value={profile.mobile} />
           <InfoRow label="Email" value={profile.email} />

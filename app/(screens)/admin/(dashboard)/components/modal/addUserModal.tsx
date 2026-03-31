@@ -11,7 +11,7 @@ import { createStudent } from "@/lib/helpers/admin/registrations/student/student
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
 import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
+import { upsertAdminEntry, upsertCollegeHR, upsertUser } from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
@@ -378,7 +378,7 @@ const AddUserModal: React.FC<{
   const isStudent = basicData.role === "Student";
   const isParent = basicData.role === "Parent";
   const isFinance = basicData.role === "Finance";
-  const isHR = basicData.role === "College HR";
+  const isHR = basicData.role === "CollegeHr";
 
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
@@ -551,14 +551,12 @@ const AddUserModal: React.FC<{
         });
       }
 
-      if (isHR && !user) {
-        await createCollegeHR({
+      if (isHR && targetUserId) {
+        await upsertCollegeHR({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
           isActive: true,
-          createdAt: timestamp,
-          updatedAt: timestamp,
         });
       }
 
@@ -656,8 +654,7 @@ const AddUserModal: React.FC<{
     }
   };
 
-  const showEmploymentFields =
-    !isStudent && !isParent && basicData.role !== "";
+  const showEmploymentFields = !isStudent && !isParent && basicData.role !== "";
 
   if (!isOpen) return null;
 
@@ -765,6 +762,7 @@ const AddUserModal: React.FC<{
                     <option value="Student">Student</option>
                     <option value="Parent">Parent</option>
                     <option value="Finance">Finance</option>
+                    {/* <option value="CollegeHr">College HR</option> */}
                     <option value="CollegeHr">College HR</option>
                   </select>
                   <CaretDown

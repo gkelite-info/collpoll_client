@@ -140,7 +140,7 @@ export default function FacultyOverview({ onSelect }: Props) {
                         Calendar Overview
                     </h1>
                     <p className="text-sm text-gray-500">
-                        Select a Faculty, Branch, or Course Calendar to view or manage schedules.
+                        Select a faculty, branch, or course calendar to view or manage schedules.
                     </p>
                 </div>
                 <div className="flex items-center justify-center">

@@ -27,8 +27,6 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-
-
 export default function AssignmentsRight() {
   const [studentTasks, setStudentTasks] = useState<any[]>([]);
   const [facultyTasks, setFacultyTasks] = useState<any[]>([]);

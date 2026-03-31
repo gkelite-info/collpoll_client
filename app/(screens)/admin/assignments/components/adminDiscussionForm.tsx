@@ -210,8 +210,16 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                     return;
                 }
             }
+            setForm({
+                title: "",
+                description: "",
+                deadline: "",
+                marks: "",
+                sections: []
+            });
 
             toast.success(discussionId ? "Discussion updated successfully." : "Discussion created successfully.");
+
             handleBack();
 
         } catch (error) {
@@ -284,7 +292,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                         value={form.title}
                         onChange={(e) => setForm({ ...form, title: e.target.value })}
                         placeholder="Enter Discussion Title here"
-                        className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
+                        className="w-full border border-gray-200 rounded-md px-3 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
                     />
                 </div>
 
@@ -295,7 +303,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                         rows={6}
                         value={form.description}
                         onChange={(e) => setForm({ ...form, description: e.target.value })}
-                        className="w-full border border-gray-200 rounded-md px-4 py-3 text-sm outline-none text-[#807F7F] focus:border-[#43C17A] resize-none"
+                        className="w-full border border-gray-200 rounded-md px-3 py-3 text-sm outline-none text-[#807F7F] focus:border-[#43C17A] resize-none"
                     />
                 </div>
 
@@ -447,8 +455,8 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                 </button>
                 <button
                     onClick={handleSave}
-                    disabled={loading}
                     className="px-8 cursor-pointer py-2.5 rounded-md font-bold text-sm bg-[#43C17A] text-white shadow-sm disabled:opacity-60"
+                    disabled={loading}
                 >
                     {loading ? "Saving..." : "Save"}
                 </button>

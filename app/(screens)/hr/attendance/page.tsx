@@ -11,9 +11,9 @@ import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcem
 import { useUser } from "@/app/utils/context/UserContext";
 
 import AttendanceStatCards from "./components/AttendanceStatCards";
-import AttendanceToolbar   from "./components/AttendanceToolbar";
+import AttendanceToolbar from "./components/AttendanceToolbar";
 
-import AttendanceTable     from "./components/AttendanceTable";
+import AttendanceTable from "./components/AttendanceTable";
 import { EditedTimes } from "./components/types";
 import { AttendanceStaffRow, getAttendanceStaff } from "@/lib/helpers/Hr/attendance/Getattendancestaff";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
@@ -30,10 +30,10 @@ const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 function FacultyAttendanceDashboard() {
-  const router       = useRouter();
-  const pathname     = usePathname();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab    = searchParams.get("tab") || "total";
+  const activeTab = searchParams.get("tab") || "total";
 
   // ── Use HR context for collegeId + collegeHrId ───────────────────────────
   const { collegeId, collegeHrId, loading: hrLoading } = useCollegeHr();
@@ -43,21 +43,21 @@ function FacultyAttendanceDashboard() {
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view,          setView]          = useState<"my" | "others">("my");
-  const [isEditMode,    setIsEditMode]    = useState(false);
-  const [selectAll,     setSelectAll]     = useState(false);
-  const [selectedRows,  setSelectedRows]  = useState<Set<number>>(new Set());
-  const [activeRole,    setActiveRole]    = useState<string | null>(null);
-  const [searchQuery,   setSearchQuery]   = useState("");
-  const [staffList,     setStaffList]     = useState<AttendanceStaffRow[]>([]);
-  const [totalCount,    setTotalCount]    = useState(0);
-  const [isFetching,    setIsFetching]    = useState(false);
+  const [view, setView] = useState<"my" | "others">("my");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectAll, setSelectAll] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [activeRole, setActiveRole] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [staffList, setStaffList] = useState<AttendanceStaffRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isFetching, setIsFetching] = useState(false);
   const [markedUserIds, setMarkedUserIds] = useState<Set<number>>(new Set());
 
   // ── ADDED: filterDate state + ref ────────────────────────────────────────
-  const [filterDate,   setFilterDate]  = useState<string | null>(null);
-  const filterDateRef                  = useRef<string | null>(null);
-  const searchMounted                  = useRef(false);
+  const [filterDate, setFilterDate] = useState<string | null>(null);
+  const filterDateRef = useRef<string | null>(null);
+  const searchMounted = useRef(false);
   useEffect(() => { filterDateRef.current = filterDate; }, [filterDate]);
 
   // ── Fetch staff — waits for HR context to resolve ────────────────────────
@@ -120,19 +120,19 @@ function FacultyAttendanceDashboard() {
 
   // ── Counts derived from staffList ────────────────────────────────────────
   const presentCount = staffList.filter(s => s.status?.toLowerCase() === "present").length;
-  const absentCount  = staffList.filter(s => s.status?.toLowerCase() === "absent").length;
-  const lateCount    = staffList.filter(s => s.status?.toLowerCase() === "late").length;
-  const leaveCount   = staffList.filter(s => s.status?.toLowerCase() === "leave").length;
+  const absentCount = staffList.filter(s => s.status?.toLowerCase() === "absent").length;
+  const lateCount = staffList.filter(s => s.status?.toLowerCase() === "late").length;
+  const leaveCount = staffList.filter(s => s.status?.toLowerCase() === "leave").length;
 
   // ── Tab filtering ─────────────────────────────────────────────────────────
   const filteredByTab = (() => {
     const tabFilter = (s: AttendanceStaffRow) => {
       switch (activeTab) {
         case "present": return s.status?.toLowerCase() === "present";
-        case "absent":  return s.status?.toLowerCase() === "absent";
-        case "late":    return s.status?.toLowerCase() === "late";
-        case "leave":   return s.status?.toLowerCase() === "leave";
-        default:        return true;
+        case "absent": return s.status?.toLowerCase() === "absent";
+        case "late": return s.status?.toLowerCase() === "late";
+        case "leave": return s.status?.toLowerCase() === "leave";
+        default: return true;
       }
     };
 
@@ -273,7 +273,7 @@ function FacultyAttendanceDashboard() {
         <div className="flex flex-col justify-start">
           <h1 className="text-xl font-bold text-[#282828]">Attendance Management</h1>
           <p className="text-sm text-[#282828] mt-1">
-            Stay Organized and On Track with Your Personalized Calendar
+            Stay organized and on track with your personalized calendar
           </p>
         </div>
         <div className="w-[320px]">

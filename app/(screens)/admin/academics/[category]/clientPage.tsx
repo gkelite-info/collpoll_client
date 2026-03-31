@@ -74,7 +74,7 @@ export function ClientAcademicsWrapper({
         </div>
 
         <div className="flex flex-col items-end w-[32%] gap-4">
-          <CourseScheduleCard style="w-[320px]" />
+          <CourseScheduleCard style="w-[320px]" isVisibile={false} />
         </div>
       </div>
 

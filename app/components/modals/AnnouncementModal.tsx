@@ -913,7 +913,7 @@ export default function AnnouncementModal({
                                         e.key === "Enter" &&
                                         handleSubmitComment(postId)
                                       }
-                                      className="flex-1 h-9 px-4 rounded-full bg-gray-100 border-none outline-none text-[14px] focus:ring-2 focus:ring-[#43C17A]/20 transition-all placeholder:text-gray-400"
+                                      className="flex-1 h-9 px-4 rounded-full text-[#282828] bg-gray-100 border-none outline-none text-[14px] focus:ring-2 focus:ring-[#43C17A]/20 transition-all placeholder:text-gray-400"
                                     />
                                     <button
                                       onClick={() =>

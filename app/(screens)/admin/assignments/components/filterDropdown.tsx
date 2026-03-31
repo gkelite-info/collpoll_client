@@ -33,8 +33,16 @@ export const FilterDropdown = ({
           onChange={(e) => onChange(e.target.value)}
           className="appearance-none bg-transparent text-[13px] font-semibold text-[#43C17A] focus:outline-none cursor-pointer w-full px-2"
         >
-          {options.map((option) => (
+          {/* {options.map((option) => (
             <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))} */}
+          {options.map((option, index) => (
+            <option
+              key={`${option.value}-${index}`}
+              value={option.value}
+            >
               {option.label}
             </option>
           ))}

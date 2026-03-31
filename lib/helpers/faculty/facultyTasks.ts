@@ -149,7 +149,6 @@ export async function saveFacultyTask(
   };
 }
 
-
 export async function deactivateFacultyTask(facultyTaskId: number) {
 
   const { error } = await supabase

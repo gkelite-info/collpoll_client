@@ -1,6 +1,5 @@
 "use client";
 
-import { Timer } from "@phosphor-icons/react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -68,10 +67,8 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg w-full min-h-[230px] p-4 flex flex-col justify-between shadow-md">
-      {/* Top section */}
+    <div className="bg-white rounded-lg w-full lg:min-h-fit p-4 flex flex-col justify-between shadow-md">
       <div className="flex flex-col justify-start gap-1.5">
-        {/* Title + Credits + Button */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <h5 className="text-[#282828] font-medium text-[17px] truncate">
@@ -90,7 +87,6 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
           </p>
         </div>
 
-        {/* Faculty */}
         <div className="flex flex-col gap-2 mt-1">
           <div className="flex items-center gap-2">
             <h4 className="text-[#282828] font-medium text-[15px]">
@@ -106,7 +102,6 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
             <p className="text-[#525252] text-[15px]">{item.facultyName}</p>
           </div>
 
-          {/* Stats */}
           <div className="flex items-center gap-5">
             <h5 className="text-[#525252] text-[15px]">
               <strong className="text-[#282828] font-medium mr-1.5">
@@ -131,7 +126,6 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
         </div>
       </div>
 
-      {/* Progress Section */}
       <div className="flex flex-col justify-between mt-1 relative">
         <div className="relative w-full rounded-full h-3 bg-gray-200 mt-3 overflow-hidden">
           <div
@@ -158,12 +152,12 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* <div className="flex items-center gap-1.5">
           <Timer size={15} weight="fill" className="text-[#9880F3]" />
           <p className="text-xs text-[#7153E1]">
             {item.fromDate} - {item.toDate}
           </p>
-        </div>
+        </div> */}
       </div>
     </div>
   );

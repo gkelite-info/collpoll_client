@@ -404,7 +404,7 @@ export default function ComposeEmailModal({
 
           <div className="flex flex-col gap-1">
             <label className="text-[13px] font-semibold text-[#282828]">
-              CC
+              Cc
             </label>
             <input
               type="text"
@@ -583,7 +583,7 @@ export default function ComposeEmailModal({
                 <button
                   onClick={handleSend}
                   disabled={isSubmitting}
-                  className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-1.5 rounded-md text-[13px] font-medium transition-colors"
+                  className="bg-[#43C17A] cursor-pointer hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-1.5 rounded-md text-[13px] font-medium transition-colors"
                 >
                   Send
                 </button>

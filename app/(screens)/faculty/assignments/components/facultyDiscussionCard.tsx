@@ -23,11 +23,11 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
     return (
         <div className="bg-white rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col gap-1">
             <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-1 w-fit">
+                <div className="flex flex-col gap-1 bg-blue-00 lg:w-[60%]">
                     <h3 className="text-lg font-bold text-[#282828]">{data.title}</h3>
                     <p className="text-sm text-[#111827] whitespace-pre-line leading-relaxed">{data.description}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 bg-red-00 w-fit">
                     {discussionView === "active" && (
                         <>
                             <button
@@ -66,7 +66,12 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                             <CalendarDotsIcon size={18} className="text-red-500" weight="regular" />
                         </div>
                         <span className="font-bold text-[#282828] text-sm">Deadline :</span>
-                        <span className="text-gray-600">{data.deadline}</span>
+                        {/* <span className="text-gray-600">{data.deadline}</span> */}
+                        <span className="text-gray-600">
+                            {data.deadline
+                                ? new Date(data.deadline).toLocaleDateString("en-GB")
+                                : "—"}
+                        </span>
                     </div>
                 </div>
 
