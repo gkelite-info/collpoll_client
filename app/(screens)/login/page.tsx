@@ -152,8 +152,8 @@ export default function LoginPage() {
       };
 
       const redirectPath = roleRouteMap[role] || "/login";
-      router.replace(redirectPath);
       toast.success("Login successful!");
+      window.location.href = redirectPath;
     } catch (error) {
       toast.error("Something went wrong");
     } finally {
