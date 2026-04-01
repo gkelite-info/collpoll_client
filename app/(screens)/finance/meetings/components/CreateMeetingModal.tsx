@@ -21,6 +21,7 @@ import {
   scheduleFinanceMeetingReminder,
 } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import ConflictErrorModal from "./ConflictErrorModal";
+import { useUser } from "@/app/utils/context/UserContext";
 interface CreateMeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -155,6 +156,7 @@ const CreateMeetingModal = ({
   const isEditMode = !!editingMeetingId;
 
   const [reminderMinutes, setReminderMinutes] = useState<number>(15);
+  const { userId } = useUser();
 
   const formatTimeForDB = (
     hour: string,
@@ -432,7 +434,7 @@ const CreateMeetingModal = ({
         setShowConflictModal(true);
         return;
       }
-      // 1. SAVE THE MEETING
+
       const meetingRes = await saveFinanceMeeting(
         {
           id: isEditMode ? editingMeetingId! : undefined,
@@ -448,7 +450,9 @@ const CreateMeetingModal = ({
           collegeId: collegeId!,
         },
         financeManagerId,
+        userId!
       );
+
 
       if (!meetingRes.success || !meetingRes.financeMeetingId) {
         toast.error("Failed to schedule meeting");
@@ -511,7 +515,6 @@ const CreateMeetingModal = ({
 
       // 3. 🆕 TRIGGER THE SYNC & REMINDER ENGINE (NOW IT CAN FIND THE SECTIONS!)
       if (!isEditMode && meetingRes.financeMeetingId && collegeId) {
-        console.log("Triggering Sync & Reminders...");
 
         await syncFinanceMeetingParticipantsAndEmails(
           meetingRes.financeMeetingId,
@@ -852,11 +855,11 @@ const CreateMeetingModal = ({
                         {sectionsSelected.length === 0
                           ? "Select Section"
                           : sections
-                              .filter((s) =>
-                                sectionsSelected.includes(s.collegeSectionsId),
-                              )
-                              .map((s) => s.collegeSections)
-                              .join(", ")}
+                            .filter((s) =>
+                              sectionsSelected.includes(s.collegeSectionsId),
+                            )
+                            .map((s) => s.collegeSections)
+                            .join(", ")}
                       </span>
                       <span className="text-gray-400 pointer-events-none">
                         <svg
@@ -971,9 +974,9 @@ const CreateMeetingModal = ({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isLoading}
               className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer"
-            >
+              disabled={isLoading}
+              >
               {isLoading
                 ? isEditMode
                   ? "Updating..."

@@ -382,8 +382,8 @@ export default function SettingsClient() {
         setEmailAlerts(prefs.email_alerts);
         setReminders(
           prefs.assignment_reminders ||
-            prefs.event_reminders ||
-            prefs.class_reminders,
+          prefs.event_reminders ||
+          prefs.class_reminders,
         );
         if (prefs.font_scale) setScale(prefs.font_scale);
       }
@@ -496,7 +496,7 @@ export default function SettingsClient() {
             </p>
           </div>
           <div className="w-[32%]">
-            <CourseScheduleCard />
+            <CourseScheduleCard isVisibile={false} />
           </div>
         </div>
 
