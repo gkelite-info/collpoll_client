@@ -52,6 +52,7 @@ export async function middleware(request: NextRequest) {
 
         if (profile && profile.collegeCode !== collegeCode) {
             await supabase.auth.signOut();
+            response.cookies.delete("auth_tokens");
 
             const url = request.nextUrl.clone()
             url.pathname = '/login'
