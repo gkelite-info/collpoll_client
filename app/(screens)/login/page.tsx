@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
+import { setTokens } from "@/app/utils/context/tokenStorage";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -105,14 +106,22 @@ export default function LoginPage() {
 
     try {
       setLoading(true);
+
       const res = await loginUser(email, password);
 
-      if (!res.success || !res.user) {
+      if (!res.success || !res.session || !res.user) {
         toast.error(res.error || "Login failed");
         return;
       }
 
-      const role = res.user.role?.toLowerCase();
+      setTokens({
+        access_token: res.session.access_token,
+        refresh_token: res.session.refresh_token,
+        expires_in: res.session.expires_in,
+      });
+
+      const userProfile = res.user as any;
+      const role = userProfile.role?.toLowerCase();
 
       const roleRouteMap: Record<string, string> = {
         admin: "/admin",
@@ -182,9 +191,8 @@ export default function LoginPage() {
               style={{
                 transform: `
           translateX(-50%)
-          rotate(${
-            position === "left" ? -40 : position === "right" ? 40 : 0
-          }deg)
+          rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
+                  }deg)
           translateY(-${radius}px)
         `,
               }}
@@ -224,11 +232,10 @@ export default function LoginPage() {
           {slides.map((_, i) => (
             <div
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                current === i
-                  ? "w-18 bg-[#1A5D3C]"
-                  : "w-5 bg-white/60 border border-white/40"
-              }`}
+              className={`h-2 rounded-full transition-all duration-300 ${current === i
+                ? "w-18 bg-[#1A5D3C]"
+                : "w-5 bg-white/60 border border-white/40"
+                }`}
             ></div>
           ))}
         </div>
