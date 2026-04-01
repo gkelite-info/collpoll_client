@@ -272,7 +272,7 @@ const Page = () => {
                 <div className="flex items-center justify-between mb-3">
                     <div>
                         <h1 className="text-2xl font-semibold text-[#282828]">Drive</h1>
-                        <p className="text-[#282828]">Manage, organize & monitor all academic and administrative files</p>
+                        <p className="text-[#282828] text-sm">Manage, organize & monitor all academic and administrative files</p>
                     </div>
                     <article className="flex w-[32%] justify-end">
                         <CourseScheduleCard style="w-[320px]" isVisibile={false} />

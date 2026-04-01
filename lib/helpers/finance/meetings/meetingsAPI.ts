@@ -1,4 +1,5 @@
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 
 export type FinanceMeetingRow = {
@@ -537,10 +538,9 @@ export async function saveFinanceMeeting(
     collegeId: number;
   },
   financeManagerId: number,
+  userId: number,
 ) {
   const now = new Date().toISOString();
-
-  const { userId: actualUserId } = useFinanceManager();
 
   if (payload.id) {
     const { data, error } = await supabase
@@ -609,7 +609,7 @@ export async function saveFinanceMeeting(
 
     if (error) return { success: false, error };
 
-    if (actualUserId) {
+    if (userId) {
       await supabase.from("college_meetings").insert({
         collegeId: payload.collegeId,
         title: payload.title.trim(),
@@ -618,7 +618,7 @@ export async function saveFinanceMeeting(
         fromTime: payload.fromTime,
         toTime: payload.toTime,
         meetingLink: payload.meetingLink.trim(),
-        createdBy: actualUserId,
+        createdBy: userId,
         isActive: true,
         is_deleted: false,
         createdAt: now,
@@ -712,7 +712,6 @@ export async function scheduleFinanceMeetingReminder(
     return { success: false, error: insertError };
   }
 
-  console.log("✅ Successfully scheduled reminder job!");
   return { success: true };
 }
 export async function checkFinanceMeetingConflict(
