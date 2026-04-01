@@ -105,6 +105,9 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (!validate()) return;
 
+    await supabase.auth.signOut();
+    localStorage.clear();
+
     try {
       setLoading(true);
 
@@ -115,10 +118,13 @@ export default function LoginPage() {
         return;
       }
 
-      const { error: sessionError } = await supabase.auth.setSession({
+      const { data, error: sessionError } = await supabase.auth.setSession({
         access_token: res.session.access_token,
         refresh_token: res.session.refresh_token,
       });
+
+      console.log("Session set result:", data);
+
 
       if (sessionError) {
         toast.error("Session sync failed");
