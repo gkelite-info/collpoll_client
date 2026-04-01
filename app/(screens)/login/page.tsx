@@ -6,6 +6,7 @@ import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
 import { setTokens } from "@/app/utils/context/tokenStorage";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -104,6 +105,9 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (!validate()) return;
 
+    await supabase.auth.signOut();
+    localStorage.clear();
+
     try {
       setLoading(true);
 
@@ -111,6 +115,19 @@ export default function LoginPage() {
 
       if (!res.success || !res.session || !res.user) {
         toast.error(res.error || "Login failed");
+        return;
+      }
+
+      const { data, error: sessionError } = await supabase.auth.setSession({
+        access_token: res.session.access_token,
+        refresh_token: res.session.refresh_token,
+      });
+
+      console.log("Session set result:", data);
+
+
+      if (sessionError) {
+        toast.error("Session sync failed");
         return;
       }
 
