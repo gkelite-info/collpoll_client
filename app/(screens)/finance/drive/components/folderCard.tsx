@@ -51,13 +51,13 @@ export function FolderCard({
                             onClick={(e) => e.stopPropagation()}
                         >
                             <button
-                                className="block w-full px-3 py-2 text-left text-black hover:bg-gray-50"
+                                className="block w-full px-3 py-2 text-left text-black hover:bg-gray-50 cursor-pointer"
                                 onClick={() => { onRename(); setOpenMenu(false); }}
                             >
                                 Rename
                             </button>
                             <button
-                                className="block w-full px-3 py-2 text-left text-red-500 hover:bg-red-50"
+                                className="block w-full px-3 py-2 text-left text-red-500 hover:bg-red-50 cursor-pointer"
                                 onClick={() => { onDelete(); setOpenMenu(false); }}
                             >
                                 Delete

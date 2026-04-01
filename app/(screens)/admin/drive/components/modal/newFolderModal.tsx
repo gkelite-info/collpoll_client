@@ -32,15 +32,52 @@ export default function NewFolderModal({
   if (!open) return null;
 
   const handleSave = () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+
+    // 1. Required
+    if (!trimmedName) {
       setError("Folder name is required");
       return;
     }
-    if (/[@#%]/.test(name)) {
-      setError("Folder name cannot contain @ # %");
+
+    // 2. Length validation
+    if (trimmedName.length < 3) {
+      setError("Folder name must be at least 3 characters");
       return;
     }
-    onSave({ name: name.trim(), color });
+
+    if (trimmedName.length > 50) {
+      setError("Folder name cannot exceed 50 characters");
+      return;
+    }
+
+    // 3. Allowed characters (letters, numbers, space, underscore, hyphen)
+    if (!/^[a-zA-Z0-9 _-]+$/.test(trimmedName)) {
+      setError("Only letters, numbers, spaces, - and _ are allowed");
+      return;
+    }
+
+    // 4. No multiple spaces
+    if (/\s{2,}/.test(trimmedName)) {
+      setError("Folder name cannot contain multiple spaces");
+      return;
+    }
+
+    // 5. Cannot start or end with space, hyphen, underscore
+    if (/^[\s_-]|[\s_-]$/.test(trimmedName)) {
+      setError("Folder name cannot start or end with space, - or _");
+      return;
+    }
+
+    // 6. Reserved names (optional)
+    const reservedNames = ["admin", "root", "system"];
+    if (reservedNames.includes(trimmedName.toLowerCase())) {
+      setError("This folder name is not allowed");
+      return;
+    }
+
+    // ✅ Passed all validations
+    onSave({ name: trimmedName, color });
   };
 
   return (
@@ -50,7 +87,6 @@ export default function NewFolderModal({
           New Folder
         </h3>
 
-       
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-[#111827]">
             Folder Name
@@ -58,15 +94,22 @@ export default function NewFolderModal({
           <input
             value={name}
             onChange={(e) => {
-              setName(e.target.value);
-              setError("");
+              const value = e.target.value;
+
+              // Allow only valid characters while typing
+              if (/^[a-zA-Z0-9 _-]*$/.test(value)) {
+                setName(value);
+                setError("");
+              } else {
+                setError("Only letters, numbers, spaces, - and _ are allowed");
+              }
             }}
             placeholder="Enter folder name"
             disabled={loading}
             className="w-full rounded border border-[#D1D5DB] px-3 py-2 text-sm outline-none text-black focus:border-[#43C17A] disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <p className="mt-1 text-xs text-[#6B7280]">
-            No special characters like @ # %
+            Only letters, numbers, spaces, - and _
           </p>
           {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
@@ -82,9 +125,8 @@ export default function NewFolderModal({
                 type="button"
                 onClick={() => setColor(c)}
                 disabled={loading}
-                className={`h-9 w-9 rounded disabled:cursor-not-allowed ${
-                  color === c ? "ring-2 ring-offset-2 ring-[#43C17A]" : ""
-                }`}
+                className={`h-9 w-9 rounded disabled:cursor-not-allowed ${color === c ? "ring-2 ring-offset-2 ring-[#43C17A]" : ""
+                  }`}
                 style={{ backgroundColor: c }}
               />
             ))}
@@ -96,7 +138,7 @@ export default function NewFolderModal({
             type="button"
             onClick={handleSave}
             disabled={loading}
-            className="flex-1 rounded bg-[#43C17A] py-2 text-sm font-semibold text-white disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+            className="flex-1 rounded bg-[#43C17A] py-2 text-sm font-semibold text-white disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
