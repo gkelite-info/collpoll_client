@@ -1,48 +1,59 @@
-import { setTokens } from "@/app/utils/context/tokenStorage";
+"use server";
+
 import { supabase } from "@/lib/supabaseClient";
+import { headers } from "next/headers";
 
 export async function loginUser(email: string, password: string) {
-  try {
-    const { data: authData, error: authError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  const host = (await headers()).get("host") || "";
+  const subdomain = host.split(".")[0];
 
-    if (authError) {
-      return { success: false, error: authError.message };
-    }
+  const { data: currentPortal } = await supabase
+    .from("colleges")
+    .select("collegeId")
+    .ilike("collegeCode", subdomain)
+    .single();
 
-    const session = authData.session;
-    const user = authData.user;
+  if (!currentPortal) {
+    return { success: false, error: "This college portal is not registered." };
+  }
 
-    if (!session) {
-      return { success: false, error: "Login failed: No session returned" };
-    }
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    setTokens({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_in: session.expires_in,
-    });
+  if (authError || !authData.user) {
+    return { success: false, error: "Invalid email or password." };
+  }
 
-    const auth_id = user?.id;
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("userId, fullName, role, collegeId, isActive")
+    .eq("auth_id", authData.user.id)
+    .single();
 
-    const { data: profile, error } = await supabase
-      .from("users")
-      .select("*")
-      .eq("auth_id", auth_id)
-      .single();
+  if (!userProfile) {
+    await supabase.auth.signOut();
+    return { success: false, error: "User profile not found." };
+  }
 
-    if (error || !profile)
-      return { success: false, error: "User profile not found" };
+  if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
+    await supabase.auth.signOut();
 
     return {
-      success: true,
-      user: profile,
+      success: false,
+      error: "Access Denied: You are not authorized to access this specific college portal."
     };
-
-  } catch (err: any) {
-    return { success: false, error: err.message };
   }
+
+  if (!userProfile.isActive) {
+    await supabase.auth.signOut();
+    return { success: false, error: "Your account is inactive." };
+  }
+
+  return {
+    success: true,
+    session: authData.session,
+    user: userProfile,
+  };
 }
