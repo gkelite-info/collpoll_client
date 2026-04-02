@@ -21,6 +21,7 @@ import {
   unlinkUserIdentity,
 } from "@/lib/helpers/settings/linkedAccountsAPI";
 import { supabase } from "@/lib/supabaseClient";
+import { usePathname } from "next/navigation";
 
 export interface LinkedAccount {
   id: string;
@@ -139,7 +140,7 @@ export default function LinkedAccounts() {
   const { userId } = useUser();
   const [accounts, setAccounts] = useState<LinkedAccount[]>(initialAccountData);
   const [processingId, setProcessingId] = useState<string | null>(null);
-
+  const pathname = usePathname();
   const loadFromSession = async (user: any) => {
     if (!user) return;
 
@@ -226,7 +227,7 @@ export default function LinkedAccounts() {
     } else {
       toast.loading(`Connecting ${targetAccount.name}...`);
       try {
-        const redirectUrl = `${window.location.origin}/settings?linked-accounts`;
+        const redirectUrl = `${window.location.origin}${pathname}?linked-accounts`;
         await linkUserIdentity(accountId, redirectUrl);
       } catch (error: any) {
         toast.dismiss();
@@ -242,7 +243,7 @@ export default function LinkedAccounts() {
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2">
             <Link
-              href="/settings"
+              href={pathname}
               className="hover:bg-gray-200 p-1 rounded-full transition-colors"
             >
               <CaretLeft size={24} className="text-[#282828]" weight="bold" />

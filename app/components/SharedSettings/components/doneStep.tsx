@@ -1,10 +1,11 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function DoneStep() {
   const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <main className="min-h-screen bg-[#FAFBFC] p-6 ">
@@ -31,7 +32,7 @@ export default function DoneStep() {
           </p>
 
           <button
-            onClick={() => router.push("/settings")}
+            onClick={() => router.push(pathname)}
             className="bg-[#43C17A] text-white px-6 py-2 rounded font-semibold"
           >
             Back to Settings

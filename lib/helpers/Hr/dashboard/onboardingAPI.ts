@@ -10,7 +10,7 @@ export interface StaffOnboardingRecord {
   id: string;
   role: string;
   email: string;
-  branch: string;
+  educationType: string;
   joiningDate: string;
   experience: string;
   gender: string;
@@ -38,6 +38,7 @@ export const fetchStaffForOnboarding = async (
         staff_aadhaar_details(userId),
         staff_bank_details(userId),
         staff_pan_details(userId)
+        
       `,
         { count: "exact" },
       )
@@ -75,7 +76,7 @@ export const fetchStaffForOnboarding = async (
         id: `ID-${u.userId.toString().padStart(6, "0")}`,
         role: u.role || "Staff",
         email: u.email || "N/A",
-        branch: u.collegeCode || "N/A",
+        educationType: u.collegeEducationType || "N/A",
         joiningDate: u.dateOfJoining
           ? new Date(u.dateOfJoining).toLocaleDateString("en-GB")
           : "N/A",

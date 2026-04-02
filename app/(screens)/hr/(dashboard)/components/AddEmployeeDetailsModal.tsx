@@ -70,6 +70,7 @@ export default function AddEmployeeModal({
 
     onClose();
   };
+
   const handleSave = async () => {
     // 1. Basic Validations
     if (
@@ -155,12 +156,14 @@ export default function AddEmployeeModal({
                 </label>
                 <ReadOnlyInput value={user.name} />
               </div>
+
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[120px]">
-                  Branch
+                  Education Type
                 </label>
-                <ReadOnlyInput value={user.branch} />
+                <ReadOnlyInput value={user.educationType || "N/A"} />
               </div>
+
               <div className="flex items-center justify-between">
                 <label className="font-bold text-[#333] w-[120px]">
                   Mobile
@@ -198,15 +201,6 @@ export default function AddEmployeeModal({
               Payment Information
             </h3>
             <div className="flex flex-col gap-3 text-[13px]">
-              {/* <div className="flex items-center justify-between mb-1">
-                <label className="font-bold text-[#333] w-[140px]">
-                  Salary Payment Mode
-                </label>
-                <select className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A] bg-white cursor-pointer">
-                  <option>Bank Transfer</option>
-                </select>
-              </div> */}
-
               <h4 className="text-[#16284F] font-bold text-[13px] mt-1">
                 Bank Information
               </h4>
@@ -282,7 +276,6 @@ export default function AddEmployeeModal({
 
         {/* IDENTITY & BANK INFORMATION */}
         <div className="border border-gray-200 rounded-lg p-4 relative">
-          {/* Overlay to block inputs while saving */}
           {isSaving && (
             <div className="absolute inset-0 z-10 bg-white/40 cursor-not-allowed"></div>
           )}
@@ -293,7 +286,6 @@ export default function AddEmployeeModal({
           <h4 className="font-bold text-[#333] text-[13px] mb-3">Photo ID</h4>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3 text-[13px]">
-            {/* Left Column - Aadhaar */}
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
                 Aadhaar Number
@@ -308,7 +300,6 @@ export default function AddEmployeeModal({
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
-            {/* Right Column - PAN */}
             <div className="flex items-center justify-between">
               <label className="font-bold text-[#333] w-[130px]">
                 Permanent Account Number

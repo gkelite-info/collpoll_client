@@ -1,6 +1,7 @@
 import React from "react";
-import { Monitor, IconProps, Phone } from "@phosphor-icons/react";
+import { Monitor, IconProps, Phone, CaretLeft } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import { useRouter } from "next/navigation";
 
 export interface TrustedDevice {
   id: string;
@@ -115,15 +116,27 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
   devices,
   onRemoveDevice,
 }) => {
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
   return (
     <div className="min-h-screen p-6 sm:p-8">
       <div className="max-w-5xl mx-auto font-sans">
         <div className="flex justify-between">
           <div className="text-xl font-semibold flex flex-col">
             <div className="flex justify-start items-center gap-2">
+              <button
+                onClick={handleBack}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1"
+              >
+                <CaretLeft size={24} weight="bold" className="text-[#282828]" />
+              </button>
               <span className="text-[#282828]">Trusted Devices List</span>
             </div>
-            <p className="text-gray-500 text-sm">
+            {/* 5. Added margin-left (ml-9) to align description under the text */}
+            <p className="text-gray-500 text-sm ml-9">
               View and manage devices that have access to your account.
             </p>
           </div>

@@ -1,9 +1,8 @@
-'use client'
+"use client";
 import { Suspense } from "react";
-import SettingsClient from "./SettingsClient";
+import SettingsClient from "@/app/components/SharedSettings/SettingsClient";
 
-export default function StudentSettings() {
-
+export default function HrSettings() {
   return (
     <Suspense fallback={<div className="p-4">Loading settings...</div>}>
       <div className="w-[82vw]">

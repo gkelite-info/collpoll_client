@@ -37,7 +37,6 @@ export async function markEmailRead(emailQueueId: number) {
     .eq("emailQueueId", emailQueueId);
   return { success: !error };
 }
-
 export async function getGroupedUserEmails(userId: number, userEmail: string) {
   const { data, error } = await supabase
     .from("email_queue")
@@ -128,7 +127,10 @@ export async function fetchUserEmailsChunk(
     .order("createdAt", { ascending: false });
 
   if (tab === "inbox") {
-    query = query.eq("userId", userId).neq("senderAddress", userEmail);
+    // FIX: .neq excludes NULL values in PostgreSQL. We must explicitly include senderAddress.is.null
+    query = query
+      .eq("userId", userId)
+      .or(`senderAddress.neq.${userEmail},senderAddress.is.null`);
   } else if (tab === "sent") {
     query = query.eq("senderAddress", userEmail);
   } else {
@@ -192,6 +194,9 @@ export function groupAndFormatEmails(
 
     const initials = displaySenderName.substring(0, 2).toUpperCase();
 
+    const displayDateStr = `
+       ${dateObj.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} ${dateObj.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
     return {
       id: mail.emailQueueId,
       isRead: mail.isRead,
@@ -212,6 +217,7 @@ export function groupAndFormatEmails(
         month: "short",
         year: "numeric",
       }),
+      displayDate: displayDateStr,
       body: mail.body,
     };
   });

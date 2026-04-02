@@ -135,13 +135,13 @@ const MyAttendanceLeft = ({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="p-12 text-center">
-        <Loader />
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="p-12 text-center">
+  //       <Loader />
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
@@ -217,7 +217,6 @@ const MyAttendanceLeft = ({
               )}
               {activePayrollTab === "myPay" && (
                 <div className="w-full text-left mt-2">
-                  {/* DATA PASSED ONLY HERE */}
                   <MyPayPage profile={profile} />
                 </div>
               )}

@@ -2,10 +2,11 @@
 
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { saveEmployeePayDetails } from "@/lib/helpers/Hr/myAttendance/saveEmployeePayDetails";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 export interface EmployeePayData {
+  userId: number;
   name: string;
   id: string;
   joiningDate: string;
@@ -19,6 +20,7 @@ interface AddPayModalProps {
   onClose: () => void;
   onSuccess: () => void;
   employee: EmployeePayData;
+  payData?: any;
 }
 
 export default function AddPayModal({
@@ -26,27 +28,59 @@ export default function AddPayModal({
   onClose,
   onSuccess,
   employee,
+  payData,
 }: AddPayModalProps) {
   const { collegeHrId, collegeId, loading: contextLoading } = useCollegeHr();
   const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     totalCTC: "",
     fixedPay: "",
     variablePay: "",
     jobType: "Permanent",
-    compType: "Direct Payment",
     totalLeaves: "",
     sickLeave: "",
     casualLeave: "",
     paidLeave: "",
-    monthlySalary: "",
-  });
+  };
 
-  const [addons, setAddons] = useState([
+  const initialActiveAllowances = [
+    {
+      id: "hra",
+      name: "House Rent Allowance (HRA)",
+      amount: "",
+      isDeduction: false,
+    },
+    {
+      id: "telephone",
+      name: "Telephone Allowance",
+      amount: "",
+      isDeduction: false,
+    },
+  ];
+
+  const initialAvailableAllowances = [
+    { id: "transport", name: "Transportation Allowance", isDeduction: false },
+    { id: "bonus", name: "Statutory Bonus (Paid Monthly)", isDeduction: false },
+    {
+      id: "deduction",
+      name: "Company's Deduction (Tax/Allowances)",
+      isDeduction: true,
+    },
+    { id: "special", name: "Special Allowance", isDeduction: false },
+  ];
+
+  const initialCompliances = [
+    { id: "pf", name: "PF", amount: "", selected: false },
+    { id: "ef", name: "EF", amount: "", selected: false },
+    { id: "tds", name: "TDS", amount: "", selected: false },
+    { id: "direct", name: "Direct Pay", amount: "", selected: false },
+  ];
+
+  const initialAddons = [
     {
       id: "1",
-      typeName: "Bonus",
+      typeName: "Performance Bonus",
       amount: "",
       payoutType: "Fixed",
       isOpen: true,
@@ -65,41 +99,271 @@ export default function AddPayModal({
       payoutType: "Fixed",
       isOpen: false,
     },
-  ]);
+  ];
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [basicSalary, setBasicSalary] = useState("");
+
+  const [activeAllowances, setActiveAllowances] = useState(
+    initialActiveAllowances,
+  );
+  const [availableAllowances, setAvailableAllowances] = useState(
+    initialAvailableAllowances,
+  );
+
+  const [addingCustomAllowance, setAddingCustomAllowance] = useState(false);
+  const [customAllowanceName, setCustomAllowanceName] = useState("");
+  const [customAllowanceType, setCustomAllowanceType] = useState<
+    "allowance" | "deduction"
+  >("allowance");
+
+  const [compliances, setCompliances] = useState(initialCompliances);
+  const [addingCustomCompliance, setAddingCustomCompliance] = useState(false);
+  const [customComplianceName, setCustomComplianceName] = useState("");
+
+  const [addons, setAddons] = useState(initialAddons);
+
+  useEffect(() => {
+    if (isOpen && payData) {
+      const leaves = Array.isArray(payData.leaveAllocations)
+        ? payData.leaveAllocations[0]
+        : payData.leaveAllocations ||
+          payData.employee_leave_allocations?.[0] ||
+          payData.employee_leave_allocations;
+
+      setFormData({
+        totalCTC: payData.totalCTC ? payData.totalCTC.toString() : "",
+        fixedPay: payData.fixedPay ? payData.fixedPay.toString() : "",
+        variablePay: payData.variablePay ? payData.variablePay.toString() : "",
+        jobType: payData.jobType || "Permanent",
+        totalLeaves: leaves?.totalLeaves?.toString() ?? "",
+        sickLeave: leaves?.sickLeave?.toString() ?? "",
+        casualLeave: leaves?.casualLeave?.toString() ?? "",
+        paidLeave: leaves?.paidLeave?.toString() ?? "",
+      });
+
+      setBasicSalary(
+        payData.monthlySalary ? payData.monthlySalary.toString() : "",
+      );
+
+      if (payData.allowances && payData.allowances.length > 0) {
+        const loadedAllowances = payData.allowances.map(
+          (a: any, idx: number) => ({
+            id: `loaded-allowance-${idx}`,
+            name: a.name,
+            amount: a.amount.toString(),
+            isDeduction: Number(a.amount) < 0,
+          }),
+        );
+        setActiveAllowances(loadedAllowances);
+        const loadedNames = loadedAllowances.map((a: any) =>
+          a.name.toLowerCase(),
+        );
+        setAvailableAllowances(
+          initialAvailableAllowances.filter(
+            (a) => !loadedNames.includes(a.name.toLowerCase()),
+          ),
+        );
+      } else {
+        setActiveAllowances(initialActiveAllowances);
+        setAvailableAllowances(initialAvailableAllowances);
+      }
+
+      if (payData.compliances && payData.compliances.length > 0) {
+        const loadedCompliances = initialCompliances.map((comp) => {
+          const found = payData.compliances.find(
+            (c: any) => c.name.toLowerCase() === comp.name.toLowerCase(),
+          );
+          if (found) {
+            return { ...comp, amount: found.amount.toString(), selected: true };
+          }
+          return comp;
+        });
+
+        const customComps = payData.compliances
+          .filter(
+            (c: any) =>
+              !initialCompliances.some(
+                (ic) => ic.name.toLowerCase() === c.name.toLowerCase(),
+              ),
+          )
+          .map((c: any, idx: number) => ({
+            id: `loaded-custom-comp-${idx}`,
+            name: c.name,
+            amount: c.amount.toString(),
+            selected: true,
+          }));
+
+        setCompliances([...loadedCompliances, ...customComps]);
+      } else {
+        setCompliances(initialCompliances);
+      }
+
+      const dbAddons = payData.rawAddons || payData.employee_pay_addons || [];
+      if (dbAddons && dbAddons.length > 0) {
+        const loadedAddons = dbAddons.map((a: any, idx: number) => ({
+          id: `loaded-addon-${idx}`,
+          typeName: a.title || a.addonType || "",
+          amount: a.amount?.toString() || "",
+          payoutType:
+            a.payNature === "VARIABLE" || a.payNature === "Variable"
+              ? "Variable"
+              : "Fixed",
+          isOpen: false,
+        }));
+
+        const mergedAddons = [...loadedAddons];
+        initialAddons.forEach((initial) => {
+          if (
+            !loadedAddons.some(
+              (la: any) =>
+                la.typeName.toLowerCase() === initial.typeName.toLowerCase(),
+            )
+          ) {
+            mergedAddons.push(initial);
+          }
+        });
+        setAddons(mergedAddons);
+      } else {
+        setAddons(initialAddons);
+      }
+    } else if (isOpen && !payData) {
+      resetForm();
+    }
+  }, [isOpen, payData]);
 
   if (!isOpen) return null;
 
-  // --- HANDLERS ---
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setBasicSalary("");
+    setActiveAllowances(initialActiveAllowances);
+    setAvailableAllowances(initialAvailableAllowances);
+    setCompliances(initialCompliances);
+    setAddons(initialAddons);
+    setAddingCustomAllowance(false);
+    setAddingCustomCompliance(false);
+    setCustomAllowanceName("");
+    setCustomComplianceName("");
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const formatNumber = (val: string) => {
+    const isNegative = val.startsWith("-");
+    const rawValue = val.replace(/\D/g, "");
+    if (!rawValue) return isNegative ? "-" : "";
+    const formatted = Number(rawValue).toLocaleString("en-IN");
+    return isNegative ? `-${formatted}` : formatted;
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: formatNumber(value) }));
+  };
+
   const handleTextOrRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (value === "") {
-      setFormData((prev) => ({ ...prev, [name]: "" }));
-      return;
-    }
-    const rawValue = value.replace(/\D/g, "");
-    if (!rawValue) return;
-    const formatted = Number(rawValue).toLocaleString("en-IN");
-    setFormData((prev) => ({ ...prev, [name]: formatted }));
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.dataset.placeholder = e.target.placeholder;
+    e.target.placeholder = "";
   };
 
-  const handleAddonAmountChange = (id: string, value: string) => {
-    if (value === "") {
-      setAddons(addons.map((a) => (a.id === id ? { ...a, amount: "" } : a)));
-      return;
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.placeholder = e.target.dataset.placeholder || "";
+  };
+
+  const moveAllowanceToActive = (id: string) => {
+    const allowance = availableAllowances.find((a) => a.id === id);
+    if (!allowance) return;
+    setAvailableAllowances(availableAllowances.filter((a) => a.id !== id));
+    setActiveAllowances([
+      ...activeAllowances,
+      { ...allowance, amount: allowance.isDeduction ? "-" : "" },
+    ]);
+  };
+
+  const handleActiveAllowanceAmount = (
+    id: string,
+    value: string,
+    isDeduction: boolean,
+  ) => {
+    let formatted = formatNumber(value);
+
+    if (formatted === "-") {
+      formatted = "";
+    } else if (isDeduction && formatted && !formatted.startsWith("-")) {
+      formatted = `-${formatted}`;
     }
-    const rawValue = value.replace(/\D/g, "");
-    if (!rawValue) return;
-    const formatted = Number(rawValue).toLocaleString("en-IN");
-    setAddons(
-      addons.map((a) => (a.id === id ? { ...a, amount: formatted } : a)),
+
+    setActiveAllowances(
+      activeAllowances.map((a) =>
+        a.id === id ? { ...a, amount: formatted } : a,
+      ),
     );
   };
 
+  const saveCustomAllowance = () => {
+    if (customAllowanceName.trim()) {
+      setAvailableAllowances([
+        ...availableAllowances,
+        {
+          id: Date.now().toString(),
+          name: customAllowanceName.trim(),
+          isDeduction: customAllowanceType === "deduction",
+        },
+      ]);
+      setCustomAllowanceName("");
+      setCustomAllowanceType("allowance");
+      setAddingCustomAllowance(false);
+    }
+  };
+
+  const toggleCompliance = (id: string) => {
+    setCompliances(
+      compliances.map((c) =>
+        c.id === id ? { ...c, selected: !c.selected } : c,
+      ),
+    );
+  };
+
+  const handleComplianceAmount = (id: string, value: string) => {
+    setCompliances(
+      compliances.map((c) =>
+        c.id === id ? { ...c, amount: formatNumber(value) } : c,
+      ),
+    );
+  };
+
+  const saveCustomCompliance = () => {
+    if (customComplianceName.trim()) {
+      setCompliances([
+        ...compliances,
+        {
+          id: Date.now().toString(),
+          name: customComplianceName.trim(),
+          amount: "",
+          selected: true,
+        },
+      ]);
+      setCustomComplianceName("");
+      setAddingCustomCompliance(false);
+    }
+  };
+
+  const handleAddonAmountChange = (id: string, value: string) => {
+    setAddons(
+      addons.map((a) =>
+        a.id === id ? { ...a, amount: formatNumber(value) } : a,
+      ),
+    );
+  };
   const toggleAddon = (id: string) =>
     setAddons(
       addons.map((a) => (a.id === id ? { ...a, isOpen: !a.isOpen } : a)),
@@ -121,9 +385,8 @@ export default function AddPayModal({
     ]);
 
   const handleSave = async () => {
-    // Basic presence checks
-    if (!formData.totalCTC || !formData.fixedPay || !formData.monthlySalary) {
-      toast.error("Please fill in Total CTC, Fixed Pay, and Monthly Salary.");
+    if (!formData.totalCTC || !formData.fixedPay || !basicSalary) {
+      toast.error("Please fill in Total CTC, Fixed Pay, and Basic Salary.");
       return;
     }
 
@@ -133,21 +396,6 @@ export default function AddPayModal({
       formData.variablePay.replace(/,/g, "") || "0",
       10,
     );
-    const monthly = parseInt(
-      formData.monthlySalary.replace(/,/g, "") || "0",
-      10,
-    );
-
-    const totalL = parseInt(formData.totalLeaves.replace(/,/g, "") || "0", 10);
-    const sick = parseInt(formData.sickLeave.replace(/,/g, "") || "0", 10);
-    const casual = parseInt(formData.casualLeave.replace(/,/g, "") || "0", 10);
-    const paid = parseInt(formData.paidLeave.replace(/,/g, "") || "0", 10);
-
-    // Mathematical Validations
-    if (fixed <= 0 || monthly <= 0) {
-      toast.error("Fixed Pay and Monthly Salary must be greater than 0.");
-      return;
-    }
 
     if (ctc !== fixed + variable) {
       toast.error(
@@ -156,15 +404,27 @@ export default function AddPayModal({
       return;
     }
 
-    if (totalL !== sick + casual + paid) {
+    if (
+      !formData.totalLeaves ||
+      !formData.sickLeave ||
+      !formData.casualLeave ||
+      !formData.paidLeave
+    ) {
       toast.error(
-        "Total Leaves must be exactly equal to Sick + Casual + Paid Leaves.",
+        "Please fill in all Leave Allocation fields (cannot be empty).",
       );
       return;
     }
 
-    if (!formData.jobType || !formData.compType) {
-      toast.error("Please select a Job Type and Compensation Type.");
+    const tLeaves = parseInt(formData.totalLeaves.replace(/,/g, "") || "0", 10);
+    const sLeave = parseInt(formData.sickLeave.replace(/,/g, "") || "0", 10);
+    const cLeave = parseInt(formData.casualLeave.replace(/,/g, "") || "0", 10);
+    const pLeave = parseInt(formData.paidLeave.replace(/,/g, "") || "0", 10);
+
+    if (tLeaves !== sLeave + cLeave + pLeave) {
+      toast.error(
+        "Total Leaves must exactly match the sum of Sick, Casual, and Paid leaves.",
+      );
       return;
     }
 
@@ -176,11 +436,18 @@ export default function AddPayModal({
     setIsSaving(true);
     const toastId = toast.loading("Saving pay details...");
 
+    const payload = {
+      ...formData,
+      basicSalary,
+      activeAllowances,
+      compliances: compliances.filter((c) => c.selected),
+    };
+
     const result = await saveEmployeePayDetails({
-      userId: parseInt(employee.id, 10),
+      userId: employee.userId,
       collegeId,
       collegeHrId,
-      formData,
+      formData: payload,
       addons,
     });
 
@@ -189,25 +456,45 @@ export default function AddPayModal({
     if (result.success) {
       toast.success("Pay details saved successfully!", { id: toastId });
       onSuccess();
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => handleClose(), 1000);
     } else {
       toast.error(`Failed to save: ${result.error}`, { id: toastId });
     }
   };
 
+  const PlusIcon = ({ isRed = false }: { isRed?: boolean }) => (
+    <svg
+      className={`w-[18px] h-[18px] ${isRed ? "text-red-500" : "text-[#43C17A]"} cursor-pointer hover:scale-110 transition-transform`}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path
+        fillRule="evenodd"
+        d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-[10px] w-full max-w-[850px] max-h-[92vh] overflow-y-auto p-5 shadow-2xl flex flex-col custom-scrollbar">
         <h2 className="text-[18px] font-bold text-[#333] mb-3">
-          Add Pay Details
+          {payData ? "Edit Pay Details" : "Add Pay Details"}
         </h2>
 
         <div className="border border-gray-200 rounded-lg p-3.5 flex items-start gap-5 mb-5 bg-[#fafafa]">
-          <img
-            src={employee.image}
-            alt={employee.name}
-            className="w-[80px] h-[80px] rounded object-cover bg-gray-200 shadow-sm"
-          />
+          {employee.image ? (
+            <img
+              src={employee.image}
+              alt={employee.name}
+              className="w-[80px] h-[80px] rounded object-cover bg-gray-200 shadow-sm"
+            />
+          ) : (
+            <div className="w-[80px] h-[80px] rounded bg-gray-200 shadow-sm flex items-center justify-center text-gray-400">
+              No Image
+            </div>
+          )}
           <div className="flex-1">
             <h3 className="text-[16px] font-bold text-[#333] mb-2">
               {employee.name}
@@ -263,6 +550,8 @@ export default function AddPayModal({
                     name="totalCTC"
                     value={formData.totalCTC}
                     onChange={handleNumberChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     placeholder="e.g. 12,00,000"
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
@@ -274,6 +563,8 @@ export default function AddPayModal({
                     name="fixedPay"
                     value={formData.fixedPay}
                     onChange={handleNumberChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     placeholder="e.g. 10,00,000"
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
@@ -285,6 +576,8 @@ export default function AddPayModal({
                     name="variablePay"
                     value={formData.variablePay}
                     onChange={handleNumberChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
                     placeholder="e.g. 2,00,000"
                     className="border border-gray-300 rounded px-2.5 py-1 w-[170px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                   />
@@ -308,31 +601,7 @@ export default function AddPayModal({
                       value={type}
                       checked={formData.jobType === type}
                       onChange={handleTextOrRadioChange}
-                      className="accent-emerald-500 cursor-pointer w-3.5 h-3.5"
-                    />{" "}
-                    {type}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-bold text-[#333] text-[14px] mb-2">
-                Compensation Type
-              </h4>
-              <div className="border border-gray-200 rounded-lg p-2.5 flex justify-between items-center text-[13px]">
-                {["PF", "EF", "TDS", "Direct Payment"].map((type) => (
-                  <label
-                    key={type}
-                    className="flex items-center gap-1.5 font-bold text-[#2A3958] cursor-pointer"
-                  >
-                    <input
-                      type="radio"
-                      name="compType"
-                      value={type}
-                      checked={formData.compType === type}
-                      onChange={handleTextOrRadioChange}
-                      className="accent-emerald-500 cursor-pointer w-3.5 h-3.5"
+                      className="accent-[#43C17A] cursor-pointer w-3.5 h-3.5"
                     />{" "}
                     {type}
                   </label>
@@ -360,6 +629,8 @@ export default function AddPayModal({
                       name={field.name}
                       value={formData[field.name as keyof typeof formData]}
                       onChange={handleNumberChange}
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
                       placeholder="0"
                       className="border border-gray-300 rounded px-2 py-1.5 text-[14px] font-bold text-[#282828] text-center placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                     />
@@ -370,32 +641,208 @@ export default function AddPayModal({
           </div>
 
           <div className="flex flex-col gap-4">
-            <div>
-              <h4 className="font-bold text-[#333] text-[14px] mb-2 opacity-0 hidden md:block">
-                Monthly Salary
-              </h4>
-              <div className="border border-gray-200 rounded-lg p-4 flex flex-col justify-center items-center gap-2 bg-[#fafafa]">
-                <span className="font-bold text-[#555] text-[14px]">
-                  Monthly Salary :
+            <div className="border border-gray-200 rounded-lg p-4 flex flex-col gap-3 bg-white">
+              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                <span className="font-bold text-[#333] text-[13px]">
+                  Basic Salary :
                 </span>
-                <div className="border border-gray-200 bg-white rounded w-full py-2 flex justify-center items-center shadow-inner">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
-                    name="monthlySalary"
-                    value={formData.monthlySalary}
-                    onChange={handleNumberChange}
-                    placeholder="e.g. 50,000"
-                    className="font-bold text-[18px] text-[#282828] text-center w-full focus:outline-none bg-transparent placeholder:text-gray-300 placeholder:font-normal"
+                    value={basicSalary}
+                    onChange={(e) =>
+                      setBasicSalary(formatNumber(e.target.value))
+                    }
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    placeholder="0"
+                    className="border border-gray-300 bg-white text-[#282828] font-bold text-[13px] text-center w-[100px] rounded px-2 py-1 outline-none placeholder:font-normal placeholder:text-gray-400 focus:border-[#43C17A]"
                   />
                 </div>
               </div>
+
+              {activeAllowances.map((allowance) => (
+                <div
+                  key={allowance.id}
+                  className="flex justify-between items-center text-[12px]"
+                >
+                  <span
+                    className={`font-bold ${allowance.isDeduction ? "text-red-500" : "text-[#333]"}`}
+                  >
+                    {allowance.name} :
+                  </span>
+                  <input
+                    type="text"
+                    value={allowance.amount}
+                    onChange={(e) =>
+                      handleActiveAllowanceAmount(
+                        allowance.id,
+                        e.target.value,
+                        allowance.isDeduction,
+                      )
+                    }
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    placeholder="0"
+                    className={`border border-gray-200 rounded px-2 py-0.5 w-[80px] text-right font-bold outline-none text-[#282828] ${allowance.isDeduction ? "focus:border-red-500" : "focus:border-[#43C17A]"}`}
+                  />
+                </div>
+              ))}
+
+              <div className="flex flex-col gap-2 mt-1">
+                {availableAllowances.map((allowance) => (
+                  <div
+                    key={allowance.id}
+                    onClick={() => moveAllowanceToActive(allowance.id)}
+                    className="flex items-center gap-2 cursor-pointer group w-fit"
+                  >
+                    <PlusIcon isRed={allowance.isDeduction} />
+                    <span className="font-bold text-[#555] text-[12px] group-hover:text-[#333] transition-colors cursor-pointer">
+                      {allowance.name}
+                    </span>
+                  </div>
+                ))}
+
+                {addingCustomAllowance ? (
+                  <div className="flex flex-col gap-2 mt-2 p-2 border border-gray-100 rounded-lg bg-gray-50/50">
+                    <div className="flex items-center gap-4 text-[12px] font-semibold text-[#555]">
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          className="accent-[#43C17A] cursor-pointer"
+                          checked={customAllowanceType === "allowance"}
+                          onChange={() => setCustomAllowanceType("allowance")}
+                        />
+                        Allowance
+                      </label>
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          className="accent-red-500 cursor-pointer"
+                          checked={customAllowanceType === "deduction"}
+                          onChange={() => setCustomAllowanceType("deduction")}
+                        />
+                        Deduction
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={customAllowanceName}
+                        onChange={(e) => setCustomAllowanceName(e.target.value)}
+                        onFocus={handleFocus}
+                        onBlur={handleBlur}
+                        placeholder="Name"
+                        autoFocus
+                        className="border text-[#282828] border-gray-300 rounded px-2 py-0.5 text-[12px] outline-none focus:border-[#43C17A] flex-1"
+                      />
+                      <button
+                        onClick={saveCustomAllowance}
+                        className={`text-white cursor-pointer px-2 py-0.5 rounded text-[11px] font-bold ${customAllowanceType === "deduction" ? "bg-red-500 hover:bg-red-600" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
+                      >
+                        Add
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAddingCustomAllowance(false);
+                          setCustomAllowanceType("allowance");
+                        }}
+                        className="text-gray-400 cursor-pointer hover:text-red-500 text-[11px] font-bold"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setAddingCustomAllowance(true)}
+                    className="flex items-center gap-2 cursor-pointer text-[#282828] group w-fit mt-1"
+                  >
+                    <PlusIcon />
+                    <span className="font-bold text-[#333] text-[12px] cursor-pointer">
+                      Others
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <h4 className="font-bold text-[#333] text-[14px] mt-2 border-t border-gray-100 pt-3">
+                Payroll Compliance
+              </h4>
+
+              <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-[12px]">
+                {compliances.map((comp) => (
+                  <div key={comp.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={comp.selected}
+                      onChange={() => toggleCompliance(comp.id)}
+                      className="accent-[#1a2f5c] cursor-pointer w-3.5 h-3.5 rounded"
+                    />
+                    <label
+                      onClick={() => toggleCompliance(comp.id)}
+                      className="font-bold text-[#2A3958] flex-1 cursor-pointer"
+                    >
+                      {comp.name}
+                    </label>
+                    <input
+                      type="text"
+                      value={comp.amount}
+                      onChange={(e) =>
+                        handleComplianceAmount(comp.id, e.target.value)
+                      }
+                      onFocus={handleFocus}
+                      onBlur={handleBlur}
+                      placeholder="0"
+                      className="border border-gray-200 rounded px-1 py-0.5 w-[60px] text-center text-[#282828] font-semibold outline-none focus:border-[#43C17A]"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {addingCustomCompliance ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={customComplianceName}
+                    onChange={(e) => setCustomComplianceName(e.target.value)}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    placeholder="Compliance Name"
+                    autoFocus
+                    className="border text-[#282828] border-gray-300 rounded px-2 py-0.5 text-[12px] outline-none focus:border-[#43C17A] flex-1"
+                  />
+                  <button
+                    onClick={saveCustomCompliance}
+                    className="bg-[#43C17A] hover:bg-[#3ba869] text-white cursor-pointer px-2 py-0.5 rounded text-[11px] font-bold"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => setAddingCustomCompliance(false)}
+                    className="text-gray-400 cursor-pointer hover:text-red-500 text-[11px] font-bold"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => setAddingCustomCompliance(true)}
+                  className="flex items-center gap-2 cursor-pointer group w-fit mt-1"
+                >
+                  <PlusIcon />
+                  <span className="font-bold text-[#333] text-[12px] cursor-pointer">
+                    Others
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 flex flex-col">
               <h4 className="font-bold text-[#333] text-[14px] mb-2">
                 Additional Add-ons
               </h4>
-              <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 max-h-[320px] custom-scrollbar">
+              <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 max-h-[220px] custom-scrollbar">
                 {addons.map((addon) => (
                   <div
                     key={addon.id}
@@ -407,21 +854,10 @@ export default function AddPayModal({
                         onClick={() => toggleAddon(addon.id)}
                       >
                         {!addon.isOpen ? (
-                          <svg
-                            className="w-4 h-4 text-[#43C17A] shrink-0"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
+                          <PlusIcon />
                         ) : (
-                          <div className="w-4 h-4 shrink-0" />
+                          <div className="w-[18px] h-[18px] shrink-0" />
                         )}
-
                         {addon.isOpen ? (
                           <span className="font-bold text-[#333] text-[13px]">
                             Configure Add-on
@@ -433,7 +869,6 @@ export default function AddPayModal({
                             {addon.typeName || "Unnamed Add-on"}
                           </span>
                         )}
-
                         {!addon.isOpen && addon.amount && (
                           <div className="flex items-center gap-1.5 ml-auto mr-2">
                             <span className="text-[11px] font-bold text-[#43C17A] bg-[#43C17A]/10 px-2 py-0.5 rounded">
@@ -445,7 +880,6 @@ export default function AddPayModal({
                           </div>
                         )}
                       </div>
-
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => removeAddon(addon.id)}
@@ -470,17 +904,7 @@ export default function AddPayModal({
                             onClick={() => toggleAddon(addon.id)}
                             className="p-1 cursor-pointer"
                           >
-                            <svg
-                              className="w-4 h-4 text-[#43C17A]"
-                              viewBox="0 0 24 24"
-                              fill="currentColor"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zm3 10.5a.75.75 0 000-1.5H9a.75.75 0 000 1.5h6z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            <PlusIcon />
                           </button>
                         )}
                       </div>
@@ -503,6 +927,8 @@ export default function AddPayModal({
                                 e.target.value,
                               )
                             }
+                            onFocus={handleFocus}
+                            onBlur={handleBlur}
                             className="border border-gray-300 rounded px-2.5 py-1 text-[13px] w-[200px] font-semibold text-[#282828] placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                           />
                         </div>
@@ -512,11 +938,13 @@ export default function AddPayModal({
                           </label>
                           <input
                             type="text"
-                            placeholder="e.g. 2,000"
+                            placeholder="0"
                             value={addon.amount}
                             onChange={(e) =>
                               handleAddonAmountChange(addon.id, e.target.value)
                             }
+                            onFocus={handleFocus}
+                            onBlur={handleBlur}
                             className="border border-gray-300 rounded px-2.5 py-1 text-[13px] w-[200px] font-semibold text-[#282828] text-center placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-[#43C17A]"
                           />
                         </div>
@@ -537,7 +965,7 @@ export default function AddPayModal({
                                     type,
                                   )
                                 }
-                                className="w-3.5 h-3.5 accent-emerald-500 cursor-pointer"
+                                className="w-3.5 h-3.5 accent-[#43C17A] cursor-pointer"
                               />{" "}
                               {type}
                             </label>
@@ -547,7 +975,6 @@ export default function AddPayModal({
                     )}
                   </div>
                 ))}
-
                 <button
                   onClick={handleAddOther}
                   className="flex items-center justify-center gap-2 mt-1 py-2.5 border-2 border-dashed border-[#43C17A] text-[#43C17A] rounded-lg font-bold text-[13px] hover:bg-[#43C17A]/5 transition-colors cursor-pointer"
@@ -573,16 +1000,16 @@ export default function AddPayModal({
 
         <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             disabled={isSaving}
-            className={`flex-1 bg-[#F5F5F5] hover:bg-[#E8E8E8] text-[#555] py-2.5 rounded-lg font-bold text-[14px] transition-colors ${isSaving ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+            className={`flex-1 bg-[#F5F5F5] hover:bg-[#E8E8E8] text-[#555] py-2.5 rounded-lg font-bold text-[14px] transition-colors cursor-pointer ${isSaving ? "cursor-not-allowed opacity-50" : ""}`}
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex-1 flex items-center justify-center bg-[#43C17A] hover:bg-[#3ba869] text-white py-2.5 rounded-lg font-bold text-[14px] shadow-md shadow-[#43C17A]/20 transition-all ${isSaving ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
+            className={`flex-1 flex items-center justify-center bg-[#43C17A] hover:bg-[#3ba869] text-white py-2.5 rounded-lg font-bold text-[14px] shadow-md shadow-[#43C17A]/20 transition-all cursor-pointer ${isSaving ? "cursor-not-allowed opacity-80" : ""}`}
           >
             {isSaving ? (
               <>
@@ -609,7 +1036,7 @@ export default function AddPayModal({
                 Saving...
               </>
             ) : (
-              "Save Details"
+              "Save"
             )}
           </button>
         </div>

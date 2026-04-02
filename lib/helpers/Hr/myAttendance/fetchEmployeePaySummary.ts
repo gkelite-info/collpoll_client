@@ -2,12 +2,18 @@ import { supabase } from "@/lib/supabaseClient";
 
 export interface EmployeePaySummary {
   totalCTC: number;
-  regularSalary: number;
+  fixedPay: number;
   variablePay: number;
+  monthlySalary: number;
+  regularSalary: number;
   bonus: number;
   otherAddons: number;
   total: number;
   revisionDate: string;
+  allowances: { name: string; amount: number }[];
+  compliances: { name: string; amount: number }[];
+  leaveAllocations?: any;
+  rawAddons?: any;
 }
 
 export const fetchEmployeePaySummary = async (
@@ -20,8 +26,12 @@ export const fetchEmployeePaySummary = async (
       .select(
         `
         updatedAt,
+        monthlySalary,
         employee_salary_structure ( totalCtc, fixedPay, variablePay ),
-        employee_pay_addons ( addonType, amount )
+        employee_pay_addons ( addonType, title, amount, payNature ),
+        employee_leave_allocations ( totalLeaves, sickLeave, casualLeave, paidLeave ),
+        employee_salary_component_values ( amount, salary_component_types ( title ) ),
+        employee_payroll_compliance_values ( amount, payroll_compliance_types ( title ) )
       `,
       )
       .eq("userId", userId)
@@ -30,7 +40,10 @@ export const fetchEmployeePaySummary = async (
 
     if (error || !data) return null;
 
-    // Supabase nested joins can return arrays or objects. We normalize them:
+    const leaves = Array.isArray(data.employee_leave_allocations)
+      ? data.employee_leave_allocations[0]
+      : data.employee_leave_allocations;
+
     const structure = Array.isArray(data.employee_salary_structure)
       ? data.employee_salary_structure[0]
       : data.employee_salary_structure;
@@ -39,6 +52,20 @@ export const fetchEmployeePaySummary = async (
       ? data.employee_pay_addons
       : data.employee_pay_addons
         ? [data.employee_pay_addons]
+        : [];
+
+    const rawAllowances = Array.isArray(data.employee_salary_component_values)
+      ? data.employee_salary_component_values
+      : data.employee_salary_component_values
+        ? [data.employee_salary_component_values]
+        : [];
+
+    const rawCompliances = Array.isArray(
+      data.employee_payroll_compliance_values,
+    )
+      ? data.employee_payroll_compliance_values
+      : data.employee_payroll_compliance_values
+        ? [data.employee_payroll_compliance_values]
         : [];
 
     let bonus = 0;
@@ -52,11 +79,24 @@ export const fetchEmployeePaySummary = async (
     const fixed = structure?.fixedPay || 0;
     const variable = structure?.variablePay || 0;
     const ctc = structure?.totalCtc || 0;
+    const monthly = data.monthlySalary || 0;
+
+    const allowances = rawAllowances.map((a: any) => ({
+      name: a.salary_component_types?.title || "Unknown",
+      amount: a.amount || 0,
+    }));
+
+    const compliances = rawCompliances.map((c: any) => ({
+      name: c.payroll_compliance_types?.title || "Unknown",
+      amount: c.amount || 0,
+    }));
 
     return {
       totalCTC: ctc,
-      regularSalary: fixed,
+      fixedPay: fixed,
       variablePay: variable,
+      monthlySalary: monthly,
+      regularSalary: fixed,
       bonus: bonus,
       otherAddons: otherAddons,
       total: ctc + bonus + otherAddons,
@@ -65,6 +105,10 @@ export const fetchEmployeePaySummary = async (
         month: "short",
         year: "numeric",
       }),
+      allowances,
+      compliances,
+      leaveAllocations: leaves || {},
+      rawAddons: addons || [],
     };
   } catch (err) {
     console.error("Error fetching pay summary:", err);

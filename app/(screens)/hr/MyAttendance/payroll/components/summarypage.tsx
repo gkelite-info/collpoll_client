@@ -60,12 +60,14 @@ const SummaryShimmer = () => (
 export default function SummaryPage({ profile }: { profile?: any }) {
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
   const { role } = useUser();
 
   useEffect(() => {
     const loadData = async () => {
       if (!profile?.userId) return;
       setIsLoading(true);
+
       const data = await fetchStaffOnboardingSummary(profile.userId);
       setOnboardingData(data);
       setIsLoading(false);
@@ -112,8 +114,13 @@ export default function SummaryPage({ profile }: { profile?: any }) {
           </span>
         </div>
         <div className="flex flex-col items-center justify-center space-y-0.5">
-          <InfoRow label={`${role} ID`} value={systemId} />
-          <InfoRow label="Department/Branch" value={profile.department} />
+          <InfoRow label={`${profile.role || role} ID`} value={systemId} />
+
+          <InfoRow
+            label="Education Type"
+            value={profile.educationType || "N/A"}
+          />
+
           <InfoRow label="Mobile" value={profile.mobile} />
           <InfoRow label="Email" value={profile.email} />
           <InfoRow label="Date of Joining" value={profile.joiningDate} />

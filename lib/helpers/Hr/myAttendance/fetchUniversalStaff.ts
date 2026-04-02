@@ -37,7 +37,10 @@ export const fetchUniversalStaffProfile = async (
     const { data: user, error: userErr } = await supabase
       .from("users")
       .select(
-        "userId, fullName, email, mobile, role, gender, dateOfJoining, professionalExperienceYears, collegeCode",
+        `
+    *,
+    user_profile ( profileUrl )
+  `,
       )
       .eq("userId", userId)
       .single();
@@ -74,7 +77,7 @@ export const fetchUniversalStaffProfile = async (
         ? new Date(user.dateOfJoining).toLocaleDateString("en-GB")
         : "Not Provided",
       experience: user.professionalExperienceYears || null,
-      image: null,
+      image: user.user_profile?.[0]?.profileUrl,
     };
   } catch (error) {
     console.error("Error fetching universal staff profile:", error);
