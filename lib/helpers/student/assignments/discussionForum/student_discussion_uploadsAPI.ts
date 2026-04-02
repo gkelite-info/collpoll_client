@@ -235,15 +235,12 @@ export async function uploadStudentDiscussionFiles(
 }
 
 export async function deleteStudentDiscussionFileFromStorage(fileUrl: string) {
-    console.log("fileUrl", fileUrl);
 
     const urlParts = fileUrl.split("/student-discussion-files/");
-    console.log("url paths", urlParts);
 
     if (urlParts.length < 2) return { success: false };
 
     const filePath = decodeURIComponent(urlParts[1]);
-    console.log("filePath", filePath);
 
 
     const { error } = await supabase.storage

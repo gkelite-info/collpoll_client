@@ -127,9 +127,7 @@ import AdminModal from "./AdminDetailsModel"; // Ensure this filename matches ex
 export default function AdminsScreen() {
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
 
-  // 1. Define the handler BEFORE the data array so it can be used inside it
   const handleView = (adminData: any) => {
-    console.log("Opening modal for:", adminData.name); // Debug log
     setSelectedAdmin(adminData);
   };
 
@@ -159,7 +157,6 @@ export default function AdminsScreen() {
       placement: 5,
       action: (
         <button 
-          // 3. Trigger the function and pass the FULL details required for the modal
           onClick={() => handleView({
             name: "Aarav Reddy",
             id: "90653978",

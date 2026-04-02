@@ -12,7 +12,6 @@ const CalendarHeader = ({ onAddClick }: CalendarHeaderProps) => {
     if (onAddClick) {
       onAddClick();
     } else {
-      console.log("Add Event Clicked (Static UI)");
     }
   };
 

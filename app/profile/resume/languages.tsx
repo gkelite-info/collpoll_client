@@ -108,11 +108,7 @@ export default function Languages() {
         };
 
         try {
-            console.log("📤 Language Payload:", payload);
-
             const response = await upsertLanguages(payload);
-
-            console.log("📥 Language Response:", response);
 
             if (response.success) {
                 toast.success("Languages saved successfully!");

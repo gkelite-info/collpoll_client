@@ -28,25 +28,11 @@ function FeeCollectionDetailsPage() {
   const pending = searchParams.get("TotalPending");
   const branchTypeRaw = searchParams.get("branchType") || "";
   const academicYearRaw = searchParams.get("academicYear") || "";
-
   const branchTypeClean = decodeURIComponent(branchTypeRaw).trim();
   const academicYearClean = decodeURIComponent(academicYearRaw).trim();
   const yearShort = academicYearClean.split(" ")[0];
-
-
-  console.log("📌 Details Params:", {
-    branchId,
-    branchType,
-    academicYearId,
-    academicYear,
-    selectedYear,
-    expected,
-    collected,
-    pending
-  });
   const router = useRouter();
   const { collegeId, collegeEducationId } = useFinanceManager();
-
   const [semesterData, setSemesterData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [students, setStudents] = useState<any[]>([]);
@@ -56,11 +42,8 @@ function FeeCollectionDetailsPage() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
-
-
   const year = searchParams.get("year") || "1st Year";
   const columns = [
     { title: "Student Name", key: "name" },

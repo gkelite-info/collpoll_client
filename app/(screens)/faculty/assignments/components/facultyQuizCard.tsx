@@ -26,7 +26,6 @@ export default function FacultyQuizCard({ data, onViewSubmissions }: { data: any
                     </div>
                     <span
                         onClick={() => {
-                            console.log("data:", data)
                             onViewSubmissions?.(data.quizId)
                         }}
                         className="text-[#43C17A] font-semibold cursor-pointer hover:underline"

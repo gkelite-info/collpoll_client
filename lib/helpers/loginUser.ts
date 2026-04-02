@@ -4,18 +4,12 @@ import { headers } from "next/headers";
 import { createClient } from "../supabaseServer";
 
 export async function loginUser(email: string, password: string) {
-  console.log("🚀 SERVER ACTION STARTED");
-  console.log("Is it failing here?");
-
   try {
 
     const supabase = await createClient();
 
     const host = (await headers()).get("host") || "";
     const parts = host.replace(':3000', '').split(".");
-
-    console.log("what is host", host);
-    console.log("what is parts", parts);
 
     let subdomain = "GK";
 
@@ -31,18 +25,11 @@ export async function loginUser(email: string, password: string) {
       }
     }
 
-    console.log("Extracted Subdomain:", subdomain);
-
-    // Use .maybeSingle() instead of .single() to prevent crashing if not found
     const { data: currentPortal, error: portalError } = await supabase
       .from("colleges")
       .select("collegeId")
       .ilike("collegeCode", subdomain)
       .maybeSingle();
-
-    console.log("what is currentPortal", currentPortal);
-    console.log("what is Currentportal error", portalError);
-
 
     if (portalError || !currentPortal) {
       return { success: false, error: `Portal for "${subdomain}" is not registered.` };
@@ -52,10 +39,6 @@ export async function loginUser(email: string, password: string) {
       email,
       password,
     });
-
-    console.log("what is authData", authData);
-    console.log("what is authData error", authError);
-
 
     if (authError || !authData.user) {
       return { success: false, error: "Invalid email or password." };
@@ -67,16 +50,11 @@ export async function loginUser(email: string, password: string) {
       .eq("auth_id", authData.user.id)
       .maybeSingle();
 
-    console.log("what is userProfile data", userProfile);
-    console.log("what is userProfile data error", profileError);
-
-
     if (!userProfile || profileError) {
       await supabase.auth.signOut();
       return { success: false, error: "User profile not found." };
     }
 
-    // Comparison logic
     if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
       await supabase.auth.signOut();
       return {
@@ -89,8 +67,6 @@ export async function loginUser(email: string, password: string) {
       await supabase.auth.signOut();
       return { success: false, error: "Your account is inactive." };
     }
-
-    console.log("Do this line runs?");
 
     return {
       success: true,

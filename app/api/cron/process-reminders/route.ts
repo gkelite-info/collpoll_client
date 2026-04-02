@@ -24,8 +24,6 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log(`Found ${pendingJobs.length} jobs to process.`);
-
     for (const job of pendingJobs) {
       const { data: meeting } = await supabase
         .from("college_meetings")

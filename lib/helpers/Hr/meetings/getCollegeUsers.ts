@@ -57,8 +57,6 @@ export async function getCollegeUsers(
   // ================= FINANCE =================
   if (role === "Finance") {
 
-    console.log("Fetching finance managers...");
-
     let query = supabase
       .from("finance_manager")
       .select(`

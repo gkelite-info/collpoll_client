@@ -126,7 +126,6 @@ function QuizAttemptScreenContent({ quiz, onSubmitSuccess }: { quiz: any, onSubm
             await saveBulkSubmissionAnswers(submissionResult.submissionId, answersPayload);
 
             toast.success("Quiz submitted successfully!");
-            console.log("calling onSubmitSuccess");
             onSubmitSuccess?.();
 
         } catch (err) {

@@ -42,9 +42,7 @@ function FeePaymentsPage() {
   const [collegeBranchId, setCollegeBranchId] = useState<number | null>(null);
   const [collegeAcademicYearId, setCollegeAcademicYearId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-
   const [students, setStudents] = useState<any[]>([]);
-  console.log("students", students)
   const range = searchParams.get("range") || "this-week";
   const formattedRange = formatRange(range);
   const columns = [
@@ -133,42 +131,17 @@ function FeePaymentsPage() {
   }, [parsedBranchId]);
 
   useEffect(() => {
-    console.log("🔄 useEffect Triggered");
-
-    console.log("📦 Current Dependency Values:", {
-      collegeId,
-      collegeEducationIdFromUrl,
-      collegeBranchIdFromUrl,
-      selectedYear,
-    });
-
     const loadData = async () => {
-      console.log("🚀 loadData() called");
-
-      // 🔍 Check required filters
-      if (!collegeId) console.log("❌ Missing collegeId");
-      if (!collegeEducationIdFromUrl)
-        console.log("❌ Missing collegeEducationIdFromUrl");
-      if (!collegeBranchIdFromUrl)
-        console.log("❌ Missing collegeBranchIdFromUrl");
 
       if (
         !collegeId ||
         !collegeEducationIdFromUrl ||
         !collegeBranchIdFromUrl
       ) {
-        console.log("⏳ Waiting for required filters...");
         return;
       }
 
       try {
-        console.log("📌 Fetching Dashboard Data with:", {
-          collegeId,
-          collegeEducationId: collegeEducationIdFromUrl,
-          collegeBranchId: collegeBranchIdFromUrl,
-          selectedYear,
-        });
-
         const startTime = performance.now();
 
         setIsLoading(true);
@@ -190,31 +163,8 @@ function FeePaymentsPage() {
         setIsLoading(false);
         const endTime = performance.now();
 
-        console.log("✅ Dashboard Response Received");
-        console.log(
-          "⏱️ API Time:",
-          `${(endTime - startTime).toFixed(2)} ms`
-        );
-
-        console.log("📊 Response Summary:", {
-          totalStudents: data?.summary?.totalStudents,
-          expected: data?.summary?.expected,
-          collected: data?.summary?.collected,
-          pending: data?.summary?.pending,
-          paidStudents: data?.summary?.paidStudents,
-          pendingStudents: data?.summary?.pendingStudents,
-        });
-
-        console.log("⚡ Quick Insights:", data?.quickInsights);
-
-        console.log(
-          "📋 Table Data Length:",
-          data?.tableData?.length || 0
-        );
-
         setStudents(data?.tableData || []);
 
-        console.log("✅ Students State Updated");
       } catch (error) {
         console.error("❌ Error fetching finance data:", error);
       }

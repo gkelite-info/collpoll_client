@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { EnvelopeSimple, DownloadSimple, Plus } from "@phosphor-icons/react";
 
 const QuickActions = () => {

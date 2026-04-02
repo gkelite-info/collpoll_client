@@ -236,8 +236,6 @@ export async function notifyStudentsOfEvent(
     message += ` Link: ${payload.meetingLink}`;
   }
 
-  console.log(`Sending calendar notification to ${userIds.length} students...`);
-
   await sendUniversalNotifications({
     userIds,
     title,

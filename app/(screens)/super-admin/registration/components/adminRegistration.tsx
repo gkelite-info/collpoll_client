@@ -190,7 +190,7 @@ export const AdminRegistration = () => {
             setShowPassword(false);
             setShowConfirmPassword(false);
         } catch (error: any) {
-            console.log("error checking admin create", error)
+            console.error("error checking admin create", error)
             toast.error(error.message || "Failed to create admin");
         } finally {
             setIsLoading(false)

@@ -1,13 +1,14 @@
-import { clearTokens } from "@/app/utils/context/tokenStorage";
 import { supabase } from "@/lib/supabaseClient";
 
 export async function logoutUser() {
   try {
-    await supabase.auth.signOut();
-    clearTokens();
+    localStorage.clear();
+    sessionStorage.clear();
+    await supabase.auth.signOut({ scope: 'global' });
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err.message };
+    console.error("Logout error caught:", err);
+    return { success: true };
   }
 }

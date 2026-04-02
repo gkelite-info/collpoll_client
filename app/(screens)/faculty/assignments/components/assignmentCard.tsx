@@ -64,11 +64,9 @@ export default function AssignmentCard({
                 <h5 className="text-[#111827] font-semibold text-lg">
                   {item.title}
                 </h5>
-
                 <p className="text-[#111827] text-sm line-clamp-2">
                   {item.description}
                 </p>
-
                 <div className="flex items-center gap-2 mt-2">
                   <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
                     <CalendarDots className="text-[#57C788]" />
@@ -80,7 +78,6 @@ export default function AssignmentCard({
                 </div>
               </div>
 
-              {/* Top-right actions */}
               <div className="flex flex-col items-end pt-1 pr-1">
                 <div className="flex items-center gap-4">
                   <div
@@ -100,7 +97,7 @@ export default function AssignmentCard({
                   )}
 
                   <h4
-                    className="text-[#43C17A] text-sm cursor-pointer underline"
+                    className="text-[#43C17A] text-sm cursor-pointer hover:underline"
                     onClick={() =>
                       router.push(`/faculty/assignments/${item.assignmentId}`)
                     }

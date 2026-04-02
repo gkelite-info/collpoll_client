@@ -70,8 +70,6 @@ export default function ProjectGrid({ department }: ProjectGridProps) {
     );
   }
 
-  console.log("filter projects", filteredProjects)
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {filteredProjects.map((project, idx) => (

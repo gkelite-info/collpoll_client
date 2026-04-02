@@ -336,11 +336,7 @@ function SecondaryFields({ studentId, onSaveRef }: { studentId: number; onSaveRe
     };
 
     try {
-      console.log("📤 Sending Secondary Payload:", payload);
-
       const response = await upsertSecondaryEducation(payload);
-
-      console.log("📥 Secondary Response:", response);
 
       if (response.success) {
         toast.success("Secondary education saved!");
@@ -538,11 +534,7 @@ function UndergraduateFields({ studentId, onSaveRef }: { studentId: number; onSa
     };
 
     try {
-      console.log("📤 Undergraduate Payload:", payload);
-
       const response = await upsertUndergraduateEducation(payload);
-
-      console.log("📥 Undergraduate Response:", response);
 
       if (response.success) {
         toast.success("Undergraduate education saved successfully!");
@@ -705,11 +697,7 @@ function PhdFields({ studentId, onSaveRef }: { studentId: number; onSaveRef: any
     };
 
     try {
-      console.log("📤 PhD Payload:", payload);
-
       const response = await upsertPhdEducation(payload);
-
-      console.log("📥 PhD Response:", response);
 
       if (response.success) {
         toast.success("PhD education saved successfully!");

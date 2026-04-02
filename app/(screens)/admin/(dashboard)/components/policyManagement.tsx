@@ -8,7 +8,7 @@ interface TotalAutomationsProps {
 
 const PolicyManagement: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   const handleRowClick = (id: string) => {
-    console.log("Automation ID:", id);
+    // console.log("Automation ID:", id);
   };
 
   return (

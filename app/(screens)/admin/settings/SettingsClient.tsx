@@ -457,7 +457,6 @@ export default function SettingsClient() {
     setDevices((prevDevices) =>
       prevDevices.filter((device) => device.id !== deviceId),
     );
-    console.log(`Device ID ${deviceId} removed.`);
   };
 
   if (step === "current-password") return <CurrentPassword />;
