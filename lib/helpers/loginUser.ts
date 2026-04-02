@@ -4,56 +4,69 @@ import { supabase } from "@/lib/supabaseClient";
 import { headers } from "next/headers";
 
 export async function loginUser(email: string, password: string) {
-  const host = (await headers()).get("host") || "";
-  const subdomain = host.split(".")[0];
+  try {
+    const host = (await headers()).get("host") || "";
+    const parts = host.replace(':3000', '').split(".");
 
-  const { data: currentPortal } = await supabase
-    .from("colleges")
-    .select("collegeId")
-    .ilike("collegeCode", subdomain)
-    .single();
+    // Logic: If there's no subdomain (like localhost:3000), use "GK"
+    let subdomain = "GK";
+    if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'localhost') {
+      subdomain = parts[0];
+    }
 
-  if (!currentPortal) {
-    return { success: false, error: "This college portal is not registered." };
-  }
+    // Use .maybeSingle() instead of .single() to prevent crashing if not found
+    const { data: currentPortal, error: portalError } = await supabase
+      .from("colleges")
+      .select("collegeId")
+      .ilike("collegeCode", subdomain)
+      .maybeSingle();
 
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+    if (portalError || !currentPortal) {
+      return { success: false, error: `Portal for "${subdomain}" is not registered.` };
+    }
 
-  if (authError || !authData.user) {
-    return { success: false, error: "Invalid email or password." };
-  }
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  const { data: userProfile } = await supabase
-    .from("users")
-    .select("userId, fullName, role, collegeId, isActive")
-    .eq("auth_id", authData.user.id)
-    .single();
+    if (authError || !authData.user) {
+      return { success: false, error: "Invalid email or password." };
+    }
 
-  if (!userProfile) {
-    await supabase.auth.signOut();
-    return { success: false, error: "User profile not found." };
-  }
+    const { data: userProfile, error: profileError } = await supabase
+      .from("users")
+      .select("userId, fullName, role, collegeId, isActive")
+      .eq("auth_id", authData.user.id)
+      .maybeSingle();
 
-  if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
-    await supabase.auth.signOut();
+    if (!userProfile || profileError) {
+      await supabase.auth.signOut();
+      return { success: false, error: "User profile not found." };
+    }
+
+    // Comparison logic
+    if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
+      await supabase.auth.signOut();
+      return {
+        success: false,
+        error: "Access Denied: You are not authorized for this specific college portal."
+      };
+    }
+
+    if (!userProfile.isActive) {
+      await supabase.auth.signOut();
+      return { success: false, error: "Your account is inactive." };
+    }
 
     return {
-      success: false,
-      error: "Access Denied: You are not authorized to access this specific college portal."
+      success: true,
+      session: authData.session,
+      user: userProfile,
     };
-  }
 
-  if (!userProfile.isActive) {
-    await supabase.auth.signOut();
-    return { success: false, error: "Your account is inactive." };
+  } catch (err) {
+    console.error("Login Server Action Error:", err);
+    return { success: false, error: "An unexpected server error occurred." };
   }
-
-  return {
-    success: true,
-    session: authData.session,
-    user: userProfile,
-  };
 }
