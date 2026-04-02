@@ -1,4 +1,5 @@
 'use client'
+import WipOverlay from "@/app/utils/WipOverlay";
 import { Clipboard } from "@phosphor-icons/react";
 
 type AssignmentProps = {
@@ -22,7 +23,8 @@ export default function AssignMentCard({ props }: AssignMentCardProps) {
     );
 
     return (
-        <div className="bg-white h-[200px] w-[32%] rounded-lg p-2 flex flex-col gap-2 shadow-md">
+        <div className="relative overflow-hidden bg-white h-[200px] w-[32%] rounded-lg p-2 flex flex-col gap-2 shadow-md">
+            <WipOverlay fullWidth={true}/>
             <div className="w-[75%] h-[20%] flex items-center justify-between">
                 <div className="bg-[#E1F4E8] rounded-lg p-1">
                     <Clipboard size={22} weight="fill" color="#6ECC90" />

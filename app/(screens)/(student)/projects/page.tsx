@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ProjectCard, ProjectDetailsModal } from "./projectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export type ProjectCardProps = {
   title: string;
@@ -86,7 +87,8 @@ const Page = () => {
     useState<ProjectCardProps | null>(null);
 
   return (
-    <main className="p-4">
+    <main className="p-4 relative overflow-hidden">
+      <WipOverlay fullHeight={true}/>
       <section className="flex justify-between items-center mb-4">
         <h1 className="text-black text-2xl font-semibold">
           Projects - CSE 2nd Year

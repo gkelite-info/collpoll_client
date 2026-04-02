@@ -6,6 +6,7 @@ import { JobInfoCard, JobInfoCardProps } from "./jobInfoCard";
 import { PlacementFilterBar, PlacementFilterBarProps } from "./filterBar";
 import AssignmentsRight from "./aside";
 import { jobInfoCardData } from "./jobData";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 type JobWithState = JobInfoCardProps & {
   id: number;
@@ -98,7 +99,8 @@ export default function Page() {
       </section>
 
       <section className="bg-blue-00 flex justify-between">
-        <section className="bg-yellow-00 w-[68%]">
+        <section className="bg-yellow-00 relative overflow-hidden w-[68%]">
+          <WipOverlay fullHeight={true}/>
           <PlacementFilterBar
             cycle={cycle}
             eligibility={eligibility}

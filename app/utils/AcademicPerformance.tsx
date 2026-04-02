@@ -10,8 +10,9 @@ import {
     Cell,
     LabelList,
 } from "recharts";
+import WipOverlay from "./WipOverlay";
 
-export default function AcademicPerformance() {
+export default function AcademicPerformance({ overlayVisible = true }: { overlayVisible?: boolean }) {
     const data = [
         { subject: "Java Programming", value: 70, full: 100 },
         { subject: "Data Structures", value: 50, full: 100 },
@@ -22,7 +23,8 @@ export default function AcademicPerformance() {
     ];
 
     return (
-        <div className="bg-white rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
+        <div className="bg-white relative overflow-hidden rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
+            <WipOverlay isOverlayVisible={overlayVisible}/>
             <h2 className="text-xl font-semibold mb-6 ml-3 text-[#282828]">
                 Academic Performance
             </h2>
