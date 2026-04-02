@@ -6,6 +6,7 @@ import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyView from "./facultyView";
 import UptimeChart, { UptimeDataPoint } from "./uptimeChart";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface TotalUsersProps {
   onBack: () => void;
@@ -76,7 +77,8 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="relative overflow-hidden flex flex-col w-full min-h-screen">
+      <WipOverlay fullHeight={true}/>
       <div className="mb-5">
         <div className="flex items-center gap-2 group w-fit">
           <CaretLeft

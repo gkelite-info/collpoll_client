@@ -7,6 +7,7 @@ import {
 } from "../types";
 import AttendancePerformanceChart from "../charts/AttendancePerformanceChart";
 import AttendanceTable from "../tables/attendanceTable";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 // Mock Data
 const mockProfile: AnalyticsFacultyProfile = {
@@ -43,7 +44,8 @@ const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map(
 
 const AttendanceAnalyticsPage = () => {
   return (
-    <div className="flex flex-col w-full">
+    <div className="relative flex flex-col w-full">
+      <WipOverlay fullHeight={true}/>
       <AnalyticsFacultyInfo profile={mockProfile} />
 
       <AttendancePerformanceChart data={mockChartData} />

@@ -1,3 +1,4 @@
+import WipOverlay from "@/app/utils/WipOverlay";
 import AttendanceTable from "../tables/attendanceTable";
 import { AttendanceRecord, AttendanceStats, FacultyProfile } from "../types";
 import AttendanceStatusCard from "./attendanceStatusCard";
@@ -36,7 +37,8 @@ const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map(
 
 const AttendancePage = () => {
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
+      <WipOverlay/>
       <div className="flex gap-4 mb-4 w-full">
         <FacultyInfoCard profile={mockProfile} />
         <AttendanceStatusCard stats={mockStats} />

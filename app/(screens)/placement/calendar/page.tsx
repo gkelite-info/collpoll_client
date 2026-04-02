@@ -10,6 +10,7 @@ import CalendarToolbar from "./components/calendarToolbar";
 import CalendarHeader from "./components/calendarHeader";
 import CalendarGrid from "./components/calendarGrid";
 import AddEventModal from "./components/AddEventModal";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 // --- STATIC MOCK DATA ---
 const MOCK_EVENTS = [
@@ -71,7 +72,8 @@ export default function Page() {
   };
 
   return (
-    <main className="p-4 bg-[#f3f4f6] min-h-screen">
+    <main className="relative overflow-hidden p-4 bg-[#f3f4f6] min-h-screen">
+      <WipOverlay fullHeight={true}/>
       <section className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">Calendar & Events</h1>

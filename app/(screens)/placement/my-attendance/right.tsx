@@ -4,6 +4,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function MyAttendanceRight() {
   // const myTasks = [
@@ -102,7 +103,8 @@ export default function MyAttendanceRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="relative w-[32%] p-2 flex flex-col">
+        <WipOverlay fullHeight={true}/>
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel studentTasks={myTasks} role="student" />

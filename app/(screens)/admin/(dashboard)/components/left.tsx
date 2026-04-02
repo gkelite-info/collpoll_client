@@ -19,6 +19,7 @@ import PolicyManagement from "./policyManagement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminDashboard } from "../../hooks/useAdminDashboard";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 type ViewState =
   | "MAIN"
@@ -155,7 +156,8 @@ export default function AdminDashLeft({
         </div>
 
         <div>
-          <div className=" bg-gray-100 mt-5">
+          <div className="relative overflow-hidden bg-gray-100 mt-5">
+            <WipOverlay/>
             <DashboardGrid data={dashboardData} />
           </div>
         </div>
