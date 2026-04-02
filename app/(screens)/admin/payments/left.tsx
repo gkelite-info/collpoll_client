@@ -2,6 +2,7 @@
 import Link from "next/link";
 import TableComponent from "@/app/utils/table/table";
 import Filters from "./filters";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function Left() {
     const columns = [
@@ -84,7 +85,8 @@ export default function Left() {
 
     return (
         <>
-            <div className="w-[68%] p-2 flex flex-col">
+            <div className="relative w-[68%] p-2 flex flex-col">
+                <WipOverlay />
                 <div className="mb-4">
                     <h1 className="text-[#282828] font-bold text-2xl mb-1">Payments Management</h1>
                     <p className="text-[#282828] text-md">

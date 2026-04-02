@@ -9,6 +9,7 @@ import ManageTaxPage from "./payroll/components/managetaxpage";
 import AttendancePage from "./components/attendancePage";
 import AttendanceAnalyticsPage from "./components/AttendanceAnalyticsPage";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const MyAttendanceLeft = () => {
   const searchParams = useSearchParams();
@@ -69,18 +70,19 @@ const MyAttendanceLeft = () => {
   }, []);
 
   return (
-    <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
+    <div className="relative w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
+      <WipOverlay fullHeight={true} />
+
       <div className="flex justify-center mb-8 w-full px-20">
         <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
           {mainTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleMainTabClick(tab.id as any)}
-              className={`relative z-10 w-1/3 py-1.5 text-[15px] cursor-pointer transition-colors duration-300 ${
-                activeMainTab === tab.id
+              className={`relative z-10 w-1/3 py-1.5 text-[15px] cursor-pointer transition-colors duration-300 ${activeMainTab === tab.id
                   ? "text-white font-medium delay-100"
                   : "text-[#5A5A5A] hover:text-gray-800"
-              }`}
+                }`}
             >
               <span className="relative z-10">{tab.label}</span>
               {activeMainTab === tab.id && (
@@ -109,11 +111,10 @@ const MyAttendanceLeft = () => {
                 <button
                   key={tab.id}
                   onClick={() => handleSubTabClick(tab.id as any)}
-                  className={`text-[15px] cursor-pointer pb-1.5 transition-all duration-300 ${
-                    activePayrollTab === tab.id
+                  className={`text-[15px] cursor-pointer pb-1.5 transition-all duration-300 ${activePayrollTab === tab.id
                       ? "text-[#43C17A] border-b-[2px] border-[#43C17A]"
                       : "text-[#5A5A5A] font-medium border-b-[2px] border-transparent hover:text-gray-800"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

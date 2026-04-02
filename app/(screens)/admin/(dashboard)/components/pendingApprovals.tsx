@@ -8,6 +8,7 @@ import PendingApprovalsTable, {
 } from "./tables/pendingApprovalsTable";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import RequestDetail from "./requestDetails";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const cardData = [
   {
@@ -63,7 +64,8 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col m-4 ">
+    <div className="relative overflow-hidden flex flex-col m-4 ">
+      <WipOverlay fullHeight={true}/>
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div

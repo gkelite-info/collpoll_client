@@ -8,6 +8,7 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import AddUserModal from "./modal/addUserModal";
 import { RequestData as TableRequestData } from "./tables/pendingApprovalsTable";
 import DocumentPreviewModal from "./modal/documentPreviewModal";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export interface FacultyData {
   name: string;
@@ -217,7 +218,8 @@ const RequestDetail: React.FC<RequestDetailProps> = ({
   };
 
   return (
-    <div className="flex w-full min-h-screen p-3">
+    <div className="relative flex w-full min-h-screen p-3">
+      <WipOverlay fullHeight={true}/>
       <div className="flex-1">
         <div className="mb-3">
           <div className="flex items-center gap-2 group w-fit">

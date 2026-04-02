@@ -5,13 +5,15 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import ProjectsHeader from "../compounents/ProjectsHeader";
 import ProjectFilters from "../compounents/ProjectFilters";
 import ProjectGrid from "../compounents/ProjectGrid";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function DepartmentProjectsPage() {
   const params = useParams();
   const department = decodeURIComponent(params.department as string);
 
   return (
-    <div className="h-full overflow-y-auto p-6 flex flex-col">
+    <div className="relative h-full overflow-y-auto p-6 flex flex-col">
+      <WipOverlay fullHeight={true} />
       {/* Header */}
       <div className="flex justify-between items-start mb-[18px]">
         <ProjectsHeader title={`${department} Projects`} />
@@ -23,8 +25,8 @@ export default function DepartmentProjectsPage() {
       </div>
 
       {/* Filters */}
-      <div style={{marginTop:"-25px", marginBottom:"15px"}}>
-      <ProjectFilters />
+      <div style={{ marginTop: "-25px", marginBottom: "15px" }}>
+        <ProjectFilters />
       </div>
 
       {/* Projects Grid */}

@@ -5,6 +5,7 @@ import { CaretLeft } from "@phosphor-icons/react";
 import FacultyView from "./facultyView";
 import ActiveAutomationsTable from "./tables/activeAutomationsTable";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const sampleRequests = [
   {
@@ -124,7 +125,8 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="relative overflow-hidden flex flex-col w-full min-h-screen">
+      <WipOverlay fullHeight={true}/>
       <div className="mb-5">
         <div className="flex items-center gap-2 group w-fit">
           <CaretLeft

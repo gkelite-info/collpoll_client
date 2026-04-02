@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "@phosphor-icons/react";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface AddAutomationModalProps {
   isOpen: boolean;
@@ -14,7 +15,8 @@ const AddAutomationModal: React.FC<AddAutomationModalProps> = ({
 
   return (
     <div className="fixed text-[#282828] inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-[600px] rounded-xl shadow-2xl overflow-hidden font-sans">
+      <div className="relative bg-white w-full max-w-[600px] rounded-xl shadow-2xl overflow-hidden font-sans">
+        <WipOverlay/>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-[#282828]">Automation Name</h2>
           <button

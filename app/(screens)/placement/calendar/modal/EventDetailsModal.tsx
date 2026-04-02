@@ -1,5 +1,6 @@
 "use client";
 
+import WipOverlay from "@/app/utils/WipOverlay";
 import { CalendarBlank, X } from "@phosphor-icons/react";
 
 type Props = {
@@ -30,8 +31,8 @@ export default function EventDetailsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-[420px] bg-white rounded-xl shadow-2xl relative">
-
+      <div className="overflow-hidden w-[420px] bg-white rounded-xl shadow-2xl relative">
+        <WipOverlay />
         {/* HEADER */}
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div className="flex items-center gap-3">

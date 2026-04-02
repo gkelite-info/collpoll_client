@@ -4,10 +4,12 @@ import { Suspense } from "react";
 import ProjectsHeader from "./compounents/ProjectsHeader";
 import FacultyAcademicCard from "./compounents/facultyAcademicCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 function ProjectsOverview() {
   return (
-    <div className="p-4 flex flex-col">
+    <div className="relative overflow-hidden p-4 flex flex-col">
+      <WipOverlay fullHeight={true}/>
       {/* Header Section */}
       <div className="flex w-full justify-between items-center">
         <ProjectsHeader />

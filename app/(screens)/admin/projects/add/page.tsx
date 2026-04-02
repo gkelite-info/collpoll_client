@@ -4,13 +4,15 @@ import React from "react";
 import { Plus } from "@phosphor-icons/react";
 import ProjectsHeader from "../compounents/ProjectsHeader";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const inputStyle =
   "w-full h-[42px] px-3 border border-gray-300 rounded-lg text-sm text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20";
 
 export default function AddProjectPage() {
   return (
-    <div className="p-6 flex justify-center bg-[#F5F6FA] min-h-screen">
+    <div className="p-6 flex justify-center bg-[#F5F6FA] relative overflow-hidden min-h-screen">
+      <WipOverlay fullHeight={true}/>
       <div className="w-full max-w-[980px]">
 
         {/* HEADER */}
@@ -117,6 +119,7 @@ export default function AddProjectPage() {
                 <img
                   src="https://i.pravatar.cc/100?u=mentor"
                   className="w-7 h-7 rounded-full"
+                  alt=""
                 />
                 <span className="text-[#111827]">Dr. Anjani Verma</span>
               </div>

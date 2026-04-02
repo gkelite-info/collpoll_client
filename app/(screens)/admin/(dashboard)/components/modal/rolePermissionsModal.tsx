@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { X, GraduationCap, User, Users } from "@phosphor-icons/react";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface RolePermissionsModalProps {
   isOpen: boolean;
@@ -106,7 +107,9 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden font-sans border border-gray-100 flex flex-col">
+      <div className="relative bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden font-sans border border-gray-100 flex flex-col">
+      <WipOverlay/>
+        
         <div className="flex items-start justify-between px-8 py-6 pb-2">
           <div>
             <h2 className="text-[18px] font-medium text-[#1A1A1A]">
