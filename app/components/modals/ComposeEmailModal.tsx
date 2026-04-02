@@ -1,29 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import {
-  X,
-  Paperclip,
-  Link as LinkIcon,
-  Smile,
-  Image as ImageIcon,
-  Bold,
-  Italic,
-  Underline,
-  Check,
-} from "lucide-react";
-import {
-  getUniqueRoles,
-  getEducationTypes,
-  getBranches,
-  getYears,
-  getSemesters,
-  getSections,
-} from "@/lib/helpers/email/emailFiltersAPI";
-import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import {
+  getBranches,
+  getEducationTypes,
+  getSections,
+  getSemesters,
+  getUniqueRoles,
+  getYears,
+} from "@/lib/helpers/email/emailFiltersAPI";
 import { supabase } from "@/lib/supabaseClient";
-import { uploadEmailAttachment } from "@/lib/helpers/email/emailStorageAPI";
+import {
+  Bold,
+  Check,
+  Image as ImageIcon,
+  Italic,
+  Link as LinkIcon,
+  Paperclip,
+  Smile,
+  Underline,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 
 type Props = {
   isOpen: boolean;
@@ -99,7 +98,7 @@ export default function ComposeEmailModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const { fullName, email } = useUser();
+  const { fullName, email, userId } = useUser();
 
   useEffect(() => {
     if (isOpen && collegeId) {
@@ -283,6 +282,7 @@ export default function ComposeEmailModal({
         description: finalDescription,
         senderName: fullName,
         senderAddress: email,
+        senderUserId: userId,
       };
 
       const response = await fetch("/api/emails/send", {

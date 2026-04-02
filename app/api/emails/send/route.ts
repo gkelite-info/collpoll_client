@@ -75,6 +75,7 @@ export async function POST(req: Request) {
       description,
       senderName,
       senderAddress,
+      senderUserId,
     } = body;
 
     const formattedHtmlBody = formatBodyToHTML(description);
@@ -213,54 +214,44 @@ export async function POST(req: Request) {
         { status: 404 },
       );
 
+    // ==========================================
+    // --- GATEKEEPER: THE DIVERT TRICK ---
+    // ==========================================
     const realUserIds = uniqueUsers
       .map((u) => u.userId)
       .filter((id) => id !== 0);
     let preferences: any[] = [];
 
     if (realUserIds.length > 0) {
-      const { data: prefData, error: prefError } = await supabase
+      const { data: prefData } = await supabase
         .from("user_preferences")
         .select("userId, email_alerts")
         .in("userId", realUserIds);
-
-      if (!prefError && prefData) {
-        preferences = prefData;
-      } else if (prefError) {
-        console.error("Failed to fetch preferences:", prefError);
-      }
-    }
-
-    const optedInUsers = uniqueUsers.filter((user) => {
-      if (user.userId === 0) return true;
-
-      const userPref = preferences.find((p) => p.userId === user.userId);
-      return userPref ? userPref.email_alerts !== false : true;
-    });
-
-    if (optedInUsers.length === 0) {
-      return NextResponse.json({
-        success: true,
-        count: 0,
-        message: "All recipients have opted out of email alerts.",
-      });
+      if (prefData) preferences = prefData;
     }
 
     const now = new Date().toISOString();
+
+    // 1. IN-APP INBOX: We create rows for everyone, but DIVERT opted-out users to the sender
     const queueData = uniqueUsers
       .filter((u) => u.userId !== 0)
-      .map((user) => ({
-        userId: user.userId,
-        email: user.email,
-        subject,
-        body: formattedHtmlBody,
-        status: "pending",
-        isRead: user.email === senderAddress ? true : false,
-        createdAt: now,
-        updatedAt: now,
-        senderName: senderName || "System Notifications",
-        senderAddress: senderAddress || "noreply@tektoncampus.edu",
-      }));
+      .map((user) => {
+        const userPref = preferences.find((p) => p.userId === user.userId);
+        const wantsEmail = userPref ? userPref.email_alerts !== false : true;
+
+        return {
+          userId: wantsEmail ? user.userId : senderUserId, // <-- THE MAGIC DIVERT
+          email: user.email,
+          subject,
+          body: formattedHtmlBody,
+          status: "pending",
+          isRead: wantsEmail ? false : true, // Mark read if diverted so it doesn't annoy the sender
+          createdAt: now,
+          updatedAt: now,
+          senderName: senderName || "System Notifications",
+          senderAddress: senderAddress || "noreply@tektoncampus.edu",
+        };
+      });
 
     if (queueData.length > 0) {
       const { error: dbError } = await supabase
@@ -269,11 +260,17 @@ export async function POST(req: Request) {
       if (dbError) throw dbError;
     }
 
-    const ccArray = cc ? cc.split(",").map((e: string) => e.trim()) : [];
+    // 2. EXTERNAL RESEND: Strictly send actual emails ONLY to opted-in users
+    const optedInUsersForResend = uniqueUsers.filter((user) => {
+      if (user.userId === 0) return true; // Always email manual guest entries
+      const userPref = preferences.find((p) => p.userId === user.userId);
+      return userPref ? userPref.email_alerts !== false : true;
+    });
 
+    const ccArray = cc ? cc.split(",").map((e: string) => e.trim()) : [];
     const BATCH_SIZE = 100;
 
-    const emailPayloads = optedInUsers.map((u) => ({
+    const emailPayloads = optedInUsersForResend.map((u) => ({
       from: "Tekton Campus <vamshivadla@gkeliteinfo.com>",
       to: [u.email],
       cc: ccArray,
@@ -291,7 +288,10 @@ export async function POST(req: Request) {
       if (emailError) throw emailError;
     }
 
-    return NextResponse.json({ success: true, count: optedInUsers.length });
+    return NextResponse.json({
+      success: true,
+      count: optedInUsersForResend.length,
+    });
   } catch (error: any) {
     console.error("API Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

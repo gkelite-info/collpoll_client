@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeSlash, CaretLeft, CircleNotch } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -14,6 +14,7 @@ import {
 
 export default function CurrentPassword() {
   const router = useRouter();
+  const pathname = usePathname();
   const { email } = useUser();
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
@@ -35,7 +36,7 @@ export default function CurrentPassword() {
     try {
       await verifyCurrentPassword(email, password);
       toast.success("Password verified!", { id: toastId });
-      router.push("/settings?reset");
+      router.push(`${pathname}?reset`);
     } catch (error: any) {
       toast.error("Incorrect password. Please try again.", { id: toastId });
     } finally {
@@ -63,7 +64,7 @@ export default function CurrentPassword() {
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2 text-[#282828]">
             <Link
-              href="/settings"
+              href={`${pathname}`}
               className="hover:bg-gray-200 p-1 rounded-full transition-colors"
             >
               <CaretLeft size={24} className="text-[#282828]" weight="bold" />
@@ -115,7 +116,7 @@ export default function CurrentPassword() {
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="text-sm text-[#10B981] hover:underline"
+              className="text-sm text-[#10B981] hover:underline cursor-pointer"
             >
               Forgot your password?
             </button>
@@ -125,7 +126,7 @@ export default function CurrentPassword() {
             <button
               onClick={handleContinue}
               disabled={isProcessing}
-              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-2 rounded shadow font-semibold flex items-center gap-2 transition-colors"
+              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] cursor-pointer text-white px-6 py-2 rounded shadow font-semibold flex items-center gap-2 transition-colors"
             >
               {isProcessing && (
                 <CircleNotch size={18} className="animate-spin" />

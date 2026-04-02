@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeSlash, CaretLeft, CircleNotch } from "@phosphor-icons/react";
 import PasswordChecklist from "./passwordChecklist";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import toast from "react-hot-toast";
@@ -11,7 +11,7 @@ import { updateUserPassword } from "@/lib/helpers/settings/passwordAPI";
 
 export default function ResetPassword() {
   const router = useRouter();
-
+  const pathname = usePathname();
   const [newPwd, setNewPwd] = useState("");
   const [confirmPwd, setConfirmPwd] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -45,7 +45,8 @@ export default function ResetPassword() {
     try {
       await updateUserPassword(newPwd);
       toast.success("Password updated successfully!", { id: toastId });
-      router.push("/settings?done");
+
+      router.push(`${pathname}?done`);
     } catch (error: any) {
       toast.error(error.message || "Failed to update password.", {
         id: toastId,
@@ -61,7 +62,7 @@ export default function ResetPassword() {
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2 text-[#282828]">
             <Link
-              href="/settings"
+              href={`${pathname}`}
               className="hover:bg-gray-200 p-1 rounded-full transition-colors"
             >
               <CaretLeft size={24} className="text-[#282828]" weight="bold" />
@@ -138,7 +139,7 @@ export default function ResetPassword() {
             <button
               onClick={handleUpdate}
               disabled={isProcessing}
-              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-2 rounded shadow font-semibold flex items-center gap-2 transition-colors"
+              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] cursor-pointer text-white px-6 py-2 rounded shadow font-semibold flex items-center gap-2 transition-colors"
             >
               {isProcessing && (
                 <CircleNotch size={18} className="animate-spin" />

@@ -1,6 +1,6 @@
-// "use client";
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Reply, ChevronDown } from "lucide-react";
 import DOMPurify from "dompurify";
 
@@ -28,6 +28,17 @@ type Props = {
 
 export default function EmailDetailModal({ mail, onClose, onReply }: Props) {
   const [showRecipients, setShowRecipients] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null); // Ref to track the body content
+
+  useEffect(() => {
+    if (contentRef.current) {
+      const links = contentRef.current.querySelectorAll("a");
+      links.forEach((link) => {
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+      });
+    }
+  }, [mail.body]);
 
   return (
     <div className="fixed bottom-10 right-[430px] z-[1100] w-[418px] h-[430px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
@@ -105,6 +116,7 @@ export default function EmailDetailModal({ mail, onClose, onReply }: Props) {
         </p>
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-4">
           <div
+            ref={contentRef} // Attached the ref here
             className="text-[13px] text-[#414141] leading-relaxed space-y-2"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mail.body) }}
           />

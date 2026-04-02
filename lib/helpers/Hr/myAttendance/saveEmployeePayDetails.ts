@@ -15,14 +15,15 @@ export const saveEmployeePayDetails = async ({
   formData,
   addons,
 }: SavePayDetailsParams) => {
-  const mapJobType = (uiValue: string) => uiValue.toUpperCase();
+  const mapJobType = (uiValue: string) => uiValue?.toUpperCase() || "PERMANENT";
 
   const mapCompType = (uiValue: string) => {
+    if (!uiValue) return "DIRECT_PAYMENT";
     if (uiValue === "Direct Payment") return "DIRECT_PAYMENT";
     return uiValue.toUpperCase();
   };
 
-  const mapPayNature = (uiValue: string) => uiValue.toUpperCase();
+  const mapPayNature = (uiValue: string) => uiValue?.toUpperCase() || "FIXED";
 
   const mapAddonType = (title: string) => {
     const lower = title.toLowerCase();
@@ -33,11 +34,12 @@ export const saveEmployeePayDetails = async ({
     return "OTHERS";
   };
 
-  const parseIntSafe = (val: string) =>
-    parseInt(val.toString().replace(/,/g, "") || "0", 10);
+  const parseIntSafe = (val: string | undefined | null) =>
+    parseInt((val || "").toString().replace(/,/g, "") || "0", 10);
 
   try {
     const now = new Date().toISOString();
+    let profileId: number;
 
     const { data: existingProfile, error: checkErr } = await supabase
       .from("employee_pay_profiles")
@@ -48,8 +50,6 @@ export const saveEmployeePayDetails = async ({
 
     if (checkErr) throw checkErr;
 
-    let profileId: number;
-
     if (existingProfile) {
       profileId = existingProfile.employeePayProfileId;
 
@@ -57,7 +57,9 @@ export const saveEmployeePayDetails = async ({
         .from("employee_pay_profiles")
         .update({
           jobType: mapJobType(formData.jobType),
-          monthlySalary: parseIntSafe(formData.monthlySalary),
+          monthlySalary: parseIntSafe(
+            formData.basicSalary || formData.monthlySalary,
+          ),
           updatedAt: now,
         })
         .eq("employeePayProfileId", profileId);
@@ -74,7 +76,6 @@ export const saveEmployeePayDetails = async ({
         .eq("employeePayProfileId", profileId);
       if (updStructErr) throw updStructErr;
 
-      // Update Leave Allocations
       const { error: updLeaveErr } = await supabase
         .from("employee_leave_allocations")
         .update({
@@ -85,31 +86,7 @@ export const saveEmployeePayDetails = async ({
         })
         .eq("employeePayProfileId", profileId);
       if (updLeaveErr) throw updLeaveErr;
-
-      // Replace Compensation Type (Delete old to avoid unique constraint errors, then insert new)
-      await supabase
-        .from("employee_compensation_types")
-        .delete()
-        .eq("employeePayProfileId", profileId);
-      const { error: compErr } = await supabase
-        .from("employee_compensation_types")
-        .insert({
-          employeePayProfileId: profileId,
-          compensationType: mapCompType(formData.compType),
-        });
-      if (compErr) throw compErr;
-
-      // Clear old Add-ons to make way for the updated list
-      await supabase
-        .from("employee_pay_addons")
-        .delete()
-        .eq("employeePayProfileId", profileId);
-    }
-    // ==========================================
-    // INSERT PATH (FRESH RECORD)
-    // ==========================================
-    else {
-      // Insert Profile
+    } else {
       const { data: newProfile, error: insProfileErr } = await supabase
         .from("employee_pay_profiles")
         .insert({
@@ -117,7 +94,9 @@ export const saveEmployeePayDetails = async ({
           collegeId: collegeId,
           createdBy: collegeHrId,
           jobType: mapJobType(formData.jobType),
-          monthlySalary: parseIntSafe(formData.monthlySalary),
+          monthlySalary: parseIntSafe(
+            formData.basicSalary || formData.monthlySalary,
+          ),
           isActive: true,
           createdAt: now,
           updatedAt: now,
@@ -127,7 +106,6 @@ export const saveEmployeePayDetails = async ({
       if (insProfileErr) throw insProfileErr;
       profileId = newProfile.employeePayProfileId;
 
-      // Insert Structure
       const { error: structErr } = await supabase
         .from("employee_salary_structure")
         .insert({
@@ -140,7 +118,6 @@ export const saveEmployeePayDetails = async ({
         });
       if (structErr) throw structErr;
 
-      // Insert Leave Allocations (No createdAt in your schema for this table)
       const { error: leaveErr } = await supabase
         .from("employee_leave_allocations")
         .insert({
@@ -151,8 +128,13 @@ export const saveEmployeePayDetails = async ({
           paidLeave: parseIntSafe(formData.paidLeave),
         });
       if (leaveErr) throw leaveErr;
+    }
 
-      // Insert Compensation Type
+    if (formData.compType) {
+      await supabase
+        .from("employee_compensation_types")
+        .delete()
+        .eq("employeePayProfileId", profileId);
       const { error: compErr } = await supabase
         .from("employee_compensation_types")
         .insert({
@@ -162,9 +144,11 @@ export const saveEmployeePayDetails = async ({
       if (compErr) throw compErr;
     }
 
-    // ==========================================
-    // SHARED: INSERT NEW/UPDATED ADD-ONS
-    // ==========================================
+    await supabase
+      .from("employee_pay_addons")
+      .delete()
+      .eq("employeePayProfileId", profileId);
+
     const validAddons = addons.filter((a) => a.typeName && a.amount);
     if (validAddons.length > 0) {
       const addonsToInsert = validAddons.map((a) => ({
@@ -181,6 +165,112 @@ export const saveEmployeePayDetails = async ({
         .from("employee_pay_addons")
         .insert(addonsToInsert);
       if (addonErr) throw addonErr;
+    }
+
+    const activeAllowances = formData.activeAllowances || [];
+    if (activeAllowances.length > 0) {
+      const { data: existingTypes } = await supabase
+        .from("salary_component_types")
+        .select("salaryComponentTypeId, title")
+        .eq("collegeId", collegeId);
+
+      const mappedAllowances = [];
+
+      for (const allowance of activeAllowances) {
+        let typeId = existingTypes?.find(
+          (t) => t.title.toLowerCase() === allowance.name.toLowerCase(),
+        )?.salaryComponentTypeId;
+
+        if (!typeId) {
+          const { data: newType, error: typeErr } = await supabase
+            .from("salary_component_types")
+            .insert({
+              title: allowance.name,
+              collegeId,
+              createdBy: collegeHrId,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .select("salaryComponentTypeId")
+            .single();
+
+          if (typeErr) throw typeErr;
+          typeId = newType.salaryComponentTypeId;
+        }
+
+        mappedAllowances.push({
+          employeePayProfileId: profileId,
+          salaryComponentTypeId: typeId,
+          amount: parseIntSafe(allowance.amount),
+          createdBy: collegeHrId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await supabase
+        .from("employee_salary_component_values")
+        .delete()
+        .eq("employeePayProfileId", profileId);
+
+      const { error: allowanceErr } = await supabase
+        .from("employee_salary_component_values")
+        .insert(mappedAllowances);
+
+      if (allowanceErr) throw allowanceErr;
+    }
+
+    const selectedCompliances = formData.compliances || [];
+    if (selectedCompliances.length > 0) {
+      const { data: existingCompTypes } = await supabase
+        .from("payroll_compliance_types")
+        .select("payrollComplianceTypeId, title")
+        .eq("collegeId", collegeId);
+
+      const mappedCompliances = [];
+
+      for (const comp of selectedCompliances) {
+        let compTypeId = existingCompTypes?.find(
+          (t) => t.title.toLowerCase() === comp.name.toLowerCase(),
+        )?.payrollComplianceTypeId;
+
+        if (!compTypeId) {
+          const { data: newCompType, error: compTypeErr } = await supabase
+            .from("payroll_compliance_types")
+            .insert({
+              title: comp.name,
+              collegeId,
+              createdBy: collegeHrId,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .select("payrollComplianceTypeId")
+            .single();
+
+          if (compTypeErr) throw compTypeErr;
+          compTypeId = newCompType.payrollComplianceTypeId;
+        }
+
+        mappedCompliances.push({
+          employeePayProfileId: profileId,
+          payrollComplianceTypeId: compTypeId,
+          amount: parseIntSafe(comp.amount),
+          createdBy: collegeHrId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await supabase
+        .from("employee_payroll_compliance_values")
+        .delete()
+        .eq("employeePayProfileId", profileId);
+
+      const { error: complianceErr } = await supabase
+        .from("employee_payroll_compliance_values")
+        .insert(mappedCompliances);
+
+      if (complianceErr) throw complianceErr;
     }
 
     return { success: true };

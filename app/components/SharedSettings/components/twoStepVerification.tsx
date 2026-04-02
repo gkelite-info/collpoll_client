@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChatTeardropText,
   EnvelopeSimple,
@@ -8,6 +8,7 @@ import {
   Monitor,
   CaretRight,
   IconProps,
+  CaretLeft,
 } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 
@@ -66,6 +67,7 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
   onToggleOrNavigate,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const Icon = method.icon;
   const accentColor = "text-green-500 bg-green-50";
 
@@ -73,7 +75,7 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
     if (method.status === "toggle") {
       onToggleOrNavigate(method.id);
     } else if (method.status === "navigate" && method.id === "devices") {
-      router.push("/settings?trusted-devices");
+      router.push(`${pathname}?trusted-devices`);
     }
   };
 
@@ -131,14 +133,28 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
   verificationMethods,
   onToggleOrNavigate,
 }) => {
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <div className="p-6 space-y-6 sm:p-8">
       <div className="flex justify-between">
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2">
+            <button
+              onClick={handleBack}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1"
+            >
+              <CaretLeft size={24} weight="bold" className="text-[#282828]" />
+            </button>
             <span className="text-[#282828]">Two-Step Verification</span>
           </div>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-sm ml-9">
+            {" "}
+            {/* Added margin to align with text above */}
             Add an extra layer of security to your account
           </p>
         </div>
