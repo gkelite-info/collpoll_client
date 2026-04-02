@@ -17,12 +17,21 @@ export async function loginUser(email: string, password: string) {
     console.log("what is host", host);
     console.log("what is parts", parts);
 
-
-    // Logic: If there's no subdomain (like localhost:3000), use "GK"
     let subdomain = "GK";
-    if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'localhost') {
-      subdomain = parts[0];
+
+    const isLocalhost = host.includes('localhost');
+
+    if (isLocalhost) {
+      if (parts.length >= 2 && parts[0] !== 'localhost') {
+        subdomain = parts[0];
+      }
+    } else {
+      if (parts.length >= 3 && parts[0] !== 'www') {
+        subdomain = parts[0];
+      }
     }
+
+    console.log("Extracted Subdomain:", subdomain);
 
     // Use .maybeSingle() instead of .single() to prevent crashing if not found
     const { data: currentPortal, error: portalError } = await supabase
