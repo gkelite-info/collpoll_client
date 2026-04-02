@@ -10,6 +10,7 @@ import CardComponent, { CardProps } from "./components/stuPerfCards";
 import { StudentDataTable } from "./components/studentDataTable";
 import TopFivePerformers from "./components/topFivePerformers";
 import { TOP_PERFORMERS } from "./data";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface StudentPerformancePageProps {
   onGoBack: () => void;
@@ -53,7 +54,8 @@ const cardData: CardProps[] = [
 
 export default function Page({ onGoBack }: StudentPerformancePageProps) {
   return (
-    <main className="p-4">
+    <main className="p-4 relative overflow-hidden">
+      <WipOverlay fullHeight={true}/>
       <section className="flex justify-between items-center mb-4">
         <div>
           <div className="flex">

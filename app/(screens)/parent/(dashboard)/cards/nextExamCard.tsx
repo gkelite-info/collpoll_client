@@ -1,4 +1,5 @@
 'use client'
+import WipOverlay from "@/app/utils/WipOverlay";
 import { Books, Calendar } from "@phosphor-icons/react";
 
 type NextExamProps = {
@@ -10,7 +11,8 @@ type NextExamProps = {
 export default function NextExamCard({ date, subject }: NextExamProps) {
     return (
         <>
-            <div className="bg-white h-[200px] w-[32%] rounded-lg p-2 flex flex-col gap-2 shadow-md">
+            <div className="bg-white relative overflow-hidden h-[200px] w-[32%] rounded-lg p-2 flex flex-col gap-2 shadow-md">
+                <WipOverlay fullWidth={true}/>
                 <div className="w-[85%] h-[20%] flex items-center justify-between">
                     <div className="bg-[#F9EFDE] rounded-lg p-1">
                         <Books size={22} weight="fill" color="#E6BD71" />

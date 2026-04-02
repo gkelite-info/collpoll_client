@@ -8,6 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts"
+import WipOverlay from "./WipOverlay"
 
 interface AttendanceInsightProps {
   weeklyData?: number[]
@@ -22,7 +23,8 @@ export default function AttendanceInsight({
   }))
 
   return (
-    <div className="bg-white rounded-lg p-4 shadow-sm w-full">
+    <div className="bg-white relative overflow-hidden rounded-lg p-4 shadow-sm w-full">
+      <WipOverlay/>
       <h2 className="text-[#282828] font-semibold text-lg mb-4">
         Attendance Insight
       </h2>

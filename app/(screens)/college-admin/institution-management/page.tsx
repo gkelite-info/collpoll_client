@@ -13,6 +13,7 @@ import FinanceOverview from "../components/finance/FinanceOverview";
 import FinanceEntry from "../components/finance/FinanceEntry";
 import FinanceEducationView from "../components/finance/FinanceEducationView";
 import FinanceStudentsView from "../components/finance/FinanceStudentsView";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 function InstitutionManagementClient() {
   const searchParams = useSearchParams();
@@ -45,7 +46,8 @@ function InstitutionManagementClient() {
 
   return (
     <div className="flex h-screen overflow-hidden mb-2">
-      <div className="w-[68%] flex flex-col p-2 pb-1">
+      <div className="relative overflow-hidden w-[68%] flex flex-col p-2 pb-1">
+        <WipOverlay fullHeight={true}/>
         <Tabs activeTab={activeTab} />
         <div className="flex-1 overflow-y-auto mt-4 pb-1">
           {renderTab()}

@@ -1,4 +1,5 @@
 'use client'
+import WipOverlay from "@/app/utils/WipOverlay";
 import { CurrencyInr, Money } from "@phosphor-icons/react";
 import { Bank } from "@phosphor-icons/react/dist/ssr";
 import { FaChevronRight } from "react-icons/fa";
@@ -11,7 +12,8 @@ type FeeDueCardProps = {
 export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
     return (
         <>
-            <div className="bg-white w-[32%] lg:h-[220px] shadow-md rounded-lg p-2.5 flex flex-col justify-between pb-4">
+            <div className="relative overflow-hidden bg-white w-[32%] lg:h-[220px] shadow-md rounded-lg p-2.5 flex flex-col justify-between pb-4">
+                <WipOverlay fullWidth={true}/>
                 <div className="bg-red-00 lg:w-[62%] flex items-center justify-between">
                     <div className="bg-[#E1F4E8] lg:p-2 rounded-lg">
                         <Bank size={22} weight="fill" color="#47CE68" />

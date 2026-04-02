@@ -1,4 +1,5 @@
 'use client'
+import WipOverlay from "@/app/utils/WipOverlay";
 import { ChatCircleDots } from "@phosphor-icons/react";
 import { FaChevronRight } from "react-icons/fa6";
 
@@ -15,7 +16,8 @@ type SubjectProgressCardProps = {
 export default function FacultyChat({ props }: SubjectProgressCardProps) {
     return (
         <>
-            <div className="bg-white h-64 rounded-lg w-[49%] p-4 shadow-md flex flex-col gap-2">
+            <div className="bg-white relative overflow-hidden h-64 rounded-lg w-[49%] p-4 shadow-md flex flex-col gap-2">
+                <WipOverlay />
                 <div className="flex justify-between items-center">
                     <h6 className="text-[#282828] font-semibold">Faculty Chat</h6>
                     <FaChevronRight className="cursor-pointer text-black" />
@@ -24,7 +26,7 @@ export default function FacultyChat({ props }: SubjectProgressCardProps) {
                     {props.map((item, index) => (
                         <div className="bg-[#E8F6E2] lg:h-[67px] rounded-full flex items-center px-2 py-2 gap-1" key={index}>
                             <div className="rounded-full lg:h-14 lg:w-14 flex items-center justify-center">
-                                <img src={item.image} className="lg:h-14 lg:w-14 object-cover rounded-full" />
+                                <img src={item.image} alt="" className="lg:h-14 lg:w-14 object-cover rounded-full" />
                             </div>
                             <div className="h-full lg:w-[60%] flex flex-col items-start justify-center pl-1">
                                 <p className="text-[#282828] font-medium text-md">Prof.{item.professor}</p>
