@@ -215,16 +215,14 @@ export default function LoginPage() {
 
       const redirectPath = roleRouteMap[role] || "/login";
 
-      toast.success("Login successful! Entering dashboard...");
+      toast.success("Login successful!");
 
-      // Give the system a moment to let the Server Action cookies settle
-      setTimeout(() => {
-        router.push(redirectPath);
+      // setTimeout(() => {
+      //   router.push(redirectPath);
+      //   router.refresh();
+      // }, 500);
 
-        // This is the magic line: it tells Next.js to re-run the middleware 
-        // with the new cookies without wiping your console/state.
-        router.refresh();
-      }, 500);
+      window.location.href = redirectPath;
 
     } catch (error) {
       console.error("Login Error:", error);

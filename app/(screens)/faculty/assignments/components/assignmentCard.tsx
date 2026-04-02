@@ -80,7 +80,6 @@ export default function AssignmentCard({
                 </div>
               </div>
 
-              {/* Top-right actions */}
               <div className="flex flex-col items-end pt-1 pr-1">
                 <div className="flex items-center gap-4">
                   <div
@@ -100,7 +99,7 @@ export default function AssignmentCard({
                   )}
 
                   <h4
-                    className="text-[#43C17A] text-sm cursor-pointer underline"
+                    className="text-[#43C17A] text-sm cursor-pointer hover:underline"
                     onClick={() =>
                       router.push(`/faculty/assignments/${item.assignmentId}`)
                     }

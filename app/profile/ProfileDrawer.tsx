@@ -60,21 +60,24 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
         try {
             setLoading(true);
 
+            const timeout = setTimeout(() => {
+                window.location.assign("/login");
+            }, 3500);
+
             const res = await logoutUser();
 
             if (res.success) {
+                clearTimeout(timeout);
                 setShowLogoutModal(false);
                 onClose();
                 toast.success("Loggedout successfully");
-                router.replace("/login");
+                // router.replace("/login");
+                window.location.assign("/login");
             } else {
                 toast.error("Logout failed. Please try again.")
             }
         } catch (error) {
             console.error("Failed to logout", error);
-        }
-        finally {
-            setLoading(false);
         }
     }
 

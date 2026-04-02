@@ -276,7 +276,7 @@ const UserContext = createContext<UserContextType>({
   userId: null,
   loading: true,
   fullName: null,
-  setFullName: () => {},
+  setFullName: () => { },
   mobile: null,
   email: null,
   gender: null,
@@ -295,7 +295,7 @@ const UserContext = createContext<UserContextType>({
   collegeAcademicYear: null,
   collegeSection: null,
   profilePhoto: null,
-  setProfilePhoto: () => {},
+  setProfilePhoto: () => { },
   dateOfJoining: null,
   professionalExperienceYears: null,
 });
@@ -467,7 +467,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: auth } = await supabase.auth.getUser();
 
         const authId = auth.user?.id ?? null;
+
         if (isContextLoaded.current && lastAuthUserId.current === authId) {
+          setLoading(false);
           return;
         }
 
@@ -513,7 +515,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           const photoData = await getUserProfilePhoto(userData.userId);
           setProfilePhoto(photoData?.profileUrl ?? null);
-        } catch {}
+        } catch { }
 
         const loader = roleLoaders[userData.role];
 
@@ -532,25 +534,42 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     loadUserContext();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const authId = session?.user?.id ?? null;
-        if (event === "SIGNED_OUT") {
-          resetState();
-          isContextLoaded.current = false;
-          lastAuthUserId.current = null;
-          return;
-        }
-        if (event === "SIGNED_IN") {
-          if (lastAuthUserId.current !== authId) {
-            isContextLoaded.current = false;
-            await loadUserContext();
-          }
-        }
-      },
-    );
+    // const { data: listener } = supabase.auth.onAuthStateChange(
+    //   async (event, session) => {
+    //     const authId = session?.user?.id ?? null;
+    //     if (event === "SIGNED_OUT") {
+    //       resetState();
+    //       isContextLoaded.current = false;
+    //       lastAuthUserId.current = null;
+    //       return;
+    //     }
+    //     if (event === "SIGNED_IN") {
+    //       if (lastAuthUserId.current !== authId) {
+    //         isContextLoaded.current = false;
+    //         await loadUserContext();
+    //       }
+    //     }
+    //   },
+    // );
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN") {
+        // Force a re-fetch by clearing the guard refs
+        isContextLoaded.current = false;
+        lastAuthUserId.current = null;
+        await loadUserContext();
+      }
+
+      if (event === "SIGNED_OUT") {
+        resetState();
+        isContextLoaded.current = false;
+        lastAuthUserId.current = null;
+      }
+    });
+
     return () => {
-      listener.subscription.unsubscribe();
+      // listener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

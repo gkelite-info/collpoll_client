@@ -9,15 +9,11 @@ import { fetchFacultyAssignments } from "@/lib/helpers/faculty/assignment/fetchF
 import { deleteFacultyAssignment } from "@/lib/helpers/faculty/assignment/deleteFacultyAssignment";
 import AssignmentSkeleton from "../shimmer/assignmentShimmer";
 import { Pagination } from "./pagination";
-
 import FacultyQuizCard from "./facultyQuizCard";
-import { STATIC_ACTIVE_QUIZZES, STATIC_DRAFT_QUIZZES, STATIC_COMPLETED_QUIZZES } from "./facultyQuizData";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
-
 import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
-import { STATIC_ACTIVE_DISCUSSIONS, STATIC_COMPLETED_DISCUSSIONS } from "./facultyDiscussionData";
 import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { deactivateDiscussionForum, fetchCompletedDiscussionsByFacultyId, fetchDiscussionsByFacultyId } from "@/lib/helpers/discussionForum/discussionForumAPI";
@@ -59,22 +55,17 @@ function AssignmentsLeftContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { facultyId } = useFaculty();
-
   const activeTab = searchParams.get("tab") || "assignments";
   const action = searchParams.get("action");
   const discussionId = searchParams.get("discussionId");
-
   const activeView = (searchParams.get("view") as "active" | "previous") || "active";
   const quizView = (searchParams.get("quizView") as "active" | "drafts" | "completed") || "active";
   const discussionView = (searchParams.get("discussionView") as "active" | "completed") || "active";
-
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [discussions, setDiscussions] = useState<any[]>([]);
@@ -225,7 +216,7 @@ function AssignmentsLeftContent() {
         const formatted: Assignment[] = data.map((a: any) => ({
           sectionId: a.collegeSectionsId,
           assignmentId: a.assignmentId,
-          image: "/ds.jpg",
+          image: "/assignment.jpg",
           title: a.college_subjects?.subjectName || "Unknown Subject",
           description: a.topicName,
           fromDate: a.dateAssignedInt,

@@ -16,7 +16,6 @@ export const supabase = createBrowserClient(
     supabaseAnonKey,
     {
         cookieOptions: {
-            // This allows cookies to work on mrecw.tektoncampus.com AND tektoncampus.com
             domain: process.env.NODE_ENV === 'production' ? '.tektoncampus.com' : 'localhost',
             path: '/',
             sameSite: 'lax',
