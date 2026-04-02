@@ -586,16 +586,6 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    console.log("🟡 Overall Pending useEffect triggered");
-
-    console.log("Filters:", {
-      loading,
-      collegeId,
-      collegeEducationId,
-      selectedBranchId,
-      selectedYear,
-    });
-
     const loadOverallPending = async () => {
       if (
         loading ||
@@ -604,19 +594,11 @@ export default function DashboardPage() {
         !selectedBranchId ||
         !selectedYear
       ) {
-        console.log("⛔ Skipping Overall Pending API call due to missing filters");
         setOverallPending(0);
         return;
       }
 
       try {
-        console.log("🚀 Calling getOverallPending API with:", {
-          collegeId,
-          collegeEducationId,
-          collegeBranchId: selectedBranchId,
-          selectedYear,
-        });
-
         const pending = await getOverallPending({
           collegeId,
           collegeEducationId,
@@ -624,11 +606,8 @@ export default function DashboardPage() {
           selectedYear,
         });
 
-        console.log("✅ Overall Pending API result:", pending);
-
         setOverallPending(pending ?? 0);
 
-        console.log("📦 State updated: overallPending =", pending ?? 0);
       } catch (err) {
         console.error("❌ Overall Pending error:", err);
         setOverallPending(0);
@@ -675,22 +654,8 @@ export default function DashboardPage() {
 
   const handleFeeCollection = () => {
     if (!collegeEducationId || !selectedBranchId || !selectedYear) {
-      console.log("⛔ Missing required params", {
-        collegeEducationId,
-        selectedBranchId,
-        selectedYear,
-      });
       return;
     }
-
-    console.log("🚀 Navigating to Fee Collection with:", {
-      educationType: collegeEducationType,
-      educationId: collegeEducationId,
-      branchType: selectedBranch,
-      branchId: selectedBranchId,
-      selectedYear,
-    });
-
     router.push(
       `/finance?view=feeCollection&educationType=${collegeEducationType}&educationId=${collegeEducationId}&branchType=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
     );

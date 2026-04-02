@@ -87,9 +87,6 @@ export default function KeySkillsWithModal() {
       return;
     }
 
-    console.log("studentId", studentId);
-
-
     try {
       setSaving(true);
       await addUserSkill(studentId, section, value);

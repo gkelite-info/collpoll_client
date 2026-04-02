@@ -102,16 +102,6 @@ function OverallStudentsOverview() {
     loadCardsSummary();
   }, [collegeId, collegeEducationId]);
 
-  useEffect(() => {
-    console.log("🔐 Finance Context:", {
-      collegeId,
-      collegeEducationId,
-      collegeEducationType,
-      loading,
-    });
-  }, [collegeId, collegeEducationId, collegeEducationType, loading]);
-
-
   const loadCardsSummary = async () => {
     if (!collegeId || !collegeEducationId || loading) {
       return;
@@ -133,10 +123,6 @@ function OverallStudentsOverview() {
       setCardsLoading(false);
     }
   };
-
-  useEffect(() => {
-    console.log("🟢 summaryCounts Updated:", summaryCounts);
-  }, [summaryCounts]);
 
   const loadStudents = async () => {
     if (!collegeId || !collegeEducationId || loading) {

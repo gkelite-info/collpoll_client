@@ -47,8 +47,6 @@ export async function updateAssignmentFile(
       return;
     }
 
-    console.log("File updated:", data);
-
     return true;
   } catch (err) {
     console.error("ERROR:", err);

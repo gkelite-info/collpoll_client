@@ -557,7 +557,6 @@ function AssignmentsLeftContent() {
                                         <p className="text-sm text-gray-500 mt-4">No attempted quizzes yet</p>
                                     ) : (
                                         attemptedQuizzes.map((submission, index) => {
-                                            console.log("submission:", submission);
                                             const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
                                             const quiz = submission.quizzes;
                                             return (

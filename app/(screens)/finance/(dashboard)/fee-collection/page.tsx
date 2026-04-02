@@ -53,20 +53,8 @@ function FeeCollectionPage() {
   useEffect(() => {
     const fetchFinance = async () => {
       if (!collegeId || !collegeEducationId || !branchId) {
-        console.log("⛔ Skipping finance fetch - Missing Params", {
-          collegeId,
-          collegeEducationId,
-          branchId,
-        });
         return;
       }
-
-      console.log("🚀 Fetching Finance Data with:", {
-        collegeId,
-        collegeEducationId,
-        branchId,
-        selectedYear: searchParams.get("selectedYear"),
-      });
 
       setIsFetchingData(true);
 
@@ -78,14 +66,11 @@ function FeeCollectionPage() {
           selectedYear: searchParams.get("selectedYear") || "",
         });
 
-        console.log("✅ Finance Data Received:", data);
-
         setFinanceData(data);
       } catch (err) {
         console.error("❌ Finance fetch error:", err);
       } finally {
         setIsFetchingData(false);
-        console.log("🏁 Finance Fetch Completed");
       }
     };
 
@@ -108,8 +93,6 @@ function FeeCollectionPage() {
     e: React.ChangeEvent<HTMLSelectElement>
   ) => {
     const newBranchCode = e.target.value;
-
-    console.log("🔁 Branch changed:", newBranchCode);
 
     setSelectedBranch(newBranchCode);
 

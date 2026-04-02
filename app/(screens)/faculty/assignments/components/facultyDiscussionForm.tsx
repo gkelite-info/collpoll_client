@@ -152,9 +152,6 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                 try {
                     const { success, data: savedSection } = await fetchDiscussionSectionByDiscussionId(payload.discussionId);
 
-                    console.log("savedSection result:", { success, savedSection });
-
-
                     if (!success || !savedSection) {
                         toast.error("Discussion saved but failed to fetch section.");
                         return;

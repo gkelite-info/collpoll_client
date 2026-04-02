@@ -51,7 +51,6 @@ const EventCard = ({
   onEdit: () => void;
   onClick: () => void;
 }) => {
-  console.log("🟡 EventCard received event:", event);
 
   const style =
     EVENT_STYLES[event.type.toLowerCase() as EventType] ||

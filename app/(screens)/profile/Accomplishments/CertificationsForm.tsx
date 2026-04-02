@@ -227,8 +227,6 @@ export default function CertificationsForm({
   endDate: form.endDate,       
     };
 
-    console.log(" Sending certification payload:", payload);
-
     const response = await upsertCertification(payload);
 
     if (response.success) {

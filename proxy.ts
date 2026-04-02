@@ -55,8 +55,6 @@ export async function proxy(request: NextRequest) {
         const userCode = (rawCollegeCode || "").trim().toUpperCase();
         const urlCode = (currentUrlCode || "").trim().toUpperCase();
 
-        console.log(`DEBUG: User belongs to ID ${profile?.collegeId} with Code (${userCode})`);
-
         if (profile) {
             if (userCode !== urlCode && request.nextUrl.pathname !== '/login') {
                 if (urlCode === "GK") {

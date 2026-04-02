@@ -66,7 +66,6 @@ export default function Page() {
       setShowConflictModal(true);
       setIsModalOpen(false);
     } else {
-      console.log("Saving Event:", payload);
       setIsModalOpen(false);
     }
   };

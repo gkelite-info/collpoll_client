@@ -113,7 +113,7 @@ export default function EmploymentForm({
 
       onSuccess();
     } catch (error: any) {
-      console.log("Error submitting employment:", error);
+      console.error("Error submitting employment:", error);
       toast.error(error.message || "Failed to save employment");
     } finally {
       setIsSubmitting(false);

@@ -132,8 +132,6 @@ export default function ClubsForm({ index, onSubmit, studentId }: ClubProps) {
             description: form.description,
         };
 
-        console.log(" CLUB PAYLOAD:", payload);
-
         const response = await upsertClubCommittee(payload);
 
         if (response.success) {

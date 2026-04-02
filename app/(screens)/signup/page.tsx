@@ -241,8 +241,8 @@ export default function Signup() {
       toast.success("Please verify your email!");
       router.push("/login");
     } catch (err: any) {
+      console.error("catch error", err);
       toast.error(err.message || "Failed to save");
-      console.log("catch error", err);
     } finally {
       setLoading(false);
     }

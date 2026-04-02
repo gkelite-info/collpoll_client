@@ -113,8 +113,6 @@ export default function AwardsForm({ index, onSubmit, studentId }: AwardProps) {
             description: form.description,
         };
 
-        console.log(" Award Payload:", payload);
-
         const response = await upsertAward(payload);
 
         if (response.success) {
