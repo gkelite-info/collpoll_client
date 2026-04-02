@@ -27,7 +27,6 @@ export default function CollegeRegistration() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-
   const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [educationList, setEducationList] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -133,7 +132,6 @@ export default function CollegeRegistration() {
     const { collegeName, email, phone, country, state, zip, countryCode } =
       formData;
 
-    // 1. Run all validations BEFORE triggering the loading state/toast
     if (!collegeName.trim()) return toast.error("College Name is required");
     if (!/^\S+@\S+\.\S+$/.test(email))
       return toast.error("Enter a valid email address");
@@ -150,12 +148,15 @@ export default function CollegeRegistration() {
       return toast.error("Select at least one Education Type");
 
     const loadingToast = toast.loading("Saving college details...");
-    setUploading(true);
 
     try {
+      setUploading(true);
+
       const superAdmin = await checkSuperAdminAuth();
+
       if (!superAdmin) {
         toast.dismiss(loadingToast);
+        setUploading(false);
         return;
       }
 
@@ -185,7 +186,8 @@ export default function CollegeRegistration() {
         fileInputRef.current.value = "";
       }
     } catch (error: any) {
-      toast.dismiss(loadingToast);
+      // toast.dismiss(loadingToast);
+      console.error("FULL ERROR:", error);
       toast.error(error.message || "Failed to register college");
     } finally {
       setUploading(false);
