@@ -53,7 +53,7 @@ export default function AssignmentsLeft({
         const formatted = data.map((a: any) => ({
           assignmentId: a.assignmentId,
           sectionId: a.collegeSectionsId,
-          image: "/ds.jpg",
+          image: "/assignment.jpg",
           title: a.subjectName,
           description: a.topicName,
           fromDate: String(a.dateAssignedInt || ""),
