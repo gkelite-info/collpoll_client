@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
-import { setTokens } from "@/app/utils/context/tokenStorage";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
@@ -102,53 +101,112 @@ export default function LoginPage() {
     return true;
   };
 
+  // const handleLogin = async () => {
+  //   if (!validate()) return;
+
+  //   await supabase.auth.signOut();
+  //   localStorage.clear();
+
+  //   try {
+  //     setLoading(true);
+
+  //     const res = await loginUser(email, password);
+
+  //     console.log("what is res", res);
+
+
+  //     if (!res.success || !res.session || !res.user) {
+  //       toast.error(res.error || "Login failed");
+  //       return;
+  //     }
+
+  //     // const { data, error: sessionError } = await supabase.auth.setSession({
+  //     //   access_token: res.session.access_token,
+  //     //   refresh_token: res.session.refresh_token,
+  //     // });
+
+  //     // console.log("Lets check data", data);
+  //     // console.log("Lets check data error", sessionError);
+
+
+  //     // if (sessionError) {
+  //     //   toast.error("Session sync failed");
+  //     //   return;
+  //     // }
+
+  //     // setTokens({
+  //     //   access_token: res.session.access_token,
+  //     //   refresh_token: res.session.refresh_token,
+  //     //   expires_in: res.session.expires_in,
+  //     // });
+
+  //     const userProfile = res.user as any;
+  //     console.log("what is userProfile", userProfile);
+
+  //     const role = userProfile.role?.toLowerCase();
+
+  //     console.log("what is role after login", role);
+
+
+  //     const roleRouteMap: Record<string, string> = {
+  //       admin: "/admin",
+  //       parent: "/parent",
+  //       faculty: "/faculty",
+  //       student: "/stu_dashboard",
+  //       superadmin: "/super-admin",
+  //       finance: "/finance",
+  //       collegeadmin: "/college-admin",
+  //       collegehr: "/hr",
+  //     };
+
+  //     const redirectPath = roleRouteMap[role] || "/login";
+
+  //     console.log("Step 1: Redirect Path:", redirectPath);
+
+  //     // WE ARE REMOVING THE SYNC STEP BECAUSE IT IS HANGING
+  //     console.log("Step 2: Skipping manual sync (Server handled it)...");
+
+  //     toast.success("Login successful!");
+
+  //     console.log("Step 3: Redirecting now...");
+
+  //     // Use window.location.assign to force the browser to pick up server cookies
+  //     setTimeout(() => {
+  //       console.log("Redirecting to:", redirectPath);
+  //       // 2. Use assign to ensure a clean navigation
+  //       window.location.assign(redirectPath);
+  //     }, 800);
+
+  //   } catch (error) {
+  //     console.error("GLOBAL LOGIN ERROR:", error);
+  //     toast.error("Something went wrong");
+  //   } finally {
+  //     console.log("FINALLY BLOCK RUNNING");
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleLogin = async () => {
     if (!validate()) return;
 
-    await supabase.auth.signOut();
-    localStorage.clear();
-
     try {
       setLoading(true);
+      // Removed the signOut() from here to prevent clearing the session we're about to get
 
       const res = await loginUser(email, password);
 
-      console.log("what is res", res);
-      
-
-      if (!res.success || !res.session || !res.user) {
+      if (!res.success || !res.user) {
         toast.error(res.error || "Login failed");
+        setLoading(false);
         return;
       }
 
-      const { data, error: sessionError } = await supabase.auth.setSession({
-        access_token: res.session.access_token,
-        refresh_token: res.session.refresh_token,
-      });
-
-      console.log("Lets check data", data);
-      console.log("Lets check data error", sessionError);
-
-
-      if (sessionError) {
-        toast.error("Session sync failed");
-        return;
-      }
-
-      setTokens({
-        access_token: res.session.access_token,
-        refresh_token: res.session.refresh_token,
-        expires_in: res.session.expires_in,
-      });
-
-      const userProfile = res.user as any;
-      const role = userProfile.role?.toLowerCase();
-
+      const role = res.user.role?.toLowerCase();
       const roleRouteMap: Record<string, string> = {
         admin: "/admin",
+        student: "/stu_dashboard",
         parent: "/parent",
         faculty: "/faculty",
-        student: "/stu_dashboard",
         superadmin: "/super-admin",
         finance: "/finance",
         collegeadmin: "/college-admin",
@@ -156,11 +214,21 @@ export default function LoginPage() {
       };
 
       const redirectPath = roleRouteMap[role] || "/login";
-      toast.success("Login successful!");
-      window.location.href = redirectPath;
+
+      toast.success("Login successful! Entering dashboard...");
+
+      // Give the system a moment to let the Server Action cookies settle
+      setTimeout(() => {
+        router.push(redirectPath);
+
+        // This is the magic line: it tells Next.js to re-run the middleware 
+        // with the new cookies without wiping your console/state.
+        router.refresh();
+      }, 500);
+
     } catch (error) {
+      console.error("Login Error:", error);
       toast.error("Something went wrong");
-    } finally {
       setLoading(false);
     }
   };
