@@ -1,5 +1,6 @@
 "use client";
 
+import WipOverlay from "@/app/utils/WipOverlay";
 import { CaretCircleRight } from "@phosphor-icons/react";
 
 function getWeekDays() {
@@ -88,7 +89,8 @@ export default function CalendarLeft() {
   ];
 
   return (
-    <div className="bg-white rounded-lg p-3 flex flex-col shadow-md">
+    <div className="bg-white relative overflow-hidden rounded-lg p-3 flex flex-col shadow-md">
+      <WipOverlay fullHeight={true}/>
       <h4 className="text-[#282828] font-medium">Weekly Calendar Overview</h4>
 
       <div className="flex flex-col">
@@ -99,29 +101,25 @@ export default function CalendarLeft() {
           return (
             <div
               key={index}
-              className={`flex p-3 h-[97px] rounded-md mt-2 gap-2 ${
-                isActive
+              className={`flex p-3 h-[97px] rounded-md mt-2 gap-2 ${isActive
                   ? "bg-[#43C17A]"
                   : "bg-[#FFFFFF] border border-[#D4D4D4]"
-              }`}
+                }`}
             >
               <div
-                className={`flex flex-col items-center justify-center gap-0.5 h-[73.1px] w-[73.1px] rounded-md ${
-                  isActive ? "bg-[#FFFFFF]" : "bg-[#D3F1E0]"
-                }`}
+                className={`flex flex-col items-center justify-center gap-0.5 h-[73.1px] w-[73.1px] rounded-md ${isActive ? "bg-[#FFFFFF]" : "bg-[#D3F1E0]"
+                  }`}
               >
                 <p
-                  className={`text-xs font-semibold ${
-                    isActive ? "text-[#43C17A]" : "text-[#282828]"
-                  }`}
+                  className={`text-xs font-semibold ${isActive ? "text-[#43C17A]" : "text-[#282828]"
+                    }`}
                 >
                   {item.dayName}
                 </p>
 
                 <p
-                  className={`text-lg font-bold ${
-                    isActive ? "text-[#43C17A]" : "text-[#282828]"
-                  }`}
+                  className={`text-lg font-bold ${isActive ? "text-[#43C17A]" : "text-[#282828]"
+                    }`}
                 >
                   {item.dateNum}
                 </p>
@@ -130,26 +128,23 @@ export default function CalendarLeft() {
               <div className="w-[80%] rounded-md flex justify-between items-center">
                 <div className="flex flex-col w-[90%] p-1 h-[100%] rounded-l-md">
                   <p
-                    className={`text-[13px] ${
-                      isActive ? "text-white" : "text-[#282828]"
-                    }`}
+                    className={`text-[13px] ${isActive ? "text-white" : "text-[#282828]"
+                      }`}
                   >
                     📘 {content.items[0].count} {content.items[0].label} · 🧾{" "}
                     {content.items[1].count} {content.items[1].label}
                   </p>
 
                   <p
-                    className={`text-[13px] ${
-                      isActive ? "text-white" : "text-[#282828]"
-                    }`}
+                    className={`text-[13px] ${isActive ? "text-white" : "text-[#282828]"
+                      }`}
                   >
                     🎯 Focus Area: {content.focus}
                   </p>
 
                   <p
-                    className={`text-[13px] ${
-                      isActive ? "text-white" : "text-[#282828]"
-                    }`}
+                    className={`text-[13px] ${isActive ? "text-white" : "text-[#282828]"
+                      }`}
                   >
                     🪄 Tip: {content.tip}
                   </p>
@@ -159,9 +154,8 @@ export default function CalendarLeft() {
                   <CaretCircleRight
                     size={25}
                     weight="fill"
-                    className={`cursor-pointer ${
-                      isActive ? "text-white" : "text-[#43C17A]"
-                    }`}
+                    className={`cursor-pointer ${isActive ? "text-white" : "text-[#43C17A]"
+                      }`}
                   />
                 </div>
               </div>

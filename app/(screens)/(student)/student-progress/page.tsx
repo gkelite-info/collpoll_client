@@ -8,6 +8,7 @@ import { AttendanceList } from "./attendanceBySubjectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { List, X } from "@phosphor-icons/react";
 import { useState } from "react";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const assignmentsData: Assignment[] = [
   {
@@ -101,7 +102,8 @@ const Page = () => {
 
   return (
     <>
-      <main className="p-3">
+      <main className="p-3 relative overflow-hidden">
+        <WipOverlay fullHeight={true}/>
         <section className="mb-3">
           <div className="flex p-2 gap-3 justify-between items-center">
             <div className="w-full max-w-5xl rounded-xl">
@@ -176,7 +178,7 @@ const Page = () => {
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-6">
-              <AcademicPerformance />
+              <AcademicPerformance overlayVisible={false}/>
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-4">

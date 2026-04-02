@@ -2,6 +2,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, } from "recharts";
 import { FaChevronRight } from "react-icons/fa6";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function AcademicPerformanceSmall() {
     const data = [
@@ -14,7 +15,8 @@ export default function AcademicPerformanceSmall() {
     ];
 
     return (
-        <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
+        <div className="relative overflow-hidden bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
+            <WipOverlay />
             <div className="bg-red-00 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[#282828]">
                     Academic Performance
