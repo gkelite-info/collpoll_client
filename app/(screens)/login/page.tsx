@@ -113,6 +113,9 @@ export default function LoginPage() {
 
       const res = await loginUser(email, password);
 
+      console.log("what is res", res);
+      
+
       if (!res.success || !res.session || !res.user) {
         toast.error(res.error || "Login failed");
         return;
@@ -123,7 +126,8 @@ export default function LoginPage() {
         refresh_token: res.session.refresh_token,
       });
 
-      console.log("Session set result:", data);
+      console.log("Lets check data", data);
+      console.log("Lets check data error", sessionError);
 
 
       if (sessionError) {
