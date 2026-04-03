@@ -129,12 +129,26 @@ export default function AdminDashLeft({
     );
   }
 
+  const overlayCardIds = [
+    "PENDING_APPROVALS",
+    "SYSTEM_HEALTH",
+    "AUTOMATIONS",
+  ];
+
+  const normalCards = cardData.filter(
+    (c) => !overlayCardIds.includes(c.id)
+  );
+
+  const overlayCards = cardData.filter(
+    (c) => overlayCardIds.includes(c.id)
+  );
+
   return (
     <>
       <div className="w-[68%] p-2">
         <AdminInfoCard cardProps={card} />
 
-        <div className="mt-5 rounded-lg flex gap-3 text-xs relative z-10">
+        {/* <div className="mt-5 rounded-lg flex gap-3 text-xs relative z-10">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}
@@ -153,11 +167,61 @@ export default function AdminDashLeft({
               }}
             />
           ))}
+        </div> */}
+
+        <div className="mt-5 rounded-lg flex gap-5 text-xs relative z-10">
+
+          {normalCards.map((item, index) => (
+            <CardComponent
+              key={index}
+              style={`${item.style} cursor-pointer`}
+              icon={item.icon}
+              value={item.value}
+              label={item.label}
+              iconBgColor="#FFFFFF"
+              onClick={() => {
+                if (item.id === "TOTAL_USERS") setView("TOTAL_USERS");
+              }}
+            />
+          ))}
+
+          {/* overlay cards group */}
+          <div className="relative grid lg:grid-cols-3 gap-5">
+            {/*
+              When you remove this overlay logic you should remove these normalCards,
+              overlayCards and top commented code use that one is original code 
+            */}
+            <WipOverlay
+              isMedium={true}
+              fullWidth={true}
+              borderRadius="rounded-lg"
+            />
+
+            {overlayCards.map((item, index) => (
+              <CardComponent
+                key={index}
+                style={`${item.style} cursor-pointer`}
+                icon={item.icon}
+                value={item.value}
+                label={item.label}
+                iconBgColor="#FFFFFF"
+                onClick={() => {
+                  if (item.id === "SYSTEM_HEALTH") setView("SYSTEM_HEALTH");
+
+                  if (item.id === "AUTOMATIONS")
+                    router.push("?view=automations");
+
+                  if (item.id === "PENDING_APPROVALS")
+                    onPendingFull();
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         <div>
           <div className="relative overflow-hidden bg-gray-100 mt-5">
-            <WipOverlay/>
+            <WipOverlay />
             <DashboardGrid data={dashboardData} />
           </div>
         </div>
