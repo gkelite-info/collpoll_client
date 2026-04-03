@@ -33,7 +33,7 @@ export default function SubjectProgressCards({
               className="h-20 flex items-center rounded-lg p-2 gap-1 bg-[#E8F8EF]"
             >
               <div className="h-full w-[22%] rounded-md flex items-center justify-center">
-                <img src={subject.image} className="rounded-md" />
+                <img src={subject.image} alt="" className="rounded-md" />
               </div>
               <div className="h-full w-[78%] rounded-md p-2 flex justify-between">
                 <div className="flex flex-col gap-2 w-auto">
