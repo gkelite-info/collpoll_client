@@ -5,10 +5,10 @@ import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
 import { InputField } from "../components/reusableComponents";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { saveCollegeAdmin } from "@/lib/helpers/collegeAdmin/collegeAdmin";
 import { CollegeDropdown, fetchCollegesForAdmin } from "@/lib/helpers/superadmin/collegeHelper";
+import { useUser } from "@/app/utils/context/UserContext";
 
 type AdminForm = {
   fullName: string;
@@ -36,36 +36,17 @@ const initialFormState: AdminForm = {
   role: "CollegeAdmin",
 };
 
-export default function AdminRegistration() {
+export default function AdminRegistration({ activeTab }: { activeTab: string }) {
   const [form, setForm] = useState<AdminForm>(initialFormState);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isCollegeCodeManual, setIsCollegeCodeManual] = useState(false);
   const [colleges, setColleges] = useState<CollegeDropdown[]>([]);
+  const { loading, role } = useUser();
 
   const handleChange = (key: keyof typeof form, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
-
-  const router = useRouter();
-
-  useEffect(() => {
-    const loadColleges = async () => {
-      const res = await fetchCollegesForAdmin();
-
-      if (!res.success) {
-        toast.error(res.error);
-      } else {
-        setColleges(res.data);
-      }
-    };
-
-    loadColleges();
-  }, []);
-
-  const PASSWORD_REGEX =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
 
   const normalizedEmail = form.email.toLowerCase();
 
@@ -75,35 +56,61 @@ export default function AdminRegistration() {
       .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const checkSuperAdminAuth = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const sessionPromise = supabase.auth.getSession();
 
-    if (error || !user) {
-      toast.error("User not authenticated. Please login.");
-      router.push('/login')
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Auth Check Timed Out")), 30000)
+    );
+
+    try {
+      const { data: { session }, error }: any = await Promise.race([sessionPromise, timeoutPromise]);
+
+      if (error || !session?.user) {
+        console.error("Auth session missing or error:", error);
+        return null;
+      }
+
+      const { data: userData, error: roleError } = await supabase
+        .from("users")
+        .select("role, userId")
+        .eq("auth_id", session.user.id)
+        .single();
+
+      if (roleError || userData?.role !== "SuperAdmin") {
+        toast.error("Access denied. SuperAdmin only.");
+        return null;
+      }
+
+      return { authUser: session.user, userId: userData.userId };
+    } catch (e: any) {
+      console.error("Auth Error:", e.message);
+      toast.error(e.message || "Authentication failed");
       return null;
     }
-
-    const { data: userData, error: roleError } = await supabase
-      .from("users")
-      .select("role, userId")
-      .eq("auth_id", user.id)
-      .single();
-
-    if (roleError || !userData) {
-      toast.error("Unable to verify user role");
-      return null;
-    }
-
-    if (userData.role !== "SuperAdmin") {
-      toast.error("Access denied. SuperAdmin only.");
-      return null;
-    }
-
-    return {
-      authUser: user,
-      userId: userData.userId,
-    };
   };
+
+  useEffect(() => {
+    if (activeTab !== "admin") return;
+    if (loading) return;
+    if (role !== "SuperAdmin") return;
+
+    let cancelled = false;
+
+    const loadColleges = async () => {
+      const res = await fetchCollegesForAdmin();
+      if (cancelled) return;
+      if (!res.success) {
+        toast.error("Failed to load colleges");
+      } else {
+        setColleges(res.data);
+      }
+    };
+
+    loadColleges();
+
+    return () => { cancelled = true; };
+
+  }, [activeTab, loading, role]);
 
   const validateCollegeId = async (collegeId: string) => {
     const { data, error } = await supabase
@@ -122,81 +129,31 @@ export default function AdminRegistration() {
     };
   };
 
-
   const handleSubmit = async () => {
+    if (isLoading) return;
+    setIsLoading(true);
 
     try {
       const superAdmin = await checkSuperAdminAuth();
-
       if (!superAdmin) {
+        setIsLoading(false);
         return;
       }
 
-      if (!form.fullName.trim()) {
-        return toast.error("Full Name is required");
-      }
-
-      if (!form.email.trim()) {
-        return toast.error("Email Address is required");
-      }
+      if (!form.fullName.trim()) throw new Error("Full Name is required");
+      if (!form.email.trim()) throw new Error("Email Address is required");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(normalizedEmail)) {
-        return toast.error("Enter a valid email address");
-      }
+      if (!emailRegex.test(normalizedEmail)) throw new Error("Invalid email format");
 
-      if (!form.countryCode.trim()) {
-        return toast.error("Country code is required");
-      }
+      if (form.password !== form.confirmPassword) throw new Error("Passwords do not match");
 
-      if (!/^\+\d{1,4}$/.test(form.countryCode)) {
-        return toast.error("Enter a valid country code (e.g. +91)");
-      }
-
-      if (!form.mobile.trim()) {
-        return toast.error("Mobile number is required");
-      }
-
-      if (form.mobile.length !== 10) {
-        return toast.error("Mobile number must be 10 digits");
-      }
-
-      if (!form.collegeId.trim()) {
-        return toast.error("College ID is required");
-      }
-
-      if (!form.gender) {
-        return toast.error("Please select gender");
-      }
-
-      if (!form.password) {
-        return toast.error("Password is required");
-      }
-
-      if (!PASSWORD_REGEX.test(form.password)) {
-        return toast.error(
-          "Password must include uppercase, lowercase, number, special character"
-        );
-      }
-
-      if (form.password !== form.confirmPassword) {
-        return toast.error("Passwords do not match");
-      }
-
-      const collegeValidation = await validateCollegeId(
-        form.collegeId
-      );
-
-      if (!collegeValidation.success) {
-        toast.error("College ID and College Code do not match.");
-        return;
-      }
-
-      setIsLoading(true);
+      const collegeValidation = await validateCollegeId(form.collegeId);
+      if (!collegeValidation.success) throw new Error("Invalid College ID");
 
       const actualCollegeId = collegeValidation.collegeId;
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: {
@@ -204,29 +161,22 @@ export default function AdminRegistration() {
         },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (signUpError) throw signUpError;
+      if (!data.user) throw new Error("Auth user not created");
 
-      if (!data.user) {
-        throw new Error("Auth user not created");
-      }
-
+      
       const userResult = await upsertUser({
         auth_id: data.user.id,
         fullName: toPascalCase(form.fullName),
         email: form.email.toLowerCase(),
         mobile: `${form.countryCode}${form.mobile}`,
         collegeId: actualCollegeId,
-        // collegeCode: form.collegeCode.trim().toUpperCase(),
         role: "CollegeAdmin",
-        gender: form.gender,
+        gender: form.gender === "" ? undefined : (form.gender as "Male" | "Female"),
       });
 
-
       if (!userResult.success || !userResult.data) {
-        toast.error(userResult.error || "Failed to create admin");
-        return;
+        throw new Error(userResult.error || "Failed to create admin record");
       }
 
       const collegeAdminResult = await saveCollegeAdmin({
@@ -234,24 +184,18 @@ export default function AdminRegistration() {
         collegeId: actualCollegeId,
       });
 
-      if (!collegeAdminResult.success) {
-        toast.error("User created, but college admin creation failed");
-        return;
-      }
+      if (!collegeAdminResult.success) throw new Error("Admin linked failed");
 
       toast.success("Admin registered successfully");
       setForm(initialFormState);
-      setIsCollegeCodeManual(false);
-      setShowPassword(false);
-      setShowConfirmPassword(false);
 
     } catch (error: any) {
+      console.error("CRITICAL ERROR:", error.message);
       toast.error(error.message || "Failed to create admin");
     } finally {
       setIsLoading(false);
     }
   };
-
 
   return (
     <motion.div

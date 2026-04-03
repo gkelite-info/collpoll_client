@@ -460,11 +460,137 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     // Placement: async (uid) => { ... setPlacementId(...) },
   };
 
+  // useEffect(() => {
+  //   const loadUserContext = async () => {
+  //     setLoading(true);
+  //     try {
+  //       const { data: auth } = await Promise.race([
+  //         supabase.auth.getUser(),
+  //         new Promise<never>((_, reject) =>
+  //           setTimeout(() => reject(new Error("getUser timeout")), 5000)
+  //         )
+  //       ]) as any;
+
+  //       const authId = auth.user?.id ?? null;
+
+  //       if (isContextLoaded.current && lastAuthUserId.current === authId) {
+  //         setLoading(false);
+  //         return;
+  //       }
+
+  //       lastAuthUserId.current = authId;
+
+  //       if (!auth?.user) {
+  //         resetState();
+  //         isContextLoaded.current = false;
+  //         return;
+  //       }
+
+  //       const { data: userData, error } = await supabase
+  //         .from("users")
+  //         .select(
+  //           "userId, fullName, mobile, email, gender, role, collegePublicId, collegeId, dateOfJoining, professionalExperienceYears",
+  //         )
+  //         .eq("auth_id", auth.user.id)
+  //         .maybeSingle();
+
+  //       if (error || !userData) {
+  //         console.error("User fetch failed:", error);
+  //         resetState();
+  //         return;
+  //       }
+
+  //       setDateOfJoining(userData.dateOfJoining ?? null);
+  //       setProfessionalExperienceYears(
+  //         userData.professionalExperienceYears ?? null,
+  //       );
+  //       setUserId(userData.userId);
+  //       setFullName(userData.fullName);
+  //       setMobile(userData.mobile);
+  //       setEmail(userData.email);
+  //       setGender(userData.gender);
+  //       setRole(userData.role);
+  //       setCollegePublicId(userData.collegePublicId);
+  //       setCollegeId(userData.collegeId);
+  //       setDateOfJoining(userData.dateOfJoining ?? null);
+  //       setProfessionalExperienceYears(
+  //         userData.professionalExperienceYears ?? null,
+  //       );
+
+  //       try {
+  //         const photoData = await getUserProfilePhoto(userData.userId);
+  //         setProfilePhoto(photoData?.profileUrl ?? null);
+  //       } catch { }
+
+  //       const loader = roleLoaders[userData.role];
+
+  //       if (loader) {
+  //         await loader(userData.userId);
+  //       }
+
+  //       isContextLoaded.current = true;
+  //     } catch (err: any) {
+  //       console.error("UserContext loadUserContext failed:", err.message);
+  //       // resetState();
+  //       // isContextLoaded.current = false;
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   loadUserContext();
+
+  //   // const { data: listener } = supabase.auth.onAuthStateChange(
+  //   //   async (event, session) => {
+  //   //     const authId = session?.user?.id ?? null;
+  //   //     if (event === "SIGNED_OUT") {
+  //   //       resetState();
+  //   //       isContextLoaded.current = false;
+  //   //       lastAuthUserId.current = null;
+  //   //       return;
+  //   //     }
+  //   //     if (event === "SIGNED_IN") {
+  //   //       if (lastAuthUserId.current !== authId) {
+  //   //         isContextLoaded.current = false;
+  //   //         await loadUserContext();
+  //   //       }
+  //   //     }
+  //   //   },
+  //   // );
+
+  //   const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+  //     if (event === "SIGNED_IN") {
+  //       // Force a re-fetch by clearing the guard refs
+  //       isContextLoaded.current = false;
+  //       lastAuthUserId.current = null;
+  //       await loadUserContext();
+  //     }
+
+  //     if (event === "SIGNED_OUT") {
+  //       resetState();
+  //       isContextLoaded.current = false;
+  //       lastAuthUserId.current = null;
+  //     }
+  //   });
+
+  //   return () => {
+  //     // listener.subscription.unsubscribe();
+  //     subscription.unsubscribe();
+  //   };
+  // }, []);
+  //timeout with console error
+
+
   useEffect(() => {
     const loadUserContext = async () => {
       setLoading(true);
       try {
-        const { data: auth } = await supabase.auth.getUser();
+        const { data: auth } = await Promise.race([
+          supabase.auth.getUser(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("getUser timeout")), 30000)
+          )
+        ]) as any;
 
         const authId = auth.user?.id ?? null;
 
@@ -475,7 +601,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
         lastAuthUserId.current = authId;
 
-        if (!auth.user) {
+        if (!auth?.user) {
           resetState();
           isContextLoaded.current = false;
           return;
@@ -496,9 +622,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         setDateOfJoining(userData.dateOfJoining ?? null);
-        setProfessionalExperienceYears(
-          userData.professionalExperienceYears ?? null,
-        );
+        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
         setUserId(userData.userId);
         setFullName(userData.fullName);
         setMobile(userData.mobile);
@@ -508,9 +632,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         setCollegePublicId(userData.collegePublicId);
         setCollegeId(userData.collegeId);
         setDateOfJoining(userData.dateOfJoining ?? null);
-        setProfessionalExperienceYears(
-          userData.professionalExperienceYears ?? null,
-        );
+        setProfessionalExperienceYears(userData.professionalExperienceYears ?? null);
 
         try {
           const photoData = await getUserProfilePhoto(userData.userId);
@@ -518,15 +640,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         } catch { }
 
         const loader = roleLoaders[userData.role];
-
-        if (loader) {
-          await loader(userData.userId);
-        }
+        if (loader) await loader(userData.userId);
 
         isContextLoaded.current = true;
-      } catch (err) {
-        resetState();
-        isContextLoaded.current = false;
+      } catch (err: any) {
+        // ← empty, preserve existing state
       } finally {
         setLoading(false);
       }
@@ -534,27 +652,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     loadUserContext();
 
-    // const { data: listener } = supabase.auth.onAuthStateChange(
-    //   async (event, session) => {
-    //     const authId = session?.user?.id ?? null;
-    //     if (event === "SIGNED_OUT") {
-    //       resetState();
-    //       isContextLoaded.current = false;
-    //       lastAuthUserId.current = null;
-    //       return;
-    //     }
-    //     if (event === "SIGNED_IN") {
-    //       if (lastAuthUserId.current !== authId) {
-    //         isContextLoaded.current = false;
-    //         await loadUserContext();
-    //       }
-    //     }
-    //   },
-    // );
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN") {
-        // Force a re-fetch by clearing the guard refs
         isContextLoaded.current = false;
         lastAuthUserId.current = null;
         await loadUserContext();
@@ -567,11 +666,10 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       }
     });
 
-    return () => {
-      // listener.subscription.unsubscribe();
-      subscription.unsubscribe();
-    };
-  }, []);
+    return () => subscription.unsubscribe();
+  }, []);  
+  //timeout but no console error
+
 
   const contextValue = useMemo<UserContextType>(
     () => ({
