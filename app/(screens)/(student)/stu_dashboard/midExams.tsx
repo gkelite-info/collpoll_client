@@ -1,6 +1,7 @@
 'use client';
 
 import TableComponent from "@/app/utils/table/table";
+import WipOverlay from "@/app/utils/WipOverlay";
 import { ArrowBendUpLeft } from "@phosphor-icons/react";
 
 type MidExamsProps = {
@@ -69,7 +70,8 @@ export default function MidExams({ onBack }: MidExamsProps) {
     }));
 
     return (
-        <div className="flex flex-col items-start justify-start gap-3">
+        <div className="relative flex flex-col items-start justify-start gap-3">
+            <WipOverlay/>
             <div className="flex items-center gap-3">
                 <ArrowBendUpLeft size={22} weight="fill" onClick={onBack} className="text-[#282828] cursor-pointer" />
                 <h3 className="text-[#282828] text-lg font-semibold">
