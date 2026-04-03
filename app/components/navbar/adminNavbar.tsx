@@ -15,7 +15,8 @@ import {
   Note,
   Student,
 } from "@phosphor-icons/react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -24,7 +25,7 @@ type NavItem = {
 };
 
 export default function AdminNavbar() {
-  const router = useRouter();
+
   const pathname = usePathname();
   const [active, setActive] = useState("");
 
@@ -148,12 +149,16 @@ export default function AdminNavbar() {
           const isActive = active === item.label;
 
           return (
-            <div
-              key={index}
-              onClick={() => {
-                setActive(item.label);
-                if (item.path) router.push(item.path);
-              }}
+            // <div
+            //   key={index}
+            //   onClick={() => {
+            //     setActive(item.label);
+            //     if (item.path) router.push(item.path);
+            //   }}
+            <Link
+              key={item.path}
+              href={item.path}
+              // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
@@ -173,7 +178,8 @@ export default function AdminNavbar() {
               >
                 {item.label}
               </p>
-            </div>
+              {/* </div> */}
+            </Link>
           );
         })}
       </div>

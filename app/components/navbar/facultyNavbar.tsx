@@ -12,7 +12,9 @@ import {
   Note,
   Student,
 } from "@phosphor-icons/react";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+
+import { usePathname } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 
 type NavItem = {
@@ -22,7 +24,6 @@ type NavItem = {
 };
 
 export default function FacultyNavbar() {
-  const router = useRouter();
   const pathname = usePathname();
   const [active, setActive] = useState("");
 
@@ -140,19 +141,22 @@ export default function FacultyNavbar() {
           const isActive = active === item.label;
 
           return (
-            <div
-              key={index}
-              onClick={() => {
-                setActive(item.label);
-                if (item.path) router.push(item.path);
-              }}
+            // <div
+            //   key={index}
+            //   onClick={() => {
+            //     setActive(item.label);
+            //     if (item.path) router.push(item.path);
+            //   }}
+            <Link
+              key={item.path}
+              href={item.path}
+              // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                    : "text-white hover:bg-[#50D689]/30"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
+                  : "text-white hover:bg-[#50D689]/30"
                 }
               `}
             >
@@ -161,13 +165,13 @@ export default function FacultyNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>
-            </div>
+              {/* </div> */}
+            </Link>
           );
         })}
       </div>
