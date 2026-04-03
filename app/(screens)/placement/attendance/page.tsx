@@ -1,7 +1,11 @@
-export default function AttendancePage(){
-    return(
+import PageUnderConstruction from "@/app/utils/PageUnderConstruction";
+
+export default function AttendancePage() {
+    return (
         <div>
-            <h1 className="text-black">Attendance Page</h1>
+            <div className="w-full h-full dark:bg-slate-950 flex flex-col">
+                <PageUnderConstruction />
+            </div>
         </div>
     )
 }

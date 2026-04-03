@@ -77,8 +77,8 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="relative overflow-hidden flex flex-col w-full min-h-screen">
-      <WipOverlay fullHeight={true}/>
+    <div className="overflow-hidden flex flex-col w-full min-h-screen">
+      <WipOverlay fullHeight={true} />
       <div className="mb-5">
         <div className="flex items-center gap-2 group w-fit">
           <CaretLeft
@@ -93,23 +93,25 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
           Review and track current uptime and response time metrics.
         </p>
       </div>
+      <div className="relative">
+        <WipOverlay fullHeight={true} />
+        <article className="flex gap-3 justify-center items-center mb-4">
+          {cardData.map((item, index) => (
+            <CardComponent
+              key={index}
+              value={item.value}
+              label={item.label}
+              bgColor={item.bgColor}
+              icon={item.icon}
+              iconBgColor={item.iconBgColor}
+              iconColor={item.iconColor}
+            />
+          ))}
+        </article>
 
-      <article className="flex gap-3 justify-center items-center mb-4">
-        {cardData.map((item, index) => (
-          <CardComponent
-            key={index}
-            value={item.value}
-            label={item.label}
-            bgColor={item.bgColor}
-            icon={item.icon}
-            iconBgColor={item.iconBgColor}
-            iconColor={item.iconColor}
-          />
-        ))}
-      </article>
-
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <UptimeChart data={mockData} />
+        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <UptimeChart data={mockData} />
+        </div>
       </div>
     </div>
   );

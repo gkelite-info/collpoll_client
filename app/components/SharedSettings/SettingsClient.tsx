@@ -432,6 +432,7 @@ import {
   updateUserPreferences,
 } from "@/lib/helpers/settings/preferencesAPI";
 import PrivacyPolicy from "./components/PrivacyPolicy";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function SettingsClient() {
   const [emailAlerts, setEmailAlerts] = useState(true);
@@ -458,8 +459,8 @@ export default function SettingsClient() {
         setEmailAlerts(prefs.email_alerts);
         setReminders(
           prefs.assignment_reminders ||
-            prefs.event_reminders ||
-            prefs.class_reminders,
+          prefs.event_reminders ||
+          prefs.class_reminders,
         );
         if (prefs.font_scale) setScale(prefs.font_scale);
       }
@@ -584,7 +585,7 @@ export default function SettingsClient() {
   // --- MAIN SETTINGS RENDER ---
   return (
     <>
-      <div className="p-6 space-y-6">
+      <div className="p-2 space-y-6 pb-4">
         <div className="flex justify-between">
           <div className="text-xl font-semibold flex flex-col">
             <div className="flex justify-start items-center gap-2">
@@ -720,7 +721,12 @@ export default function SettingsClient() {
 
           <hr className="text-[#CECECE]" />
 
-          <div className="flex items-center justify-between">
+          <div className="relative flex items-center justify-between">
+            <WipOverlay
+              isExtraSmall={true}
+              style={{ height: "95px", marginTop: "-25px" }}
+              borderRadius="rounded-sm"
+            />
             <div className="flex gap-3 items-start">
               <div className="p-2 rounded-full bg-[#43C17A26]">
                 <Globe weight="fill" size={22} className="text-[#43C17A]" />
@@ -769,7 +775,12 @@ export default function SettingsClient() {
           <hr className="text-[#CECECE]" />
 
           <Link href={`${pathname}?2fa`} className="block">
-            <div className="flex items-center justify-between">
+            <div className="relative flex items-center justify-between">
+              <WipOverlay
+                isExtraSmall={true}
+                style={{ height: "95px", marginTop: "-25px" }}
+                borderRadius="rounded-sm"
+              />
               <div className="flex gap-3 items-start">
                 <div className="p-2 rounded-full bg-[#43C17A26]">
                   <LockKey weight="fill" size={22} className="text-[#43C17A]" />

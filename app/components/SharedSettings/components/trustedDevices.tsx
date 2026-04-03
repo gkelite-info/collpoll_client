@@ -2,6 +2,7 @@ import React from "react";
 import { Monitor, IconProps, Phone, CaretLeft } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useRouter } from "next/navigation";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export interface TrustedDevice {
   id: string;
@@ -104,7 +105,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, onRemove }) => {
 
       <button
         onClick={() => onRemove(device.id)}
-        className="mt-4 w-full py-2.5 px-4 bg-[#16284F] text-white font-medium rounded-lg hover:bg-red-700 transition duration-150 shadow-lg"
+        className="mt-4 cursor-pointer w-full py-2.5 px-4 bg-[#16284F] text-white font-medium rounded-lg hover:bg-red-700 transition duration-150 shadow-lg"
       >
         Remove Device
       </button>
@@ -122,8 +123,8 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
     router.back();
   };
   return (
-    <div className="min-h-screen p-6 sm:p-8">
-      <div className="max-w-5xl mx-auto font-sans">
+    <div className="min-h-screen p-2 sm:p-2">
+      <div className="mx-auto font-sans">
         <div className="flex justify-between">
           <div className="text-xl font-semibold flex flex-col">
             <div className="flex justify-start items-center gap-2">
@@ -146,7 +147,8 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
         </div>
         <div></div>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 bg-white p-6 rounded-xl gap-6">
+        <div className="relative mt-8 grid grid-cols-1 md:grid-cols-2 bg-white p-6 rounded-xl gap-6">
+          <WipOverlay/>
           {devices.map((device) => (
             <DeviceCard
               key={device.id}
