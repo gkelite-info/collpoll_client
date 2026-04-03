@@ -175,8 +175,10 @@ const Right: React.FC<{ actionData: ActionData }> = ({ actionData }) => {
         </div>
 
         <WorkWeekCalendar style="mt-0" />
-
-        <ActionCard data={actionData} />
+        <div className="relative">
+          <WipOverlay fullHeight={true} />
+          <ActionCard data={actionData} />
+        </div>
       </div>
 
       <AddUserModal
@@ -219,7 +221,6 @@ const RequestDetail: React.FC<RequestDetailProps> = ({
 
   return (
     <div className="relative flex w-full min-h-screen p-3">
-      <WipOverlay fullHeight={true}/>
       <div className="flex-1">
         <div className="mb-3">
           <div className="flex items-center gap-2 group w-fit">
@@ -237,12 +238,14 @@ const RequestDetail: React.FC<RequestDetailProps> = ({
             Review this request and take action.
           </p>
         </div>
+        <div className="relative">
+          <WipOverlay fullHeight={true} />
+          <div className="mb-6">
+            <FacultyCard data={facultyData} />
+          </div>
 
-        <div className="mb-6">
-          <FacultyCard data={facultyData} />
+          <ApprovalRequest description={description} attachments={attachments} />
         </div>
-
-        <ApprovalRequest description={description} attachments={attachments} />
       </div>
 
       <Right actionData={actionData} />

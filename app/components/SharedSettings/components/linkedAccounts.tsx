@@ -238,7 +238,7 @@ export default function LinkedAccounts() {
   };
 
   return (
-    <div className="p-6 space-y-6 sm:p-8">
+    <div className="p-2 space-y-6 sm:p-2">
       <div className="flex justify-between">
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2">

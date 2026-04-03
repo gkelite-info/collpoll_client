@@ -64,8 +64,7 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="relative overflow-hidden flex flex-col m-4 ">
-      <WipOverlay fullHeight={true}/>
+    <div className="overflow-hidden flex flex-col m-4 ">
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div
@@ -89,26 +88,29 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
           <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
       </div>
-      <div className="flex gap-4 w-full h-full mb-3">
-        {cardData.map((item, index) => (
-          <CardComponent
-            key={index}
-            style={`${item.style} w-[156px] h-[156px]`}
-            icon={item.icon}
-            iconBgColor={item.iconBgColor}
-            value={item.value}
-            label={item.label}
-          />
-        ))}
-        <div>
-          <WorkWeekCalendar style="h-full w-[350px]" />
+      <div className="relative">
+        <WipOverlay fullHeight={true} />
+        <div className="flex gap-4 w-full h-full mb-3">
+          {cardData.map((item, index) => (
+            <CardComponent
+              key={index}
+              style={`${item.style} w-[156px] h-[156px]`}
+              icon={item.icon}
+              iconBgColor={item.iconBgColor}
+              value={item.value}
+              label={item.label}
+            />
+          ))}
+          <div>
+            <WorkWeekCalendar style="h-full w-[350px]" />
+          </div>
         </div>
-      </div>
 
-      <PendingApprovalsTable
-        requests={pendingRequests}
-        onViewClick={(data) => setSelectedRequest(data)}
-      />
+        <PendingApprovalsTable
+          requests={pendingRequests}
+          onViewClick={(data) => setSelectedRequest(data)}
+        />
+      </div>
     </div>
   );
 };

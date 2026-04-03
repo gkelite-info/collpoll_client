@@ -11,6 +11,7 @@ import {
   CaretLeft,
 } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 export interface VerificationMethod {
   id: string;
@@ -108,11 +109,10 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between p-4 border-2 rounded-xl  mb-4 ${
-        method.status === "navigate"
+      className={`flex items-center justify-between p-4 border-2 rounded-xl  mb-4 ${method.status === "navigate"
           ? "cursor-pointer hover:bg-gray-50 transition"
           : ""
-      }`}
+        }`}
       onClick={method.status === "navigate" ? handleAction : undefined}
     >
       <div className="flex items-center space-x-4">
@@ -140,7 +140,7 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
   };
 
   return (
-    <div className="p-6 space-y-6 sm:p-8">
+    <div className=" p-2 space-y-6 sm:p-2">
       <div className="flex justify-between">
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2">
@@ -163,7 +163,8 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
         </div>
       </div>
       <div>
-        <div className="mt-8 bg-white p-6 rounded-xl">
+        <div className="relative mt-8 bg-white p-6 rounded-xl">
+          <WipOverlay />
           {verificationMethods.map((method) => (
             <VerificationRow
               key={method.id}

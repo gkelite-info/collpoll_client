@@ -10,8 +10,10 @@ interface WipOverlayProps {
     fullWidth?: boolean;
     fullHeight?: boolean;
     isSmall?: boolean;
-    isMedium?: boolean,
+    isExtraSmall?: boolean;
+    isMedium?: boolean;
     isOverlayVisible?: boolean;
+    style?: React.CSSProperties;
 }
 
 export default function WipOverlay({
@@ -21,8 +23,10 @@ export default function WipOverlay({
     fullWidth = false,
     fullHeight = false,
     isSmall = false,
+    isExtraSmall = false,
     isMedium = false,
     isOverlayVisible = true,
+    style
 }: WipOverlayProps) {
     const [isVisible, setIsVisible] = useState(isOverlayVisible);
     const [isFading, setIsFading] = useState(false);
@@ -43,15 +47,22 @@ export default function WipOverlay({
 
     return (
         <div
+            style={style}
             className={`absolute inset-0 z-50 flex 
-                ${isMedium ? "flex-row " : "flex-col"} items-center 
+                ${isExtraSmall
+                    ? "flex-row items-center justify-center gap-20 "
+                    : isMedium ? "flex-row " : "flex-col"} items-center 
                 ${fullHeight ? "justify-start pt-10 sm:pt-14 md:pt-50" : "justify-center"}
+                px-2 py-1 sm:px-3 sm:py-2
                  p-3 sm:p-4 text-center transition-opacity duration-400 ease-in-out 
                 ${isFading ? "opacity-0" : "opacity-95"} 
                 bg-linear-to-br from-slate-900/85 to-slate-800/90 backdrop-blur-md border border-white/10 
                 ${borderRadius} overflow-hidden`}
         >
-            <div className={`relative flex-none w-[46px] h-[40px] mb-2 sm:mb-3 mt-1 ${isMedium && "mx-auto ml-10"}`}>
+            <div className={`relative flex-none w-[46px] h-[40px] mb-2 sm:mb-3 mt-1 
+            ${isExtraSmall
+                    ? "w-auto mt-4"
+                    : isMedium && "mx-auto ml-10"}`}>
                 <div className="absolute top-1 left-2 w-8 h-8 bg-blue-500/30 blur-xl rounded-full scale-150"></div>
 
                 <div className="absolute left-0 top-0 w-[32px] h-[32px] animate-[spin_4s_linear_infinite]">
@@ -66,8 +77,10 @@ export default function WipOverlay({
                 </div>
             </div>
 
-            <div className={`flex flex-col gap-1.5 sm:gap-2 ${fullWidth ? "w-full items-center" : "items-center"}`}>
-                {!isSmall &&
+            <div className={`flex flex-col gap-1.5 sm:gap-2
+                ${isExtraSmall && "flex-row items-center gap-3"}
+                 ${fullWidth ? "w-full items-center" : "items-center"}`}>
+                {!isSmall && !isExtraSmall &&
                     <>
                         <h4 className="text-white font-bold text-[13px] sm:text-sm tracking-wide drop-shadow-md leading-tight">
                             {title}

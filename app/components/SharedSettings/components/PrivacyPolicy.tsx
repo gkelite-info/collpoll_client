@@ -7,8 +7,8 @@ const PrivacyPolicy = () => {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen p-6 ">
-      <div className="max-w-5xl mx-auto font-sans">
+    <div className="min-h-screen p-2">
+      <div className="mx-auto font-sans">
         {/* Header Section */}
         <div className="flex justify-between">
           <div className="text-xl font-semibold flex flex-col">

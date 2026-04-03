@@ -125,8 +125,7 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="relative overflow-hidden flex flex-col w-full min-h-screen">
-      <WipOverlay fullHeight={true}/>
+    <div className=" overflow-hidden flex flex-col w-full min-h-screen">
       <div className="mb-5">
         <div className="flex items-center gap-2 group w-fit">
           <CaretLeft
@@ -144,7 +143,8 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
         </p>
       </div>
 
-      <article className="">
+      <article className="relative">
+        <WipOverlay fullHeight={true} />
         <ActiveAutomationsTable
           data={sampleRequests}
           onRowClick={handleRowClick}

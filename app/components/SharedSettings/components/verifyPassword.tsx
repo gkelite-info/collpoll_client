@@ -59,7 +59,7 @@ export default function CurrentPassword() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAFBFC] p-8">
+    <main className="min-h-screen p-2">
       <div className="flex justify-between mb-6">
         <div className="text-xl font-semibold flex flex-col">
           <div className="flex justify-start items-center gap-2 text-[#282828]">
