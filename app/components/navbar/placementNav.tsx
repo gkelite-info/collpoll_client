@@ -10,7 +10,8 @@ import {
     House,
     Laptop,
 } from "@phosphor-icons/react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 type NavItem = {
     icon: (isActive: boolean) => ReactNode;
@@ -19,10 +20,7 @@ type NavItem = {
 };
 
 export default function PlacementNavbar() {
-    const router = useRouter();
     const pathname = usePathname();
-
-
     const BASE = "/placement";
 
     const items: NavItem[] = [
@@ -73,7 +71,7 @@ export default function PlacementNavbar() {
                 <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "My Attendance",
-             path: `${BASE}/my-attendance`,
+            path: `${BASE}/my-attendance`,
         },
         {
             icon: (isActive) => (
@@ -100,27 +98,28 @@ export default function PlacementNavbar() {
                     const active = isActivePath(item.path);
 
                     return (
-                        <div
+                        // <div
+                        //     key={item.path}
+                        //     onClick={() => router.push(item.path)}
+                        <Link
                             key={item.path}
-                            onClick={() => router.push(item.path)}
+                            href={item.path}
+                            // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
                             className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
-                ${active
+                                    ${active
                                     ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
                                     : "text-white hover:bg-[#50D689]/30"
-                                }
-              `}
+                                }`}
                         >
                             <div className={active ? "text-[#43C17A]" : "text-white"}>
                                 {item.icon(active)}
                             </div>
 
-                            <p
-                                className={`text-sm font-medium ${active ? "text-[#43C17A]" : "text-white"
-                                    }`}
-                            >
+                            <p className={`text-sm font-medium ${active ? "text-[#43C17A]" : "text-white"}`}>
                                 {item.label}
                             </p>
-                        </div>
+                            {/* </div> */}
+                        </Link>
                     );
                 })}
             </div>

@@ -545,9 +545,9 @@ export default function SettingsClient() {
   // --- SHIMMER LOADING STATE ---
   if (isLoadingPrefs) {
     return (
-      <div className="p-6 space-y-6 animate-pulse">
+      <div className="p-2 space-y-6 animate-pulse">
         {/* Shimmer Header */}
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <div className="flex flex-col gap-3 mt-1">
             <div className="flex justify-start items-center gap-2">
               <div className="w-6 h-6 bg-gray-200 rounded-md"></div>
@@ -555,7 +555,7 @@ export default function SettingsClient() {
             </div>
             <div className="h-4 w-56 bg-gray-200 rounded-md"></div>
           </div>
-          <div className="w-[32%] h-[120px] bg-gray-200 rounded-xl"></div>
+          <div className="w-[32%] h-[70px] bg-gray-200 rounded-xl"></div>
         </div>
 
         {/* Shimmer List */}
