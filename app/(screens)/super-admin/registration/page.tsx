@@ -1,15 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import CollegeRegistration from "./collegeRegistration/page";
 import AdminRegistration from "./adminRegistration/page";
 import EducationalType from "./educationalType/page";
 import DepartmentType from "./department/page";
 import { Toaster } from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
+import { Loader } from "../../(student)/calendar/right/timetable";
 
-export default function Page() {
+function RegistrationContent() {
   const [activeTab, setActiveTab] = useState("college");
+  const params = useSearchParams();
+
+  useEffect(() => {
+    if (params.get("tab") === "admin-registration") {
+      setActiveTab("admin");
+    }
+  }, [params]);
+
 
   return (
     <div className="min-h-screen bg-white rounded-xl flex justify-center p-6 mx-4 font-sans">
@@ -57,7 +67,11 @@ export default function Page() {
               College Registration
             </button>
             <button
-              onClick={() => setActiveTab("admin")}
+              // onClick={() => setActiveTab("admin")}
+              onClick={() => {
+                setActiveTab("admin")
+                // router.push("?tab=admin-registration");
+              }}
               className={`cursor-pointer flex-1 py-2 rounded-full text-sm font-semibold z-10 ${activeTab === "admin" ? "text-white" : "text-gray-600"
                 }`}
             >
@@ -84,7 +98,7 @@ export default function Page() {
           {activeTab === "college" ? (
             <CollegeRegistration key="college" />
           ) : activeTab === "admin" ? (
-            <AdminRegistration key="admin" />
+            <AdminRegistration key="admin" activeTab={activeTab} />
           ) : activeTab === "education" ? (
             <EducationalType key="education" />
           ) : (
@@ -94,5 +108,14 @@ export default function Page() {
       </div>
       <Toaster position="top-right" />
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center"><Loader /></div>}>
+      <RegistrationContent />
+    </Suspense>
   );
 }

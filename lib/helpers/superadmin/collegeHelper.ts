@@ -29,14 +29,9 @@ export const fetchCollegesForAdmin = async (): Promise<FetchCollegesResponse> =>
 
         if (error) throw error;
 
-        return {
-            success: true,
-            data: data ?? [],
-        };
+        return { success: true, data: data ?? [] };
+
     } catch (err: any) {
-        return {
-            success: false,
-            error: err.message || "Failed to fetch colleges",
-        };
+        return { success: false, error: err.message || "Failed to fetch colleges" };
     }
 };

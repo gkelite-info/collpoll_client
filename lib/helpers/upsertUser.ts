@@ -12,7 +12,7 @@ export const upsertUser = async (payload: {
   role?: string;
   // collegeCode: string;
   collegePublicId?: string;
-  gender?: "Male" | "Female";
+  gender?: "Male" | "Female" | "";
   dateOfJoining?: string | null;
   professionalExperienceYears?: number | null;
 }) => {
@@ -36,6 +36,8 @@ export const upsertUser = async (payload: {
 
     const now = new Date().toISOString();
 
+    const finalGender = payload.gender === "" ? null : payload.gender;
+
     const { data, error } = await supabase
       .from("users")
       .upsert(
@@ -51,7 +53,7 @@ export const upsertUser = async (payload: {
           role: role ?? null,
           // collegeCode,
           collegePublicId,
-          gender,
+          gender: finalGender,
           dateOfJoining: dateOfJoining ?? null,
           professionalExperienceYears: professionalExperienceYears ?? null,
           updatedAt: now,

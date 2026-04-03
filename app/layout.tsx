@@ -11,6 +11,7 @@ import { CollegeAdminProvider } from "./utils/context/college-admin/useCollegeAd
 import { ParentProvider } from "./utils/context/parent/useParent";
 import { HrProvider } from "./utils/context/hr/useCollegeHr";
 import { FontProvider } from "./utils/FontProvider";
+import SessionRefresher from "./components/sessionRefresher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,7 @@ export default function RootLayout({
                     <CollegeAdminProvider>
                       <FinanceManagerProvider>
                         <HrProvider>
+                          <SessionRefresher />
                           <ClientLayout>{children}</ClientLayout>
                         </HrProvider>
                       </FinanceManagerProvider>
