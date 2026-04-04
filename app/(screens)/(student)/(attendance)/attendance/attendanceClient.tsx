@@ -18,8 +18,7 @@ import { useStudent } from "@/app/utils/context/student/useStudent";
 interface TableRow {
   Subject: string;
   Faculty: string;
-  "Today's Status": string;
-  "Class Attendance": string;
+  "Today's Status": React.ReactNode; // ← CHANGED: ReactNode to support badge
   "Percentage %": string;
   Notes: React.ReactNode;
 }
@@ -36,11 +35,11 @@ interface CardItem {
   totalPercentage?: string | number;
 }
 
+// ── CHANGED: removed "Class Attendance" ──────────────────────────────────────
 const columns = [
   "Subject",
   "Faculty",
   "Today's Status",
-  "Class Attendance",
   "Percentage %",
   "Notes",
 ];
@@ -51,6 +50,30 @@ function formatAttendanceStatus(status: string) {
     .toLowerCase()
     .replace(/_/g, " ")
     .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── ADDED: colored badge only for Class Cancel ───────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const label = formatAttendanceStatus(status);
+  if (status === "CLASS_CANCEL") {
+    return (
+      <span
+        style={{
+          background: "#F3F4F6",
+          color: "#6B7280",
+          padding: "2px 10px",
+          borderRadius: "999px",
+          fontSize: "12px",
+          fontWeight: 600,
+          whiteSpace: "nowrap",
+          display: "inline-block",
+        }}
+      >
+        {label}
+      </span>
+    );
+  }
+  return <span>{label}</span>;
 }
 
 
@@ -140,12 +163,12 @@ export default function AttendanceClient() {
     }
   };
 
+  // ── CHANGED: removed "Class Attendance", added StatusBadge for Today's Status
   const tableRows: TableRow[] =
     dashboardData?.tableData?.map((row: any) => ({
       Subject: row.subject,
       Faculty: row.faculty,
-      "Today's Status": formatAttendanceStatus(row.status),
-      "Class Attendance": row.classAttendance,
+      "Today's Status": <StatusBadge status={row.status} />,
       "Percentage %": row.percentage,
       Notes: <FilePdf size={17} />,
     })) || [];
@@ -239,7 +262,7 @@ export default function AttendanceClient() {
               <div className="bg-red-00 flex flex-col">
                 <h5 className="text-[#282828] font-medium text-md">
                   {isToday
-                    ? "Today’s Attendance"
+                    ? "Today's Attendance"
                     : `Attendance – ${formattedDate}`}
                 </h5>
                 <p className="text-[#282828] text-sm">

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CaretLeft, CaretDown, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { CaretLeft, CaretDown, CaretRight, MagnifyingGlass, UserGear, GraduationCap, UsersThree, UsersFour, CurrencyDollar, Buildings, Briefcase } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation"; // ← ADDED
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 import TableComponent from "@/app/utils/table/table";
+import CardComponent from "@/app/utils/card"; // ← ADDED
 import { AgCharts } from "ag-charts-react";
 import { ModuleRegistry, AllCommunityModule } from "ag-charts-community";
 import type { AgPolarChartOptions } from "ag-charts-community";
@@ -11,15 +13,75 @@ import { EduTypeDistribution, FinanceListData, getFinanceListData } from "@/lib/
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+// ── ADDED: Stat card definitions ──────────────────────────────────
+
+type FinancePageSummary = {
+  admins: number;
+  students: number;
+  parents: number;
+  faculty: number;
+  financeManagers: number;
+  hrExecutives: number;
+  placementManagers: number;
+};
+
+type StatDef = {
+  label:     string;
+  key:       keyof FinancePageSummary;
+  bg:        string;
+  iconBg:    string;
+  iconColor: string;
+  icon:      React.ReactNode;
+};
+
+const STAT_DEFS: StatDef[] = [
+  { label: "Admins",            key: "admins",            bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED", icon: <UserGear size={18} weight="fill" /> },
+  { label: "Students",          key: "students",          bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706", icon: <GraduationCap size={18} weight="fill" /> },
+  { label: "Parents",           key: "parents",           bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669", icon: <UsersThree size={18} weight="fill" /> },
+  { label: "Faculty",           key: "faculty",           bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB", icon: <UsersFour size={18} weight="fill" /> },
+  { label: "Finance Manager",   key: "financeManagers",   bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626", icon: <CurrencyDollar size={18} weight="fill" /> },
+  { label: "HR Executive",      key: "hrExecutives",      bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7", icon: <Buildings size={18} weight="fill" /> },
+  { label: "Placement Manager", key: "placementManagers", bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777", icon: <Briefcase size={18} weight="fill" /> },
+];
+
+// ── ADDED: CardsShimmer ───────────────────────────────────────────
+
+function CardsShimmer() {
+  return (
+    <div className="flex gap-3 mb-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+      {[...Array(7)].map((_, i) => (
+        <div key={i} className="min-w-[176px] h-32 flex-shrink-0 animate-pulse bg-gray-200 rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
 const ROLE_COLORS: Record<string, string> = {
     admins: "#7C3AED", students: "#FBA945", parents: "#10B981",
     faculty: "#3B82F6", finance: "#F97316", placement: "#EC4899",
+    collegeHr: "#0284C7", // ← ADDED
 };
 
-function EduDonutCard({ dist }: { dist: EduTypeDistribution }) {
-    const roles = ["admins", "students", "parents", "faculty", "finance", "placement"] as const;
-    const chartData = roles.filter((r) => dist[r] > 0).map((r) => ({ role: r.charAt(0).toUpperCase() + r.slice(1), value: dist[r] }));
-    const fills = roles.filter((r) => dist[r] > 0).map((r) => ROLE_COLORS[r]);
+function EduDonutCard({ dist, hrExecutives = 0 }: { dist: EduTypeDistribution; hrExecutives?: number }) {
+    const roles = ["admins", "students", "parents", "faculty", "finance", "placement", "collegeHr"] as const; // ← added collegeHr
+
+    const LEGEND_LABELS: Record<string, string> = {
+        admins: "Admins", students: "Students", parents: "Parents",
+        faculty: "Faculty", finance: "Finance", placement: "Placement",
+        collegeHr: "HR Executive", // ← shows "HR Executive" in legend
+    };
+
+    const getValue = (role: typeof roles[number]) => {
+        if (role === "collegeHr") return dist.collegeHr > 0 ? dist.collegeHr : hrExecutives;
+        return dist[role] as number;
+    };
+
+    const chartData = roles
+        .filter((role) => getValue(role) > 0)
+        .map((role) => ({ role: LEGEND_LABELS[role], value: getValue(role) }));
+    const fills = roles
+        .filter((role) => getValue(role) > 0)
+        .map((role) => ROLE_COLORS[role]);
     const options: AgPolarChartOptions = useMemo(() => ({
         data: chartData.length > 0 ? chartData : [{ role: "Empty", value: 1 }],
         background: { fill: "transparent" },
@@ -31,7 +93,7 @@ function EduDonutCard({ dist }: { dist: EduTypeDistribution }) {
             highlightStyle: { series: { dimOpacity: 0.8 } },
         }],
         legend: { position: "bottom", spacing: 4, item: { label: { fontSize: 10, color: "#6B7280" }, marker: { size: 8, shape: "circle", padding: 4 } } },
-    }), [dist]);
+    }), [dist, hrExecutives]);
 
     return (
         <div className="min-w-[280px] max-w-[300px] flex-shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-col gap-3">
@@ -58,6 +120,34 @@ function FilterPill({ label, value, showCaret = false, onClick }: {
     );
 }
 
+// ── ADDED: TableShimmer ───────────────────────────────────────────
+
+function TableShimmer() {
+  return (
+    <div className="animate-pulse">
+      <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
+        {TABLE_COLUMNS.map((col) => (
+          <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
+        ))}
+      </div>
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
+        >
+          {TABLE_COLUMNS.map((col) => (
+            <div
+              key={col.key}
+              className="flex-1 h-3.5 bg-gray-200 rounded"
+              style={{ opacity: 1 - i * 0.1 }}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const TABLE_COLUMNS = [
     { title: "Finance Manager", key: "fullName" },
     { title: "Finance ID",      key: "financeManagerId" },
@@ -71,10 +161,15 @@ type Props = { onBack: () => void };
 
 export default function FinanceListView({ onBack }: Props) {
     const { collegeId, loading: contextLoading } = useCollegeAdmin();
+    const router       = useRouter(); // ← ADDED
+    const searchParams = useSearchParams(); // ← ADDED
 
-    const [data, setData]             = useState<(FinanceListData & { totalCount: number }) | null>(null);
-    const [isFetching, setIsFetching] = useState(true);
-    const [search, setSearch]         = useState("");
+    const [data, setData]                     = useState<(FinanceListData & { totalCount: number }) | null>(null);
+    const [summary, setSummary]               = useState<FinancePageSummary | null>(null); // ← ADDED
+    const [isFetching, setIsFetching]         = useState(true);
+    const [isSearching, setIsSearching]       = useState(false); // ← ADDED
+    const [search, setSearch]                 = useState(""); // ← ADDED
+    const [debouncedSearch, setDebouncedSearch] = useState(""); // ← ADDED
     const [selectedEduId, setSelectedEduId]   = useState<number | null>(null);
     const [selectedAdmin, setSelectedAdmin]   = useState("All");
     const [adminOpen, setAdminOpen]           = useState(false);
@@ -83,38 +178,62 @@ export default function FinanceListView({ onBack }: Props) {
 
     const totalPages = Math.ceil(totalRecords / ROWS_PER_PAGE);
 
-    const load = async (page: number, eduId: number | null, admin: string) => {
-        if (contextLoading || !collegeId) return;
-        setIsFetching(true);
-        try {
-            const adminId = admin !== "All"
-                ? data?.finance.find((f) => f.supportAdmin === admin) ? undefined : undefined
-                : undefined;
+    // ── ADDED: Query routing ──
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("subview", "finance");
+        router.replace(`?${params.toString()}`, { scroll: false });
+        return () => {
+            const cleanParams = new URLSearchParams(searchParams.toString());
+            cleanParams.delete("subview");
+            router.replace(`?${cleanParams.toString()}`, { scroll: false });
+        };
+    }, []);
 
+    // ── ADDED: Debounce search → triggers API call after 400ms ──
+    useEffect(() => {
+        setIsSearching(true);
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+            setCurrentPage(1);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    // ── load wrapped in useCallback ──
+    const load = useCallback(async (page: number, eduId: number | null, admin: string, searchTerm: string) => {
+        if (contextLoading || !collegeId) return;
+        if (page === 1) setIsFetching(true);
+        setIsSearching(true);
+        try {
             const d = await getFinanceListData(collegeId, page, ROWS_PER_PAGE, {
                 collegeEducationId: eduId ?? undefined,
+                search:             searchTerm || undefined, // ← ADDED
             });
             setData(d);
             setTotalRecords(d.totalCount);
-            if (!selectedEduId && d.distributions.length > 0) {
+            setSummary(d.summary); // ← ADDED
+            if (!eduId && d.distributions.length > 0) {
                 setSelectedEduId(d.distributions[0].collegeEducationId);
             }
         } catch (err) {
             console.error("FinanceListView error:", err);
         } finally {
             setIsFetching(false);
+            setIsSearching(false);
         }
-    };
-
-    useEffect(() => {
-        if (contextLoading || !collegeId) return;
-        load(1, null, "All");
     }, [collegeId, contextLoading]);
 
     useEffect(() => {
+        if (contextLoading || !collegeId) return;
+        load(1, null, "All", "");
+    }, [collegeId, contextLoading]);
+
+    // ── ADDED: debouncedSearch included in dependencies ──
+    useEffect(() => {
         if (!collegeId || contextLoading) return;
-        load(currentPage, selectedEduId, selectedAdmin);
-    }, [currentPage, selectedEduId]);
+        load(currentPage, selectedEduId, selectedAdmin, debouncedSearch);
+    }, [currentPage, selectedEduId, selectedAdmin, debouncedSearch]);
 
     const availableAdmins = useMemo(() => {
         if (!data || !selectedEduId) return [];
@@ -150,6 +269,46 @@ export default function FinanceListView({ onBack }: Props) {
                     <h1 className="text-xl font-semibold text-[#282828]">Finance</h1>
                 </div>
 
+                {/* ── ADDED: Total users ── */}
+                <p className="text-[#1E40AF] font-bold text-[15px] mb-3">
+                    Total Users :{" "}
+                    <span className="text-[#22A55D]">
+                        {isFetching ? "…" : (
+                            ((summary?.admins ?? 0) +
+                              (summary?.students ?? 0) +
+                              (summary?.parents ?? 0) +
+                              (summary?.faculty ?? 0) +
+                              (summary?.financeManagers ?? 0) +
+                              (summary?.hrExecutives ?? 0) +
+                              (summary?.placementManagers ?? 0)
+                            ).toLocaleString("en-IN")
+                        )}
+                    </span>
+                </p>
+
+                {/* ── ADDED: Stat Cards ── */}
+                {isFetching && !summary ? (
+                    <CardsShimmer />
+                ) : (
+                    <div
+                        className="flex gap-3 mb-5 overflow-x-auto"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                    >
+                        {STAT_DEFS.map((def) => (
+                            <div key={def.key} className="flex-shrink-0">
+                                <CardComponent
+                                    style={`${def.bg} h-32 w-44`}
+                                    icon={def.icon}
+                                    iconBgColor={def.iconBg}
+                                    iconColor={def.iconColor}
+                                    value={isFetching ? "…" : (summary?.[def.key] ?? 0).toLocaleString("en-IN")}
+                                    label={def.label}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <p className="text-[#1E40AF] font-bold text-[15px] mb-3">User Distribution by Education Type</p>
 
                 {isFetching && !data ? (
@@ -163,7 +322,7 @@ export default function FinanceListView({ onBack }: Props) {
                                 onClick={() => { setSelectedEduId(dist.collegeEducationId); setSelectedAdmin("All"); setCurrentPage(1); }}
                                 className={`flex-shrink-0 cursor-pointer transition-all ${selectedEduId === dist.collegeEducationId ? "ring-2 ring-[#43C17A] rounded-2xl" : ""}`}
                             >
-                                <EduDonutCard dist={dist} />
+                                <EduDonutCard dist={dist} hrExecutives={summary?.hrExecutives ?? 0} />
                             </div>
                         ))}
                     </div>
@@ -200,8 +359,8 @@ export default function FinanceListView({ onBack }: Props) {
                     <MagnifyingGlass size={18} className="text-[#43C17A]" />
                 </div>
 
-                {isFetching ? (
-                    <div className="animate-pulse bg-gray-200 rounded-2xl h-64" />
+                {isFetching && !data ? (
+                    <TableShimmer />
                 ) : tableData.length === 0 ? (
                     <p className="text-gray-400 text-sm mt-8 text-center">No finance managers found.</p>
                 ) : (

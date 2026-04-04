@@ -10,6 +10,7 @@ export type EduTypeDistribution = {
   faculty: number;
   finance: number;
   placement: number;
+  collegeHr: number; // ← ADDED
 };
  
 export type ParentRow = {
@@ -29,6 +30,16 @@ export type ParentListData = {
   parents: ParentRow[];
   branches: { collegeBranchId: number; collegeBranchCode: string; collegeEducationId: number }[];
   academicYears: { collegeAcademicYearId: number; collegeAcademicYear: string; collegeEducationId: number; collegeBranchId: number }[];
+  // ← ADDED: summary counts for stat cards
+  summary: {
+    admins: number;
+    students: number;
+    parents: number;
+    faculty: number;
+    financeManagers: number;
+    hrExecutives: number;
+    placementManagers: number;
+  };
 };
  
 export async function getParentListData(
@@ -39,6 +50,7 @@ export async function getParentListData(
     collegeEducationId?: number;
     collegeBranchId?: number;
     collegeAcademicYearId?: number;
+    search?: string; // ← ADDED
   }
 ): Promise<ParentListData & { totalCount: number }> {
  
@@ -53,7 +65,10 @@ export async function getParentListData(
  
   if (eduError) throw eduError;
   if (!eduList || eduList.length === 0) {
-    return { distributions: [], parents: [], branches: [], academicYears: [], totalCount: 0 };
+    return {
+      distributions: [], parents: [], branches: [], academicYears: [], totalCount: 0,
+      summary: { admins: 0, students: 0, parents: 0, faculty: 0, financeManagers: 0, hrExecutives: 0, placementManagers: 0 },
+    };
   }
  
   const eduIds = eduList.map((e: any) => e.collegeEducationId) as number[];
@@ -69,6 +84,7 @@ export async function getParentListData(
     { data: usersData },
     { data: academicHistoryData },
     { data: allParentData },
+    { data: hrData }, // ← ADDED
   ] = await Promise.all([
  
     supabase
@@ -128,6 +144,13 @@ export async function getParentListData(
       .eq("collegeId", collegeId)
       .eq("isActive", true)
       .eq("is_deleted", false),
+
+    // ← ADDED: HR executives from college_hr table (college-scoped)
+    supabase
+      .from("college_hr")
+      .select("collegeHrId, userId")
+      .eq("collegeId", collegeId)
+      .eq("is_deleted", false),
   ]);
  
   // ── Lookup maps ──────────────────────────────────────────────────────────────
@@ -138,6 +161,15 @@ export async function getParentListData(
   const academicYearMap = new Map((academicYearData ?? []).map((y: any) => [y.collegeAcademicYearId, y.collegeAcademicYear]));
   const studentYearMap  = new Map((academicHistoryData ?? []).map((h: any) => [h.studentId, h.collegeAcademicYearId]));
   const studentMap      = new Map((studentData ?? []).map((s: any) => [s.studentId, s]));
+
+  // ── ADDED: collect userIds matching search term ──────────────────────────
+  let searchUserIds: number[] | null = null;
+  if (filters?.search) {
+    const term = filters.search.toLowerCase();
+    searchUserIds = (usersData ?? [])
+      .filter((u: any) => u.fullName?.toLowerCase().includes(term))
+      .map((u: any) => u.userId);
+  }
  
   // ── Build student filter ids for pagination ───────────────────────────────
  
@@ -168,6 +200,15 @@ export async function getParentListData(
   if (filteredStudentIds && filteredStudentIds.size > 0) {
     parentQuery = parentQuery.in("studentId", Array.from(filteredStudentIds));
   }
+
+  // ← ADDED: filter by matched userIds when search term is provided
+  if (searchUserIds !== null) {
+    if (searchUserIds.length > 0) {
+      parentQuery = parentQuery.in("userId", searchUserIds);
+    } else {
+      parentQuery = parentQuery.in("userId", [-1]); // no match → empty result
+    }
+  }
  
   const { data: parentData, count: parentCount } = await parentQuery;
  
@@ -194,8 +235,20 @@ export async function getParentListData(
       faculty:    facultyCount,
       finance:    financeCount,
       placement:  0,
+      collegeHr:  0, // ← ADDED (college-wide, shown in summary card)
     };
   });
+
+  // ← ADDED: summary totals for stat cards
+  const summary = {
+    admins:           (adminData      ?? []).length,
+    students:         (studentData    ?? []).length,
+    parents:          (allParentData  ?? []).length,
+    faculty:          (facultyData    ?? []).length,
+    financeManagers:  (financeData    ?? []).length,
+    hrExecutives:     (hrData         ?? []).length,
+    placementManagers: 0,
+  };
  
   // ── Parent rows ───────────────────────────────────────────────────────────
  
@@ -223,5 +276,6 @@ export async function getParentListData(
     branches:      branchData      ?? [],
     academicYears: academicYearData ?? [],
     totalCount:    parentCount      ?? 0,
+    summary, // ← ADDED
   };
 }

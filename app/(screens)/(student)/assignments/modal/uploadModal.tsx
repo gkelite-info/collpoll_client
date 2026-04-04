@@ -25,6 +25,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [fileDeleted, setFileDeleted] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -126,6 +127,7 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
         }
 
         try {
+            setIsDeleting(true);
             const { error: storageErr } = await supabase.storage
                 .from("student_submissions")
                 .remove([existingFilePath]);
@@ -188,6 +190,8 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
 
         } catch (err) {
             toast.error("Failed to delete uploaded file");
+        } finally {
+            setIsDeleting(false);
         }
     };
     const removeFile = (idx: number) => {
@@ -296,10 +300,11 @@ export default function UploadModal({ isOpen, onClose, onUpload, card, index, ex
 
                 {existingFilePath && (
                     <button
-                        className="text-red-500 text-sm underline mt-3 self-start cursor-pointer"
+                        className="text-red-500 text-sm underline mt-3 self-start cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleDeleteExistingFile}
+                        disabled={isDeleting}
                     >
-                        Delete uploaded file
+                        {isDeleting ? "Deleting..." : "Delete uploaded file"}
                     </button>
                 )}
 

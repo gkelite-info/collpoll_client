@@ -1,11 +1,11 @@
 "use client";
-
+ 
 import { useSearchParams } from "next/navigation";
 import { UserInfoCard } from "./financerInfoCard";
 import DashboardPage from "./gridDashMain";
-
+ 
 const financerImage = "/financer-m.png";
-
+ 
 const card = [
   {
     show: false,
@@ -16,24 +16,19 @@ const card = [
     imageHeight: 170,
   },
 ];
-
+ 
+const SUBVIEWS = ["admins", "faculty", "students", "parents", "finance", "hr"];
+ 
 export default function FinanceDashLeft() {
   const searchParams = useSearchParams();
-  const view = searchParams.get("view");
-  const semester = searchParams.get("semester");
-
-  // if (view === "semwise" && semester) {
-  //   return (
-  //     <div className="w-[68%] p-2">
-  //       <SemwiseDetail semester={semester} />
-  //     </div>
-  //   );
-  // }
-
+  const subview = searchParams.get("subview");
+ 
+  const isSubview = SUBVIEWS.includes(subview ?? "");
+ 
   return (
     <div className="w-[68%] p-2">
-      <UserInfoCard cardProps={card} />
-      <div className="mt-5 rounded-lg flex gap-3 text-xs"></div>
+      {!isSubview && <UserInfoCard cardProps={card} />}
+      {!isSubview && <div className="mt-5 rounded-lg flex gap-3 text-xs" />}
       <DashboardPage />
     </div>
   );
