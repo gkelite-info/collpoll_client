@@ -14,6 +14,7 @@ import {
 } from "@/lib/helpers/Hr/meetings/meetingsAPI";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
+import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
@@ -199,9 +200,8 @@ export default function MeetingsPage() {
                     key={tab.id}
                     onClick={() => updateFilter("type", tab.id)}
                     disabled={isActive}
-                    className={`relative z-10 focus:outline-none cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                      isActive ? "text-[#E9E9E9]" : "text-[#414141]"
-                    }`}
+                    className={`relative z-10 focus:outline-none cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${isActive ? "text-[#E9E9E9]" : "text-[#414141]"
+                      }`}
                   >
                     {tab.label}
                     {isActive && (
@@ -236,9 +236,12 @@ export default function MeetingsPage() {
           <div className="flex-1 overflow-y-auto p-2 mt-4 min-h-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
               {isLoading || !collegeHrId ? (
-                <div className="col-span-full flex justify-center items-center h-[400px]">
-                  <Loader />
-                </div>
+                <MeetingCardShimmer
+                  role={"Finance"}
+                  category={currentCategory}
+                  type={currentType}
+                  count={8}
+                />
               ) : meetings.length > 0 ? (
                 meetings.map((meeting) => (
                   <NewMeetingCard
@@ -262,11 +265,10 @@ export default function MeetingsPage() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className={`p-2 rounded-md ${
-                    page === 1
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-200 hover:bg-gray-300 cursor-pointer"
-                  }`}
+                  className={`p-2 rounded-md ${page === 1
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-200 hover:bg-gray-300 cursor-pointer"
+                    }`}
                 >
                   <CaretLeft size={16} weight="bold" />
                 </button>
@@ -276,11 +278,10 @@ export default function MeetingsPage() {
                       <button
                         key={p}
                         onClick={() => setPage(p)}
-                        className={`px-3 py-1 cursor-pointer rounded-md text-sm font-medium ${
-                          page === p
-                            ? "bg-[#16284F] text-white"
-                            : "bg-gray-200 hover:bg-gray-300"
-                        }`}
+                        className={`px-3 py-1 cursor-pointer rounded-md text-sm font-medium ${page === p
+                          ? "bg-[#16284F] text-white"
+                          : "bg-gray-200 hover:bg-gray-300"
+                          }`}
                       >
                         {p}
                       </button>
@@ -291,11 +292,10 @@ export default function MeetingsPage() {
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className={`p-2 rounded-md ${
-                    page === totalPages
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-200 hover:bg-gray-300 cursor-pointer"
-                  }`}
+                  className={`p-2 rounded-md ${page === totalPages
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-200 hover:bg-gray-300 cursor-pointer"
+                    }`}
                 >
                   <CaretRight size={16} weight="bold" />
                 </button>

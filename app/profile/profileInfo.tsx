@@ -8,7 +8,6 @@ import { Image as ImageIcon } from "@phosphor-icons/react";
 import { deleteUserProfilePhoto, getUserProfilePhoto, upsertUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
 import { ProfileShimmer } from "./shimmers/ProfileShimmer";
 import { DeletePhotoModal } from "./DeletePhotoModal";
-
 interface ProfileInfoData {
   registrationId: string;
   email: string;
@@ -185,11 +184,13 @@ export default function ProfileInfo() {
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       toast.error("Only JPG, PNG, WEBP images allowed");
+      event.target.value = "";
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
       toast.error("Image must be less than 5MB");
+      event.target.value = "";
       return;
     }
 
@@ -200,10 +201,14 @@ export default function ProfileInfo() {
         const base64String = reader.result as string;
         setProfileData((prev) => ({ ...prev, profilePhoto: base64String }));
         setIsPhotoChanged(true);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       };
       reader.readAsDataURL(file);
     } catch (error) {
       toast.error("Failed to preview photo");
+      event.target.value = "";
     } finally {
       setPhotoLoading(false);
     }
@@ -217,6 +222,9 @@ export default function ProfileInfo() {
       setProfileData((prev) => ({ ...prev, profilePhoto: null }));
       setIsPhotoChanged(false);
       setProfilePhoto(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       toast.success("Profile photo removed");
       setIsDeleteModalOpen(false);
     } catch (error) {
@@ -253,16 +261,6 @@ export default function ProfileInfo() {
     }
   };
 
-
-
-
-  // const ProfileRow = ({ label, value }: { label: string; value: string }) => (
-  //   <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
-  //     <span className="text-gray-700 font-medium text-sm sm:text-base">{label}</span>
-  //     <span className="text-gray-600 text-sm sm:text-base">{value || "—"}</span>
-  //   </div>
-  // );
-
   const ProfileRow = ({ label, value }: { label: string; value: string }) => (
     <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[180px_1fr] gap-4 py-2">
       <span className="text-gray-700 font-medium text-sm sm:text-base">
@@ -278,8 +276,8 @@ export default function ProfileInfo() {
   );
 
   return (
-    <div className="w-full min-h-[85vh]">
-      <div className="mx-auto bg-white rounded-lg p-6 sm:p-10 shadow-sm">
+    <div className="w-full">
+      <div className="mx-auto bg-white rounded-lg p-6 sm:p-8 shadow-sm">
         {(isInitialLoading || !role) ? (
           <ProfileShimmer />
         ) : <>
@@ -356,8 +354,7 @@ export default function ProfileInfo() {
               </div>
             </div>
           </div>
-
-          <div className="flex justify-end mt-12 pt-6">
+          <div className="flex justify-end -mt-10">
             <button
               onClick={handleSave}
               disabled={isLoading}

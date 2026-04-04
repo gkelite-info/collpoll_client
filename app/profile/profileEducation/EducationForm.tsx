@@ -81,7 +81,7 @@ export default function ProfileEducationForm({
   onRemove: () => void;
 }) {
   const { userId, collegeId } = useUser();
-
+  const resetRef = useState<(() => void) | null>(null);
   const [recordId, setRecordId] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -110,7 +110,13 @@ export default function ProfileEducationForm({
       if (response.success) {
         toast.success(`${TITLES[type]} deleted`);
         setConfirmOpen(false);
-        onRemove();
+        if (type === "primary") {
+          setRecordId(null);
+          resetRef[0]?.();
+        }
+        else {
+          onRemove();
+        }
       } else {
         toast.error(`Failed to delete ${TITLES[type]}. Please try again.`);
       }
@@ -143,14 +149,20 @@ export default function ProfileEducationForm({
       <div className="flex justify-between items-center w-[85%] mb-3">
         <h3 className="text-[#43C17A] font-medium">{TITLES[type]}</h3>
         <button
-          onClick={() => setConfirmOpen(true)}
+          onClick={() => {
+            if (!recordId) {
+              onRemove();
+              return;
+            }
+            setConfirmOpen(true);
+          }}
           className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
         >
           <span className="block w-3 h-[3px] bg-white rounded-full" />
         </button>
       </div>
 
-      {type === "primary" && <PrimaryFields       {...fieldProps} />}
+      {type === "primary" && <PrimaryFields       {...fieldProps} setResetHandler={resetRef[1]} />}
       {type === "secondary" && <SecondaryFields     {...fieldProps} />}
       {type === "undergraduate" && <UndergraduateFields {...fieldProps} />}
       {type === "phd" && <PhdFields           {...fieldProps} />}
@@ -159,7 +171,11 @@ export default function ProfileEducationForm({
 }
 
 
-function PrimaryFields({ userId, collegeId, onSaveRef, onRecordSaved }: FieldProps) {
+function PrimaryFields({ userId, collegeId, onSaveRef, onRecordSaved, setResetHandler }: FieldProps & {
+  setResetHandler: React.Dispatch<
+    React.SetStateAction<(() => void) | null>
+  >
+}) {
   const [form, setForm] = useState({
     primaryEducationId: undefined as number | undefined,
     schoolName: "",
@@ -190,10 +206,29 @@ function PrimaryFields({ userId, collegeId, onSaveRef, onRecordSaved }: FieldPro
     })();
   }, [userId]);
 
+  useEffect(() => {
+
+    const resetPrimaryForm = () => {
+      setForm({
+        primaryEducationId: undefined,
+        schoolName: "",
+        board: "",
+        mediumOfStudy: "",
+        yearOfPassing: "",
+        location: "",
+      });
+    };
+
+    setResetHandler(() => resetPrimaryForm);
+
+  }, [setResetHandler]);
+
   const handleChange = (field: string, value: string) => {
     let v = value;
-    if (["schoolName", "board", "mediumOfStudy", "location"].includes(field))
+    if (["schoolName", "mediumOfStudy", "location"].includes(field))
       v = formatTitleCase(v);
+    if (field === "board")
+      v = v.replace(/[^A-Za-z ]/g, "");
     if (field === "yearOfPassing") v = v.replace(/\D/g, "").slice(0, 4);
     setForm((p) => ({ ...p, [field]: v }));
   };
@@ -293,8 +328,10 @@ function SecondaryFields({ userId, collegeId, onSaveRef, onRecordSaved }: FieldP
 
   const handleChange = (field: string, value: string) => {
     let v = value;
-    if (["institutionName", "board", "mediumOfStudy", "location"].includes(field))
+    if (["institutionName", "mediumOfStudy", "location"].includes(field))
       v = formatTitleCase(v);
+    if (field === "board")
+      v = v.replace(/[^A-Za-z ]/g, "");
     if (field === "yearOfPassing") v = v.replace(/\D/g, "").slice(0, 4);
     if (field === "percentage") v = v.replace(/[^0-9.%]/g, "");
     setForm((p) => ({ ...p, [field]: v }));

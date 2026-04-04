@@ -18,11 +18,11 @@ export default function CalendarPage() {
                         />
                     </div>
                 </div>
-                <div className="mt-5 gap-4 bg-green-00 flex justify-between">
-                    <div className="w-[459px] bg-pink-00">
+                <div className="mt-5 gap-4 bg-green-00 grid lg:grid-cols-[40%_60%] ">
+                    <div className=" bg-pink-00">
                         <CalendarLeft />
                     </div>
-                    <div className="w-[647px] bg-indigo-00">
+                    <div className=" bg-indigo-00">
                         <CalendarRight />
                     </div>
                 </div>

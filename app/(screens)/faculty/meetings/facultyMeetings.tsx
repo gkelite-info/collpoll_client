@@ -10,6 +10,7 @@ import MeetingCard from "../../finance/meetings/components/MeetingCard";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Faculty';
@@ -154,9 +155,12 @@ export default function FacultyMeetingsPage() {
                     <div className="flex-1 overflow-y-auto p-2 mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
                             {isLoading ? (
-                                <div className="col-span-full flex justify-center items-center h-[400px]">
-                                    <Loader />
-                                </div>
+                                <MeetingCardShimmer
+                                    role={role}
+                                    category={currentCategory}
+                                    type={currentType}
+                                    count={8}
+                                />
                             ) : meetings.length > 0 ? (
                                 meetings.map((meeting) => (
                                     <MeetingCard key={meeting.id} data={meeting} role={role} />
