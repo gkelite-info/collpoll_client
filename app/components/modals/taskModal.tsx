@@ -32,7 +32,7 @@ type TaskModalProps = {
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ) => Promise<void>;
 };
 
@@ -40,57 +40,90 @@ const getWordCount = (text: string) => {
   return text.trim().split(/\s+/).filter(Boolean).length;
 };
 
-export default function TaskModal({ open, role, collegeSubjectId, facultyId, studentId, onClose, onSave, defaultValues }: TaskModalProps) {
+export default function TaskModal({
+  open,
+  role,
+  collegeSubjectId,
+  facultyId,
+  studentId,
+  onClose,
+  onSave,
+  defaultValues,
+}: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [saving, setSaving] = useState(false);
 
-
   useEffect(() => {
     if (defaultValues?.facultyTaskId) {
-
       setTitle(defaultValues.title);
       setDescription(defaultValues.description);
       setDueTime(defaultValues.time);
 
-      setDueDate(
-        defaultValues.date ??
-        new Date().toISOString().split("T")[0]
-      );
+      setDueDate(defaultValues.date ?? new Date().toISOString().split("T")[0]);
     } else {
       setTitle("");
       setDescription("");
       setDueDate("");
       setDueTime("");
-
     }
   }, [defaultValues]);
 
   if (!open) return null;
 
+  const handleCancel = () => {
+    setTitle("");
+    setDescription("");
+    setDueDate("");
+    setDueTime("");
+
+    onClose();
+  };
   const handleSave = async () => {
+    if (!title.trim()) {
+      toast.error("Task title is required.");
+      return; // Stop execution immediately
+    }
+
+    if (!description.trim()) {
+      toast.error("Description is required.");
+      return;
+    }
+
+    if (!dueDate) {
+      toast.error("Please select a date.");
+      return;
+    }
+
+    if (!dueTime) {
+      toast.error("Please select a time.");
+      return;
+    }
+
     try {
       setSaving(true);
 
       await onSave(
         {
-          title,
-          description,
+          title: title.trim(),
+          description: description.trim(),
           dueDate,
           dueTime,
         },
-        defaultValues?.facultyTaskId
+        defaultValues?.facultyTaskId,
       );
 
       toast.success(
-        defaultValues ? "Task updated successfully" : "Task created successfully"
+        defaultValues
+          ? "Task updated successfully"
+          : "Task created successfully",
       );
 
-      onClose();
-    } catch (e) {
-      toast.error("Failed to save task");
+      handleCancel();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save task");
     } finally {
       setSaving(false);
     }
@@ -99,14 +132,17 @@ export default function TaskModal({ open, role, collegeSubjectId, facultyId, stu
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-6 w-[450px] animate-fadeIn relative">
-
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-[#282828]">
             {defaultValues ? "Edit Task" : "Add Task"}
           </h2>
 
           <button onClick={onClose}>
-            <X size={24} weight="bold" className="text-[#282828] cursor-pointer" />
+            <X
+              size={24}
+              weight="bold"
+              className="text-[#282828] cursor-pointer"
+            />
           </button>
         </div>
 
@@ -173,17 +209,18 @@ export default function TaskModal({ open, role, collegeSubjectId, facultyId, stu
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${saving
-              ? "bg-[#A7DDBE] text-white cursor-not-allowed"
-              : "bg-[#43C17A] text-white"
-              }`}
+            className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${
+              saving
+                ? "bg-[#A7DDBE] text-white cursor-not-allowed"
+                : "bg-[#43C17A] text-white"
+            }`}
           >
             {saving ? "Saving..." : "Save task"}
           </button>
 
           <button
             className="w-1/2 border py-2 rounded-md text-sm text-[#282828] cursor-pointer"
-            onClick={onClose}
+            onClick={handleCancel}
           >
             Cancel
           </button>

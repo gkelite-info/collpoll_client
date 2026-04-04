@@ -25,6 +25,60 @@ import {
 
 const ITEMS_PER_PAGE = 10;
 
+const HorizontalChartSkeleton = () => (
+  <div className="bg-white rounded-xl shadow-md py-4 px-2 h-90 animate-pulse flex flex-col justify-around">
+    {[60, 85, 45, 90].map((w, i) => (
+      <div
+        key={i}
+        className="h-8 bg-gray-200 rounded-r-md mx-6"
+        style={{ width: `${w}%` }}
+      ></div>
+    ))}
+  </div>
+);
+
+const TableSkeleton = ({
+  columns,
+  height,
+}: {
+  columns: any[];
+  height?: string;
+}) => (
+  <div className="mt-2 w-full animate-pulse">
+    <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className={`max-h-[${height || "60vh"}] overflow-auto`}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-6 py-4 text-left">
+                  <div className="h-4 w-20 bg-gray-300 rounded"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3, 4, 5, 6, 7].map((rowIdx) => (
+              <tr key={rowIdx} className="border-b border-gray-100">
+                {columns.map((_, colIdx) => (
+                  <td key={colIdx} className="px-6 py-4">
+                    <div
+                      className={`h-4 bg-gray-200 rounded ${
+                        colIdx === 0 ? "w-3/4" : "w-1/2"
+                      }`}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+// ---------------------------------------------
+
 const RightAlignedLabel = (props: any) => {
   const { y, height, value, viewBox } = props;
 
@@ -122,7 +176,7 @@ function YearWiseFeeCollectionContent() {
 
   const columns = [
     { title: "Student Name", key: "studentName" },
-    { title: "Student ID", key: "rollNo" }, // Changed title to Student ID
+    { title: "Student ID", key: "rollNo" },
     { title: "Department", key: "department" },
     { title: "Year", key: "year" },
     { title: "Semester", key: "semester" },
@@ -232,211 +286,210 @@ function YearWiseFeeCollectionContent() {
         {breadcrumb}
       </h2>
 
-      {isPageLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader />
+      {/* HEADER INFO PRESERVED DURING LOADING */}
+      <div className="flex justify-between items-center">
+        <h3 className="font-semibold text-lg -mb-2 text-[#282828]">
+          Fee Collection Trends
+        </h3>
+
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium text-[#282828]">Academic Year</span>
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="bg-purple-100 text-purple-700 px-1 py-0.5 rounded-full outline-none cursor-pointer"
+            >
+              {availableYears.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>
+                  {yearOption}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-5 text-sm">
+            <div className="flex items-center gap-2 text-[#5A5A5A]">
+              <span className="w-3 h-3 bg-[#43C17A] rounded-xs" />
+              Collected
+            </div>
+            <div className="flex items-center gap-2 text-[#5A5A5A]">
+              <span className="w-3 h-3 bg-[#B9E6CD] rounded-xs" />
+              Pending
+            </div>
+          </div>
         </div>
-      ) : (
-        <>
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg -mb-2 text-[#282828]">
-              Fee Collection Trends
-            </h3>
+      </div>
 
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-[#282828]">
-                  Academic Year
-                </span>
-                <select
-                  value={academicYear}
-                  onChange={(e) => setAcademicYear(e.target.value)}
-                  className="bg-purple-100 text-purple-700 px-1 py-0.5 rounded-full outline-none"
-                >
-                  {availableYears.map((yearOption) => (
-                    <option key={yearOption} value={yearOption}>
-                      {yearOption}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-5 text-sm">
-                <div className="flex items-center gap-2 text-[#5A5A5A]">
-                  <span className="w-3 h-3 bg-[#43C17A] rounded-xs" />
-                  Collected
-                </div>
-                <div className="flex items-center gap-2 text-[#5A5A5A]">
-                  <span className="w-3 h-3 bg-[#B9E6CD] rounded-xs" />
-                  Pending
-                </div>
+      {/* CHARTS SECTION */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {isPageLoading ? (
+          <>
+            <HorizontalChartSkeleton />
+            <HorizontalChartSkeleton />
+          </>
+        ) : (
+          [
+            { data: leftChart, colors: ["#43C17A", "#B9E6CD"] },
+            { data: rightChart, colors: ["#6C5DD3", "#C7BFFF"] },
+          ].map((chart, idx) => (
+            <div key={idx} className="bg-white rounded-xl shadow-md py-4 -px-2">
+              <div className="h-90">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={chart.data}
+                    layout="vertical"
+                    barCategoryGap="20%"
+                    margin={{ right: 40, left: 15, bottom: 15 }}
+                  >
+                    <XAxis
+                      type="number"
+                      tickFormatter={formatAmount}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ dx: 10 }}
+                      tickMargin={0}
+                    />
+                    <YAxis
+                      dataKey="year"
+                      type="category"
+                      axisLine={false}
+                      tickLine={false}
+                      tickMargin={10}
+                    />
+                    <Tooltip
+                      formatter={(value) =>
+                        typeof value === "number"
+                          ? `₹ ${value.toLocaleString()}`
+                          : value
+                      }
+                      cursor={{ fill: "#f8fafc" }}
+                      labelStyle={{
+                        color: "#000",
+                        opacity: 1,
+                        fontWeight: 600,
+                      }}
+                    />
+                    <Bar
+                      dataKey="collected"
+                      stackId="a"
+                      fill={chart.colors[0]}
+                    />
+                    <Bar dataKey="pending" stackId="a" fill={chart.colors[1]}>
+                      <LabelList
+                        dataKey="label"
+                        content={<RightAlignedLabel />}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
+          ))
+        )}
+      </div>
+
+      {/* OVERVIEW & TABLE SECTION */}
+      <div className="space-y-4 pb-10 pt-4">
+        <h3 className="font-semibold text-lg text-[#282828]">
+          Students Overview
+        </h3>
+
+        <div className="flex justify-between items-center">
+          <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[40%]">
+            <input
+              placeholder="Search by Student Name / Student ID"
+              className="bg-transparent outline-none text-sm w-full text-[#282828]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <MagnifyingGlass size={20} className="text-[#22A55D]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { data: leftChart, colors: ["#43C17A", "#B9E6CD"] },
-              { data: rightChart, colors: ["#6C5DD3", "#C7BFFF"] },
-            ].map((chart, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-xl shadow-md py-4 -px-2"
-              >
-                <div className="h-90">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chart.data}
-                      layout="vertical"
-                      barCategoryGap="20%"
-                      margin={{ right: 40, left: 15, bottom: 15 }}
-                    >
-                      <XAxis
-                        type="number"
-                        tickFormatter={formatAmount}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ dx: 10 }}
-                        tickMargin={0}
-                      />
-                      <YAxis
-                        dataKey="year"
-                        type="category"
-                        axisLine={false}
-                        tickLine={false}
-                        tickMargin={10}
-                      />
-                      <Tooltip
-                        formatter={(value) =>
-                          typeof value === "number"
-                            ? `₹ ${value.toLocaleString()}`
-                            : value
-                        }
-                        cursor={{ fill: "#f8fafc" }}
-                        labelStyle={{
-                          color: "#000",
-                          opacity: 1,
-                          fontWeight: 600,
-                        }}
-                      />
-                      <Bar
-                        dataKey="collected"
-                        stackId="a"
-                        fill={chart.colors[0]}
-                      />
-                      <Bar dataKey="pending" stackId="a" fill={chart.colors[1]}>
-                        <LabelList
-                          dataKey="label"
-                          content={<RightAlignedLabel />}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-4 text-sm">
+            <select
+              value={semester}
+              onChange={(e) => {
+                setSemester(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-[#43C17A1F] text-[#00A94A] cursor-pointer px-3 py-1 rounded-md outline-none"
+            >
+              <option value="All Semesters">All Semesters</option>
+
+              {availableSemesters.map((sem) => (
+                <option key={sem} value={sem}>
+                  {sem.replace("Sem", "Semester")}
+                </option>
+              ))}
+            </select>
+
+            <div
+              onClick={() => {
+                setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                setCurrentPage(1);
+              }}
+              className="bg-[#43C17A1F] cursor-pointer rounded-full p-2"
+            >
+              <FunnelSimple size={18} className="text-[#00A94A]" />
+            </div>
           </div>
+        </div>
 
-          <div className="space-y-4 pb-10">
-            <h3 className="font-semibold text-lg text-[#282828]">
-              Students Overview
-            </h3>
-
-            <div className="flex justify-between items-center">
-              <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[40%]">
-                <input
-                  placeholder="Search by Student Name / Student ID"
-                  className="bg-transparent outline-none text-sm w-full text-[#282828]"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <MagnifyingGlass size={20} className="text-[#22A55D]" />
-              </div>
-
-              <div className="flex items-center gap-4 text-sm">
-                <select
-                  value={semester}
-                  onChange={(e) => {
-                    setSemester(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="bg-[#43C17A1F] text-[#00A94A] cursor-pointer px-3 py-1 rounded-md outline-none"
-                >
-                  <option value="All Semesters">All Semesters</option>
-
-                  {availableSemesters.map((sem) => (
-                    <option key={sem} value={sem}>
-                      {sem.replace("Sem", "Semester")}
-                    </option>
-                  ))}
-                </select>
-
-                <div
-                  onClick={() => {
-                    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                    setCurrentPage(1);
-                  }}
-                  className="bg-[#43C17A1F] cursor-pointer rounded-full p-2"
-                >
-                  <FunnelSimple size={18} className="text-[#00A94A]" />
-                </div>
-              </div>
+        <div className="relative min-h-[400px]">
+          {isSearching && !isPageLoading ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-xl">
+              <Loader />
             </div>
+          ) : null}
 
-            <div className="relative min-h-[400px]">
-              {isSearching ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-xl">
-                  <Loader />
-                </div>
-              ) : null}
+          {isPageLoading ? (
+            <TableSkeleton columns={columns} height="60vh" />
+          ) : (
+            <TableComponent
+              columns={columns}
+              tableData={paginatedData}
+              height="60vh"
+            />
+          )}
+        </div>
 
-              <TableComponent
-                columns={columns}
-                tableData={paginatedData}
-                height="60vh"
-              />
-            </div>
+        {totalPages > 1 && !isSearching && !isPageLoading && (
+          <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+            >
+              <CaretLeft size={18} weight="bold" color="black" />
+            </button>
 
-            {totalPages > 1 && !isSearching && (
-              <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+            <div className="flex gap-1">
+              {[...Array(totalPages)].map((_, i) => (
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+                  key={i + 1}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
+                    currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "bg-white text-gray-600 border hover:border-gray-300"
+                  }`}
                 >
-                  <CaretLeft size={18} weight="bold" color="black" />
+                  {i + 1}
                 </button>
+              ))}
+            </div>
 
-                <div className="flex gap-1">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i + 1}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${
-                        currentPage === i + 1
-                          ? "bg-[#16284F] text-white"
-                          : "bg-white text-gray-600 border hover:border-gray-300"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  <CaretRight size={18} weight="bold" color="black" />
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
+            >
+              <CaretRight size={18} weight="bold" color="black" />
+            </button>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

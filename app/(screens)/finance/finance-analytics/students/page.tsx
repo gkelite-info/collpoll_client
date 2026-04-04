@@ -1,7 +1,13 @@
 "use client";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MagnifyingGlass, DownloadSimple, UsersThree, CaretLeftIcon, CaretDown } from "@phosphor-icons/react";
+import {
+  MagnifyingGlass,
+  DownloadSimple,
+  UsersThree,
+  CaretLeftIcon,
+  CaretDown,
+} from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { downloadCSV } from "@/app/utils/downloadCSV";
@@ -9,8 +15,10 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 import { getFinanceFilterOptions } from "@/lib/helpers/finance/getFinanceFilterOptions";
 import toast from "react-hot-toast";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { getOverallStudentsOverview, getOverallStudentsSummary } from "@/lib/helpers/finance/getOverallStudentsOverview";
-
+import {
+  getOverallStudentsOverview,
+  getOverallStudentsSummary,
+} from "@/lib/helpers/finance/getOverallStudentsOverview";
 
 type Semester = {
   collegeSemesterId: number;
@@ -31,11 +39,65 @@ type Branch = {
   years: AcademicYear[];
 };
 
+// --- Corrected Shimmer Skeleton for Summary Cards ---
+const CardSkeleton = () => (
+  <div className="rounded-lg p-3 h-32 bg-gray-50 border border-gray-100 flex flex-col justify-between shadow-sm animate-pulse w-full">
+    <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="w-9 h-8 rounded-sm bg-gray-200"></div>
+    </div>
+    <div className="h-6 w-16 bg-gray-300 rounded"></div>
+    <div className="h-4 w-32 bg-gray-200 rounded mt-1"></div>
+  </div>
+);
+
+// --- New Standalone Table Shimmer ---
+const TableSkeleton = ({
+  columns,
+  height,
+}: {
+  columns: any[];
+  height?: string;
+}) => (
+  <div className="mt-2 w-full animate-pulse">
+    <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className={`max-h-[${height || "55vh"}] overflow-auto`}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-6 py-4 text-left">
+                  <div className="h-4 w-20 bg-gray-300 rounded"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3, 4, 5, 6].map((rowIdx) => (
+              <tr key={rowIdx} className="border-b border-gray-100">
+                {columns.map((_, colIdx) => (
+                  <td key={colIdx} className="px-6 py-4">
+                    <div
+                      className={`h-4 bg-gray-200 rounded ${
+                        colIdx === 0 ? "w-3/4" : "w-1/2"
+                      }`}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+// ------------------------------------------
 
 function OverallStudentsOverview() {
   const router = useRouter();
 
-  const { collegeId, collegeEducationId, collegeEducationType, loading } = useFinanceManager();
+  const { collegeId, collegeEducationId, collegeEducationType, loading } =
+    useFinanceManager();
   const [search, setSearch] = useState("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [educationFilter, setEducationFilter] = useState("All");
@@ -112,7 +174,7 @@ function OverallStudentsOverview() {
     try {
       const summary = await getOverallStudentsSummary(
         collegeId,
-        collegeEducationId
+        collegeEducationId,
       );
 
       setSummaryCounts(summary);
@@ -154,7 +216,6 @@ function OverallStudentsOverview() {
 
       setStudentsData(data.students);
       setTotalRecords(data.totalCount ?? 0);
-
     } catch (error: any) {
       console.error("❌ Table Load Error:", error);
       toast.error(error?.message || "Failed to load students");
@@ -250,7 +311,6 @@ function OverallStudentsOverview() {
         downloadCSV(exportData, "students-report");
         setDownloadLoading(false);
       }, 300);
-
     } catch (error) {
       setDownloadLoading(false);
       toast.error("Failed to download report");
@@ -280,14 +340,14 @@ function OverallStudentsOverview() {
     { title: "Pending", key: "pending" },
     { title: "Status", key: "status" },
     { title: "Action", key: "action" },
-  ]
+  ];
 
   useEffect(() => {
     const loadFilters = async () => {
       if (!loading && collegeId && collegeEducationId) {
         const filterData = await getFinanceFilterOptions(
           collegeId,
-          collegeEducationId
+          collegeEducationId,
         );
 
         const branchList = filterData.branches || [];
@@ -321,10 +381,9 @@ function OverallStudentsOverview() {
           onClick={handleDownload}
           disabled={downloadLoading}
           className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
-    ${downloadLoading
-              ? "opacity-70 cursor-not-allowed"
-              : "hover:bg-[#1E3A8A]"
-            }`}
+    ${
+      downloadLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#1E3A8A]"
+    }`}
         >
           {downloadLoading ? "Downloading Report..." : "Download Report"}
           {!downloadLoading && <DownloadSimple size={18} />}
@@ -332,16 +391,21 @@ function OverallStudentsOverview() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
-        {cardsData.map((card, index) => (
-          <CardComponent
-            key={index}
-            style={card.style}
-            icon={card.icon}
-            value={card.value}
-            label={card.label}
-          />
-        ))}
+        {cardsLoading || loading
+          ? /* Render 4 Skeletons while loading */
+            [1, 2, 3, 4].map((i) => <CardSkeleton key={i} />)
+          : /* Render actual cards once data is loaded */
+            cardsData.map((card, index) => (
+              <CardComponent
+                key={index}
+                style={card.style}
+                icon={card.icon}
+                value={card.value}
+                label={card.label}
+              />
+            ))}
       </div>
+
       <div className="flex items-center gap-6">
         <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[300px] flex-shrink-0">
           <input
@@ -450,9 +514,12 @@ function OverallStudentsOverview() {
                       {branchFilter !== "All" &&
                         yearFilter !== "All" &&
                         branches
-                          .find((b) => b.collegeBranchId === Number(branchFilter))
+                          .find(
+                            (b) => b.collegeBranchId === Number(branchFilter),
+                          )
                           ?.years?.find(
-                            (y) => y.collegeAcademicYearId === Number(yearFilter)
+                            (y) =>
+                              y.collegeAcademicYearId === Number(yearFilter),
                           )
                           ?.semesters?.map((sem) => (
                             <option
@@ -502,22 +569,32 @@ function OverallStudentsOverview() {
       <h1 className="text-lg text-[#282828] font-bold mb-3 -mt-3">
         Overall Students Overview
       </h1>
-      <TableComponent
-        columns={collegeEducationType === "Inter" ? interColumns : columns}
-        tableData={tableData}
-        isLoading={tableLoading}
-        height="55vh"
-      />
+
+      {/* Conditionally Render Table Shimmer or Actual Table */}
+      {tableLoading ? (
+        <TableSkeleton
+          columns={collegeEducationType === "Inter" ? interColumns : columns}
+          height="55vh"
+        />
+      ) : (
+        <TableComponent
+          columns={collegeEducationType === "Inter" ? interColumns : columns}
+          tableData={tableData}
+          height="55vh"
+        />
+      )}
+
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-3 mt-8 mb-4">
           <button
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${currentPage === 1
-                ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
+        ${
+          currentPage === 1
+            ? "border-gray-200 text-gray-300 cursor-not-allowed"
+            : "border-gray-300 text-gray-600 hover:bg-gray-100"
+        }`}
           >
             <CaretLeft size={18} weight="bold" />
           </button>
@@ -527,10 +604,11 @@ function OverallStudentsOverview() {
               key={i}
               onClick={() => setCurrentPage(i + 1)}
               className={`w-10 h-10 rounded-lg font-semibold transition-all
-          ${currentPage === i + 1
-                  ? "bg-[#16284F] text-white shadow-md"
-                  : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+          ${
+            currentPage === i + 1
+              ? "bg-[#16284F] text-white shadow-md"
+              : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+          }`}
             >
               {i + 1}
             </button>
@@ -540,10 +618,11 @@ function OverallStudentsOverview() {
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${currentPage === totalPages
-                ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
+        ${
+          currentPage === totalPages
+            ? "border-gray-200 text-gray-300 cursor-not-allowed"
+            : "border-gray-300 text-gray-600 hover:bg-gray-100"
+        }`}
           >
             <CaretRight size={18} weight="bold" />
           </button>
@@ -559,4 +638,3 @@ export default function Page() {
     </Suspense>
   );
 }
-

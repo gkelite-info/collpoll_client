@@ -24,8 +24,8 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
               src={faculty.image}
               alt={faculty.id}
               width={56}
-              height={56}
-              className="rounded-full object-cover"
+              height={76}
+              className="rounded-full aspect-square object-cover"
             />
           </div>
 
@@ -48,9 +48,7 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
 
         <p className="text-sm text-[#282828] mb-1 flex items-center">
           Subjects Handled –{" "}
-          <span
-            className="text-[#525252] flex-1 min-w-0 max-w-[220px] overflow-x-auto whitespace-nowrap ml-1"
-          >
+          <span className="text-[#525252] flex-1 min-w-0 max-w-[220px] overflow-x-auto whitespace-nowrap ml-1">
             {faculty.subjects}
           </span>
         </p>

@@ -41,7 +41,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
   return (
     <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
-      {/* <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm overflow-hidden"> */}
       {cardProps.map((item, index) => (
         <div
           className="relative z-10 flex h-full items-center px-8"
@@ -58,19 +57,25 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               Welcome Back,
             </p>
 
-            <div className="bg-red-00 flex items-baseline flex-wrap">
+            <div className="flex items-baseline flex-wrap gap-1.5">
               <h1 className="text-lg font-semibold text-[#089144] leading-tight">
-                {!item.show && "Prof."} {item.user}
+                {!item.show ? `Prof. ${item.user}` : item.user}
               </h1>
-              <span className="text-[#454545] lg:ml-3 text-md font-medium">
-                {faculty_subject.map((s) => s.subjectName).join(", ")}
-              </span>
-              <p className="text-[#454545] italic text-sm font-medium">
-                {item.show && "Parent of"}{" "}
-                <span className="text-[#089144] font-semibold">
-                  {item.studentName}
+
+              {!item.show && faculty_subject?.length > 0 && (
+                <span className="text-[#454545] text-md font-medium">
+                  {faculty_subject.map((s) => s.subjectName).join(", ")}
                 </span>
-              </p>
+              )}
+
+              {item.show && item.studentName && (
+                <p className="text-[#454545] italic text-sm font-medium">
+                  Parent of{" "}
+                  <span className="text-[#089144] font-semibold">
+                    {item.studentName}
+                  </span>
+                </p>
+              )}
             </div>
 
             <p className="text-md text-[#454545] mt-0 font-medium">
@@ -95,12 +100,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           )}
         </div>
       ))}
-
-      {/* <div className="absolute top-4 right-4 z-20">
-        <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
-          {today ? today : "Loading..."}
-        </div>
-      </div> */}
 
       <svg
         className="absolute right-0 bottom-0 z-0 h-full w-auto"

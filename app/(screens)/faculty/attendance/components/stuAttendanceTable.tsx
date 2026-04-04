@@ -34,6 +34,41 @@ interface Props {
   loadingFilters?: boolean;
 }
 
+const TableRowSkeleton = () => (
+  <tr className="border-b border-gray-50">
+    <td className="px-4 py-4">
+      <div className="h-4 w-4 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-6 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-20 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-8 w-8 bg-gray-200 rounded-full shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-32 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-8 w-24 bg-gray-200 rounded-full shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-24 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
+    </td>
+    <td className="px-4 py-4">
+      <div className="h-4 w-16 bg-gray-200 rounded shimmer-bg" />
+    </td>
+  </tr>
+);
+
 export default function StuAttendanceTable({
   students,
   setStudents,
@@ -109,11 +144,35 @@ export default function StuAttendanceTable({
         return "bg-gray-100 text-gray-600";
     }
   };
+
   const shouldShowReasonInput = (status: string) =>
     ["Absent", "Leave", "Late", "Class Cancel"].includes(status);
 
   return (
     <div className="space-y-4">
+      <style>{`
+        .shimmer-bg {
+          position: relative;
+          overflow: hidden;
+        }
+        .shimmer-bg::after {
+          content: "";
+          position: absolute;
+          top: 0; right: 0; bottom: 0; left: 0;
+          transform: translateX(-100%);
+          background-image: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          animation: table-sweep 1.5s infinite;
+        }
+        @keyframes table-sweep {
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
           {!isTopicMode && onFilterChange && (
@@ -199,7 +258,9 @@ export default function StuAttendanceTable({
             <button
               onClick={onEditClick}
               disabled={
-                (!isTopicMode && !selectedClass) || students.length === 0
+                (!isTopicMode && !selectedClass) ||
+                students.length === 0 ||
+                loadingFilters
               }
               className="flex items-center gap-2 bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white px-4 py-2 rounded-lg shadow-sm transition-transform active:scale-95 disabled:opacity-50 font-medium"
             >
@@ -209,7 +270,7 @@ export default function StuAttendanceTable({
           ) : (
             <button
               onClick={handleSaveAttendance}
-              disabled={saving}
+              disabled={saving || loadingFilters}
               className="bg-[#43C17A] hover:bg-[#36a86a] text-sm cursor-pointer text-white px-4 py-2 rounded-lg shadow-sm transition-transform active:scale-95 disabled:opacity-50 whitespace-nowrap font-medium"
             >
               {saving ? "Saving..." : "Save Attendance"}
@@ -218,9 +279,9 @@ export default function StuAttendanceTable({
         </div>
       </div>
 
-      {/* TABLE */}
+      {/* TABLE DATA AREA */}
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-        {isEditing && selectedIds.length > 0 && (
+        {isEditing && selectedIds.length > 0 && !loadingFilters && (
           <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-4 py-2 shadow-sm animate-in fade-in slide-in-from-top-2">
             <span className="text-xs font-bold text-gray-500 mr-2 border-r pr-3">
               {selectedIds.length} Selected
@@ -251,6 +312,7 @@ export default function StuAttendanceTable({
             </button>
           </div>
         )}
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAFA] text-[#282828] border-b border-gray-100">
@@ -264,7 +326,7 @@ export default function StuAttendanceTable({
                       filtered.length > 0
                     }
                     onChange={toggleSelectAll}
-                    disabled={!isEditing}
+                    disabled={!isEditing || loadingFilters}
                   />
                 </th>
                 <th className="px-4 py-4 text-left font-semibold text-gray-600">
@@ -296,135 +358,141 @@ export default function StuAttendanceTable({
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map((s, index) => (
-                <tr
-                  key={s.id}
-                  className={`text-[#515151] transition-colors hover:bg-gray-50/50 ${selectedIds.includes(s.id) ? "bg-[#43C17A05]" : ""}`}
-                >
-                  <td className="px-4 py-4">
-                    <input
-                      type="checkbox"
-                      className="accent-[#43C17A] h-4 w-4 rounded cursor-pointer"
-                      checked={selectedIds.includes(s.id)}
-                      onChange={() => toggleSelectOne(s.id)}
-                      disabled={!isEditing}
-                    />
-                  </td>
-                  <td className="px-4 py-4 font-medium text-gray-500">
-                    {index + 1}
-                  </td>
-                  <td className="px-4 py-4 font-medium">
-                    <span className="text-[#43C17A]">ID </span> - {s.roll}
-                  </td>
-                  <td className="px-4 py-4">
-                    {s.photo ? (
-                      <img
-                        src={s.photo}
-                        className="h-8 w-8 rounded-full border border-gray-200 object-cover"
-                        alt={s.name}
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
-                        {s.name?.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 font-semibold text-gray-800">
-                    {s.name}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div
-                      className={`relative inline-flex items-center rounded-full w-max ${getStatusStyle(s.attendance)}`}
-                    >
-                      {s.attendance === "Class Cancel" ? (
-                        <span className="px-4 py-1.5 text-xs font-bold">
-                          Class Cancelled
-                        </span>
-                      ) : (
-                        <div
-                          className={`relative inline-flex items-center rounded-full w-max ${getStatusStyle(s.attendance)}`}
-                        >
-                          <select
-                            value={s.attendance}
-                            onChange={(e) =>
-                              updateAttendance(s.id, e.target.value as any)
-                            }
-                            disabled={!isEditing}
-                            className={`
-    appearance-none bg-transparent border-none outline-none text-xs font-bold pl-4 pr-8 py-1.5 cursor-pointer z-10
-      ${
-        isEditing
-          ? "px-4 cursor-pointer"
-          : "pl-4 pr-8 cursor-default pointer-events-none"
-      }
-    `}
-                          >
-                            {s.attendance === "Not Marked" && (
-                              <option value="Not Marked" disabled>
-                                Unmarked
-                              </option>
-                            )}
-                            <option value="Present">Present</option>
-                            <option value="Absent">Absent</option>
-                            <option value="Leave">Leave</option>
-                            <option value="Late">Late</option>
-                          </select>
 
-                          <CaretDown
-                            size={12}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none"
-                          />
+            <tbody className="divide-y divide-gray-50">
+              {loadingFilters ? (
+                [...Array(5)].map((_, i) => <TableRowSkeleton key={i} />)
+              ) : filtered.length > 0 ? (
+                filtered.map((s, index) => (
+                  <tr
+                    key={s.id}
+                    className={`text-[#515151] transition-colors hover:bg-gray-50/50 ${selectedIds.includes(s.id) ? "bg-[#43C17A05]" : ""}`}
+                  >
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        className="accent-[#43C17A] h-4 w-4 rounded cursor-pointer"
+                        checked={selectedIds.includes(s.id)}
+                        onChange={() => toggleSelectOne(s.id)}
+                        disabled={!isEditing}
+                      />
+                    </td>
+                    <td className="px-4 py-4 font-medium text-gray-500">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-4 font-medium">
+                      <span className="text-[#43C17A]">ID </span> - {s.roll}
+                    </td>
+                    <td className="px-4 py-4">
+                      {s.photo ? (
+                        <img
+                          src={s.photo}
+                          className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                          alt={s.name}
+                        />
+                      ) : (
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
+                          {s.name?.charAt(0).toUpperCase()}
                         </div>
                       )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 font-medium text-gray-600">
-                    {s.percentage}
-                  </td>
-                  <td className="px-4 py-4">
-                    {shouldShowReasonInput(s.attendance) ? (
-                      <div className="relative group">
-                        <input
-                          type="text"
-                          value={s.reason || ""}
-                          onChange={(e) => updateReason(s.id, e.target.value)}
-                          placeholder={isEditing ? "Add reason..." : ""}
-                          disabled={!isEditing}
-                          className={`w-full text-xs bg-transparent border-b ${isEditing ? "border-gray-300 focus:border-[#43C17A]" : "border-transparent"} outline-none py-1 transition-colors text-gray-600 placeholder-gray-400`}
-                        />
-                        {isEditing && (
-                          <NotePencil
-                            className={`absolute right-0 top-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}
-                            size={14}
-                          />
+                    </td>
+                    <td className="px-4 py-4 font-semibold text-gray-800">
+                      {s.name}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div
+                        className={`relative inline-flex items-center rounded-full w-max ${getStatusStyle(s.attendance)}`}
+                      >
+                        {s.attendance === "Class Cancel" ? (
+                          <span className="px-4 py-1.5 text-xs font-bold">
+                            Class Cancelled
+                          </span>
+                        ) : (
+                          <>
+                            <select
+                              value={s.attendance}
+                              onChange={(e) =>
+                                updateAttendance(s.id, e.target.value as any)
+                              }
+                              disabled={!isEditing}
+                              className={`appearance-none bg-transparent border-none outline-none text-xs font-bold pl-4 pr-8 py-1.5 cursor-pointer z-10 ${isEditing ? "px-4 cursor-pointer" : "pl-4 pr-8 cursor-default pointer-events-none"}`}
+                            >
+                              {s.attendance === "Not Marked" && (
+                                <option value="Not Marked" disabled>
+                                  Unmarked
+                                </option>
+                              )}
+                              <option value="Present">Present</option>
+                              <option value="Absent">Absent</option>
+                              <option value="Leave">Leave</option>
+                              <option value="Late">Late</option>
+                            </select>
+                            <CaretDown
+                              size={12}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none"
+                            />
+                          </>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-gray-400 pl-2">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${parseInt(s.percentage) >= 90 ? "bg-green-100 text-green-700" : parseInt(s.percentage) >= 70 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}
-                    >
-                      {parseInt(s.percentage) >= 90
-                        ? "Top"
-                        : parseInt(s.percentage) >= 70
-                          ? "Good"
-                          : "Low"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <button
-                      onClick={() => router.push(`/faculty/attendance/${s.id}`)}
-                      className="text-gray-500 cursor-pointer hover:text-[#43C17A] font-medium text-xs transition-colors hover:underline underline-offset-2"
-                    >
-                      View Details
-                    </button>
+                    </td>
+                    <td className="px-4 py-4 font-medium text-gray-600">
+                      {s.percentage}
+                    </td>
+                    <td className="px-4 py-4">
+                      {shouldShowReasonInput(s.attendance) ? (
+                        <div className="relative group">
+                          <input
+                            type="text"
+                            value={s.reason || ""}
+                            onChange={(e) => updateReason(s.id, e.target.value)}
+                            placeholder={isEditing ? "Add reason..." : ""}
+                            disabled={!isEditing}
+                            className={`w-full text-xs bg-transparent border-b ${isEditing ? "border-gray-300 focus:border-[#43C17A]" : "border-transparent"} outline-none py-1 transition-colors text-gray-600 placeholder-gray-400`}
+                          />
+                          {isEditing && (
+                            <NotePencil
+                              className="absolute right-0 top-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                              size={14}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 pl-2">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${parseInt(s.percentage) >= 90 ? "bg-green-100 text-green-700" : parseInt(s.percentage) >= 70 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}
+                      >
+                        {parseInt(s.percentage) >= 90
+                          ? "Top"
+                          : parseInt(s.percentage) >= 70
+                            ? "Good"
+                            : "Low"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <button
+                        onClick={() =>
+                          router.push(`/faculty/attendance/${s.id}`)
+                        }
+                        className="text-gray-500 cursor-pointer hover:text-[#43C17A] font-medium text-xs transition-colors hover:underline underline-offset-2"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-8 text-center text-gray-400 italic"
+                  >
+                    No students found.
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

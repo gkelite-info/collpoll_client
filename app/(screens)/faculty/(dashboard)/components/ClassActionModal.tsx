@@ -22,6 +22,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
     "initial" | "confirm_accept" | "cancel_reason"
   >("initial");
   const [reason, setReason] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -138,7 +139,7 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
           </>
         )}
 
-        {step === "confirm_accept" && (
+        {/* {step === "confirm_accept" && (
           <>
             <div className="px-5 py-8 text-center">
               <p className="text-gray-800 font-medium">
@@ -157,6 +158,39 @@ export const ClassActionModal: React.FC<ActionModalProps> = ({
               </button>
               <button
                 onClick={() => setStep("initial")}
+                className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors"
+              >
+                Back
+              </button>
+            </div>
+          </>
+        )} */}
+
+        {step === "confirm_accept" && (
+          <>
+            <div className="px-5 py-8 text-center">
+              <p className="text-gray-800 font-medium">
+                Are you sure you want to accept this class?
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                This will officially mark the class as accepted.
+              </p>
+            </div>
+            <div className="px-5 py-4 flex gap-3">
+              <button
+                onClick={async () => {
+                  setIsProcessing(true); // <-- TRIGGER LOADING
+                  await onAccept(lesson.id);
+                  // Intentionally not setting it back to false, let the page transition naturally
+                }}
+                disabled={isProcessing}
+                className="flex-1 cursor-pointer bg-[#3FC27B] hover:bg-[#36a86a] text-white font-medium py-2.5 rounded-md text-sm transition-colors flex justify-center items-center"
+              >
+                {isProcessing ? "Redirecting..." : "Yes, Accept"}
+              </button>
+              <button
+                onClick={() => setStep("initial")}
+                disabled={isProcessing}
                 className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2.5 rounded-md text-sm transition-colors"
               >
                 Back

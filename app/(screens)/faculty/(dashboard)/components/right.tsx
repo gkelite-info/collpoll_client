@@ -5,7 +5,10 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { fetchFacultyTasks, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import {
+  fetchFacultyTasksForLoggedInFaculty,
+  saveFacultyTask,
+} from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import toast from "react-hot-toast";
@@ -36,20 +39,28 @@ export default function FacultyDashRight() {
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-
-  const { facultyId, subjectIds, collegeId, userId, role, loading: facultyLoading } = useFaculty();
+  const {
+    facultyId,
+    subjectIds,
+    collegeId,
+    userId,
+    role,
+    loading: facultyLoading,
+  } = useFaculty();
 
   const collegeSubjectId = subjectIds?.[0] ?? null;
-
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
 
   const loadTasks = async () => {
-    if (!collegeSubjectId) return;
+    if (!collegeSubjectId || !facultyId) return;
 
     try {
-      const data = await fetchFacultyTasks(collegeSubjectId);
+      const data = await fetchFacultyTasksForLoggedInFaculty(
+        facultyId,
+        collegeSubjectId,
+      );
 
       setTasks(
         data.map((t: any) => ({
@@ -58,7 +69,7 @@ export default function FacultyDashRight() {
           description: t.description,
           time: t.time,
           date: t.date,
-        }))
+        })),
       );
     } catch (err) {
       console.error("LOAD TASK ERROR", err);
@@ -106,10 +117,10 @@ export default function FacultyDashRight() {
   };
 
   useEffect(() => {
-    if (!facultyLoading && collegeSubjectId) {
+    if (!facultyLoading && collegeSubjectId && facultyId) {
       loadTasks();
     }
-  }, [facultyLoading, collegeSubjectId]);
+  }, [facultyLoading, collegeSubjectId, facultyId]);
 
   const handleSave = async (
     payload: {
@@ -118,7 +129,7 @@ export default function FacultyDashRight() {
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ) => {
     try {
       const res = await saveFacultyTask(
@@ -130,21 +141,19 @@ export default function FacultyDashRight() {
           date: payload.dueDate,
           time: payload.dueTime,
         },
-        facultyId!
+        facultyId!,
       );
 
       if (!res.success) {
-        throw new Error("Save failed");
+        throw new Error(res.error?.message || "Save failed");
       }
 
       await loadTasks();
-    } catch (error) {
+    } catch (error: any) {
       console.error("HANDLE SAVE ERROR:", error);
-      toast.error("Failed to save task");
       throw error;
     }
   };
-
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
     fetchAnnouncements();
@@ -161,7 +170,7 @@ export default function FacultyDashRight() {
         loading={loading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => { }}
+        onAddTask={() => {}}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
           await loadTasks();
@@ -180,13 +189,9 @@ export default function FacultyDashRight() {
           }}
           defaultValues={editingTask}
           onSave={async (payload, taskId) => {
-            try {
-              await handleSave(payload, taskId);
-              setOpenModal(false);
-              setEditingTask(null);
-            } catch (error) {
-              console.error("Modal Save Error:", error);
-            }
+            await handleSave(payload, taskId);
+            setOpenModal(false);
+            setEditingTask(null);
           }}
         />
       )}

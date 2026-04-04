@@ -699,7 +699,7 @@ export default function CreateFee() {
 
               <button
                 onClick={handleSaveModalComponent}
-                className="w-full bg-[#58AE77] hover:bg-[#469160] text-white font-medium py-3 rounded-md transition-colors"
+                className="w-full bg-[#58AE77] hover:bg-[#469160] cursor-pointer text-white font-medium py-3 rounded-md transition-colors"
               >
                 Save additional due
               </button>
@@ -764,14 +764,19 @@ export default function CreateFee() {
             </div>
             <div className="flex flex-col w-[49%]">
               <label className="font-medium text-[#282828]">
-                {["Inter"].includes(collegeEducationType!) ? "Group" : "Branch"} <span className="text-red-500">*</span>
+                {["Inter"].includes(collegeEducationType!) ? "Group" : "Branch"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedBranch ?? ""}
                 onChange={(e) => setSelectedBranch(Number(e.target.value))}
                 className="border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989] cursor-pointer"
               >
-                <option value="">{collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}</option>
+                <option value="">
+                  {collegeEducationType === "Inter"
+                    ? "Select Group"
+                    : "Select Branch"}
+                </option>
                 {(branches || []).map((branch) => (
                   <option
                     key={branch.collegeBranchId}
@@ -1104,7 +1109,9 @@ export default function CreateFee() {
                   <input
                     type="text"
                     value={gstValue}
-                    onChange={(e) => setGstValue(e.target.value.replace(/\D/g, ""))}
+                    onChange={(e) =>
+                      setGstValue(e.target.value.replace(/\D/g, ""))
+                    }
                     placeholder="Ex: 18 (Enter 0 if none)"
                     className="border border-[#C4C4C4] p-2 px-3 rounded-md mt-2 text-[#898989] focus:outline-none text-md"
                   />
@@ -1181,10 +1188,11 @@ export default function CreateFee() {
                   <button
                     onClick={handleSaveFeeStructure}
                     disabled={isSaving}
-                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${isSaving
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-[#58AE77] hover:bg-[#469160]"
-                      }`}
+                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${
+                      isSaving
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-[#58AE77] hover:bg-[#469160]"
+                    }`}
                   >
                     {isSaving ? "Saving..." : "Save fee structure"}
                   </button>
@@ -1328,10 +1336,11 @@ export default function CreateFee() {
                     <button
                       onClick={handleSaveAdditionalDues}
                       disabled={isSaving}
-                      className={`px-8 py-3 text-lg font-medium text-white rounded-md transition-colors shadow-sm
-                        ${isSaving
-                          ? "bg-gray-300 cursor-not-allowed"
-                          : "bg-[#58AE77] hover:bg-[#469160]"
+                      className={`px-8 py-3 text-lg font-medium cursor-pointer text-white rounded-md transition-colors shadow-sm
+                        ${
+                          isSaving
+                            ? "bg-gray-300 cursor-not-allowed"
+                            : "bg-[#58AE77] hover:bg-[#469160]"
                         }`}
                     >
                       {isSaving ? "Saving..." : "Save additional due"}

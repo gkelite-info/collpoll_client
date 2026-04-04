@@ -76,32 +76,66 @@ const PaymentConfirm = ({ plan, onBack }: PaymentConfirmProps) => {
   //   }
   // };
 
+  // const handlePayment = async () => {
+  //   const res = await fetch("/api/stripe/create-checkout-session", {
+  //     method: "POST",
+
+  //     headers: {
+  //       "Content-Type": "application/json",
+  //     },
+
+  //     body: JSON.stringify({
+  //       amount: plan.pendingAmount,
+
+  //       studentFeeObligationId: plan.studentFeeObligationId,
+
+  //       collegeSemesterId: plan.collegeSemesterId,
+  //     }),
+  //   });
+
+  //   const data = await res.json();
+
+  //   window.location.href = data.url;
+  // };
+
   const handlePayment = async () => {
-    const res = await fetch("/api/stripe/create-checkout-session", {
-      method: "POST",
+    if (!plan.pendingAmount || plan.pendingAmount <= 0) {
+      toast.error("Invalid payment amount.");
+      return;
+    }
 
-      headers: {
-        "Content-Type": "application/json",
-      },
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: plan.pendingAmount,
+          studentFeeObligationId: plan.studentFeeObligationId,
+          collegeSemesterId: plan.collegeSemesterId,
+        }),
+      });
 
-      body: JSON.stringify({
-        amount: plan.pendingAmount,
+      const data = await res.json();
 
-        studentFeeObligationId: plan.studentFeeObligationId,
-
-        collegeSemesterId: plan.collegeSemesterId,
-      }),
-    });
-
-    const data = await res.json();
-
-    window.location.href = data.url;
+      if (res.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error("Stripe Checkout Error:", data);
+        toast.error(
+          data.error || "Failed to initiate payment. Please try again.",
+        );
+      }
+    } catch (err) {
+      console.error("Network Error:", err);
+      toast.error("A network error occurred. Check your connection.");
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       <Toaster position="top-right" />
-      {/* Back Button */}
       <button
         onClick={handleBack}
         className="flex items-center gap-2 cursor-pointer text-gray-500 hover:text-gray-800 transition-colors font-medium text-sm"
@@ -350,7 +384,7 @@ const PaymentConfirm = ({ plan, onBack }: PaymentConfirmProps) => {
               </div>
               <button
                 onClick={handlePayment}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition-all active:scale-[0.98] flex justify-center items-center gap-2"
+                className="w-full bg-emerald-500 cursor-pointer hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-lg shadow-sm transition-all active:scale-[0.98] flex justify-center items-center gap-2"
               >
                 Pay {formatCurrency(plan.pendingAmount)}
               </button>
