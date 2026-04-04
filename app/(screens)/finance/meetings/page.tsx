@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import ConfirmDeleteModal from '../../admin/calendar/components/ConfirmDeleteModal';
 import { useUser } from '@/app/utils/context/UserContext';
+import MeetingCardShimmer from '@/app/utils/shimmers/MeetingCardShimmer';
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Parent' | 'Student' | 'Faculty' | 'Admin';
@@ -60,7 +61,7 @@ const MeetingListContent = () => {
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
     const currentCategory = (searchParams.get('category') as MeetingCategory) || 'Parent';
     const { financeManagerId } = useFinanceManager()
-    const {role} = useUser()
+    const { role } = useUser()
     const itemsPerPage = 10;
 
     const updateFilter = (key: string, value: string) => {
@@ -243,9 +244,12 @@ const MeetingListContent = () => {
             <div className="flex-1 overflow-y-auto p-2 pt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-6">
                     {isLoading ? (
-                        <div className="col-span-full flex justify-center items-center h-[200px]">
-                            <Loader />
-                        </div>
+                        <MeetingCardShimmer
+                            role={role}
+                            category={currentCategory}
+                            type={currentType}
+                            count={8}
+                        />
                     ) : meetings.length > 0 ? (
                         meetings.map((meeting, index) => (
                             <MeetingCard key={meeting.id || `meeting-card-${index}`} data={meeting} onDelete={handleDeleteClick} role={role} category={currentCategory} onEdit={handleEditClick} />
@@ -299,7 +303,7 @@ const MeetingListContent = () => {
                 </div>
             )}
 
-             <CreateMeetingModal
+            <CreateMeetingModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);

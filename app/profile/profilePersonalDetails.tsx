@@ -77,7 +77,7 @@ export default function ProfilePersonalDetails() {
         }
     };
 
-    const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
+    const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+){0,3}$/;
     const emailAllowed = /^[a-z0-9@.]+$/;
     const linkedInRegex = /^https:\/\/(www\.)?linkedin\.com\/.+$/;
 
@@ -90,8 +90,7 @@ export default function ProfilePersonalDetails() {
     const sanitizeName = (value: string) => {
         let clean = value.replace(/[^A-Za-z ]/g, "");
         clean = clean.replace(/\s+/g, " ");
-        clean = clean.trimStart();
-        clean = clean.replace(/\b\w/g, (c) => c.toUpperCase());
+        clean = clean.trim();
         return clean;
     };
 
@@ -100,9 +99,11 @@ export default function ProfilePersonalDetails() {
 
     const handleSubmit = async () => {
         if (!userId) return
-        if (!fullName) return toast.error("Full Name is required!");
-        if (!nameRegex.test(fullName))
-            return toast.error("Full Name must contain letters only & proper format!");
+        const formattedName = sanitizeName(fullName);
+        if (!formattedName)
+            return toast.error("Full Name is required!");
+        if (!nameRegex.test(formattedName))
+            return toast.error("Name should contain only letters and spaces");
         if (!mobile) return toast.error("Mobile number is required!");
         if (!email) return toast.error("Email is required!");
         if (!emailAllowed.test(email))
@@ -118,7 +119,7 @@ export default function ProfilePersonalDetails() {
         }
         setIsloading(true);
         const [userRes, pdRes] = await Promise.all([
-            updateUserBasic({ userId, fullName }),
+            updateUserBasic({ userId, fullName: formattedName }),
             savePersonalDetails({
                 personalDetailsId: personalDetailsId || undefined,
                 userId,
@@ -132,7 +133,7 @@ export default function ProfilePersonalDetails() {
             setIsloading(false);
             return toast.error("Failed to update personal details. Please try again.");
         }
-        setCtxFullName(fullName);
+        setCtxFullName(formattedName);
         await reloadData();
         setIsloading(false);
         toast.success("Personal details updated successfully");
@@ -163,7 +164,7 @@ export default function ProfilePersonalDetails() {
                             type="text"
                             placeholder="Enter Full Name"
                             value={fullName}
-                            onChange={(e) => setFullName(sanitizeName(e.target.value))}
+                            onChange={(e) => setFullName(e.target.value)}
                             className="w-full border border-[#CCCCCC] text-[#282828] rounded-md px-3 py-2 outline-none"
                         />
                     </div>

@@ -171,7 +171,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       }
     };
     loadFacultyAcademics();
-    return () => {cancelled = true};
+    return () => { cancelled = true };
   }, [collegeId, facultyCtx]);
 
   useEffect(() => {
@@ -268,9 +268,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       setIsDeptOpen(false);
       setIsSectionOpen(false);
       setSubjectId(undefined);
-      setTopicId(undefined);
-      setMeetingTitle("");
-      setMeetingLink("");
+      setTopicId(undefined);
+      setMeetingTitle("");
+      setMeetingLink("");
     }
   }, [isOpen]);
 
@@ -326,10 +326,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
   };
 
   const handleSave = () => {
-    if (date < TODAY) {
-      toast.error("Past dates are not allowed");
-      return;
-    }
     if (isMeeting) {
       if (!meetingTitle.trim()) {
         toast.error("Please enter a Meeting Title.");
@@ -360,6 +356,14 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       toast.error("Please select a Date.");
       return;
     }
+    if (date < TODAY) {
+      toast.error("Past dates are not allowed");
+      return;
+    }
+    if (!roomNo.trim()) {
+      toast.error("Please enter Room No.");
+      return;
+    }
     if (!educationId) {
       toast.error("Education Type not resolved. Please reload.");
       return;
@@ -384,10 +388,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       toast.error("Semester not resolved.");
       return;
     }
-    if (!roomNo.trim()) {
-      toast.error("Please enter Room No.");
-      return;
-    }
+
     const startTime = to24Hour(startHour, startMinute, startPeriod);
     const endTime = to24Hour(endHour, endMinute, endPeriod);
     if (startTime >= endTime) {

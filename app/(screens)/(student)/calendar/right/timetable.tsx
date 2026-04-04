@@ -5,6 +5,7 @@ import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetc
 import { supabase } from "@/lib/supabaseClient";
 import { FilePdf } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import TimetableCardShimmer from "./TimetableCardShimmer";
 
 const formatTimeToAMPM = (time24: string) => {
     const [h, m] = time24.split(":");
@@ -111,7 +112,7 @@ export default function CalendarTimeTable() {
 
     return (
         <>
-            <div className="bg-white lg:h-[784px] lg:w-[647px] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto">
+            <div className="bg-white lg:h-[784px] lg:w-[98%] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto">
                 <div className="bg-red-00">
                     <div className="flex bg-[#E8EAED] w-[191px] h-[54px] rounded-md shadow-md">
                         <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
@@ -125,7 +126,7 @@ export default function CalendarTimeTable() {
 
                     <div className="bg-red-00 mt-5 flex flex-col gap-4">
                         {loading ? (
-                            <Loader />
+                            <TimetableCardShimmer count={6} />
                         ) : (
                             timetable.length === 0 ? <div className="flex items-center justify-center bg-pink-00 h-[50vh]"><p className="text-center text-[#282828]">No classes yet..</p></div> :
                                 timetable.map((item, index) => (
@@ -142,7 +143,7 @@ export default function CalendarTimeTable() {
                                         <div className="bg-[#16284F] w-[527px] rounded-xl flex justify-end">
                                             <div className="w-[98%] h-full bg-[#E8E9ED] gap-3 rounded-r-lg flex items-center px-2">
                                                 <div className="h-[84px] w-[84px] rounded-lg bg-yellow-00 flex items-center justify-center">
-                                                    <img src={item.img} />
+                                                    <img src={item.img} alt=""/>
                                                 </div>
 
                                                 <div className="bg-green-00 h-[84px] w-[408px] gap-2 flex items-center justify-between">
@@ -180,9 +181,9 @@ export default function CalendarTimeTable() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className="bg-[#16284F] rounded-full h-[40px] w-[40px] flex items-center justify-center cursor-pointer">
+                                                    {/* <div className="bg-[#16284F] rounded-full h-[40px] w-[40px] flex items-center justify-center cursor-pointer">
                                                         <FilePdf size={23} className="cursor-pointer text-white" />
-                                                    </div>
+                                                    </div> */}
                                                 </div>
                                             </div>
                                         </div>
