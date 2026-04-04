@@ -339,13 +339,13 @@ function AttendanceContent() {
               />
               <button
                 onClick={confirmClassCancel}
-                className="bg-green-500 text-white p-2 rounded-lg"
+                className="bg-green-500 text-white cursor-pointer p-2 rounded-lg"
               >
                 <Check size={18} weight="bold" />
               </button>
               <button
                 onClick={() => setIsCancellingMode(false)}
-                className="bg-gray-200 text-gray-600 p-2 rounded-lg"
+                className="bg-gray-200 text-gray-600 p-2 cursor-pointer rounded-lg"
               >
                 <X size={18} weight="bold" />
               </button>
@@ -353,8 +353,35 @@ function AttendanceContent() {
           ))}
       </section>
 
-      <section>
+      {/* <section>
         {urlClassId || classOptions.length > 0 || sectionOptions.length > 0 ? (
+          <StuAttendanceTable
+            students={studentsList}
+            setStudents={setStudentsList}
+            handleSaveAttendance={handleSaveAttendance}
+            saving={saving}
+            isTopicMode={isTopicMode}
+            classes={classOptions}
+            sections={sectionOptions}
+            selectedClass={selectedClassId}
+            selectedSection={selectedSectionId}
+            onFilterChange={urlClassId ? undefined : handleFilterChange}
+            loadingFilters={tableLoading}
+            isEditing={isEditing}
+            onEditClick={() => setIsEditing(true)}
+          />
+        ) : (
+          <div className="flex justify-center items-center py-16 text-gray-500">
+            No students found
+          </div>
+        )}
+      </section> */}
+
+      <section>
+        {tableLoading ||
+        urlClassId ||
+        classOptions.length > 0 ||
+        sectionOptions.length > 0 ? (
           <StuAttendanceTable
             students={studentsList}
             setStudents={setStudentsList}
@@ -382,7 +409,13 @@ function AttendanceContent() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-8 text-center"><Loader/></div>}>
+    <Suspense
+      fallback={
+        <div className="p-8 text-center">
+          <Loader />
+        </div>
+      }
+    >
       <AttendanceContent />
     </Suspense>
   );

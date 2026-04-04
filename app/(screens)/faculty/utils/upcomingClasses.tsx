@@ -502,12 +502,11 @@ export default function UpcomingClasses({
     null,
   );
 
-  // AFTER
   const [localLessons, setLocalLessons] = useState<UpcomingLesson[]>(lessons);
 
   useEffect(() => {
     setLocalLessons(
-      Array.from(new Map(lessons.map((l) => [l.id, l])).values())
+      Array.from(new Map(lessons.map((l) => [l.id, l])).values()),
     );
   }, [lessons]);
 
@@ -521,19 +520,17 @@ export default function UpcomingClasses({
   };
 
   const handleAcceptClass = async (id: string) => {
-    if (!facultyId) return toast.error("Faculty ID missing");
-    const res = await handleMissionClassStatus(id, facultyId, "Accepted");
+    if (!facultyId) return;
+    const res = await handleMissionClassStatus(
+      id,
+      Number(facultyId),
+      "Accepted",
+    );
     if (res.success) {
-      toast.success("Class Accepted");
-      setLocalLessons((prev) =>
-        prev.map((l) =>
-          l.id === id ? { ...l, sessionStatus: "Accepted" } : l,
-        ),
-      );
-      setIsActionModalOpen(false);
+      toast.success("Class Accepted! Redirecting...");
       router.push(`/faculty/attendance?classId=${id}`);
     } else {
-      toast.error("Failed to update status");
+      toast.error("Failed to accept class");
     }
   };
 

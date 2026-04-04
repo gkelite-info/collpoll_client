@@ -17,6 +17,76 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 import { getBranchWiseCollection } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
+const VerticalChartSkeleton = () => (
+  <div className="w-full h-full bg-gray-50 rounded-xl animate-pulse flex items-end justify-around px-8 pb-8 pt-10 border border-gray-100">
+    {[40, 70, 45, 90, 60, 85].map((h, i) => (
+      <div
+        key={i}
+        className="w-12 bg-gray-200 rounded-t-lg"
+        style={{ height: `${h}%` }}
+      ></div>
+    ))}
+  </div>
+);
+
+const BranchCardSkeleton = () => (
+  <div className="bg-[#EAEAEA]/50 rounded-lg p-3 space-y-3 animate-pulse">
+    <div className="h-4 w-12 bg-gray-300 rounded"></div>
+    <div className="h-8 w-full bg-gray-300 rounded-md"></div>
+    <div className="space-y-2 pt-1">
+      <div className="flex justify-between">
+        <div className="h-3 w-16 bg-gray-300 rounded"></div>
+        <div className="h-3 w-12 bg-gray-300 rounded"></div>
+      </div>
+      <div className="flex justify-between">
+        <div className="h-3 w-12 bg-gray-300 rounded"></div>
+        <div className="h-3 w-14 bg-gray-300 rounded"></div>
+      </div>
+    </div>
+  </div>
+);
+
+const TableSkeleton = ({
+  columns,
+  height,
+}: {
+  columns: any[];
+  height?: string;
+}) => (
+  <div className="mt-2 w-full animate-pulse">
+    <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+      <div className={`max-h-[${height || "60vh"}] overflow-auto`}>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-6 py-4 text-left">
+                  <div className="h-4 w-20 bg-gray-300 rounded"></div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {[1, 2, 3, 4, 5, 6].map((rowIdx) => (
+              <tr key={rowIdx} className="border-b border-gray-100">
+                {columns.map((_, colIdx) => (
+                  <td key={colIdx} className="px-6 py-4">
+                    <div
+                      className={`h-4 bg-gray-200 rounded ${
+                        colIdx === 0 ? "w-3/4" : "w-1/2"
+                      }`}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+);
+
 const CustomBar = (props: any) => {
   const { x, y, width, height, payload, dataKey } = props;
 
@@ -140,47 +210,52 @@ function FinanceAnalyticsContent() {
         <span className="text-gray-400">→</span> Branch Wise Collection
       </h2>
 
-      {isPageLoading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader />
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-[#282828] text-lg">
-              Fee Collection Trends
-            </h3>
+      <div className="bg-white rounded-xl shadow-md p-6 space-y-6">
+        {/* HEADER AREA - ALWAYS VISIBLE TO PREVENT LAYOUT SHIFT */}
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold text-[#282828] text-lg">
+            Fee Collection Trends
+          </h3>
 
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-[#282828] font-bold text-md">
-                Academic Year
-              </span>
-              <select
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className="bg-[#EDE7F6] text-[#6C20CA] font-medium px-1.5 py-0.5 rounded-full outline-none cursor-pointer"
-              >
-                {availableYears.map((yearOption) => (
-                  <option key={yearOption} value={yearOption}>
-                    {yearOption}
-                  </option>
-                ))}
-              </select>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-[#282828] font-bold text-md">
+              Academic Year
+            </span>
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              disabled={isPageLoading}
+              className={`bg-[#EDE7F6] text-[#6C20CA] font-medium px-1.5 py-0.5 rounded-full outline-none ${
+                isPageLoading
+                  ? "cursor-not-allowed opacity-70"
+                  : "cursor-pointer"
+              }`}
+            >
+              {availableYears.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>
+                  {yearOption}
+                </option>
+              ))}
+            </select>
 
-              <div className="flex items-center gap-4 ml-4 text-sm">
-                <div className="flex items-center gap-2 text-[#282828]">
-                  <span className="w-3 h-3 bg-[#43C17A] rounded-xs" />
-                  Collected
-                </div>
-                <div className="flex items-center gap-2 text-[#282828]">
-                  <span className="w-3 h-3 bg-[#B9E6CD] rounded-xs" />
-                  Pending
-                </div>
+            <div className="flex items-center gap-4 ml-4 text-sm">
+              <div className="flex items-center gap-2 text-[#282828]">
+                <span className="w-3 h-3 bg-[#43C17A] rounded-xs" />
+                Collected
+              </div>
+              <div className="flex items-center gap-2 text-[#282828]">
+                <span className="w-3 h-3 bg-[#B9E6CD] rounded-xs" />
+                Pending
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="w-full h-[300px] focus:outline-none">
+        {/* CHART SECTION */}
+        <div className="w-full h-[300px] focus:outline-none">
+          {isPageLoading ? (
+            <VerticalChartSkeleton />
+          ) : (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
@@ -215,45 +290,55 @@ function FinanceAnalyticsContent() {
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {gridData.map((branchInfo) => (
-              <div
-                key={branchInfo.branch}
-                className="bg-[#EAEAEA] rounded-lg p-3 space-y-2"
-              >
-                <p className="text-[#43C17A] font-semibold text-sm">
-                  {branchInfo.branch}
-                </p>
-
-                <div className="bg-[#16284F] text-white font-semibold text-xs px-3 w-full border py-2 rounded-md">
-                  {branchInfo.totalFeesShort}
-                </div>
-
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-[#16284F] font-semibold text-xs">
-                      {branchInfo.collectedShort}
-                    </span>
-                    <span className="text-[#22A55D]">Collected</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[#16284F] font-semibold">
-                      {branchInfo.pendingShort}
-                    </span>
-                    <span className="text-[#FF0000]">Pending</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      )}
 
+        {/* CARDS SECTION */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {isPageLoading
+            ? Array.from({ length: 6 }).map((_, idx) => (
+                <BranchCardSkeleton key={idx} />
+              ))
+            : gridData.map((branchInfo) => (
+                <div
+                  key={branchInfo.branch}
+                  className="bg-[#EAEAEA] rounded-lg p-3 space-y-2"
+                >
+                  <p className="text-[#43C17A] font-semibold text-sm">
+                    {branchInfo.branch}
+                  </p>
+
+                  <div className="bg-[#16284F] text-white font-semibold text-xs px-3 w-full border py-2 rounded-md">
+                    {branchInfo.totalFeesShort}
+                  </div>
+
+                  <div className="text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-[#16284F] font-semibold text-xs">
+                        {branchInfo.collectedShort}
+                      </span>
+                      <span className="text-[#22A55D]">Collected</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#16284F] font-semibold">
+                        {branchInfo.pendingShort}
+                      </span>
+                      <span className="text-[#FF0000]">Pending</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+        </div>
+      </div>
+
+      {/* TABLE SECTION */}
       <div className="space-y-4">
         <h3 className="font-semibold text-[#282828]">Branch Overview</h3>
-        <TableComponent columns={tableColumns} tableData={tableData} />
+        {isPageLoading ? (
+          <TableSkeleton columns={tableColumns} height="60vh" />
+        ) : (
+          <TableComponent columns={tableColumns} tableData={tableData} />
+        )}
       </div>
     </div>
   );
@@ -262,11 +347,7 @@ function FinanceAnalyticsContent() {
 export default function Page() {
   return (
     <Suspense
-      fallback={
-        <div>
-          <Loader />
-        </div>
-      }
+      fallback={<div className="flex justify-center items-center py-20"></div>}
     >
       <FinanceAnalyticsContent />
     </Suspense>

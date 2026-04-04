@@ -140,9 +140,10 @@ const Dropdown = ({
           <div
             onClick={disabled ? undefined : onClick}
             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
-              ${disabled
-                ? "cursor-not-allowed opacity-70"
-                : "cursor-pointer hover:bg-green-100"
+              ${
+                disabled
+                  ? "cursor-not-allowed opacity-70"
+                  : "cursor-pointer hover:bg-green-100"
               }
             `}
           >
@@ -192,8 +193,9 @@ const TopStat = ({
       `}
     >
       <div
-        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"
-          } flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${
+          isP ? "bg-white/20" : "bg-white"
+        } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -205,8 +207,9 @@ const TopStat = ({
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"
-            }`}
+          className={`text-[10px] font-medium ${
+            isP ? "text-purple-200" : "text-blue-800/70"
+          }`}
         >
           {label}
         </div>
@@ -232,7 +235,7 @@ const YearCard = ({
   educationTypeId,
   collegeId,
   collegeEducationId,
-  semesterList
+  semesterList,
 }: {
   data: YearData;
   branchId?: number;
@@ -292,7 +295,7 @@ const YearCard = ({
         />
       </div>
     </Card>
-  )
+  );
 };
 
 const SemBox = ({
@@ -306,7 +309,7 @@ const SemBox = ({
   educationTypeId,
   collegeId,
   collegeEducationId,
-  semesterId
+  semesterId,
 }: {
   label: string;
   val: string;
@@ -342,8 +345,6 @@ const SemBox = ({
     router.push(`/finance?${params.toString()}`);
   };
 
-
-
   return (
     <div
       onClick={handleClick}
@@ -354,7 +355,6 @@ const SemBox = ({
     </div>
   );
 };
-
 
 // const defaultYearWiseData = [1, 2, 3, 4].map((year) => ({
 //   year:
@@ -411,17 +411,17 @@ export default function DashboardPage() {
     selectedBranch === "ALL"
       ? undefined
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
-        ?.collegeBranchId;
+          ?.collegeBranchId;
 
   const selectedBranchData = branches.find(
-    (b: any) => b.collegeBranchCode === selectedBranch
+    (b: any) => b.collegeBranchCode === selectedBranch,
   );
 
   const branchYears = selectedBranchData?.years || [];
 
   const dynamicYearWiseData = branchYears.map((yearObj: any) => {
     const summaryYear = financeSummary.yearWiseData.find(
-      (y: any) => y.year === yearObj.collegeAcademicYear
+      (y: any) => y.year === yearObj.collegeAcademicYear,
     );
 
     return {
@@ -463,7 +463,7 @@ export default function DashboardPage() {
       if (!loading && collegeId && collegeEducationId) {
         const filterData = await getFinanceFilterOptions(
           collegeId,
-          collegeEducationId
+          collegeEducationId,
         );
 
         const branchList = filterData.branches || [];
@@ -490,7 +490,7 @@ export default function DashboardPage() {
 
         const total = await getOverallFinanceTotal(
           collegeId,
-          collegeEducationId
+          collegeEducationId,
         );
 
         if (isMounted) {
@@ -515,13 +515,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFinanceSummary = async () => {
       if (
-        loading ||                      // ⬅ wait for context
+        loading || // ⬅ wait for context
         !collegeId ||
         !collegeEducationId ||
-        !selectedBranchId ||            // ⬅ VERY IMPORTANT
+        !selectedBranchId || // ⬅ VERY IMPORTANT
         !selectedYear
       ) {
-        return;                         // ⬅ DO NOT reset to 0
+        return; // ⬅ DO NOT reset to 0
       }
 
       try {
@@ -542,13 +542,7 @@ export default function DashboardPage() {
     };
 
     loadFinanceSummary();
-  }, [
-    loading,
-    collegeId,
-    collegeEducationId,
-    selectedBranchId,
-    selectedYear,
-  ]);
+  }, [loading, collegeId, collegeEducationId, selectedBranchId, selectedYear]);
 
   useEffect(() => {
     const loadInsights = async () => {
@@ -570,20 +564,11 @@ export default function DashboardPage() {
           selectedYear,
         });
         setQuickInsights(result);
-      } catch (err) {
-      }
+      } catch (err) {}
     };
 
     loadInsights();
-  }, [
-    loading,
-    collegeId,
-    collegeEducationId,
-    selectedBranchId,
-    selectedYear,
-  ]);
-
-
+  }, [loading, collegeId, collegeEducationId, selectedBranchId, selectedYear]);
 
   useEffect(() => {
     const loadOverallPending = async () => {
@@ -607,7 +592,6 @@ export default function DashboardPage() {
         });
 
         setOverallPending(pending ?? 0);
-
       } catch (err) {
         console.error("❌ Overall Pending error:", err);
         setOverallPending(0);
@@ -615,21 +599,11 @@ export default function DashboardPage() {
     };
 
     loadOverallPending();
-  }, [
-    loading,
-    collegeId,
-    collegeEducationId,
-    selectedBranchId,
-    selectedYear,
-  ]);
+  }, [loading, collegeId, collegeEducationId, selectedBranchId, selectedYear]);
 
   useEffect(() => {
     const loadPendingStudents = async () => {
-      if (
-        loading ||
-        !collegeId ||
-        !collegeEducationId
-      ) {
+      if (loading || !collegeId || !collegeEducationId) {
         return;
       }
 
@@ -640,24 +614,18 @@ export default function DashboardPage() {
           collegeBranchId: selectedBranchId,
         });
         setPendingStudentsCount(count ?? 0);
-      } catch (err) {
-      }
+      } catch (err) {}
     };
 
     loadPendingStudents();
-  }, [
-    loading,
-    collegeId,
-    collegeEducationId,
-    selectedBranchId,
-  ]);
+  }, [loading, collegeId, collegeEducationId, selectedBranchId]);
 
   const handleFeeCollection = () => {
     if (!collegeEducationId || !selectedBranchId || !selectedYear) {
       return;
     }
     router.push(
-      `/finance?view=feeCollection&educationType=${collegeEducationType}&educationId=${collegeEducationId}&branchType=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
+      `/finance?view=feeCollection&educationType=${collegeEducationType}&educationId=${collegeEducationId}&branchType=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
     );
   };
 
@@ -667,14 +635,11 @@ export default function DashboardPage() {
   };
 
   const formatAmount = (amount: number) => {
-    if (amount >= 10000000)
-      return (amount / 10000000).toFixed(2) + " Cr";
+    if (amount >= 10000000) return (amount / 10000000).toFixed(2) + " Cr";
 
-    if (amount >= 100000)
-      return (amount / 100000).toFixed(1) + " L";
+    if (amount >= 100000) return (amount / 100000).toFixed(1) + " L";
 
-    if (amount >= 1000)
-      return (amount / 1000).toFixed(1) + " K";
+    if (amount >= 1000) return (amount / 1000).toFixed(1) + " K";
 
     return amount.toString();
   };
@@ -687,8 +652,7 @@ export default function DashboardPage() {
     value: Number((item.total / 100000).toFixed(1)),
   }));
 
-  if (!collegeEducationId) return
-
+  if (!collegeEducationId) return;
 
   return (
     <div className="min-h-screen flex justify-center text-gray-900">
@@ -712,6 +676,7 @@ export default function DashboardPage() {
                 <StaticDatePicker
                   views={["year"]}
                   displayStaticWrapperAs="desktop"
+                  minDate={new Date()}
                   value={
                     selectedYear !== "Year"
                       ? new Date(`${selectedYear}-01-01`)
@@ -724,12 +689,16 @@ export default function DashboardPage() {
                     }
                     setYearModalOpen(false);
                   }}
+                  // Custom logic to show present and future (e.g., next 10 years)
                   shouldDisableYear={(date) => {
+                    const currentYear = new Date().getFullYear();
                     const year = date.getFullYear();
 
-                    if (year < BASE_YEAR) return true;
+                    // Disable any year before this year
+                    if (year < currentYear) return true;
 
-                    if (year > CURRENT_YEAR) return true;
+                    // Optional: limit how far into the future they can go (e.g., 20 years)
+                    if (year > currentYear + 20) return true;
 
                     return false;
                   }}
@@ -745,6 +714,14 @@ export default function DashboardPage() {
                       fontSize: "12px",
                       width: 50,
                       height: 32,
+                      cursor: "pointer !important",
+                      "&:hover": {
+                        backgroundColor: "#43C17A20",
+                      },
+                      "&.Mui-selected": {
+                        backgroundColor: "#43C17A !important",
+                        color: "white",
+                      },
                     },
                   }}
                 />
@@ -782,7 +759,7 @@ export default function DashboardPage() {
           <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
             {(() => {
               const selectedBranchData = branches.find(
-                (b) => b.collegeBranchCode === selectedBranch
+                (b) => b.collegeBranchCode === selectedBranch,
               );
 
               const branchYears = selectedBranchData?.years || [];
@@ -795,43 +772,47 @@ export default function DashboardPage() {
                 return (
                   <div className="col-span-9 flex items-center justify-center h-[203px]">
                     <div className="text-center text-gray-500 text-xs font-medium">
-                      Academic Years and Semesters are not registered for this branch
+                      Academic Years and Semesters are not registered for this
+                      branch
                     </div>
                   </div>
                 );
               }
-              return <div
-                className={`col-span-9 grid grid-cols-2 gap-3 ${enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
+              return (
+                <div
+                  className={`col-span-9 grid grid-cols-2 gap-3 ${
+                    enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
                   }`}
-              >
-                {branchYears.map((yearObj: any, index: number) => {
-                  const summaryYear = financeSummary.yearWiseData.find(
-                    (y: any) => y.year === yearObj.collegeAcademicYear
-                  )
+                >
+                  {branchYears.map((yearObj: any, index: number) => {
+                    const summaryYear = financeSummary.yearWiseData.find(
+                      (y: any) => y.year === yearObj.collegeAcademicYear,
+                    );
 
-                  return (
-                    <div key={index} className="h-[95px]">
-                      <YearCard
-                        data={{
-                          year: yearObj.collegeAcademicYear,
-                          total: (summaryYear?.total ?? 0).toLocaleString(),
-                          sem1: (summaryYear?.sem1 ?? 0).toLocaleString(),
-                          sem2: (summaryYear?.sem2 ?? 0).toLocaleString(),
-                        }}
-                        branchId={selectedBranchId}
-                        academicYearId={yearObj.collegeAcademicYearId}
-                        academicYear={yearObj.collegeAcademicYear}
-                        branchName={selectedBranch}
-                        year={selectedYear}
-                        educationTypeId={collegeEducationId ?? undefined}
-                        collegeId={collegeId ?? undefined}
-                        collegeEducationId={collegeEducationId ?? undefined}
-                        semesterList={yearObj.semesters}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
+                    return (
+                      <div key={index} className="h-[95px]">
+                        <YearCard
+                          data={{
+                            year: yearObj.collegeAcademicYear,
+                            total: (summaryYear?.total ?? 0).toLocaleString(),
+                            sem1: (summaryYear?.sem1 ?? 0).toLocaleString(),
+                            sem2: (summaryYear?.sem2 ?? 0).toLocaleString(),
+                          }}
+                          branchId={selectedBranchId}
+                          academicYearId={yearObj.collegeAcademicYearId}
+                          academicYear={yearObj.collegeAcademicYear}
+                          branchName={selectedBranch}
+                          year={selectedYear}
+                          educationTypeId={collegeEducationId ?? undefined}
+                          collegeId={collegeId ?? undefined}
+                          collegeEducationId={collegeEducationId ?? undefined}
+                          semesterList={yearObj.semesters}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
             })()}
           </div>
 
@@ -1014,10 +995,26 @@ export default function DashboardPage() {
               </h3>
               <div className="space-y-2">
                 {[
-                  { label: "This Week", val: quickInsights.thisWeek, icon: CalendarCheck },
-                  { label: "Last Week", val: quickInsights.lastWeek, icon: Calendar },
-                  { label: "This Month", val: quickInsights.thisMonth, icon: Calendar },
-                  { label: "This Year", val: quickInsights.thisYear, icon: Calendar },
+                  {
+                    label: "This Week",
+                    val: quickInsights.thisWeek,
+                    icon: CalendarCheck,
+                  },
+                  {
+                    label: "Last Week",
+                    val: quickInsights.lastWeek,
+                    icon: Calendar,
+                  },
+                  {
+                    label: "This Month",
+                    val: quickInsights.thisMonth,
+                    icon: Calendar,
+                  },
+                  {
+                    label: "This Year",
+                    val: quickInsights.thisYear,
+                    icon: Calendar,
+                  },
                 ].map((d, i) => (
                   <div
                     key={i}
@@ -1054,7 +1051,7 @@ export default function DashboardPage() {
                           params.set("range", range);
 
                           router.push(
-                            `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
+                            `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
                           );
                         }}
                       />
@@ -1066,7 +1063,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex col-span-6 justify-around p-2 bg-white rounded-lg">
-
             <div className="col-span-3">
               <div className="bg-[#E5F6EC] p-3  rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
                 <h4 className="font-bold text-gray-800 text-xs mb-1">
@@ -1102,7 +1098,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
           </div>
 
           <div className="col-span-6">
