@@ -149,6 +149,7 @@ export async function deactivateStudentTask(studentTaskId: number) {
         .from("student_tasks")
         .update({
             isActive: false,
+            is_deleted: true,          // ← ADDED: was missing, causing is_deleted to stay false
             deletedAt: new Date().toISOString(),
         })
         .eq("studentTaskId", studentTaskId);

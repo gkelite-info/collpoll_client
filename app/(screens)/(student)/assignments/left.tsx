@@ -20,6 +20,10 @@ import { fetchActiveDiscussionsForStudent, fetchCompletedDiscussionsForStudent }
 import { fetchStudentDiscussionUploads } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
 import { fetchActiveQuizzesForStudent, fetchAttemptedQuizzesForStudent } from "@/lib/helpers/quiz/quizAPI";
 import { fetchSubmissionDetails, getStudentAttemptCount } from "@/lib/helpers/quiz/quizSubmissionAPI";
+import { QuizCardSkeletonGroup } from "./components/QuizCardShimmer";
+import { StudentDiscussionCardSkeletonGroup } from "./components/StudentDiscussionCardShimmer";
+import { AssignmentCardSkeletonGroup } from "./assignmentcard";
+
 
 function formatDate(dateStr: string) {
     if (!dateStr) return "-";
@@ -58,7 +62,15 @@ function AssignmentsLeftContent() {
     const [ongoingQuizzes, setOngoingQuizzes] = useState<any[]>([]);
     const [attemptedQuizzes, setAttemptedQuizzes] = useState<any[]>([]);
     const [quizzesLoading, setQuizzesLoading] = useState(false);
+    const [quizSubTabLoading, setQuizSubTabLoading] = useState(false);
+    const [discussionSubTabLoading, setDiscussionSubTabLoading] = useState(false);
+    const [assignmentSubTabLoading, setAssignmentSubTabLoading] = useState(false);
+    const [tabSwitchLoading, setTabSwitchLoading] = useState(false);
     const [quizRefreshKey, setQuizRefreshKey] = useState(0);
+    const [quizCurrentPage, setQuizCurrentPage] = useState(1);
+    const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
+    const QUIZ_PER_PAGE = 8;
+    const DISCUSSION_PER_PAGE = 8;
     const MAX_ATTEMPTS = 3;
     const [performanceData, setPerformanceData] = useState<any>(null);
     const [performanceLoading, setPerformanceLoading] = useState(false);
@@ -181,6 +193,48 @@ function AssignmentsLeftContent() {
             loadDiscussions();
         }
     }, [activeTab, collegeSectionsId]);
+
+    // Shimmer effect when switching quiz subtabs
+    useEffect(() => {
+        if (activeTab === "quiz") {
+            setQuizSubTabLoading(true);
+            const timer = setTimeout(() => {
+                setQuizSubTabLoading(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [quizView, activeTab]);
+
+    // Shimmer effect when switching discussion subtabs
+    useEffect(() => {
+        if (activeTab === "discussion") {
+            setDiscussionSubTabLoading(true);
+            const timer = setTimeout(() => {
+                setDiscussionSubTabLoading(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [discussionView, activeTab]);
+
+    // Shimmer effect when switching assignment subtabs
+    useEffect(() => {
+        if (activeTab === "assignments") {
+            setAssignmentSubTabLoading(true);
+            const timer = setTimeout(() => {
+                setAssignmentSubTabLoading(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [activeView]);
+
+    // Shimmer effect when switching main tabs
+    useEffect(() => {
+        setTabSwitchLoading(true);
+        const timer = setTimeout(() => {
+            setTabSwitchLoading(false);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [activeTab]);
 
     const handleTabChange = (tab: "assignments" | "quiz" | "discussion") => {
         const params = new URLSearchParams(searchParams.toString());
@@ -487,8 +541,8 @@ function AssignmentsLeftContent() {
 
                 <div className="mt-4 h-[151vh] overflow-y-auto pr-1">
                     {activeTab === "assignments" && (
-                        loading ? (
-                            <Loader />
+                        loading || tabSwitchLoading || assignmentSubTabLoading ? (
+                            <AssignmentCardSkeletonGroup count={4} />
                         ) : (
                             <>
                                 {activeView === "active" && (
@@ -521,13 +575,15 @@ function AssignmentsLeftContent() {
                     {activeTab === "quiz" && (
                         <>
                             {quizView === "ongoing" && (
-                                <div className="flex flex-col">
-                                    {quizzesLoading ? (
-                                        <Loader />
+                                <div className="flex flex-col h-full">
+                                    {quizzesLoading || quizSubTabLoading ? (
+                                        <QuizCardSkeletonGroup count={3} />
                                     ) : ongoingQuizzes.length === 0 ? (
-                                        <p className="text-sm text-gray-500 mt-4">No ongoing quizzes available</p>
+                                        <div className="flex items-center justify-center h-1/3">
+                                            <p className="text-sm text-gray-500">No ongoing quizzes available</p>
+                                        </div>
                                     ) : (
-                                        ongoingQuizzes.map((quiz, index) => {
+                                        ongoingQuizzes.slice((quizCurrentPage - 1) * QUIZ_PER_PAGE, quizCurrentPage * QUIZ_PER_PAGE).map((quiz, index) => {
                                             const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
                                             return (
                                                 <QuizCard
@@ -550,13 +606,20 @@ function AssignmentsLeftContent() {
                             )}
 
                             {quizView === "attempted" && (
-                                <div className="flex flex-col">
-                                    {quizzesLoading ? (
-                                        <Loader />
+                                <div className="flex flex-col h-full">
+                                    {quizzesLoading || quizSubTabLoading ? (
+                                        <QuizCardSkeletonGroup count={3} />
                                     ) : attemptedQuizzes.length === 0 ? (
-                                        <p className="text-sm text-gray-500 mt-4">No attempted quizzes yet</p>
+                                        <div className="flex items-center justify-center h-1/3">
+                                            <p className="text-sm text-gray-500">No attempted quizzes yet</p>
+                                        </div>
                                     ) : (
+<<<<<<< Updated upstream
                                         attemptedQuizzes.map((submission, index) => {
+=======
+                                        attemptedQuizzes.slice((quizCurrentPage - 1) * QUIZ_PER_PAGE, quizCurrentPage * QUIZ_PER_PAGE).map((submission, index) => {
+                                            console.log("submission:", submission);
+>>>>>>> Stashed changes
                                             const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
                                             const quiz = submission.quizzes;
                                             return (
@@ -588,16 +651,18 @@ function AssignmentsLeftContent() {
                     )}
 
                     {activeTab === "discussion" && (
-                        <div className="flex flex-col gap-4 pb-10">
-                            {discussionsLoading ? (
-                                <Loader />
+                        <div className="flex flex-col gap-4 pb-10 h-full">
+                            {discussionsLoading || discussionSubTabLoading ? (
+                                <StudentDiscussionCardSkeletonGroup count={3} />
                             ) : (
                                 <>
                                     {discussionView === "active" && (
                                         activeDiscussions.length === 0 ? (
-                                            <p className="text-sm text-gray-500 mt-4">No active discussions found.</p>
+                                            <div className="flex items-center justify-center h-1/3">
+                                                <p className="text-sm text-gray-500">No active discussions found.</p>
+                                            </div>
                                         ) : (
-                                            activeDiscussions.map((discussion) => (
+                                            activeDiscussions.slice((discussionCurrentPage - 1) * DISCUSSION_PER_PAGE, discussionCurrentPage * DISCUSSION_PER_PAGE).map((discussion) => (
                                                 <StudentDiscussionCard
                                                     key={discussion.discussionId}
                                                     data={discussion}
@@ -622,9 +687,11 @@ function AssignmentsLeftContent() {
                                     )}
                                     {discussionView === "completed" && (
                                         completedDiscussions.length === 0 ? (
-                                            <p className="text-sm text-gray-500 mt-4">No completed discussions found.</p>
+                                            <div className="flex items-center justify-center h-1/3">
+                                                <p className="text-sm text-gray-500">No completed discussions found.</p>
+                                            </div>
                                         ) : (
-                                            completedDiscussions.map((discussion) => (
+                                            completedDiscussions.slice((discussionCurrentPage - 1) * DISCUSSION_PER_PAGE, discussionCurrentPage * DISCUSSION_PER_PAGE).map((discussion) => (
                                                 <StudentDiscussionCard
                                                     key={discussion.discussionId}
                                                     data={discussion}
@@ -641,45 +708,102 @@ function AssignmentsLeftContent() {
                 </div>
 
                 {activeTab === "assignments" && totalPages > 1 && (
-                    <div className="flex justify-end items-center gap-3 mt-6">
+                    <div className="flex justify-center items-center gap-2 mt-6">
                         <button
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={currentPage === 1}
-                            className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === 1
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                                }`}
+                            className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
                         >
-                            <CaretLeft size={18} weight="bold" className="text-[#282828]" />
+                            <CaretLeft size={18} weight="bold" color="black" />
                         </button>
-
-                        {[...Array(totalPages)].map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => setCurrentPage(i + 1)}
-                                className={`px-3 py-1 cursor-pointer rounded ${currentPage === i + 1
-                                    ? "bg-[#16284F] text-white"
-                                    : "border text-[#282828] hover:bg-gray-100"
-                                    }`}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
-
+                        <div className="flex gap-1">
+                            {[...Array(totalPages)].map((_, i) => (
+                                <button
+                                    key={i + 1}
+                                    onClick={() => setCurrentPage(i + 1)}
+                                    className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${currentPage === i + 1 ? "bg-[#16284F] text-white" : "bg-white text-gray-600 border hover:border-gray-300"}`}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                        </div>
                         <button
-                            onClick={() =>
-                                setCurrentPage((p) => Math.min(totalPages, p + 1))
-                            }
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={currentPage === totalPages}
-                            className={`w-9 h-9 flex items-center justify-center border rounded ${currentPage === totalPages
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                                }`}
+                            className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
                         >
-                            <CaretRight size={18} weight="bold" className="text-[#282828]" />
+                            <CaretRight size={18} weight="bold" color="black" />
                         </button>
                     </div>
                 )}
+
+                {activeTab === "quiz" && (() => {
+                    const list = quizView === "ongoing" ? ongoingQuizzes : attemptedQuizzes;
+                    const quizTotalPages = Math.ceil(list.length / QUIZ_PER_PAGE);
+                    return quizTotalPages > 1 && !quizzesLoading && !quizSubTabLoading ? (
+                        <div className="flex justify-center items-center gap-2 mt-6">
+                            <button
+                                onClick={() => setQuizCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={quizCurrentPage === 1}
+                                className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+                            >
+                                <CaretLeft size={18} weight="bold" color="black" />
+                            </button>
+                            <div className="flex gap-1">
+                                {[...Array(quizTotalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => setQuizCurrentPage(i + 1)}
+                                        className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${quizCurrentPage === i + 1 ? "bg-[#16284F] text-white" : "bg-white text-gray-600 border hover:border-gray-300"}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setQuizCurrentPage((p) => Math.min(quizTotalPages, p + 1))}
+                                disabled={quizCurrentPage === quizTotalPages}
+                                className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
+                            >
+                                <CaretRight size={18} weight="bold" color="black" />
+                            </button>
+                        </div>
+                    ) : null;
+                })()}
+
+                {activeTab === "discussion" && (() => {
+                    const list = discussionView === "active" ? activeDiscussions : completedDiscussions;
+                    const discTotalPages = Math.ceil(list.length / DISCUSSION_PER_PAGE);
+                    return discTotalPages > 1 && !discussionsLoading && !discussionSubTabLoading ? (
+                        <div className="flex justify-center items-center gap-2 mt-6">
+                            <button
+                                onClick={() => setDiscussionCurrentPage((p) => Math.max(1, p - 1))}
+                                disabled={discussionCurrentPage === 1}
+                                className="p-2 rounded-lg border cursor-pointer bg-white disabled:opacity-30 hover:bg-gray-50 transition-all"
+                            >
+                                <CaretLeft size={18} weight="bold" color="black" />
+                            </button>
+                            <div className="flex gap-1">
+                                {[...Array(discTotalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => setDiscussionCurrentPage(i + 1)}
+                                        className={`w-9 cursor-pointer h-9 rounded-lg text-sm font-bold transition-all ${discussionCurrentPage === i + 1 ? "bg-[#16284F] text-white" : "bg-white text-gray-600 border hover:border-gray-300"}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setDiscussionCurrentPage((p) => Math.min(discTotalPages, p + 1))}
+                                disabled={discussionCurrentPage === discTotalPages}
+                                className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
+                            >
+                                <CaretRight size={18} weight="bold" color="black" />
+                            </button>
+                        </div>
+                    ) : null;
+                })()}
             </div>
         </div>
     )

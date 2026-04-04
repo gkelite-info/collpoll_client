@@ -5,6 +5,7 @@ import {
     CalendarDots,
     LinkSimpleHorizontal,
     UserCircle,
+    FilePdf,
 } from "@phosphor-icons/react";
 import { FiDownload } from "react-icons/fi";
 import { TfiPencil } from "react-icons/tfi";
@@ -255,7 +256,7 @@ export default function AssignmentCard({
                             </div>
 
                             {activeView === "active" && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1 -ml-4">
                                     {uploadedFiles[index] ? (
                                         <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
                                             <span
@@ -268,11 +269,10 @@ export default function AssignmentCard({
                                         </div>
                                     ) : (
                                         <div
-                                            className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] gap-1 cursor-pointer"
+                                            className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
                                             onClick={() => openUploadModal(index)}
                                         >
                                             <p className="text-[#43C17A] text-xs">Upload</p>
-                                            <FaPlus size={8} className="text-[#43C17A]" />
                                         </div>
                                     )}
                                 </div>
@@ -287,7 +287,11 @@ export default function AssignmentCard({
                 onClose={closeModal}
                 card={selectedCard}
                 submissionFileName={
-                    uploadingIndex !== null ? uploadedFiles[uploadingIndex] : undefined
+                    selectedCard
+                        ? uploadedFiles[cardProp.findIndex((c) => c.assignmentId === selectedCard.assignmentId)]
+                        ?? selectedCard.existingFilePath
+                        ?? undefined
+                        : undefined
                 }
             />
 

@@ -10,6 +10,7 @@ export type EduTypeDistribution = {
   faculty: number;
   finance: number;
   placement: number;
+  collegeHr: number; // ← ADDED
 };
  
 export type FinanceRow = {
@@ -23,6 +24,15 @@ export type FinanceRow = {
 export type FinanceListData = {
   distributions: EduTypeDistribution[];
   finance: FinanceRow[];
+  summary: {
+    admins: number;
+    students: number;
+    parents: number;
+    faculty: number;
+    financeManagers: number;
+    hrExecutives: number;
+    placementManagers: number;
+  };
 };
  
 export async function getFinanceListData(
@@ -32,6 +42,7 @@ export async function getFinanceListData(
   filters?: {
     collegeEducationId?: number;
     adminId?: number;
+    search?: string; // ← ADDED
   }
 ): Promise<FinanceListData & { totalCount: number }> {
  
@@ -46,7 +57,7 @@ export async function getFinanceListData(
  
   if (eduError) throw eduError;
   if (!eduList || eduList.length === 0) {
-    return { distributions: [], finance: [], totalCount: 0 };
+    return { distributions: [], finance: [], totalCount: 0, summary: { admins: 0, students: 0, parents: 0, faculty: 0, financeManagers: 0, hrExecutives: 0, placementManagers: 0 } };
   }
  
   const eduIds = eduList.map((e: any) => e.collegeEducationId) as number[];
@@ -62,6 +73,7 @@ export async function getFinanceListData(
  
   if (filters?.collegeEducationId) financeQuery = financeQuery.eq("collegeEducationId", filters.collegeEducationId);
   if (filters?.adminId)            financeQuery = financeQuery.eq("createdBy", filters.adminId);
+  if (filters?.search)             financeQuery = financeQuery.ilike("fullName", `%${filters.search}%`); // ← ADDED
  
   const { data: financeData, count: financeCount } = await financeQuery;
  
@@ -71,50 +83,59 @@ export async function getFinanceListData(
     { data: facultyData },
     { data: parentData },
     { data: usersData },
+    { data: hrData }, // ← ADDED
+    { data: allFinanceData }, // ← ADDED: Finance managers for college-wide count
   ] = await Promise.all([
- 
+
     supabase
       .from("admins")
       .select("adminId, fullName, collegeEducationId")
       .eq("collegeId", collegeId)
       .eq("is_deleted", false),
- 
+
     supabase
       .from("students")
       .select("collegeEducationId")
       .eq("collegeId", collegeId)
       .is("deletedAt", null),
- 
+
     supabase
       .from("faculty")
       .select("collegeEducationId")
       .eq("collegeId", collegeId)
       .eq("isActive", true),
- 
+
     supabase
       .from("parents")
       .select("parentId, students ( collegeEducationId )")
       .eq("collegeId", collegeId)
       .eq("isActive", true),
- 
+
     supabase
       .from("users")
       .select("userId, fullName")
       .eq("collegeId", collegeId)
       .eq("is_deleted", false),
+
+    // ← ADDED: HR executives from college_hr table (college-scoped)
+    supabase
+      .from("college_hr")
+      .select("collegeHrId, userId")
+      .eq("collegeId", collegeId)
+      .eq("is_deleted", false),
+
+    // ← ADDED: Finance managers for college-wide count and per-education distribution
+    supabase
+      .from("finance_manager")
+      .select("collegeEducationId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false),
   ]);
- 
+
   const userNameMap = new Map((usersData ?? []).map((u: any) => [u.userId, u.fullName]));
   const adminMap    = new Map((adminData ?? []).map((a: any) => [a.adminId, a.fullName]));
- 
-  // Full college-wide finance count for distributions
-  const { data: allFinanceData } = await supabase
-    .from("finance_manager")
-    .select("collegeEducationId")
-    .eq("collegeId", collegeId)
-    .eq("isActive", true)
-    .eq("is_deleted", false);
- 
+
   const distributions: EduTypeDistribution[] = eduList.map((edu: any) => {
     const eduId = edu.collegeEducationId;
     const adminsCount   = (adminData      ?? []).filter((r: any) => r.collegeEducationId === eduId).length;
@@ -125,13 +146,14 @@ export async function getFinanceListData(
     return {
       collegeEducationId: eduId,
       eduType:    edu.collegeEducationType,
-      totalUsers: adminsCount + studentsCount + parentsCount + facultyCount + financeCount,
+      totalUsers: adminsCount + studentsCount + parentsCount + facultyCount + financeCount + (hrData ?? []).length,
       admins:     adminsCount,
       students:   studentsCount,
       parents:    parentsCount,
       faculty:    facultyCount,
       finance:    financeCount,
       placement:  0,
+      collegeHr:  (hrData ?? []).length, // ← ADDED
     };
   });
  
@@ -142,6 +164,18 @@ export async function getFinanceListData(
     eduType:            eduList.find((e: any) => e.collegeEducationId === f.collegeEducationId)?.collegeEducationType ?? "—",
     supportAdmin:       adminMap.get(f.createdBy) ?? "—",
   }));
- 
-  return { distributions, finance, totalCount: financeCount ?? 0 };
+
+  // ← ADDED: summary for stat cards (college-wide counts)
+  const collegeWideFinanceCount = (allFinanceData ?? []).length;
+  const summary = {
+    admins:            (adminData    ?? []).length,
+    students:          (studentData  ?? []).length,
+    parents:           (parentData   ?? []).length,
+    faculty:           (facultyData  ?? []).length,
+    financeManagers:   collegeWideFinanceCount,
+    hrExecutives:      (hrData       ?? []).length,
+    placementManagers: 0,
+  };
+
+  return { distributions, finance, totalCount: financeCount ?? 0, summary };
 }

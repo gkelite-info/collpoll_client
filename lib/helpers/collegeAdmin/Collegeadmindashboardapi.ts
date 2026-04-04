@@ -1,12 +1,36 @@
 import { supabase } from "@/lib/supabaseClient";
 
+// Helper function to safely parse and format dates
+const formatDateOfJoining = (dateString: string | null | undefined): string => {
+  if (!dateString) return "—";
+  
+  try {
+    // Parse the date string
+    const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "—";
+    }
+    
+    // Format to "en-IN" locale (DD-MMM-YYYY)
+    return date.toLocaleDateString("en-IN", { 
+      day: "numeric", 
+      month: "short", 
+      year: "numeric" 
+    });
+  } catch (error) {
+    return "—";
+  }
+};
+
 export type AdminDetail = {
   adminId: number;
   fullName: string;
   email: string;
   mobile: string;
   gender: string;
-  createdAt: string;
+  dateOfJoining: string; // Date of Joining — sourced from users.dateOfJoining
   collegeEducationId: number;
   eduType: string;
   branchCount: number;
@@ -52,7 +76,6 @@ export async function fetchCollegeAdminDashboardStats(
         email,
         mobile,
         gender,
-        createdAt,
         collegeEducationId,
         is_deleted,
         college_education ( collegeEducationType )
@@ -67,10 +90,10 @@ export async function fetchCollegeAdminDashboardStats(
       .eq("collegeId", collegeId)
       .eq("isActive", true),
 
-    // 4. Total users count for this college (all roles)
+    // 4. Total users count + dateOfJoining from users table
     supabase
       .from("users")
-      .select("userId", { count: "exact", head: true })
+      .select("userId, email, dateOfJoining", { count: "exact" })
       .eq("collegeId", collegeId)
       .eq("is_deleted", false),
   ]);
@@ -83,7 +106,13 @@ export async function fetchCollegeAdminDashboardStats(
   const eduList    = eduRes.data    ?? [];
   const adminList  = adminsRes.data ?? [];
   const branchList = branchRes.data ?? [];
+  const userList   = usersRes.data  ?? [];
   const totalUsers = usersRes.count ?? 0;
+
+  // Build lookup: email → dateOfJoining (users table is the source of truth)
+  const userDateOfJoiningMap = new Map<string, string | null>(
+    userList.map((u: any) => [u.email, u.dateOfJoining])
+  );
 
   // Build per-eduType stats
   const eduTypeStats: EduTypeStat[] = eduList.map((edu) => ({
@@ -93,18 +122,18 @@ export async function fetchCollegeAdminDashboardStats(
     branchCount: branchList.filter((b) => b.collegeEducationId === edu.collegeEducationId).length,
   }));
 
-  // Format admin details — attach branchCount for their eduType
+  // Format admin details — dateOfJoining from users table matched by email
   const adminDetails: AdminDetail[] = adminList.map((a: any) => {
-    const eduStat = eduTypeStats.find(
-      (e) => e.collegeEducationId === a.collegeEducationId
-    );
+    const eduStat       = eduTypeStats.find((e) => e.collegeEducationId === a.collegeEducationId);
+    const dateOfJoining = userDateOfJoiningMap.get(a.email);
+
     return {
       adminId:            a.adminId,
       fullName:           a.fullName,
       email:              a.email,
       mobile:             a.mobile,
       gender:             a.gender ?? "—",
-      createdAt:          new Date(a.createdAt).toLocaleDateString("en-IN"),
+      dateOfJoining:      formatDateOfJoining(dateOfJoining),
       collegeEducationId: a.collegeEducationId,
       eduType:            (a.college_education as any)?.collegeEducationType ?? "N/A",
       branchCount:        eduStat?.branchCount ?? 0,

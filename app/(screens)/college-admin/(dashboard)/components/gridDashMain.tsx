@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   GraduationCap,
   UserGear,
@@ -11,6 +11,12 @@ import {
 import { FeeCollectionTrend, fetchFeeCollectionTrend, formatINR } from "@/lib/helpers/collegeAdmin/Feecollectiontrendapi";
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
 import { DashboardStats, fetchCollegeAdminDashboardStats } from "@/lib/helpers/collegeAdmin/Collegeadmindashboardapi";
+import { AdminProfileCardShimmer } from "../shimmers/AdminProfileCardShimmer";
+import { StatCardShimmer } from "../shimmers/StatCardShimmer";
+import { QuickLinkCardShimmer } from "../shimmers/QuickLinkCardShimmer";
+import { FeeCollectionTrendCardShimmer } from "../shimmers/FeeCollectionTrendCardShimmer";
+import { MeetingCardShimmer } from "../shimmers/MeetingCardShimmer";
+import { AdminSectionShimmer } from "../shimmers/AdminSectionShimmer";
 import AdminListView from "./AdminListView";
 import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
@@ -120,8 +126,12 @@ const AdminProfileCard = ({ data }: { data: any }) => (
       </div>
 
       <div className="flex justify-between items-center pt-1">
-        <span className="text-gray-600 font-medium">Created on:</span>
-        <span className="font-bold text-gray-600">{data.createdAt}</span>
+        <span className="text-gray-600 font-medium">Date of Joining:</span>
+        <span className="font-bold text-gray-600">
+          {data.dateOfJoining && data.dateOfJoining !== "—"
+            ? data.dateOfJoining
+            : "—"}
+        </span>
       </div>
     </div>
   </div>
@@ -257,8 +267,9 @@ const MeetingCard = () => (
           <span className="text-gray-500 font-normal flex-shrink-0">Date :</span>
           <PillTag label="20 Feb 2026" />
           <button
-            className="ml-auto px-6 py-2.5 rounded-full text-sm font-semibold bg-[#16284F] text-white hover:bg-[#0f1c38] transition-colors whitespace-nowrap flex-shrink-0 cursor-pointer"
-            onClick={() => window.open("#", "_blank", "noopener,noreferrer")}
+            disabled
+            className="ml-auto px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-200 text-gray-400 cursor-not-allowed whitespace-nowrap flex-shrink-0"
+            title="No meeting link available"
           >
             Join Meeting
           </button>
@@ -272,9 +283,22 @@ const MeetingCard = () => (
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { collegeId, loading: contextLoading } = useCollegeAdmin();
 
-  const [activeView, setActiveView] = useState<string | null>(null);
+  // Map URL subview param → activeView label
+  const SUBVIEW_MAP: Record<string, string> = {
+    admins:   "Admins",
+    faculty:  "Faculty",
+    students: "Students",
+    parents:  "Parents",
+    finance:  "Finance",
+  };
+
+  const subviewParam = searchParams.get("subview");
+  const [activeView, setActiveView] = useState<string | null>(
+    subviewParam ? (SUBVIEW_MAP[subviewParam] ?? null) : null
+  );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trend, setTrend] = useState<FeeCollectionTrend | null>(null);
   const [isFetching, setIsFetching] = useState(true);
@@ -298,28 +322,38 @@ export default function AdminDashboard() {
     load();
   }, [collegeId, contextLoading]);
 
-  const shimmer = "animate-pulse bg-gray-200 rounded-xl";
   const isLoading = contextLoading || isFetching;
+
+  const handleSetView = (view: string | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (view) {
+      params.set("subview", view.toLowerCase());
+    } else {
+      params.delete("subview");
+    }
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setActiveView(view);
+  };
 
   // ── Sub-view: Admins list ──
   if (activeView === "Admins") {
-    return <AdminListView onBack={() => setActiveView(null)} />;
+    return <AdminListView onBack={() => handleSetView(null)} />;
   }
 
   if (activeView === "Faculty") {
-    return <FacultyListView onBack={() => setActiveView(null)} />;
+    return <FacultyListView onBack={() => handleSetView(null)} />;
   }
 
   if (activeView === "Students") {
-    return <StudentListView onBack={() => setActiveView(null)} />;
+    return <StudentListView onBack={() => handleSetView(null)} />;
   }
 
   if (activeView === "Parents") {
-    return <ParentListView onBack={() => setActiveView(null)} />;
+    return <ParentListView onBack={() => handleSetView(null)} />;
   }
 
   if (activeView === "Finance") {
-    return <FinanceListView onBack={() => setActiveView(null)} />;
+    return <FinanceListView onBack={() => handleSetView(null)} />;
   }
 
   return (
@@ -327,66 +361,79 @@ export default function AdminDashboard() {
       {/* Top Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {statConfig.map((stat) => (
-          <StatCard
-            key={stat.id}
-            label={stat.label}
-            value={
-              isLoading || !stats
-                ? "—"
-                : String(stats[stat.key as keyof DashboardStats] ?? 0)
-            }
-            color={stat.color}
-            icon={stat.icon}
-            iconColor={stat.iconColor}
-          />
+          isLoading || !stats ? (
+            <StatCardShimmer key={stat.id} />
+          ) : (
+            <StatCard
+              key={stat.id}
+              label={stat.label}
+              value={String(stats[stat.key as keyof DashboardStats] ?? 0)}
+              color={stat.color}
+              icon={stat.icon}
+              iconColor={stat.iconColor}
+            />
+          )
         ))}
       </div>
 
       {/* Middle Quick Links Row */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {quickLinks.map((link) => (
-            <QuickLinkCard
-              key={link}
-              title={link}
-              onClick={() => setActiveView(link)}
-            />
-          ))}
+          {isLoading
+            ? [...Array(6)].map((_, i) => (
+              <QuickLinkCardShimmer key={i} />
+            ))
+            : quickLinks.map((link) => (
+              <QuickLinkCard
+                key={link}
+                title={link}
+                onClick={() => handleSetView(link)}
+              />
+            ))
+          }
         </div>
       </div>
 
       {/* Admins — horizontal scroll, single row */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[#1F2937] text-xl font-bold">Admins</h2>
-          <button
-            onClick={() => router.push("/college-admin/add-admin")}
-            className="bg-[#089144] hover:bg-[#06723a] text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
-          >
-            Add Admin
-          </button>
-        </div>
+      {isLoading ? (
+        <AdminSectionShimmer />
+      ) : (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#1F2937] text-xl font-bold">Admins</h2>
+            <button
+              onClick={() => router.push("/college-admin/add-admin")}
+              className="bg-[#089144] hover:bg-[#06723a] text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
+            >
+              Add Admin
+            </button>
+          </div>
 
-        <div
-          className="flex gap-4 overflow-x-auto pb-2"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {isLoading
-            ? [...Array(3)].map((_, i) => (
-              <div key={i} className={`min-w-[260px] h-[230px] flex-shrink-0 ${shimmer}`} />
-            ))
-            : (stats?.adminDetails ?? []).map((admin) => (
+          <div
+            className="flex gap-4 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {(stats?.adminDetails ?? []).map((admin) => (
               <div key={admin.adminId} className="min-w-[260px] flex-shrink-0">
                 <AdminProfileCard data={admin} />
               </div>
             ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Fee Collection Trend + Meeting Card */}
       <div className="grid grid-cols-2 gap-4 mt-6">
-        <FeeCollectionTrendCard trend={trend} />
-        <MeetingCard />
+        {isLoading ? (
+          <FeeCollectionTrendCardShimmer />
+        ) : (
+          <FeeCollectionTrendCard trend={trend} />
+        )}
+        {isLoading ? (
+          <MeetingCardShimmer />
+        ) : (
+          <MeetingCard />
+        )}
       </div>
     </div>
   );

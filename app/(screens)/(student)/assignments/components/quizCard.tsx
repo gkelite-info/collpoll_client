@@ -182,7 +182,13 @@ export default function QuizCard({ data }: { data: any }) {
                             <div className="bg-[#43C07A24] rounded-full p-1">
                                 <CalendarDotsIcon size={16} className="text-[#43C17A]" weight="regular" />
                             </div>
-                            <span className="font-semibold text-sm text-[#282828]">Quiz Duration :</span> <span className="text-[#282828]">{data.quizDuration}</span>
+                            <span className="font-semibold text-sm text-[#282828]">Quiz Duration :</span>
+
+                            <div className="overflow-x-auto max-w-[140px]">
+                                <span className="text-[#282828] whitespace-nowrap block">
+                                    {data.quizDuration}
+                                </span>
+                            </div>
                         </div>
                         {/* <div className="flex items-center gap-2 text-xs text-[#282828]">
                             <div className="bg-[#43C07A24] rounded-full p-1">
