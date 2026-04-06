@@ -643,14 +643,10 @@ export default function DashboardPage() {
           selectedYear,
         });
         setQuickInsights(result);
-<<<<<<< Updated upstream
-      } catch (err) {}
-=======
       } catch (err) {
       } finally {
         setLoadingInsights(false);
       }
->>>>>>> Stashed changes
     };
 
     loadInsights();
@@ -704,14 +700,10 @@ export default function DashboardPage() {
           collegeBranchId: selectedBranchId,
         });
         setPendingStudentsCount(count ?? 0);
-<<<<<<< Updated upstream
-      } catch (err) {}
-=======
       } catch (err) {
       } finally {
         setLoadingPendingStudents(false);
       }
->>>>>>> Stashed changes
     };
 
     loadPendingStudents();
@@ -866,6 +858,7 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+          
 
           {/* ── YearCards ── */}
           <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
@@ -1114,44 +1107,13 @@ export default function DashboardPage() {
                 Quick Insights
               </h3>
               <div className="space-y-2">
-<<<<<<< Updated upstream
-                {[
-                  {
-                    label: "This Week",
-                    val: quickInsights.thisWeek,
-                    icon: CalendarCheck,
-                  },
-                  {
-                    label: "Last Week",
-                    val: quickInsights.lastWeek,
-                    icon: Calendar,
-                  },
-                  {
-                    label: "This Month",
-                    val: quickInsights.thisMonth,
-                    icon: Calendar,
-                  },
-                  {
-                    label: "This Year",
-                    val: quickInsights.thisYear,
-                    icon: Calendar,
-                  },
-                ].map((d, i) => (
-                  <div
-                    key={i}
-                    className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-[#609872] flex items-center justify-center text-white">
-                        <d.icon weight="fill" size={10} />
-=======
                 {loadingInsights ? (
+                  // Shimmer rows
                   [0, 1, 2, 3].map((i) => (
                     <div key={i} className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <div className="shimmer w-5 h-5 rounded-full" />
                         <div className="shimmer h-3 w-16" />
->>>>>>> Stashed changes
                       </div>
                       <div className="shimmer h-3 w-14" />
                     </div>
@@ -1197,20 +1159,12 @@ export default function DashboardPage() {
 
                             params.set("range", range);
 
-<<<<<<< Updated upstream
-                          router.push(
-                            `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
-                          );
-                        }}
-                      />
-=======
                             router.push(
-                              `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`
+                              `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
                             );
                           }}
                         />
                       </div>
->>>>>>> Stashed changes
                     </div>
                   ))
                 )}
