@@ -79,7 +79,7 @@ const EventCard = ({
 
   return (
     <div
-      onClick={onClick}
+      // onClick={onClick}
       className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
       {/* DELETE BUTTON */}
@@ -87,7 +87,7 @@ const EventCard = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            // onDelete();
           }}
           className="absolute cursor-pointer top-2 right-2 hidden group-hover:flex bg-white rounded-full p-1 shadow hover:bg-red-50 z-50"
         >

@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
 import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
 import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 interface Option {
     id: number;
@@ -36,6 +37,7 @@ export default function FacultyAddQuestions({
     isLoading,
     quizId
 }: FacultyAddQuestionsProps) {
+    const [deleteQuestionId, setDeleteQuestionId] = useState<number | null>(null);
     const [questions, setQuestions] = useState<Question[]>([
         {
             id: 1,
@@ -43,10 +45,10 @@ export default function FacultyAddQuestions({
             type: "Multiple Choice",
             correctAnswer: "",
             options: [
-                { id: 1, text: "Option 1", isCorrect: false },
-                { id: 2, text: "Option 2", isCorrect: false },
-                { id: 3, text: "Option 3", isCorrect: false },
-                { id: 4, text: "Option 4", isCorrect: false },
+                { id: 1, text: "", isCorrect: false },
+                { id: 2, text: "", isCorrect: false },
+                { id: 3, text: "", isCorrect: false },
+                { id: 4, text: "", isCorrect: false },
             ],
         },
     ]);
@@ -64,7 +66,7 @@ export default function FacultyAddQuestions({
             .then((data) => {
                 setQuizDetails({
                     quizTitle: data.quizTitle,
-                    topicTitle: data.quizTitle,
+                    topicTitle: data.quizId,
                 });
             })
             .catch(() => toast.error("Failed to fetch quiz details"));
@@ -78,17 +80,31 @@ export default function FacultyAddQuestions({
             type: lastType,
             correctAnswer: "",
             options: [
-                { id: 1, text: "Option 1", isCorrect: false },
-                { id: 2, text: "Option 2", isCorrect: false },
-                { id: 3, text: "Option 3", isCorrect: false },
-                { id: 4, text: "Option 4", isCorrect: false },
+                { id: 1, text: "", isCorrect: false },
+                { id: 2, text: "", isCorrect: false },
+                { id: 3, text: "", isCorrect: false },
+                { id: 4, text: "", isCorrect: false },
             ],
         };
         setQuestions((prev) => [...prev, newQuestion]);
     };
 
     const deleteQuestion = (id: number) => {
-        setQuestions((prev) => prev.filter((q) => q.id !== id));
+        const question = questions.find(q => q.id === id);
+        if (!question) return;
+        if (isQuestionEmpty(question)) {
+            setQuestions(prev => prev.filter(q => q.id !== id));
+            return;
+        }
+        setDeleteQuestionId(id);
+    };
+
+    const confirmDeleteQuestion = () => {
+        if (!deleteQuestionId) return;
+        setQuestions(prev =>
+            prev.filter(q => q.id !== deleteQuestionId)
+        );
+        setDeleteQuestionId(null);
     };
 
     const updateQuestionTitle = (id: number, title: string) => {
@@ -142,7 +158,7 @@ export default function FacultyAddQuestions({
                         ...q,
                         options: [
                             ...q.options,
-                            { id: Date.now(), text: `Option ${q.options.length + 1}`, isCorrect: false },
+                            { id: Date.now(), text: '', isCorrect: false },
                         ],
                     }
                     : q
@@ -207,6 +223,7 @@ export default function FacultyAddQuestions({
             const params = new URLSearchParams();
             params.set("tab", "quiz");
             params.set("quizView", status === "Draft" ? "drafts" : "active");
+            params.set("refreshQuiz", "1");
             router.push(`${pathname}?${params.toString()}`);
         } catch (err) {
             console.error("handleSave error:", err);
@@ -216,6 +233,15 @@ export default function FacultyAddQuestions({
             setIsDrafting(false);
         }
     };
+
+    const isQuestionEmpty = (q: Question) => {
+        const hasTitle = q.title.trim().length > 0;
+        const hasOptions = q.options.some(o => o.text.trim().length > 0);
+        const hasAnswer = q.correctAnswer.trim().length > 0;
+        return !(hasTitle || hasOptions || hasAnswer);
+    };
+
+    const hasMultipleChoice = questions.some((q) => q.type === "Multiple Choice");
 
     return (
         <div className="w-full h-full flex flex-col">
@@ -229,19 +255,37 @@ export default function FacultyAddQuestions({
                 </p>
             </div>
 
-            <div className="bg-white rounded-md px-4 py-3 mb-3">
+            <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px]">
                 <p className="font-bold text-[#282828] text-sm">
-                    {quizDetails?.quizTitle || quizTitle}
+                    {quizDetails?.quizTitle || ""}
                 </p>
                 <p className="text-[#282828] text-xs mt-0.5">
-                    {quizDetails?.topicTitle || quizTopic}
+                    {quizDetails?.quizTitle || ""}
                 </p>
             </div>
 
-            <div className="flex justify-end mb-3">
+            {/* <div className="flex justify-end mb-3">
                 <button
                     onClick={addQuestion}
                     className="flex items-center gap-2 bg-[#43C17A] text-white text-sm font-medium p-2 rounded-md hover:bg-[#35a868] transition-colors cursor-pointer"
+                >
+                    <span className="text-lg leading-none"><PlusCircleIcon size={20} weight="fill" color="white" /></span> Add Question
+                </button>
+            </div> */}
+
+            <div className="flex justify-between items-center mb-3 gap-4">
+                <div className="flex-1">
+                    {hasMultipleChoice && (
+                        <div className="inline-block bg-red-50 border border-red-100 px-3 py-1.5 rounded-md">
+                            <p className="text-red-500 text-xs sm:text-sm font-medium m-0">
+                                * Note: For multiple choice questions, select the correct answer by clicking the radio button.
+                            </p>
+                        </div>
+                    )}
+                </div>
+                <button
+                    onClick={addQuestion}
+                    className="flex items-center gap-2 bg-[#43C17A] text-white text-sm font-medium p-2 rounded-md hover:bg-[#35a868] transition-colors cursor-pointer shrink-0 whitespace-nowrap"
                 >
                     <span className="text-lg leading-none"><PlusCircleIcon size={20} weight="fill" color="white" /></span> Add Question
                 </button>
@@ -288,6 +332,7 @@ export default function FacultyAddQuestions({
                                         <input
                                             type="text"
                                             value={option.text}
+                                            placeholder={`Option ${question.options.findIndex(o => o.id === option.id) + 1}`}
                                             onChange={(e) =>
                                                 updateOptionText(question.id, option.id, e.target.value)
                                             }
@@ -303,6 +348,7 @@ export default function FacultyAddQuestions({
                                                 key={option.id}
                                                 type="text"
                                                 value={option.text}
+                                                placeholder={`Option ${question.options.findIndex(o => o.id === option.id) + 1}`}
                                                 onChange={(e) =>
                                                     updateOptionText(question.id, option.id, e.target.value)
                                                 }
@@ -377,6 +423,12 @@ export default function FacultyAddQuestions({
                     {isSaving ? "Saving..." : "Save"}
                 </button>
             </div>
+            <ConfirmDeleteModal
+                open={!!deleteQuestionId}
+                name="question"
+                onConfirm={confirmDeleteQuestion}
+                onCancel={() => setDeleteQuestionId(null)}
+            />
         </div>
     );
 }

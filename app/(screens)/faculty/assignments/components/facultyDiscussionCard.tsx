@@ -1,5 +1,53 @@
-import { PencilSimple, FilePdf, CalendarDotsIcon, Trash } from "@phosphor-icons/react";
+import {
+    PencilSimple,
+    FilePdf,
+    FileDoc,
+    FileXls,
+    FilePpt,
+    FileZip,
+    FileJs,
+    FileCss,
+    FileHtml,
+    FilePng,
+    FileJpg,
+    CalendarDotsIcon,
+    Trash
+} from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+
+const getFileIcon = (fileName: string) => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    switch (ext) {
+        case "pdf":
+            return <FilePdf size={16} weight="fill" className="text-white" />;
+        case "doc":
+        case "docx":
+            return <FileDoc size={16} weight="fill" className="text-white" />;
+        case "xls":
+        case "xlsx":
+            return <FileXls size={16} weight="fill" className="text-white" />;
+        case "ppt":
+        case "pptx":
+            return <FilePpt size={16} weight="fill" className="text-white" />;
+        case "zip":
+        case "rar":
+            return <FileZip size={16} weight="fill" className="text-white" />;
+        case "js":
+            return <FileJs size={16} weight="fill" className="text-white" />;
+        case "html":
+            return <FileHtml size={16} weight="fill" className="text-white" />;
+        case "css":
+            return <FileCss size={16} weight="fill" className="text-white" />;
+        case "png":
+            return <FilePng size={16} weight="fill" className="text-white" />;
+        case "jpg":
+        case "jpeg":
+            return <FileJpg size={16} weight="fill" className="text-white" />;
+
+        default:
+            return <FilePdf size={16} weight="fill" className="text-white" />;
+    }
+};
 
 export default function FacultyDiscussionCard({ data, discussionView = "active", onDelete }: { data: any, discussionView?: "active" | "completed", onDelete?: (discussionId: number) => void; }) {
     const router = useRouter();
@@ -86,7 +134,7 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                                 rel="noopener noreferrer"
                                 className="flex items-center cursor-pointer gap-2 bg-[#16284F38] text-[#16284F] px-3 py-1 rounded-md text-xs font-medium flex-shrink-0">
                                 <div className="bg-[#16284F] rounded-full p-1 flex items-center justify-center mx-auto">
-                                    <FilePdf size={16} weight="fill" className="text-white" />
+                                    {getFileIcon(file.fileUrl)}
                                 </div>
                                 {file.fileUrl.split("/").pop()?.split("_").slice(1).join("_")}
                             </a>

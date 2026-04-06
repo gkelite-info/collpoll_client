@@ -181,8 +181,11 @@ export async function fetchDiscussionsByFacultyId(facultyId: number) {
       deadline,
       createdAt,
       discussion_file_uploads (
-                fileUrl
-            )
+            fileUrl,
+            isActive,
+            is_deleted,
+            deletedAt
+     )
     `)
         .eq("createdBy", facultyId)
         .eq("isActive", true)
@@ -194,7 +197,13 @@ export async function fetchDiscussionsByFacultyId(facultyId: number) {
         throw error;
     }
 
-    return data ?? [];
+    // return data ?? [];
+    return (data ?? []).map(d => ({
+        ...d,
+        discussion_file_uploads:
+            (d.discussion_file_uploads ?? [])
+                .filter(f => f.isActive && !f.is_deleted && !f.deletedAt)
+    }));
 }
 
 export async function fetchCompletedDiscussionsByFacultyId(facultyId: number) {
@@ -207,7 +216,10 @@ export async function fetchCompletedDiscussionsByFacultyId(facultyId: number) {
             deadline,
             createdAt,
             discussion_file_uploads (
-                fileUrl
+                fileUrl,
+                isActive,
+                is_deleted,
+                deletedAt
             )
         `)
         .eq("createdBy", facultyId)
@@ -219,7 +231,14 @@ export async function fetchCompletedDiscussionsByFacultyId(facultyId: number) {
         throw error;
     }
 
-    return data ?? [];
+    // return data ?? [];
+
+    return (data ?? []).map(d => ({
+        ...d,
+        discussion_file_uploads:
+            (d.discussion_file_uploads ?? [])
+                .filter(f => f.isActive && !f.is_deleted && !f.deletedAt) // CHANGED
+    }));
 }
 
 export async function fetchDiscussionById(discussionId: number) {
@@ -238,10 +257,15 @@ export async function fetchDiscussionById(discussionId: number) {
             ),
             discussion_file_uploads (
                 discussionFileUploadId,
-                fileUrl
+                fileUrl,
+                isActive,
+                is_deleted,
+                deletedAt
             )
         `)
         .eq("discussionId", discussionId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
         .single();
 
     if (error) {

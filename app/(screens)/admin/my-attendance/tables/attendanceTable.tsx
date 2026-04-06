@@ -61,7 +61,7 @@ const AttendanceTable: React.FC<Props> = ({
   const years = Array.from(
     {
       length:
-        now.getFullYear() + 5 - startYear + 1
+        now.getFullYear() - startYear + 1
     },
     (_, i) => startYear + i
   );
@@ -181,7 +181,7 @@ const AttendanceTable: React.FC<Props> = ({
             {records.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={10}
                   className="text-center h-[30vh] text-gray-400"
                 >
                   No attendance records found
