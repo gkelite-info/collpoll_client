@@ -12,7 +12,9 @@ export type PaymentStatus = "Pending" | "Paid" | "Partial";
 export async function getYearFinanceStudentList(
     filters: YearFinanceFilters,
     page: number,
-    limit: number
+    limit: number,
+    search: string = "",
+    statusFilter: "all" | "paid" | "pending" | "partial" = "all"
 ) {
     const {
         collegeId,
@@ -47,7 +49,7 @@ export async function getYearFinanceStudentList(
         .is("deletedAt", null)
         .eq("student_academic_history.collegeAcademicYearId", collegeAcademicYearId)
         .is("student_academic_history.deletedAt", null)
-        .range(from, to); // ✅ Pagination added
+        .range(from, to);
 
     if (!students?.length) {
         return {
@@ -123,12 +125,14 @@ export async function getYearFinanceStudentList(
             ? (paidMap.get(obligation.studentFeeObligationId) || 0)
             : 0;
 
-        const balance = total - paid;
+        // ✅ FIX: floor balance at 0 — never show negative
+        const balance = Math.max(0, total - paid);
 
+        // ✅ FIX: treat overpayment (paid >= total) as Paid, not Partial
         const status: PaymentStatus =
             paid === 0
                 ? "Pending"
-                : balance === 0
+                : paid >= total
                     ? "Paid"
                     : "Partial";
 
@@ -147,9 +151,27 @@ export async function getYearFinanceStudentList(
         };
     });
 
+    /* 6️⃣ Apply search + status filter post-build
+       (fullName is a joined field — not filterable at DB level;
+        paymentStatus is a derived value — not a DB column) */
+    const searchLower = search.trim().toLowerCase();
+
+    const filtered = result.filter(s => {
+        const matchesSearch =
+            searchLower === "" ||
+            s.studentName.toLowerCase().includes(searchLower) ||
+            String(s.studentId).toLowerCase().includes(searchLower);
+
+        const matchesStatus =
+            statusFilter === "all" ||
+            s.paymentStatus.toLowerCase() === statusFilter;
+
+        return matchesSearch && matchesStatus;
+    });
+
     return {
-        students: result,
+        students: filtered,
         totalCount: count ?? 0,
-        currentPageCount: result.length,
+        currentPageCount: filtered.length,
     };
 }

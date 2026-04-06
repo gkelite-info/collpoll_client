@@ -15,8 +15,7 @@ import RecentFileCard from "./components/recentFileCard";
 import FilesTable from "./components/allFilesTable";
 import RenameFolderModal from "./components/modal/renameFolderModal";
 import DeleteFolderModal from "./components/modal/deleteFolderModal";
-import ReplaceFolderModal from "../assignments/modal/replaceFolderModal";
-
+import ReplaceFolderModal from "./components/modal/replaceFolderModal";
 
 type SortOption = "latest" | "name" | "size";
 
@@ -38,7 +37,8 @@ type RecentFile = {
     accessedAt: string;
 };
 
-const MAX_RECENT = 5;
+// ✅ Change 7: increased from 5 → 10
+const MAX_RECENT = 10;
 const getRecentKey = (uid: number | null) => `recentlyViewedFiles_${uid ?? "guest"}`;
 
 function formatSize(bytes: number | null): string {
@@ -73,6 +73,15 @@ function addToRecent(file: DriveFileRow, userId: number | null) {
     return updated;
 }
 
+// ✅ Shimmer component reused across page
+function ShimmerBlock({ className }: { className?: string }) {
+    return (
+        <div className={`relative overflow-hidden bg-gray-200 rounded ${className}`}>
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        </div>
+    );
+}
+
 const Page = () => {
     const { collegeId, userId } = useUser();
     const [collegeName, setCollegeName] = useState<string | null>(null);
@@ -88,6 +97,8 @@ const Page = () => {
     const [folderToDelete, setFolderToDelete] = useState<FolderItemProps | null>(null);
     const [isRenaming, setIsRenaming] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    // ✅ Change 1: separate loading state for file delete
+    const [isDeletingFile, setIsDeletingFile] = useState(false);
     const [loadingFolders, setLoadingFolders] = useState(true);
     const [loadingFiles, setLoadingFiles] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
@@ -323,12 +334,35 @@ const Page = () => {
         }
     };
 
+    // ✅ Change 4: delete all files in folder from storage + DB before deleting folder
     const handleConfirmDeleteFolder = async () => {
         if (!folderToDelete || !collegeId) return;
 
         setIsDeleting(true);
 
         try {
+            // 1. Fetch all files in this folder from DB
+            const { data: folderFiles } = await supabase
+                .from("drive_files")
+                .select("driveFileId, fileName")
+                .eq("driveFolderId", folderToDelete.driveFolderId)
+                .eq("is_deleted", false);
+
+            // 2. Delete files from Supabase Storage
+            if (folderFiles && folderFiles.length > 0) {
+                const storagePaths = folderFiles.map(
+                    (f) => `${collegeId}/${folderToDelete.driveFolderId}/${f.fileName.trim()}`
+                );
+                await supabase.storage.from("college-drive").remove(storagePaths);
+
+                // 3. Soft-delete all files in DB
+                await supabase
+                    .from("drive_files")
+                    .update({ is_deleted: true, deletedAt: new Date().toISOString() })
+                    .eq("driveFolderId", folderToDelete.driveFolderId);
+            }
+
+            // 4. Delete the folder itself
             const result = await deleteDriveFolder(folderToDelete.driveFolderId, collegeId);
 
             if (!result.success) {
@@ -336,14 +370,23 @@ const Page = () => {
                 return;
             }
 
+            // 5. Update UI immediately — no refresh needed
             setFolders((prev) => prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId));
+
+            // 6. Remove deleted folder's files from All Files list & recent
+            setRecentFiles((prev) => prev.filter((f) => f.driveFolderId !== folderToDelete.driveFolderId));
+            const updatedRecent = getRecentFiles(userId).filter(
+                (f) => f.driveFolderId !== folderToDelete.driveFolderId
+            );
+            localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
+            setRecentViewed(updatedRecent);
 
             const savedColors: Record<number, string> = JSON.parse(localStorage.getItem("folderColors") ?? "{}");
             delete savedColors[folderToDelete.driveFolderId];
             localStorage.setItem("folderColors", JSON.stringify(savedColors));
 
             setFolderToDelete(null);
-            showToast("Folder deleted", "success");
+            showToast("Folder and all its files deleted", "success");
         } catch {
             showToast("Something went wrong", "error");
         } finally {
@@ -352,6 +395,7 @@ const Page = () => {
     };
 
     const handleFilesChanged = (driveFolderId: number, fileCount: number, totalSizeBytes: number) => {
+        // ── Update folder card immediately with values from modal ──
         setFolders((prev) =>
             prev.map((f) =>
                 f.driveFolderId === driveFolderId
@@ -361,6 +405,18 @@ const Page = () => {
         );
 
         if (collegeId && userId) {
+            // ── Re-fetch accurate folder stats from DB ──
+            fetchFolderStats(collegeId, userId).then((stats) => {
+                setFolders((prev) =>
+                    prev.map((f) => ({
+                        ...f,
+                        filesCount: stats[f.driveFolderId]?.totalFiles ?? f.filesCount,
+                        sizeLabel: formatSize(stats[f.driveFolderId]?.totalSizeBytes ?? 0),
+                    }))
+                );
+            }).catch(console.error);
+
+            // ── Also refresh All Files table ──
             fetchRecentDriveFiles(collegeId, currentPage, rowsPerPage, userId)
                 .then(({ data, totalCount }) => {
                     setRecentFiles(data as DriveFileRow[]);
@@ -370,6 +426,7 @@ const Page = () => {
         }
     };
 
+    // ✅ Change 9: always force-download, never open in new tab
     const handleDownloadFile = async (file: DriveFileRow) => {
         try {
             const storagePath = `${collegeId}/${file.driveFolderId}/${file.fileName.trim()}`;
@@ -377,23 +434,17 @@ const Page = () => {
 
             if (error || !data?.signedUrl) return;
 
-            const ext = file.fileName.split(".").pop()?.toLowerCase() ?? "";
-            const viewable = ["pdf", "png", "jpg", "jpeg", "gif", "webp", "svg"];
-
-            if (viewable.includes(ext)) {
-                window.open(data.signedUrl, "_blank");
-            } else {
-                const response = await fetch(data.signedUrl);
-                const blob = await response.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = blobUrl;
-                a.download = file.fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(blobUrl);
-            }
+            // Force download for all file types including images
+            const response = await fetch(data.signedUrl);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = file.fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
 
             const updated = addToRecent(file, userId);
             setRecentViewed(updated);
@@ -402,25 +453,47 @@ const Page = () => {
         }
     };
 
+    // ✅ Change 1: optimistic UI delete + loading state, no page refresh
     const handleDeleteFile = async (file: DriveFileRow) => {
-        const { error } = await supabase
-            .from("drive_files")
-            .update({ is_deleted: true, deletedAt: new Date().toISOString() })
-            .eq("driveFileId", file.driveFileId);
+        setIsDeletingFile(true);
+        // Optimistically remove from UI immediately
+        setRecentFiles((prev) => prev.filter((f) => f.driveFileId !== file.driveFileId));
+        const updatedRecent = getRecentFiles(userId).filter(f => f.driveFileId !== file.driveFileId);
+        localStorage.setItem(getRecentKey(userId), JSON.stringify(updatedRecent));
+        setRecentViewed(updatedRecent);
 
-        if (!error) {
-            setRecentFiles((prev) => prev.filter((f) => f.driveFileId !== file.driveFileId));
-            const updated = getRecentFiles(userId).filter(f => f.driveFileId !== file.driveFileId);
-            localStorage.setItem(getRecentKey(userId), JSON.stringify(updated));
-            setRecentViewed(updated);
-            showToast("File deleted", "success");
+        try {
+            const { error } = await supabase
+                .from("drive_files")
+                .update({ is_deleted: true, deletedAt: new Date().toISOString() })
+                .eq("driveFileId", file.driveFileId);
+
+            if (error) {
+                // Rollback on failure
+                setRecentFiles((prev) => [file, ...prev]);
+                showToast("Failed to delete file", "error");
+            } else {
+                showToast("File deleted", "success");
+            }
+        } catch {
+            setRecentFiles((prev) => [file, ...prev]);
+            showToast("Something went wrong", "error");
+        } finally {
+            setIsDeletingFile(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-screen overflow-hidden">
+            {/* Shimmer keyframe injected once */}
+            <style>{`
+                @keyframes shimmer {
+                    100% { transform: translateX(100%); }
+                }
+            `}</style>
+
             {toast && (
-                <div className={`fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-[#43C17A]" : "bg-red-500"}`}>
+                <div className={`fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-white" : "bg-red-500"}`}>
                     {toast.message}
                 </div>
             )}
@@ -441,7 +514,7 @@ const Page = () => {
                 onFilesChanged={handleFilesChanged}
             />
 
-            <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0">
+            <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0 sticky top-0 z-10">
                 <div className="flex items-center justify-between mb-3">
                     <div>
                         <h1 className="text-2xl font-semibold text-[#282828]">Drive</h1>
@@ -462,13 +535,15 @@ const Page = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 pb-6">
+                {/* ✅ Change 6: Folders shimmer */}
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Folders</h2>
 
                     {loadingFolders ? (
                         <div className="mt-2 flex gap-4">
                             {[...Array(4)].map((_, i) => (
-                                <div key={i} className="relative flex min-w-[200px] flex-col rounded-md p-2 bg-gray-100 animate-pulse h-[130px]">
+                                <div key={i} className="relative overflow-hidden flex min-w-[200px] flex-col rounded-md p-2 bg-gray-100 h-[130px]">
+                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
                                     <div className="flex items-start justify-between">
                                         <div className="w-14 h-14 rounded-lg bg-gray-200" />
                                         <div className="w-3 h-6 rounded bg-gray-200" />
@@ -501,13 +576,15 @@ const Page = () => {
                     )}
                 </section>
 
+                {/* ✅ Change 6 + 7: Recent shimmer + shows up to 10 */}
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Recent</h2>
 
                     {loadingFiles ? (
                         <div className="mt-2 flex gap-4">
                             {[...Array(4)].map((_, i) => (
-                                <div key={i} className="flex items-center min-w-[220px] rounded-md bg-gray-100 p-3 gap-2 animate-pulse">
+                                <div key={i} className="relative overflow-hidden flex items-center min-w-[220px] rounded-md bg-gray-100 p-3 gap-2">
+                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
                                     <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0" />
                                     <div className="flex flex-col gap-2 flex-1">
                                         <div className="h-3 w-3/4 rounded bg-gray-200" />
@@ -518,7 +595,7 @@ const Page = () => {
                         </div>
                     ) : recentViewed.length > 0 ? (
                         <div className="mt-2 flex gap-4 overflow-x-scroll pb-1">
-                            {recentViewed.map((file) => (
+                            {recentViewed.slice(0, 10).map((file) => (
                                 <RecentFileCard
                                     key={file.driveFileId}
                                     name={file.fileName}
@@ -533,24 +610,32 @@ const Page = () => {
                     )}
                 </section>
 
+                {/* ✅ Change 6: All Files shimmer */}
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">All Files</h2>
 
                     {loadingFiles ? (
                         <div className="mt-2 rounded-2xl bg-white overflow-hidden">
                             {[...Array(5)].map((_, i) => (
-                                <div key={i} className="flex gap-4 px-4 py-3 border-b border-gray-100">
-                                    <div className="h-4 flex-[3] rounded animate-pulse bg-gray-200" />
-                                    <div className="h-4 flex-1 rounded animate-pulse bg-gray-200" />
-                                    <div className="h-4 flex-1 rounded animate-pulse bg-gray-200" />
-                                    <div className="h-4 flex-[1.5] rounded animate-pulse bg-gray-200" />
-                                    <div className="h-8 w-16 rounded animate-pulse bg-gray-200" />
+                                <div key={i} className="relative overflow-hidden flex gap-4 px-4 py-3 border-b border-gray-100">
+                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                                    <div className="h-4 flex-[3] rounded bg-gray-200" />
+                                    <div className="h-4 flex-1 rounded bg-gray-200" />
+                                    <div className="h-4 flex-1 rounded bg-gray-200" />
+                                    <div className="h-4 flex-[1.5] rounded bg-gray-200" />
+                                    <div className="h-8 w-16 rounded bg-gray-200" />
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <>
-                            <FilesTable files={sortedFiles} onDelete={handleDeleteFile} onDownload={handleDownloadFile} />
+                            {/* ✅ Change 1: pass isDeletingFile down */}
+                            <FilesTable
+                                files={sortedFiles}
+                                onDelete={handleDeleteFile}
+                                onDownload={handleDownloadFile}
+                                isDeleting={isDeletingFile}
+                            />
 
                             {totalPages > 1 && (
                                 <div className="flex justify-end items-center gap-3 mt-4 mb-2">

@@ -84,8 +84,11 @@ function FeeCollectionPage() {
   function formatCurrency(value: number = 0) {
     if (value >= 10000000)
       return `${(value / 10000000).toFixed(2)} Cr`;
-    if (value >= 100000)
-      return `${(value / 100000).toFixed(2)} L`;
+    if (value >= 100000) {
+      const inLakhs = value / 100000;
+      // Show up to 5 decimal places but trim trailing zeros
+      return `${parseFloat(inLakhs.toFixed(5))} L`;
+    }
     return value.toLocaleString();
   }
 

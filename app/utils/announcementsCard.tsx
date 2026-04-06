@@ -188,7 +188,7 @@ export default function AnnouncementsCard({
                   setActiveView("others");
                   onViewChange?.("others");
                 }}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${activeView === "others"
+                className={`px-3 py-1 cursor-pointer rounded-md transition-all duration-200 ${activeView === "others"
                   ? "bg-[#43C17A] text-white shadow-sm"
                   : "text-gray-400 hover:text-[#16284F]"
                   }`}
@@ -203,7 +203,7 @@ export default function AnnouncementsCard({
                   setActiveView("my");
                   onViewChange?.("my");
                 }}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${activeView === "my"
+                className={`px-3 py-1 text-sm rounded-md cursor-pointer transition-all duration-200 ${activeView === "my"
                   ? "bg-[#43C17A] text-white shadow-sm"
                   : "text-gray-400 hover:text-[#16284F]"
                   }`}

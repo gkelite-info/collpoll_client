@@ -11,10 +11,58 @@ import {
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { getYearFinanceStudentList } from "@/lib/helpers/finance/dashboard/getYearFinanceStudentList";
+
+// ─── Shimmer styles ────────────────────────────────────────────────────────────
+const shimmerStyle = `
+  @keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position:  600px 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 6px;
+  }
+`;
+
+const ShimmerStyle = () => <style>{shimmerStyle}</style>;
+
+// ─── Shimmer: Card ─────────────────────────────────────────────────────────────
+const CardShimmer = () => (
+  <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex flex-col gap-3">
+    <div className="shimmer w-8 h-8 rounded-full" />
+    <div className="shimmer h-6 w-20" />
+    <div className="shimmer h-3 w-24" />
+  </div>
+);
+
+// ─── Shimmer: Table rows ───────────────────────────────────────────────────────
+const TableShimmer = ({ rows = 8, cols = 7 }: { rows?: number; cols?: number }) => (
+  <div className="w-full overflow-hidden rounded-lg border border-gray-100">
+    <div className="flex gap-3 bg-gray-50 px-4 py-3 border-b border-gray-100">
+      {Array.from({ length: cols }).map((_, i) => (
+        <div key={i} className="shimmer h-3 flex-1" />
+      ))}
+    </div>
+    {Array.from({ length: rows }).map((_, r) => (
+      <div
+        key={r}
+        className="flex gap-3 px-4 py-3 border-b border-gray-50 last:border-0"
+        style={{ opacity: 1 - r * 0.08 }}
+      >
+        {Array.from({ length: cols }).map((_, c) => (
+          <div key={c} className="shimmer h-3 flex-1" />
+        ))}
+      </div>
+    ))}
+  </div>
+);
+// ──────────────────────────────────────────────────────────────────────────────
 
 function FeeCollectionDetailsPage() {
   const searchParams = useSearchParams();
@@ -40,11 +88,15 @@ function FeeCollectionDetailsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "paid" | "pending" | "partial">("all");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const isFirstLoad = useRef(true);
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
   const year = searchParams.get("year") || "1st Year";
+
   const columns = [
     { title: "Student Name", key: "name" },
     { title: "Student ID", key: "id" },
@@ -55,20 +107,21 @@ function FeeCollectionDetailsPage() {
     { title: "Payment Status", key: "status" },
   ];
 
-  const filteredStudents = students.filter((s) => {
-    const matchesStatus =
-      statusFilter === "all"
-        ? true
-        : s.paymentStatus.toLowerCase() === statusFilter;
+  // ── Debounce search 400ms ────────────────────────────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // reset page on new search
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-    const matchesSearch =
-      s.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      String(s.studentId).toLowerCase().includes(search.toLowerCase());
+  // ── Reset page when status filter changes ────────────────────────────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter]);
 
-    return matchesStatus && matchesSearch;
-  });
-
-  const tableData = filteredStudents.map((s) => ({
+  const tableData = students.map((s) => ({
     name: s.studentName,
     id: s.studentId,
     dept: s.branch,
@@ -104,6 +157,10 @@ function FeeCollectionDetailsPage() {
       if (!collegeId || !collegeEducationId || !branchId || !academicYearId) return;
 
       setLoading(true);
+      // Cards shimmer only on the very first fetch
+      if (isFirstLoad.current) {
+        setCardsLoading(true);
+      }
 
       try {
         const res = await getYearFinanceStudentList(
@@ -114,7 +171,9 @@ function FeeCollectionDetailsPage() {
             collegeAcademicYearId: Number(academicYearId),
           },
           currentPage,
-          rowsPerPage
+          rowsPerPage,
+          debouncedSearch,
+          statusFilter
         );
 
         setStudents(Array.isArray(res?.students) ? res.students : []);
@@ -125,54 +184,70 @@ function FeeCollectionDetailsPage() {
         setTotalRecords(0);
       } finally {
         setLoading(false);
+        if (isFirstLoad.current) {
+          setCardsLoading(false);
+          isFirstLoad.current = false;
+        }
       }
     };
 
     fetchStudents();
-  }, [collegeId, collegeEducationId, branchId, academicYearId, currentPage]);
+  }, [collegeId, collegeEducationId, branchId, academicYearId, currentPage, debouncedSearch, statusFilter]);
 
   return (
     <div className="p-2 bg-[#F3F4F6] min-h-screen">
+      {/* Inject shimmer keyframes once */}
+      <ShimmerStyle />
+
       <div className="flex items-center gap-2 mb-6">
         <CaretLeftIcon size={20} weight="bold" className="text-black cursor-pointer active:scale-90" onClick={router.back} />
         <h1 className="text-xl font-semibold text-[#282828]">
           {academicYearClean} Fee Collection Details
         </h1>
       </div>
+
+      {/* ── Cards: shimmer only on initial load, real cards always after ── */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-4">
-        <CardComponent
-          icon={<UsersThreeIcon size={22} weight="fill" />}
-          value={totalRecords.toString()}
-          label="Total Students"
-          iconBgColor="#FFFFFF"
-          iconColor="#6D28D9"
-          style="bg-[#F3E8FF]"
-        />
-        <CardComponent
-          icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
-          value={String(expected)}
-          label="Total Expected"
-          iconBgColor="#FFFFFF"
-          iconColor="#2563EB"
-          style="bg-[#EFF6FF]"
-        />
-        <CardComponent
-          icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
-          value={String(collected)}
-          label="Total Collected"
-          iconBgColor="#FFFFFF"
-          iconColor="#16A34A"
-          style="bg-[#ECFDF5]"
-        />
-        <CardComponent
-          icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
-          value={String(pending)}
-          label="Pending Amount"
-          iconBgColor="#FFFFFF"
-          iconColor="#DC2626"
-          style="bg-[#FEF2F2]"
-        />
+        {cardsLoading ? (
+          [0, 1, 2, 3].map((i) => <CardShimmer key={i} />)
+        ) : (
+          <>
+            <CardComponent
+              icon={<UsersThreeIcon size={22} weight="fill" />}
+              value={totalRecords.toString()}
+              label="Total Students"
+              iconBgColor="#FFFFFF"
+              iconColor="#6D28D9"
+              style="bg-[#F3E8FF]"
+            />
+            <CardComponent
+              icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
+              value={String(expected)}
+              label="Total Expected"
+              iconBgColor="#FFFFFF"
+              iconColor="#2563EB"
+              style="bg-[#EFF6FF]"
+            />
+            <CardComponent
+              icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
+              value={String(collected)}
+              label="Total Collected"
+              iconBgColor="#FFFFFF"
+              iconColor="#16A34A"
+              style="bg-[#ECFDF5]"
+            />
+            <CardComponent
+              icon={<CurrencyDollarSimpleIcon size={22} weight="fill" />}
+              value={String(pending)}
+              label="Pending Amount"
+              iconBgColor="#FFFFFF"
+              iconColor="#DC2626"
+              style="bg-[#FEF2F2]"
+            />
+          </>
+        )}
       </div>
+
       <div className="flex flex-wrap items-center gap-6 mb-6">
         <div className="w-[40%] bg-[#EAEAEA] px-2 rounded-2xl flex items-center justify-center">
           <input
@@ -218,10 +293,10 @@ function FeeCollectionDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Table: shimmer on every load, real table after ── */}
       {loading ? (
-        <div className="flex justify-center items-center h-[200px]">
-          <Loader />
-        </div>
+        <TableShimmer rows={8} cols={7} />
       ) : (
         <TableComponent
           columns={columns}
@@ -229,6 +304,7 @@ function FeeCollectionDetailsPage() {
           height="60vh"
         />
       )}
+
       {totalPages > 1 && (
         <div className="flex justify-end items-center gap-3 mt-8 mb-4">
           <button
