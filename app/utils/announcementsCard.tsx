@@ -50,9 +50,17 @@ export default function AnnouncementsCard({
   const isFacultyDashboard = pathname.startsWith("/faculty");
   const isHrDashboard = pathname.startsWith("/hr");
   const isReadOnlyUser = readOnly ?? (isStudentDashboard || isParentDashboard);
-  const canManageAnnouncements = !isReadOnlyUser && (isFinanceDashboard || isCollegeAdminDashboard || isAdminDashboard || isFacultyDashboard || isHrDashboard);
+  const canManageAnnouncements =
+    !isReadOnlyUser &&
+    (isFinanceDashboard ||
+      isCollegeAdminDashboard ||
+      isAdminDashboard ||
+      isFacultyDashboard ||
+      isHrDashboard);
 
-  const [activeView, setActiveView] = useState<"others" | "my">(isReadOnlyUser ? "my" : "others");
+  const [activeView, setActiveView] = useState<"others" | "my">(
+    isReadOnlyUser ? "my" : "others",
+  );
   const [openModal, setOpenModal] = useState(false);
   const [editData, setEditData] = useState<any>(null);
 
@@ -103,16 +111,13 @@ export default function AnnouncementsCard({
   };
 
   const handleDelete = (announcementId: number) => {
-
     toast((t) => (
       <div className="flex flex-col gap-3">
-
         <span className="text-sm font-medium">
           Are you sure you want to delete this announcement?
         </span>
 
         <div className="flex justify-end gap-2">
-
           <button
             onClick={() => toast.dismiss(t.id)}
             className="px-3 py-1 text-sm rounded-md bg-gray-200 hover:bg-gray-300"
@@ -122,11 +127,9 @@ export default function AnnouncementsCard({
 
           <button
             onClick={async () => {
-
               toast.dismiss(t.id);
 
               try {
-
                 const res = await deactivateCollegeAnnouncement(announcementId);
 
                 if (!res.success) {
@@ -137,47 +140,41 @@ export default function AnnouncementsCard({
                 toast.success("Announcement deleted successfully");
 
                 await refreshAnnouncements?.();
-
               } catch (error) {
-
                 console.error("Delete error:", error);
                 toast.error("Something went wrong");
-
               }
-
             }}
             className="px-3 py-1 text-sm rounded-md bg-red-500 text-white hover:bg-red-600"
           >
             Delete
           </button>
-
         </div>
-
       </div>
     ));
   };
 
-
   return (
-    <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-fit">
+    <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-full">
+      {/* <div className="bg-white rounded-md flex flex-col mt-5 p-2 shadow-md h-fit"> */}
       <div className="flex flex-col mb-3 px-1">
         <div className="flex items-center justify-between">
-          <h4 className="text-[#282828] font-semibold">
-            Announcements
-          </h4>
+          <h4 className="text-[#282828] font-semibold">Announcements</h4>
 
-          {!isReadOnlyUser && canManageAnnouncements && !isReadOnlyUser && activeView === "my" && (
-            <button
-              onClick={() => {
-                setEditData(null);
-                setOpenModal(true);
-              }}
-              className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer"
-            >
-              <Plus size={14} weight="bold" />
-            </button>
-          )}
-
+          {!isReadOnlyUser &&
+            canManageAnnouncements &&
+            !isReadOnlyUser &&
+            activeView === "my" && (
+              <button
+                onClick={() => {
+                  setEditData(null);
+                  setOpenModal(true);
+                }}
+                className="bg-[#43C17A] text-white w-7 h-7 flex items-center justify-center rounded-full cursor-pointer"
+              >
+                <Plus size={14} weight="bold" />
+              </button>
+            )}
         </div>
 
         {!isReadOnlyUser && canManageAnnouncements && (
@@ -188,10 +185,11 @@ export default function AnnouncementsCard({
                   setActiveView("others");
                   onViewChange?.("others");
                 }}
-                className={`px-3 py-1 cursor-pointer rounded-md transition-all duration-200 ${activeView === "others"
-                  ? "bg-[#43C17A] text-white shadow-sm"
-                  : "text-gray-400 hover:text-[#16284F]"
-                  }`}
+                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                  activeView === "others"
+                    ? "bg-[#43C17A] text-white shadow-sm"
+                    : "text-gray-400 hover:text-[#16284F]"
+                }`}
               >
                 Shared
               </button>
@@ -203,10 +201,11 @@ export default function AnnouncementsCard({
                   setActiveView("my");
                   onViewChange?.("my");
                 }}
-                className={`px-3 py-1 text-sm rounded-md cursor-pointer transition-all duration-200 ${activeView === "my"
-                  ? "bg-[#43C17A] text-white shadow-sm"
-                  : "text-gray-400 hover:text-[#16284F]"
-                  }`}
+                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                  activeView === "my"
+                    ? "bg-[#43C17A] text-white shadow-sm"
+                    : "text-gray-400 hover:text-[#16284F]"
+                }`}
               >
                 Personal
               </button>
@@ -218,35 +217,27 @@ export default function AnnouncementsCard({
       {/* </div> */}
       <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
         {announceCard.length === 0 ? (
-
           isReadOnlyUser ? (
-
             // ✅ STUDENT / PARENT
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
                 You don't have any announcements today
               </p>
             </div>
-
           ) : activeView === "my" ? (
-
             // ✅ ADMIN / FINANCE / COLLEGE ADMIN (MY)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">No announcements yet</p>
               <p className="text-xs mt-1">Click + to create one</p>
             </div>
-
           ) : (
-
             // ✅ ADMIN / FINANCE (SHARED)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
                 You don't have any announcements today
               </p>
             </div>
-
           )
-
         ) : (
           announceCard.map((card, index) => (
             <div
@@ -266,9 +257,7 @@ export default function AnnouncementsCard({
               </div>
 
               <div className="h-full w-[78%] rounded-md flex flex-col">
-
                 <div className="flex items-center justify-between h-[60%] px-1">
-
                   {/* Title (fixed width + horizontal scroll) */}
                   <div className="max-w-[210px] overflow-x-auto whitespace-nowrap scrollbar-hide">
                     <p className="text-[13px] font-semibold text-[#282828]">
@@ -279,7 +268,6 @@ export default function AnnouncementsCard({
                   {/* Show icons ONLY for My Announcements */}
                   {!isReadOnlyUser && activeView === "my" && (
                     <div className="flex items-center gap-2 ml-2">
-
                       <button
                         onClick={() => {
                           setOpenModal(false); // force reset
@@ -304,35 +292,26 @@ export default function AnnouncementsCard({
                       </button>
                     </div>
                   )}
-
                 </div>
 
                 {/* Role + Date + Time */}
                 <div className="flex items-center justify-between px-1 text-[11px] text-[#454545]">
-
                   {/* LEFT → Roles + Date (scrollable) */}
                   <div className="flex gap-2 overflow-x-auto whitespace-nowrap max-w-[70%] scrollbar-hide">
+                    <span className="shrink-0">{card.professor}</span>
 
-                    <span className="shrink-0">
-                      {card.professor}
-                    </span>
-
-                    <span className="shrink-0">
-                      {formatDate(card.date)}
-                    </span>
-
+                    <span className="shrink-0">{formatDate(card.date)}</span>
                   </div>
 
                   {/* RIGHT → Time (fixed) */}
                   <span className="text-[#6B7280] shrink-0 ml-2">
                     {formatRelativeTime(card.createdAt)}
                   </span>
-
                 </div>
               </div>
             </div>
-          )
-          ))}
+          ))
+        )}
       </div>
       <AddAnnouncementModal
         key={editData?.collegeAnnouncementId || "new"}
@@ -344,6 +323,5 @@ export default function AnnouncementsCard({
         }}
       />
     </div>
-
   );
 }

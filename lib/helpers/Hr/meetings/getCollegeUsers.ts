@@ -5,150 +5,144 @@ export type SelectUser = {
   userId: number;
   name: string;
   subLabel: string;
+  avatar?: string | null;
 };
 
 export async function getCollegeUsers(
   role: "Admin" | "Faculty" | "Finance",
   collegeId: number,
-  educationTypeId?: number
+  educationTypeId?: number,
+  searchQuery?: string,
 ): Promise<SelectUser[]> {
-
-  if (!collegeId) {
-    return [];
-  }
+  if (!collegeId) return [];
 
   // ================= ADMIN =================
   if (role === "Admin") {
-
     let query = supabase
       .from("admins")
-      .select(`
+      .select(
+        `
         adminId,
         userId,
         fullName,
-        collegeEducation:collegeEducationId(
-          collegeEducationType
+        collegeEducation:collegeEducationId(collegeEducationType),
+        users:userId(
+          user_profile(profileUrl)
         )
-      `)
+      `,
+      )
       .eq("collegeId", collegeId)
       .eq("is_deleted", false);
 
-    if (educationTypeId) {
+    if (educationTypeId)
       query = query.eq("collegeEducationId", educationTypeId);
-    }
+    if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
     const { data, error } = await query;
+    if (error) throw error;
 
-    if (error) {
-      console.error(" Admin fetch error:", error);
-      throw error;
-    }
-
-    const mapped = (data || []).map((a: any) => ({
-      id: a.adminId,
-      userId: a.userId,
-      name: a.fullName,
-      subLabel: a.collegeEducation?.collegeEducationType ?? "",
-    }));
-
-    return mapped;
+    return (data || []).map((a: any) => {
+      const profile = a.users?.user_profile;
+      const profileUrl = Array.isArray(profile)
+        ? profile[0]?.profileUrl
+        : profile?.profileUrl;
+      return {
+        id: a.adminId,
+        userId: a.userId,
+        name: a.fullName,
+        subLabel: a.collegeEducation?.collegeEducationType ?? "",
+        avatar: profileUrl || null,
+      };
+    });
   }
 
   // ================= FINANCE =================
   if (role === "Finance") {
-
     let query = supabase
       .from("finance_manager")
-      .select(`
+      .select(
+        `
         financeManagerId,
         userId,
-        users(
-          fullName
+        users!inner(
+          fullName,
+          user_profile(profileUrl)
         ),
-        collegeEducation:collegeEducationId(
-          collegeEducationType
-        )
-      `)
+        collegeEducation:collegeEducationId(collegeEducationType)
+      `,
+      )
       .eq("collegeId", collegeId)
       .eq("is_deleted", false);
 
-    if (educationTypeId) {
+    if (educationTypeId)
       query = query.eq("collegeEducationId", educationTypeId);
-    }
+    if (searchQuery) query = query.ilike("users.fullName", `%${searchQuery}%`);
 
     const { data, error } = await query;
+    if (error) throw error;
 
-    if (error) {
-      console.error(" Finance fetch error:", error);
-      throw error;
-    }
-
-    const mapped = (data || []).map((f: any) => ({
-      id: f.financeManagerId,
-      userId: f.userId,
-      name: f.users?.fullName ?? "",
-      subLabel: f.collegeEducation?.collegeEducationType ?? "",
-    }));
-
-    return mapped;
+    return (data || []).map((f: any) => {
+      const profile = f.users?.user_profile;
+      const profileUrl = Array.isArray(profile)
+        ? profile[0]?.profileUrl
+        : profile?.profileUrl;
+      return {
+        id: f.financeManagerId,
+        userId: f.userId,
+        name: f.users?.fullName ?? "",
+        subLabel: f.collegeEducation?.collegeEducationType ?? "",
+        avatar: profileUrl || null,
+      };
+    });
   }
 
   // ================= FACULTY =================
   if (role === "Faculty") {
-
     let query = supabase
       .from("faculty")
-      .select(`
+      .select(
+        `
         facultyId,
         userId,
         fullName,
-        collegeEducation:collegeEducationId(
-          collegeEducationType
-        ),
-        collegeBranch:collegeBranchId(
-          collegeBranchCode
-        ),
+        collegeEducation:collegeEducationId(collegeEducationType),
+        collegeBranch:collegeBranchId(collegeBranchCode),
         faculty_sections(
-          collegeSections:collegeSectionsId(
-            collegeSections
-          )
+          collegeSections:collegeSectionsId(collegeSections)
+        ),
+        users:userId(
+          user_profile(profileUrl)
         )
-      `)
+      `,
+      )
       .eq("collegeId", collegeId)
       .eq("isActive", true);
 
-    if (educationTypeId) {
+    if (educationTypeId)
       query = query.eq("collegeEducationId", educationTypeId);
-    }
+    if (searchQuery) query = query.ilike("fullName", `%${searchQuery}%`);
 
     const { data, error } = await query;
+    if (error) throw error;
 
-    if (error) {
-      console.error(" Faculty fetch error:", error);
-      throw error;
-    }
-
-    const mapped = (data || []).map((f: any) => {
-
+    return (data || []).map((f: any) => {
       const sections =
-        f.faculty_sections?.map(
-          (s: any) => s.collegeSections?.collegeSections
-        ).filter(Boolean) || [];
-
-      const sectionLabel = sections.join(", ");
-
-      const branch = f.collegeBranch?.collegeBranchCode ?? "";
-      const edu = f.collegeEducation?.collegeEducationType ?? "";
+        f.faculty_sections
+          ?.map((s: any) => s.collegeSections?.collegeSections)
+          .filter(Boolean) || [];
+      const profile = f.users?.user_profile;
+      const profileUrl = Array.isArray(profile)
+        ? profile[0]?.profileUrl
+        : profile?.profileUrl;
 
       return {
         id: f.facultyId,
         userId: f.userId,
         name: f.fullName,
-        subLabel: `${edu} - ${branch} - ${sectionLabel}`,
+        subLabel: `${f.collegeEducation?.collegeEducationType ?? ""} - ${f.collegeBranch?.collegeBranchCode ?? ""} - ${sections.join(", ")}`,
+        avatar: profileUrl || null,
       };
     });
-
-    return mapped;
   }
 
   return [];

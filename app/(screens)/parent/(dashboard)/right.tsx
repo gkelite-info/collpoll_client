@@ -23,13 +23,8 @@ const typeIcons: Record<string, string> = {
 };
 
 export default function ParentRight() {
-
   const { collegeId, userId, role } = useUser();
-  const allowedCreatorRoles = [
-    "Admin",
-    "Faculty",
-    "Finance",
-  ];
+  const allowedCreatorRoles = ["Admin", "Faculty", "Finance"];
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view] = useState<"my" | "others">("others");
@@ -48,7 +43,7 @@ export default function ParentRight() {
       });
 
       const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole)
+        allowedCreatorRoles.includes(item.createdByRole),
       );
 
       const formatted = filtered.map((item: any) => ({
@@ -67,7 +62,6 @@ export default function ParentRight() {
         professor: `By ${item.createdByRole}`,
       }));
       setAnnouncements(formatted);
-
     } catch (err) {
       console.error("Parent announcements error:", err);
     }
@@ -79,13 +73,13 @@ export default function ParentRight() {
   }, [collegeId, userId, role]);
 
   return (
-    <div className="w-[32%] px-1 flex flex-col">
+    <div className="w-[32%] px-1 flex min-h-full flex-col">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
 
       <AnnouncementsCard
         announceCard={announcements}
-        height="80vh"
+        height="full"
         refreshAnnouncements={fetchAnnouncements}
       />
     </div>

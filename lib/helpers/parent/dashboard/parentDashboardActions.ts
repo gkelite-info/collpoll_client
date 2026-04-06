@@ -19,14 +19,15 @@ export async function getParentDashboardWidgets(userId: number) {
     .from("students")
     .select(
       `
-            studentId,
-            collegeId,
-            collegeSessionId,
-            collegeEducationId,
-            collegeBranchId,
-            user:userId(fullName),
-            college_branch(collegeBranchCode, collegeBranchType)
-        `,
+        studentId,
+        userId,
+        collegeId,
+        collegeSessionId,
+        collegeEducationId,
+        collegeBranchId,
+        user:userId(fullName),
+        college_branch(collegeBranchCode, collegeBranchType)
+      `,
     )
     .eq("studentId", studentId)
     .single();
@@ -41,11 +42,11 @@ export async function getParentDashboardWidgets(userId: number) {
     .from("student_academic_history")
     .select(
       `
-            collegeAcademicYearId,
-            college_academic_year (
-                collegeAcademicYear
-            )
-        `,
+        collegeAcademicYearId,
+        college_academic_year (
+            collegeAcademicYear
+        )
+      `,
     )
     .eq("studentId", studentId)
     .eq("isCurrent", true)
@@ -87,9 +88,9 @@ export async function getParentDashboardWidgets(userId: number) {
           .from("college_fee_components")
           .select(
             `
-                        amount,
-                        fee_type_master ( feeTypeName )
-                    `,
+              amount,
+              fee_type_master ( feeTypeName )
+            `,
           )
           .eq("feeStructureId", feeStruct.feeStructureId)
           .eq("isActive", true);
@@ -196,6 +197,7 @@ export async function getParentDashboardWidgets(userId: number) {
 
   return {
     studentId,
+    childUserId: studentInfo.userId,
     studentName,
     branchName,
     feeTotal: formatInr(totalFee),
@@ -204,4 +206,20 @@ export async function getParentDashboardWidgets(userId: number) {
     attendancePercentage: overallPercentage,
     attendanceChartData,
   };
+}
+
+// Add this to your server actions file
+export async function getChildUserIdForParent(userId: number) {
+  // 1. Get the parent's record
+  const parent = await fetchParentContext(userId);
+  if (!parent || !parent.studentId) return null;
+
+  // 2. Fetch the student's actual userId safely on the server
+  const { data: studentInfo } = await supabase
+    .from("students")
+    .select("userId")
+    .eq("studentId", parent.studentId)
+    .single();
+
+  return studentInfo?.userId || null;
 }

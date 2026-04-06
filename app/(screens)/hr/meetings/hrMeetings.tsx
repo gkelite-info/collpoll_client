@@ -26,6 +26,9 @@ interface Meeting {
   category: MeetingCategory;
   title: string;
   timeRange: string;
+  fromTime?: string;
+  toTime?: string;
+  rawDate?: string;
   educationType: string;
   branch: string;
   description: string;
@@ -59,7 +62,11 @@ export default function MeetingsPage() {
   const currentType = (searchParams.get("type") as MeetingType) || "upcoming";
   const currentCategory = "Student";
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const isCreateModalOpen = searchParams.get("create") === "true";
+
+  const isCreateModalOpen =
+    searchParams.get("create") === "true" ||
+    !!searchParams.get("editMeetingId");
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -75,7 +82,6 @@ export default function MeetingsPage() {
 
   const closeCreateModal = () => {
     const params = new URLSearchParams(searchParams.toString());
-
     params.delete("create");
     params.delete("selectRole");
     params.delete("editMeetingId");
@@ -137,6 +143,7 @@ export default function MeetingsPage() {
       const formattedMeetings: Meeting[] = res.data.map((m: any) => ({
         ...m,
         type: currentType,
+        rawDate: m.date, // Preserving raw YYYY-MM-DD for edit modal pre-filling
         date: formatMeetingDate(m.date),
       }));
 
@@ -174,6 +181,11 @@ export default function MeetingsPage() {
       setIsDeleting(false);
     }
   };
+
+  const editMeetingId = searchParams.get("editMeetingId");
+  const editData = editMeetingId
+    ? meetings.find((m) => String(m.hrMeetingId) === editMeetingId)
+    : undefined;
 
   return (
     <>
