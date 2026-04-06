@@ -140,8 +140,8 @@ export default async function getBranchYearWiseFinanceSummaryV2(
 
     obligations?.forEach((o: any) => {
         const expected = Number(o.totalAmount) || 0;
-        const collected =
-            ledgerMap.get(o.studentFeeObligationId) || 0;
+        // ✅ Keep actual collected (including overpayments)
+        const collected = ledgerMap.get(o.studentFeeObligationId) || 0;
 
         if (!yearMap.has(o.collegeAcademicYearId)) {
             yearMap.set(o.collegeAcademicYearId, {
@@ -168,16 +168,20 @@ export default async function getBranchYearWiseFinanceSummaryV2(
 
         const expected = data?.expected || 0;
         const collected = data?.collected || 0;
-        const pending = expected - collected;
+
+        // ✅ Floor pending at 0 — never show negative
+        const pending = Math.max(0, expected - collected);
 
         totalExpected += expected;
         totalCollected += collected;
 
+        // ✅ Cap percentage at 100 — never show above 100%
         const collectionPercentage =
             expected === 0
                 ? 0
-                : Number(
-                    ((collected / expected) * 100).toFixed(2)
+                : Math.min(
+                    Number(((collected / expected) * 100).toFixed(2)),
+                    100
                 );
 
         return {
@@ -190,13 +194,16 @@ export default async function getBranchYearWiseFinanceSummaryV2(
         };
     });
 
-    const totalPending = totalExpected - totalCollected;
+    // ✅ Floor total pending at 0
+    const totalPending = Math.max(0, totalExpected - totalCollected);
 
+    // ✅ Cap total percentage at 100
     const totalCollectionPercentage =
         totalExpected === 0
             ? 0
-            : Number(
-                ((totalCollected / totalExpected) * 100).toFixed(2)
+            : Math.min(
+                Number(((totalCollected / totalExpected) * 100).toFixed(2)),
+                100
             );
 
     return {

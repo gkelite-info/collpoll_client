@@ -21,7 +21,8 @@ type Branch = {
 export default async function getBranchWiseFinanceSummary(
   filters: BranchFinanceFilters,
   page: number,
-  limit: number
+  limit: number,
+  search: string = ""
 ) {
   const {
     collegeId,
@@ -34,13 +35,10 @@ export default async function getBranchWiseFinanceSummary(
   const to = from + limit - 1;
 
   /* --------------------------------------------------
-     1️⃣ Fetch Branches (Paginated)
+     1️⃣ Fetch Branches (Paginated + Search)
   --------------------------------------------------- */
 
-  const {
-    data: branches,
-    count: totalCount,
-  } = await supabase
+  let branchQuery = supabase
     .from("college_branch")
     .select("collegeBranchId, collegeBranchCode", {
       count: "exact",
@@ -48,13 +46,27 @@ export default async function getBranchWiseFinanceSummary(
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
     .eq("isActive", true)
-    .is("deletedAt", null)
-    .range(from, to);
+    .is("deletedAt", null);
+
+  if (search.trim()) {
+    branchQuery = branchQuery.ilike("collegeBranchCode", `%${search.trim()}%`);
+  }
+
+  const {
+    data: branches,
+    count: totalCount,
+  } = await branchQuery.range(from, to);
 
   if (!branches?.length) {
     return {
       data: [],
       totalCount: 0,
+      summary: {
+        totalExpected: 0,
+        totalCollected: 0,
+        totalPending: 0,
+        overallPercentage: 0,
+      },
     };
   }
 
@@ -176,17 +188,17 @@ export default async function getBranchWiseFinanceSummary(
 
       const expected = data?.expected || 0;
       const collected = data?.collected || 0;
-      const pending = expected - collected;
+      // ✅ FIX: floor pending at 0 — never show negative
+      const pending = Math.max(0, expected - collected);
 
+      // ✅ FIX: cap collection % at 100 — overpayments shouldn't exceed 100%
       const collectionPercentage =
         expected === 0
           ? 0
-          : Number(
-            (
-              (collected / expected) *
-              100
-            ).toFixed(2)
-          );
+          : Math.min(
+              100,
+              Number(((collected / expected) * 100).toFixed(2))
+            );
 
       return {
         branchId: branch.collegeBranchId,
@@ -207,15 +219,20 @@ export default async function getBranchWiseFinanceSummary(
     totalCollected += value.collected;
   });
 
-  const totalPending = totalExpected - totalCollected;
+  // ✅ FIX: floor total pending at 0
+  const totalPending = Math.max(0, totalExpected - totalCollected);
 
+  // ✅ FIX: cap overall percentage at 100
   const overallPercentage =
     totalExpected === 0
       ? 0
-      : Number(((totalCollected / totalExpected) * 100).toFixed(2));
+      : Math.min(
+          100,
+          Number(((totalCollected / totalExpected) * 100).toFixed(2))
+        );
 
   return {
-    data: result, // paginated branches
+    data: result,
     totalCount: totalCount ?? 0,
     summary: {
       totalExpected,

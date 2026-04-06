@@ -9,7 +9,8 @@ type YearFinanceFilters = {
 export async function getYearWiseFinanceSummary(
   filters: YearFinanceFilters,
   page: number,
-  limit: number
+  limit: number,
+  search: string = ""
 ) {
   try {
     const { collegeId, collegeEducationId, branchCode } = filters;
@@ -36,14 +37,10 @@ export async function getYearWiseFinanceSummary(
     const branchId = branchData.collegeBranchId;
 
     /* =====================================================
-       2️⃣ Fetch Academic Years (Paginated)
+       2️⃣ Fetch Academic Years (Paginated + Search)
     ====================================================== */
 
-    const {
-      data: years,
-      count: totalCount,
-      error: yearError,
-    } = await supabase
+    let yearQuery = supabase
       .from("college_academic_year")
       .select("collegeAcademicYearId, collegeAcademicYear", {
         count: "exact",
@@ -51,8 +48,17 @@ export async function getYearWiseFinanceSummary(
       .eq("collegeId", collegeId)
       .eq("collegeEducationId", collegeEducationId)
       .eq("collegeBranchId", branchId)
-      .is("deletedAt", null)
-      .range(from, to);
+      .is("deletedAt", null);
+
+    if (search.trim()) {
+      yearQuery = yearQuery.ilike("collegeAcademicYear", `%${search.trim()}%`);
+    }
+
+    const {
+      data: years,
+      count: totalCount,
+      error: yearError,
+    } = await yearQuery.range(from, to);
 
     if (yearError) throw yearError;
 
@@ -157,12 +163,17 @@ export async function getYearWiseFinanceSummary(
 
       const expected = data?.expected || 0;
       const collected = data?.collected || 0;
-      const pending = expected - collected;
+      // ✅ FIX: floor pending at 0 — never show negative
+      const pending = Math.max(0, expected - collected);
 
+      // ✅ FIX: cap collection % at 100 — overpayments shouldn't exceed 100%
       const collectionPercentage =
         expected === 0
           ? 0
-          : Number(((collected / expected) * 100).toFixed(2));
+          : Math.min(
+              100,
+              Number(((collected / expected) * 100).toFixed(2))
+            );
 
       return {
         yearId: year.collegeAcademicYearId,
@@ -186,12 +197,17 @@ export async function getYearWiseFinanceSummary(
       totalCollected += value.collected;
     });
 
-    const totalPending = totalExpected - totalCollected;
+    // ✅ FIX: floor total pending at 0
+    const totalPending = Math.max(0, totalExpected - totalCollected);
 
+    // ✅ FIX: cap overall percentage at 100
     const overallPercentage =
       totalExpected === 0
         ? 0
-        : Number(((totalCollected / totalExpected) * 100).toFixed(2));
+        : Math.min(
+            100,
+            Number(((totalCollected / totalExpected) * 100).toFixed(2))
+          );
 
     return {
       data: result,

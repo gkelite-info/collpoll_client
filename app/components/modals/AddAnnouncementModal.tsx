@@ -138,17 +138,10 @@ export default function AddAnnouncementModal({
   }, [open, editData]);
 
   const handleSave = async () => {
-
-    const titleRegex = /^[A-Za-z\s]+$/;
     const today = new Date().toISOString().split("T")[0];
 
     if (!title || !date || targetRoles.length === 0 || !type) {
       toast.error("Please fill all required fields");
-      return;
-    }
-
-    if (!titleRegex.test(title.trim())) {
-      toast.error("Title should contain only letters");
       return;
     }
 
@@ -318,13 +311,7 @@ export default function AddAnnouncementModal({
             type="text"
             placeholder="Short title of the announcement"
             value={title}
-            onChange={(e) => {
-              const value = e.target.value;
-
-              if (/^[A-Za-z\s]*$/.test(value)) {
-                setTitle(value);
-              }
-            }}
+           onChange={(e) => setTitle(e.target.value)}
             className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] placeholder:text-[#B0B0B0] outline-none focus:ring-2 focus:ring-[#43C17A]"
           />
         </div>

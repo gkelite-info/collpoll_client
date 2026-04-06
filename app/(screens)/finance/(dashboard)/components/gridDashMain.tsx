@@ -34,6 +34,25 @@ import { getQuickInsights } from "@/lib/helpers/finance/dashboard/getQuickInsigh
 import { getCurrentSemesterPendingStudents } from "@/lib/helpers/finance/dashboard/getPendingStudentsCount";
 // import { fetchSemesters } from "@/lib/helpers/admin/academics/academicDropdowns";
 
+// ─── Shimmer styles (injected once) ───────────────────────────────────────────
+const shimmerStyle = `
+  @keyframes shimmer {
+    0%   { background-position: -600px 0; }
+    100% { background-position:  600px 0; }
+  }
+  .shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 600px 100%;
+    animation: shimmer 1.4s infinite linear;
+    border-radius: 6px;
+  }
+`;
+
+const ShimmerStyle = () => (
+  <style>{shimmerStyle}</style>
+);
+// ──────────────────────────────────────────────────────────────────────────────
+
 const Card = ({
   children,
   className = "",
@@ -168,6 +187,27 @@ const Dropdown = ({
   );
 };
 
+// ─── Shimmer: TopStat ─────────────────────────────────────────────────────────
+const TopStatShimmer = ({ theme }: { theme: "purple" | "blue" }) => {
+  const isP = theme === "purple";
+  return (
+    <div
+      className={`${isP ? "bg-[#6d28d9]" : "bg-[#dbeafe]"
+        } p-3 rounded-lg flex flex-col justify-between h-full min-h-[90px]`}
+    >
+      <div
+        className="w-7 h-7 rounded shimmer mb-2"
+        style={{ opacity: 0.4 }}
+      />
+      <div>
+        <div className="shimmer h-5 w-20 mb-1" style={{ opacity: 0.4 }} />
+        <div className="shimmer h-3 w-24" style={{ opacity: 0.3 }} />
+      </div>
+    </div>
+  );
+};
+// ──────────────────────────────────────────────────────────────────────────────
+
 const TopStat = ({
   icon: Icon,
   val,
@@ -224,6 +264,27 @@ type YearData = {
   sem1: string;
   sem2: string;
 };
+
+// ─── Shimmer: YearCard ────────────────────────────────────────────────────────
+const YearCardShimmer = () => (
+  <Card className="h-full flex flex-col justify-center gap-2">
+    <div className="flex justify-between items-center">
+      <div className="shimmer h-3 w-20" />
+      <div className="shimmer h-4 w-16 rounded-full" />
+    </div>
+    <div className="flex gap-2">
+      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1">
+        <div className="shimmer h-3 w-10 mb-1" />
+        <div className="shimmer h-3 w-14" />
+      </div>
+      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1">
+        <div className="shimmer h-3 w-10 mb-1" />
+        <div className="shimmer h-3 w-14" />
+      </div>
+    </div>
+  </Card>
+);
+// ──────────────────────────────────────────────────────────────────────────────
 
 const YearCard = ({
   data,
@@ -407,6 +468,15 @@ export default function DashboardPage() {
   const [overallPending, setOverallPending] = useState<number>(0);
   const [pendingStudentsCount, setPendingStudentsCount] = useState<number>(0);
 
+  // ─── Loading states for shimmer ─────────────────────────────────────────────
+  const [loadingStudents, setLoadingStudents] = useState(true);
+  const [loadingBranches, setLoadingBranches] = useState(true);
+  const [loadingFinanceSummary, setLoadingFinanceSummary] = useState(true);
+  const [loadingInsights, setLoadingInsights] = useState(true);
+  const [loadingPending, setLoadingPending] = useState(true);
+  const [loadingPendingStudents, setLoadingPendingStudents] = useState(true);
+  // ────────────────────────────────────────────────────────────────────────────
+
   const selectedBranchId =
     selectedBranch === "ALL"
       ? undefined
@@ -447,10 +517,13 @@ export default function DashboardPage() {
     const loadDashboardStats = async () => {
       if (!loading && collegeId && collegeEducationId) {
         try {
+          setLoadingStudents(true);
           const stats = await getOverallStudents(collegeId, collegeEducationId);
           setOverallStudents(stats);
         } catch (err) {
           console.error("Dashboard stats error:", err);
+        } finally {
+          setLoadingStudents(false);
         }
       }
     };
@@ -461,6 +534,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFilters = async () => {
       if (!loading && collegeId && collegeEducationId) {
+        setLoadingBranches(true);
         const filterData = await getFinanceFilterOptions(
           collegeId,
           collegeEducationId,
@@ -473,6 +547,7 @@ export default function DashboardPage() {
         if (branchList.length > 0) {
           setSelectedBranch(branchList[0].collegeBranchCode);
         }
+        setLoadingBranches(false);
       }
     };
 
@@ -525,6 +600,7 @@ export default function DashboardPage() {
       }
 
       try {
+        setLoadingFinanceSummary(true);
         const summary = await getFinanceYearSemesterCollectionSummary({
           collegeId,
           collegeEducationId,
@@ -538,6 +614,8 @@ export default function DashboardPage() {
         });
       } catch (err) {
         console.error("Finance summary error:", err);
+      } finally {
+        setLoadingFinanceSummary(false);
       }
     };
 
@@ -557,6 +635,7 @@ export default function DashboardPage() {
       }
 
       try {
+        setLoadingInsights(true);
         const result = await getQuickInsights({
           collegeId,
           collegeEducationId,
@@ -564,7 +643,10 @@ export default function DashboardPage() {
           selectedYear,
         });
         setQuickInsights(result);
-      } catch (err) {}
+      } catch (err) {
+      } finally {
+        setLoadingInsights(false);
+      }
     };
 
     loadInsights();
@@ -584,6 +666,7 @@ export default function DashboardPage() {
       }
 
       try {
+        setLoadingPending(true);
         const pending = await getOverallPending({
           collegeId,
           collegeEducationId,
@@ -595,6 +678,8 @@ export default function DashboardPage() {
       } catch (err) {
         console.error("❌ Overall Pending error:", err);
         setOverallPending(0);
+      } finally {
+        setLoadingPending(false);
       }
     };
 
@@ -608,13 +693,17 @@ export default function DashboardPage() {
       }
 
       try {
+        setLoadingPendingStudents(true);
         const count = await getCurrentSemesterPendingStudents({
           collegeId,
           collegeEducationId,
           collegeBranchId: selectedBranchId,
         });
         setPendingStudentsCount(count ?? 0);
-      } catch (err) {}
+      } catch (err) {
+      } finally {
+        setLoadingPendingStudents(false);
+      }
     };
 
     loadPendingStudents();
@@ -656,6 +745,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen flex justify-center text-gray-900">
+      {/* Inject shimmer keyframes once */}
+      <ShimmerStyle />
+
       <div className="w-full">
         <div className="relative">
           <Header
@@ -731,31 +823,44 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-12 gap-3">
+          {/* ── TopStat: Overall Students ── */}
           <div className="col-span-3 flex flex-col gap-3">
             <div className="h-[95px]">
-              <TopStat
-                icon={UsersThree}
-                val={overallStudents.toLocaleString()}
-                label="Overall Students"
-                theme="purple"
-                onClick={() =>
-                  router.push(
-                    `/finance/finance-analytics/students?studentsCount=${overallStudents}`,
-                  )
-                }
-              />
+              {loadingStudents ? (
+                <TopStatShimmer theme="purple" />
+              ) : (
+                <TopStat
+                  icon={UsersThree}
+                  val={overallStudents.toLocaleString()}
+                  label="Overall Students"
+                  theme="purple"
+                  onClick={() =>
+                    router.push(
+                      `/finance/finance-analytics/students?studentsCount=${overallStudents}`,
+                    )
+                  }
+                />
+              )}
             </div>
+
+            {/* ── TopStat: Overall Finance ── */}
             <div className="h-[95px]">
-              <TopStat
-                icon={CurrencyInr}
-                val={`₹ ${overallFinanceTotal.toLocaleString()}`}
-                label="Overall Finance"
-                theme="blue"
-                onClick={handleOverallFinance}
-              />
+              {loadingOverallFinance ? (
+                <TopStatShimmer theme="blue" />
+              ) : (
+                <TopStat
+                  icon={CurrencyInr}
+                  val={`₹ ${overallFinanceTotal.toLocaleString()}`}
+                  label="Overall Finance"
+                  theme="blue"
+                  onClick={handleOverallFinance}
+                />
+              )}
             </div>
           </div>
+          
 
+          {/* ── YearCards ── */}
           <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
             {(() => {
               const selectedBranchData = branches.find(
@@ -767,6 +872,19 @@ export default function DashboardPage() {
               // const testBranchYears = [...branchYears, ...branchYears];
 
               const enableScroll = branchYears.length >= 5;
+
+              if (loadingBranches || loadingFinanceSummary) {
+                // Shimmer placeholders for year cards
+                return (
+                  <div className="col-span-9 grid grid-cols-2 gap-3">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="h-[95px]">
+                        <YearCardShimmer />
+                      </div>
+                    ))}
+                  </div>
+                );
+              }
 
               if (branchYears.length === 0) {
                 return (
@@ -816,25 +934,7 @@ export default function DashboardPage() {
             })()}
           </div>
 
-          {/* <div className="col-span-9 grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-3">
-              <div className="h-[95px]">
-                <YearCard data={data.years[0]} />
-              </div>
-              <div className="h-[95px]">
-                <YearCard data={data.years[2]} />
-              </div>
-            </div>
-            <div className="flex flex-col gap-3">
-              <div className="h-[95px]">
-                <YearCard data={data.years[1]} />
-              </div>
-              <div className="h-[95px]">
-                <YearCard data={data.years[3]} />
-              </div>
-            </div>
-          </div> */}
-
+          {/* ── Fee Collection by year ── */}
           <div className="col-span-3">
             <Card className="h-[220px] flex flex-col">
               <div className="flex items-center justify-between mb-3">
@@ -851,52 +951,52 @@ export default function DashboardPage() {
                 />
               </div>
               <div className="flex-1 space-y-2">
-                {dynamicYearWiseData.map((yearData: any, i: number) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center text-[10px]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <span className="font-medium text-gray-600">
-                        {yearData.year}
+                {loadingFinanceSummary ? (
+                  // Shimmer rows
+                  [0, 1, 2, 3].map((i) => (
+                    <div key={i} className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="shimmer w-1.5 h-1.5 rounded-full" />
+                        <div className="shimmer h-3 w-16" />
+                      </div>
+                      <div className="shimmer h-3 w-14" />
+                    </div>
+                  ))
+                ) : (
+                  dynamicYearWiseData.map((yearData: any, i: number) => (
+                    <div
+                      key={i}
+                      className="flex justify-between items-center text-[10px]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        <span className="font-medium text-gray-600">
+                          {yearData.year}
+                        </span>
+                      </div>
+                      <span className="font-bold text-green-600 font-mono">
+                        ₹ {yearData.total.toLocaleString()}
                       </span>
                     </div>
-                    <span className="font-bold text-green-600 font-mono">
-                      ₹ {yearData.total.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-                {/* {data.collection.map((d, i) => (
-                  <div
-                    key={i}
-                    className="flex justify-between items-center text-[10px]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <span className="font-medium text-gray-600">
-                        {d.label}
-                      </span>
-                    </div>
-                    <span className="font-bold text-green-600 font-mono">
-                      ₹ {financeSummary.academicYearTotal.toLocaleString()}
-                    </span>
-                  </div>
-                ))} */}
+                  ))
+                )}
               </div>
               <div className="bg-[#E5F6EC] px-3 py-2 rounded-md mt-3 flex justify-between items-center">
                 <span className="font-semibold text-gray-700 text-[12px]">
                   Total
                 </span>
-
-                <p className="bg-[#1e293b] text-white px-3 py-1 rounded-full text-[11px] font-bold font-mono">
-                  ₹ {financeSummary.academicYearTotal?.toLocaleString() || "0"}
-                </p>
+                {loadingFinanceSummary ? (
+                  <div className="shimmer h-6 w-20 rounded-full" />
+                ) : (
+                  <p className="bg-[#1e293b] text-white px-3 py-1 rounded-full text-[11px] font-bold font-mono">
+                    ₹ {financeSummary.academicYearTotal?.toLocaleString() || "0"}
+                  </p>
+                )}
               </div>
             </Card>
           </div>
 
-          {/* Trend Chart (Span 6) */}
+          {/* ── Trend Chart ── */}
           <div className="col-span-5">
             <Card className="h-[220px] flex flex-col">
               <div className="flex justify-between">
@@ -911,172 +1011,187 @@ export default function DashboardPage() {
               </div>
 
               <div className="flex-1 w-full text-[9px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={trendData}
-                    margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
-                    barSize={28}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="barGradient"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop offset="0%" stopColor="#43C17A" />
-                        <stop offset="100%" stopColor="#205B3A" />
-                      </linearGradient>
-                    </defs>
-
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#f1f5f9"
-                    />
-
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#64748b", fontSize: 9, fontWeight: 600 }}
-                      dy={5}
-                    />
-
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#64748b", fontSize: 9 }}
-                      tickFormatter={(v) => `${v}L`}
-                      ticks={[0, 10, 20, 30]}
-                      domain={[0, 35]}
-                    />
-
-                    <ReferenceLine
-                      y={30}
-                      stroke="#e2e8f0"
-                      strokeDasharray="3 3"
-                    />
-
-                    <Tooltip
-                      cursor={{ fill: "#f8fafc" }}
-                      contentStyle={{
-                        fontSize: "10px",
-                        padding: "4px",
-                        borderRadius: "4px",
-                      }}
-                      formatter={(val) => [`₹ ${val}L`, ""]}
-                    />
-
-                    <Bar
-                      dataKey="value"
-                      fill="url(#barGradient)"
-                      radius={[3, 3, 0, 0]}
+                {loadingFinanceSummary ? (
+                  // Shimmer bar placeholders
+                  <div className="flex items-end gap-3 h-full px-4 pb-4">
+                    {[60, 80, 45, 90].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="shimmer w-full rounded-t" style={{ height: `${h}%` }} />
+                        <div className="shimmer h-2 w-8" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={trendData}
+                      margin={{ top: 15, right: 10, left: -25, bottom: 0 }}
+                      barSize={28}
                     >
-                      <LabelList
-                        dataKey="value"
-                        position="top"
-                        fill="#64748b"
-                        fontSize={9}
-                        formatter={(v: any) => `${v}L`}
+                      <defs>
+                        <linearGradient
+                          id="barGradient"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop offset="0%" stopColor="#43C17A" />
+                          <stop offset="100%" stopColor="#205B3A" />
+                        </linearGradient>
+                      </defs>
+
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="#f1f5f9"
                       />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#64748b", fontSize: 9, fontWeight: 600 }}
+                        dy={5}
+                      />
+
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: "#64748b", fontSize: 9 }}
+                        tickFormatter={(v) => `${v}L`}
+                        ticks={[0, 10, 20, 30]}
+                        domain={[0, 35]}
+                      />
+
+                      <ReferenceLine
+                        y={30}
+                        stroke="#e2e8f0"
+                        strokeDasharray="3 3"
+                      />
+
+                      <Tooltip
+                        cursor={{ fill: "#f8fafc" }}
+                        contentStyle={{
+                          fontSize: "10px",
+                          padding: "4px",
+                          borderRadius: "4px",
+                        }}
+                        formatter={(val) => [`₹ ${val}L`, ""]}
+                      />
+
+                      <Bar
+                        dataKey="value"
+                        fill="url(#barGradient)"
+                        radius={[3, 3, 0, 0]}
+                      >
+                        <LabelList
+                          dataKey="value"
+                          position="top"
+                          fill="#64748b"
+                          fontSize={9}
+                          formatter={(v: any) => `${v}L`}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </Card>
           </div>
 
+          {/* ── Quick Insights ── */}
           <div className="col-span-4">
             <Card className="h-[220px]">
               <h3 className="text-xs font-bold text-gray-800 mb-3">
                 Quick Insights
               </h3>
               <div className="space-y-2">
-                {[
-                  {
-                    label: "This Week",
-                    val: quickInsights.thisWeek,
-                    icon: CalendarCheck,
-                  },
-                  {
-                    label: "Last Week",
-                    val: quickInsights.lastWeek,
-                    icon: Calendar,
-                  },
-                  {
-                    label: "This Month",
-                    val: quickInsights.thisMonth,
-                    icon: Calendar,
-                  },
-                  {
-                    label: "This Year",
-                    val: quickInsights.thisYear,
-                    icon: Calendar,
-                  },
-                ].map((d, i) => (
-                  <div
-                    key={i}
-                    className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-5 h-5 rounded-full bg-[#609872] flex items-center justify-center text-white">
-                        <d.icon weight="fill" size={10} />
+                {loadingInsights ? (
+                  // Shimmer rows
+                  [0, 1, 2, 3].map((i) => (
+                    <div key={i} className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="shimmer w-5 h-5 rounded-full" />
+                        <div className="shimmer h-3 w-16" />
                       </div>
-                      <span className="font-semibold text-gray-700 text-xs">
-                        {d.label}
-                      </span>
+                      <div className="shimmer h-3 w-14" />
                     </div>
+                  ))
+                ) : (
+                  [
+                    { label: "This Week", val: quickInsights.thisWeek, icon: CalendarCheck },
+                    { label: "Last Week", val: quickInsights.lastWeek, icon: Calendar },
+                    { label: "This Month", val: quickInsights.thisMonth, icon: Calendar },
+                    { label: "This Year", val: quickInsights.thisYear, icon: Calendar },
+                  ].map((d, i) => (
+                    <div
+                      key={i}
+                      className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-full bg-[#609872] flex items-center justify-center text-white">
+                          <d.icon weight="fill" size={10} />
+                        </div>
+                        <span className="font-semibold text-gray-700 text-xs">
+                          {d.label}
+                        </span>
+                      </div>
 
-                    {/* Right Side */}
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#43C17A] text-xs">
-                        ₹ {d.val}
-                      </span>
+                      {/* Right Side */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#43C17A] text-xs">
+                          ₹ {d.val}
+                        </span>
 
-                      <CaretRight
-                        size={16}
-                        weight="bold"
-                        className="cursor-pointer text-[#282828]"
-                        onClick={() => {
-                          const params = new URLSearchParams(
-                            searchParams.toString(),
-                          );
+                        <CaretRight
+                          size={16}
+                          weight="bold"
+                          className="cursor-pointer text-[#282828]"
+                          onClick={() => {
+                            const params = new URLSearchParams(
+                              searchParams.toString(),
+                            );
 
-                          const range = d.label
-                            .toLowerCase()
-                            .replace(/\s+/g, "-");
+                            const range = d.label
+                              .toLowerCase()
+                              .replace(/\s+/g, "-");
 
-                          params.set("range", range);
+                            params.set("range", range);
 
-                          router.push(
-                            `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
-                          );
-                        }}
-                      />
+                            router.push(
+                              `/finance/fee-collection/payments?range=${range}&educationId=${collegeEducationId}&educationType=${collegeEducationType}&branch=${selectedBranch}&branchId=${selectedBranchId}&selectedYear=${selectedYear}`,
+                            );
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </Card>
           </div>
 
+          {/* ── Overall Pending + Current Semester ── */}
           <div className="flex col-span-6 justify-around p-2 bg-white rounded-lg">
             <div className="col-span-3">
-              <div className="bg-[#E5F6EC] p-3  rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
+              <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
                 <h4 className="font-bold text-gray-800 text-xs mb-1">
                   Overall Pending
                 </h4>
                 <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
                   Total unpaid fees across all students
                 </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-[#43C17A]">₹</span>
-                  <span className="text-2xl font-bold text-[#43C17A]">
-                    {formatAmount(overallPending)}
-                  </span>
-                </div>
+                {loadingPending ? (
+                  <div className="shimmer h-7 w-24" />
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-bold text-[#43C17A]">₹</span>
+                    <span className="text-2xl font-bold text-[#43C17A]">
+                      {formatAmount(overallPending)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1088,18 +1203,23 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-[#282828] mb-3 leading-3 w-3/4">
                   Students yet to complete payment
                 </p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-[#43C17A]">
-                    {pendingStudentsCount}
-                  </span>
-                  <span className="text-[10px] font-bold text-[#43C17A]">
-                    Students
-                  </span>
-                </div>
+                {loadingPendingStudents ? (
+                  <div className="shimmer h-7 w-20" />
+                ) : (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-[#43C17A]">
+                      {pendingStudentsCount}
+                    </span>
+                    <span className="text-[10px] font-bold text-[#43C17A]">
+                      Students
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
+          {/* ── Payment Reminder ── */}
           <div className="col-span-6">
             <Card className="h-[120px] flex flex-col items-center justify-center text-center py-2">
               <h3 className="text-xs font-bold text-gray-800 mb-1">
