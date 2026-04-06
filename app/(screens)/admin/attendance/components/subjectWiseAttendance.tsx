@@ -31,6 +31,12 @@ interface SubjectWiseAttendanceProps {
   onBack: () => void;
 }
 
+const TOAST_IDS = {
+  NO_CLASSES: "no_classes_today",
+  LOAD_ERROR: "load_section_error",
+  STUDENT_LOAD_ERROR: "student_load_error",
+};
+
 const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -84,11 +90,17 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           );
           setStudentsList(students);
         } else {
-          toast("No classes scheduled for today", { icon: "ℹ️" });
+          // toast("No classes scheduled for today", { icon: "ℹ️" });
+          toast("No classes scheduled for today", {
+            icon: "ℹ️",
+            id: TOAST_IDS.NO_CLASSES,
+          });
         }
       } catch (err) {
-        console.error(err);
-        toast.error("Failed to load section data");
+        // toast.error("Failed to load section data");
+        toast.error("Failed to load section data", {
+          id: TOAST_IDS.LOAD_ERROR,
+        });
       } finally {
         setLoading(false);
       }
@@ -103,21 +115,21 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     setLoading(true);
     setIsEditing(false);
     try {
-      // ✅ FIXED: Pass collegeSectionsId here as well
       const students = await getStudentsForClass(
         newClassId,
         String(collegeSectionsId),
       );
       setStudentsList(students);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to load students");
+      // toast.error("Failed to load students");
+      toast.error("Failed to load students", {
+        id: TOAST_IDS.STUDENT_LOAD_ERROR,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // --- 3. SAVE ATTENDANCE ---
   const handleSaveAttendance = async () => {
     if (!selectedClassId) return;
     const unmarked = studentsList.filter((s) => s.attendance === "Not Marked");
@@ -333,7 +345,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           </div>
         </div>
 
-        {/* TABLE AREA */}
         {loading ? (
           <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
             <p className="text-gray-400 font-medium">Loading...</p>

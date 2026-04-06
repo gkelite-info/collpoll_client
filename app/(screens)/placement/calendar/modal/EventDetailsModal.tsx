@@ -51,7 +51,7 @@ export default function EventDetailsModal({
 
           <button
             onClick={onClose}
-            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800"
+            className="h-8 w-8 cursor-pointer flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-800"
           >
             <X size={18} weight="bold" />
           </button>

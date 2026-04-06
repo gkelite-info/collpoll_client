@@ -47,16 +47,26 @@ export default function ConfirmDeleteModal({
 
         <div className="flex gap-3 mt-6">
           <button
-            className="flex-1 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-colors duration-200"
+            disabled={isDeleting}
+            className={`flex-1 font-medium py-2.5 px-4 rounded-xl transition-colors duration-200
+              ${isDeleting
+                ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700 cursor-pointer"
+              }`}
             onClick={onCancel}
           >
             Cancel
           </button>
           <button
-            className="flex-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm shadow-red-200 transition-colors duration-200"
+            disabled={isDeleting}
+            className={`flex-1 cursor-pointer font-medium py-2.5 px-4 rounded-xl shadow-sm shadow-red-200 transition-colors duration-200
+              ${isDeleting
+                ? "bg-red-400 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-700"
+              } text-white`}
             onClick={onConfirm}
           >
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </button>
         </div>
       </div>

@@ -125,6 +125,7 @@ export async function saveQuiz(
         collegeSubjectId: number;
         collegeSectionsId: number;
         collegeSubjectUnitId: number;
+        collegeSubjectUnitTopicId? : number;
         quizTitle: string;
         totalMarks: number;
         startDate: string;
@@ -139,6 +140,7 @@ export async function saveQuiz(
         collegeSubjectId: payload.collegeSubjectId,
         collegeSectionsId: payload.collegeSectionsId,
         collegeSubjectUnitId: payload.collegeSubjectUnitId,
+        collegeSubjectUnitTopicId : payload.collegeSubjectUnitTopicId,
         quizTitle: payload.quizTitle.trim(),
         totalMarks: payload.totalMarks,
         startDate: payload.startDate,

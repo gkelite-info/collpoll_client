@@ -16,7 +16,12 @@ export async function getAttendanceData({
     limit = 15,
 }: AttendanceQueryParams) {
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+    // const endDate = new Date(year, month, 0).toISOString().split("T")[0];
+
+    const endDate =
+        `${year}-${String(month).padStart(2, "0")}-${String(
+            new Date(year, month, 0).getDate()
+        ).padStart(2, "0")}`;
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -55,7 +60,7 @@ export async function getAttendanceData({
 
     const records =
         (data ?? []).map(row => {
-            const latestAdjustment = row.attendance_adjustments?.sort((a,b)=> b.adjustmentId - a.adjustmentId)?.[0];
+            const latestAdjustment = row.attendance_adjustments?.sort((a, b) => b.adjustmentId - a.adjustmentId)?.[0];
             const checkIn = latestAdjustment?.newCheckIn ?? row.checkIn;
             const checkOut = latestAdjustment?.newCheckOut ?? row.checkOut;
             const totalMinutes = row.totalMinutes ?? 0;

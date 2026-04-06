@@ -1,6 +1,20 @@
 'use client'
-import React, { useState, useRef, useCallback, useEffect } from "react";
-import { CaretLeftIcon, CloudArrowUp, FilePdf, Trash } from "@phosphor-icons/react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import {
+    CaretLeftIcon,
+    CloudArrowUp,
+    FilePdf,
+    FileDoc,
+    FileXls,
+    FilePpt,
+    FileZip,
+    FileJs,
+    FileCss,
+    FileHtml,
+    FilePng,
+    FileJpg,
+    Trash
+} from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
@@ -8,6 +22,66 @@ import { fetchDiscussionById, fetchExistingDiscussion, saveDiscussionForum } fro
 import { saveDiscussionSections, replaceDiscussionSections, fetchDiscussionSectionByDiscussionId } from "@/lib/helpers/discussionForum/discussionForumSectionsAPI";
 import { uploadDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadStorageAPI";
 import { deactivateDiscussionFile, saveDiscussionFiles } from "@/lib/helpers/discussionForum/discussionFileUploadsAPI";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
+
+const ALLOWED_FILE_EXTENSIONS = [
+    "pdf",
+    "doc",
+    "docx",
+    "xls",
+    "xlsx",
+    "ppt",
+    "pptx",
+    "zip",
+    "rar",
+    "png",
+    "jpg",
+    "jpeg",
+    "html",
+    "css",
+    "js",
+    "json",
+    "txt"
+];
+
+const isValidFile = (file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    return ext && ALLOWED_FILE_EXTENSIONS.includes(ext);
+};
+
+const getFileIcon = (fileName: string) => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    switch (ext) {
+        case "pdf":
+            return <FilePdf size={24} weight="fill" className="text-red-500" />;
+        case "doc":
+        case "docx":
+            return <FileDoc size={24} weight="fill" className="text-blue-500" />;
+        case "xls":
+        case "xlsx":
+            return <FileXls size={24} weight="fill" className="text-green-600" />;
+        case "ppt":
+        case "pptx":
+            return <FilePpt size={24} weight="fill" className="text-orange-500" />;
+        case "zip":
+        case "rar":
+            return <FileZip size={24} weight="fill" className="text-yellow-600" />;
+        case "js":
+            return <FileJs size={24} weight="fill" className="text-yellow-500" />;
+        case "html":
+            return <FileHtml size={24} weight="fill" className="text-orange-600" />;
+        case "css":
+            return <FileCss size={24} weight="fill" className="text-blue-600" />;
+        case "png":
+            return <FilePng size={24} weight="fill" className="text-green-500" />;
+        case "jpg":
+        case "jpeg":
+            return <FileJpg size={24} weight="fill" className="text-green-500" />;
+
+        default:
+            return <FilePdf size={24} weight="fill" className="text-gray-400" />;
+    }
+};
 
 export default function FacultyDiscussionForm({ discussionId, onSaved }: { discussionId?: number, onSaved?: () => void; }) {
     const router = useRouter();
@@ -30,6 +104,8 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
     });
     const [sectionOpen, setSectionOpen] = useState(false);
     const sectionRef = useRef<HTMLDivElement>(null);
+    const [deleteFileId, setDeleteFileId] = useState<number | null>(null);
+    const [isDeletingFile, setIsDeletingFile] = useState(false);
 
     useEffect(() => {
         const loadDiscussion = async () => {
@@ -48,7 +124,15 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                     ) || []
                 });
 
-                setExistingFiles(data.discussion_file_uploads ?? []);
+                // setExistingFiles(data.discussion_file_uploads ?? []);
+                setExistingFiles(
+                    (data.discussion_file_uploads ?? [])
+                        .filter((f: any) => f.isActive && !f.is_deleted && !f.deletedAt)
+                        .map((f: any) => ({
+                            discussionFileUploadId: f.discussionFileUploadId,
+                            fileUrl: f.fileUrl
+                        }))
+                );
             } catch (err) {
                 toast.error("Failed to load discussion");
             } finally {
@@ -77,18 +161,35 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
         }));
     };
 
+    // const removeExistingFile = async (discussionFileUploadId: number) => {
+    //     try {
+    //         const result = await deactivateDiscussionFile(discussionFileUploadId);
+    //         if (result.success) {
+    //             setExistingFiles(prev => prev.filter(f => f.discussionFileUploadId !== discussionFileUploadId));
+    //             toast.success("File removed successfully.");
+    //         } else {
+    //             toast.error("Failed to remove file.");
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to remove file.");
+    //         console.error("removeExistingFile error:", error);
+    //     }
+    // };
+
     const removeExistingFile = async (discussionFileUploadId: number) => {
+
         try {
             const result = await deactivateDiscussionFile(discussionFileUploadId);
-            if (result.success) {
-                setExistingFiles(prev => prev.filter(f => f.discussionFileUploadId !== discussionFileUploadId));
-                toast.success("File removed successfully.");
-            } else {
+            if (!result.success) {
                 toast.error("Failed to remove file.");
+                return;
             }
+            setExistingFiles(prev =>
+                prev.filter(f => f.discussionFileUploadId !== discussionFileUploadId)
+            );
+            toast.success("File removed successfully.");
         } catch (error) {
             toast.error("Failed to remove file.");
-            console.error("removeExistingFile error:", error);
         }
     };
 
@@ -193,7 +294,15 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
-            setFiles(prev => [...prev, ...newFiles]);
+            // setFiles(prev => [...prev, ...newFiles]);
+
+            const validFiles = newFiles.filter(isValidFile);
+            const invalidFiles = newFiles.filter(f => !isValidFile(f));
+            if (invalidFiles.length > 0) {
+                toast.error("Only project related files allowed (pdf, doc, excel, ppt, zip, images)");
+            }
+
+            setFiles(prev => [...prev, ...validFiles]);
         }
     };
 
@@ -212,7 +321,13 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
         setIsDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             const droppedFiles = Array.from(e.dataTransfer.files);
-            setFiles(prev => [...prev, ...droppedFiles]);
+            // setFiles(prev => [...prev, ...droppedFiles]);
+            const validFiles = droppedFiles.filter(isValidFile);
+            const invalidFiles = droppedFiles.filter(f => !isValidFile(f));
+            if (invalidFiles.length > 0) {
+                toast.error("Unsupported file type detected");
+            }
+            setFiles(prev => [...prev, ...validFiles]);
         }
     }, []);
 
@@ -236,6 +351,31 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
             </div>
         );
     }
+
+    const confirmDeleteExistingFile = async () => {
+        if (!deleteFileId) return;
+        try {
+            setIsDeletingFile(true);
+            const result = await deactivateDiscussionFile(deleteFileId);
+            if (!result.success) {
+                toast.error("Failed to remove file.");
+                return;
+            }
+            setExistingFiles(prev =>
+                prev.filter(f => f.discussionFileUploadId !== deleteFileId)
+            );
+            toast.success("File removed successfully.");
+        } catch (error) {
+            toast.error("Failed to remove file.");
+        } finally {
+            setDeleteFileId(null);
+            setIsDeletingFile(false);
+        }
+    };
+
+    const handleExistingFileDeleteClick = (discussionFileUploadId: number) => {
+        setDeleteFileId(discussionFileUploadId);
+    };
 
     return (
         <div className="w-full flex flex-col h-full overflow-y-auto pb-10">
@@ -373,7 +513,8 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                             {existingFiles.map((file) => (
                                 <div key={file.discussionFileUploadId} className="flex items-center gap-1 justify-between border border-blue-100 rounded-md p-3 bg-white shadow-sm">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <FilePdf size={24} weight="fill" className="text-blue-500 flex-shrink-0" />
+                                        {/* <FilePdf size={24} weight="fill" className="text-blue-500 flex-shrink-0" /> */}
+                                        {getFileIcon(file.fileUrl)}
                                         <div className="flex flex-col flex-1 min-w-0">
                                             <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">
                                                 {file.fileUrl.split("/").pop()}
@@ -382,7 +523,8 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => removeExistingFile(file.discussionFileUploadId)}
+                                        // onClick={() => removeExistingFile(file.discussionFileUploadId)}
+                                        onClick={() => handleExistingFileDeleteClick(file.discussionFileUploadId)}
                                         className="p-1.5 bg-red-50 cursor-pointer text-red-500 rounded-full hover:bg-red-100 transition-colors flex-shrink-0"
                                     >
                                         <Trash size={18} />
@@ -393,7 +535,8 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                             {files.map((file, idx) => (
                                 <div key={`${file.name}-${idx}`} className="flex items-center gap-1 justify-between border border-red-100 rounded-md p-3 bg-white shadow-sm">
                                     <div className="flex items-center gap-3 min-w-0">
-                                        <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" />
+                                        {/* <FilePdf size={24} weight="fill" className="text-red-500 flex-shrink-0" /> */}
+                                        {getFileIcon(file.name)}
                                         <div className="flex flex-col flex-1 min-w-0">
                                             <span className="text-sm font-medium text-[#282828] whitespace-nowrap overflow-x-auto">
                                                 {file.name}
@@ -433,6 +576,14 @@ export default function FacultyDiscussionForm({ discussionId, onSaved }: { discu
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
             `}</style>
+
+            <ConfirmDeleteModal
+                open={!!deleteFileId}
+                onConfirm={confirmDeleteExistingFile}
+                onCancel={() => setDeleteFileId(null)}
+                isDeleting={isDeletingFile}
+                name="file"
+            />
         </div>
     );
 }

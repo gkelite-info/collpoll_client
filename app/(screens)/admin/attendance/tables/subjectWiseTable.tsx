@@ -266,7 +266,7 @@ export default function SubjectWiseAttendance({
             {data.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={10}
                   className="px-4 py-8 text-center text-sm text-gray-400 italic"
                 >
                   No attendance records found.

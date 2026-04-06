@@ -13,6 +13,14 @@ interface FacultyQuizFormProps {
     onSaved: () => void;
 }
 
+const todayStr = new Date().toISOString().split("T")[0];
+
+const isPastDate = (date: string) =>
+    new Date(date) < new Date(todayStr);
+
+const isEndBeforeStart = (start: string, end: string) =>
+    new Date(end) < new Date(start);
+
 export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -77,6 +85,8 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
         if (!totalMarks) return toast.error("Total marks is required");
         if (!startDate) return toast.error("Start date is required");
         if (!endDate) return toast.error("End date is required");
+        if (isPastDate(startDate)) return toast.error("Start date cannot be in past");
+        if (isEndBeforeStart(startDate, endDate)) return toast.error("End date must be after start date");
         if (!selectedTopicId) return toast.error("Please select a topic");
         if (!subjects[0]?.collegeSubjectId) return toast.error("Subject not found");
         if (!sections[0]?.collegeSectionsId) return toast.error("Section not found");
@@ -90,6 +100,7 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                 collegeSubjectId: subjects[0].collegeSubjectId,
                 collegeSectionsId: sections[0].collegeSectionsId,
                 collegeSubjectUnitId: selectedTopicId,
+                collegeSubjectUnitTopicId: selectedTopicId,
                 quizTitle: quizTitle.trim(),
                 totalMarks: Number(totalMarks),
                 startDate,
@@ -209,7 +220,20 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                             <input
                                 type="date"
                                 value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
+                                // onChange={(e) => setStartDate(e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (isPastDate(value)) {
+                                        toast.error("Start date cannot be in past");
+                                        return;
+                                    }
+                                    if (endDate && isEndBeforeStart(value, endDate)) {
+                                        setEndDate("");
+                                    }
+                                    setStartDate(value);
+                                }}
+
+                                min={todayStr}
                                 className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                             />
                         </div>
@@ -218,7 +242,21 @@ export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormPr
                             <input
                                 type="date"
                                 value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                // onChange={(e) => setEndDate(e.target.value)}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (!startDate) {
+                                        toast.error("Select start date first");
+                                        return;
+                                    }
+                                    if (isEndBeforeStart(startDate, value)) {
+                                        toast.error("End date must be after start date");
+                                        return;
+                                    }
+                                    setEndDate(value);
+                                }}
+
+                                min={startDate || todayStr}
                                 className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
                             />
                         </div>

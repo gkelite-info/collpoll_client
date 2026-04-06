@@ -22,7 +22,7 @@ import ConfirmDeleteModal from "./confirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
 import FacultyAddQuestions from "./FacultyAddQuizQuestions";
 import FacultyQuizResumeBanner from "./FacultyQuizResumeBanner";
-import { fetchQuizzesByStatus } from "@/lib/helpers/quiz/quizAPI";
+import { fetchQuizzesByStatus, autoCompleteExpiredQuizzes } from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizShimmer from "../shimmer/FacultyQuizShimmer";
 import FacultyQuizSubmissions from "./quizSubmissions";
 
@@ -55,6 +55,7 @@ function AssignmentsLeftContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { facultyId } = useFaculty();
+  const refreshQuiz = searchParams.get("refreshQuiz");
   const activeTab = searchParams.get("tab") || "assignments";
   const action = searchParams.get("action");
   const discussionId = searchParams.get("discussionId");
@@ -84,6 +85,7 @@ function AssignmentsLeftContent() {
     if (!facultyId) return;
     try {
       setQuizzesLoading(true);
+      await autoCompleteExpiredQuizzes(facultyId);
       const [active, drafts, completed] = await Promise.all([
         fetchQuizzesByStatus(facultyId, "Active"),
         fetchQuizzesByStatus(facultyId, "Draft"),
@@ -92,6 +94,9 @@ function AssignmentsLeftContent() {
       setActiveQuizzes(active);
       setDraftQuizzes(drafts);
       setCompletedQuizzes(completed);
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("refreshQuiz");
+      router.replace(`${pathname}?${params.toString()}`);
     } catch (err) {
       toast.error("Failed to fetch quizzes");
     } finally {
@@ -132,12 +137,37 @@ function AssignmentsLeftContent() {
     }
   }
 
+  // useEffect(() => {
+  //   if (activeTab === "discussion") {
+  //     fetchDiscussions();
+  //     fetchCompletedDiscussions();
+  //   }
+  // }, [activeTab, facultyId, refreshKey, refreshQuiz]);
+
+  // BEFORE
+  // useEffect(() => {
+  //   if (activeTab === "discussion") {
+  //     fetchDiscussions();
+  //     fetchCompletedDiscussions();
+  //   }
+  // }, [activeTab, facultyId, refreshKey, refreshQuiz]);
+
   useEffect(() => {
-    if (activeTab === "discussion") {
+    if (activeTab !== "discussion") return;
+    if (discussionView === "active") {
+      setDiscussionsLoading(true);
       fetchDiscussions();
+    } else {
+      setCompletedDiscussionsLoading(true);
       fetchCompletedDiscussions();
     }
-  }, [activeTab, facultyId, refreshKey]);
+  }, [
+    activeTab,
+    discussionView,
+    facultyId,
+    refreshKey,
+    refreshQuiz
+  ]);
 
   const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -167,7 +197,18 @@ function AssignmentsLeftContent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  // const handleDiscussionViewChange = (view: "active" | "completed") => {
+  //   const params = new URLSearchParams(searchParams.toString());
+  //   params.set("discussionView", view);
+  //   router.push(`${pathname}?${params.toString()}`);
+  // };
+
   const handleDiscussionViewChange = (view: "active" | "completed") => {
+    if (view === "active") {
+      setDiscussionsLoading(true);
+    } else {
+      setCompletedDiscussionsLoading(true);
+    }
     const params = new URLSearchParams(searchParams.toString());
     params.set("discussionView", view);
     router.push(`${pathname}?${params.toString()}`);

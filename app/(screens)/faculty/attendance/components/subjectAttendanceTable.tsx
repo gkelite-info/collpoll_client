@@ -23,7 +23,7 @@ export default function SubjectAttendanceTable({
             <th className="px-4 py-3 text-center">Time</th>
             <th className="px-4 py-3 text-center">Status</th>
             <th className="px-4 py-3 text-center">Reason</th>
-            <th className="px-4 py-3 text-center">Notes</th>
+            {/* <th className="px-4 py-3 text-center">Notes</th> */}
           </tr>
         </thead>
 
@@ -48,8 +48,8 @@ export default function SubjectAttendanceTable({
               </td>
 
               <td className="px-4 py-3 text-center">{r.reason || "-"}</td>
-
-              <td className="px-4 py-3">
+              {/* once the PDF logic completed then uncomment bellow code */}
+              {/* <td className="px-4 py-3">
                 <div className="flex justify-center">
                   <button className="p-1.5 bg-[#F5F3FF] rounded-lg hover:bg-[#EDE9FE] transition-colors cursor-pointer">
                     <FilePdf
@@ -59,7 +59,7 @@ export default function SubjectAttendanceTable({
                     />
                   </button>
                 </div>
-              </td>
+              </td> */}
             </tr>
           ))}
         </tbody>
