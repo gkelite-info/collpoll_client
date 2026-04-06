@@ -19,7 +19,10 @@ export async function fetchMeetingParticipants(meetingId: number) {
       userId,
       role,
       users (
-        fullName
+        fullName,
+        user_profile (
+          profileUrl
+        )
       )
     `,
     )
@@ -28,6 +31,11 @@ export async function fetchMeetingParticipants(meetingId: number) {
   if (error) throw error;
 
   return (data ?? []).map((p: any) => {
+    const profile = p.users?.user_profile;
+    const profileUrl = Array.isArray(profile)
+      ? profile[0]?.profileUrl
+      : profile?.profileUrl;
+
     return {
       id: p.userId,
       name: p.users?.fullName ?? "Unknown",
@@ -35,10 +43,10 @@ export async function fetchMeetingParticipants(meetingId: number) {
       branch: "",
       year: "",
       section: "",
+      avatar: profileUrl || null,
     };
   });
 }
-
 export async function clearMeetingParticipants(hrMeetingId: number) {
   const { data: hrMeeting } = await supabase
     .from("hr_meetings")

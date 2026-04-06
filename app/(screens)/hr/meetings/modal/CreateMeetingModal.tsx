@@ -126,9 +126,11 @@ export default function CreateMeetingModal({
   const [endPeriod, setEndPeriod] = useState<"AM" | "PM">("AM");
   const [isScheduling, setIsScheduling] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
-  const [selectedEducationType, setSelectedEducationType] = useState(
-    "Select Education Type",
-  );
+  const [selectedEducationType, setSelectedEducationType] = useState("");
+
+  // Validation state to control Bold/Red time fonts
+  const [isPastTimeError, setIsPastTimeError] = useState(false);
+
   const [conflictData, setConflictData] = useState<{
     title: string;
     role: string;
@@ -138,11 +140,14 @@ export default function CreateMeetingModal({
   const isSelectModalOpen = !!selectModalRoleParam;
   const editMeetingId = searchParams.get("editMeetingId");
 
+  // Fix: Guarantees complete state clearance upon closing
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      resetForm();
+    } else if (isOpen && !editMeetingId) {
       resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, editMeetingId]);
 
   useEffect(() => {
     const loadEducationTypes = async () => {
@@ -160,6 +165,7 @@ export default function CreateMeetingModal({
     setAgenda("");
     setDate("");
     setSelectedRole("Select Role");
+    setSelectedEducationType(""); // Clean wipe
     setMeetingLink("");
 
     setStartHour("09");
@@ -174,7 +180,9 @@ export default function CreateMeetingModal({
 
     setInAppNotification(false);
     setEmailNotification(false);
+    setIsPastTimeError(false);
   };
+
   const getDynamicSelectionText = () => {
     switch (selectedRole) {
       case "Admin":
@@ -206,20 +214,22 @@ export default function CreateMeetingModal({
     }
   };
   const validateTitle = (title: string) => {
-    const regex = /^[A-Za-z\s]+$/;
+    const regex = /^[A-Za-z0-9\s&:\-]+$/;
 
     if (!title.trim()) {
       toast.error("Meeting title is required");
       return false;
     }
-
     if (!regex.test(title.trim())) {
-      toast.error("Title can contain only letters and spaces");
+      toast.error(
+        "Title can contain only letters, numbers, spaces, &, :, and -",
+        { id: "title-error" },
+      );
       return false;
     }
-
     return true;
   };
+
   const validateAgenda = (agenda: string) => {
     if (!agenda.trim()) {
       toast.error("Agenda is required");
@@ -271,22 +281,30 @@ export default function CreateMeetingModal({
         setDate(meeting.meetingDate);
         setMeetingLink(meeting.meetingLink);
 
-        const parseTime = (time: string) => {
-          const [t, period] = time.split(" ");
-          const [h, m] = t.split(":");
-          return { hour: h, minute: m, period };
+        const parseTimeFromDB = (time24: string) => {
+          if (!time24) return { hour: "09", minute: "00", period: "AM" };
+          const [hStr, mStr] = time24.split(":");
+          let h = parseInt(hStr, 10);
+          const period = h >= 12 ? "PM" : "AM";
+          h = h % 12;
+          if (h === 0) h = 12;
+          return {
+            hour: String(h).padStart(2, "0"),
+            minute: mStr,
+            period: period as "AM" | "PM",
+          };
         };
 
-        const start = parseTime(meeting.fromTime);
-        const end = parseTime(meeting.toTime);
+        const start = parseTimeFromDB(meeting.fromTime);
+        const end = parseTimeFromDB(meeting.toTime);
 
         setStartHour(start.hour);
         setStartMinute(start.minute);
-        setStartPeriod(start.period as "AM" | "PM");
+        setStartPeriod((start.period as "AM") || "PM");
 
         setEndHour(end.hour);
         setEndMinute(end.minute);
-        setEndPeriod(end.period as "AM" | "PM");
+        setEndPeriod((end.period as "AM") || "PM");
         const { data: participants } = await supabase
           .from("hr_meeting_participants")
           .select("*")
@@ -346,9 +364,14 @@ export default function CreateMeetingModal({
   const fromTime = `${startHour}:${startMinute} ${startPeriod}`;
   const toTime = `${endHour}:${endMinute} ${endPeriod}`;
 
+  // Restored cascading dropdown validation rule
   const handleOpenSelectModal = () => {
-    if (selectedRole === "Select Role") {
+    if (!selectedRole || selectedRole === "Select Role") {
       toast.error("Please select a role first");
+      return;
+    }
+    if (!selectedEducationType) {
+      toast.error("Please select an education type first");
       return;
     }
 
@@ -356,6 +379,7 @@ export default function CreateMeetingModal({
     params.set("selectRole", selectedRole);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
   const handleCloseSelectModal = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("selectRole");
@@ -368,13 +392,13 @@ export default function CreateMeetingModal({
       return;
     }
     if (!validateTitle(title)) return;
-    if (!validateTitle(title)) return;
     if (!validateAgenda(agenda)) return;
     if (!selectedRole || selectedRole === "Select Role") {
       toast.error("Please select a role", { id: "role-error" });
       return;
     }
     if (!validateDate(date)) return;
+
     if (
       !validateTimeRange(
         startHour,
@@ -386,6 +410,22 @@ export default function CreateMeetingModal({
       )
     )
       return;
+
+    // Strict Past-Time Validation Check
+    const fromTime24 = convertTo24HourString(
+      startHour,
+      startMinute,
+      startPeriod,
+    );
+    const selectedDateTime = new Date(`${date}T${fromTime24}`);
+    const now = new Date();
+
+    if (selectedDateTime < now) {
+      setIsPastTimeError(true);
+      toast.error("Meeting time cannot be in the past", { id: "time-error" });
+      return;
+    }
+    setIsPastTimeError(false);
 
     const trimmedLink = meetingLink.trim();
 
@@ -437,13 +477,6 @@ export default function CreateMeetingModal({
       );
 
       let hrMeetingId;
-
-      const fromTime24 = convertTo24HourString(
-        startHour,
-        startMinute,
-        startPeriod,
-      );
-
       const toTime24 = convertTo24HourString(endHour, endMinute, endPeriod);
 
       if (editMeetingId) {
@@ -451,8 +484,8 @@ export default function CreateMeetingModal({
           title,
           agenda,
           meetingDate: date,
-          fromTime,
-          toTime,
+          fromTime: fromTime24,
+          toTime: toTime24,
           meetingLink: trimmedLink,
         });
 
@@ -464,7 +497,6 @@ export default function CreateMeetingModal({
             });
 
             setShowConflictModal(true);
-
             toast.dismiss("schedule-loading");
 
             return;
@@ -596,7 +628,7 @@ export default function CreateMeetingModal({
               className="bg-white rounded-2xl w-full max-w-112 p-4 max-h-[90vh] shadow-xl custom-scrollbar overflow-y-auto "
             >
               <h2 className="text-[22px] font-bold text-[#282828] mb-6">
-                Create Meeting
+                {editMeetingId ? "Edit Meeting" : "Create Meeting"}
               </h2>
 
               <div className="space-y-3">
@@ -643,7 +675,10 @@ export default function CreateMeetingModal({
                     type="date"
                     value={date}
                     min={getTodayDateString()}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      setIsPastTimeError(false); // Reset validation on change
+                    }}
                     className="w-full border border-[#E0E0E0] rounded-lg px-3 py-2.5 text-sm font-regular outline-none text-[#555555] cursor-pointer"
                   />
                 </div>
@@ -654,15 +689,21 @@ export default function CreateMeetingModal({
                   </label>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <span className="text-base text-[#555555] block mb-1">
+                      {/* Past Time Error Highlighting */}
+                      <span
+                        className={`text-base block mb-1 font-semibold transition-colors ${isPastTimeError ? "font-bold text-red-600" : "text-[#282828]"}`}
+                      >
                         From<span className="text-red-500">*</span>
                       </span>
                       <div className="flex gap-2">
                         <div className="relative flex-1">
                           <select
                             value={startHour}
-                            onChange={(e) => setStartHour(e.target.value)}
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setStartHour(e.target.value);
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             {Array.from({ length: 12 }, (_, i) => {
                               const h = String(i + 1).padStart(2, "0");
@@ -681,8 +722,11 @@ export default function CreateMeetingModal({
                         <div className="relative flex-1">
                           <select
                             value={startMinute}
-                            onChange={(e) => setStartMinute(e.target.value)}
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setStartMinute(e.target.value);
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             {Array.from({ length: 12 }, (_, i) => {
                               const m = String(i * 5).padStart(2, "0");
@@ -701,10 +745,11 @@ export default function CreateMeetingModal({
                         <div className="relative flex-1">
                           <select
                             value={startPeriod}
-                            onChange={(e) =>
-                              setStartPeriod(e.target.value as "AM" | "PM")
-                            }
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setStartPeriod(e.target.value as "AM" | "PM");
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             <option value="AM">AM</option>
                             <option value="PM">PM</option>
@@ -713,7 +758,10 @@ export default function CreateMeetingModal({
                       </div>
                     </div>
                     <div>
-                      <span className="text-base text-[#555555] block mb-1">
+                      {/* Past Time Error Highlighting */}
+                      <span
+                        className={`text-base block mb-1 font-semibold transition-colors ${isPastTimeError ? "font-bold text-red-600" : "text-[#282828]"}`}
+                      >
                         To<span className="text-red-500">*</span>
                       </span>
 
@@ -721,13 +769,20 @@ export default function CreateMeetingModal({
                         <div className="relative flex-1">
                           <select
                             value={endHour}
-                            onChange={(e) => setEndHour(e.target.value)}
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setEndHour(e.target.value);
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             {Array.from({ length: 12 }, (_, i) => {
                               const h = String(i + 1).padStart(2, "0");
                               return (
-                                <option key={h} value={h}>
+                                <option
+                                  key={h}
+                                  value={h}
+                                  className="text-[#282828]"
+                                >
                                   {h}
                                 </option>
                               );
@@ -737,13 +792,20 @@ export default function CreateMeetingModal({
                         <div className="relative flex-1">
                           <select
                             value={endMinute}
-                            onChange={(e) => setEndMinute(e.target.value)}
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setEndMinute(e.target.value);
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             {Array.from({ length: 12 }, (_, i) => {
                               const m = String(i * 5).padStart(2, "0");
                               return (
-                                <option key={m} value={m}>
+                                <option
+                                  key={m}
+                                  value={m}
+                                  className="text-[#282828]"
+                                >
                                   {m}
                                 </option>
                               );
@@ -753,10 +815,11 @@ export default function CreateMeetingModal({
                         <div className="relative flex-1">
                           <select
                             value={endPeriod}
-                            onChange={(e) =>
-                              setEndPeriod(e.target.value as "AM" | "PM")
-                            }
-                            className="w-full border border-[#E0E0E0] rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-[#282828] text-center cursor-pointer"
+                            onChange={(e) => {
+                              setEndPeriod(e.target.value as "AM" | "PM");
+                              setIsPastTimeError(false);
+                            }}
+                            className={`w-full border rounded-lg pl-2 pr-6 py-2.5 text-sm outline-none appearance-none bg-white text-center cursor-pointer transition-colors ${isPastTimeError ? "border-red-500 text-red-600 font-medium" : "border-[#E0E0E0] text-[#282828]"}`}
                           >
                             <option value="AM">AM</option>
                             <option value="PM">PM</option>
@@ -921,7 +984,11 @@ export default function CreateMeetingModal({
                     className={`flex-1 py-1.5 rounded-lg font-semibold text-white transition-colors shadow-sm
     ${isScheduling ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#38a869] cursor-pointer"}`}
                   >
-                    {isScheduling ? "Scheduling..." : "Schedule"}
+                    {isScheduling
+                      ? "Processing..."
+                      : editMeetingId
+                        ? "Update"
+                        : "Schedule"}
                   </button>
                 </div>
               </div>

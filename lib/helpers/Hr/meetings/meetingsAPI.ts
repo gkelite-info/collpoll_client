@@ -48,7 +48,12 @@ export async function fetchHrMeetings({
       toTime,
       meetingLink,
       hr_meeting_participants (
-        userId
+        userId,
+        users (
+          user_profile (
+            profileUrl
+          )
+        )
       )
     `,
       { count: "exact" },
@@ -79,6 +84,16 @@ export async function fetchHrMeetings({
   const formatted = (data ?? []).map((meeting: any) => {
     const participants = meeting.hr_meeting_participants || [];
     const participantCount = participants.length;
+
+    // Map dynamic avatars from the DB
+    const participantAvatars = participants.map((p: any) => {
+      const profile = p.users?.user_profile;
+      const url = Array.isArray(profile)
+        ? profile[0]?.profileUrl
+        : profile?.profileUrl;
+      return url || `https://i.pravatar.cc/150?u=${p.userId}`;
+    });
+
     return {
       id: meeting.hrMeetingId,
       hrMeetingId: meeting.hrMeetingId,
@@ -87,9 +102,12 @@ export async function fetchHrMeetings({
       title: meeting.title,
       description: meeting.agenda,
       date: meeting.meetingDate,
+      fromTime: meeting.fromTime,
+      toTime: meeting.toTime,
       timeRange: `${meeting.fromTime} - ${meeting.toTime}`,
       meetingLink: meeting.meetingLink || "",
       participants: participantCount,
+      participantAvatars,
       educationType: "",
       branch: "",
       year: "",

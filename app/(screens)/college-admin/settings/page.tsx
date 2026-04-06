@@ -5,9 +5,15 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 
 export default function CollegeAdminSettings() {
   return (
-    <Suspense fallback={<div className="p-4 text-center"><Loader /></div>}>
+    <Suspense
+      fallback={
+        <div className="p-4 text-center">
+          <Loader />
+        </div>
+      }
+    >
       <div className="w-[82vw]">
-        <SettingsClient />
+        <SettingsClient CardIsVisible={false} />
       </div>
     </Suspense>
   );

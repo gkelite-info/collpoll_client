@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
-import { Chalkboard, FilePdf } from "@phosphor-icons/react";
+import { CaretLeft, Chalkboard, FilePdf } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
@@ -123,24 +123,27 @@ export default function ParentSubjectAttendance() {
 
   return (
     <>
-      <div className="flex flex-col pb-3">
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col w-[50%]">
-            <h1 className="text-[#282828] font-bold text-2xl mb-1">
-              Attendance
-            </h1>
-            <p className="text-[#282828]">
+      <div className="flex justify-between items-center pb-3">
+        <div className="flex w-full justify-between items-center">
+          <div className="flex flex-col w-full">
+            <div className="flex items-center gap-2 mb-1">
+              <button
+                onClick={() => router.back()}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                title="Go Back"
+              >
+                <CaretLeft size={24} weight="bold" color="#282828" />
+              </button>
+
+              <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+            </div>
+
+            <p className="text-[#282828] whitespace-nowrap">
               Track, manage, and maintain your attendance effortlessly
             </p>
           </div>
-
-          <div className="flex justify-end w-[32%]">
-            <CourseScheduleCard style="w-[320px]" />
-          </div>
-          <p className="text-[#282828]">
-            Track, Manage, and Maintain Your Attendance Effortlessly
-          </p>
         </div>
+
         <div className="flex justify-end w-[32%]">
           <CourseScheduleCard style="w-[320px]" isVisibile={false} />
         </div>
