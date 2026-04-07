@@ -88,6 +88,7 @@ export default function LoginPage() {
       return false;
     }
 
+    
     const passwordRegex =
       /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
