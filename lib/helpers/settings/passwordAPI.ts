@@ -20,6 +20,8 @@ export async function updateUserPassword(newPassword: string) {
 }
 
 export async function sendPasswordResetEmail(email: string) {
+  // Password reset redirects to /settings
+  // Middleware will handle role-based redirects based on user's role
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.origin}/settings?reset`,
   });
