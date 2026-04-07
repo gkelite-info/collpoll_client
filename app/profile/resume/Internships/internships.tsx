@@ -1,253 +1,156 @@
 "use client";
 
-import {
-  deleteInternshipAction,
-  getInternshipsAction,
-} from "@/lib/helpers/profile/actions/internship.actions";
-import { Plus } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
-import InternshipCard from "./internshipCard";
+import { useState, useEffect } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
 import InternshipForm, { InternshipFormData } from "./internshipForm";
 
-interface InternshipState {
-  uiId: string | number;
-  dbId?: number;
-  submitted: boolean;
-  data?: InternshipFormData;
-  isDeleting?: boolean;
+import {
+  fetchResumeInternships,
+  deleteResumeInternship,
+  ResumeInternship,
+} from "@/lib/helpers/student/Resume/resumeInternshipsAPI";
+import ResumeInternshipsShimmer from "../../shimmers/ResumeInternshipsShimmer";
+import InternshipCard from "./internshipCard";
+
+
+interface InternshipEntry {
+  dbId: number;
+  data: InternshipFormData;
+  isEditing: boolean;
 }
 
+const emptyForm: InternshipFormData = {
+  organization: "",
+  role: "",
+  startDate: "",
+  endDate: "",
+  projectName: "",
+  projectUrl: "",
+  location: "",
+  domain: "",
+  description: "",
+};
+
 export default function Internships() {
-  const [forms, setForms] = useState<InternshipState[]>([]);
+  const { studentId } = useUser();
+
+  const [entries, setEntries] = useState<InternshipEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [formKey, setFormKey] = useState(0); // resets form after submit
 
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{
-    index: number;
-    dbId: number;
-  } | null>(null);
-
-  const router = useRouter();
-  const studentId = 1;
-
+  // ── Load existing internships ──────────────────────────────────
   useEffect(() => {
-    const fetchInternships = async () => {
-      try {
-        const data = await getInternshipsAction(studentId);
+    if (!studentId) return;
 
-        if (data && data.length > 0) {
-          const formatted: InternshipState[] = data.map((item: any) => ({
-            uiId: item.internshipId,
-            dbId: item.internshipId,
-            submitted: true,
-            data: {
-              organization: item.organizationName,
-              role: item.role,
-              startDate: item.startDate,
-              endDate: item.endDate,
-              projectName: item.projectName,
-              projectUrl: item.projectUrl || "",
-              location: item.location,
-              domain: item.domain,
-              description: item.description || "",
-            },
-          }));
-          setForms(formatted);
-        } else {
-          setForms([{ uiId: "init-1", submitted: false }]);
-        }
-      } catch (error) {
-        console.error("Failed to load internships", error);
-        toast.error("Failed to load saved internships");
-        setForms([{ uiId: "init-1", submitted: false }]);
+    const load = async () => {
+      try {
+        const rows: ResumeInternship[] = await fetchResumeInternships(studentId);
+        const mapped: InternshipEntry[] = rows.map((r) => ({
+          dbId: r.resumeInternshipId!,
+          isEditing: false,
+          data: {
+            organization: r.organizationName,
+            role: r.role,
+            startDate: r.startDate ? r.startDate.slice(0, 10) : "",
+            endDate: r.endDate ? r.endDate.slice(0, 10) : "",
+            projectName: r.projectName ?? "",
+            projectUrl: r.projectUrl ?? "",
+            location: r.location ?? "",
+            domain: r.domain ?? "",
+            description: r.description ?? "",
+          },
+        }));
+        setEntries(mapped);
+      } catch (err) {
+        console.error("Failed to load internships:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchInternships();
-  }, []);
+    load();
+  }, [studentId]);
 
-  const handleAdd = () => {
-    const last = forms[forms.length - 1];
-
-    if (last && !last.submitted) {
-      toast.error(
-        "Please submit the current internship before adding a new one."
-      );
-      return;
+  // ── Add new internship ─────────────────────────────────────────
+  const handleAddSubmitted = (data: InternshipFormData, newDbId?: number) => {
+    if (newDbId) {
+      setEntries((prev) => [...prev, { dbId: newDbId, data, isEditing: false }]);
     }
-
-    setForms((prev) => [
-      ...prev,
-      { uiId: `new-${Date.now()}`, submitted: false },
-    ]);
+    setFormKey((k) => k + 1); // reset form fields
   };
 
-  const handleEdit = (index: number) => {
-    setForms((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, submitted: false } : f))
+  // ── Edit existing internship ───────────────────────────────────
+  const handleEditSubmitted = (dbId: number) => (data: InternshipFormData) => {
+    setEntries((prev) =>
+      prev.map((e) => (e.dbId === dbId ? { ...e, data, isEditing: false } : e))
     );
   };
 
-  // CHANGED: Trigger function that decides whether to delete immediately (local) or open modal (db)
-  const handleDeleteClick = (index: number, dbId?: number) => {
-    if (!dbId) {
-      setForms((prev) => {
-        const filtered = prev.filter((_, i) => i !== index);
-        return filtered.length
-          ? filtered
-          : [{ uiId: `new-${Date.now()}`, submitted: false }];
-      });
-      return;
-    }
-
-    // Prepare state and open modal
-    setItemToDelete({ index, dbId });
-    setDeleteModalOpen(true);
+  const toggleEdit = (dbId: number) => {
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.dbId === dbId ? { ...e, isEditing: !e.isEditing } : e
+      )
+    );
   };
 
-  // NEW: Action function called when "Delete" is clicked in the modal
-  const confirmDelete = async () => {
-    if (!itemToDelete) return;
-    const { index, dbId } = itemToDelete;
-
-    // Close modal
-    setDeleteModalOpen(false);
-
-    setForms((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, isDeleting: true } : f))
-    );
-
+  // ── Delete internship ──────────────────────────────────────────
+  const handleDelete = async (dbId: number) => {
+    setDeletingId(dbId);
     try {
-      await deleteInternshipAction(dbId);
-      toast.success("Internship deleted successfully");
-
-      setForms((prev) => {
-        const filtered = prev.filter((_, i) => i !== index);
-        return filtered.length
-          ? filtered
-          : [{ uiId: `new-${Date.now()}`, submitted: false }];
-      });
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to delete internship");
-      setForms((prev) =>
-        prev.map((f, i) => (i === index ? { ...f, isDeleting: false } : f))
-      );
+      await deleteResumeInternship(dbId);
+      setEntries((prev) => prev.filter((e) => e.dbId !== dbId));
+    } catch {
+      console.error("Failed to delete internship");
     } finally {
-      setItemToDelete(null);
+      setDeletingId(null);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="mt-3 p-6 bg-white rounded-lg shadow-sm text-center text-gray-500">
-        Loading internships...
-      </div>
-    );
-  }
+  if (loading || !studentId) return <ResumeInternshipsShimmer />;
 
   return (
     <div className="mt-3">
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-start justify-between">
-          <h2 className="text-2xl font-medium text-[#282828]">Internships</h2>
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleAdd}
-              type="button"
-              className="inline-flex cursor-pointer items-center gap-2 bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors"
-            >
-              Add <Plus size={14} />
-            </button>
+        {/* Header */}
+        <h2 className="text-lg font-semibold text-[#282828] mb-4">Internships</h2>
 
-            <button
-              type="button"
-              onClick={() => router.push("/profile?resume=projects&Step=6")}
-              className="inline-flex items-center cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-600 transition-colors"
-            >
-              Next
-            </button>
+        {/* Internship Cards */}
+        {entries.length > 0 && (
+          <div className="space-y-4 mb-6">
+            {entries.map((entry) => (
+              <div key={entry.dbId}>
+                <InternshipCard
+                  data={entry.data}
+                  onEdit={() => toggleEdit(entry.dbId)}
+                  onDelete={() => handleDelete(entry.dbId)}
+                  isDeleting={deletingId === entry.dbId}
+                />
+                {entry.isEditing && (
+                  <div className="mt-2 border border-[#C0C0C0] rounded-lg p-4">
+                    <InternshipForm
+                      studentId={studentId}
+                      internshipId={entry.dbId}
+                      initialData={entry.data}
+                      onSubmitted={handleEditSubmitted(entry.dbId)}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
+        )}
 
-        <div className="space-y-8">
-          {forms.map((f, index) => (
-            <div
-              key={f.uiId}
-              className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-            >
-              {f.submitted && f.data ? (
-                <div className="mt-6">
-                  <InternshipCard
-                    data={f.data}
-                    onEdit={() => handleEdit(index)}
-                    onDelete={() => handleDeleteClick(index, f.dbId)}
-                    isDeleting={f.isDeleting || false}
-                  />
-                </div>
-              ) : (
-                <>
-                  <h3 className="mt-6 text-lg font-semibold text-[#282828] -mb-1">
-                    Internship {index + 1}
-                  </h3>
-                  <InternshipForm
-                    studentId={studentId}
-                    initialData={f.data}
-                    internshipId={f.dbId}
-                    onSubmitted={(data: InternshipFormData, newDbId?: number) =>
-                      setForms((prev) =>
-                        prev.map((x) =>
-                          x.uiId === f.uiId
-                            ? {
-                                ...x,
-                                submitted: true,
-                                data: data,
-                                dbId: newDbId || x.dbId,
-                              }
-                            : x
-                        )
-                      )
-                    }
-                  />
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* Always-visible Add Form */}
+        <InternshipForm
+          key={formKey}
+          studentId={studentId}
+          onSubmitted={handleAddSubmitted}
+        />
+
       </div>
-
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-white rounded-lg shadow-xl p-6">
-            <h3 className="text-lg font-semibold text-[#282828]">
-              Delete Internship
-            </h3>
-            <p className="mt-2 text-sm text-gray-500">
-              Are you sure you want to delete this internship? This action
-              cannot be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteModalOpen(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

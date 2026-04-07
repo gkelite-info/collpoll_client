@@ -4,6 +4,7 @@ export default function Field({
   type,
   placeholder,
   onChange,
+  required,
   ...rest
 }: {
   label: string;
@@ -11,11 +12,15 @@ export default function Field({
   type: string;
   placeholder?: string;
   onChange: (v: string) => void;
+  required?: boolean;
   [key: string]: any;
 }) {
   return (
-    <div className="flex flex-col ">
-      <label className="form-label font-medium text-[#282828]">{label}</label>
+    <div className="flex flex-col">
+      <label className="form-label font-medium text-[#282828]">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
       <input
         className="border border-[#CCCCCC] text-[#525252] rounded-md px-3 h-10 py-1 focus:outline-none"
         value={value}

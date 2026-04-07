@@ -1138,7 +1138,6 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      {/* Right Side */}
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-[#43C17A] text-xs">
                           ₹ {d.val}
