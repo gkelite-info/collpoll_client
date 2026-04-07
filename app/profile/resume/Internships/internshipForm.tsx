@@ -4,12 +4,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import toast from "react-hot-toast";
-
-import {
-  createInternshipAction,
-  updateInternshipAction,
-} from "@/lib/helpers/profile/actions/internship.actions";
-import { InternshipInsert } from "@/lib/helpers/profile/types";
+import { upsertResumeInternship } from "@/lib/helpers/student/Resume/resumeInternshipsAPI";
 
 export interface InternshipFormData {
   organization: string;
@@ -27,20 +22,29 @@ const schema = yup.object({
   organization: yup.string().required("Organization is required"),
   role: yup.string().required("Role is required"),
   startDate: yup.string().required("Start date is required"),
-  endDate: yup.string().required("End date is required"),
-  projectName: yup.string().required("Project name is required"),
+  endDate: yup.string().optional().default(""),
+  projectName: yup.string().optional().default(""),
   projectUrl: yup
     .string()
-    .url("Must be a valid URL")
-    .required("Project URL is required"),
+    .optional()
+    .default("")
+    .test("url-or-empty", "Must be a valid URL", (val) => {
+      if (!val || val.trim() === "") return true;
+      try {
+        new URL(val);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
   location: yup.string().required("Location is required"),
   domain: yup.string().required("Domain is required"),
-  description: yup.string().max(500, "Max 500 characters").default(""),
+  description: yup.string().max(500, "Max 500 characters").optional().default(""),
 });
 
 type FormValues = yup.InferType<typeof schema>;
 
-const roles = [
+const ROLES = [
   "Software Developer Intern",
   "Frontend Intern",
   "Backend Intern",
@@ -48,14 +52,24 @@ const roles = [
   "Mobile Developer Intern",
 ];
 
-const locations = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Remote"];
-const domains = [
+const LOCATIONS = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Remote"];
+
+const DOMAINS = [
   "Web Development",
   "Mobile Development",
   "Data Science",
   "Machine Learning",
   "DevOps",
 ];
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <label className="block text-sm font-medium text-[#282828] mb-1">
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+  );
+}
 
 export default function InternshipForm({
   studentId,
@@ -93,54 +107,22 @@ export default function InternshipForm({
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
-      const now = new Date().toISOString();
-
-      const startIso = new Date(data.startDate).toISOString();
-      const endIso = new Date(data.endDate).toISOString();
-
-      const payloadBase = {
-        studentId: studentId,
+      const result = await upsertResumeInternship({
+        resumeInternshipId: internshipId,
+        studentId,
         organizationName: data.organization,
         role: data.role,
-        startDate: startIso,
-        endDate: endIso,
-        projectName: data.projectName,
-        projectUrl: data.projectUrl,
+        startDate: data.startDate,
+        endDate: data.endDate || null,
+        projectName: data.projectName || null,
+        projectUrl: data.projectUrl || null,
         location: data.location,
         domain: data.domain,
-        description: data.description || "",
-        isDeleted: false,
-      };
+        description: data.description || null,
+      });
 
-      let resultId = internshipId;
-
-      if (internshipId) {
-        const updatePayload: any = {
-          ...payloadBase,
-          updatedAt: now,
-        };
-        await updateInternshipAction(internshipId, updatePayload);
-        toast.success("Internship updated successfully");
-      } else {
-        // --- CREATE ---
-        const insertPayload: any = {
-          ...payloadBase,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        const result = await createInternshipAction(insertPayload);
-
-        const savedData = result as any;
-        resultId =
-          savedData.internshipId ||
-          savedData.id ||
-          (Array.isArray(savedData) && savedData[0]?.internshipId);
-
-        toast.success("Internship saved successfully");
-      }
-
-      onSubmitted(data as InternshipFormData, resultId);
+      toast.success(internshipId ? "Internship updated successfully" : "Internship saved successfully");
+      onSubmitted(data as InternshipFormData, result.resumeInternshipId);
     } catch (error: any) {
       console.error("Save Error:", error);
       toast.error(`Failed to save: ${error.message || "Unknown error"}`);
@@ -148,217 +130,144 @@ export default function InternshipForm({
   };
 
   return (
-    <form
-      className="mt-6 bg-white rounded-lg mb-10 text-black"
-      onSubmit={handleSubmit(onSubmit)}
-      noValidate
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="mt-4 space-y-4">
+
+      {/* Row 1: Organization | Role */}
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium text-[#282828]">
-            Organization Name
-          </label>
+          <FieldLabel label="Organization Name" required />
           <input
             {...register("organization")}
-            placeholder="Enter Org"
+            placeholder="Organization Name"
             disabled={isSubmitting}
-            className={`mt-2 w-full border border-[#CCCCCC] rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.organization
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
-          {errors.organization && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.organization.message}
-            </p>
-          )}
+          {errors.organization && <p className="text-red-500 text-xs mt-1">{errors.organization.message}</p>}
         </div>
-
         <div>
-          <label className="text-sm font-medium text-[#282828]">
-            Role / Position
-          </label>
-          <select
-            {...register("role")}
-            disabled={isSubmitting}
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.role
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
-          >
-            <option value="">Select role</option>
-            {roles.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-          {errors.role && (
-            <p className="text-sm text-red-600 mt-1">{errors.role.message}</p>
-          )}
+          <FieldLabel label="Role / Position" required />
+          <div className="relative">
+            <select
+              {...register("role")}
+              disabled={isSubmitting}
+              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
+            >
+              <option value="">Select role</option>
+              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
+          </div>
+          {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role.message}</p>}
         </div>
+      </div>
 
+      {/* Row 2: Start Date | End Date */}
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="text-sm font-medium text-[#282828]">
-            Start Date
-          </label>
+          <FieldLabel label="Start Date" required />
           <input
             {...register("startDate")}
             type="date"
             disabled={isSubmitting}
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.startDate
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer"
           />
-          {errors.startDate && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.startDate.message}
-            </p>
-          )}
+          {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
         </div>
-
         <div>
-          <label className="text-sm font-medium text-[#282828]">End Date</label>
+          <FieldLabel label="End Date" />
           <input
             {...register("endDate")}
             type="date"
             disabled={isSubmitting || !startDateValue}
             min={startDateValue}
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.endDate
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            } ${!startDateValue ? "bg-gray-50 cursor-not-allowed" : ""}`}
+            className={`w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer ${!startDateValue ? "bg-gray-50 cursor-not-allowed" : ""}`}
           />
-          {errors.endDate && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.endDate.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-[#282828]">
-            Project Name
-          </label>
-          <input
-            {...register("projectName")}
-            disabled={isSubmitting}
-            placeholder="Enter Project Name"
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.projectName
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
-          />
-          {errors.projectName && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.projectName.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-[#282828]">
-            Project URL
-          </label>
-          <input
-            {...register("projectUrl")}
-            disabled={isSubmitting}
-            placeholder="Enter Project URL"
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.projectUrl
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
-          />
-          {errors.projectUrl && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.projectUrl.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-[#282828]">Location</label>
-          <select
-            {...register("location")}
-            disabled={isSubmitting}
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.location
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
-          >
-            <option value="">Select location</option>
-            {locations.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
-          {errors.location && (
-            <p className="text-sm text-red-600 mt-1">
-              {errors.location.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-[#282828]">Domain</label>
-          <select
-            {...register("domain")}
-            disabled={isSubmitting}
-            className={`mt-2 w-full border rounded px-3 py-2 text-sm outline-none focus:ring-2 ${
-              errors.domain
-                ? "border-red-300 focus:ring-red-200"
-                : "border-gray-200 focus:ring-emerald-200"
-            }`}
-          >
-            <option value="">Select domain</option>
-            {domains.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          {errors.domain && (
-            <p className="text-sm text-red-600 mt-1">{errors.domain.message}</p>
-          )}
+          {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
         </div>
       </div>
 
-      <div className="mt-4">
-        <label className="text-sm font-medium text-[#282828]">
-          Short Description
-        </label>
+      {/* Row 3: Project Name | Project URL */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <FieldLabel label="Project Name" />
+          <input
+            {...register("projectName")}
+            placeholder="Enter the name of the project"
+            disabled={isSubmitting}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
+          />
+        </div>
+        <div>
+          <FieldLabel label="Project URL" />
+          <input
+            {...register("projectUrl")}
+            placeholder="Project URL"
+            disabled={isSubmitting}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
+          />
+          {errors.projectUrl && <p className="text-red-500 text-xs mt-1">{errors.projectUrl.message}</p>}
+        </div>
+      </div>
+
+      {/* Row 4: Location | Domain */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <FieldLabel label="Location" required />
+          <div className="relative">
+            <select
+              {...register("location")}
+              disabled={isSubmitting}
+              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
+            >
+              <option value="">Select location</option>
+              {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
+          </div>
+          {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location.message}</p>}
+        </div>
+        <div>
+          <FieldLabel label="Domain" required />
+          <div className="relative">
+            <select
+              {...register("domain")}
+              disabled={isSubmitting}
+              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
+            >
+              <option value="">Select domain</option>
+              {DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
+          </div>
+          {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain.message}</p>}
+        </div>
+      </div>
+
+      {/* Row 5: Description */}
+      <div>
+        <FieldLabel label="Short Description" />
         <textarea
           {...register("description")}
           disabled={isSubmitting}
-          placeholder="Describe your key responsibilities..."
+          placeholder="Describe your key responsibilities, achievements, and skills gained during the internship.........."
+          rows={4}
           maxLength={500}
-          className="mt-2 w-full border border-gray-200 rounded px-3 py-2 text-sm min-h-[110px] resize-none outline-none focus:ring-2 focus:ring-emerald-200"
+          className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none resize-none"
         />
-        <div className="text-right text-sm text-gray-400 mt-1">
-          {descriptionValue.length}/500
-        </div>
+        <p className="text-xs text-gray-400 text-right mt-1">{descriptionValue.length}/500</p>
       </div>
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className={`mt-1 text-white px-4 py-2 rounded transition-all ${
-          isSubmitting
-            ? "bg-emerald-300 cursor-not-allowed"
-            : "bg-[#43C17A] cursor-pointer hover:bg-emerald-600"
-        }`}
-      >
-        {isSubmitting ? "Saving..." : "Submit"}
-      </button>
-    </form>
+      {/* Submit */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit(onSubmit)}
+          disabled={isSubmitting}
+          className={`px-6 py-2 rounded-md text-sm text-white 
+            ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+        >
+          {isSubmitting ? "Saving..." : "Submit"}
+        </button>
+      </div>
+    </div>
   );
 }

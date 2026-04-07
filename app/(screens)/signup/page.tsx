@@ -322,6 +322,7 @@ export default function Signup() {
               <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden">
                 <img
                   src={slide.image}
+                  alt=""
                   className=" inset-0 w-full h-full object-cover pointer-events-none"
                 />
               </div>

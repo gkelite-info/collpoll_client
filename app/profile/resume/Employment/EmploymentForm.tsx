@@ -1,9 +1,8 @@
 "use client";
 
-import { Input, Select, TextArea } from "@/app/utils/ReusableComponents";
+import { Input, TextArea } from "@/app/utils/ReusableComponents";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { Trash } from "@phosphor-icons/react";
 import {
   addEmployment,
   updateEmployment,
@@ -29,17 +28,10 @@ export default function EmploymentForm({
   const [form, setForm] = useState({
     companyName: data?.companyName ?? "",
     designation: data?.designation ?? "",
-    experienceYears: data?.experienceYears
-      ? data.experienceYears >= 4
-        ? "4+ Years"
-        : `${data.experienceYears} ${data.experienceYears > 1 ? "Years" : "Year"}`
-      : "",
-    experienceMonths: data?.experienceMonths
-      ? `${data.experienceMonths} ${data.experienceMonths > 1 ? "Months" : "Month"}`
-      : "",
-
+    experienceYears: data?.experienceYears ?? "",   // ✅ plain number
+    experienceMonths: data?.experienceMonths ?? "", // ✅ plain number
     from: data?.startDate ?? "",
-    to: data?.endDate ?? "",
+    to: data?.endDate === null ? "current" : data?.endDate ?? "",
     description: data?.description ?? "",
   });
 
@@ -52,30 +44,14 @@ export default function EmploymentForm({
   const validate = () => {
     if (!form.companyName.trim()) return "Company Name is required";
     if (!form.designation.trim()) return "Designation is required";
-    if (!form.experienceYears) return "Please select experience in years";
-    if (!isFourPlusYears && !form.experienceMonths)
-      return "Please select experience in months";
+    if (form.experienceYears === "") return "Please enter experience in years";
     if (!form.from) return "Start date is required";
-    if (!form.to) return "End date is required";
-    if (form.from > today) return "Start date cannot be in the future";
-    if (form.to > today) return "End date cannot be in the future";
-    if (form.to < form.from) return "End date cannot be before start date";
-    //if (!form.description.trim()) return "Short description is required";
+    if (!form.to) return "Select end date or mark as currently working";
+    if (form.to !== "current" && form.to > today)
+      return "End date cannot be in the future";
+    if (form.to !== "current" && form.to < form.from)
+      return "End date cannot be before start date";
     return null;
-  };
-
-  const parseNumber = (val: string) => Number(val.split(" ")[0]);
-
-  const isFourPlusYears = form.experienceYears === "4+ Years";
-
-  const parseYears = (val: string) => {
-    if (val === "4+ Years") return 4;
-    return Number(val.split(" ")[0]);
-  };
-
-  const parseMonths = (val: string) => {
-    if (isFourPlusYears) return 0;
-    return Number(val.split(" ")[0]);
   };
 
   const handleSubmit = async () => {
@@ -91,10 +67,10 @@ export default function EmploymentForm({
       studentId,
       companyName: form.companyName,
       designation: form.designation,
-      experienceYears: parseYears(form.experienceYears),
-      experienceMonths: parseMonths(form.experienceMonths),
+      experienceYears: Number(form.experienceYears) || 0, // ✅
+      experienceMonths: Number(form.experienceMonths) || 0, // ✅
       startDate: form.from,
-      endDate: form.to,
+      endDate: form.to === "current" ? null : form.to,
       description: form.description,
       updatedAt: new Date().toISOString(),
     };
@@ -104,13 +80,9 @@ export default function EmploymentForm({
         await updateEmployment(data.employmentId, payload);
         toast.success(`Employment ${index + 1} updated`);
       } else {
-        await addEmployment({
-          ...payload,
-          createdAt: new Date().toISOString(),
-        });
+        await addEmployment({ ...payload, createdAt: new Date().toISOString() });
         toast.success(`Employment ${index + 1} submitted`);
       }
-
       onSuccess();
     } catch (error: any) {
       console.error("Error submitting employment:", error);
@@ -120,13 +92,8 @@ export default function EmploymentForm({
     }
   };
 
-  const startMaxDate = form.to ? (form.to < today ? form.to : today) : today;
-
-  const endMinDate = form.from || undefined;
-
   const handleDelete = async () => {
     if (!data?.employmentId) return;
-
     try {
       setIsDeleting(true);
       await deleteEmployment(data.employmentId);
@@ -146,20 +113,12 @@ export default function EmploymentForm({
         <h3 className="text-base font-semibold text-[#282828]">
           Employment {index + 1}
         </h3>
-
         {data?.employmentId && (
           <button
             onClick={() => setOpenDelete(true)}
-            className="
-                w-5 h-5
-                flex items-center justify-center
-                rounded-full
-                bg-red-500
-                hover:bg-red-600
-                cursor-pointer
-            "
+            className="w-5 h-5 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 cursor-pointer"
           >
-            <span className="block w-3 h-[3px] bg-white rounded-full"></span>
+            <span className="block w-3 h-[3px] bg-white rounded-full" />
           </button>
         )}
       </div>
@@ -170,15 +129,14 @@ export default function EmploymentForm({
           name="companyName"
           value={form.companyName}
           onChange={handleChange}
-          placeholder="Student Attendance Tracker, AI Chatbot for College"
+          placeholder="e.g. Google, Infosys"
         />
-
         <Input
           label="Designation"
           name="designation"
           value={form.designation}
           onChange={handleChange}
-          placeholder="Web Development"
+          placeholder="e.g. Software Engineer"
         />
 
         <div className="md:col-span-2">
@@ -186,21 +144,31 @@ export default function EmploymentForm({
             Total Work Experience
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <Select
-              label=""
+            <Input
+              label="Years"
               name="experienceYears"
+              type="number"
               value={form.experienceYears}
-              options={["1 Year", "2 Years", "3 Years", "4+ Years"]}
-              onChange={handleChange}
+              onChange={(e: any) => {
+                const val = Math.max(0, Math.min(50, Number(e.target.value)));
+                setForm({ ...form, experienceYears: String(val) });
+              }}
+              placeholder="e.g. 2"
+              min="0"
+              max="50"
             />
-
-            <Select
-              label=""
+            <Input
+              label="Months"
               name="experienceMonths"
+              type="number"
               value={form.experienceMonths}
-              options={["1 Month", "3 Months", "6 Months", "9 Months"]}
-              onChange={handleChange}
-              disabled={isFourPlusYears}
+              onChange={(e: any) => {
+                const val = Math.max(0, Math.min(11, Number(e.target.value)));
+                setForm({ ...form, experienceMonths: String(val) });
+              }}
+              placeholder="e.g. 6"
+              min="0"
+              max="11"
             />
           </div>
         </div>
@@ -216,18 +184,28 @@ export default function EmploymentForm({
               type="date"
               value={form.from}
               onChange={handleChange}
-              max={startMaxDate}
             />
-
-            <Input
-              label="To"
-              name="to"
-              type="date"
-              value={form.to}
-              onChange={handleChange}
-              min={endMinDate}
-              max={today}
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                label="To"
+                name="to"
+                type="date"
+                value={form.to === "current" ? "" : form.to}
+                onChange={handleChange}
+                disabled={form.to === "current"}
+              />
+              <label className="flex items-center gap-2 text-sm text-[#282828] cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={form.to === "current"}
+                  onChange={(e) =>
+                    setForm({ ...form, to: e.target.checked ? "current" : "" })
+                  }
+                  className="accent-[#43C17A] w-4 h-4 cursor-pointer"
+                />
+                Currently Working Here
+              </label>
+            </div>
           </div>
         </div>
 
@@ -243,12 +221,13 @@ export default function EmploymentForm({
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
+            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50"
           >
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>
         </div>
       </div>
+
       <ConfirmDeleteModal
         open={openDelete}
         title="Delete Employment"
