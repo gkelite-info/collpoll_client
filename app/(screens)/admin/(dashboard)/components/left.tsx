@@ -72,7 +72,7 @@ export default function AdminDashLeft({
   const cardData = [
     {
       id: "TOTAL_USERS",
-      style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
+      style: "bg-[#E2DAFF] h-[126.35px] w-[162px]",
       icon: <UsersThree size={32} weight="fill" color="#714EF2" />,
       value: loading ? <ValueShimmer /> : cards?.totalUsers,
       label: "Total Users",
@@ -124,24 +124,16 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
       </div>
     );
   }
 
-  const overlayCardIds = [
-    "PENDING_APPROVALS",
-    "SYSTEM_HEALTH",
-    "AUTOMATIONS",
-  ];
+  const overlayCardIds = ["PENDING_APPROVALS", "SYSTEM_HEALTH", "AUTOMATIONS"];
 
-  const normalCards = cardData.filter(
-    (c) => !overlayCardIds.includes(c.id)
-  );
+  const normalCards = cardData.filter((c) => !overlayCardIds.includes(c.id));
 
-  const overlayCards = cardData.filter(
-    (c) => overlayCardIds.includes(c.id)
-  );
+  const overlayCards = cardData.filter((c) => overlayCardIds.includes(c.id));
 
   return (
     <>
@@ -169,12 +161,11 @@ export default function AdminDashLeft({
           ))}
         </div> */}
 
-        <div className="mt-5 rounded-lg flex gap-5 text-xs relative z-10">
-
+        <div className="mt-5 rounded-lg grid grid-cols-4 gap-3 text-xs relative z-10 w-full">
           {normalCards.map((item, index) => (
             <CardComponent
               key={index}
-              style={`${item.style} cursor-pointer`}
+              style={`${item.style} cursor-pointer w-full`}
               icon={item.icon}
               value={item.value}
               label={item.label}
@@ -185,12 +176,7 @@ export default function AdminDashLeft({
             />
           ))}
 
-          {/* overlay cards group */}
-          <div className="relative grid lg:grid-cols-3 gap-5">
-            {/*
-              When you remove this overlay logic you should remove these normalCards,
-              overlayCards and top commented code use that one is original code 
-            */}
+          <div className="col-span-3 relative grid grid-cols-3 gap-3">
             <WipOverlay
               isMedium={true}
               fullWidth={true}
@@ -200,19 +186,16 @@ export default function AdminDashLeft({
             {overlayCards.map((item, index) => (
               <CardComponent
                 key={index}
-                style={`${item.style} cursor-pointer`}
+                style={`${item.style} cursor-pointer w-full`}
                 icon={item.icon}
                 value={item.value}
                 label={item.label}
                 iconBgColor="#FFFFFF"
                 onClick={() => {
                   if (item.id === "SYSTEM_HEALTH") setView("SYSTEM_HEALTH");
-
                   if (item.id === "AUTOMATIONS")
                     router.push("?view=automations");
-
-                  if (item.id === "PENDING_APPROVALS")
-                    onPendingFull();
+                  if (item.id === "PENDING_APPROVALS") onPendingFull();
                 }}
               />
             ))}

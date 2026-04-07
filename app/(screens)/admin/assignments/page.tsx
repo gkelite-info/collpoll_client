@@ -17,6 +17,7 @@ import DiscussionForumBasic from "./components/discussionForumBasic";
 import TabNavigation from "./components/tabNavigation";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "../../(student)/calendar/right/timetable";
+import { DiscussionCourseCardSkeleton } from "./components/shimmers/courseCardSkeleton";
 
 interface FilterProps {
   label: string;
@@ -129,13 +130,6 @@ const AssignmentPage = () => {
     [dataList],
   );
 
-  if (loading && activeTab === "assignments")
-    return (
-      <div className="p-10 text-center">
-        <Loader />
-      </div>
-    );
-
   if (activeTab === "quiz") {
     return <QuizBasic />;
   }
@@ -183,12 +177,23 @@ const AssignmentPage = () => {
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {currentCards.map((dept) => (
-            <AssignmentCard key={dept.id} {...dept} />
-          ))}
+          {loading ? (
+            <>
+              <DiscussionCourseCardSkeleton />
+              <DiscussionCourseCardSkeleton />
+              <DiscussionCourseCardSkeleton />
+              <DiscussionCourseCardSkeleton />
+              <DiscussionCourseCardSkeleton />
+              <DiscussionCourseCardSkeleton />
+            </>
+          ) : (
+            currentCards.map((dept) => (
+              <AssignmentCard key={dept.id} {...dept} />
+            ))
+          )}
         </div>
 
-        {totalPages > 1 && (
+        {!loading && totalPages > 1 && (
           <div className="flex justify-center items-center gap-2 mt-8 mb-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -212,7 +217,7 @@ const AssignmentPage = () => {
             </button>
           </div>
         )}
-        {filteredResults.length === 0 && (
+        {!loading && filteredResults.length === 0 && (
           <div className="flex justify-center py-20 text-gray-400">
             No matching records found.
           </div>

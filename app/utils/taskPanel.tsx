@@ -9,7 +9,6 @@ import { deactivateStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 import ConfirmDeleteModal from "../(screens)/admin/calendar/components/ConfirmDeleteModal";
 import toast from "react-hot-toast";
 
-
 export type Task = {
   facultyTaskId: number;
   title: string;
@@ -17,7 +16,6 @@ export type Task = {
   time: string;
   date: string;
 };
-
 
 export type TaskPanelProps = {
   role?: "faculty" | "student";
@@ -37,7 +35,7 @@ export type TaskPanelProps = {
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ) => Promise<void>;
   onDeleteTask?: (taskId: number) => Promise<void>;
 };
@@ -54,12 +52,13 @@ export default function TaskPanel({
   onEditTask,
   onAddTask,
   onSaveTask,
-  onDeleteTask
+  onDeleteTask,
 }: TaskPanelProps) {
-
   const [openModal, setOpenModal] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const [activeView, setActiveView] = useState<"student" | "faculty">("faculty");
+  const [activeView, setActiveView] = useState<"student" | "faculty">(
+    "faculty",
+  );
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [taskToDeleteId, setTaskToDeleteId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,9 +68,10 @@ export default function TaskPanel({
 
     setIsDeleting(true);
     try {
-      const res = role === "student"
-        ? await deactivateStudentTask(taskToDeleteId)
-        : await deactivateFacultyTask(taskToDeleteId);
+      const res =
+        role === "student"
+          ? await deactivateStudentTask(taskToDeleteId)
+          : await deactivateFacultyTask(taskToDeleteId);
 
       if (res.success) {
         await onDeleteTask?.(taskToDeleteId);
@@ -96,7 +96,6 @@ export default function TaskPanel({
         ? studentTasks
         : facultyTasks;
 
-
   const formatTime = (time: string) => {
     const [hourStr, minute] = time.split(":");
     let hour = Number(hourStr);
@@ -107,8 +106,9 @@ export default function TaskPanel({
 
   return (
     <>
-
-      <div className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px]`}>
+      <div
+        className={`bg-white ${!style && "mt-5"} rounded-md shadow-md p-4 min-h-[345px]`}
+      >
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-3">
             <div className="bg-[#E7F7EE] rounded-full p-1">
@@ -132,7 +132,7 @@ export default function TaskPanel({
                 </button>
 
                 <span className="text-gray-300 ml-1 mr-1">/</span>
-                
+
                 <button
                   onClick={() => setActiveView("student")}
                   className={
@@ -143,16 +143,12 @@ export default function TaskPanel({
                 >
                   My Tasks
                 </button>
-
               </div>
             )}
           </div>
           {onAddTask &&
-            (
-              role === "faculty" ||
-
-              (role === "student" && activeView === "student")
-            ) && (
+            (role === "faculty" ||
+              (role === "student" && activeView === "student")) && (
               <button
                 onClick={() => {
                   setOpenModal(true);
@@ -164,7 +160,6 @@ export default function TaskPanel({
               >
                 + Add Task
               </button>
-
             )}
         </div>
         <div className="max-h-[240px] overflow-y-auto pr-1">
@@ -188,9 +183,7 @@ export default function TaskPanel({
                   <h5 className="text-sm font-semibold text-[#16284F]">
                     {task.title}
                   </h5>
-                  <p className="text-xs text-[#454545]">
-                    {task.description}
-                  </p>
+                  <p className="text-xs text-[#454545]">{task.description}</p>
                 </div>
 
                 <div className="w-[20%] flex flex-col items-center justify-between">
@@ -199,36 +192,35 @@ export default function TaskPanel({
                   </p>
 
                   <div className="flex gap-2">
-
-                    {((role === "faculty") ||
+                    {(role === "faculty" ||
                       (role === "student" && activeView === "student")) && (
-                        <button
-                          onClick={() => {
-                            if (onEditTask) {
-                              onEditTask(task);
-                            } else {
-                              setEditTask(task);
-                              setOpenModal(true);
-                            }
-                          }}
-                          className="p-1 rounded-full hover:bg-[#DFF3E9] cursor-pointer"
-                        >
-                          <PencilSimple size={18} color="#16284F" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          if (onEditTask) {
+                            onEditTask(task);
+                          } else {
+                            setEditTask(task);
+                            setOpenModal(true);
+                          }
+                        }}
+                        className="p-1 rounded-full hover:bg-[#DFF3E9] cursor-pointer"
+                      >
+                        <PencilSimple size={18} color="#16284F" />
+                      </button>
+                    )}
 
-                    {((role === "faculty") ||
+                    {(role === "faculty" ||
                       (role === "student" && activeView === "student")) && (
-                        <button
-                          onClick={() => {
-                            setTaskToDeleteId(task.facultyTaskId);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
-                        >
-                          <Trash size={18} color="#EF4444" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          setTaskToDeleteId(task.facultyTaskId);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        className="p-1 rounded-full hover:bg-red-100 cursor-pointer"
+                      >
+                        <Trash size={18} color="#EF4444" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

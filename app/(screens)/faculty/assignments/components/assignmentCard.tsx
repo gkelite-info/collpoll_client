@@ -117,7 +117,7 @@ export default function AssignmentCard({
                 <p className="text-[#474747] text-sm">Total Submissions</p>
 
                 <span className="text-[#44C07A] text-sm font-semibold">
-                  {item.totalSubmissions} / {item.totalSubmitted}
+                  {item.totalSubmitted} / {item.totalSubmissions}
                 </span>
               </div>
 
