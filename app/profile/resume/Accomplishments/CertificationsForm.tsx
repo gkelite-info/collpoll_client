@@ -1,34 +1,46 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { upsertCertification } from "@/lib/helpers/upsertCertification";
 import { X, UploadSimple } from "@phosphor-icons/react";
 import { useRef } from "react";
 import { Input } from "@/app/utils/ReusableComponents";
+import {
+  insertCertification,
+  updateCertification,
+  uploadCertificateFile,
+} from "@/lib/helpers/student/Resume/resumeCertificationsAPI";
 
 interface CertificationsProps {
   index: number;
   studentId: number;
   onRemove: () => void;
+  onSubmit: () => void;
+  existingData?: {
+    resumeCertificateId: number;
+    certificationName: string;
+    certificationCompletionId: string;
+    certificateLink: string;
+    uploadCertificate: string;
+    startDate: string;
+    endDate: string | null;
+  } | null;
 }
 
 function CertificateUpload({ form, setForm }: any) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
- 
+
   const handleFileSelect = (e: any) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const allowed = ["image/png", "image/jpeg", "image/jpg"];
     if (!allowed.includes(file.type)) {
       alert("Only PNG & JPG files are allowed");
       return;
     }
-
-    setForm({ ...form, file: file.name });
+    setForm({ ...form, file: file.name, fileObject: file });
   };
 
   const removeFile = () => {
-    setForm({ ...form, file: "" });
+    setForm({ ...form, file: "", fileObject: null });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -41,29 +53,14 @@ function CertificateUpload({ form, setForm }: any) {
         className="hidden"
         onChange={handleFileSelect}
       />
-
       <div className="w-full border rounded-xl px-3 py-2 flex items-center">
         {form.file ? (
           <div className="flex items-center gap-2 bg-[#E8F9F0] text-[#43C17A] px-3 py-1 rounded-full w-fit">
-            <span className="text-sm">{form.file}</span>
-
+            <span className="text-sm truncate max-w-[180px]">{form.file}</span>
             <button
               type="button"
               onClick={removeFile}
-              className="
-                w-[20px]
-                h-[20px]
-                flex
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-red-500
-                text-red-500
-                cursor-pointer
-                hover:bg-red-100
-                transition
-              "
+              className="w-[20px] h-[20px] flex items-center justify-center rounded-full border border-red-500 text-red-500 cursor-pointer hover:bg-red-100 transition"
             >
               <X size={12} weight="bold" />
             </button>
@@ -72,168 +69,133 @@ function CertificateUpload({ form, setForm }: any) {
           <span className="text-gray-400">Upload Certificate...</span>
         )}
       </div>
-
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="
-          absolute
-          top-1/2
-          -translate-y-1/2
-          right-[-55px]
-          w-[40px]
-          h-[40px]
-          rounded-full
-          bg-[#43C17A]
-          flex
-          items-center
-          justify-center
-          cursor-pointer
-        "
+        className="absolute top-1/2 -translate-y-1/2 right-[-55px] w-[40px] h-[40px] rounded-full bg-[#43C17A] flex items-center justify-center cursor-pointer"
       >
         <UploadSimple size={20} color="white" weight="bold" />
       </button>
     </div>
   );
-
 }
 
 export default function CertificationsForm({
   index,
   studentId,
   onRemove,
+  onSubmit,
+  existingData,
 }: CertificationsProps) {
   const [form, setForm] = useState({
     name: "",
     id: "",
     link: "",
     file: "",
-    startDate: "",
-    endDate: "",
+    fileObject: null as File | null,
+    startDate: "",   // stored as YYYY-MM-DD for input
+    endDate: "",     // optional
   });
 
-   const [loading, setLoading] = useState(false);
+  const [resumeCertificateId, setResumeCertificateId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const toDDMMYYYY = (iso: string) => {
+  // Convert timestamptz → YYYY-MM-DD for date input
+  const toInputDate = (iso: string | null): string => {
     if (!iso) return "";
-    const [year, month, day] = iso.split("-");
-    return `${day}-${month}-${year}`;
+    return iso.split("T")[0];
   };
 
-  const toISO = (ddmmyyyy: string) => {
-    if (!ddmmyyyy) return "";
-    const [day, month, year] = ddmmyyyy.split("-");
-    return `${year}-${month}-${day}`;
+  // Convert YYYY-MM-DD → full ISO for DB
+  const toISOString = (dateStr: string): string => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toISOString();
   };
-
 
   const today = new Date().toISOString().split("T")[0];
 
+  useEffect(() => {
+    if (existingData) {
+      setResumeCertificateId(existingData.resumeCertificateId);
+      setForm({
+        name: existingData.certificationName,
+        id: existingData.certificationCompletionId,
+        link: existingData.certificateLink,
+        file: existingData.uploadCertificate
+          ? existingData.uploadCertificate.split("/").pop() ?? "Uploaded"
+          : "",
+        fileObject: null,
+        startDate: toInputDate(existingData.startDate),
+        endDate: toInputDate(existingData.endDate),
+      });
+    }
+  }, [existingData]);
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
-
     if (name === "name") {
-      const cleaned = value.replace(/[^A-Za-z0-9 .,-]/g, "");
-      setForm({ ...form, name: cleaned });
+      setForm({ ...form, name: value.replace(/[^A-Za-z0-9 .,-]/g, "") });
       return;
     }
-
     if (name === "id") {
-      const cleaned = value.replace(/[^A-Za-z0-9\-_ ]/g, "");
-      setForm({ ...form, id: cleaned });
+      setForm({ ...form, id: value.replace(/[^A-Za-z0-9\-_ ]/g, "") });
       return;
     }
-
     if (name === "link") {
-      const cleaned = value.replace(/[^A-Za-z0-9:/?&%=._\-#]/g, "");
-      setForm({ ...form, link: cleaned });
+      setForm({ ...form, link: value.replace(/[^A-Za-z0-9:/?&%=._\-#]/g, "") });
       return;
     }
-    if (name === "startDate" || name === "endDate") {
-      // Convert YYYY-MM-DD → DD-MM-YYYY
-      const converted = toDDMMYYYY(value);
-      setForm({ ...form, [name]: converted });
-      return;
-    }
-
     setForm({ ...form, [name]: value });
-
   };
 
   const validateCertification = () => {
     if (!form.name.trim()) return "Certification Name is required";
-
-    if (form.name.length < 3)
-      return "Certification Name must be at least 3 characters";
-
-    const nameRegex = /^[A-Za-z0-9 .,-]+$/;
-    if (!nameRegex.test(form.name))
-      return "Certification Name contains invalid characters";
-
+    if (form.name.length < 3) return "Certification Name must be at least 3 characters";
+    if (!/^[A-Za-z0-9 .,-]+$/.test(form.name)) return "Certification Name contains invalid characters";
     if (form.id.trim()) {
-      const idRegex = /^[A-Za-z0-9\-_ ]{2,50}$/;
-      if (!idRegex.test(form.id))
-        return "Completion ID format invalid";
+      if (!/^[A-Za-z0-9\-_ ]{2,50}$/.test(form.id)) return "Completion ID format invalid";
     }
-
     if (!form.link.trim()) return "Certificate Link is required";
-
-    const urlRegex = /^(https?:\/\/)[^\s]+$/;
-    if (!urlRegex.test(form.link))
-      return "Certificate Link must start with http or https";
-
-    // ✅ DATE VALIDATION (CALENDAR FORMAT YYYY-MM-DD)
+    if (!/^(https?:\/\/)[^\s]+$/.test(form.link)) return "Certificate Link must start with http or https";
     if (!form.startDate) return "Start date is required";
-    if (!form.endDate) return "End date is required";
-
-    if (form.startDate > today) return "Start date cannot be in future";
-    if (form.endDate > today) return "End date cannot be in future";
-
-    if (form.endDate < form.startDate)
-      return "End date cannot be before start date";
-
     return null;
-  };
-
-
-  const convertToIntDate = (dateStr: string) => {
-    const cleaned = dateStr.replace(/-/g, "/");
-    const [d, m, y] = cleaned.split("/");
-    return Number(`${y}${m}${d}`);
   };
 
   const saveCertification = async () => {
     const error = validateCertification();
     if (error) return toast.error(error);
 
-    setLoading(true); // 🔒 Disable button & prevent double click
-
+    setLoading(true);
     try {
+      let uploadedUrl = existingData?.uploadCertificate ?? "";
+      if (form.fileObject) {
+        uploadedUrl = await uploadCertificateFile(studentId, form.fileObject);
+      }
+
       const payload = {
-        studentId,
         certificationName: form.name,
-        certification_completionId: form.id,
+        certificationCompletionId: form.id,
         certificateLink: form.link,
-        uploadCertificate: form.file,
-        startDate: form.startDate,
-        endDate: form.endDate,
+        uploadCertificate: uploadedUrl,
+        startDate: toISOString(form.startDate),
+        endDate: form.endDate ? toISOString(form.endDate) : null,
       };
 
-      const response = await upsertCertification(payload);
-
-      if (response.success) {
-        toast.success(`Certification ${index + 1} saved successfully`);
+      if (resumeCertificateId) {
+        await updateCertification(resumeCertificateId, payload);
       } else {
-        toast.error(response.error ?? "Something went wrong!");
+        const result = await insertCertification({ studentId, ...payload });
+        setResumeCertificateId(result.resumeCertificateId);
       }
-    } catch (err) {
-      toast.error("Something went wrong!");
+
+      toast.success(`Certification ${index + 1} saved successfully`);
+      onSubmit();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Something went wrong!");
     } finally {
-      setLoading(false); // 🔓 Re-enable button
+      setLoading(false);
     }
   };
-
 
   const handleSubmit = () => {
     const error = validateCertification();
@@ -241,7 +203,6 @@ export default function CertificationsForm({
       toast.error(error);
       return;
     }
-
     saveCertification();
   };
 
@@ -250,16 +211,14 @@ export default function CertificationsForm({
       <h3 className="text-base font-semibold text-[#282828] mb-4">
         Certification {index + 1}
       </h3>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Input
           label="Certification Name"
           name="name"
           value={form.name}
           onChange={handleChange}
-          placeholder='Java Full Stack'
+          placeholder="Java Full Stack"
         />
-
         <Input
           label="Certification Completion ID"
           name="id"
@@ -267,7 +226,6 @@ export default function CertificationsForm({
           onChange={handleChange}
           placeholder="WD-12345"
         />
-
         <Input
           label="Certificate Link"
           name="link"
@@ -275,7 +233,6 @@ export default function CertificationsForm({
           onChange={handleChange}
           placeholder="https://example.com"
         />
-
         <div className="flex flex-col">
           <label className="mb-1 text-sm font-medium text-[#282828]">
             Upload Certificate
@@ -287,34 +244,29 @@ export default function CertificationsForm({
           label="Start Date"
           name="startDate"
           type="date"
-          value={form.startDate ? toISO(form.startDate) : ""}
+          value={form.startDate}
           onChange={handleChange}
-          max={form.endDate ? toISO(form.endDate) : today}
         />
 
         <Input
-          label="End Date"
+          label="End Date (Optional)"
           name="endDate"
           type="date"
-          value={form.endDate ? toISO(form.endDate) : ""}
+          value={form.endDate}
           onChange={handleChange}
-          min={form.startDate ? toISO(form.startDate) : undefined}
-          max={today}
         />
-
 
         <div className="md:col-span-2 flex justify-end">
           <button
             type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-6 py-2 rounded-md text-sm font-medium text-white
-    ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
-  `}
+            className={`px-6 py-2 rounded-md text-sm font-medium text-white cursor-pointer
+              ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}
+            `}
           >
             {loading ? "Saving..." : "Submit"}
           </button>
-
         </div>
       </div>
     </div>

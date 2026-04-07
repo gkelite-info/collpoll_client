@@ -1,27 +1,48 @@
 "use client";
+
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   getProfileSummary,
   insertProfileSummary,
-} from "@/lib/helpers/profile/profileSummaryAPI";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+  updateProfileSummary,
+} from "@/lib/helpers/student/Resume/profileSummaryAPI";
+import ProfileSummaryShimmer from "../shimmers/ProfileSummaryShimmer";
 
 export default function ProfileSummary() {
   const [description, setDescription] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [resumeSummaryId, setResumeSummaryId] = useState<number | null>(null);
+  const { studentId } = useUser();
   const router = useRouter();
 
-  // const user = supabase.auth.getUser();
-  // const studentId = user?.id;
-  const studentId = 1;
+  useEffect(() => {
+    if (!studentId) return;
+    setLoading(true);
+
+    getProfileSummary(studentId)
+      .then((data) => {
+        if (data?.summary) {
+          setDescription(data.summary);
+          setResumeSummaryId(data.resumeSummaryId);
+        }
+      })
+      .catch(() => toast.error("Failed to load summary."))
+      .finally(() => setLoading(false));
+  }, [studentId]);
 
   const handleNext = () => {
     router.push("/profile?resume=accomplishments&Step=8");
   };
 
   const handleSubmit = async () => {
-    if (!description.trim()) {
+    if (!studentId) return;
+
+    const trimmed = description.trim();
+    if (!trimmed) {
       toast.error("Please write a summary before submitting.");
       return;
     }
@@ -29,36 +50,21 @@ export default function ProfileSummary() {
     setIsSubmitting(true);
 
     try {
-      await insertProfileSummary({
-        studentId: studentId,
-        summary: description,
-        isDeleted: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      toast.success("Profile Summary Submitted Successfully");
-
-      setTimeout(() => {
-        handleNext();
-      }, 500);
+      if (resumeSummaryId) {
+        await updateProfileSummary(studentId, trimmed);
+      } else {
+        const result = await insertProfileSummary(studentId, trimmed);
+        setResumeSummaryId(result.resumeSummaryId);
+      }
+      toast.success("Profile Summary Saved Successfully");
     } catch (error) {
       toast.error("Failed to submit summary. Please try again.");
-      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    const loadExistingSummary = async () => {
-      const data = await getProfileSummary(studentId);
-      if (data?.summary) {
-        setDescription(data.summary);
-      }
-    };
-    loadExistingSummary();
-  }, [studentId]);
+  if (loading) return <ProfileSummaryShimmer />;
 
   return (
     <div className="min-h-[58vh] bg-gray-100 flex justify-center rounded-xl mt-2 mb-5">
@@ -94,11 +100,11 @@ export default function ProfileSummary() {
               placeholder="A passionate Computer Science student with a strong interest in software development and problem-solving. Eager to apply technical skills to real-world projects and grow as a developer."
               className="w-full border border-[#CCCCCC] rounded-lg p-4 text-sm text-[#525252] focus:outline-none resize-none"
             />
-
             <span className="absolute bottom-3 right-4 text-xs text-gray-400">
               {description.length}/1000
             </span>
           </div>
+
           <div className="flex justify-end mt-3">
             <button
               onClick={handleSubmit}
