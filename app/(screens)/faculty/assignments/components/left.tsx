@@ -16,7 +16,11 @@ import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
 import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { deactivateDiscussionForum, fetchCompletedDiscussionsByFacultyId, fetchDiscussionsByFacultyId } from "@/lib/helpers/discussionForum/discussionForumAPI";
+import {
+  deactivateDiscussionForum,
+  fetchCompletedDiscussionsByFacultyId,
+  fetchDiscussionsByFacultyId,
+} from "@/lib/helpers/discussionForum/discussionForumAPI";
 import FacultyDiscussionShimmer from "../shimmer/discussionShimmer";
 import ConfirmDeleteModal from "./confirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
@@ -59,21 +63,31 @@ function AssignmentsLeftContent() {
   const activeTab = searchParams.get("tab") || "assignments";
   const action = searchParams.get("action");
   const discussionId = searchParams.get("discussionId");
-  const activeView = (searchParams.get("view") as "active" | "previous") || "active";
-  const quizView = (searchParams.get("quizView") as "active" | "drafts" | "completed") || "active";
-  const discussionView = (searchParams.get("discussionView") as "active" | "completed") || "active";
+  const activeView =
+    (searchParams.get("view") as "active" | "previous") || "active";
+  const quizView =
+    (searchParams.get("quizView") as "active" | "drafts" | "completed") ||
+    "active";
+  const discussionView =
+    (searchParams.get("discussionView") as "active" | "completed") || "active";
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // FIX 1: Set initial isLoading state to true so shimmer appears instantly on first load
+  const [isLoading, setIsLoading] = useState(true);
+
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [discussions, setDiscussions] = useState<any[]>([]);
   const [discussionsLoading, setDiscussionsLoading] = useState(true);
   const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
-  const [completedDiscussionsLoading, setCompletedDiscussionsLoading] = useState(true);
-  const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(null);
+  const [completedDiscussionsLoading, setCompletedDiscussionsLoading] =
+    useState(true);
+  const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeQuizzes, setActiveQuizzes] = useState<any[]>([]);
@@ -219,6 +233,9 @@ function AssignmentsLeftContent() {
   }, [activeView, currentPage, activeTab]);
 
   async function fetchAssignments() {
+    // FIX 2: Show shimmer if this is a fresh fetch (like switching tabs) but ignore for pagination loads
+    if (!isFetchingMore) setIsLoading(true);
+
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
@@ -262,8 +279,9 @@ function AssignmentsLeftContent() {
           description: a.topicName,
           fromDate: a.dateAssignedInt,
           toDate: a.submissionDeadlineInt,
-          totalSubmissions: String(a.totalSubmissionsExpected || 0),
-          totalSubmitted: "0",
+          // Mapped the exact counts fetched from the DB
+          totalSubmitted: String(a.actualSubmissionsCount || 0),
+          totalSubmissions: String(a.expectedStudentsCount || 0),
           marks: a.marks ? String(a.marks) : "0",
         }));
         setAssignments(formatted);
@@ -318,12 +336,19 @@ function AssignmentsLeftContent() {
     }
   };
 
-  if (activeTab === "discussion" && (action === "editDiscussion" || action === "createDiscussion")) {
+  if (
+    activeTab === "discussion" &&
+    (action === "editDiscussion" || action === "createDiscussion")
+  ) {
     return (
       <div className="w-[68%] h-full p-2 flex flex-col">
         <FacultyDiscussionForm
-          discussionId={action === "editDiscussion" && discussionId ? Number(discussionId) : undefined}
-          onSaved={() => setRefreshKey(prev => prev + 1)}
+          discussionId={
+            action === "editDiscussion" && discussionId
+              ? Number(discussionId)
+              : undefined
+          }
+          onSaved={() => setRefreshKey((prev) => prev + 1)}
         />
       </div>
     );
@@ -352,9 +377,7 @@ function AssignmentsLeftContent() {
             router.push(`${pathname}?${params.toString()}`);
           }}
         />
-        <FacultyQuizResumeBanner
-          margintop="lg:mt-5"
-        />
+        <FacultyQuizResumeBanner margintop="lg:mt-5" />
       </div>
     );
   }
@@ -436,9 +459,12 @@ function AssignmentsLeftContent() {
           </span>
         </h1>
         <p className="text-[#282828] text-sm">
-          {activeTab === "assignments" && "Create, manage, and evaluate assignments for your students efficiently."}
-          {activeTab === "quiz" && "Design, organize, and publish quizzes to assess your students effectively."}
-          {activeTab === "discussion" && "Create and manage project discussions for students."}
+          {activeTab === "assignments" &&
+            "Create, manage, and evaluate assignments for your students efficiently."}
+          {activeTab === "quiz" &&
+            "Design, organize, and publish quizzes to assess your students effectively."}
+          {activeTab === "discussion" &&
+            "Create and manage project discussions for students."}
         </p>
       </div>
 
@@ -503,8 +529,6 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
-
-
             {activeTab === "discussion" && (
               <>
                 <div className="flex gap-4 pb-1">
@@ -536,8 +560,8 @@ function AssignmentsLeftContent() {
           </div>
 
           <div className="max-h-[115vh] overflow-y-auto w-full">
-            {activeTab === "assignments" && (
-              isLoading ? (
+            {activeTab === "assignments" &&
+              (isLoading ? (
                 <div className="w-full">
                   {[1, 2, 3].map((i) => (
                     <AssignmentSkeleton key={i} />
@@ -574,8 +598,7 @@ function AssignmentsLeftContent() {
                     />
                   )}
                 </>
-              )
-            )}
+              ))}
 
             {activeTab === "quiz" && (
               <div className="grid grid-cols-2 gap-4 pb-10 h-full">
@@ -591,8 +614,8 @@ function AssignmentsLeftContent() {
                   </>
                 ) : (
                   <>
-                    {quizView === "active" && (
-                      activeQuizzes.length === 0 ? (
+                    {quizView === "active" &&
+                      (activeQuizzes.length === 0 ? (
                         <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
                           No active quizzes found.
                         </div>
@@ -610,18 +633,19 @@ function AssignmentsLeftContent() {
                               status: quiz.status,
                             }}
                             onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(searchParams.toString());
+                              const params = new URLSearchParams(
+                                searchParams.toString(),
+                              );
                               params.set("action", "viewQuizSubmissions");
                               params.set("quizId", String(quizId));
                               router.push(`${pathname}?${params.toString()}`);
                             }}
                           />
                         ))
-                      )
-                    )}
+                      ))}
 
-                    {quizView === "drafts" && (
-                      draftQuizzes.length === 0 ? (
+                    {quizView === "drafts" &&
+                      (draftQuizzes.length === 0 ? (
                         <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
                           No draft quizzes found.
                         </div>
@@ -639,18 +663,19 @@ function AssignmentsLeftContent() {
                               status: quiz.status,
                             }}
                             onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(searchParams.toString());
+                              const params = new URLSearchParams(
+                                searchParams.toString(),
+                              );
                               params.set("action", "viewQuizSubmissions");
                               params.set("quizId", String(quizId));
                               router.push(`${pathname}?${params.toString()}`);
                             }}
                           />
                         ))
-                      )
-                    )}
+                      ))}
 
-                    {quizView === "completed" && (
-                      completedQuizzes.length === 0 ? (
+                    {quizView === "completed" &&
+                      (completedQuizzes.length === 0 ? (
                         <div className="col-span-2 py-10 text-center text-gray-500 text-sm">
                           No completed quizzes found.
                         </div>
@@ -668,15 +693,16 @@ function AssignmentsLeftContent() {
                               status: quiz.status,
                             }}
                             onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(searchParams.toString());
+                              const params = new URLSearchParams(
+                                searchParams.toString(),
+                              );
                               params.set("action", "viewQuizSubmissions");
                               params.set("quizId", String(quizId));
                               router.push(`${pathname}?${params.toString()}`);
                             }}
                           />
                         ))
-                      )
-                    )}
+                      ))}
                   </>
                 )}
               </div>
@@ -684,11 +710,13 @@ function AssignmentsLeftContent() {
 
             {activeTab === "discussion" && (
               <div className="flex flex-col gap-4 pb-10">
-                {discussionView === "active" && (
-                  discussionsLoading ? (
+                {discussionView === "active" &&
+                  (discussionsLoading ? (
                     [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
                   ) : discussions.length === 0 ? (
-                    <div className="w-full py-10 text-center text-gray-500">No active discussions found.</div>
+                    <div className="w-full py-10 text-center text-gray-500">
+                      No active discussions found.
+                    </div>
                   ) : (
                     discussions.map((discussion) => (
                       <FacultyDiscussionCard
@@ -698,14 +726,15 @@ function AssignmentsLeftContent() {
                         onDelete={(id) => setDeleteDiscussionId(id)}
                       />
                     ))
-                  )
-                )}
+                  ))}
 
-                {discussionView === "completed" && (
-                  completedDiscussionsLoading ? (
+                {discussionView === "completed" &&
+                  (completedDiscussionsLoading ? (
                     [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
                   ) : completedDiscussions.length === 0 ? (
-                    <div className="w-full py-10 text-center text-gray-500">No completed discussions found.</div>
+                    <div className="w-full py-10 text-center text-gray-500">
+                      No completed discussions found.
+                    </div>
                   ) : (
                     completedDiscussions.map((discussion) => (
                       <FacultyDiscussionCard
@@ -714,11 +743,9 @@ function AssignmentsLeftContent() {
                         discussionView="completed"
                       />
                     ))
-                  )
-                )}
+                  ))}
               </div>
             )}
-
           </div>
         </div>
       </div>
@@ -735,7 +762,13 @@ function AssignmentsLeftContent() {
 
 export default function AssignmentsLeft() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center w-full h-[50vh]"><Loader /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center w-full h-[50vh]">
+          <Loader />
+        </div>
+      }
+    >
       <AssignmentsLeftContent />
     </Suspense>
   );

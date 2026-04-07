@@ -40,7 +40,6 @@ export default function AssignmentForm({
   const { faculty_edu_type } = useFaculty();
   const [sectionSelect, setSectionSelect] = useState("");
 
-
   const [form, setForm] = useState({
     assignmentId: initialData?.assignmentId,
     topicName: initialData?.description || "",
@@ -176,7 +175,8 @@ export default function AssignmentForm({
   }, [facultySections, form.subjectId, form.branchId]);
 
   const availableYears = useMemo(() => {
-    if (!form.subjectId || !form.branchId || form.sectionIds.length === 0) return [];
+    if (!form.subjectId || !form.branchId || form.sectionIds.length === 0)
+      return [];
     const map = new Map();
     facultySections
       .filter((s) => {
@@ -198,37 +198,96 @@ export default function AssignmentForm({
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [facultySections, form.subjectId, form.branchId, form.sectionIds]);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  // ==========================================
+  // FIX: ROBUST PRE-SUBMISSION VALIDATION
+  // ==========================================
+  const validateForm = () => {
+    if (!facultyId) {
+      toast.error("Faculty ID missing");
+      return false;
+    }
 
-    if (!facultyId) return toast.error("Faculty ID missing");
+    if (!form.subjectId) {
+      toast.error("Please select a Subject.");
+      return false;
+    }
+
+    // Topic Validation: letters, numbers, spaces, &, :, -
+    const topicRegex = /^[A-Za-z0-9\s&:\-]+$/;
+    if (!form.topicName.trim()) {
+      toast.error("Topic Name is required.");
+      return false;
+    }
+    if (!topicRegex.test(form.topicName.trim())) {
+      toast.error(
+        "Topic Name can contain only letters, numbers, spaces, &, :, and -",
+      );
+      return false;
+    }
+
+    if (!form.totalMarks) {
+      toast.error("Total Marks are required.");
+      return false;
+    }
+
+    if (!form.branchId) {
+      toast.error(
+        `Please select a ${faculty_edu_type === "Inter" ? "Group" : "Branch"}.`,
+      );
+      return false;
+    }
+
+    if (form.sectionIds.length === 0) {
+      toast.error("Please select at least one Section.");
+      return false;
+    }
+
+    if (!form.yearId) {
+      toast.error("Please select an Academic Year.");
+      return false;
+    }
+
+    if (!form.fromDate || !form.toDate) {
+      toast.error("Both start and end dates are required.");
+      return false;
+    }
 
     const fromDateObj = new Date(form.fromDate);
     const toDateObj = new Date(form.toDate);
     const todayObj = new Date(today);
 
-    if (fromDateObj < todayObj) {
-      return toast.error("Assigned date cannot be in the past.");
+    if (!initialData) {
+      if (fromDateObj < todayObj) {
+        toast.error("Assigned date cannot be in the past.");
+        return false;
+      }
+      if (toDateObj < todayObj) {
+        toast.error("Submission deadline cannot be in the past.");
+        return false;
+      }
     }
-    if (toDateObj < todayObj) {
-      return toast.error("Submission deadline cannot be in the past.");
-    }
+
     if (fromDateObj > toDateObj) {
-      return toast.error(
-        "Assigned date must be before the submission deadline.",
-      );
+      toast.error("Assigned date must be before the submission deadline.");
+      return false;
     }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) return; // Stop submission if validation fails
 
     setIsSaving(true);
     try {
-
       for (const sectionId of form.sectionIds) {
-
         const payload = {
           assignmentId: form.assignmentId,
-          facultyId: facultyId,
+          facultyId: facultyId as number, // Safe due to validation above
           subjectId: form.subjectId,
-          topicName: form.topicName,
+          topicName: form.topicName.trim(),
           dateAssigned: form.fromDate,
           submissionDeadline: form.toDate,
           collegeBranchId: form.branchId,
@@ -248,18 +307,18 @@ export default function AssignmentForm({
 
       onSave({
         ...initialData,
-        description: form.topicName,
-        title: form.topicName,
+        description: form.topicName.trim(),
+        title: form.topicName.trim(),
         fromDate: form.fromDate,
         toDate: form.toDate,
         marks: form.totalMarks,
       } as Assignment);
 
       router.push("/faculty/assignments");
-
     } catch (error) {
       console.error(error);
       toast.error("An unexpected error occurred.");
+    } finally {
       setIsSaving(false);
     }
   };
@@ -321,9 +380,18 @@ export default function AssignmentForm({
                 value={form.topicName}
                 placeholder="e.g., Implementation of Stack and Queue"
                 required
-                onChange={(e) =>
-                  setForm({ ...form, topicName: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Optional: Live validation UX
+                  if (/^[A-Za-z0-9\s&:\-]*$/.test(value)) {
+                    setForm({ ...form, topicName: value });
+                  } else {
+                    toast.error(
+                      "Invalid character entered. Use letters, numbers, spaces, &, :, or -",
+                      { id: "topic-char-err" },
+                    );
+                  }
+                }}
                 className="w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
                 rows={3}
               />
@@ -393,9 +461,10 @@ export default function AssignmentForm({
               </label>
 
               <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white min-h-[40px] flex flex-wrap gap-2">
-
                 {form.sectionIds.map((id) => {
-                  const section = availableSections.find((s) => String(s.id) === id);
+                  const section = availableSections.find(
+                    (s) => String(s.id) === id,
+                  );
 
                   return (
                     <div
@@ -409,7 +478,9 @@ export default function AssignmentForm({
                         onClick={() =>
                           setForm((prev) => ({
                             ...prev,
-                            sectionIds: prev.sectionIds.filter((sid) => sid !== id),
+                            sectionIds: prev.sectionIds.filter(
+                              (sid) => sid !== id,
+                            ),
                           }))
                         }
                         className="text-red-500 font-bold"
@@ -433,9 +504,9 @@ export default function AssignmentForm({
                         : [...prev.sectionIds, value],
                     }));
 
-                    setSectionSelect(""); // reset dropdown
+                    setSectionSelect("");
                   }}
-                  className="text-sm outline-none flex-1 text-black"
+                  className="text-sm outline-none flex-1 cursor-pointer text-black"
                 >
                   <option value="">Select section</option>
 

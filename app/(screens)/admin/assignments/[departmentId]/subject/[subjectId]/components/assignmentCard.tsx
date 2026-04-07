@@ -27,8 +27,8 @@ function formatDate(dateValue: number | string) {
 
   if (/^\d{8}$/.test(str)) {
     const year = str.substring(0, 4);
-    const month = str.substring(4, 6)
-    const day = str.substring(6, 8)
+    const month = str.substring(4, 6);
+    const day = str.substring(6, 8);
     return `${day}/${month}/${year}`;
   }
 
@@ -128,7 +128,7 @@ export default function AssignmentCard({
               </div>
             </div>
 
-            <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center justify-between mt-3 ">
               <div className="flex items-center gap-2">
                 <div className="rounded-full bg-[#E2F3E9] p-1.5">
                   <Book className="text-[#57C788]" />
@@ -137,10 +137,8 @@ export default function AssignmentCard({
                 <p className="text-[#474747] text-sm">Total Submissions</p>
 
                 <span className="text-[#44C07A] text-sm font-semibold">
-                  {`${item.totalSubmissions} / ${item.totalSubmitted}`}
+                  {item.totalSubmitted} / {item.totalSubmissions}
                 </span>
-
-                <CaretRight className="text-[#454545]" size={16} />
               </div>
 
               <div className="flex overflow-hidden rounded-md">

@@ -12,8 +12,8 @@ export const fetchFacultyAssignments = async (
 
     const selectQuery =
       tab === "Evaluated"
-        ? `*, college_subjects (subjectName, subjectCode), student_assignments_submission!inner(status)`
-        : `*, college_subjects (subjectName, subjectCode)`;
+        ? `*, college_subjects (subjectName, subjectCode), student_assignments_submission!inner(status), submissions_count:student_assignments_submission(count)`
+        : `*, college_subjects (subjectName, subjectCode), submissions_count:student_assignments_submission(count)`;
 
     let query = supabase
       .from("assignments")
@@ -32,7 +32,41 @@ export const fetchFacultyAssignments = async (
 
     if (error) throw error;
 
-    return { data, count, error: null };
+    const enrichedData = await Promise.all(
+      (data || []).map(async (assignment: any) => {
+        const { count: expectedStudentsCount, error: stuError } = await supabase
+          .from("students")
+          .select(
+            "studentId, student_academic_history!inner(collegeAcademicYearId, collegeSectionsId)",
+            { count: "exact", head: true },
+          )
+          .eq("collegeBranchId", assignment.collegeBranchId)
+          .eq(
+            "student_academic_history.collegeAcademicYearId",
+            assignment.collegeAcademicYearId,
+          )
+          .eq(
+            "student_academic_history.collegeSectionsId",
+            assignment.collegeSectionsId,
+          )
+          .eq("student_academic_history.isCurrent", true)
+          .eq("isActive", true);
+
+        if (stuError)
+          console.error("Error fetching student count:", stuError.message);
+
+        const actualSubmissionsCount =
+          assignment.submissions_count?.[0]?.count || 0;
+
+        return {
+          ...assignment,
+          actualSubmissionsCount,
+          expectedStudentsCount: expectedStudentsCount || 0,
+        };
+      }),
+    );
+
+    return { data: enrichedData, count, error: null };
   } catch (err: any) {
     console.error("Fetch Error:", err.message);
     return { data: null, count: 0, error: err.message };

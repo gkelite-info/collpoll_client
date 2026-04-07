@@ -58,8 +58,9 @@ export default function AssignmentsLeft({
           description: a.topicName,
           fromDate: String(a.dateAssignedInt || ""),
           toDate: String(a.submissionDeadlineInt || ""),
-          totalSubmissions: "0",
-          totalSubmitted: "0",
+          // Injecting the DB counts here!
+          totalSubmitted: String(a.actualSubmissionsCount || 0),
+          totalSubmissions: String(a.expectedStudentsCount || 0),
           marks: String(a.marks || 0),
         }));
 
@@ -124,7 +125,7 @@ export default function AssignmentsLeft({
             activeView="active"
             cardProp={assignments}
             onEdit={(item: any) => setEditingAssignment(item)}
-            onDelete={(id: number) => { }}
+            onDelete={(id: number) => {}}
           />
         )}
       </div>

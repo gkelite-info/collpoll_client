@@ -7,9 +7,10 @@ import CourseCard from "../components/courseCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { fetchAdminSubjectDetails } from "@/lib/helpers/admin/assignments/fetchAdminSubjectDetails";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { DiscussionDeptCardSkeleton } from "../components/shimmers/DiscussionDeptCardSkeleton";
+import { DiscussionCourseCardSkeleton } from "../components/shimmers/courseCardSkeleton";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -70,13 +71,6 @@ const DepartmentSubjectPage = () => {
     loadData();
   }, [departmentId, year, currentPage]);
 
-  if (loading)
-    return (
-      <div className="p-10 text-center">
-        <Loader />
-      </div>
-    );
-
   return (
     <div className="flex flex-col m-4 relative min-h-[calc(100vh-120px)]">
       <div className="mb-6 flex justify-between items-center">
@@ -96,38 +90,55 @@ const DepartmentSubjectPage = () => {
           </p>
         </div>
         <div className="w-80">
-          <CourseScheduleCard department={departmentId} year={year} isVisibile={false} />
+          <CourseScheduleCard
+            department={departmentId}
+            year={year}
+            isVisibile={false}
+          />
         </div>
       </div>
 
       <div className="flex flex-col flex-1 relative">
-        {isFetchingMore && (
-          <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
-            <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        )}
-
-        {courses.length === 0 ? (
-          <div className="bg-white p-20 rounded-xl text-center text-gray-400 border border-dashed">
-            No active subjects found for this branch and year.
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <DiscussionCourseCardSkeleton />
+            <DiscussionCourseCardSkeleton />
+            <DiscussionCourseCardSkeleton />
+            <DiscussionCourseCardSkeleton />
+            <DiscussionCourseCardSkeleton />
+            <DiscussionCourseCardSkeleton />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-              {courses.map((course) => (
-                <CourseCard key={course.uniqueId} {...course} />
-              ))}
-            </div>
-
-            {totalCount > ITEMS_PER_PAGE && (
-              <div className="mt-auto pt-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalItems={totalCount}
-                  itemsPerPage={ITEMS_PER_PAGE}
-                  onPageChange={setCurrentPage}
-                />
+            {isFetchingMore && (
+              <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center backdrop-blur-[1px] rounded-lg">
+                <div className="w-8 h-8 border-4 border-[#43C17A] border-t-transparent rounded-full animate-spin"></div>
               </div>
+            )}
+
+            {courses.length === 0 ? (
+              <div className="bg-white p-20 rounded-xl text-center text-gray-400 border border-dashed">
+                No active subjects found for this branch and year.
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                  {courses.map((course) => (
+                    <CourseCard key={course.uniqueId} {...course} />
+                  ))}
+                </div>
+
+                {totalCount > ITEMS_PER_PAGE && (
+                  <div className="mt-auto pt-4">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalItems={totalCount}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
