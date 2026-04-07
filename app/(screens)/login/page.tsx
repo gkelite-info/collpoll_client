@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import { Icon } from "@iconify/react";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -92,12 +91,12 @@ export default function LoginPage() {
     const passwordRegex =
       /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/;
 
-    if (!passwordRegex.test(password)) {
-      toast.error(
-        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character",
-      );
-      return false;
-    }
+    // if (!passwordRegex.test(password)) {
+    //   toast.error(
+    //     "Password must be at least 6 characters and include uppercase, lowercase, number, and special character",
+    //   );
+    //   return false;
+    // }
     return true;
   };
 

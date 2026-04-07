@@ -31,7 +31,7 @@ export default function ProjectsForm() {
     const last = projects[projects.length - 1];
 
     if (!last.isSubmitted) {
-      toast.error("Please submit the current project before adding a new one");
+      toast.error("Please submit the current project before adding new one");
       return;
     }
 

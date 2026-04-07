@@ -27,6 +27,7 @@
     "ai": "^6.0.44",
     "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
+    "digest-fetch": "^3.1.1",
     "dompurify": "^3.3.3",
     "framer-motion": "^12.23.26",
     "groq-sdk": "^0.37.0",
@@ -45,6 +46,7 @@
     "resend": "^6.9.4",
     "stripe": "^20.3.1",
     "uuid": "^13.0.0",
+    "xml2js": "^0.6.2",
     "yup": "^1.7.1"
   },
   "devDependencies": {
@@ -55,6 +57,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/xml2js": "^0.4.14",
     "baseline-browser-mapping": "^2.9.9",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",

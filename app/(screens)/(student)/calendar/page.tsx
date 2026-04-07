@@ -18,7 +18,7 @@ export default function CalendarPage() {
                         />
                     </div>
                 </div>
-                <div className="mt-5 gap-4 bg-green-00 grid lg:grid-cols-[40%_60%] ">
+                <div className="mt-5 gap-4 bg-green-00 flex justify-between">
                     <div className=" bg-pink-00">
                         <CalendarLeft />
                     </div>

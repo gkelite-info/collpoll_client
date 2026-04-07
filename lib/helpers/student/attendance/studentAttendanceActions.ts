@@ -1,9 +1,9 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
 
-const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
+const ATTENDED_STATUSES = ["PRESENT", "LEAVE"] as const;
 
-const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
+const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LEAVE"] as const;
 
 function isAttendedStatus(s: string) {
   return (ATTENDED_STATUSES as readonly string[]).includes(s);
@@ -32,7 +32,7 @@ export interface StudentDashboardResponse {
   semesterStats: {
     present: number;
     absent: number;
-    late: number;
+    leave: number;
   };
   tableData: any[];
   totalCount: number;
@@ -259,7 +259,7 @@ export async function getStudentDashboardData(
 
   const semPresent = new Set<number>();
   const semAbsent = new Set<number>();
-  const semLate = new Set<number>();
+  const semLeave = new Set<number>();
 
   for (const r of semAll ?? []) {
 
@@ -270,15 +270,66 @@ export async function getStudentDashboardData(
 
     if (r.status === "PRESENT") semPresent.add(r.calendarEventId);
     else if (r.status === "ABSENT") semAbsent.add(r.calendarEventId);
-    else if (r.status === "LATE") semLate.add(r.calendarEventId);
+    else if (r.status === "LEAVE") semLeave.add(r.calendarEventId);
   }
 
-  const totalDist = semPresent.size + semAbsent.size + semLate.size;
+  const totalDist = semPresent.size + semAbsent.size + semLeave.size;
 
   const paginatedRows = tableData.slice(from, to + 1);
 
-  return {
+  let presentPercent = 0;
+  let absentPercent = 0;
+  let leavePercent = 0;
 
+  if (totalDist > 0) {
+    presentPercent = Math.round((semPresent.size / totalDist) * 100);
+    absentPercent = Math.round((semAbsent.size / totalDist) * 100);
+
+    leavePercent = Math.max(0, 100 - presentPercent - absentPercent);
+  }
+
+  // return {
+
+  //   todayStats: {
+  //     attended: todayAttended,
+  //     total: todayConducted,
+  //   },
+
+  //   cards: {
+  //     attended: semesterAttended,
+  //     totalClasses: semesterConducted,
+  //     percentage:
+  //       semesterConducted === 0
+  //         ? 0
+  //         : Math.round((semesterAttended / semesterConducted) * 100),
+  //   },
+
+  //   semesterStats: {
+  //     present:
+  //       totalDist === 0
+  //         ? 0
+  //         : Math.round((semPresent.size / totalDist) * 100),
+
+  //     absent:
+  //       totalDist === 0
+  //         ? 0
+  //         : Math.round((semAbsent.size / totalDist) * 100),
+
+  //     leave:
+  //       totalDist === 0
+  //         ? 0
+  //         : Math.round((semLeave.size / totalDist) * 100),
+  //   },
+
+  //   tableData: paginatedRows,
+  //   totalCount: tableData.length,
+
+  //   subjectWiseAttendance,
+
+  //   weeklyData: [0, 0, 0, 0, 0, 0, 0],
+  // };
+
+  return {
     todayStats: {
       attended: todayAttended,
       total: todayConducted,
@@ -294,20 +345,9 @@ export async function getStudentDashboardData(
     },
 
     semesterStats: {
-      present:
-        totalDist === 0
-          ? 0
-          : Math.round((semPresent.size / totalDist) * 100),
-
-      absent:
-        totalDist === 0
-          ? 0
-          : Math.round((semAbsent.size / totalDist) * 100),
-
-      late:
-        totalDist === 0
-          ? 0
-          : Math.round((semLate.size / totalDist) * 100),
+      present: presentPercent,
+      absent: absentPercent,
+      leave: leavePercent,
     },
 
     tableData: paginatedRows,
@@ -317,13 +357,14 @@ export async function getStudentDashboardData(
 
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
   };
+  
 }
 
 function emptyDashboard() {
   return {
     todayStats: { attended: 0, total: 0 },
     cards: { attended: 0, totalClasses: 0, percentage: 0 },
-    semesterStats: { present: 0, absent: 0, late: 0 },
+    semesterStats: { present: 0, absent: 0, leave: 0 },
 
     tableData: [],
     totalCount: 0,

@@ -241,7 +241,7 @@ export default function StuAttendanceTable({
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Leave">Leave</option>
-                <option value="Late">Late</option>
+                {/* <option value="Late">Late</option> */}
                 <option value="Class Cancel">Class Cancelled</option>
               </select>
               <CaretDown
@@ -279,7 +279,6 @@ export default function StuAttendanceTable({
         </div>
       </div>
 
-      {/* TABLE DATA AREA */}
       <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
         {isEditing && selectedIds.length > 0 && !loadingFilters && (
           <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-4 py-2 shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -304,12 +303,12 @@ export default function StuAttendanceTable({
             >
               <User weight="fill" /> Leave
             </button>
-            <button
+            {/* <button
               onClick={() => bulkUpdate("Late")}
               className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-yellow-500 text-white rounded-lg hover:opacity-90 transition"
             >
               <Clock weight="fill" /> Late
-            </button>
+            </button> */}
           </div>
         )}
 

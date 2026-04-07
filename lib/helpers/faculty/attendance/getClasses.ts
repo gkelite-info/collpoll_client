@@ -121,7 +121,7 @@ calendar_event_section (
     )
     .eq("facultyId", faculty.facultyId)
     .eq("type", "class")
-    .gte("date", today)
+    .eq("date", today)
     .eq("is_deleted", false)
     .is("deletedAt", null)
     .order("date", { ascending: true })

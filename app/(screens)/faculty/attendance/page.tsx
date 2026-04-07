@@ -292,7 +292,6 @@ function AttendanceContent() {
         )}
       </section>
 
-      {/* CARDS */}
       <section className="flex flex-row items-stretch gap-4 w-full mb-3">
         {baseCardData.map((item, index) => (
           <div key={index} className="flex-1">
