@@ -3,20 +3,21 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, } from "recharts";
 import { FaChevronRight } from "react-icons/fa6";
 import WipOverlay from "@/app/utils/WipOverlay";
+import { useRouter } from "next/navigation";
 
 export default function AcademicPerformanceSmall() {
+    const router = useRouter()
     const data = [
-        { subject: "Java", value: 70, full: 100 },
-        { subject: "DS", value: 50, full: 100 },
-        { subject: "DBMS", value: 80, full: 100 },
-        { subject: "OS", value: 35, full: 100 },
-        { subject: "SE", value: 80, full: 100 },
-        { subject: "Web", value: 60, full: 100 },
+        { subject: "Sub 1", value: 0, full: 100 },
+        { subject: "Sub 2", value: 0, full: 100 },
+        { subject: "Sub 3", value: 0, full: 100 },
+        { subject: "Sub 4", value: 0, full: 100 },
+        { subject: "Sub 5", value: 0, full: 100 },
+        { subject: "Sub 6", value: 0, full: 100 },
     ];
 
     return (
-        <div className="relative overflow-hidden bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
-            <WipOverlay />
+        <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
             <div className="bg-red-00 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[#282828]">
                     Academic Performance
@@ -24,6 +25,7 @@ export default function AcademicPerformanceSmall() {
                 <FaChevronRight
                     size={18}
                     className="text-black cursor-pointer"
+                    onClick={() => router.push("/parent/student-progress")}
                 />
             </div>
 
@@ -83,7 +85,7 @@ export default function AcademicPerformanceSmall() {
                         />
 
                         <Bar dataKey="value" barSize={25} radius={[6, 6, 6, 6]}>
-                            <LabelList
+                            {/* <LabelList
                                 dataKey="value"
                                 content={({ x, y, width, value }: any) => (
                                     <g>
@@ -105,6 +107,34 @@ export default function AcademicPerformanceSmall() {
                                         </text>
                                     </g>
                                 )}
+                            /> */}
+                            <LabelList
+                                dataKey="value"
+                                content={({ x, y, width, height, value }: any) => {
+                                    // If value is 0, place label slightly above baseline to avoid overlap with X-axis labels
+                                    const adjustedY = value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
+
+                                    return (
+                                        <g>
+                                            <circle
+                                                cx={x + width / 2}
+                                                cy={adjustedY}
+                                                r={10}
+                                                fill="#E8F6E2"
+                                            />
+                                            <text
+                                                x={x + width / 2}
+                                                y={adjustedY + 4}
+                                                textAnchor="middle"
+                                                fill="#7CD24C"
+                                                fontSize={8}
+                                                fontWeight="bold"
+                                            >
+                                                {value}%
+                                            </text>
+                                        </g>
+                                    );
+                                }}
                             />
 
                             {data.map((_, i) => (

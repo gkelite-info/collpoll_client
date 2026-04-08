@@ -108,6 +108,7 @@ export const LEGACY_STUDENT_ROUTES = [
   "/meetings",
   "/drive",
   "/payments",
+  "/settings"
 ];
 
 /**

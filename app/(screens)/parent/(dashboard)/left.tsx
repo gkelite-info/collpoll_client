@@ -278,20 +278,20 @@ export default function ParentLeft() {
 
   const chats = [
     {
-      image: "/faculty.png",
-      professor: "Ramesh Reddy",
-      subject: "Date Structures",
+      image: "/Group 2992 (01).png",
+      professor: "1",
+      subject: "N/A",
     },
-    { image: "/faculty.png", professor: "Ramu", subject: "Oops" },
+    { image: "/Group 2992 (01).png", professor: "2", subject: "N/A" },
     {
-      image: "/faculty.png",
-      professor: "Ashish",
-      subject: "Discrete Mathematics",
+      image: "/Group 2992 (01).png",
+      professor: "3",
+      subject: "N/A",
     },
     {
-      image: "/faculty.png",
-      professor: "Shiva Prasad",
-      subject: "Digital Electronics",
+      image: "/Group 2992 (01).png",
+      professor: "4",
+      subject: "N/A",
     },
   ];
 

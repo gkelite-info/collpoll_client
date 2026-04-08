@@ -22,7 +22,6 @@ import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
 import ParentListView from "./ParentListView";
 import FinanceListView from "./FinanceListView";
-import WipOverlay from "@/app/utils/WipOverlay";
 
 
 
@@ -88,14 +87,14 @@ const StatCard = ({
 
 
 const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => {
-  const isPlacement = title === "Placement"; // ADDED
+  const isPlacement = title === "Placement";
   const [gearRunning, setGearRunning] = useState(isPlacement);
   useEffect(() => {
     if (!isPlacement) return;
 
     const timer = setTimeout(() => {
       setGearRunning(false);
-    }, 2000);
+    }, 300);
     return () => clearTimeout(timer);
   }, [isPlacement]);
 
@@ -116,9 +115,6 @@ const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void 
         shadow-xs
       `}
     >
-      {isPlacement && gearRunning && (
-        <WipOverlay isSmall={true} gearOnly={true} />
-      )}
       <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
       <span
         className={`
@@ -279,8 +275,7 @@ const PillTag = ({ label }: { label: string }) => (
 );
 
 const MeetingCard = () => (
-  <div className="bg-white relative rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-w-0">
-    <WipOverlay />
+  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-w-0">
     {/* Green header bar */}
     <div className="bg-[#43C17A26] px-4 py-2.5 flex items-center gap-3 border-b-2 border-dotted border-[#43C17A]">
       <div className="bg-[#43C17A] p-1.5 rounded-full flex-shrink-0">
@@ -304,23 +299,23 @@ const MeetingCard = () => (
       <div className="flex flex-col gap-4 text-sm">
         <div className="flex items-center gap-2">
           <span className="text-gray-500 font-normal flex-shrink-0">Education Type :</span>
-          <PillTag label="B.Tech" />
+          <PillTag label="N/A" />
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-gray-500 font-normal flex-shrink-0">Admin :</span>
-          <PillTag label="Shravani - (B.Tech)" />
+          <PillTag label="N/A" />
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-gray-500 font-normal flex-shrink-0">Date :</span>
-          <PillTag label="20 Feb 2026" />
+          <PillTag label="N/A" />
           <button
             disabled
             className="ml-auto px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-200 text-gray-400 cursor-not-allowed whitespace-nowrap flex-shrink-0"
             title="No meeting link available"
           >
-            Join Meeting
+            Join Meeting 
           </button>
         </div>
       </div>
