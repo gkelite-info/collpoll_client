@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { Loader } from "../../(student)/calendar/right/timetable";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 
@@ -14,34 +13,89 @@ import AttendanceStatCards from "./components/AttendanceStatCards";
 import AttendanceToolbar from "./components/AttendanceToolbar";
 
 import AttendanceTable from "./components/AttendanceTable";
-import { EditedTimes } from "./components/types";
-import { AttendanceStaffRow, getAttendanceStaff } from "@/lib/helpers/Hr/attendance/Getattendancestaff";
+import {
+  AttendanceStaffRow,
+  getAttendanceStaff,
+} from "@/lib/helpers/Hr/attendance/Getattendancestaff";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import AttendanceFilters from "./components/AttendanceFilteres";
 
 const typeIcons: Record<string, string> = {
-  class: "/class.png", exam: "/exam.png", meeting: "/meeting.png",
-  holiday: "/calendar-3d.png", event: "/event.png", notice: "/clip.png",
-  result: "/result.jpg", timetable: "/timetable.png", placement: "/placement.png",
-  emergency: "/emergency.png", finance: "/finance.jpg", other: "/others.png",
+  class: "/class.png",
+  exam: "/exam.png",
+  meeting: "/meeting.png",
+  holiday: "/calendar-3d.png",
+  event: "/event.png",
+  notice: "/clip.png",
+  result: "/result.jpg",
+  timetable: "/timetable.png",
+  placement: "/placement.png",
+  emergency: "/emergency.png",
+  finance: "/finance.jpg",
+  other: "/others.png",
 };
 
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+const DashboardShimmer = () => (
+  <div className="p-2 w-full h-full flex flex-col animate-pulse">
+    <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col gap-2">
+        <div className="h-7 w-64 bg-gray-200 rounded"></div>
+        <div className="h-4 w-96 bg-gray-200 rounded"></div>
+      </div>
+      <div className="w-[320px] h-24 bg-gray-200 rounded-xl"></div>
+    </div>
+    <div className="w-full flex gap-5">
+      <div className="w-[68%] flex flex-col gap-6">
+        <div className="flex gap-3 w-full">
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              className="flex-1 h-[126px] rounded-xl bg-gray-200"
+            ></div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div className="h-6 w-40 bg-gray-200 rounded"></div>
+            <div className="flex gap-2">
+              <div className="h-8 w-24 bg-gray-200 rounded"></div>
+              <div className="h-8 w-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-8 w-20 bg-gray-200 rounded-full"
+                ></div>
+              ))}
+            </div>
+            <div className="h-10 w-64 bg-gray-200 rounded-full"></div>
+          </div>
+          <div className="h-[400px] w-full bg-gray-200 rounded-xl mt-2"></div>
+        </div>
+      </div>
+      <div className="w-[32%] flex flex-col gap-4">
+        <div className="h-64 w-full bg-gray-200 rounded-xl"></div>
+        <div className="h-[400px] w-full bg-gray-200 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+);
+
 function FacultyAttendanceDashboard() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") || "total";
+  const urlTab = searchParams.get("tab") || "total";
 
-  // ── Use HR context for collegeId + collegeHrId ───────────────────────────
   const { collegeId, collegeHrId, loading: hrLoading } = useCollegeHr();
-
-  // useUser still needed for announcements (userId + role)
   const { userId, role } = useUser();
 
-  // ── State ─────────────────────────────────────────────────────────────────
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
   const [isEditMode, setIsEditMode] = useState(false);
@@ -51,130 +105,177 @@ function FacultyAttendanceDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [staffList, setStaffList] = useState<AttendanceStaffRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [isFetching, setIsFetching] = useState(false);
+
+  // States to manage loading and UI feel
+  const [isFetching, setIsFetching] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isTabSwitching, setIsTabSwitching] = useState(false);
+
+  // FIX: Local state for active tab ensures instant optimistic UI updates
+  const [localTab, setLocalTab] = useState(urlTab);
+  const activeTab = localTab;
+
   const [markedUserIds, setMarkedUserIds] = useState<Set<number>>(new Set());
 
-  // ── ADDED: filterDate state + ref ────────────────────────────────────────
   const [filterDate, setFilterDate] = useState<string | null>(null);
   const filterDateRef = useRef<string | null>(null);
   const searchMounted = useRef(false);
-  useEffect(() => { filterDateRef.current = filterDate; }, [filterDate]);
 
-  // ── Fetch staff — waits for HR context to resolve ────────────────────────
-  const fetchStaff = useCallback(async (search = "", date?: string | null) => {
-    if (!collegeId) return;
-    setIsFetching(true);
-    try {
-      const result = await getAttendanceStaff({
-        collegeId,
-        search,
-        page: 1,
-        limit: 100,
-        date: date ?? undefined, // ADDED: pass date param
-      });
-      setStaffList(result.staff);
-      setTotalCount(result.totalCount);
-    } catch (err) {
-      console.error("Attendance staff fetch error:", err);
-    } finally {
-      setIsFetching(false);
-    }
-  }, [collegeId]);
-
-  // Silent fetch — updates data without showing table loading skeleton
-  const fetchStaffSilent = useCallback(async (search = "", date?: string | null) => {
-    if (!collegeId) return;
-    try {
-      const result = await getAttendanceStaff({
-        collegeId,
-        search,
-        page: 1,
-        limit: 100,
-        date: date ?? undefined, // ADDED: pass date param
-      });
-      setStaffList(result.staff);
-      setTotalCount(result.totalCount);
-    } catch (err) {
-      console.error("Silent fetch error:", err);
-    }
-  }, [collegeId]);
-
-  // Fetch once HR context is ready
   useEffect(() => {
-    if (!hrLoading && collegeId) fetchStaff();
+    filterDateRef.current = filterDate;
+  }, [filterDate]);
+
+  // Sync URL changes to local state if external navigation happens
+  useEffect(() => {
+    setLocalTab(urlTab);
+  }, [urlTab]);
+
+  const fetchStaff = useCallback(
+    async (search = "", date?: string | null, rFilter?: string | null) => {
+      if (!collegeId) return;
+      try {
+        const result = await getAttendanceStaff({
+          collegeId,
+          search,
+          page: 1,
+          limit: 100,
+          date: date ?? undefined,
+          role: rFilter ?? undefined,
+        });
+        setStaffList(result.staff);
+        setTotalCount(result.totalCount);
+      } catch (err) {
+        console.error("Attendance staff fetch error:", err);
+      } finally {
+        setIsFetching(false);
+        setIsInitialLoad(false);
+      }
+    },
+    [collegeId],
+  );
+
+  useEffect(() => {
+    if (!hrLoading && collegeId) {
+      fetchStaff(searchQuery, filterDateRef.current, activeRole);
+    }
   }, [hrLoading, collegeId]);
 
-  // Debounced search — skips mount run, always reads latest date from ref
   useEffect(() => {
-    if (!searchMounted.current) { searchMounted.current = true; return; }
-    const timer = setTimeout(() => fetchStaff(searchQuery, filterDateRef.current), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    if (!searchMounted.current) {
+      searchMounted.current = true;
+      return;
+    }
 
-  // ── ADDED: date filter handler ────────────────────────────────────────────
+    setIsFetching(true);
+
+    const timer = setTimeout(() => {
+      fetchStaff(searchQuery, filterDateRef.current, activeRole);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, activeRole]);
+
+  // Table Shimmer on localTab Change (Optimistic UI)
+  useEffect(() => {
+    if (!searchMounted.current) return;
+    setIsTabSwitching(true);
+    const timer = setTimeout(() => setIsTabSwitching(false), 250);
+    return () => clearTimeout(timer);
+  }, [localTab]);
+
+  const fetchStaffSilent = useCallback(
+    async (search = "", date?: string | null) => {
+      if (!collegeId) return;
+      try {
+        const result = await getAttendanceStaff({
+          collegeId,
+          search,
+          page: 1,
+          limit: 100,
+          date: date ?? undefined,
+        });
+        setStaffList(result.staff);
+        setTotalCount(result.totalCount);
+      } catch (err) {
+        console.error("Silent fetch error:", err);
+      }
+    },
+    [collegeId],
+  );
+
   const handleDateFilter = (date: string | null) => {
+    setIsFetching(true);
     setFilterDate(date);
-    filterDateRef.current = date;        // sync ref immediately
-    fetchStaff(searchQuery, date);       // fetch right away for selected date
+    filterDateRef.current = date;
+    fetchStaff(searchQuery, date, activeRole);
   };
 
-  // ── Counts derived from staffList ────────────────────────────────────────
-  const presentCount = staffList.filter(s => s.status?.toLowerCase() === "present").length;
-  const absentCount = staffList.filter(s => s.status?.toLowerCase() === "absent").length;
-  const lateCount = staffList.filter(s => s.status?.toLowerCase() === "late").length;
-  const leaveCount = staffList.filter(s => s.status?.toLowerCase() === "leave").length;
+  const presentCount = staffList.filter(
+    (s) => s.status?.toLowerCase() === "present",
+  ).length;
+  const absentCount = staffList.filter(
+    (s) => s.status?.toLowerCase() === "absent",
+  ).length;
+  const lateCount = staffList.filter(
+    (s) => s.status?.toLowerCase() === "late",
+  ).length;
+  const leaveCount = staffList.filter(
+    (s) => s.status?.toLowerCase() === "leave",
+  ).length;
 
-  // ── Tab filtering ─────────────────────────────────────────────────────────
   const filteredByTab = (() => {
     const tabFilter = (s: AttendanceStaffRow) => {
       switch (activeTab) {
-        case "present": return s.status?.toLowerCase() === "present";
-        case "absent": return s.status?.toLowerCase() === "absent";
-        case "late": return s.status?.toLowerCase() === "late";
-        case "leave": return s.status?.toLowerCase() === "leave";
-        default: return true;
+        case "present":
+          return s.status?.toLowerCase() === "present";
+        case "absent":
+          return s.status?.toLowerCase() === "absent";
+        case "late":
+          return s.status?.toLowerCase() === "late";
+        case "leave":
+          return s.status?.toLowerCase() === "leave";
+        default:
+          return true;
       }
     };
 
     if (!isEditMode) return staffList.filter(tabFilter);
 
-    // In edit mode — show tab-filtered rows PLUS any rows that were marked
-    // (so they don't disappear after status change)
-    return staffList.filter(s => tabFilter(s) || markedUserIds.has(s.userId));
+    return staffList.filter((s) => tabFilter(s) || markedUserIds.has(s.userId));
   })();
-  useEffect(() => {
-    setIsEditMode(false);
-    setSelectAll(false);
-    setSelectedRows(new Set());
-    setActiveRole(null);
-    setSearchQuery("");
-  }, [activeTab]);
 
-  // ── Tab change ────────────────────────────────────────────────────────────
   const handleTabChange = (tabId: string) => {
+    // FIX: Instant state updates before the router can delay
+    setLocalTab(tabId);
     setActiveRole(null);
     setSearchQuery("");
     setIsEditMode(false);
     setSelectAll(false);
     setSelectedRows(new Set());
+
+    // Non-blocking URL push
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tabId);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  // ── Edit mode toggle ──────────────────────────────────────────────────────
   const handleToggleEdit = () => {
     setIsEditMode((prev) => !prev);
-    if (isEditMode) { setSelectAll(false); setSelectedRows(new Set()); }
+    if (isEditMode) {
+      setSelectAll(false);
+      setSelectedRows(new Set());
+    }
   };
 
-  // ── Row selection ─────────────────────────────────────────────────────────
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     setSelectedRows(checked ? new Set(staffList.map((_, i) => i)) : new Set());
   };
 
-  const handleSelectRow = (index: number, checked: boolean, filteredLength: number) => {
+  const handleSelectRow = (
+    index: number,
+    checked: boolean,
+    filteredLength: number,
+  ) => {
     const updated = new Set(selectedRows);
     if (checked) {
       updated.add(index);
@@ -186,8 +287,10 @@ function FacultyAttendanceDashboard() {
     setSelectedRows(updated);
   };
 
-  // ── Bulk mark — UI only, no API call until Save Attendance ──────────────
-  const handleMarkStatus = (status: "Present" | "Absent" | "Leave" | "Late", filteredStaff: AttendanceStaffRow[]) => {
+  const handleMarkStatus = (
+    status: "Present" | "Absent" | "Leave" | "Late",
+    filteredStaff: AttendanceStaffRow[],
+  ) => {
     if (selectedRows.size === 0) return;
 
     const selectedUserIds = Array.from(selectedRows)
@@ -199,9 +302,13 @@ function FacultyAttendanceDashboard() {
     setStaffList((prev) =>
       prev.map((s) =>
         selectedUserIds.includes(s.userId)
-          ? { ...s, status: status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() }
-          : s
-      )
+          ? {
+              ...s,
+              status:
+                status.charAt(0).toUpperCase() + status.slice(1).toLowerCase(),
+            }
+          : s,
+      ),
     );
 
     setMarkedUserIds((prev) => new Set([...prev, ...selectedUserIds]));
@@ -213,17 +320,16 @@ function FacultyAttendanceDashboard() {
     setIsEditMode(false);
     setSelectAll(false);
     setSelectedRows(new Set());
-    setMarkedUserIds(new Set());  // clear after save
+    setMarkedUserIds(new Set());
   };
 
   const handleCancel = () => {
     setIsEditMode(false);
     setSelectAll(false);
     setSelectedRows(new Set());
-    setMarkedUserIds(new Set());  // clear on cancel too
+    setMarkedUserIds(new Set());
   };
 
-  // ── Announcements ─────────────────────────────────────────────────────────
   const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
@@ -235,16 +341,24 @@ function FacultyAttendanceDashboard() {
         page: 1,
         limit: 20,
       });
-      setAnnouncements(res.data.map((item: any) => ({
-        collegeAnnouncementId: item.collegeAnnouncementId,
-        title: item.title, date: item.date, createdAt: item.createdAt,
-        type: item.type, targetRoles: item.targetRoles,
-        image: typeIcons[item.type] || "/clip.png",
-        imgHeight: "h-10", cardBg: "#E8F8EF", imageBg: "#D3F1E0",
-        professor: view === "my"
-          ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-          : `By ${formatRole(item.createdByRole)}`,
-      })));
+      setAnnouncements(
+        res.data.map((item: any) => ({
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.title,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          targetRoles: item.targetRoles,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor:
+            view === "my"
+              ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+              : `By ${formatRole(item.createdByRole)}`,
+        })),
+      );
     } catch (err) {
       console.error("HR announcements error:", err);
     }
@@ -255,49 +369,40 @@ function FacultyAttendanceDashboard() {
     fetchAnnouncements();
   }, [collegeId, userId, role, view]);
 
-  // ── Loading state while HR context resolves ───────────────────────────────
   if (hrLoading) {
-    return (
-      <div className="p-10 text-center text-gray-400 text-sm font-medium">
-        <Loader />
-      </div>
-    );
+    return <DashboardShimmer />;
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="text-[#282828] p-2 w-full h-full flex flex-col">
-
-      {/* Page header */}
       <div className="flex justify-between items-start mb-6">
         <div className="flex flex-col justify-start">
-          <h1 className="text-xl font-bold text-[#282828]">Attendance Management</h1>
+          <h1 className="text-xl font-bold text-[#282828] whitespace-nowrap">
+            Attendance Management
+          </h1>
           <p className="text-sm text-[#282828] mt-1">
             Stay organized and on track with your personalized calendar
           </p>
         </div>
-        <div className="w-[320px]">
+        <div className="w-[320px] shrink-0">
           <CourseScheduleCard isVisibile={false} />
         </div>
       </div>
 
       <div className="w-full flex gap-5">
         <div className="w-[68%] flex flex-col gap-6">
-
-          {/* Stat cards */}
           <AttendanceStatCards
-            activeTab={activeTab}
+            activeTab={activeTab} // Uses localTab for immediate visual updates
             totalCount={totalCount}
             presentCount={presentCount}
             absentCount={absentCount}
             lateCount={lateCount}
             leaveCount={leaveCount}
+            isLoading={isInitialLoad}
             onTabChange={handleTabChange}
           />
 
-          <div className="flex flex-col flex-1 w-full">
-
-            {/* Title + mark buttons + edit toggle */}
+          <div className="flex flex-col flex-1 w-full min-w-0 overflow-hidden">
             <AttendanceToolbar
               isEditMode={isEditMode}
               selectedRows={selectedRows}
@@ -311,7 +416,6 @@ function FacultyAttendanceDashboard() {
               onDateFilter={handleDateFilter}
             />
 
-            {/* Role pills + search bar */}
             <AttendanceFilters
               activeRole={activeRole}
               searchQuery={searchQuery}
@@ -319,10 +423,9 @@ function FacultyAttendanceDashboard() {
               onSearchChange={setSearchQuery}
             />
 
-            {/* Table + save/cancel */}
             <AttendanceTable
               isEditMode={isEditMode}
-              isFetching={isFetching}
+              isFetching={isFetching || isTabSwitching}
               activeRole={activeRole}
               staffList={filteredByTab}
               fullStaffList={staffList}
@@ -335,13 +438,13 @@ function FacultyAttendanceDashboard() {
               onSelectRow={handleSelectRow}
               onSave={handleSave}
               onCancel={handleCancel}
-              onRefresh={() => fetchStaffSilent(searchQuery, filterDateRef.current)}
+              onRefresh={() =>
+                fetchStaffSilent(searchQuery, filterDateRef.current)
+              }
             />
-
           </div>
         </div>
 
-        {/* Right sidebar */}
         <div className="w-[32%] flex flex-col -gap-1 -mt-5 pb-4">
           <WorkWeekCalendar />
           <AnnouncementsCard
@@ -358,7 +461,7 @@ function FacultyAttendanceDashboard() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div className="p-10 text-center text-gray-500 font-medium"><Loader /></div>}>
+    <Suspense fallback={<DashboardShimmer />}>
       <FacultyAttendanceDashboard />
     </Suspense>
   );

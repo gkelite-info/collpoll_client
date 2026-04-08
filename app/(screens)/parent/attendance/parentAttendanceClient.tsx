@@ -177,7 +177,7 @@ export default function ParentAttendanceClient() {
                 Attendance
               </h1>
               <p className="text-[#282828] text-sm">
-                Track, Manage, and Maintain Your Attendance Effortlessly
+                Track, Manage, and Maintain Your ward's Attendance Effortlessly
               </p>
             </div>
 

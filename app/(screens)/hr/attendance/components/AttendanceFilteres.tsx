@@ -3,11 +3,10 @@
 import { MagnifyingGlass } from "@phosphor-icons/react";
 import { ROLE_FILTERS } from "./types";
 
-
 type Props = {
-  activeRole:    string | null;
-  searchQuery:   string;
-  onRoleChange:  (role: string | null) => void;
+  activeRole: string | null;
+  searchQuery: string;
+  onRoleChange: (role: string | null) => void;
   onSearchChange: (q: string) => void;
 };
 
@@ -26,9 +25,10 @@ export default function AttendanceFilters({
             key={r}
             onClick={() => onRoleChange(activeRole === r ? null : r)}
             className={`text-xs font-medium px-3 py-1 rounded-full border cursor-pointer transition-colors
-              ${activeRole === r
-                ? "bg-[#E8F8EF] text-[#22C55E] border-[#22C55E]"
-                : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#22C55E] hover:text-[#22C55E]"
+              ${
+                activeRole === r
+                  ? "bg-[#E8F8EF] text-[#22C55E] border-[#22C55E]"
+                  : "bg-white text-[#6B7280] border-[#E5E7EB] hover:border-[#22C55E] hover:text-[#22C55E]"
               }`}
           >
             {r}

@@ -11,7 +11,7 @@ type Props = {
 const STATIC_EVENT = {
   title: "Faculty Meeting",
   type: "meeting",
-  rawTopic: "Department Planning",
+  topic: "Department Planning",
   startTime: "2026-02-18T09:00:00",
   endTime: "2026-02-18T10:00:00",
   branch: "CSE",
@@ -75,19 +75,17 @@ export default function EventDetailsModal({
             — [{event.type?.charAt(0).toUpperCase() + event.type?.slice(1)}]
           </span>
         </h3>
-        {event.rawTopic && (
+
+        {/* Render Event Topic */}
+        {event.topic && (
           <p className="text-sm text-gray-600 mb-4">
-            <span className="font-medium">Event Topic:</span> {event.rawTopic}
+            <span className="font-medium">Event Topic:</span> {event.topic}
           </p>
         )}
 
-        <div className="space-y-2.5 text-sm">
-          <Detail label="Type" value={event.type} />
+        <div className="space-y-2.5 text-sm mt-4">
           <Detail label="Date" value={dateStr} />
           <Detail label="Time" value={timeStr} />
-          {/* <Detail label="Branch" value={event.branch} />
-          <Detail label="Year" value={event.year} />
-          <Detail label="Section" value={event.section} /> */}
         </div>
       </div>
     </div>

@@ -3,37 +3,46 @@
 import { useState, useEffect } from "react";
 
 type Props = {
-  value:          string;           // "09:30 AM" or ""
-  defaultMeridiem?: "AM" | "PM";   // default when no value — "AM" for checkIn, "PM" for checkOut
-  onChange:       (val: string) => void;
+  value: string;
+  defaultMeridiem?: "AM" | "PM";
+  onChange: (val: string) => void;
 };
 
-function parseValue(val: string, defaultMer: "AM" | "PM"): { hh: string; mm: string; mer: "AM" | "PM" } {
+function parseValue(val: string, defaultMer: "AM" | "PM") {
   if (!val) return { hh: "", mm: "", mer: defaultMer };
-  // Match "H:MM AM/PM" or "HH:MM AM/PM" (1 or 2 digit hour)
-  const match = val.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
-  if (match) return {
-    hh:  match[1], // keep as-is, padStart handled in emit
-    mm:  match[2],
-    mer: match[3].toUpperCase() as "AM" | "PM",
+  const exactMatch = val.trim().match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/i);
+  if (exactMatch)
+    return {
+      hh: exactMatch[1],
+      mm: exactMatch[2],
+      mer: exactMatch[3].toUpperCase() as "AM" | "PM",
+    };
+
+  const partial = val.trim().match(/^(\d{0,2}):?(\d{0,2})\s?(AM|PM)?/i);
+  return {
+    hh: partial?.[1] || "",
+    mm: partial?.[2] || "",
+    mer: (partial?.[3]?.toUpperCase() as "AM" | "PM") || defaultMer,
   };
-  return { hh: "", mm: "", mer: defaultMer };
 }
 
-function emit(hh: string, mm: string, mer: "AM" | "PM", onChange: (v: string) => void) {
-  // Accept 1 or 2 digit hour, but require exactly 2 digit minutes
-  if (hh.length >= 1 && mm.length === 2) {
-    const paddedHH = hh.padStart(2, "0");
-    onChange(`${paddedHH}:${mm} ${mer}`);
-  } else {
-    onChange("");
-  }
+function emit(
+  hh: string,
+  mm: string,
+  mer: "AM" | "PM",
+  onChange: (v: string) => void,
+) {
+  onChange(`${hh}:${mm} ${mer}`);
 }
 
-export default function TimeInput({ value, defaultMeridiem = "AM", onChange }: Props) {
+export default function TimeInput({
+  value,
+  defaultMeridiem = "AM",
+  onChange,
+}: Props) {
   const parsed = parseValue(value, defaultMeridiem);
-  const [hh,  setHh]  = useState(parsed.hh);
-  const [mm,  setMm]  = useState(parsed.mm);
+  const [hh, setHh] = useState(parsed.hh);
+  const [mm, setMm] = useState(parsed.mm);
   const [mer, setMer] = useState<"AM" | "PM">(parsed.mer);
 
   useEffect(() => {
@@ -44,13 +53,20 @@ export default function TimeInput({ value, defaultMeridiem = "AM", onChange }: P
   }, [value]);
 
   const handleHH = (raw: string) => {
-    const digits = raw.replace(/\D/g, "").slice(0, 2);
+    let digits = raw.replace(/\D/g, "").slice(0, 2);
+    // STRCIT ACTIVE CAP: Instantly forces hours <= 12
+    if (digits.length > 0 && parseInt(digits, 10) > 12) {
+      digits = "12";
+    }
     setHh(digits);
     emit(digits, mm, mer, onChange);
   };
 
   const handleMM = (raw: string) => {
-    const digits = raw.replace(/\D/g, "").slice(0, 2);
+    let digits = raw.replace(/\D/g, "").slice(0, 2);
+    if (digits.length > 0 && parseInt(digits, 10) > 59) {
+      digits = "59";
+    }
     setMm(digits);
     emit(hh, digits, mer, onChange);
   };
@@ -63,11 +79,11 @@ export default function TimeInput({ value, defaultMeridiem = "AM", onChange }: P
   const isComplete = hh.length >= 1 && mm.length === 2;
 
   return (
-    <div className={`flex items-center border rounded overflow-hidden w-[120px]
+    <div
+      className={`flex items-center border rounded overflow-hidden w-fit shrink-0 bg-white
       focus-within:ring-1 focus-within:ring-[#6C20CA] focus-within:border-[#6C20CA]
-      ${isComplete ? "border-[#d1d5db]" : "border-[#d1d5db]"}`}
+      ${isComplete ? "border-[#d1d5db]" : "border-red-300"}`}
     >
-      {/* HH */}
       <input
         type="text"
         inputMode="numeric"
@@ -75,13 +91,11 @@ export default function TimeInput({ value, defaultMeridiem = "AM", onChange }: P
         onChange={(e) => handleHH(e.target.value)}
         placeholder="HH"
         maxLength={2}
-        className="w-[28px] text-xs text-center px-1 py-1 outline-none bg-white placeholder:text-gray-400"
+        className="w-[30px] text-xs text-center px-1 py-1.5 outline-none bg-white placeholder:text-gray-400"
       />
 
-      {/* Fixed colon */}
-      <span className="text-xs text-gray-500 select-none">:</span>
+      <span className="text-xs text-gray-500 select-none pb-[2px]">:</span>
 
-      {/* MM */}
       <input
         type="text"
         inputMode="numeric"
@@ -89,17 +103,15 @@ export default function TimeInput({ value, defaultMeridiem = "AM", onChange }: P
         onChange={(e) => handleMM(e.target.value)}
         placeholder="MM"
         maxLength={2}
-        className="w-[28px] text-xs text-center px-1 py-1 outline-none bg-white placeholder:text-gray-400"
+        className="w-[30px] text-xs text-center px-1 py-1.5 outline-none bg-white placeholder:text-gray-400"
       />
 
-      {/* Divider */}
-      <div className="w-px h-5 bg-gray-200 mx-0.5" />
+      <div className="w-px h-4 bg-gray-200 mx-1" />
 
-      {/* AM/PM */}
       <select
         value={mer}
         onChange={(e) => handleMer(e.target.value as "AM" | "PM")}
-        className="text-[11px] font-medium px-0.5 py-1 outline-none bg-white text-gray-600 cursor-pointer border-none appearance-none w-[30px]"
+        className="text-[11px] font-medium pl-0.5 pr-1 py-1.5 outline-none bg-white text-gray-600 cursor-pointer border-none appearance-none w-fit"
       >
         <option value="AM">AM</option>
         <option value="PM">PM</option>

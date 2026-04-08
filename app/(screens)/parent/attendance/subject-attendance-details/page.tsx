@@ -216,7 +216,7 @@ function ParentSubjectAttendanceDetails() {
             <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
           </div>
           <p className="text-[#282828]">
-            Track, manage, and maintain your attendance effortlessly
+            Track, manage, and maintain your ward's attendance effortlessly
           </p>
         </div>
         <div className="flex justify-end w-[32%]">

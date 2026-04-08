@@ -8,9 +8,14 @@ import {
 } from "@/lib/helpers/Hr/dashboard/onboardingAPI";
 import AddEmployeeModal from "./AddEmployeeDetailsModal";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { CaretLeft, PencilSimple } from "@phosphor-icons/react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 export default function StaffOnboardingView() {
   const { collegeId } = useCollegeHr();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [staffData, setStaffData] = useState<StaffOnboardingRecord[]>([]);
@@ -54,6 +59,12 @@ export default function StaffOnboardingView() {
     }
   };
 
+  const handleBack = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("view");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <div className="rounded-xl p-4 w-full h-full min-h-[80vh] flex flex-col">
       {selectedUser && (
@@ -65,9 +76,15 @@ export default function StaffOnboardingView() {
         />
       )}
 
-      <h2 className="text-[20px] font-bold text-[#333] mb-4">
-        Staff Onboarding
-      </h2>
+      <div className="flex items-center gap-2 mb-4">
+        <CaretLeft
+          size={24}
+          weight="bold"
+          className="cursor-pointer text-[#333] hover:text-gray-600 transition-colors active:scale-90"
+          onClick={handleBack}
+        />
+        <h2 className="text-[20px] font-bold text-[#333]">Staff Onboarding</h2>
+      </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col flex-1">
         <div className="overflow-x-auto w-full">
@@ -128,12 +145,27 @@ export default function StaffOnboardingView() {
                     <td className="py-2.5 px-4">{row.id}</td>
                     <td className="py-2.5 px-4">{row.role}</td>
                     <td className="py-2.5 px-4 text-right">
-                      <button
-                        onClick={() => handleActionClick(row)}
-                        className={`px-4 py-1.5 rounded font-bold text-[12px] min-w-[100px] text-center transition-colors ${getStatusStyle(row.status)}`}
-                      >
-                        {row.status}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {row.status === "Onboarded" && (
+                          <button
+                            onClick={() => {
+                              setSelectedUser(row);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-[#43C17A] transition-colors cursor-pointer"
+                            title="Edit Onboarding Details"
+                          >
+                            <PencilSimple size={16} weight="bold" />
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleActionClick(row)}
+                          className={`px-4 py-1.5 rounded font-bold text-[12px] min-w-[100px] text-center transition-colors ${getStatusStyle(row.status)}`}
+                        >
+                          {row.status}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

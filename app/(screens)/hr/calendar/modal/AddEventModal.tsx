@@ -25,6 +25,7 @@ export default function AddEventModal({
   onClose,
   editData,
   onSuccess,
+  events = [],
 }: any) {
   const { collegeId, collegeHrId } = useCollegeHr();
 
@@ -40,6 +41,10 @@ export default function AddEventModal({
   const [toAmPm, setToAmPm] = useState("AM");
   const [assignTo, setAssignTo] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState<any>(null);
+
   const TODAY = getTodayDateString();
 
   useEffect(() => {
@@ -74,21 +79,10 @@ export default function AddEventModal({
     const title = eventTitle?.trim();
     const topic = eventTopic?.trim();
 
-    if (!title) {
-      return toast.error("Event title is required.");
-    }
-
-    if (!topic) {
-      return toast.error("Event topic is required.");
-    }
-
-    if (!eventDate) {
-      return toast.error("Event date is required.");
-    }
-
-    if (!assignTo) {
-      return toast.error("Please select a role.");
-    }
+    if (!title) return toast.error("Event title is required.");
+    if (!topic) return toast.error("Event topic is required.");
+    if (!eventDate) return toast.error("Event date is required.");
+    if (!assignTo) return toast.error("Please select a role.");
 
     if (
       !fromHour ||
@@ -120,29 +114,58 @@ export default function AddEventModal({
       return toast.error("HR context missing.");
     }
 
+    const payload = {
+      hrCalendarEventId: editData?.hrCalendarEventId,
+      title,
+      topic,
+      eventDate,
+      fromTime: `${fromHour}:${fromMinute} ${fromAmPm}`,
+      toTime: `${toHour}:${toMinute} ${toAmPm}`,
+      roomNo,
+      collegeId,
+      role: assignTo,
+    };
+
+    // OVERLAP CHECK LOGIC
+    const newStart = new Date(`${eventDate}T${from24}`);
+    const newEnd = new Date(`${eventDate}T${to24}`);
+
+    const hasConflict = events.some((e: any) => {
+      // Don't compare with itself if editing
+      if (
+        editData &&
+        String(e.hrCalendarEventId) === String(editData.hrCalendarEventId)
+      )
+        return false;
+
+      const eStart = new Date(e.startTime);
+      const eEnd = new Date(e.endTime);
+
+      // True if the time slots overlap
+      return newStart < eEnd && newEnd > eStart;
+    });
+
+    if (hasConflict) {
+      setPendingPayload(payload);
+      setShowConflictModal(true);
+      return; // Pause save process
+    }
+
+    await submitEvent(payload);
+  };
+
+  const submitEvent = async (payload: any) => {
     setLoading(true);
-
     try {
-      const payload = {
-        hrCalendarEventId: editData?.hrCalendarEventId,
-        title,
-        topic,
-        eventDate,
-        fromTime: `${fromHour}:${fromMinute} ${fromAmPm}`,
-        toTime: `${toHour}:${toMinute} ${toAmPm}`,
-        roomNo, // optional
-        collegeId,
-        role: assignTo,
-      };
-
-      const res = await saveHrCalendarEvent(payload, collegeHrId);
-
+      const res = await saveHrCalendarEvent(payload, collegeHrId!);
       if (res.success) {
         toast.success(
           editData
             ? "Event updated successfully"
             : "Event created successfully",
         );
+        setShowConflictModal(false);
+        setPendingPayload(null);
         onSuccess();
         onClose();
       } else {
@@ -159,7 +182,44 @@ export default function AddEventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col">
+      <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col relative overflow-hidden">
+        {/* CONFLICT WARNING OVERLAY */}
+        {showConflictModal && (
+          <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm p-6">
+            <div className="bg-white border border-gray-200 shadow-2xl rounded-xl p-6 max-w-sm text-center flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                <span className="text-orange-500 font-bold text-2xl">!</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-800 mb-2">
+                Schedule Conflict
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Another event is already scheduled during this time slot. Do you
+                still want to proceed and double-book?
+              </p>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => {
+                    setShowConflictModal(false);
+                    setPendingPayload(null);
+                  }}
+                  disabled={loading}
+                  className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => submitEvent(pendingPayload)}
+                  disabled={loading}
+                  className="flex-1 py-2 bg-[#43C17A] text-white rounded-lg font-semibold hover:bg-[#3ba869] transition cursor-pointer disabled:opacity-70"
+                >
+                  {loading ? "Saving..." : "Proceed Anyway"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center p-5 pb-3">
           <h2 className="text-lg font-semibold text-gray-800">
             {editData ? "Edit Event" : "Add Event"}
@@ -348,7 +408,7 @@ export default function AddEventModal({
 
           <button
             onClick={handleSave}
-            className="w-full mt-4 cursor-pointer focus:outline-none bg-[#43C17A] text-white py-3 rounded-lg font-semibold transition hover:bg-[#3aad69]"
+            className="w-full mt-4 cursor-pointer focus:outline-none bg-[#43C17A] text-white py-3 rounded-lg font-semibold transition hover:bg-[#3aad69] disabled:opacity-70"
             disabled={loading}
           >
             {loading ? "Saving..." : "Save"}
