@@ -139,7 +139,8 @@ export default function ParentSubjectAttendance() {
             </div>
 
             <p className="text-[#282828] whitespace-nowrap">
-              Track, manage, and maintain your attendance effortlessly
+              Track, Monitor, and Stay Updated on Your Child’s Attendance
+              Effortlessly.
             </p>
           </div>
         </div>

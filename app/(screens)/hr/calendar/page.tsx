@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { Trash, CircleNotch } from "@phosphor-icons/react"; // NEW: Imported CircleNotch for the spinner
+import { Trash, CircleNotch } from "@phosphor-icons/react";
 import CalendarToolbar from "./components/calenderToolbar";
 import CalendarHeader from "./components/calenderHeader";
 import AddEventModal from "./modal/AddEventModal";
@@ -38,6 +38,7 @@ export default function FinanceCalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
 
   const [isFetchingEvents, setIsFetchingEvents] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false); // NEW: Deleting state
 
   const weekDays = useMemo(() => {
     const week = [];
@@ -87,15 +88,22 @@ export default function FinanceCalendarPage() {
 
   const handleDelete = async () => {
     if (!eventToDelete) return;
-    const res = await deactivateHrCalendarEvent(
-      eventToDelete.hrCalendarEventId,
-    );
-    if (res.success) {
-      toast.success("Event deleted");
-      setEventToDelete(null);
-      loadEvents();
-    } else {
-      toast.error("Failed to delete event");
+    setIsDeleting(true);
+    try {
+      const res = await deactivateHrCalendarEvent(
+        eventToDelete.hrCalendarEventId,
+      );
+      if (res.success) {
+        toast.success("Event deleted");
+        setEventToDelete(null);
+        loadEvents();
+      } else {
+        toast.error("Failed to delete event");
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -122,7 +130,7 @@ export default function FinanceCalendarPage() {
             Stay Organized And On Track With Your Personalised Calendar
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
 
       <div className="flex justify-between items-center">
@@ -131,6 +139,7 @@ export default function FinanceCalendarPage() {
         <AddEventModal
           isOpen={isModalOpen}
           editData={eventToEdit}
+          events={events} // NEW: Pass existing events to check conflicts
           onSuccess={loadEvents}
           onClose={() => {
             setIsModalOpen(false);
@@ -195,15 +204,28 @@ export default function FinanceCalendarPage() {
             <div className="flex gap-3 w-full">
               <button
                 onClick={() => setEventToDelete(null)}
-                className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
+                disabled={isDeleting}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-sm cursor-pointer"
+                disabled={isDeleting}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition shadow-sm cursor-pointer flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Delete
+                {isDeleting ? (
+                  <>
+                    <CircleNotch
+                      size={18}
+                      weight="bold"
+                      className="animate-spin mr-2"
+                    />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </button>
             </div>
           </div>

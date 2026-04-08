@@ -31,7 +31,7 @@ type AssignmentCardProps = {
   cardProp: Assignment[];
   activeView: "active" | "previous";
   onEdit: (assignment: Assignment) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: number) => Promise<void> | void;
 };
 
 export default function AssignmentCard({
@@ -42,6 +42,7 @@ export default function AssignmentCard({
 }: AssignmentCardProps) {
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   return (
     <div className="flex flex-col gap-3">
@@ -136,10 +137,19 @@ export default function AssignmentCard({
 
       {deleteId !== null && (
         <ConfirmDeleteModal
-          onCancel={() => setDeleteId(null)}
-          onConfirm={() => {
-            if (deleteId) onDelete(deleteId);
-            setDeleteId(null);
+          open={true}
+          isDeleting={isDeleting}
+          name="assignment"
+          onCancel={() => {
+            if (!isDeleting) setDeleteId(null);
+          }}
+          onConfirm={async () => {
+            if (deleteId) {
+              setIsDeleting(true);
+              await onDelete(deleteId);
+              setIsDeleting(false);
+              setDeleteId(null);
+            }
           }}
         />
       )}

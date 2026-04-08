@@ -4,7 +4,7 @@ import {
   saveEmployeeOnboardingDetails,
   StaffOnboardingRecord,
 } from "@/lib/helpers/Hr/dashboard/onboardingAPI";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 
 interface AddEmployeeModalProps {
@@ -29,6 +29,8 @@ export default function AddEmployeeModal({
     ifscCode: "",
     accountHolderName: "",
     branch: "",
+    staffBankId: undefined as number | undefined,
+
     // Aadhaar
     aadhaarNumber: "",
     aadhaarDob: "",
@@ -36,77 +38,189 @@ export default function AddEmployeeModal({
     enrollmentNumber: "",
     nameOnAadhaar: "",
     gender: "",
+    staffAadhaarId: undefined as number | undefined,
+
     // PAN
     panNumber: "",
     panDob: "",
     nameOnPan: "",
     fatherName: "",
+    staffPanId: undefined as number | undefined,
   });
+
+  // PRE-LOAD DATA WHEN MODAL OPENS
+  useEffect(() => {
+    if (isOpen && user) {
+      setFormData({
+        bankName: user.bankDetails?.bankName || "",
+        accountNumber: user.bankDetails?.accountNumber || "",
+        ifscCode: user.bankDetails?.ifscCode || "",
+        accountHolderName: user.bankDetails?.accountHolderName || "",
+        branch: user.bankDetails?.branch || "",
+        staffBankId: user.bankDetails?.staffBankId,
+
+        aadhaarNumber: user.aadhaarDetails?.aadhaarNumber || "",
+        aadhaarDob: user.aadhaarDetails?.dateOfBirth || "",
+        address: user.aadhaarDetails?.address || "",
+        enrollmentNumber: user.aadhaarDetails?.enrollmentNumber || "",
+        nameOnAadhaar: user.aadhaarDetails?.nameOnAadhaar || "",
+        staffAadhaarId: user.aadhaarDetails?.staffAadhaarId,
+
+        panNumber: user.panDetails?.panNumber || "",
+        panDob: user.panDetails?.dateOfBirth || "",
+        nameOnPan: user.panDetails?.nameOnPan || "",
+        fatherName: user.panDetails?.fatherName || "",
+        staffPanId: user.panDetails?.staffPanId,
+
+        gender: user.gender || "",
+      });
+    }
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 
+  // STRICT REAL-TIME INPUT GATEKEEPER
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    let { name, value } = e.target;
+
+    // Auto-capitalize specific official codes
+    if (name === "panNumber" || name === "ifscCode") {
+      value = value.toUpperCase();
+    }
+
+    let isValid = true;
+
+    // Reject keystrokes that do not match the required pattern
+    switch (name) {
+      case "bankName":
+      case "accountHolderName":
+      case "nameOnAadhaar":
+      case "nameOnPan":
+      case "fatherName":
+        // Only allows letters, spaces, hyphens, and dots
+        isValid = /^[a-zA-Z\s\-\.]*$/.test(value);
+        break;
+      case "accountNumber":
+      case "aadhaarNumber":
+        // Only allows digits
+        isValid = /^\d*$/.test(value);
+        break;
+      case "ifscCode":
+      case "panNumber":
+        // Only allows uppercase letters and numbers
+        isValid = /^[A-Z0-9]*$/.test(value);
+        break;
+      case "branch":
+        // Allows letters, numbers, spaces, hyphens, dots, and commas
+        isValid = /^[a-zA-Z0-9\s\-\.\,]*$/.test(value);
+        break;
+      case "enrollmentNumber":
+        // Allows alphanumeric, spaces, hyphens, and slashes
+        isValid = /^[a-zA-Z0-9\s\-\/]*$/.test(value);
+        break;
+      default:
+        break;
+    }
+
+    if (isValid) {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleClose = () => {
+    // Completely clear states before closing
     setFormData({
       bankName: "",
       accountNumber: "",
       ifscCode: "",
       accountHolderName: "",
       branch: "",
+      staffBankId: undefined,
       aadhaarNumber: "",
       aadhaarDob: "",
       address: "",
       enrollmentNumber: "",
       nameOnAadhaar: "",
+      staffAadhaarId: undefined,
       gender: "",
       panNumber: "",
       panDob: "",
       nameOnPan: "",
       fatherName: "",
+      staffPanId: undefined,
     });
-
     onClose();
   };
 
   const handleSave = async () => {
-    // 1. Basic Validations
-    if (
-      !formData.bankName ||
-      !formData.accountNumber ||
-      !formData.ifscCode ||
-      !formData.accountHolderName
-    ) {
-      toast.error("Please fill in all mandatory Bank Details.");
+    // --- FINAL SUBMISSION LENGTH & FORMAT VALIDATIONS ---
+    const accNumRegex = /^\d{9,18}$/; // Standard Indian account lengths
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/; // Official Indian IFSC format
+    const aadhaarRegex = /^\d{12}$/; // Exactly 12 digits
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/; // Official Indian PAN format
+
+    // 1. Bank Information Validation
+    if (formData.bankName.trim().length < 2) {
+      toast.error("Bank Name is required (min 2 characters).");
       return;
     }
-    if (
-      formData.aadhaarNumber.length !== 12 ||
-      isNaN(Number(formData.aadhaarNumber))
-    ) {
+    if (!accNumRegex.test(formData.accountNumber.trim())) {
+      toast.error("Invalid Account Number. Must be between 9 and 18 digits.");
+      return;
+    }
+    if (!ifscRegex.test(formData.ifscCode.trim())) {
+      toast.error("Invalid IFSC Code. Example: SBIN0001234");
+      return;
+    }
+    if (formData.accountHolderName.trim().length < 2) {
+      toast.error("Name on Account is required.");
+      return;
+    }
+    if (formData.branch.trim().length < 2) {
+      toast.error("Branch Name is required.");
+      return;
+    }
+
+    // 2. Identity Information Validation
+    if (!aadhaarRegex.test(formData.aadhaarNumber.trim())) {
       toast.error("Aadhaar Number must be exactly 12 digits.");
       return;
     }
-    if (formData.panNumber.length !== 10) {
-      toast.error("PAN Number must be exactly 10 characters.");
+    if (!panRegex.test(formData.panNumber.trim())) {
+      toast.error("Invalid PAN Number format. Example: ABCDE1234F");
       return;
     }
     if (!formData.aadhaarDob || !formData.panDob) {
       toast.error("Please provide both Dates of Birth.");
       return;
     }
-    if (
-      !formData.nameOnAadhaar ||
-      !formData.nameOnPan ||
-      !formData.fatherName
-    ) {
-      toast.error("Please provide all mandatory Identity names.");
+    if (formData.nameOnAadhaar.trim().length < 2) {
+      toast.error("Name on Aadhaar is required.");
+      return;
+    }
+    if (formData.nameOnPan.trim().length < 2) {
+      toast.error("Name on PAN is required.");
+      return;
+    }
+    if (formData.fatherName.trim().length < 2) {
+      toast.error("Father's Name is required.");
       return;
     }
 
-    // 2. Submit
+    // Validate optional fields ONLY if the user decided to type something in them
+    if (formData.address.trim() && formData.address.trim().length < 5) {
+      toast.error("If provided, the address must be at least 5 characters.");
+      return;
+    }
+    if (
+      formData.enrollmentNumber.trim() &&
+      formData.enrollmentNumber.trim().length < 5
+    ) {
+      toast.error("If provided, the Enrollment Number must be valid.");
+      return;
+    }
+
+    // 3. Submit
     setIsSaving(true);
     const toastId = toast.loading("Saving employee details...");
 
@@ -117,7 +231,7 @@ export default function AddEmployeeModal({
       onSuccess();
       setTimeout(() => {
         setIsSaving(false);
-        onClose();
+        handleClose(); // Clears state and closes modal safely
       }, 2000);
     } else {
       toast.error(result.error || "Failed to onboard employee.", {
@@ -215,6 +329,7 @@ export default function AddEmployeeModal({
                   value={formData.bankName}
                   onChange={handleChange}
                   placeholder="Enter Bank Name"
+                  maxLength={100}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
@@ -228,6 +343,7 @@ export default function AddEmployeeModal({
                   value={formData.accountNumber}
                   onChange={handleChange}
                   placeholder="Enter account number"
+                  maxLength={18}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
@@ -241,6 +357,7 @@ export default function AddEmployeeModal({
                   value={formData.ifscCode}
                   onChange={handleChange}
                   placeholder="Enter IFSC Code"
+                  maxLength={11}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
@@ -254,6 +371,7 @@ export default function AddEmployeeModal({
                   value={formData.accountHolderName}
                   onChange={handleChange}
                   placeholder="Enter name on the account"
+                  maxLength={100}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
@@ -266,7 +384,8 @@ export default function AddEmployeeModal({
                   name="branch"
                   value={formData.branch}
                   onChange={handleChange}
-                  placeholder="N/A"
+                  placeholder="e.g. Madhapur"
+                  maxLength={100}
                   className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
                 />
               </div>
@@ -347,7 +466,7 @@ export default function AddEmployeeModal({
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                placeholder="Enter address"
+                placeholder="Enter address (Optional)"
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -359,6 +478,7 @@ export default function AddEmployeeModal({
                 value={formData.nameOnPan}
                 onChange={handleChange}
                 placeholder="Name on PAN"
+                maxLength={100}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -373,6 +493,7 @@ export default function AddEmployeeModal({
                 value={formData.enrollmentNumber}
                 onChange={handleChange}
                 placeholder="Optional"
+                maxLength={30}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -386,6 +507,7 @@ export default function AddEmployeeModal({
                 value={formData.fatherName}
                 onChange={handleChange}
                 placeholder="Enter Father's Name"
+                maxLength={100}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>
@@ -398,6 +520,7 @@ export default function AddEmployeeModal({
                 value={formData.nameOnAadhaar}
                 onChange={handleChange}
                 placeholder="Name on Aadhaar"
+                maxLength={100}
                 className="border border-gray-300 rounded px-2.5 py-1.5 flex-1 focus:outline-none focus:border-[#43C17A]"
               />
             </div>

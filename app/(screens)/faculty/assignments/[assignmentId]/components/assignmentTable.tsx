@@ -39,6 +39,7 @@ export default function AssignmentTable({
     status: Status;
   } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // ADDED: Track saving state
 
   useEffect(() => {
     if (assignmentId) fetchDynamicData();
@@ -120,6 +121,8 @@ export default function AssignmentTable({
     const row = rows.find((r) => r.id === editingId);
     if (!row?.submissionId) return;
 
+    setIsSaving(true); // START SAVING
+
     const { error } = await updateSubmissionEvaluation(row.submissionId, {
       marksScored: parseInt(tempData.marks) || 0,
       feedback: tempData.feedback,
@@ -135,6 +138,8 @@ export default function AssignmentTable({
       toast.success("Saved successfully");
       setEditingId(null);
     }
+
+    setIsSaving(false);
     setShowConfirm(false);
   };
 
@@ -158,13 +163,15 @@ export default function AssignmentTable({
             <div className="flex gap-3">
               <button
                 onClick={confirmSave}
-                className="flex-1 bg-[#13934B] text-white py-2 rounded-lg font-medium"
+                disabled={isSaving}
+                className="flex-1 bg-[#13934B] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 text-white py-2 rounded-lg font-medium"
               >
-                Yes, Save
+                {isSaving ? "Saving..." : "Yes, Save"}
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium"
+                disabled={isSaving}
+                className="flex-1 bg-gray-100 text-gray-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 py-2 rounded-lg font-medium"
               >
                 Cancel
               </button>
@@ -231,7 +238,7 @@ export default function AssignmentTable({
                   {r.filePath ? (
                     <button
                       onClick={() => handleViewFile(r.filePath!)}
-                      className="text-blue-500 hover:text-blue-700 hover:underline flex items-center gap-1 max-w-[120px] transition-all"
+                      className="text-blue- cursor-pointer  hover:text-blue-700 hover:underline flex items-center gap-1 max-w-[120px] transition-all"
                     >
                       <FilePdf
                         size={18}
@@ -294,20 +301,20 @@ export default function AssignmentTable({
                             status: e.target.value as Status,
                           })
                         }
-                        className="rounded-full bg-gray-50 px-2 py-1 text-xs border font-bold"
+                        className="rounded-full cursor-pointer bg-gray-50 px-2 py-1 text-xs border font-bold"
                       >
                         <option>Pending</option>
                         <option>Evaluated</option>
                       </select>
                       <button
                         onClick={handleSaveRequest}
-                        className="text-green-600 p-1 hover:scale-110 transition-transform"
+                        className="text-green-600 p-1 cursor-pointer hover:scale-110 transition-transform"
                       >
                         <Check size={20} weight="bold" />
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="text-red-500 p-1 hover:scale-110 transition-transform"
+                        className="text-red-500 cursor-pointer  p-1 hover:scale-110 transition-transform"
                       >
                         <X size={20} />
                       </button>
@@ -319,7 +326,7 @@ export default function AssignmentTable({
                   ) : (
                     <button
                       onClick={() => startEditing(r)}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                      className={`flex items-center gap-1 cursor-pointer  rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
                         r.status === "Evaluated"
                           ? "bg-[#E3F6EB] text-[#13934B]"
                           : "bg-[#FFF1E2] text-[#FFBB70]"

@@ -15,6 +15,9 @@ export interface StaffOnboardingRecord {
   experience: string;
   gender: string;
   status: "Onboard" | "Onboarding" | "Onboarded";
+  bankDetails?: any;
+  aadhaarDetails?: any;
+  panDetails?: any;
 }
 
 export const fetchStaffForOnboarding = async (
@@ -35,10 +38,9 @@ export const fetchStaffForOnboarding = async (
       .select(
         `
         userId, fullName, mobile, role, email, collegeCode, dateOfJoining, professionalExperienceYears, gender,
-        staff_aadhaar_details(userId),
-        staff_bank_details(userId),
-        staff_pan_details(userId)
-        
+        staff_aadhaar_details(*),
+        staff_bank_details(*),
+        staff_pan_details(*)
       `,
         { count: "exact" },
       )
@@ -52,15 +54,20 @@ export const fetchStaffForOnboarding = async (
     if (!users) return { data: [], totalCount: 0 };
 
     const formattedData = users.map((u: any) => {
-      const hasAadhaar = Array.isArray(u.staff_aadhaar_details)
-        ? u.staff_aadhaar_details.length > 0
-        : !!u.staff_aadhaar_details;
-      const hasBank = Array.isArray(u.staff_bank_details)
-        ? u.staff_bank_details.length > 0
-        : !!u.staff_bank_details;
-      const hasPan = Array.isArray(u.staff_pan_details)
-        ? u.staff_pan_details.length > 0
-        : !!u.staff_pan_details;
+      // Extract the actual full objects from the database arrays
+      const bankDetails = Array.isArray(u.staff_bank_details)
+        ? u.staff_bank_details[0]
+        : u.staff_bank_details;
+      const aadhaarDetails = Array.isArray(u.staff_aadhaar_details)
+        ? u.staff_aadhaar_details[0]
+        : u.staff_aadhaar_details;
+      const panDetails = Array.isArray(u.staff_pan_details)
+        ? u.staff_pan_details[0]
+        : u.staff_pan_details;
+
+      const hasAadhaar = !!aadhaarDetails;
+      const hasBank = !!bankDetails;
+      const hasPan = !!panDetails;
 
       const isOnboarded = hasAadhaar && hasBank && hasPan;
 
@@ -84,6 +91,10 @@ export const fetchStaffForOnboarding = async (
           ? `${u.professionalExperienceYears} Years`
           : "N/A",
         status,
+        // Attach them so the Modal can read them!
+        bankDetails,
+        aadhaarDetails,
+        panDetails,
       };
     });
 
