@@ -50,7 +50,7 @@ export default function LoginPage() {
     {
       heading: "Managing Institutional Finances with Precision",
       para: "Handle fee structures, payments, financial records, and reports seamlessly.",
-      image: "/finance home.png",
+      image: "/Group 0021 (6).png",
     },
     {
       heading: "Shaping Student Careers and Opportunities",
@@ -304,11 +304,12 @@ export default function LoginPage() {
 
               {/* <div className="absolute top-[15%] w-[75%] h-[95px]  rounded-3xl"></div> */}
 
-              <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden">
+              <div className="relative w-full h-full p-4 mt-35 bg-transparent rounded-xl overflow-hidden flex items-center justify-center">
                 <img
-                  src={slide.image}
+                  src={encodeURI(slide.image)}
                   alt={`Slide ${idx + 1}`}
-                  className=" inset-0 w-full h-full object-cover pointer-events-none"
+                  className="w-full h-full object-contain"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -390,7 +391,7 @@ export default function LoginPage() {
                 />
               </button>
             </div>
-            <div className="flex justify-end">
+            {/* <div className="flex justify-end">
               <button
                 type="button"
                 className="text-[13px] text-[#16284F] mt-2 text-right cursor-pointer underline"
@@ -398,6 +399,29 @@ export default function LoginPage() {
               >
                 Forgot Password?
               </button>
+            </div> */}
+
+            <div className="flex items-start justify-between mt-3">
+              <div className="flex items-center gap-1.5 text-[12px] text-gray-500 pr-4">
+                <Icon
+                  icon="mdi:information-outline"
+                  width={20}
+                  className="shrink-0 text-amber-500 mt-[1px]"
+                />
+                <p className="leading-tight">
+                  New account? Please verify your email before logging in.
+                  If you haven’t received the verification email, check your inbox or spam folder.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="text-[13px] text-[#16284F] cursor-pointer hover:underline whitespace-nowrap shrink-0 font-medium"
+                onClick={() => router.push("/forgot-password")}
+              >
+                Forgot Password?
+              </button>
+
             </div>
           </div>
 

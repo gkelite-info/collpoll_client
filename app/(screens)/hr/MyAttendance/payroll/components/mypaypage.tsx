@@ -6,6 +6,7 @@ import AddPayModal from "../../components/AddPayModal";
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { useUser } from "@/app/utils/context/UserContext"; // Imported UserContext
 import { fetchEmployeePaySummary } from "@/lib/helpers/Hr/myAttendance/fetchEmployeePaySummary";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface MyPayPageProps {
   profile?: any;
@@ -305,7 +306,8 @@ export default function MyPayPage({ profile }: MyPayPageProps) {
             </h2>
           </div>
 
-          <div className="min-h-[108vh] overflow-y-auto pr-2 pb-6 space-y-4 rounded-xl custom-scrollbar">
+          <div className="min-h-[108vh] relative overflow-y-auto pr-2 pb-6 space-y-4 rounded-xl custom-scrollbar">
+            <WipOverlay fullHeight={true} />
             {paySlips.map((slip) => (
               <div
                 key={slip.id}

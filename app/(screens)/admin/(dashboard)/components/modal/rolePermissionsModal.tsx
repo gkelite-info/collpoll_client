@@ -9,48 +9,48 @@ interface RolePermissionsModalProps {
 
 const initialData = {
   Faculty: {
-    users: 60,
+    users: 0,
     permissions: {
-      Attendance: true,
-      Assignments: true,
-      Academics: true,
-      Projects: true,
-      "Student Progress": true,
-      Calendar: true,
-      Placements: true,
-      Drive: true,
-      Announcements: true,
-      Payments: false,
-    },
-  },
-  Students: {
-    users: 60,
-    permissions: {
-      Attendance: true,
-      Assignments: true,
-      Academics: true,
-      Projects: true,
-      "Student Progress": true,
-      Calendar: true,
-      Placements: true,
-      Drive: true,
-      Announcements: true,
-      Payments: true,
-    },
-  },
-  Parent: {
-    users: 60,
-    permissions: {
-      Attendance: true,
+      Attendance: false,
       Assignments: false,
-      Academics: true,
+      Academics: false,
       Projects: false,
       "Student Progress": false,
       Calendar: false,
       Placements: false,
       Drive: false,
-      Announcements: true,
-      Payments: true,
+      Announcements: false,
+      Payments: false,
+    },
+  },
+  Students: {
+    users: 0,
+    permissions: {
+      Attendance: false,
+      Assignments: false,
+      Academics: false,
+      Projects: false,
+      "Student Progress": false,
+      Calendar: false,
+      Placements: false,
+      Drive: false,
+      Announcements: false,
+      Payments: false,
+    },
+  },
+  Parent: {
+    users: 0,
+    permissions: {
+      Attendance: false,
+      Assignments: false,
+      Academics: false,
+      Projects: false,
+      "Student Progress": false,
+      Calendar: false,
+      Placements: false,
+      Drive: false,
+      Announcements: false,
+      Payments: false,
     },
   },
 };
@@ -75,7 +75,7 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
           ...prev[activeTab].permissions,
           [permission]:
             !prev[activeTab].permissions[
-              permission as keyof typeof prev.Faculty.permissions
+            permission as keyof typeof prev.Faculty.permissions
             ],
         },
       },
@@ -93,11 +93,10 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
     return (
       <button
         onClick={() => setActiveTab(role)}
-        className={`w-full flex items-center justify-center gap-3 py-4 px-4 rounded-lg font-medium text-[15px] transition-all shadow-sm ${
-          isActive
-            ? "bg-[#43C17A] text-white cursor-pointer"
-            : "bg-[#ECECEC] text-[#666666] cursor-pointer hover:bg-gray-200"
-        }`}
+        className={`w-full flex items-center justify-center gap-3 py-4 px-4 rounded-lg font-medium text-[15px] transition-all shadow-sm ${isActive
+          ? "bg-[#43C17A] text-white cursor-pointer"
+          : "bg-[#ECECEC] text-[#666666] cursor-pointer hover:bg-gray-200"
+          }`}
       >
         <Icon size={20} weight="fill" />
         {role}
@@ -107,9 +106,8 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="relative bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden font-sans border border-gray-100 flex flex-col">
-      <WipOverlay/>
-        
+      <div className="bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden font-sans border border-gray-100 flex flex-col">
+
         <div className="flex items-start justify-between px-8 py-6 pb-2">
           <div>
             <h2 className="text-[18px] font-medium text-[#1A1A1A]">
@@ -127,7 +125,8 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-1 p-8 pt-6 gap-8 overflow-hidden min-h-0">
+        <div className="flex relative flex-1 p-8 pt-6 gap-8 overflow-hidden min-h-0">
+          <WipOverlay />
           <div className="w-[180px] flex flex-col gap-3 shrink-0">
             <TabButton role="Faculty" icon={GraduationCap} />
             <TabButton role="Students" icon={User} />
@@ -140,7 +139,7 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
                 {activeTab}
               </h3>
               <span className="bg-[#E7F7EE] text-[#43C17A] text-[11px] font-semibold px-2.5 py-1 rounded-full">
-                {data[activeTab].users} Users
+                {0} Users
               </span>
             </div>
 
@@ -157,14 +156,12 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
 
                     <button
                       onClick={() => handleToggle(permissionName)}
-                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-                        isEnabled ? "bg-[#43C17A]" : "bg-gray-300"
-                      }`}
+                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none ${isEnabled ? "bg-[#43C17A]" : "bg-gray-300"
+                        }`}
                     >
                       <span
-                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${
-                          isEnabled ? "translate-x-5" : "translate-x-0.5"
-                        }`}
+                        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-md transition-transform duration-200 ${isEnabled ? "translate-x-5" : "translate-x-0.5"
+                          }`}
                       />
                     </button>
                   </div>

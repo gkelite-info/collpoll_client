@@ -13,6 +13,7 @@ interface WipOverlayProps {
     isExtraSmall?: boolean;
     isMedium?: boolean;
     isOverlayVisible?: boolean;
+    gearOnly?: boolean,
     style?: React.CSSProperties;
 }
 
@@ -26,6 +27,7 @@ export default function WipOverlay({
     isExtraSmall = false,
     isMedium = false,
     isOverlayVisible = true,
+    gearOnly = false,
     style
 }: WipOverlayProps) {
     const [isVisible, setIsVisible] = useState(isOverlayVisible);
@@ -59,10 +61,16 @@ export default function WipOverlay({
                 bg-linear-to-br from-slate-900/85 to-slate-800/90 backdrop-blur-md border border-white/10 
                 ${borderRadius} overflow-hidden`}
         >
-            <div className={`relative flex-none w-[46px] h-[40px] mb-2 sm:mb-3 mt-1 
+            <div
+                onClick={(e) => {
+                    if (gearOnly) {
+                        handleReveal(e)
+                    }
+                }}
+                className={`relative flex-none w-[46px] h-[40px] mb-2 sm:mb-3 mt-1 ${gearOnly && "mt-3"}
             ${isExtraSmall
-                    ? "w-auto mt-4"
-                    : isMedium && "mx-auto ml-10"}`}>
+                        ? "w-auto mt-4"
+                        : isMedium && "mx-auto ml-10"}`}>
                 <div className="absolute top-1 left-2 w-8 h-8 bg-blue-500/30 blur-xl rounded-full scale-150"></div>
 
                 <div className="absolute left-0 top-0 w-[32px] h-[32px] animate-[spin_4s_linear_infinite]">
@@ -93,12 +101,14 @@ export default function WipOverlay({
                         </p>
                     </>
                 }
-                <button
-                    onClick={handleReveal}
-                    className="cursor-pointer max-w-[150px] mt-1 px-4 py-1.5 sm:px-5 sm:py-2 text-[11px] sm:text-xs font-semibold text-white bg-white/10 border border-white/20 rounded-md shadow-sm hover:bg-white/20 hover:border-white/50 hover:shadow-[0_0_12px_rgba(255,255,255,0.15)] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
-                >
-                    Preview Layout
-                </button>
+                {!gearOnly &&
+                    <button
+                        onClick={handleReveal}
+                        className="cursor-pointer max-w-[150px] mt-1 px-4 py-1.5 sm:px-5 sm:py-2 text-[11px] sm:text-xs font-semibold text-white bg-white/10 border border-white/20 rounded-md shadow-sm hover:bg-white/20 hover:border-white/50 hover:shadow-[0_0_12px_rgba(255,255,255,0.15)] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                    >
+                        Preview Layout
+                    </button>
+                }
             </div>
         </div>
     );

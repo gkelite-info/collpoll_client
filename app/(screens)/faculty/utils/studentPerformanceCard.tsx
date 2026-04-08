@@ -1,8 +1,6 @@
 import { CaretRight } from "@phosphor-icons/react";
-import Router from "next/router";
 import React from "react";
 import { useRouter } from "next/navigation";
-import WipOverlay from "@/app/utils/WipOverlay";
 
 export interface StudentPerformance {
   id: string;
@@ -15,31 +13,40 @@ interface StudentPerformanceCardProps {
   students: StudentPerformance[];
 }
 
-const StudentRow: React.FC<{ student: StudentPerformance }> = ({ student }) => {
+export const DefaultAvatar = () => (
+  <div className="w-10 h-10 rounded-full border border-[#43C17A] bg-gray-200 flex items-center justify-center text-gray-400">
+    <svg
+      className="w-6 h-6"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+    </svg>
+  </div>
+);
+
+const StudentRow: React.FC<{ student: StudentPerformance, number: number }> = ({ student, number }) => {
   return (
     <div className="flex items-center py-3 border-b border-gray-100 last:border-b-0">
-      <div className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 mr-4 bg-gray-200">
-        <img
-          src={student.imageUrl}
-          alt={student.name}
-          className="w-full h-full object-cover"
-        />
+      <div className="mr-4 shrink-0">
+        <DefaultAvatar />
       </div>
 
       <div className="flex-1 font-medium text-gray-800 text-xs">
-        {student.name}
+        Student {number + 1}
       </div>
 
       <div className="flex items-center ml-4 w-[180px]">
         <div className="h-2 bg-[#16284F] rounded-full flex-1 overflow-hidden mr-3 relative">
           <div
             className="h-full bg-emerald-500 rounded-full absolute left-0 top-0 transition-all duration-500 ease-out"
-            style={{ width: `${student.percentage}%` }}
+            style={{ width: `${0}%` }}
           ></div>
         </div>
 
         <span className="text-gray-700 font-medium text-sm w-8 text-right">
-          {student.percentage}%
+          {0}%
         </span>
       </div>
     </div>
@@ -56,7 +63,6 @@ export default function studentPerformanceCard({
       <div
         className={`bg-white relative overflow-hidden rounded-2xl shadow-lg p-6 w-full max-w-[420px] font-sans flex flex-col`}
       >
-        <WipOverlay />
         <div className="flex items-center justify-between mb-4 shrink-0">
           <h2 className="text-lg font-bold text-gray-900">
             My Students Performance
@@ -70,8 +76,8 @@ export default function studentPerformanceCard({
         </div>
 
         <div className="flex flex-col overflow-y-auto custom-scrollbar max-h-[355px]">
-          {students.map((student) => (
-            <StudentRow key={student.id} student={student} />
+          {students.map((student, index) => (
+            <StudentRow key={student.id} student={student} number={index} />
           ))}
         </div>
       </div>

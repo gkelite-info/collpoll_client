@@ -76,9 +76,10 @@ export const EXEMPTED_ROUTES = [
  * Routes that need role-based portal protection check
  * These routes require fetching user profile to validate access
  * Sub-routes like /profile/settings don't need this check
+ * Note: "/" is NOT here because it would match all paths with startsWith
+ * Instead, we check specific role portals
  */
 export const ROLE_PROTECTED_PORTALS = [
-  "/",
   "/admin",
   "/faculty",
   "/super-admin",
@@ -208,6 +209,7 @@ export const normalizeRole = (role: string | null): UserRole | null => {
     collegeadmin: ROLES.COLLEGE_ADMIN,
     finance: ROLES.FINANCE,
     hr: ROLES.HR,
+    collegehr: ROLES.HR, // Map CollegeHr to HR portal
     placement: ROLES.PLACEMENT,
     parent: ROLES.PARENT,
   };

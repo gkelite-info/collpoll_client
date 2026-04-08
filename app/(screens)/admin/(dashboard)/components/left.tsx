@@ -81,7 +81,7 @@ export default function AdminDashLeft({
       id: "PENDING_APPROVALS",
       style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
       icon: <HourglassIcon size={32} weight="fill" color="#FFBB70" />,
-      value: "34",
+      value: "0",
       label: "Pending Approvals",
     },
     {
@@ -95,7 +95,7 @@ export default function AdminDashLeft({
       id: "AUTOMATIONS",
       style: "bg-[#CEE6FF] h-[126.35px] w-[182px] ",
       icon: <ArrowsClockwise size={32} weight="fill" color="#60AEFF" />,
-      value: "12",
+      value: "0",
       label: "Automations",
     },
   ];
@@ -124,23 +124,17 @@ export default function AdminDashLeft({
   if (view === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => {}} />
+        <SystemHealth onBack={() => setView("MAIN")} onViewDetails={() => { }} />
       </div>
     );
   }
-
-  const overlayCardIds = ["PENDING_APPROVALS", "SYSTEM_HEALTH", "AUTOMATIONS"];
-
-  const normalCards = cardData.filter((c) => !overlayCardIds.includes(c.id));
-
-  const overlayCards = cardData.filter((c) => overlayCardIds.includes(c.id));
 
   return (
     <>
       <div className="w-[68%] p-2">
         <AdminInfoCard cardProps={card} />
 
-        {/* <div className="mt-5 rounded-lg flex gap-3 text-xs relative z-10">
+        <div className="mt-5 rounded-lg flex gap-3 text-xs relative z-10">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}
@@ -159,52 +153,10 @@ export default function AdminDashLeft({
               }}
             />
           ))}
-        </div> */}
-
-        <div className="mt-5 rounded-lg grid grid-cols-4 gap-3 text-xs relative z-10 w-full">
-          {normalCards.map((item, index) => (
-            <CardComponent
-              key={index}
-              style={`${item.style} cursor-pointer w-full`}
-              icon={item.icon}
-              value={item.value}
-              label={item.label}
-              iconBgColor="#FFFFFF"
-              onClick={() => {
-                if (item.id === "TOTAL_USERS") setView("TOTAL_USERS");
-              }}
-            />
-          ))}
-
-          <div className="col-span-3 relative grid grid-cols-3 gap-3">
-            <WipOverlay
-              isMedium={true}
-              fullWidth={true}
-              borderRadius="rounded-lg"
-            />
-
-            {overlayCards.map((item, index) => (
-              <CardComponent
-                key={index}
-                style={`${item.style} cursor-pointer w-full`}
-                icon={item.icon}
-                value={item.value}
-                label={item.label}
-                iconBgColor="#FFFFFF"
-                onClick={() => {
-                  if (item.id === "SYSTEM_HEALTH") setView("SYSTEM_HEALTH");
-                  if (item.id === "AUTOMATIONS")
-                    router.push("?view=automations");
-                  if (item.id === "PENDING_APPROVALS") onPendingFull();
-                }}
-              />
-            ))}
-          </div>
         </div>
 
         <div>
-          <div className="relative overflow-hidden bg-gray-100 mt-5">
-            <WipOverlay />
+          <div className="overflow-hidden bg-gray-100 mt-5">
             <DashboardGrid data={dashboardData} />
           </div>
         </div>

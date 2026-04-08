@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchEmployeePaySummary } from "@/lib/helpers/Hr/myAttendance/fetchEmployeePaySummary";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 const ShimmerBlock = () => (
   <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 p-5 flex flex-col gap-3 animate-pulse rounded-xl">
@@ -279,7 +280,8 @@ function MyPayPage() {
             </h2>
           </div>
 
-          <div className="min-h-[108vh] overflow-y-auto pr-2 pb-6 space-y-4 rounded-xl custom-scrollbar">
+          <div className="min-h-[108vh] relative overflow-y-auto pr-2 pb-6 space-y-4 rounded-xl custom-scrollbar">
+            <WipOverlay fullHeight={true}/>
             {paySlips.map((slip) => (
               <div
                 key={slip.id}
@@ -350,7 +352,8 @@ function MyPayPage() {
           </div>
         </>
       ) : (
-        <div className="flex-1 min-h-[154vh] overflow-y-auto pr-2 pb-6 custom-scrollbar">
+        <div className="flex-1 min-h-[60vh] overflow-y-auto pr-2 pb-6 custom-scrollbar">
+          <WipOverlay fullHeight={true}/>
           <div className="bg-white rounded-xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-4">
             <div>
               <p className="text-[#333333] font-bold text-[14px]">
