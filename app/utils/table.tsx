@@ -8,7 +8,7 @@ type TableProps = {
 
 export default function Table({ columns, data }: TableProps) {
   return (
-    <div className="bg-white rounded-2xl shadow-md mt-5 overflow-hidden">
+    <div className="bg-white rounded-lg shadow-md mt-5 overflow-hidden">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-[#5252521C]">

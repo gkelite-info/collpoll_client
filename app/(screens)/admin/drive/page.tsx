@@ -9,7 +9,7 @@ import RecentFileCard from "./components/recentFileCard";
 import FolderFilesModal from "@/app/components/modals/FolderFilesModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
-import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
+import { CaretLeftIcon, CaretRight, CheckCircleIcon } from "@phosphor-icons/react";
 import {
     DriveFolderRow,
     fetchRootDriveFolders,
@@ -109,7 +109,7 @@ const Page = () => {
         setTimeout(() => setToast(null), 3000);
     };
 
-    
+
     useEffect(() => {
         if (userId) setRecentViewed(getRecentFiles(userId));
     }, [userId]);
@@ -120,7 +120,7 @@ const Page = () => {
             .then(({ data }) => { if (data) setCollegeName(data.collegeName); });
     }, [collegeId]);
 
-   
+
     useEffect(() => {
         if (!collegeId || !userId) return;
         setLoadingFolders(true);
@@ -252,7 +252,8 @@ const Page = () => {
     return (
         <div className="flex flex-col h-full">
             {toast && (
-                <div className={`fixed top-5 right-5 z-[200] px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-[#43C17A]" : "bg-red-500"}`}>
+                <div className={`fixed flex gap-2 top-5 right-5 z-[200] px-4 py-3 rounded-lg shadow-lg text-[#282828] text-sm ${toast.type === "success" ? "bg-white" : "bg-red-500"}`}>
+                    <CheckCircleIcon size={22} weight="fill" className="text-green-500" />
                     {toast.message}
                 </div>
             )}
@@ -267,7 +268,7 @@ const Page = () => {
                 onFilesChanged={handleFilesChanged}
             />
 
-           
+
             <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0">
                 <div className="flex items-center justify-between mb-3">
                     <div>
@@ -286,7 +287,7 @@ const Page = () => {
                 />
             </div>
 
-           
+
             <div className="flex-1 overflow-y-auto px-4 pb-6">
                 <section className="mt-6">
                     <h2 className="text-md font-semibold text-[#282828]">Folders</h2>

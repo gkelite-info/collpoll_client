@@ -4,14 +4,13 @@ import { useRouter } from "next/navigation";
 import CardComponent from "@/app/utils/card";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SemesterAttendanceCard from "@/app/utils/seminsterAttendanceCard";
-import { CaretLeft, Chalkboard, FilePdf, UsersThree } from "@phosphor-icons/react";
+import { CaretLeft, Chalkboard, FilePdf } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 // import { getStudentDashboardData } from "@/lib/helpers/attendance/studentAtendanceActions";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
-import { Loader } from "../../calendar/right/timetable";
 
 interface CardItem {
   id: number;
@@ -49,7 +48,6 @@ export default function SubjectAttendance() {
 
 
   useEffect(() => {
-
     if (!userId) return;
 
     const safeUserId = userId;
@@ -107,30 +105,6 @@ export default function SubjectAttendance() {
         : "0%",
     },
   ];
-
-
-
-  // const cards: CardItem[] = [
-  //   {
-  //     id: 1,
-  //     icon: <UsersThree size={32} />,
-  //     value: "8/10",
-  //     label: "Total Classes",
-  //     style: "bg-[#FFEDDA] w-44",
-  //     iconBgColor: "#FFBB70",
-  //     iconColor: "#EFEFEF",
-  //   },
-  //   {
-  //     id: 2,
-  //     icon: <Chalkboard size={32} />,
-  //     value: "220/250",
-  //     label: "Semester wise Classes",
-  //     style: "bg-[#CEE6FF] w-44",
-  //     iconBgColor: "#7764FF",
-  //     iconColor: "#EFEFEF",
-  //     totalPercentage: "85%",
-  //   },
-  // ];
 
   const columns = [
     { title: "Subject", key: "subject" },
@@ -219,11 +193,9 @@ export default function SubjectAttendance() {
           <SemesterAttendanceCard
             presentPercent={dashboardData?.semesterStats.present || 0}
             absentPercent={dashboardData?.semesterStats.absent || 0}
-            latePercent={dashboardData?.semesterStats.late || 0}
+            leavePercent={dashboardData?.semesterStats.leave || 0}
             overallPercent={dashboardData?.cards.percentage || 0}
           />
-
-
 
           {/* <SemesterAttendanceCard
             presentPercent={80}
@@ -247,7 +219,6 @@ export default function SubjectAttendance() {
           {totalPages > 1 && (
             <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
 
-              {/* Prev */}
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}

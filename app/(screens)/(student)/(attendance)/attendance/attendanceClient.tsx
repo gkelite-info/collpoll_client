@@ -41,9 +41,21 @@ const columns = [
   "Faculty",
   "Today's Status",
   "Percentage %",
-  "Notes",
+  // "Notes",
 ];
 
+function getStatusClass(status: string) {
+  switch (status.toLowerCase()) {
+    case "leave":
+      return "text-[#FFBB70] font-medium";
+    case "present":
+      return "text-[#43C17A]";
+    case "absent":
+      return "text-[#FF2020]";
+    default:
+      return "text-gray-600";
+  }
+}
 
 function formatAttendanceStatus(status: string) {
   return status
@@ -96,7 +108,6 @@ export default function AttendanceClient() {
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const [tableLoading, setTableLoading] = useState(false);
-
 
   useEffect(() => {
     if (userLoading) {
@@ -163,14 +174,19 @@ export default function AttendanceClient() {
     }
   };
 
-  // ── CHANGED: removed "Class Attendance", added StatusBadge for Today's Status
   const tableRows: TableRow[] =
     dashboardData?.tableData?.map((row: any) => ({
       Subject: row.subject,
       Faculty: row.faculty,
-      "Today's Status": <StatusBadge status={row.status} />,
+      // "Today's Status": formatAttendanceStatus(row.status),
+      "Today's Status": (
+        <span className={getStatusClass(row.status)}>
+          {formatAttendanceStatus(row.status)}
+        </span>
+      ),
+      "Class Attendance": row.classAttendance,
       "Percentage %": row.percentage,
-      Notes: <FilePdf size={17} />,
+      // Notes: <FilePdf size={17} />,
     })) || [];
 
   const dynamicCards: CardItem[] = [
@@ -250,10 +266,10 @@ export default function AttendanceClient() {
                   <SemesterAttendanceCard
                     presentPercent={dashboardData?.semesterStats.present || 0}
                     absentPercent={dashboardData?.semesterStats.absent || 0}
-                    latePercent={dashboardData?.semesterStats.late || 0}
+                    leavePercent={dashboardData?.semesterStats.leave || 0}
                     overallPercent={
-                      (dashboardData?.semesterStats.present || 0) +
-                      (dashboardData?.semesterStats.late || 0)
+                      (dashboardData?.semesterStats.present || 0)
+                      // + (dashboardData?.semesterStats.leave || 0)
                     }
                   />
                 </div>

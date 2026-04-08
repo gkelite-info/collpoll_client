@@ -34,13 +34,11 @@ export default function NewFolderModal({
   const handleSave = () => {
     const trimmedName = name.trim();
 
-    // 1. Required
     if (!trimmedName) {
       setError("Folder name is required");
       return;
     }
 
-    // 2. Length validation
     if (trimmedName.length < 3) {
       setError("Folder name must be at least 3 characters");
       return;
@@ -51,32 +49,27 @@ export default function NewFolderModal({
       return;
     }
 
-    // 3. Allowed characters (letters, numbers, space, underscore, hyphen)
     if (!/^[a-zA-Z0-9 _-]+$/.test(trimmedName)) {
       setError("Only letters, numbers, spaces, - and _ are allowed");
       return;
     }
 
-    // 4. No multiple spaces
     if (/\s{2,}/.test(trimmedName)) {
       setError("Folder name cannot contain multiple spaces");
       return;
     }
 
-    // 5. Cannot start or end with space, hyphen, underscore
     if (/^[\s_-]|[\s_-]$/.test(trimmedName)) {
       setError("Folder name cannot start or end with space, - or _");
       return;
     }
 
-    // 6. Reserved names (optional)
     const reservedNames = ["admin", "root", "system"];
     if (reservedNames.includes(trimmedName.toLowerCase())) {
       setError("This folder name is not allowed");
       return;
     }
 
-    // ✅ Passed all validations
     onSave({ name: trimmedName, color });
   };
 
@@ -96,7 +89,6 @@ export default function NewFolderModal({
             onChange={(e) => {
               const value = e.target.value;
 
-              // Allow only valid characters while typing
               if (/^[a-zA-Z0-9 _-]*$/.test(value)) {
                 setName(value);
                 setError("");
