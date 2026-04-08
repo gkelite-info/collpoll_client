@@ -31,7 +31,7 @@ export default function UserInfoCard() {
                         <p className="text-md text-[#282828]">Welcome Back, <span className="text-[#089144] text-md font-medium">{fullName}</span></p>
                     </div>
                     <div className="flex flex-col">
-                        <p className="text-sm text-[#454545]">You’ve completed <span className="text-[#089144] font-semibold">5</span> of your tasks.</p>
+                        <p className="text-sm text-[#454545]">You’ve completed <span className="text-[#089144] font-semibold">0</span> of your tasks.</p>
                         <p className="text-sm text-[#454545]">Keep up the great progress!</p>
                     </div>
                     {/* <div className="bg-[#A3FFCB] w-[25%] p-1 flex items-center justify-center rounded-sm text-[#007533] font-semibold text-sm">

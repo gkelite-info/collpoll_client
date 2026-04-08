@@ -52,7 +52,7 @@ export default function CardComponent({
       className={`relative rounded-lg p-3 h-32 ${style} flex flex-col justify-between shadow-sm 
         ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
-      {value === "Mid Exams" && <WipOverlay isSmall={true}/>}
+      {/* {value === "Mid Exams" && <WipOverlay isSmall={true}/>} */}
       <div className="flex items-center justify-between gap-3 mb-2">
         <div
           className="w-9 h-8 rounded-sm flex items-center justify-center"

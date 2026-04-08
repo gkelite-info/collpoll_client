@@ -10,21 +10,19 @@ import {
     Cell,
     LabelList,
 } from "recharts";
-import WipOverlay from "./WipOverlay";
 
 export default function AcademicPerformance({ overlayVisible = true }: { overlayVisible?: boolean }) {
     const data = [
-        { subject: "Java Programming", value: 70, full: 100 },
-        { subject: "Data Structures", value: 50, full: 100 },
-        { subject: "Database Management Systems", value: 80, full: 100 },
-        { subject: "Operating Systems", value: 35, full: 100 },
-        { subject: "Software Engineering", value: 80, full: 100 },
-        { subject: "Web Development", value: 60, full: 100 },
+        { subject: "Sub 1", value: 0, full: 100 },
+        { subject: "Sub 2", value: 0, full: 100 },
+        { subject: "Sub 3", value: 0, full: 100 },
+        { subject: "Sub 4", value: 0, full: 100 },
+        { subject: "Sub 5", value: 0, full: 100 },
+        { subject: "Sub 6", value: 0, full: 100 },
     ];
 
     return (
         <div className="bg-white relative overflow-hidden rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
-            <WipOverlay isOverlayVisible={overlayVisible}/>
             <h2 className="text-xl font-semibold mb-6 ml-3 text-[#282828]">
                 Academic Performance
             </h2>
@@ -86,7 +84,7 @@ export default function AcademicPerformance({ overlayVisible = true }: { overlay
                         />
 
                         <Bar dataKey="value" barSize={50} radius={[10, 10, 10, 10]}>
-                            <LabelList
+                            {/* <LabelList
                                 dataKey="value"
                                 position="insideTop"
                                 content={(props: any) => {
@@ -108,6 +106,35 @@ export default function AcademicPerformance({ overlayVisible = true }: { overlay
                                                 fontWeight="bold"
                                             >
                                                 {`${value}%`}
+                                            </text>
+                                        </g>
+                                    );
+                                }}
+                            /> */}
+
+                            <LabelList
+                                dataKey="value"
+                                content={({ x, y, width, height, value }: any) => {
+                                    // If value is 0, place label slightly above baseline to avoid overlap with X-axis labels
+                                    const adjustedY = value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
+
+                                    return (
+                                        <g>
+                                            <circle
+                                                cx={x + width / 2}
+                                                cy={adjustedY}
+                                                r={10}
+                                                fill="#E8F6E2"
+                                            />
+                                            <text
+                                                x={x + width / 2}
+                                                y={adjustedY + 4}
+                                                textAnchor="middle"
+                                                fill="#7CD24C"
+                                                fontSize={8}
+                                                fontWeight="bold"
+                                            >
+                                                {value}%
                                             </text>
                                         </g>
                                     );
