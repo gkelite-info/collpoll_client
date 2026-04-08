@@ -167,7 +167,7 @@ export default function ParentSubjectAttendance() {
         <SemesterAttendanceCard
           presentPercent={dashboardData?.semesterStats.present || 0}
           absentPercent={dashboardData?.semesterStats.absent || 0}
-          latePercent={dashboardData?.semesterStats.late || 0}
+          leavePercent={dashboardData?.semesterStats.leave || 0}
           overallPercent={dashboardData?.cards.percentage || 0}
         />
         <WorkWeekCalendar style="w-[345px] mt-0" />

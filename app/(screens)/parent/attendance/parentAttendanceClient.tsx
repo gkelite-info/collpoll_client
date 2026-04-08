@@ -204,10 +204,10 @@ export default function ParentAttendanceClient() {
                 <SemesterAttendanceCard
                   presentPercent={dashboardData?.semesterStats.present || 0}
                   absentPercent={dashboardData?.semesterStats.absent || 0}
-                  latePercent={dashboardData?.semesterStats.late || 0}
+                  leavePercent={dashboardData?.semesterStats.leave || 0}
                   overallPercent={
-                    (dashboardData?.semesterStats.present || 0) +
-                    (dashboardData?.semesterStats.late || 0)
+                    (dashboardData?.semesterStats.present || 0) 
+                    // + (dashboardData?.semesterStats.late || 0)
                   }
                 />
               </div>
