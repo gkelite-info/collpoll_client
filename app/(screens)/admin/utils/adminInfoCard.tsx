@@ -52,12 +52,13 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
               <p className="text-[#454545] text-sm">{item.adminSubject}</p>
             </div>
 
-            <p className="text-sm text-[#454545] mb-3">
-              {!item.show && "You are managing "}
+            <p className="text-sm text-[#454545] mb-3 mt-2">
+              {/* {!item.show && "You are managing "}
               <span>
                 {item.activeFacultyTasks} active faculty tasks and
               </span>{" "}
-              {!item.show && `${item.pendingApprovals} pending approvals`}
+              {!item.show && `${item.pendingApprovals} pending approvals`} */}
+              Everything is clear at the moment.
             </p>
             <div className="bg-[#A3FFCB] text-[#007533] mb-3 px-2 py-1 rounded-lg w-25 font-semibold text-sm">
               {today ? today : "Loading..."}

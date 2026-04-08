@@ -71,7 +71,7 @@ const RowItem: React.FC<{
 const Toggle: React.FC<{
   checked?: boolean;
   onChange?: (val: boolean) => void;
-}> = ({ checked = true, onChange }) => (
+}> = ({ checked = false, onChange }) => (
   <div
     onClick={() => onChange?.(!checked)}
     className={`w-8 h-4 rounded-full relative transition-colors cursor-pointer ${checked ? "bg-[#4BB583]" : "bg-gray-200"
@@ -124,7 +124,7 @@ const ActiveAutomations: React.FC<{
                 {item.label}
               </span>
             </div>
-            <Toggle checked={item.checked} onChange={() => handleToggle(idx)} />
+            <Toggle  onChange={() => handleToggle(idx)} />
           </div>
         ))}
       </div>
@@ -155,7 +155,7 @@ const BackupRetention: React.FC<{ data: typeof dashboardData.backup }> = ({
           Storage Used
         </span>
         <span className="text-[12px] font-medium text-gray-400">
-          {data.storageUsed}
+          0%
         </span>
       </div>
       <div className="flex items-center justify-between">
@@ -187,7 +187,7 @@ const RolesPermissions: React.FC<{
             {role.label}
           </span>
           <span className="bg-[#E3E1FF] text-[#6C20CA] py-0.5 rounded font-bold text-[10px] min-w-[32px] text-center">
-            {role.value}
+            {0}
           </span>
         </div>
       ))}

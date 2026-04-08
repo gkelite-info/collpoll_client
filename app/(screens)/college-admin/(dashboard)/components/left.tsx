@@ -1,30 +1,31 @@
 "use client";
- 
+
 import { useSearchParams } from "next/navigation";
 import { UserInfoCard } from "./financerInfoCard";
 import DashboardPage from "./gridDashMain";
- 
-const financerImage = "/financer-m.png";
- 
+
+// const financerImage = "/financer-m.png";
+const collegeImage = "/college-admin-m"
+
 const card = [
   {
     show: false,
     user: "Finance Officer",
     todayCollection: 245000,
-    image: financerImage ?? undefined,
+    image: collegeImage ?? undefined,
     top: "lg:top-[-173px]",
     imageHeight: 170,
   },
 ];
- 
+
 const SUBVIEWS = ["admins", "faculty", "students", "parents", "finance", "hr"];
- 
+
 export default function FinanceDashLeft() {
   const searchParams = useSearchParams();
   const subview = searchParams.get("subview");
- 
+
   const isSubview = SUBVIEWS.includes(subview ?? "");
- 
+
   return (
     <div className="w-[68%] p-2">
       {!isSubview && <UserInfoCard cardProps={card} />}

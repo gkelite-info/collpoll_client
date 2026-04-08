@@ -210,12 +210,15 @@ export async function middleware(request: NextRequest) {
                 return NextResponse.redirect(url);
             }
         }
+        // If all checks pass for role portals, allow access
+        return response;
     } else if (isAuthProtectedRoute(pathname)) {
         // =====================================================
-        // HANDLE ROLE-SPECIFIC PROTECTED ROUTES (/settings, etc.)
+        // HANDLE AUTH-PROTECTED ROUTES (/profile, /settings, etc.)
+        // Fast path: These routes only need auth, not role validation
         // =====================================================
-        // For /settings specifically, redirect to role-based path
         if (pathname === '/settings' || pathname.match(/^\/settings(\?|$)/)) {
+            // Only /settings needs role-based redirect
             // Fetch user role to redirect to {role}/settings
             const { data: profile, error: profileError } = await supabase
                 .from('users')
@@ -242,11 +245,11 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url);
         }
 
+        // =====================================================
         // For other auth-protected routes like /profile, /notifications, etc.
-        // User is logged in, so just allow access (no role validation needed)
-        return response;
-    } else if (isProtectedRoute(pathname)) {
-        // Other protected routes - user is logged in, allow access
+        // User is logged in, so just allow access immediately (FAST PATH)
+        // No role validation needed - just need authentication
+        // =====================================================
         return response;
     }
 

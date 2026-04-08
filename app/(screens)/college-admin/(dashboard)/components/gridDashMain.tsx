@@ -22,6 +22,7 @@ import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
 import ParentListView from "./ParentListView";
 import FinanceListView from "./FinanceListView";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 
 
@@ -73,17 +74,64 @@ const StatCard = ({
 
 // ─── QuickLinkCard ────────────────────────────────────────────────────────────
 
-const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => (
-  <div
-    onClick={onClick}
-    className="bg-[#E4F2E7] hover:bg-[#d4eadd] transition-colors rounded-lg p-4 flex flex-col justify-between h-16 cursor-pointer shadow-xs"
-  >
-    <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
-    <span className="text-xs font-medium text-[#1F2937] underline decoration-1 underline-offset-2">
-      View
-    </span>
-  </div>
-);
+// const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => (
+//   <div
+//     onClick={onClick}
+//     className="bg-[#E4F2E7] relative hover:bg-[#d4eadd] transition-colors rounded-lg p-4 flex flex-col justify-between h-16 cursor-pointer shadow-xs"
+//   >
+//     <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
+//     <span className="text-xs font-medium text-[#1F2937] underline decoration-1 underline-offset-2">
+//       View
+//     </span>
+//   </div>
+// );
+
+
+const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => {
+  const isPlacement = title === "Placement"; // ADDED
+  const [gearRunning, setGearRunning] = useState(isPlacement);
+  useEffect(() => {
+    if (!isPlacement) return;
+
+    const timer = setTimeout(() => {
+      setGearRunning(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [isPlacement]);
+
+  return (
+    <div
+      onClick={!isPlacement ? onClick : undefined}
+      className={`
+        bg-[#E4F2E7] relative
+        ${!isPlacement && "hover:bg-[#d4eadd]"}
+        transition-colors rounded-lg p-4 flex flex-col justify-between h-16
+        ${isPlacement
+          ? gearRunning
+            ? "cursor-pointer"
+            : "cursor-not-allowed opacity-70"
+          : "cursor-pointer"
+        }
+
+        shadow-xs
+      `}
+    >
+      {isPlacement && gearRunning && (
+        <WipOverlay isSmall={true} gearOnly={true} />
+      )}
+      <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
+      <span
+        className={`
+        text-xs font-medium
+        ${!isPlacement ? "text-[#1F2937] hover:text-[#089144] hover:underline underline-offset-2" : "text-gray-400"}
+          transition-colors
+      `}
+      >
+        View
+      </span>
+    </div>
+  );
+};
 
 // ─── AdminProfileCard ─────────────────────────────────────────────────────────
 
@@ -231,7 +279,8 @@ const PillTag = ({ label }: { label: string }) => (
 );
 
 const MeetingCard = () => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-w-0">
+  <div className="bg-white relative rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-w-0">
+    <WipOverlay />
     {/* Green header bar */}
     <div className="bg-[#43C17A26] px-4 py-2.5 flex items-center gap-3 border-b-2 border-dotted border-[#43C17A]">
       <div className="bg-[#43C17A] p-1.5 rounded-full flex-shrink-0">
@@ -288,11 +337,11 @@ export default function AdminDashboard() {
 
   // Map URL subview param → activeView label
   const SUBVIEW_MAP: Record<string, string> = {
-    admins:   "Admins",
-    faculty:  "Faculty",
+    admins: "Admins",
+    faculty: "Faculty",
     students: "Students",
-    parents:  "Parents",
-    finance:  "Finance",
+    parents: "Parents",
+    finance: "Finance",
   };
 
   const subviewParam = searchParams.get("subview");

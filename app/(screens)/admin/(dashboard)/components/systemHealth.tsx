@@ -78,7 +78,6 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
 
   return (
     <div className="overflow-hidden flex flex-col w-full min-h-screen">
-      <WipOverlay fullHeight={true} />
       <div className="mb-5">
         <div className="flex items-center gap-2 group w-fit">
           <CaretLeft
