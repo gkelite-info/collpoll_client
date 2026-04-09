@@ -1,5 +1,3 @@
-import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 
 export type FinanceMeetingRow = {
@@ -343,8 +341,19 @@ export async function fetchFacultyFinanceMeetings(params: {
   type?: "upcoming" | "previous";
   page?: number;
   limit?: number;
+  collegeBranchId?: number;
+  sectionIds?: number[];
+  academicYearIds?: number[];
 }) {
-  const { role = "Faculty", type = "upcoming", page = 1, limit = 10 } = params;
+  const {
+    role = "Faculty",
+    type = "upcoming",
+    page = 1,
+    limit = 10,
+    collegeBranchId,
+    sectionIds,
+    academicYearIds,
+  } = params;
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -381,6 +390,16 @@ export async function fetchFacultyFinanceMeetings(params: {
     .is("finance_meetings.deletedAt", null)
     .is("deletedAt", null)
     .eq("finance_meetings.role", role);
+
+  if (collegeBranchId) {
+    query = query.eq("collegeBranchId", collegeBranchId);
+  }
+  if (sectionIds && sectionIds.length > 0) {
+    query = query.in("collegeSectionsId", sectionIds);
+  }
+  if (academicYearIds && academicYearIds.length > 0) {
+    query = query.in("collegeAcademicYearId", academicYearIds);
+  }
 
   if (type === "upcoming") {
     query = query.or(
@@ -429,8 +448,19 @@ export async function fetchParentFinanceMeetings(params: {
   type?: "upcoming" | "previous";
   page?: number;
   limit?: number;
+  collegeBranchId?: number;
+  collegeSectionsId?: number;
+  collegeAcademicYearId?: number;
 }) {
-  const { role = "Parent", type = "upcoming", page = 1, limit = 10 } = params;
+  const {
+    role = "Parent",
+    type = "upcoming",
+    page = 1,
+    limit = 10,
+    collegeBranchId,
+    collegeSectionsId,
+    collegeAcademicYearId,
+  } = params;
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -447,6 +477,7 @@ export async function fetchParentFinanceMeetings(params: {
             college_education ( collegeEducationType ),
             college_branch ( collegeBranchCode ),
             college_sections ( collegeSections ),
+            college_academic_year ( collegeAcademicYear ),
             finance_meetings!inner (
                 financeMeetingId, 
                 title, 
@@ -466,6 +497,16 @@ export async function fetchParentFinanceMeetings(params: {
     .is("finance_meetings.deletedAt", null)
     .is("deletedAt", null)
     .eq("finance_meetings.role", role);
+
+  if (collegeBranchId) {
+    query = query.eq("collegeBranchId", collegeBranchId);
+  }
+  if (collegeSectionsId) {
+    query = query.eq("collegeSectionsId", collegeSectionsId);
+  }
+  if (collegeAcademicYearId) {
+    query = query.eq("collegeAcademicYearId", collegeAcademicYearId);
+  }
 
   if (type === "upcoming") {
     query = query.or(
@@ -497,6 +538,7 @@ export async function fetchParentFinanceMeetings(params: {
     description: row.finance_meetings.description,
     educationType: row.college_education?.collegeEducationType ?? "N/A",
     branch: row.college_branch?.collegeBranchCode ?? "N/A",
+    year: row.college_academic_year?.collegeAcademicYear ?? "N/A",
     date: row.finance_meetings.date,
     participants: 0,
     section: row.college_sections?.collegeSections ?? "N/A",

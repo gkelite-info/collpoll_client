@@ -14,6 +14,7 @@ import { useFacultyByDepartment } from "../../hooks/useFacultyByDepartment";
 import { useStudentsByDepartment } from "../../hooks/useStudentsByDepartment";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { supabase } from "@/lib/supabaseClient";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 interface FacultyViewProps {
   departmentId: number;
@@ -37,11 +38,10 @@ const FilterDropdownChip = ({
       <Listbox value={selectedValue} onChange={onChange} disabled={loading}>
         <div className="relative">
           <Listbox.Button
-            className={`relative flex items-center justify-between gap-2.5 pl-4 pr-3 py-1 text-white bg-[#3EAD6F] rounded-full transition-all  ${
-              loading
-                ? "opacity-70 cursor-not-allowed"
-                : "cursor-pointer hover:bg-emerald-600"
-            }`}
+            className={`relative flex items-center justify-between gap-2.5 pl-4 pr-3 py-1 text-white bg-[#3EAD6F] rounded-full transition-all  ${loading
+              ? "opacity-70 cursor-not-allowed"
+              : "cursor-pointer hover:bg-emerald-600"
+              }`}
           >
             <span className="block truncate font-medium">
               {loading ? "Loading..." : valueText}
@@ -96,20 +96,17 @@ const FacultyView: React.FC<FacultyViewProps> = ({
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const activeTab = searchParams.get("tab") || "Faculty";
-
   const yearIdParam = searchParams.get("yearId");
   const activeYearId = yearIdParam ? parseInt(yearIdParam) : null;
   const sectionIdParam = searchParams.get("sectionId");
   const activeSectionId = sectionIdParam ? parseInt(sectionIdParam) : null;
-
   const [availableYears, setAvailableYears] = useState<any[]>([]);
   const [yearsLoading, setYearsLoading] = useState(true);
   const [availableSections, setAvailableSections] = useState<any[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
-
   const [selectedFaculty, setSelectedFaculty] = useState<any | null>(null);
+  const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
     async function fetchYears() {
@@ -235,12 +232,14 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     name: f.users.fullName,
     subject: f.subject,
     role: f.designation,
-    contact: f.users.email,
+    contact: f.mobile,
     email: f.users.email,
     avatar:
       f.users.avatar ??
       `https://api.dicebear.com/9.x/initials/svg?seed=${f.users.fullName}`,
     raw: f,
+    collegeBranchCode: f.collegeBranchCode,
+    department: f.collegeBranchCode,
   }));
 
   const studentList = students.map((s: any) => ({
@@ -286,6 +285,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       <FacultyDetail
         faculty={selectedFaculty}
         onBack={() => setSelectedFaculty(null)}
+        collegeEdu={collegeEducationType}
       />
     );
   }
@@ -293,12 +293,12 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   return (
     <div className="flex flex-col w-full min-h-screen">
       <div className="mb-3">
-        <div className="flex items-center gap-2 group w-fit">
+        <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
             size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
           <h1 className="text-2xl font-bold text-[#282828]">{dynamicHeader}</h1>
         </div>
@@ -349,9 +349,8 @@ const FacultyView: React.FC<FacultyViewProps> = ({
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`pb-1 transition-all relative cursor-pointer ${
-              activeTab === tab ? "text-[#43C17A]" : "text-[#525252]"
-            }`}
+            className={`pb-1 transition-all relative cursor-pointer ${activeTab === tab ? "text-[#43C17A]" : "text-[#525252]"
+              }`}
           >
             <span className="w-full ml-8">{tab}</span>
             {activeTab === tab ? (
@@ -418,7 +417,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
               facultyList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-gray-400">
-                    No faculty found in this department.
+                    No faculty found in this branch.
                   </td>
                 </tr>
               ) : (
@@ -446,7 +445,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                       {prof.role}
                     </td>
                     <td className="py-2 px-6 text-right text-[#4A5568] text-[13px]">
-                      {prof.email}
+                      {prof.contact}
                     </td>
                   </tr>
                 ))

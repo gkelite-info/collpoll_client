@@ -22,6 +22,7 @@ export interface FacultyData {
   experience: string;
   qualification: string;
   avatar: string;
+  collegeBranchCode?: string;
 }
 
 interface Attachment {

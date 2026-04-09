@@ -8,7 +8,6 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import MeetingCard from "../../finance/meetings/components/MeetingCard";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { Loader } from "../../(student)/calendar/right/timetable";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
 
@@ -47,7 +46,7 @@ export default function FacultyMeetingsPage() {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
 
     const { role } = useUser();
-    const { facultyId } = useFaculty();
+    const { facultyId, collegeBranchId, sectionIds, academicYearIds } = useFaculty();
 
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
@@ -89,6 +88,9 @@ export default function FacultyMeetingsPage() {
                 type: currentType,
                 page,
                 limit: 10,
+                collegeBranchId: collegeBranchId ?? undefined,
+                sectionIds: sectionIds.length > 0 ? sectionIds : undefined,
+                academicYearIds: academicYearIds.length > 0 ? academicYearIds : undefined,
             });
 
             const finalMeetings: Meeting[] = res.data.map((meeting: any) => ({
