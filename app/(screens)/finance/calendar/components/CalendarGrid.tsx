@@ -144,8 +144,8 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-r-[20px] rounded-b-[20px] shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[400px] 2xl:h-[700px]">
-      {/* HEADER FIX: Increased padding, strict centering, slightly larger text */}
+    // HEIGHT UPDATED & BOTTOM BORDER RADIUS REMOVED HERE
+    <div className="bg-white rounded-tr-[20px] rounded-b-none shadow-sm overflow-y-auto flex flex-col relative -mt-2 h-[600px] lg:h-[700px] xl:h-[750px] 2xl:h-[850px]">
       <div className="flex border-b border-gray-400 bg-white min-h-[60px]">
         <div className="w-20 min-w-[80px] border-r border-gray-400 p-2 flex items-center justify-center gap-1 z-10">
           <button
@@ -166,7 +166,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
           {weekDays.map((day) => (
             <div
               key={day.fullDate}
-              // py-4 increases the height, flex items-center perfectly centers the content
               className="flex items-center justify-center border-r border-gray-400 last:border-r-0 py-4"
             >
               <div className="flex items-center justify-center space-x-1.5">
@@ -182,7 +181,6 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
         </div>
       </div>
 
-      {/* BODY */}
       <div className="flex-1 overflow-y-auto custom-scrollbar relative">
         <div className="flex min-h-[720px]">
           <div className="w-20 min-w-20 bg-white border-r border-gray-300 shrink-0 select-none">

@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 type Status = "Evaluated" | "Pending" | "Not Submitted";
 
@@ -142,12 +141,69 @@ export default function AssignmentTable({
   const filtered =
     filter === "All" ? rows : rows.filter((r) => r.status === filter);
 
-  if (loading)
+  // --- SHIMMER LOADING STATE ---
+  if (loading) {
     return (
-      <div className="p-10 text-center text-gray-400">
-        <Loader />
+      <div className="w-full animate-pulse">
+        <div className="mb-3 flex items-center gap-2 text-sm px-1">
+          <div className="w-10 h-4 bg-gray-200 rounded"></div>
+          <div className="w-24 h-6 bg-gray-200 rounded-full"></div>
+        </div>
+        <div className="overflow-x-auto bg-white rounded-xl border border-gray-100 shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-[#ECECEC] text-[#282828] font-poppins">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold">S.No</th>
+                <th className="px-4 py-3 text-left font-semibold">Photo</th>
+                <th className="px-4 py-3 text-left font-semibold">Name</th>
+                <th className="px-4 py-3 text-left font-semibold">
+                  Student ID
+                </th>
+                <th className="px-4 py-3 text-left font-semibold">Date</th>
+                <th className="px-4 py-3 text-left font-semibold">File</th>
+                <th className="px-4 py-3 text-left font-semibold">Marks</th>
+                <th className="px-4 py-3 text-left font-semibold">Feedback</th>
+                <th className="px-4 py-3 text-left font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...Array(6)].map((_, rowIndex) => (
+                <tr key={rowIndex} className="border-b border-gray-50">
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-6 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-20 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-12 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-6 w-24 bg-gray-200 rounded-full"></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
+  }
 
   return (
     <div className="w-full relative">
@@ -163,13 +219,13 @@ export default function AssignmentTable({
             <div className="flex gap-3">
               <button
                 onClick={confirmSave}
-                className="flex-1 bg-[#13934B] text-white py-2 rounded-lg font-medium"
+                className="flex-1 bg-[#13934B] text-white py-2 rounded-lg font-medium cursor-pointer"
               >
                 Yes, Save
               </button>
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium"
+                className="flex-1 bg-gray-100 text-gray-600 py-2 rounded-lg font-medium cursor-pointer"
               >
                 Cancel
               </button>
@@ -236,7 +292,7 @@ export default function AssignmentTable({
                   {r.filePath ? (
                     <button
                       onClick={() => handleViewFile(r.filePath!)}
-                      className="text-blue-500 hover:text-blue-700 hover:underline flex items-center gap-1 max-w-[120px] transition-all"
+                      className="text-blue-500 hover:text-blue-700 hover:underline flex items-center gap-1 max-w-[120px] transition-all cursor-pointer"
                     >
                       <FilePdf
                         size={18}
@@ -299,20 +355,20 @@ export default function AssignmentTable({
                             status: e.target.value as Status,
                           })
                         }
-                        className="rounded-full bg-gray-50 px-2 py-1 text-xs border font-bold"
+                        className="rounded-full bg-gray-50 px-2 py-1 text-xs border font-bold cursor-pointer"
                       >
                         <option>Pending</option>
                         <option>Evaluated</option>
                       </select>
                       <button
                         onClick={handleSaveRequest}
-                        className="text-green-600 p-1 hover:scale-110 transition-transform"
+                        className="text-green-600 p-1 hover:scale-110 transition-transform cursor-pointer"
                       >
                         <Check size={20} weight="bold" />
                       </button>
                       <button
                         onClick={() => setEditingId(null)}
-                        className="text-red-500 p-1 hover:scale-110 transition-transform"
+                        className="text-red-500 p-1 hover:scale-110 transition-transform cursor-pointer"
                       >
                         <X size={20} />
                       </button>
@@ -324,7 +380,7 @@ export default function AssignmentTable({
                   ) : (
                     <button
                       onClick={() => startEditing(r)}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
+                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                         r.status === "Evaluated"
                           ? "bg-[#E3F6EB] text-[#13934B]"
                           : "bg-[#FFF1E2] text-[#FFBB70]"

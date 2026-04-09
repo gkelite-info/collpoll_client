@@ -8,6 +8,8 @@ type RoleCounts = {
   FACULTY: number;
   STUDENT: number;
   PARENT: number;
+  FINANCE: number;
+  COLLEGE_HR: number;
 };
 
 type DepartmentRow = {
@@ -27,6 +29,8 @@ export function useTotalUsers(
     FACULTY: 0,
     STUDENT: 0,
     PARENT: 0,
+    FINANCE: 0,
+    COLLEGE_HR: 0,
   });
 
   const [departments, setDepartments] = useState<DepartmentRow[]>([]);
@@ -43,6 +47,8 @@ export function useTotalUsers(
           { count: facultyCount },
           { count: adminsCount },
           { count: parentsCount },
+          { count: financeCount },
+          { count: hrCount },
         ] = await Promise.all([
           supabase
             .from("students")
@@ -74,6 +80,23 @@ export function useTotalUsers(
             .eq("collegeId", collegeId)
             .eq("students.collegeEducationId", collegeEducationId)
             .eq("is_deleted", false),
+
+          // New Query: Finance Manager
+          supabase
+            .from("finance_manager")
+            .select("financeManagerId", { count: "exact", head: true })
+            .eq("collegeId", collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("isActive", true)
+            .eq("is_deleted", false),
+
+          // New Query: College HR
+          supabase
+            .from("college_hr")
+            .select("collegeHrId", { count: "exact", head: true })
+            .eq("collegeId", collegeId)
+            .eq("isActive", true)
+            .eq("is_deleted", false),
         ]);
 
         setRoles({
@@ -81,6 +104,8 @@ export function useTotalUsers(
           FACULTY: facultyCount ?? 0,
           STUDENT: studentsCount ?? 0,
           PARENT: parentsCount ?? 0,
+          FINANCE: financeCount ?? 0,
+          COLLEGE_HR: hrCount ?? 0,
         });
 
         const { data, error } = await supabase

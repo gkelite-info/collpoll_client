@@ -25,8 +25,12 @@ interface Row {
 
 export default function AssignmentTable({
   assignmentId,
+  parentLoading,
+  assignmentExists,
 }: {
   assignmentId: string;
+  parentLoading?: boolean;
+  assignmentExists?: boolean;
 }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,11 +43,15 @@ export default function AssignmentTable({
     status: Status;
   } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isSaving, setIsSaving] = useState(false); // ADDED: Track saving state
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (assignmentId) fetchDynamicData();
-  }, [assignmentId]);
+    if (assignmentId && assignmentExists) {
+      fetchDynamicData();
+    } else if (!parentLoading && !assignmentExists) {
+      setLoading(false);
+    }
+  }, [assignmentId, assignmentExists, parentLoading]);
 
   async function fetchDynamicData() {
     try {
@@ -121,7 +129,7 @@ export default function AssignmentTable({
     const row = rows.find((r) => r.id === editingId);
     if (!row?.submissionId) return;
 
-    setIsSaving(true); // START SAVING
+    setIsSaving(true);
 
     const { error } = await updateSubmissionEvaluation(row.submissionId, {
       marksScored: parseInt(tempData.marks) || 0,
@@ -146,8 +154,65 @@ export default function AssignmentTable({
   const filtered =
     filter === "All" ? rows : rows.filter((r) => r.status === filter);
 
-  if (loading)
-    return <div className="p-10 text-center text-gray-400">Loading...</div>;
+  if (parentLoading || loading) {
+    return (
+      <div className="w-full mt-4 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden min-h-[400px]">
+        <div className="flex gap-4 p-4 border-b border-gray-100 bg-gray-50/50">
+          {[...Array(9)].map((_, i) => (
+            <div
+              key={`th-${i}`}
+              className="h-4 bg-gray-200 rounded w-full animate-pulse"
+            ></div>
+          ))}
+        </div>
+        {[...Array(6)].map((_, r) => (
+          <div
+            key={`tr-${r}`}
+            className="flex gap-4 p-4 border-b border-gray-50 last:border-0"
+          >
+            {[...Array(9)].map((_, c) => (
+              <div
+                key={`td-${c}`}
+                className="h-5 bg-gray-100 rounded w-full animate-pulse relative overflow-hidden"
+              >
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!assignmentExists) {
+    return (
+      <div className="w-full mt-4 bg-white rounded-xl border border-gray-100 shadow-sm p-16 flex flex-col items-center justify-center text-center">
+        <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+          <FilePdf size={32} className="text-gray-400" />
+        </div>
+        <h3 className="text-lg font-bold text-gray-800 mb-1">
+          Assignment Not Found
+        </h3>
+        <p className="text-sm text-gray-500 max-w-sm">
+          The assignment details you are looking for do not exist or have been
+          removed.
+        </p>
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="w-full mt-4 bg-white rounded-xl border border-gray-100 shadow-sm p-16 flex flex-col items-center justify-center text-center">
+        <h3 className="text-lg font-bold text-gray-800 mb-1">
+          No Students Found
+        </h3>
+        <p className="text-sm text-gray-500">
+          There are no students assigned to this specific branch and year.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full relative">

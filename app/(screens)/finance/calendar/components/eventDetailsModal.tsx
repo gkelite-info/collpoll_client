@@ -44,7 +44,7 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
 
           <button
             onClick={onClose}
-            className="flex items-center justify-center h-9 w-9 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer"
+            className="flex items-center justify-center h-9 w-9 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors"
           >
             <X size={18} weight="bold" />
           </button>
@@ -52,20 +52,13 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
 
         <h3 className="font-semibold text-lg mb-1 text-gray-900">
           {event.title || "-"}
-          <span className="text-gray-500 font-medium text-base">
-            {" "}
-            — [{event.type.charAt(0).toUpperCase() + event.type.slice(1)}]
-          </span>
         </h3>
 
         {event.rawTopic && (
-          <p className="text-sm text-gray-600 mb-4">
-            <span className="font-medium">Event Topic:</span> {event.rawTopic}
-          </p>
+          <p className="text-sm text-gray-600 mb-4 italic">{event.rawTopic}</p>
         )}
 
         <div className="space-y-2.5 text-sm">
-          <Detail label="Type" value={event.type} />
           <Detail label="Date" value={dateStr} />
           <Detail label="Time" value={timeStr} />
           <Detail label="Branch" value={event.branch} />
@@ -80,6 +73,6 @@ export default function EventDetailsModal({ open, event, onClose }: Props) {
 const Detail = ({ label, value }: { label: string; value?: string }) => (
   <div className="flex">
     <span className="w-28 text-gray-500">{label} :</span>
-    <span className="font-medium">{value || "-"}</span>
+    <span className="font-medium text-gray-800">{value || "-"}</span>
   </div>
 );
