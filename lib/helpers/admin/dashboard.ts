@@ -9,6 +9,8 @@ export async function getAdminDashboardSummary(
     { count: facultyCount },
     { count: adminsCount },
     { count: parentsCount },
+    { count: financeCount },
+    { count: hrCount },
   ] = await Promise.all([
     supabase
       .from("students")
@@ -40,13 +42,30 @@ export async function getAdminDashboardSummary(
       .eq("collegeId", collegeId)
       .eq("students.collegeEducationId", collegeEducationId)
       .eq("is_deleted", false),
+
+    supabase
+      .from("finance_manager")
+      .select("financeManagerId", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .eq("is_deleted", false),
+
+    supabase
+      .from("college_hr")
+      .select("collegeHrId", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false),
   ]);
 
   const totalUsers =
     (studentsCount ?? 0) +
     (facultyCount ?? 0) +
     (adminsCount ?? 0) +
-    (parentsCount ?? 0);
+    (parentsCount ?? 0) +
+    (financeCount ?? 0) +
+    (hrCount ?? 0);
 
   return {
     totalUsers,

@@ -450,9 +450,8 @@ const CreateMeetingModal = ({
           collegeId: collegeId!,
         },
         financeManagerId,
-        userId!
+        userId!,
       );
-
 
       if (!meetingRes.success || !meetingRes.financeMeetingId) {
         toast.error("Failed to schedule meeting");
@@ -515,7 +514,6 @@ const CreateMeetingModal = ({
 
       // 3. 🆕 TRIGGER THE SYNC & REMINDER ENGINE (NOW IT CAN FIND THE SECTIONS!)
       if (!isEditMode && meetingRes.financeMeetingId && collegeId) {
-
         await syncFinanceMeetingParticipantsAndEmails(
           meetingRes.financeMeetingId,
           collegeId,
@@ -577,7 +575,9 @@ const CreateMeetingModal = ({
           </div>
           <div className="p-6 space-y-2 pt-0 mt-3">
             <div className="space-y-1">
-              <label className="text-sm text-[#282828]">Title</label>
+              <label className="text-sm text-[#282828]">
+                Title <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
                 value={title}
@@ -587,7 +587,9 @@ const CreateMeetingModal = ({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm text-[#282828]">Description</label>
+              <label className="text-sm text-[#282828]">
+                Description <span className="text-red-500">*</span>
+              </label>
               <textarea
                 rows={3}
                 value={description}
@@ -598,7 +600,9 @@ const CreateMeetingModal = ({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm text-[#282828]">Role</label>
+                <label className="text-sm text-[#282828]">
+                  Role <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <select
                     value={role}
@@ -629,7 +633,9 @@ const CreateMeetingModal = ({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-sm text-[#282828]">Date</label>
+                <label className="text-sm text-[#282828]">
+                  Date <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -643,7 +649,9 @@ const CreateMeetingModal = ({
               <label className="text-sm text-[#282828]">Time</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-xs text-gray-500 mb-1 block">From</span>
+                  <span className="text-xs text-gray-500 mb-1 block">
+                    From <span className="text-red-500">*</span>
+                  </span>
                   <div className="flex gap-2">
                     <select
                       value={startHour}
@@ -686,7 +694,9 @@ const CreateMeetingModal = ({
                   </div>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500 mb-1 block">To</span>
+                  <span className="text-xs text-gray-500 mb-1 block">
+                    To <span className="text-red-500">*</span>
+                  </span>
                   <div className="flex gap-2">
                     <select
                       value={endHour}
@@ -763,7 +773,9 @@ const CreateMeetingModal = ({
             {role !== "Admin" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm text-[#282828]">Branch</label>
+                  <label className="text-sm text-[#282828]">
+                    Branch <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <select
                       value={branch ?? ""}
@@ -800,7 +812,9 @@ const CreateMeetingModal = ({
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm text-[#282828]">Year</label>
+                  <label className="text-sm text-[#282828]">
+                    Year <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <select
                       value={year ?? ""}
@@ -841,7 +855,9 @@ const CreateMeetingModal = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {role !== "Admin" && (
                 <div className="space-y-1" ref={sectionDropdownRef}>
-                  <label className="text-sm text-[#282828]">Section</label>
+                  <label className="text-sm text-[#282828]">
+                    Section <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative">
                     <div
                       onClick={() => {
@@ -855,11 +871,11 @@ const CreateMeetingModal = ({
                         {sectionsSelected.length === 0
                           ? "Select Section"
                           : sections
-                            .filter((s) =>
-                              sectionsSelected.includes(s.collegeSectionsId),
-                            )
-                            .map((s) => s.collegeSections)
-                            .join(", ")}
+                              .filter((s) =>
+                                sectionsSelected.includes(s.collegeSectionsId),
+                              )
+                              .map((s) => s.collegeSections)
+                              .join(", ")}
                       </span>
                       <span className="text-gray-400 pointer-events-none">
                         <svg
@@ -915,7 +931,9 @@ const CreateMeetingModal = ({
                 </div>
               )}
               <div className="space-y-1">
-                <label className="text-sm text-[#282828]">Meeting Link</label>
+                <label className="text-sm text-[#282828]">
+                  Meeting Link <span className="text-red-500">*</span>
+                </label>
                 <input
                   type="url"
                   value={meetingLink}
@@ -926,7 +944,9 @@ const CreateMeetingModal = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm text-[#282828]">Notifications</label>
+              <label className="text-sm text-[#282828]">
+                Notifications <span className="text-red-500">*</span>
+              </label>
               <div className="flex flex-col sm:flex-row gap-4">
                 <label className="flex items-center gap-2 p-3 py-2 border border-[#CCCCCC] rounded-md flex-1 cursor-pointer">
                   <input
@@ -976,7 +996,7 @@ const CreateMeetingModal = ({
               onClick={handleSubmit}
               className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer"
               disabled={isLoading}
-              >
+            >
               {isLoading
                 ? isEditMode
                   ? "Updating..."

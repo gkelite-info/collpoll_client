@@ -4,30 +4,27 @@ import CalendarTimeTable from "./timetable";
 import { CheckCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 
-
 export default function CalendarRight() {
+  const [openModal, setOpenModal] = useState(false);
 
-    const [openModal, setOpenModal] = useState(false);
+  const [card, setCard] = useState([
+    {
+      title: "AI Lab",
+      description: "description",
+      dueDate: "2025-11-14",
+      dueTime: "17:00",
+    },
+  ]);
 
+  const addTask = (task: any) => {
+    setCard((prev) => [...prev, task]);
+  };
 
-    const [card, setCard] = useState([
-        {
-            title: "AI Lab",
-            description: "description",
-            dueDate: "2025-11-14",
-            dueTime: "17:00"
-        }
-    ]);
-
-    const addTask = (task: any) => {
-        setCard((prev) => [...prev, task]);
-    };
-
-    return (
-        <>
-            <div className="bg-pink-00 h-full flex flex-col justify-between">
-                <CalendarTimeTable />
-                {/* <div className="bg-white h-[158px] w-[647px] rounded-lg p-3 shadow-md">
+  return (
+    <>
+      <div className="bg-pink-00 h-full flex flex-col justify-between">
+        <CalendarTimeTable />
+        {/* <div className="bg-white h-[158px] w-[647px] rounded-lg p-3 shadow-md">
                     <div className="bg-red-00 w-full flex justify-between">
                         <h4 className="text-[#282828] font-medium">Assignments / Tasks</h4>
 
@@ -63,7 +60,7 @@ export default function CalendarRight() {
                         ))}
                     </div>
                 </div> */}
-            </div>
-        </>
-    );
+      </div>
+    </>
+  );
 }

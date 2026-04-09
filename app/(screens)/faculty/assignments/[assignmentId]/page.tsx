@@ -2,7 +2,6 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
 import { UserCircle, UsersThree, CaretLeft } from "@phosphor-icons/react";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -12,7 +11,6 @@ import CardComponent, {
   CardProps,
 } from "@/app/(screens)/admin/assignments/[departmentId]/subject/[subjectId]/[assignmentId]/components/cardComponent";
 import { supabase } from "@/lib/supabaseClient";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function formatDate(value: number | string) {
   if (!value) return "";
@@ -26,7 +24,9 @@ function formatDate(value: number | string) {
 export default function AdminAssignmentDetailPage() {
   const { assignmentId } = useParams();
   const router = useRouter();
+
   const [assignment, setAssignment] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (assignmentId) fetchAssignmentDetails();
@@ -34,13 +34,17 @@ export default function AdminAssignmentDetailPage() {
 
   async function fetchAssignmentDetails() {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from("assignments")
         .select("*")
         .eq("assignmentId", assignmentId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        setAssignment(null);
+        return;
+      }
 
       const { count: submittedCount } = await supabase
         .from("student_assignments_submission")
@@ -61,14 +65,15 @@ export default function AdminAssignmentDetailPage() {
       });
     } catch (err) {
       console.error("Error fetching detail stats:", err);
+      setAssignment(null);
+    } finally {
+      setLoading(false);
     }
   }
 
-  if (!assignment) return <Loader />;
-
   const cardData: CardProps[] = [
     {
-      value: assignment.submissionDeadlineInt
+      value: assignment?.submissionDeadlineInt
         ? formatDate(assignment.submissionDeadlineInt)
         : "—",
       label: "Due Date",
@@ -78,7 +83,7 @@ export default function AdminAssignmentDetailPage() {
       iconColor: "text-white",
     },
     {
-      value: assignment.marks || "—",
+      value: assignment?.marks ? String(assignment.marks) : "—",
       label: "Total Marks",
       bgColor: "bg-[#FFEDDA]",
       icon: <UsersThree />,
@@ -86,7 +91,7 @@ export default function AdminAssignmentDetailPage() {
       iconColor: "text-white",
     },
     {
-      value: `${assignment.totalSubmitted} `,
+      value: assignment ? `${assignment.totalSubmitted}` : "—",
       label: "Total Submissions",
       bgColor: "bg-[#E6FBEA]",
       icon: <UserCircle />,
@@ -101,9 +106,9 @@ export default function AdminAssignmentDetailPage() {
         <div>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => router.push("/faculty/assignments")}
-              className=" hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
-              title="Back to Assignments"
+              onClick={() => router.back()}
+              className="hover:bg-gray-50 text-gray-700 transition-colors cursor-pointer"
+              title="Back"
             >
               <CaretLeft size={24} weight="bold" />
             </button>
@@ -113,22 +118,39 @@ export default function AdminAssignmentDetailPage() {
             Reviewing submission stats and evaluating student work.
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>
 
       <section className="flex flex-row items-stretch gap-4 w-full mb-3">
-        {cardData.map((item, index) => (
-          <div key={index} className="flex-1">
-            <CardComponent {...item} />
-          </div>
-        ))}
+        {loading ? (
+          <>
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex-1 h-[142px] bg-gray-200 rounded-xl relative overflow-hidden animate-pulse"
+              >
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+              </div>
+            ))}
+          </>
+        ) : (
+          cardData.map((item, index) => (
+            <div key={index} className="flex-1">
+              <CardComponent {...item} />
+            </div>
+          ))
+        )}
         <div className="flex-[1.6]">
           <WorkWeekCalendar style="h-full" />
         </div>
       </section>
 
       <section>
-        <AssignmentTable assignmentId={assignmentId as string} />
+        <AssignmentTable
+          assignmentId={assignmentId as string}
+          parentLoading={loading}
+          assignmentExists={!!assignment}
+        />
       </section>
     </main>
   );
