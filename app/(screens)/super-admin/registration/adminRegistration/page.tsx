@@ -164,7 +164,8 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       if (signUpError) throw signUpError;
       if (!data.user) throw new Error("Auth user not created");
 
-      
+      setIsLoading(true);
+
       const userResult = await upsertUser({
         auth_id: data.user.id,
         fullName: toPascalCase(form.fullName),
@@ -189,9 +190,24 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
       toast.success("Admin registered successfully");
       setForm(initialFormState);
 
-    } catch (error: any) {
-      console.error("CRITICAL ERROR:", error.message);
-      toast.error(error.message || "Failed to create admin");
+    } catch (e: any) {
+      console.error(e);
+
+      let message = "Something went wrong. Please try again.";
+
+      if (e?.message) {
+        const errMsg = e.message.toLowerCase();
+
+        if (errMsg.includes("email")) {
+          message = "This email is already registered.";
+        } else if (errMsg.includes("mobile")) {
+          message = "This mobile number is already in use.";
+        } else if (errMsg.includes("duplicate")) {
+          message = "User already exists with provided details.";
+        }
+      }
+
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }

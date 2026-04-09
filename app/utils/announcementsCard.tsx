@@ -179,13 +179,13 @@ export default function AnnouncementsCard({
 
         {!isReadOnlyUser && canManageAnnouncements && (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm font-semibold">
+            <div className="flex items-center gap-1 text-sm font-semibold lg:mt-2">
               <button
                 onClick={() => {
                   setActiveView("others");
                   onViewChange?.("others");
                 }}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 cursor-pointer ${
                   activeView === "others"
                     ? "bg-[#43C17A] text-white shadow-sm"
                     : "text-gray-400 hover:text-[#16284F]"
@@ -201,7 +201,7 @@ export default function AnnouncementsCard({
                   setActiveView("my");
                   onViewChange?.("my");
                 }}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 ${
+                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 cursor-pointer ${
                   activeView === "my"
                     ? "bg-[#43C17A] text-white shadow-sm"
                     : "text-gray-400 hover:text-[#16284F]"
@@ -214,24 +214,20 @@ export default function AnnouncementsCard({
         )}
       </div>
 
-      {/* </div> */}
       <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
         {announceCard.length === 0 ? (
           isReadOnlyUser ? (
-            // ✅ STUDENT / PARENT
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
                 You don't have any announcements today
               </p>
             </div>
           ) : activeView === "my" ? (
-            // ✅ ADMIN / FINANCE / COLLEGE ADMIN (MY)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">No announcements yet</p>
               <p className="text-xs mt-1">Click + to create one</p>
             </div>
           ) : (
-            // ✅ ADMIN / FINANCE (SHARED)
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
                 You don't have any announcements today
@@ -258,19 +254,17 @@ export default function AnnouncementsCard({
 
               <div className="h-full w-[78%] rounded-md flex flex-col">
                 <div className="flex items-center justify-between h-[60%] px-1">
-                  {/* Title (fixed width + horizontal scroll) */}
                   <div className="max-w-[210px] overflow-x-auto whitespace-nowrap scrollbar-hide">
                     <p className="text-[13px] font-semibold text-[#282828]">
                       {card.title}
                     </p>
                   </div>
 
-                  {/* Show icons ONLY for My Announcements */}
                   {!isReadOnlyUser && activeView === "my" && (
                     <div className="flex items-center gap-2 ml-2">
                       <button
                         onClick={() => {
-                          setOpenModal(false); // force reset
+                          setOpenModal(false);
                           setTimeout(() => {
                             setEditData(card);
                             setOpenModal(true);
@@ -294,16 +288,13 @@ export default function AnnouncementsCard({
                   )}
                 </div>
 
-                {/* Role + Date + Time */}
                 <div className="flex items-center justify-between px-1 text-[11px] text-[#454545]">
-                  {/* LEFT → Roles + Date (scrollable) */}
                   <div className="flex gap-2 overflow-x-auto whitespace-nowrap max-w-[70%] scrollbar-hide">
                     <span className="shrink-0">{card.professor}</span>
 
                     <span className="shrink-0">{formatDate(card.date)}</span>
                   </div>
 
-                  {/* RIGHT → Time (fixed) */}
                   <span className="text-[#6B7280] shrink-0 ml-2">
                     {formatRelativeTime(card.createdAt)}
                   </span>

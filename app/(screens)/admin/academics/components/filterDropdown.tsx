@@ -20,9 +20,9 @@ export const FilterDropdown = ({
   placeholder = "Select...",
 }: FilterProps) => {
   const realOptions = options.filter((opt) => opt !== "All");
-  const hasData = realOptions.length > 0;
+  const hasData = options.length > 0;
 
-  const selectedValue = value && value !== "All" ? value : "";
+  const selectedValue = value || "";
 
   return (
     <div className="flex flex-col gap-1 min-w-30 overflow-visible">
@@ -31,23 +31,25 @@ export const FilterDropdown = ({
       </label>
 
       <div
-        className={`relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white w-[120px] overflow-visible ${
-          disabled ? "bg-gray-100 cursor-not-allowed" : ""
-        }`}
+        className={`relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white w-[120px] overflow-visible ${disabled ? "bg-gray-100 cursor-not-allowed" : ""
+          }`}
       >
-        <select
+        {/* <select
           value={selectedValue}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full appearance-none cursor-pointer bg-transparent text-[13px] font-medium pl-2 pr-10 focus:outline-none truncate ${
-            disabled ? "text-gray-400" : "text-gray-700"
-          }`}
+          className={`w-full appearance-none cursor-pointer bg-transparent text-[13px] font-medium pl-2 pr-10 focus:outline-none truncate ${disabled ? "text-gray-400" : "text-gray-700"
+            }`}
         >
-          <option value="" disabled>
-            {placeholder}
-          </option>
+          {(!value || value === "") && (
+            <option value="">{placeholder}</option>
+          )} */}
 
-          {hasData ? (
+        {/* <option value="" disabled>
+            {placeholder}
+          </option> */}
+
+        {/* {hasData ? (
             <>
               <option value="All">All</option>
               {realOptions.map((opt) => {
@@ -63,7 +65,27 @@ export const FilterDropdown = ({
             <option value="" disabled>
               No data available
             </option>
-          )}
+          )} */}
+        {/* </select> */}
+
+        <select value={selectedValue}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+          className={`w-full appearance-none cursor-pointer bg-transparent text-[13px] font-medium pl-2 pr-10 focus:outline-none truncate ${disabled ? "text-gray-400" : "text-gray-700"
+            }`}
+        >
+          <option value="All">All</option>
+
+          {realOptions.length > 0 ? (
+            realOptions.map((opt) => {
+              const labelText = displayModifier ? displayModifier(opt) : opt;
+              return (
+                <option key={opt} value={opt} title={labelText}>
+                  {labelText}
+                </option>
+              );
+            })
+          ) : null}
         </select>
 
         <CaretDown
@@ -72,6 +94,6 @@ export const FilterDropdown = ({
           weight="bold"
         />
       </div>
-    </div>
+    </div >
   );
 };

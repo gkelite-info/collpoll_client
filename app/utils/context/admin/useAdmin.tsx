@@ -49,6 +49,8 @@ export const AdminProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             }
 
+            setState((s) => ({ ...s, loading: s.adminId ? s.loading : true }));
+
             try {
                 const admin = await fetchAdminContext(userId);
 

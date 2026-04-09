@@ -645,10 +645,26 @@ const AddUserModal: React.FC<{
       setSessionOptions([]);
     } catch (e: any) {
       console.error(e);
+
+      let message = "Something went wrong. Please try again.";
+
+      if (e?.message) {
+        const errMsg = e.message.toLowerCase();
+
+        if (errMsg.includes("email")) {
+          message = "This email is already registered.";
+        } else if (errMsg.includes("mobile")) {
+          message = "This mobile number is already in use.";
+        } else if (errMsg.includes("duplicate")) {
+          message = "User already exists with provided details.";
+        }
+      }
+
+      toast.error(message);
+
       if (createdUserId && !user) {
         await supabase.from("users").delete().eq("userId", createdUserId);
       }
-      toast.error(e.message || "An error occurred");
     } finally {
       setLoading(false);
     }
