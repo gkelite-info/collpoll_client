@@ -360,11 +360,11 @@ export default function AdminDashLeft({
           ))}
 
           <div className="col-span-3 relative grid grid-cols-3 gap-3">
-            <WipOverlay
+            {/* <WipOverlay
               isMedium={true}
               fullWidth={true}
               borderRadius="rounded-lg"
-            />
+            /> */}
 
             {overlayCards.map((item, index) => (
               <CardComponent
