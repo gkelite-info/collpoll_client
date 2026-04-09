@@ -247,6 +247,8 @@ export default function AdminDashLeft({
   const { fullName, gender, loading: userLoading } = useUser(); // <-- Moved this up!
 
   const currentView = searchParams.get("view") || "MAIN";
+  const isAutomationsView = searchParams.get("view") === "automations";
+  const isPolicyView = searchParams.get("view") === "policy-setup";
 
   const handleBack = () => {
     router.push("?");
@@ -294,7 +296,6 @@ export default function AdminDashLeft({
       id: "TOTAL_USERS",
       style: "bg-[#E2DAFF] h-[126.35px] w-[162px]",
       icon: <UsersThree size={32} weight="fill" color="#714EF2" />,
-      // Using userLoading and adminLoading safely
       value: userLoading || adminLoading ? <ValueShimmer /> : cards?.totalUsers,
       label: "Total Users",
     },

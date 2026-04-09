@@ -374,7 +374,7 @@ const AttendancePage = () => {
             </h1>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            Track, verify, and manage Attendance records across branches and
+            Track, verify, and manage attendance records across branches and
             faculty.
           </p>
         </div>

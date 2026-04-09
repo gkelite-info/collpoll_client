@@ -33,6 +33,81 @@ export default function CollegeRegistration() {
 
   const router = useRouter();
 
+  const formatAddress = (value: string) => {
+    if (!value) return value;
+
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  };
+
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+
+    const formatted = formatAddress(value);
+
+    setFormData((prev) => ({
+      ...prev,
+      address: formatted,
+    }));
+  };
+
+  const validateLocationInput = (value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z\s]/g, "");
+    return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const validateZipByCountry = (value: string, country: string) => {
+    let cleaned = value.trim();
+
+    switch (country.toLowerCase()) {
+      case "india":
+        cleaned = cleaned.replace(/\D/g, "").slice(0, 6);
+        break;
+
+      case "united states":
+      case "usa":
+        const digits = value.replace(/\D/g, "").slice(0, 9);
+
+        if (digits.length > 5) {
+          cleaned = `${digits.slice(0, 5)}-${digits.slice(5)}`;
+        } else {
+          cleaned = digits;
+        }
+        break;
+
+      case "canada":
+      case "united kingdom":
+        cleaned = cleaned.replace(/[^a-zA-Z0-9\s]/g, "").toUpperCase();
+        break;
+
+      default:
+        cleaned = cleaned.replace(/[^a-zA-Z0-9\s-]/g, "").slice(0, 10);
+    }
+
+    return cleaned;
+  };
+
+  const handleZipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
+
+    const formatted = validateZipByCountry(value, formData.country);
+
+    setFormData((prev) => ({
+      ...prev,
+      zip: formatted,
+    }));
+  };
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+
+    const formattedValue = validateLocationInput(value);
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: formattedValue,
+    }));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
@@ -128,9 +203,11 @@ export default function CollegeRegistration() {
     };
   };
 
+
   const handleSave = async () => {
-    const { collegeName, email, phone, country, state, zip, countryCode } =
-      formData;
+    const { collegeName, email, phone, country, state, zip, countryCode } = formData;
+
+    const countryLower = formData.country.toLowerCase();
 
     if (!collegeName.trim()) return toast.error("College Name is required");
     if (!/^\S+@\S+\.\S+$/.test(email))
@@ -141,7 +218,22 @@ export default function CollegeRegistration() {
       return toast.error("Phone must be exactly 10 digits");
     if (!country.trim()) return toast.error("Please enter a Country");
     if (!state.trim()) return toast.error("Please enter a State");
-    if (!/^\d{5,6}$/.test(zip)) return toast.error("Enter a valid Zip/Pincode");
+    if (!formData.city.trim()) return toast.error("Please enter a City");
+
+    if (countryLower === "india") {
+      if (!/^[1-9][0-9]{5}$/.test(formData.zip)) {
+        return toast.error("Enter a valid 6-digit Indian Pincode");
+      }
+    } else if (countryLower === "united states" || countryLower === "usa") {
+      if (!/^\d{5}(-\d{4})?$/.test(formData.zip)) {
+        return toast.error("Enter a valid US ZIP code");
+      }
+    } else {
+      if (!formData.zip.trim()) {
+        return toast.error("Zip/Postal code is required");
+      }
+    }
+
     if (!formData.address.trim()) return toast.error("Address cannot be empty");
     if (!selectedFile) return toast.error("Please upload a verification proof");
     if (formData.educationType.length === 0)
@@ -186,13 +278,30 @@ export default function CollegeRegistration() {
         fileInputRef.current.value = "";
       }
     } catch (error: any) {
-      // toast.dismiss(loadingToast);
+      toast.dismiss(loadingToast);
+      
       console.error("FULL ERROR:", error);
-      toast.error(error.message || "Failed to register college");
+
+      let message = "Something went wrong. Please try again.";
+
+      const errMsg = error?.message?.toLowerCase() || "";
+
+      if (errMsg.includes("collegecode")) {
+        message = "This college code already exists. Please use a different code.";
+      } else if (errMsg.includes("collegeemail") || errMsg.includes("email")) {
+        message = "This email is already registered.";
+      } else if (errMsg.includes("mobile") || errMsg.includes("phone")) {
+        message = "This mobile number is already in use.";
+      } else if (errMsg.includes("duplicate")) {
+        message = "Duplicate entry detected. Please check your details.";
+      }
+
+      toast.error(message);
     } finally {
       setUploading(false);
     }
   };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -10 }}
@@ -396,14 +505,14 @@ export default function CollegeRegistration() {
             label="Country"
             name="country"
             value={formData.country}
-            onChange={handleChange}
+            onChange={handleLocationChange}
             placeholder="Enter Country"
           />
           <InputField
             label="State"
             name="state"
             value={formData.state}
-            onChange={handleChange}
+            onChange={handleLocationChange}
             placeholder="Enter State"
           />
         </div>
@@ -412,14 +521,14 @@ export default function CollegeRegistration() {
             label="City"
             name="city"
             value={formData.city}
-            onChange={handleChange}
+            onChange={handleLocationChange}
             placeholder='e.g., "Hyderabad"'
           />
           <InputField
             label="Zip / Pincode"
             name="zip"
             value={formData.zip}
-            onChange={handleChange}
+            onChange={handleZipChange}
             placeholder='e.g., "500081"'
           />
         </div>
@@ -429,7 +538,7 @@ export default function CollegeRegistration() {
             label="Address"
             name="address"
             value={formData.address}
-            onChange={handleChange}
+            onChange={handleAddressChange}
             placeholder='e.g., "Hyderabad"'
             className="flex-[3]"
           />

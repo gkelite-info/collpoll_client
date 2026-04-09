@@ -38,6 +38,18 @@ export function useAcademicFilters(userId?: number) {
     fetchEducations(collegeId).then(setEducations);
   }, [collegeId]);
 
+  // useEffect(() => {
+  //   if (!collegeId || !branch || !year || !section) {
+  //     setSubjects([]);
+  //     setSubject(null);
+  //     return;
+  //   }
+
+  //   getSubjects(collegeId, branch.collegeBranchId, year.collegeAcademicYearId)
+  //     .then(setSubjects)
+  //     .catch(() => setSubjects([]));
+  // }, [collegeId, branch, year, section]);
+
   useEffect(() => {
     if (!collegeId || !branch || !year || !section) {
       setSubjects([]);
@@ -45,7 +57,11 @@ export function useAcademicFilters(userId?: number) {
       return;
     }
 
-    getSubjects(collegeId, branch.collegeBranchId, year.collegeAcademicYearId)
+    getSubjects(
+      collegeId,
+      branch.collegeBranchId,
+      year.collegeAcademicYearId
+    )
       .then(setSubjects)
       .catch(() => setSubjects([]));
   }, [collegeId, branch, year, section]);
@@ -64,33 +80,76 @@ export function useAcademicFilters(userId?: number) {
     setSections([]);
   };
 
+  // const selectBranch = async (br: any) => {
+  //   setBranch(br);
+  //   setYear(null);
+  //   setSection(null);
+
+  //   setYears(
+  //     await fetchAcademicYears(
+  //       collegeId!,
+  //       education.collegeEducationId,
+  //       br.collegeBranchId,
+  //     ),
+  //   );
+  //   setSections([]);
+  // };
+
   const selectBranch = async (br: any) => {
     setBranch(br);
     setYear(null);
     setSection(null);
+    setSubject(null);
 
-    setYears(
-      await fetchAcademicYears(
-        collegeId!,
-        education.collegeEducationId,
-        br.collegeBranchId,
-      ),
+    if (!br) {
+      setYears([]);
+      setSections([]);
+      return;
+    }
+
+    const yearsData = await fetchAcademicYears(
+      collegeId!,
+      education.collegeEducationId,
+      br.collegeBranchId,
     );
+
+    setYears(yearsData);
     setSections([]);
   };
+
+  // const selectYear = async (yr: any) => {
+  //   setYear(yr);
+  //   setSection(null);
+
+  //   setSections(
+  //     await fetchSections(
+  //       collegeId!,
+  //       education.collegeEducationId,
+  //       branch.collegeBranchId,
+  //       yr.collegeAcademicYearId,
+  //     ),
+  //   );
+  // };
 
   const selectYear = async (yr: any) => {
     setYear(yr);
     setSection(null);
+    setSubject(null);
 
-    setSections(
-      await fetchSections(
-        collegeId!,
-        education.collegeEducationId,
-        branch.collegeBranchId,
-        yr.collegeAcademicYearId,
-      ),
+    // 🛑 HANDLE "All"
+    if (!yr) {
+      setSections([]);
+      return;
+    }
+
+    const sectionsData = await fetchSections(
+      collegeId!,
+      education.collegeEducationId,
+      branch.collegeBranchId,
+      yr.collegeAcademicYearId,
     );
+
+    setSections(sectionsData);
   };
 
   const resetEducation = () => {

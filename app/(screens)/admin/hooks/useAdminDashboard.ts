@@ -14,7 +14,10 @@ export function useAdminDashboard() {
 
   const load = async () => {
     if (!collegeId || !collegeEducationId) return;
-    setLoading(true);
+
+    if (!cards) {
+      setLoading(true);
+    }
 
     const [summaryResult, deptDataResult] = await Promise.allSettled([
       getAdminDashboardSummary(collegeId, collegeEducationId),

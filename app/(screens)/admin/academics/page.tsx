@@ -189,7 +189,7 @@ const AcademicPage = () => {
             <h1 className="text-xl font-bold text-[#282828]">Academics</h1>
           </div>
           <p className="text-[#282828] mt-1 text-sm">
-            Track syllabus Progress and manage notes by semester
+            Track syllabus progress and manage notes by semester
           </p>
         </div>
         <div className="w-[30%]">
@@ -256,39 +256,56 @@ const AcademicPage = () => {
           <FilterDropdown
             label="Branch"
             value={branch?.collegeBranchId?.toString() ?? "All"}
-            disabled={!education}
-            placeholder="Select Branch"
-            options={[
-              "All",
-              ...branches.map((b) => b.collegeBranchId.toString()),
-            ]}
+            placeholder="All"
+            options={["All", ...branches.map((b) => b.collegeBranchId.toString())]}
+            // onChange={(val) => {
+            //   if (val === "All") {
+            //     if (education) selectEducation(education);
+            //     return;
+            //   }
+            //   const br = branches.find((b) => b.collegeBranchId === +val);
+            //   br && selectBranch(br);
+            // }}
             onChange={(val) => {
               if (val === "All") {
-                selectEducation(education);
+                selectBranch(null);
+
+                // 🔥 ADD THIS
+                selectYear(null);
+                setSection(null);
+                setSubject(null);
+
                 return;
               }
+
               const br = branches.find((b) => b.collegeBranchId === +val);
-              br && selectBranch(br);
+              if (br) {
+                selectBranch(br);
+
+                // Optional but recommended
+                selectYear(null);
+                setSection(null);
+                setSubject(null);
+              }
             }}
             displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (branches.find((b) => b.collegeBranchId.toString() === val)
-                  ?.collegeBranchCode ?? val)
+              val === "All" ? "All" : (branches.find((b) => b.collegeBranchId.toString() === val)?.collegeBranchCode ?? val)
             }
           />
 
+          {/* Year - REMOVED disabled={!branch} */}
           <FilterDropdown
             label="Year"
+            // If year is null, we MUST pass the string "All"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
-            disabled={!branch}
-            placeholder="Select Year"
-            options={[
-              "All",
-              ...years.map((y) => y.collegeAcademicYearId.toString()),
-            ]}
+            placeholder="All"
+            // Keep it enabled so users can see the "All" state
+            disabled={false}
+            // Ensure "All" is always the first option regardless of whether 'years' is empty
+            options={["All", ...years.map((y) => y.collegeAcademicYearId.toString())]}
             onChange={(val) => {
               if (val === "All") {
+                selectYear(null);
                 setSection(null);
                 setSubject(null);
                 return;
@@ -296,23 +313,20 @@ const AcademicPage = () => {
               const yr = years.find((y) => y.collegeAcademicYearId === +val);
               yr && selectYear(yr);
             }}
-            displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (years.find((y) => y.collegeAcademicYearId.toString() === val)
-                  ?.collegeAcademicYear ?? val)
-            }
+            displayModifier={(val) => {
+              // This is the critical fix for the blank UI
+              if (val === "All") return "All";
+              return years.find((y) => y.collegeAcademicYearId.toString() === val)?.collegeAcademicYear ?? "All";
+            }}
           />
 
+          {/* Section - REMOVED disabled={!year} */}
           <FilterDropdown
             label="Section"
             value={section?.collegeSectionsId?.toString() ?? "All"}
-            disabled={!year}
-            placeholder="Select Section"
-            options={[
-              "All",
-              ...sections.map((s) => s.collegeSectionsId.toString()),
-            ]}
+            placeholder="All"
+            disabled={false}
+            options={["All", ...sections.map((s) => s.collegeSectionsId.toString())]}
             onChange={(val) => {
               if (val === "All") {
                 setSection(null);
@@ -323,22 +337,17 @@ const AcademicPage = () => {
               sec && setSection(sec);
             }}
             displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (sections.find((s) => s.collegeSectionsId.toString() === val)
-                  ?.collegeSections ?? val)
+              val === "All" ? "All" : (sections.find((s) => s.collegeSectionsId.toString() === val)?.collegeSections ?? val)
             }
           />
 
+          {/* Subject - REMOVED disabled={!section} */}
           <FilterDropdown
             label="Subject"
             value={subject?.collegeSubjectId?.toString() ?? "All"}
-            disabled={!section}
-            placeholder="Select Subject"
-            options={[
-              "All",
-              ...subjects.map((s) => s.collegeSubjectId.toString()),
-            ]}
+            placeholder="All"
+            disabled={false}
+            options={["All", ...subjects.map((s) => s.collegeSubjectId.toString())]}
             onChange={(val) => {
               if (val === "All") {
                 setSubject(null);
@@ -348,10 +357,7 @@ const AcademicPage = () => {
               sub && setSubject(sub);
             }}
             displayModifier={(val) =>
-              val === "All"
-                ? "All"
-                : (subjects.find((s) => s.collegeSubjectId.toString() === val)
-                  ?.subjectName ?? val)
+              val === "All" ? "All" : (subjects.find((s) => s.collegeSubjectId.toString() === val)?.subjectName ?? val)
             }
           />
         </div>
