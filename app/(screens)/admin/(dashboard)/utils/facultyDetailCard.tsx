@@ -12,6 +12,8 @@ export interface FacultyData {
       fullName?: string;
       email?: string;
     };
+    mobile?: string;
+    collegeBranchCode?: string
   };
   name: string;
   subject: string;
@@ -21,6 +23,7 @@ export interface FacultyData {
   phone: string;
   email: string;
   address: string;
+  collegeBranchCode?: string;
   experience: string;
   qualification: string;
   avatar: string;
@@ -28,10 +31,11 @@ export interface FacultyData {
 
 interface FacultyCardProps {
   data: FacultyData;
+  collegeEdu?: string | null;
 }
 
-const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
-  // fallback if raw data is missing
+const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
+
   const raw = (data as any)?.raw ?? (data as any) ?? {};
 
   return (
@@ -57,7 +61,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
         </div>
 
         <span className="rounded-full bg-[#E1F5EA] px-3 py-1 text-sm font-medium text-[#43C17A]">
-          ID {raw.facultyId ?? "N/A"}
+          ID - {raw.facultyId ?? "N/A"}
         </span>
       </div>
 
@@ -65,7 +69,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
         <div>
           <p className="text-sm font-medium text-[#666666] mb-0.5">Contact</p>
           <p className="text-base font-medium text-[#333333]">
-            {raw.facultyId ?? "N/A"}
+            {raw.mobile ?? "N/A"}
           </p>
         </div>
 
@@ -80,9 +84,9 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-[#666666] mb-0.5">Address</p>
+          <p className="text-sm font-medium text-[#666666] mb-0.5">Branch</p>
           <p className="text-base font-medium text-[#333333] leading-tight">
-            {data.address}
+            {data.collegeBranchCode}
           </p>
         </div>
       </div>
@@ -120,7 +124,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data }) => {
             <p className="text-base font-bold text-[#1a1a1a]">
               {data.department}
             </p>
-            <p className="text-xs font-medium text-[#444444]">Department</p>
+            <p className="text-xs font-medium text-[#444444]">{!(collegeEdu === "Inter") ? "Branch" : "Group"}</p>
           </div>
         </div>
       </div>

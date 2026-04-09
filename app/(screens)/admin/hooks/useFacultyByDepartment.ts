@@ -29,6 +29,11 @@ export function useFacultyByDepartment(
           email,
           role,
           userId,
+          mobile,
+          collegeBranchId,
+          college_branch!inner (
+            collegeBranchCode
+          ),
           faculty_sections${sectionJoin} (
             collegeSectionsId,
             college_subjects (
@@ -71,6 +76,7 @@ export function useFacultyByDepartment(
 
           return {
             ...f,
+            collegeBranchCode: f.college_branch?.collegeBranchCode ?? "—",
             designation: f.role || "Faculty",
             subject: uniqueSubjects || "—",
             users: {

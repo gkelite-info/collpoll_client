@@ -1,16 +1,16 @@
 'use client'
 import { useUser } from "@/app/utils/context/UserContext";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { fetchAdminFinanceMeetings, fetchParentFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
+import { fetchParentFinanceMeetings } from "@/lib/helpers/finance/meetings/meetingsAPI";
 import { motion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import MeetingCard from "../../finance/meetings/components/MeetingCard";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { Loader } from "../../(student)/calendar/right/timetable";
 import { useParent } from "@/app/utils/context/parent/useParent";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
+import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 
 type MeetingType = 'upcoming' | 'previous';
 type MeetingCategory = 'Parent';
@@ -46,7 +46,17 @@ export default function ParentMeetingsPage() {
     const currentCategory = 'Parent';
     const [meetings, setMeetings] = useState<Meeting[]>([]);
     const { role } = useUser();
-    const { parentId } = useParent();
+    const { parentId, childUserId } = useParent();
+
+    const [childDetails, setChildDetails] = useState<{
+        collegeBranchId: number | null;
+        collegeSectionsId: number | null;
+        collegeAcademicYearId: number | null;
+    }>({
+        collegeBranchId: null,
+        collegeSectionsId: null,
+        collegeAcademicYearId: null,
+    });
 
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
@@ -69,13 +79,27 @@ export default function ParentMeetingsPage() {
     ];
 
     useEffect(() => {
-        if (!parentId) {
-            setMeetings([]);
-            return;
-        }
+        if (!childUserId) return;
+        const loadChildDetails = async () => {
+            try {
+                const student = await fetchStudentContext(childUserId);
+                setChildDetails({
+                    collegeBranchId: student.collegeBranchId,
+                    collegeSectionsId: student.collegeSectionsId,
+                    collegeAcademicYearId: student.collegeAcademicYearId,
+                });
+            } catch (err) {
+                console.error("Failed to fetch child student details", err);
+            }
+        };
+        loadChildDetails();
+    }, [childUserId]);
+
+    useEffect(() => {
+        if (!parentId || !childDetails.collegeBranchId) return;
         loadMeetings();
 
-    }, [currentType, page, parentId]);
+    }, [currentType, page, parentId, childDetails]);
 
     const loadMeetings = async () => {
         try {
@@ -87,6 +111,9 @@ export default function ParentMeetingsPage() {
                 type: currentType,
                 page,
                 limit: 10,
+                collegeBranchId: childDetails.collegeBranchId ?? undefined,
+                collegeSectionsId: childDetails.collegeSectionsId ?? undefined,
+                collegeAcademicYearId: childDetails.collegeAcademicYearId ?? undefined,
             });
 
             const finalMeetings: Meeting[] = res.data.map((meeting: any) => ({
@@ -103,7 +130,6 @@ export default function ParentMeetingsPage() {
             setIsLoading(false);
         }
     };
-
 
     return (
         <>

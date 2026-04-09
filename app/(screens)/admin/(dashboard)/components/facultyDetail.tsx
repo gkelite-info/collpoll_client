@@ -7,6 +7,7 @@ import { classSessions } from "../data";
 interface FacultyDetailProps {
   faculty: FacultyData;
   onBack: () => void;
+  collegeEdu?: string | null;
 }
 
 const cardData: CardProps[] = [
@@ -36,16 +37,16 @@ const cardData: CardProps[] = [
   },
 ];
 
-const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack }) => {
+const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeEdu }) => {
   return (
     <div className="w-full px-1">
       <div className="mb-3">
-        <div className="flex items-center gap-2 group w-fit">
+        <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
             size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
           <h1 className="text-2xl font-bold text-[#282828]">CSE Faculty</h1>
         </div>
@@ -69,7 +70,7 @@ const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack }) => {
       </article>
 
       <div className="mb-6">
-        <FacultyCard data={faculty} />
+        <FacultyCard data={faculty} collegeEdu={collegeEdu} />
       </div>
 
       <div>
