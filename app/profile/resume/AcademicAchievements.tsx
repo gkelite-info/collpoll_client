@@ -8,6 +8,7 @@ import {
 import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 const DEFAULT_ACHIEVEMENTS = [
   "College Topper",
@@ -50,6 +51,7 @@ function AchievementsShimmer() {
 
 export default function AcademicAchievements() {
   const { studentId } = useUser();
+  const router = useRouter();
 
   const [achievements, setAchievements] =
     useState<string[]>(DEFAULT_ACHIEVEMENTS);
@@ -143,6 +145,7 @@ export default function AcademicAchievements() {
 
       setInitialSelected(selected);
       toast.success("Academic achievements saved successfully.");
+      router.push("/profile?resume=accomplishments&Step=8");
     } catch (error: any) {
       toast.error(error.message || "Failed to save achievements.");
       console.error("Submit Error:", error);
@@ -249,6 +252,30 @@ export default function AcademicAchievements() {
               >
                 {isSubmitting ? "Saving..." : "Submit"}
               </button>
+
+              <div className="mt-4 bg-purple-100 rounded-xl p-4 flex flex-col items-center text-center">
+                <div className="flex items-center gap-2 mb-2 w-full">
+                  <img
+                    src="/AI Robot.png"
+                    alt="AI Robot"
+                    width={70}
+                    height={70}
+                    className="object-contain shrink-0"
+                  />
+                  <p className="flex-1 text-sm font-medium text-gray-700">
+                    Do you feel your current resume doesn't fully showcase your skills or match the job you're aiming for?
+                    <br />
+                    Want to enhance it to better fit your target role?
+                  </p>
+                </div>
+                {/* ✅ ONLY CHANGE: routing added to Click here button */}
+                <button
+                  onClick={() => router.push("/profile?resume=profilesummaryai")}
+                  className="bg-[#1e1b4b] text-white text-sm px-5 py-1.5 rounded-md font-medium hover:bg-[#2d2a6e] transition-all cursor-pointer"
+                >
+                  Click here
+                </button>
+              </div>
             </div>
           </div>
         )}

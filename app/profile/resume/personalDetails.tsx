@@ -273,7 +273,7 @@ export default function ResumePersonalDetails() {
           </div>
 
           {/* College Code — locked */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-[#282828] mb-1">
               College Code
             </label>
@@ -290,7 +290,7 @@ export default function ResumePersonalDetails() {
                 size={16}
               />
             </div>
-          </div>
+          </div> */}
 
           {/* LinkedIn — editable */}
           <div>
@@ -321,7 +321,7 @@ export default function ResumePersonalDetails() {
           </div>
 
           {/* College ID — locked */}
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-[#282828] mb-1">
               College ID<span className="text-red-500">*</span>
             </label>
@@ -337,7 +337,7 @@ export default function ResumePersonalDetails() {
                 size={16}
               />
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Work Status */}

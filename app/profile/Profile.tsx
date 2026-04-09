@@ -18,12 +18,15 @@ import Accomplishments from "./resume/Accomplishments/Accomplishments";
 import CompetetiveExams from "./resume/CompetetiveExams";
 import Employment from "./resume/Employment/Employment";
 import AcademicAchievements from "./resume/AcademicAchievements";
+
 import ResumeSteps from "./resumeSteps";
 import { useUser } from "../utils/context/UserContext";
 import { useEffect } from "react";
 import { canAccessResume } from "@/lib/helpers/profile/profileRouteConfig";
 import { Loader } from "../(screens)/(student)/calendar/right/timetable";
 import StudentProfileSummary from "./studentProfileSummary";
+import ProfileSummaryAI from "./resume/profilesummaryai";
+import ResumeTemplateSelector from "./resume/Resumetemplateselector ";
 
 export default function ProfileClient() {
   const searchParams = useSearchParams();
@@ -46,7 +49,7 @@ export default function ProfileClient() {
   useEffect(() => {
     if (!roleChecked || role === undefined) return;
     const resumeParam = searchParams.get("resume");
-    
+
     const isStudent = role === "Student";
     if (resumeParam && !isStudent) {
       const params = new URLSearchParams();
@@ -100,7 +103,7 @@ export default function ProfileClient() {
         return <ProjectsForm />;
 
       case "profile-summary":
-        return isProfileMode ? <StudentProfileSummary/> : <ProfileSummary /> 
+        return isProfileMode ? <StudentProfileSummary /> : <ProfileSummary />
 
       case "accomplishments":
         return <Accomplishments />;
@@ -113,6 +116,16 @@ export default function ProfileClient() {
 
       case "academic-achievements":
         return <AcademicAchievements />;
+
+      case "profilesummaryai": // 
+        return <ProfileSummaryAI />;
+
+      case "templates":
+        return (
+          <ResumeTemplateSelector
+            // onBack={() => router.push("/profile?resume=profilesummaryai")}
+          />
+        );
 
       default:
         return isProfileMode ? <ProfileInfo /> : <PersonalDetails />;
