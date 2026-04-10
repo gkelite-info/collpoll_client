@@ -80,10 +80,6 @@ export const EXEMPTED_ROUTES = [
  * Instead, we check specific role portals
  */
 export const ROLE_PROTECTED_PORTALS = [
-<<<<<<< Updated upstream
-=======
-  // "/",
->>>>>>> Stashed changes
   "/admin",
   "/faculty",
   "/super-admin",
