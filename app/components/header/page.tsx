@@ -49,6 +49,7 @@ function HeaderContent() {
     email: currentUserEmail,
     userId,
     profilePhoto,
+    identifierId
   } = useUser();
 
   const { financeManagerId } = useFinanceManager();
@@ -250,7 +251,7 @@ function HeaderContent() {
                         : "—"}
                     </p>
                     <p>
-                      ID - <span>{studentId}</span>
+                      ID - <span>{identifierId || studentId}</span>
                     </p>
                   </>
                 )}
@@ -258,7 +259,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{financeManagerId}</span>
+                      ID - <span>{identifierId || financeManagerId}</span>
                     </p>
                   </>
                 )}
@@ -266,7 +267,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{facultyId}</span>
+                      ID - <span>{identifierId || facultyId}</span>
                     </p>
                   </>
                 )}
@@ -274,7 +275,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{adminId}</span>
+                      ID - <span>{identifierId || adminId}</span>
                     </p>
                   </>
                 )}
@@ -282,7 +283,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{collegeAdminId}</span>
+                      ID - <span>{identifierId || collegeAdminId}</span>
                     </p>
                   </>
                 )}
@@ -290,7 +291,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{parentId}</span>
+                      ID - <span>{identifierId || parentId}</span>
                     </p>
                   </>
                 )}
@@ -298,7 +299,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{collegeHrId}</span>
+                      ID - <span>{identifierId || collegeHrId}</span>
                     </p>
                   </>
                 )}

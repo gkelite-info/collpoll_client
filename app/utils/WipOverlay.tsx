@@ -70,7 +70,7 @@ export default function WipOverlay({
                 className={`relative flex-none w-[46px] h-[40px] mb-2 sm:mb-3 mt-1 ${gearOnly && "mt-3"}
             ${isExtraSmall
                         ? "w-auto mt-4"
-                        : isMedium && "mx-auto ml-10"}`}>
+                        : isMedium && ""}`}>
                 <div className="absolute top-1 left-2 w-8 h-8 bg-blue-500/30 blur-xl rounded-full scale-150"></div>
 
                 <div className="absolute left-0 top-0 w-[32px] h-[32px] animate-[spin_4s_linear_infinite]">

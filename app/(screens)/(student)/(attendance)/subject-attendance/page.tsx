@@ -113,7 +113,7 @@ export default function SubjectAttendance() {
     { title: "Missed", key: "missed" },
     { title: "Leave", key: "leave" },
     { title: "Percentage", key: "percentage" },
-    { title: "Notes", key: "notes" },
+    // { title: "Notes", key: "notes" },
     { title: "Actions", key: "actions" },
   ];
 
@@ -125,16 +125,16 @@ export default function SubjectAttendance() {
       missed: row.missed,
       leave: row.leave,
       percentage: `${row.percentage}%`,
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
+      // notes: (
+      //   <div className="w-full flex justify-center">
+      //     <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+      //       <FilePdf size={20} color="#7557E3" />
+      //     </div>
+      //   </div>
+      // ),
       actions: (
         <span
-          className="text-[#525252] cursor-pointer hover:underline underline"
+          className="text-[#525252] cursor-pointer hover:underline"
           onClick={() =>
             router.push(
               `/attendance?tab=subject-attendance-details&subjectId=${row.subjectId}`

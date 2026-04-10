@@ -268,8 +268,6 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
             </section>
 
-
-
             {!loading && facultyList.length === 0 && (
                 <div className="flex items-center justify-center min-h-[60vh] w-full -mt-20">
                     <p className="text-sm text-gray-500 flex items-center justify-center">
@@ -278,63 +276,12 @@ export default function FacultyOverview({ onSelect }: Props) {
                 </div>
             )}
 
-            {/* {!loading && facultyList.length > 0 && (
-                <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {paginatedFaculty.map((faculty) => (
-                        <FacultyCard
-                            key={faculty.id}
-                            faculty={faculty}
-                            onSelect={onSelect}
-                        />
-                    ))}
-
-                    
-
-                    {totalPages > 1 && (
-                        <div className="col-span-full w-full flex justify-center mt-8 mb-4">
-                            <div className="flex flex-wrap justify-center items-center gap-2 max-w-full">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
-                                >
-                                    ‹
-                                </button>
-
-                                {[...Array(totalPages)].slice(0, 10).map((_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        onClick={() => setCurrentPage(i + 1)}
-                                        className={`min-w-[36px] cursor-pointer h-9 px-2 rounded-lg text-sm font-bold ${currentPage === i + 1
-                                                ? "bg-[#16284F] text-white"
-                                                : "bg-white border"
-                                            }`}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="h-9 px-4 cursor-pointer rounded-lg border bg-white"
-                                >
-                                    ›
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </section>
-            )} */}
-
             <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
                 {loading && (
                     [...Array(15)].map((_, index) => (
                         <FacultyCardSkeleton key={index} />
                     ))
                 )}
-
                 {!loading && facultyList.length > 0 &&
                     paginatedFaculty.map((faculty) => (
                         <FacultyCard
@@ -344,7 +291,6 @@ export default function FacultyOverview({ onSelect }: Props) {
                         />
                     ))
                 }
-
             </section>
 
             {totalPages > 1 && (

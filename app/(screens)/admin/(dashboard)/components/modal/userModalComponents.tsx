@@ -77,7 +77,7 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
       {/* Label — matches native select exactly */}
       {label && (
         <label className={`text-sm font-medium text-gray-700`}>
-          {label}
+          {label} {label !== "Academic Session" && <span className="text-red-600">*</span> }
           {required && <span className="text-red-500">*</span>}
         </label>
       )}

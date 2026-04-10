@@ -179,7 +179,7 @@ Missed: ${data?.headerStats.absent ?? 0} |
     { title: "Time", key: "time" },
     { title: "Status", key: "status" },
     { title: "Reason", key: "reason" },
-    { title: "Notes", key: "notes" },
+    // { title: "Notes", key: "notes" },
   ];
 
   const tableData: AttendanceTableRow[] =
@@ -189,13 +189,13 @@ Missed: ${data?.headerStats.absent ?? 0} |
       rawStatus: r.status,
       status: <StatusBadge status={normalizeStatus(r.status)} />,
       reason: r.reason,
-      notes: (
-        <div className="w-full flex justify-center">
-          <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-            <FilePdf size={20} color="#7557E3" />
-          </div>
-        </div>
-      ),
+      // notes: (
+      //   <div className="w-full flex justify-center">
+      //     <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
+      //       <FilePdf size={20} color="#7557E3" />
+      //     </div>
+      //   </div>
+      // ),
     })) ?? [];
 
   const filteredTableData = (() => {

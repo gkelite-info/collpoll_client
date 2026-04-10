@@ -1,3 +1,4 @@
+import WipOverlay from "@/app/utils/WipOverlay";
 import React from "react";
 
 export interface ClassSession {
@@ -13,7 +14,8 @@ interface SessionTableProps {
 
 const SessionTable: React.FC<SessionTableProps> = ({ sessions }) => {
   return (
-    <div className="w-full bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+    <div className="relative w-full bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+      <WipOverlay />
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-gray-100/80">

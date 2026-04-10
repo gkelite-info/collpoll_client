@@ -360,10 +360,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       toast.error("Past dates are not allowed");
       return;
     }
-    if (!roomNo.trim()) {
-      toast.error("Please enter Room No.");
-      return;
-    }
     if (!educationId) {
       toast.error("Education Type not resolved. Please reload.");
       return;
@@ -593,7 +589,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Room No. <span className="text-red-600">*</span></label>
+                <label className="block text-sm font-medium text-gray-700">Room No.</label>
                 <input
                   value={roomNo}
                   onChange={(e) => setRoomNo(e.target.value.toUpperCase())}
