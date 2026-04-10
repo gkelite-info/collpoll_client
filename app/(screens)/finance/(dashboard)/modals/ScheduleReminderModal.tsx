@@ -12,6 +12,8 @@ import {
   BellRinging,
   WarningCircle,
 } from "@phosphor-icons/react";
+import toast from "react-hot-toast";
+import { scheduleFeeReminders } from "@/lib/helpers/finance/dashboard/reminders/financeReminders";
 
 const generateNumbers = (start: number, end: number) =>
   Array.from({ length: end - start + 1 }, (_, i) =>
@@ -37,18 +39,20 @@ const MONTHS_SHORT = [
   "Dec",
 ];
 
-const getCurrentTimeState = () => {
-  const now = new Date();
-  let h = now.getHours();
+// Helper to get current time + 15 minutes by default
+const getFutureTimeState = (addMinutes = 15) => {
+  const future = new Date();
+  future.setMinutes(future.getMinutes() + addMinutes);
+  let h = future.getHours();
   const ampm = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
 
   return {
-    date: new Date(now.getFullYear(), now.getMonth(), 1),
-    day: now.getDate(),
+    date: new Date(future.getFullYear(), future.getMonth(), 1),
+    day: future.getDate(),
     hour: String(h).padStart(2, "0"),
-    minute: String(now.getMinutes()).padStart(2, "0"),
-    second: String(now.getSeconds()).padStart(2, "0"),
+    minute: String(future.getMinutes()).padStart(2, "0"),
+    second: String(future.getSeconds()).padStart(2, "0"),
     ampm,
   };
 };
@@ -78,7 +82,7 @@ const ScrollPicker = ({
     if (containerRef.current && index !== -1) {
       containerRef.current.scrollTop = index * ITEM_HEIGHT;
     }
-  }, []);
+  }, [items, selectedValue]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
@@ -128,7 +132,11 @@ const ScrollPicker = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUpOrLeave}
       onMouseLeave={handleMouseUpOrLeave}
-      className={`h-[120px] overflow-y-auto relative ${width} ${isDragging ? "cursor-grabbing snap-none" : "cursor-grab snap-y snap-mandatory"}`}
+      className={`h-[120px] overflow-y-auto relative ${width} ${
+        isDragging
+          ? "cursor-grabbing snap-none"
+          : "cursor-grab snap-y snap-mandatory"
+      }`}
       style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
     >
       <div style={{ height: ITEM_HEIGHT }} className="snap-center" />
@@ -154,30 +162,94 @@ const ScrollPicker = ({
   );
 };
 
-interface Props {
+const CustomCheckbox = ({
+  label,
+  checked,
+  onChange,
+  disabled = false,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+}) => {
+  return (
+    <div
+      className={`flex items-center gap-3 group select-none ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+      }`}
+      onClick={!disabled ? onChange : undefined}
+    >
+      <div
+        className={`w-[20px] h-[20px] rounded-[4px] flex items-center justify-center transition-all border shadow-sm
+        ${
+          checked
+            ? "bg-white border-[#192233]"
+            : "border-gray-300 bg-gray-50 group-hover:border-gray-400"
+        }`}
+      >
+        <motion.div
+          initial={false}
+          animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
+          <Check weight="bold" className="text-[#192233] w-3.5 h-3.5" />
+        </motion.div>
+      </div>
+      <span className="text-gray-700 text-[14px] font-semibold tracking-tight">
+        {label}
+      </span>
+    </div>
+  );
+};
+
+interface ScheduleProps {
   isOpen: boolean;
+  variant?: "student" | "faculty";
+  collegeId: number;
+  selectedStudentIds: number[];
   onClose: () => void;
 }
 
-const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
+export const ScheduleReminderModal = ({
+  isOpen,
+  variant = "student",
+  collegeId,
+  selectedStudentIds,
+  onClose,
+}: ScheduleProps) => {
+  // Initialize with exactly Now + 15 minutes
   const [currentDate, setCurrentDate] = useState(
-    () => getCurrentTimeState().date,
+    () => getFutureTimeState().date,
   );
   const [selectedDay, setSelectedDay] = useState<number | null>(
-    () => getCurrentTimeState().day,
+    () => getFutureTimeState().day,
   );
   const [showMonthPicker, setShowMonthPicker] = useState(false);
 
-  const [hour, setHour] = useState(() => getCurrentTimeState().hour);
-  const [minute, setMinute] = useState(() => getCurrentTimeState().minute);
-  const [second, setSecond] = useState(() => getCurrentTimeState().second);
-  const [ampm, setAmpm] = useState(() => getCurrentTimeState().ampm);
+  const [hour, setHour] = useState(() => getFutureTimeState().hour);
+  const [minute, setMinute] = useState(() => getFutureTimeState().minute);
+  const [second, setSecond] = useState(() => getFutureTimeState().second);
+  const [ampm, setAmpm] = useState(() => getFutureTimeState().ampm);
 
   const [sendEmail, setSendEmail] = useState(true);
-  const [sms, setSms] = useState(true);
+  const [sendInApp, setSendInApp] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  // If closed, ensure we reset the +15 minute logic next time it opens
+  useEffect(() => {
+    if (isOpen) {
+      const future = getFutureTimeState();
+      setCurrentDate(future.date);
+      setSelectedDay(future.day);
+      setHour(future.hour);
+      setMinute(future.minute);
+      setSecond(future.second);
+      setAmpm(future.ampm);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -203,7 +275,8 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
   if (ampm === "AM" && h24 === 12) h24 = 0;
   selectedFullDate.setHours(h24, parseInt(minute, 10), parseInt(second, 10));
 
-  const isPastSelection = selectedFullDate < now;
+  // Validation strictly checks if selectedFullDate is behind right now
+  const isPastSelection = selectedFullDate < new Date();
 
   const handlePrevMonth = () =>
     !isPrevMonthDisabled &&
@@ -222,19 +295,47 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
     setShowMonthPicker(false);
   };
 
-  const handleSubmit = () => {
-    if (isPastSelection) return;
+  const handleSubmit = async () => {
+    if (isPastSelection) {
+      toast.error("Cannot schedule a reminder in the past.");
+      return;
+    }
+
+    if (!sendEmail && !sendInApp) {
+      toast.error("Please select at least one notification method");
+      return;
+    }
+
     setIsSubmitting(true);
+    toast.loading("Scheduling reminder...", { id: "schedule-reminder" });
 
-    setTimeout(() => {
+    const result = await scheduleFeeReminders({
+      collegeId,
+      studentIds: selectedStudentIds,
+      variant,
+      notifyStudents: true,
+      notifyParents: true,
+      viaInApp: sendInApp,
+      viaEmail: sendEmail,
+      // viaSms: false,
+      runAt: selectedFullDate.toISOString(),
+    });
+
+    if (result.success) {
       setIsSubmitting(false);
-      setShowToast(true);
+      toast.success("Reminder scheduled successfully", {
+        id: "schedule-reminder",
+      });
 
+      setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
         onClose();
-      }, 3000);
-    }, 1200);
+      }, 2000);
+    } else {
+      setIsSubmitting(false);
+      toast.error("Failed to schedule reminder.", { id: "schedule-reminder" });
+    }
   };
 
   const formattedDate = `${MONTHS_SHORT[currentMonth]} ${selectedDay}, ${currentYear}`;
@@ -269,7 +370,6 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
       </AnimatePresence>
 
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -278,7 +378,6 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
           className="absolute inset-0 bg-[#0f172a]/60 backdrop-blur-sm"
         />
 
-        {/* Modal Window */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -286,14 +385,13 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
           transition={{ type: "spring", damping: 25, stiffness: 350 }}
           className="relative bg-white rounded-2xl shadow-2xl w-full max-w-[700px] flex flex-col font-sans overflow-hidden"
         >
-          {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white z-10 shrink-0">
             <h2 className="text-xl font-bold text-gray-800 tracking-tight">
               Schedule Fee Reminder
             </h2>
             <button
               onClick={!isSubmitting && !showToast ? onClose : undefined}
-              className="text-gray-400 hover:text-gray-800 transition-colors disabled:opacity-50 p-1 rounded"
+              className="text-gray-400 hover:text-gray-800 transition-colors disabled:opacity-50 p-1 rounded cursor-pointer"
               disabled={isSubmitting || showToast}
             >
               <X size={22} weight="bold" />
@@ -315,13 +413,17 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                       <button
                         onClick={handlePrevMonth}
                         disabled={isPrevMonthDisabled}
-                        className={`p-1.5 rounded-lg transition-colors ${isPrevMonthDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-white/10"}`}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isPrevMonthDisabled
+                            ? "opacity-30 cursor-not-allowed"
+                            : "hover:bg-white/10"
+                        }`}
                       >
                         <CaretLeft size={20} weight="bold" />
                       </button>
                       <button
                         onClick={() => setShowMonthPicker(true)}
-                        className="flex items-center gap-2 font-bold text-[16px] tracking-wide hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                        className="flex items-center gap-2 font-bold text-[16px] tracking-wide hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         {currentDate.toLocaleString("default", {
                           month: "long",
@@ -335,7 +437,7 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                       </button>
                       <button
                         onClick={handleNextMonth}
-                        className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+                        className="hover:bg-white/10 p-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         <CaretRight size={20} weight="bold" />
                       </button>
@@ -362,7 +464,6 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                         const day = i + 1;
                         const isSelected = selectedDay === day;
 
-                        // Validation: Check if day is strictly in the past (before today)
                         const dayDate = new Date(
                           currentYear,
                           currentMonth,
@@ -379,7 +480,7 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                             <button
                               disabled={isPastDay}
                               onClick={() => setSelectedDay(day)}
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] transition-all duration-200
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-[13px] transition-all duration-200 cursor-pointer
                                 ${
                                   isPastDay
                                     ? "text-gray-600 cursor-not-allowed opacity-50"
@@ -407,7 +508,11 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                       <button
                         onClick={handlePrevYear}
                         disabled={isPrevYearDisabled}
-                        className={`p-1.5 rounded-lg transition-colors ${isPrevYearDisabled ? "opacity-30 cursor-not-allowed" : "hover:bg-white/10"}`}
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          isPrevYearDisabled
+                            ? "opacity-30 cursor-not-allowed"
+                            : "hover:bg-white/10"
+                        }`}
                       >
                         <CaretLeft size={20} weight="bold" />
                       </button>
@@ -416,7 +521,7 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                       </span>
                       <button
                         onClick={handleNextYear}
-                        className="hover:bg-white/10 p-1.5 rounded-lg transition-colors"
+                        className="hover:bg-white/10 p-1.5 rounded-lg transition-colors cursor-pointer"
                       >
                         <CaretRight size={20} weight="bold" />
                       </button>
@@ -431,7 +536,7 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                             key={month}
                             disabled={isMonthDisabled}
                             onClick={() => selectMonth(idx)}
-                            className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200
+                            className={`py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer
                               ${
                                 isMonthDisabled
                                   ? "text-gray-600 opacity-30 cursor-not-allowed"
@@ -503,9 +608,9 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                     onChange={() => setSendEmail(!sendEmail)}
                   />
                   <CustomCheckbox
-                    label="SMS"
-                    checked={sms}
-                    onChange={() => setSms(!sms)}
+                    label="In-app"
+                    checked={sendInApp}
+                    onChange={() => setSendInApp(!sendInApp)}
                   />
                 </div>
               </div>
@@ -522,11 +627,12 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
                     : {}
                 }
                 onClick={handleSubmit}
-                disabled={isSubmitting || showToast || isPastSelection}
-                className={`w-full py-3.5 rounded-xl font-bold text-[15px] transition-all shadow-md flex items-center justify-center gap-2 overflow-hidden relative mt-auto
+                // We keep it visually clickable to show the validation error via toast
+                disabled={isSubmitting || showToast}
+                className={`w-full py-3.5 rounded-xl font-bold text-[15px] transition-all shadow-md flex items-center justify-center gap-2 overflow-hidden relative mt-auto cursor-pointer
                   ${
                     isPastSelection
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      ? "bg-gray-200 text-gray-500"
                       : showToast
                         ? "bg-[#10B981] text-white"
                         : "bg-[#52B774] hover:bg-[#43a062] text-white"
@@ -587,38 +693,3 @@ const ScheduleReminderModal = ({ isOpen, onClose }: Props) => {
     </>
   );
 };
-
-const CustomCheckbox = ({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) => {
-  return (
-    <div
-      className="flex items-center gap-3 cursor-pointer group select-none"
-      onClick={onChange}
-    >
-      <div
-        className={`w-[20px] h-[20px] rounded-[4px] flex items-center justify-center transition-all border shadow-sm
-        ${checked ? "bg-white border-[#192233]" : "border-gray-300 bg-gray-50 group-hover:border-gray-400"}`}
-      >
-        <motion.div
-          initial={false}
-          animate={{ scale: checked ? 1 : 0, opacity: checked ? 1 : 0 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-        >
-          <Check weight="bold" className="text-[#192233] w-3.5 h-3.5" />
-        </motion.div>
-      </div>
-      <span className="text-gray-700 text-[14px] font-semibold tracking-tight">
-        {label}
-      </span>
-    </div>
-  );
-};
-
-export default ScheduleReminderModal;
