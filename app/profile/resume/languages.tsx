@@ -1,66 +1,49 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CaretDown, X } from "@phosphor-icons/react";
+import { MagnifyingGlass, X, Plus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchResumeLanguages, upsertResumeLanguages } from "@/lib/helpers/student/Resume/resumeLanguagesAPI";
 import ResumeLanguagesShimmer from "./ResumeLanguagesShimmer";
-
-const ALL_LANGUAGES = [
-  "English",
-  "Hindi",
-  "Telugu",
-  "Kannada",
-  "Tamil",
-  "Malayalam",
-  "Marathi",
-  "Bengali",
-  "Punjabi",
-  "Gujarati",
-];
+import { suggestLanguagesAction } from "@/lib/helpers/student/ai/Suggestlanguagesaction";
+import SuggestedPill from "./KeySkills/SuggestedPill";
 
 const toPascalCase = (str: string) =>
-  str
-    .trim()
-    .split(" ")
-    .filter(Boolean)
+  str.trim().split(" ").filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
 
-const toPascalCaseLive = (str: string) =>
-  str
-    .split(" ")
-    .map((word) => {
-      if (!word) return "";
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
+type LangSearch = { query: string; results: string[]; loading: boolean; open: boolean };
 
 export default function ResumeLanguages() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showOtherInput, setShowOtherInput] = useState(false);
-  const [otherValue, setOtherValue] = useState("");
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
-  const { studentId } = useUser();
+  const { studentId, collegeEducationType, collegeBranchCode } = useUser();
+
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [addingSuggestion, setAddingSuggestion] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<string[]>([]);
+
+  const [langSearch, setLangSearch] = useState<LangSearch>({
+    query: "", results: [], loading: false, open: false,
+  });
+
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    function onDocClick(e: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setLangSearch((prev) => ({ ...prev, open: false }));
       }
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -72,29 +55,72 @@ export default function ResumeLanguages() {
       .finally(() => setLoading(false));
   }, [studentId]);
 
-  const filtered = ALL_LANGUAGES.filter(
-    (l) => l.toLowerCase().includes(query.trim().toLowerCase()) && !selected.includes(l)
-  );
+  useEffect(() => {
+    if (!collegeEducationType || !collegeBranchCode) return;
+    setLoadingSuggestions(true);
+    suggestLanguagesAction(collegeEducationType, collegeBranchCode)
+      .then((langs) => setSuggestions(langs))
+      .catch(() => {})
+      .finally(() => setLoadingSuggestions(false));
+  }, [collegeEducationType, collegeBranchCode]);
 
-  const toggleSelect = (lang: string) => {
-    if (selected.includes(lang)) return;
-    setSelected((s) => [...s, lang]);
-    setQuery("");
-    if (inputRef.current) inputRef.current.value = "";
-    setOpen(false);
-    inputRef.current?.focus();
+  const handleSearchChange = (query: string) => {
+    setLangSearch((prev) => ({
+      ...prev, query, open: true,
+      results: query ? prev.results : [],
+    }));
+
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    if (!query.trim()) return;
+
+    searchDebounceRef.current = setTimeout(async () => {
+      setLangSearch((prev) => ({ ...prev, loading: true }));
+      try {
+        const matched = suggestions.filter((s) =>
+          s.toLowerCase().includes(query.toLowerCase()) && !selected.includes(s)
+        );
+        setLangSearch((prev) => ({
+          ...prev, results: matched, loading: false, open: true,
+        }));
+      } catch {
+        setLangSearch((prev) => ({ ...prev, loading: false }));
+      }
+    }, 300);
+  };
+
+  const addLanguage = (name: string) => {
+    const formatted = toPascalCase(name);
+    if (selected.includes(formatted)) {
+      toast.error("Language already added");
+      return;
+    }
+    setSelected((prev) => [...prev, formatted]);
+    setSuggestions((prev) => prev.filter((s) => s !== name && s !== formatted));
+    setDismissed((prev) => prev.filter((s) => s !== name && s !== formatted));
+  };
+
+  const handleAddKeyword = () => {
+    const query = langSearch.query.trim();
+    if (!query) return;
+    addLanguage(query);
+    setLangSearch({ query: "", results: [], loading: false, open: false });
+  };
+
+  const handleAddFromSearch = (name: string) => {
+    addLanguage(name);
+    setLangSearch({ query: "", results: [], loading: false, open: false });
   };
 
   const remove = (lang: string) => {
     setSelected((s) => s.filter((x) => x !== lang));
+    // Restore back to suggestions
+    setSuggestions((prev) => prev.includes(lang) ? prev : [lang, ...prev]);
+    setDismissed((prev) => prev.filter((s) => s !== lang));
   };
 
   const saveLanguages = async () => {
     if (isSubmitting || !studentId) return;
-    if (selected.length === 0) {
-      toast.error("Select at least one language");
-      return;
-    }
+    if (selected.length === 0) { toast.error("Select at least one language"); return; }
     try {
       setIsSubmitting(true);
       await upsertResumeLanguages(studentId, selected);
@@ -106,150 +132,57 @@ export default function ResumeLanguages() {
     }
   };
 
-  const addOtherLanguage = () => {
-    const trimmed = otherValue.trim();
-    if (!trimmed) {
-      toast.error("Please enter a language");
-      return;
-    }
-    const formatted = toPascalCase(trimmed);
-    if (!selected.includes(formatted)) {
-      setSelected((prev) => [...prev, formatted]);
-    }
-    setOtherValue("");
-    setShowOtherInput(false);
+  const handleAddSuggestion = (name: string) => {
+    setAddingSuggestion(name);
+    addLanguage(name);
+    setAddingSuggestion(null);
   };
 
-  const handleOtherKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addOtherLanguage();
-    }
+  const handleDismissSuggestion = (name: string) => {
+    setSuggestions((prev) => prev.filter((s) => s !== name));
+    setDismissed((prev) => (prev.includes(name) ? prev : [...prev, name]));
+  };
+
+  const handleRestoreDismissed = (name: string) => {
+    setDismissed((prev) => prev.filter((s) => s !== name));
+    setSuggestions((prev) => (prev.includes(name) ? prev : [...prev, name]));
   };
 
   if (loading) return <ResumeLanguagesShimmer />;
 
+  const keywordNotAdded =
+    langSearch.query.trim() &&
+    !selected.some((s) => s.toLowerCase() === langSearch.query.trim().toLowerCase());
+
+  const searchResults = langSearch.results.filter((s) => !selected.includes(s));
+
   return (
-    <div className="mt-3 h-full">
-      <div className="bg-white rounded-lg shadow-sm p-6 h-[95%]">
-        <div className="flex justify-between">
+    <div className="mt-3 min-h-screen pb-10">
+      <div className="bg-white rounded-lg shadow-sm p-8 pb-4">
+
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
           <button
             onClick={() => router.push("/profile?resume=internships&Step=5")}
-            className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm"
+            className="bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm font-medium cursor-pointer"
           >
             Next
           </button>
         </div>
 
-        <div className="mt-6 max-w-xl flex flex-col mx-auto">
-          <div ref={containerRef} className="relative">
-            <div className="w-full flex items-center justify-between border border-[#CCCCCC] rounded px-3 py-2 text-left focus-within:outline-none">
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  if (!open) setOpen(true);
-                }}
-                onFocus={() => setOpen(true)}
-                className="flex-1 text-[#525252] text-sm outline-none bg-transparent"
-                placeholder="Select Language"
-                aria-label="Select Language"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen((v) => !v);
-                  setTimeout(() => inputRef.current?.focus(), 10);
-                }}
-                className="ml-2"
-                aria-haspopup="listbox"
-                aria-expanded={open}
-              >
-                <CaretDown size={18} className="text-[#525252]" />
-              </button>
-            </div>
+        <div className="max-w-xl mx-auto flex flex-col gap-4">
 
-            <div
-              className={`absolute left-0 right-0 mt-1 z-50 bg-white border border-[#C0C0C0] rounded shadow-sm max-h-56 overflow-auto ${
-                open ? "block" : "hidden"
-              }`}
-            >
-              <ul role="listbox" tabIndex={-1} className="p-2 space-y-1">
-                {filtered.length === 0 ? (
-                  <li className="text-sm text-[#525252] px-2 py-2">No languages found</li>
-                ) : (
-                  filtered.map((lang) => (
-                    <li
-                      key={lang}
-                      onClick={() => toggleSelect(lang)}
-                      className="cursor-pointer px-3 py-2 text-[#525252] rounded hover:bg-emerald-50 text-sm flex items-center justify-between"
-                      role="option"
-                      aria-selected={false}
-                    >
-                      <span>{lang}</span>
-                      <span className="text-xs">Add</span>
-                    </li>
-                  ))
-                )}
-
-                {!showOtherInput && (
-                  <div
-                    onClick={() => setShowOtherInput(true)}
-                    className="mt-2 px-3 hover:bg-emerald-50 py-2 cursor-pointer text-sm text-[#43C17A]"
-                  >
-                    + Other
-                  </div>
-                )}
-
-                {showOtherInput && (
-                  <div className="flex gap-2 mt-2">
-                    <input
-                      autoFocus
-                      value={otherValue}
-                      onChange={(e) => setOtherValue(toPascalCaseLive(e.target.value))}
-                      onKeyDown={handleOtherKey}
-                      placeholder="Enter language"
-                      className="flex-1 border border-[#CCCCCC] focus:outline-none ml-3 rounded px-3 py-2 text-sm"
-                    />
-                    <button
-                      onClick={addOtherLanguage}
-                      className="px-4 bg-[#43C17A] focus:outline-none cursor-pointer text-white rounded text-sm"
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => {
-                        setOtherValue("");
-                        setShowOtherInput(false);
-                      }}
-                      className="px-4 cursor-pointer focus:outline-none border rounded text-sm"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-4 border border-[#C0C0C0] rounded px-3 py-3 min-h-12">
+          {/* Selected Pills Box */}
+          <div className="border border-[#C0C0C0] rounded-md px-3 py-3 min-h-[50px]">
             <div className="flex flex-wrap gap-2">
               {selected.length === 0 ? (
-                <div className="text-sm text-gray-400 italic">No languages selected.</div>
+                <span className="text-sm text-gray-400 italic">No languages selected.</span>
               ) : (
                 selected.map((lang) => (
-                  <div
-                    key={lang}
-                    className="flex items-center gap-2 bg-white border rounded-full px-3 py-1 text-sm text-[#525252]"
-                  >
+                  <div key={lang} className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1 text-sm text-[#525252]">
                     <span>{lang}</span>
-                    <button
-                      onClick={() => remove(lang)}
-                      className="inline-flex cursor-pointer items-center justify-center w-5 h-5 text-[#525252] hover:text-red-600"
-                      aria-label={`Remove ${lang}`}
-                    >
+                    <button onClick={() => remove(lang)} className="text-red-500 cursor-pointer">
                       <X size={14} weight="bold" />
                     </button>
                   </div>
@@ -258,16 +191,140 @@ export default function ResumeLanguages() {
             </div>
           </div>
 
-          <div className="flex justify-end mt-6">
+          {/* ✦ AI Suggestions label + inline search bar — same as skills */}
+          <div className="mt-1">
+            <div className="flex items-center gap-3 mb-2">
+              <p className="text-xs font-medium text-gray-500 shrink-0">✦ AI Suggestions — click to add</p>
+
+              {/* Inline search with dropdown */}
+              <div
+                className="relative flex-1 max-w-xs"
+                ref={dropdownRef}
+              >
+                <div className="flex items-center gap-1.5 border border-[#D9D9D9] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
+                  <MagnifyingGlass size={12} className="text-gray-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={langSearch.query}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onFocus={() => setLangSearch((prev) => ({ ...prev, open: true }))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && langSearch.query.trim()) {
+                        e.preventDefault();
+                        handleAddKeyword();
+                      }
+                      if (e.key === "Escape") {
+                        setLangSearch({ query: "", results: [], loading: false, open: false });
+                      }
+                    }}
+                    placeholder="Search languages..."
+                    className="flex-1 text-xs text-[#282828] outline-none placeholder:text-gray-300 bg-transparent"
+                  />
+                  {langSearch.loading && (
+                    <span className="text-[10px] text-[#43C17A] animate-pulse shrink-0">...</span>
+                  )}
+                  {langSearch.query && !langSearch.loading && (
+                    <button
+                      type="button"
+                      onClick={() => setLangSearch({ query: "", results: [], loading: false, open: false })}
+                      className="text-gray-300 hover:text-gray-500 cursor-pointer"
+                    >
+                      <X size={11} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown */}
+                {langSearch.open && langSearch.query.trim() && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-[5.5rem] overflow-y-auto">
+                    {keywordNotAdded && (
+                      <button
+                        type="button"
+                        onClick={handleAddKeyword}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F6FDF9] text-left border-b border-gray-100 transition-colors"
+                      >
+                        <Plus size={13} className="text-[#43C17A] shrink-0" weight="bold" />
+                        <span className="text-sm text-[#282828] font-medium">
+                          Add "<span className="text-[#43C17A]">{langSearch.query.trim()}</span>"
+                        </span>
+                      </button>
+                    )}
+                    {langSearch.loading && searchResults.length === 0 && (
+                      <div className="px-4 py-3 text-xs text-gray-400 animate-pulse">Finding suggestions...</div>
+                    )}
+                    {!langSearch.loading && searchResults.length === 0 && !keywordNotAdded && (
+                      <div className="px-4 py-3 text-xs text-gray-400">No results found</div>
+                    )}
+                    {searchResults.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleAddFromSearch(s)}
+                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F6FDF9] text-left transition-colors"
+                      >
+                        <Plus size={13} className="text-[#43C17A] shrink-0" weight="bold" />
+                        <span className="text-sm text-[#525252]">{s}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Suggestion pills — shown when not searching */}
+            {!langSearch.query && suggestions.filter((s) => !selected.includes(s)).length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {suggestions
+                  .filter((s) => !selected.includes(s))
+                  .map((s) => (
+                    <SuggestedPill
+                      key={s}
+                      label={s}
+                      disabled={addingSuggestion === s}
+                      onAdd={() => handleAddSuggestion(s)}
+                      onDismiss={() => handleDismissSuggestion(s)}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {loadingSuggestions && suggestions.length === 0 && (
+              <p className="text-xs text-gray-300 animate-pulse">Loading AI suggestions...</p>
+            )}
+          </div>
+
+          {/* Dismissed Section */}
+          {dismissed.filter((s) => !selected.includes(s)).length > 0 && (
+            <div className="mt-2 pt-3 border-t border-gray-100">
+              <p className="text-xs font-medium text-gray-400 mb-2">Dismissed — click to restore</p>
+              <div className="flex flex-wrap gap-2">
+                {dismissed
+                  .filter((s) => !selected.includes(s))
+                  .map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => handleRestoreDismissed(s)}
+                      className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1 text-xs text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer"
+                    >
+                      <span>+ {s}</span>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Save Button */}
+          <div className="flex justify-end mt-4">
             <button
               onClick={saveLanguages}
               disabled={isSubmitting}
-              className={`px-6 py-2 rounded-md text-sm text-white 
-                ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+              className={`px-8 py-2 rounded-md text-sm font-semibold text-white cursor-pointer 
+                ${isSubmitting ? "bg-gray-400" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
             >
               {isSubmitting ? "Saving..." : "Save"}
             </button>
           </div>
+
         </div>
       </div>
     </div>

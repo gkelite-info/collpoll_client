@@ -10,12 +10,16 @@ import {
   updateProfileSummary,
 } from "@/lib/helpers/student/Resume/profileSummaryAPI";
 import ProfileSummaryShimmer from "../shimmers/ProfileSummaryShimmer";
+import { generateProfileSummaryAction } from "@/lib/helpers/student/ai/profileSummaryAction";
 
 export default function ProfileSummary() {
   const [description, setDescription] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [resumeSummaryId, setResumeSummaryId] = useState<number | null>(null);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const { studentId } = useUser();
   const router = useRouter();
 
@@ -64,6 +68,26 @@ export default function ProfileSummary() {
     }
   };
 
+  const handleGenerateAI = async () => {
+    if (!studentId) return;
+
+    setIsGenerating(true);
+
+    try {
+      const summary = await generateProfileSummaryAction(studentId);
+
+      if (summary) {
+        setDescription(summary); // ✅ ONLY SET (toast removed)
+      } else {
+        toast.error("Failed to generate summary");
+      }
+    } catch (err) {
+      toast.error("AI generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (loading) return <ProfileSummaryShimmer />;
 
   return (
@@ -85,10 +109,21 @@ export default function ProfileSummary() {
           <h3 className="text-base font-medium text-[#282828] mb-1">
             Write Your Professional Summary
           </h3>
-          <p className="text-sm text-[#525252] mb-4 max-w-3xl">
-            Share a short overview of your education, skills, and career goals
-            what drives you and where you see your future.
-          </p>
+
+          {/* AI BUTTON */}
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={handleGenerateAI}
+              disabled={isGenerating}
+              className={`px-4 py-1.5 text-sm rounded-md font-medium transition-all ${
+                isGenerating
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+              }`}
+            >
+              {isGenerating ? "Generating..." : "Generate with AI"}
+            </button>
+          </div>
 
           <div className="relative">
             <textarea
