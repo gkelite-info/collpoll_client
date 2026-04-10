@@ -328,18 +328,18 @@ export const classSessions = [
     section: "2nd Year CSE - A",
     subject: "Data Structures",
     students: 45,
-    semester: "Sem 3",
+    semester: "Sem 1",
   },
   {
     section: "2nd Year CSE - B",
     subject: "Data Structures",
     students: 45,
-    semester: "Sem 3",
+    semester: "Sem 1",
   },
   {
     section: "3rd Year CSE - A",
     subject: "Operating Systems",
     students: 42,
-    semester: "Sem 5",
+    semester: "Sem 2",
   },
 ];

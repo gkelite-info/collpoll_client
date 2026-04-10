@@ -86,16 +86,16 @@ export default function AdminNavbar() {
       label: "Placements",
       path: "/admin/placements",
     },
-    {
-      icon: (isActive) => (
-        <CurrencyCircleDollar
-          size={18}
-          weight={isActive ? "fill" : "regular"}
-        />
-      ),
-      label: "Payments",
-      path: "/admin/payments",
-    },
+    // {
+    //   icon: (isActive) => (
+    //     <CurrencyCircleDollar
+    //       size={18}
+    //       weight={isActive ? "fill" : "regular"}
+    //     />
+    //   ),
+    //   label: "Payments",
+    //   path: "/admin/payments",
+    // },
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />

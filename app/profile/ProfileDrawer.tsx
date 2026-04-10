@@ -54,6 +54,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     collegeBranchCode,
     collegeAcademicYear,
     profilePhoto,
+    identifierId
   } = useUser();
   const { financeManagerId } = useFinanceManager();
   const { facultyId, college_branch, faculty_edu_type } = useFaculty();
@@ -187,7 +188,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                 )}
                 {role === "Faculty" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {facultyId}
+                    ID - {identifierId || facultyId}
                   </span>
                 )}
                 {role === "Admin" && (

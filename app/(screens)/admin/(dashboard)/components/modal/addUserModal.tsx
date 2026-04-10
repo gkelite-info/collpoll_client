@@ -15,6 +15,7 @@ import { upsertAdminEntry, upsertCollegeHR, upsertUser } from "@/lib/helpers/ups
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
+import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 
 const toPascalCase = (str: string) => {
   return str.replace(
@@ -31,6 +32,23 @@ const validatePassword = (password: string) => {
   if (!hasUpper || !hasLower || !hasDigit || !hasSpecial) {
     return "Password must contain one uppercase, one lowercase, one number and one special character.";
   }
+  return null;
+};
+
+const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(-[A-Za-z0-9]+)?$/;
+
+const validateIdentifier = (value: string) => {
+  if (!value?.trim()) {
+    return "is required.";
+  }
+  if (
+    value.length < 6 ||
+    value.length > 15 ||
+    !IDENTIFIER_REGEX.test(value)
+  ) {
+    return "Must be 6–15 characters and include at least one number. Only letters, numbers and one hyphen (-) allowed.";
+  }
+
   return null;
 };
 
@@ -76,6 +94,7 @@ const AddUserModal: React.FC<{
     adminId: 0,
     dateOfJoining: "",
     professionalExperienceYears: undefined as number | undefined,
+    identifierValue: "",
   };
   const [basicData, setBasicData] = useState<any>(initialBasicData);
 
@@ -110,6 +129,7 @@ const AddUserModal: React.FC<{
   const resetForm = () => {
     setBasicData((prev: any) => ({
       ...initialBasicData,
+      identifierValue: "",
       collegeId: prev.collegeId,
       collegeIntId: prev.collegeIntId,
       adminId: prev.adminId,
@@ -335,6 +355,13 @@ const AddUserModal: React.FC<{
       if (formattedValue.length > 10) return;
     }
 
+    else if (name === "identifierValue") {
+      const sanitized = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
+      const hyphenCount = (sanitized.match(/-/g) || []).length;
+      if (hyphenCount > 1) return;
+      formattedValue = sanitized;
+    }
+
     setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
   };
 
@@ -404,6 +431,17 @@ const AddUserModal: React.FC<{
     }
 
     if (!basicData.role) return toast.error("Role is required.");
+
+    if (showRollNoField || showEmployeeIdField) {
+      const error = validateIdentifier(basicData.identifierValue);
+      if (error) {
+        const label =
+          showRollNoField
+            ? "Roll no"
+            : "Employee Id";
+        return toast.error(`${label} ${error}`);
+      }
+    }
 
     if (!basicData.gender) return toast.error("Please select a gender.");
 
@@ -578,6 +616,8 @@ const AddUserModal: React.FC<{
 
       if (!targetUserId) throw new Error("User creation failed");
 
+      let studentId: number | null = null;
+
       if (isStudent) {
         const eduId = studentSelectedEducation?.collegeEducationId;
         const branchId = studentSelectedBranch?.collegeBranchId;
@@ -600,7 +640,7 @@ const AddUserModal: React.FC<{
           throw new Error("Invalid academic selection data");
         }
 
-        const studentId = await createStudent({
+        studentId = await createStudent({
           userId: targetUserId,
           collegeEducationId: eduId,
           collegeBranchId: branchId,
@@ -632,6 +672,19 @@ const AddUserModal: React.FC<{
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
         });
+      }
+
+      if (basicData.identifierValue) {
+        await upsertIdentifier({
+          userId: targetUserId,
+          studentId: isStudent
+            ? studentId!
+            : undefined,
+          collegeId: basicData.collegeIntId,
+          role: basicData.role,
+          identifierValue: basicData.identifierValue,
+        });
+
       }
 
       toast.success("User Created Successfully");
@@ -672,6 +725,9 @@ const AddUserModal: React.FC<{
 
   const showEmploymentFields = !isStudent && !isParent && basicData.role !== "";
 
+  const showRollNoField = isStudent;
+  const showEmployeeIdField = !isStudent && !isParent && basicData.role !== "";
+
   if (!isOpen) return null;
 
   return (
@@ -692,7 +748,7 @@ const AddUserModal: React.FC<{
           <div className="p-5 overflow-y-auto custom-scrollbar flex flex-col gap-3.5">
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#2D3748]">
-                Full Name
+                Full Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
@@ -705,7 +761,7 @@ const AddUserModal: React.FC<{
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#2D3748]">
-                Email ID
+                Email ID <span className="text-red-600">*</span>
               </label>
               <input
                 type="email"
@@ -719,7 +775,7 @@ const AddUserModal: React.FC<{
             <div className="grid grid-cols-2 gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
-                  College ID
+                  College ID <span className="text-red-600">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -736,7 +792,7 @@ const AddUserModal: React.FC<{
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
-                  Mobile
+                  Mobile <span className="text-red-600">*</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -762,7 +818,7 @@ const AddUserModal: React.FC<{
 
             <div className="grid grid-cols-2 gap-5">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">Role</label>
+                <label className="text-xs font-bold text-[#2D3748]">Role <span className="text-red-600">*</span></label>
                 <div className="relative">
                   <select
                     name="role"
@@ -791,7 +847,7 @@ const AddUserModal: React.FC<{
               {(isFaculty || isFinance || isAdmin) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Education Type
+                    Education Type <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -814,7 +870,7 @@ const AddUserModal: React.FC<{
                 <>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#2D3748]">
-                      Education Type
+                      Education Type <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -837,7 +893,7 @@ const AddUserModal: React.FC<{
               {isParent && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Student ID
+                    Student ID <span className="text-red-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -858,7 +914,7 @@ const AddUserModal: React.FC<{
                     <label className="text-xs font-bold text-[#2D3748]">
                       {collegeEducationType === "Inter"
                         ? "Group Type"
-                        : "Branch Type"}
+                        : "Branch Type"} <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -892,7 +948,7 @@ const AddUserModal: React.FC<{
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#2D3748]">
-                      Year
+                      Year <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -926,7 +982,7 @@ const AddUserModal: React.FC<{
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#2D3748]">
-                      Subject
+                      Subject <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -1087,7 +1143,7 @@ const AddUserModal: React.FC<{
               <div className="grid grid-cols-2 gap-5 bg-pink-00">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Date of Joining
+                    Date of Joining <span className="text-red-600">*</span>
                   </label>
                   <input
                     type="date"
@@ -1100,7 +1156,7 @@ const AddUserModal: React.FC<{
 
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Experience (Years)
+                    Experience (Years) <span className="text-red-600">*</span>
                   </label>
                   <input
                     type="number"
@@ -1118,37 +1174,65 @@ const AddUserModal: React.FC<{
               </div>
             )}
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-[#2D3748]">Gender</label>
-              <div className="flex gap-6 mt-1">
-                {["Male", "Female"].map((g) => (
-                  <label
-                    key={g}
-                    className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
-                    >
-                      {basicData.gender === g && (
-                        <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
-                      )}
-                    </div>
-                    <input
-                      type="radio"
-                      name="gender"
-                      value={g}
-                      checked={basicData.gender === g}
-                      onChange={(e) =>
-                        setBasicData((p: any) => ({
-                          ...p,
-                          gender: e.target.value as any,
-                        }))
-                      }
-                      className="hidden"
-                    />
-                    {g}
+            <div className="grid grid-cols-2 gap-5">
+
+              {(showRollNoField || showEmployeeIdField) && (
+                <div className="space-y-1">
+
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    {showRollNoField ? "Roll No" : "Employee Id"} <span className="text-red-600">*</span>
                   </label>
-                ))}
+
+                  <input
+                    type="text"
+                    name="identifierValue"
+                    value={basicData.identifierValue}
+                    onChange={handleBasicChange}
+                    placeholder={
+                      showRollNoField
+                        ? "Enter Roll No"
+                        : "Enter Employee Id"
+                    }
+                    maxLength={15}
+                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                  />
+
+                </div>
+              )}
+
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D3748]">Gender <span className="text-red-600">*</span></label>
+                <div className="flex gap-6 mt-1">
+                  {["Male", "Female"].map((g) => (
+                    <label
+                      key={g}
+                      className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${basicData.gender === g ? "border-[#48C78E]" : "border-gray-300"}`}
+                      >
+                        {basicData.gender === g && (
+                          <div className="w-2 h-2 rounded-full bg-[#48C78E]" />
+                        )}
+                      </div>
+                      <input
+                        type="radio"
+                        name="gender"
+                        value={g}
+                        checked={basicData.gender === g}
+                        onChange={(e) =>
+                          setBasicData((p: any) => ({
+                            ...p,
+                            gender: e.target.value as any,
+                          }))
+                        }
+                        className="hidden"
+                      />
+                      {g}
+                    </label>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1156,7 +1240,7 @@ const AddUserModal: React.FC<{
               <div className="grid grid-cols-2 gap-5">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Password
+                    Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -1181,7 +1265,7 @@ const AddUserModal: React.FC<{
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Confirm Password
+                    Confirm Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
                     <input

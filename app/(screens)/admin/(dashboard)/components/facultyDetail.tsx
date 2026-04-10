@@ -3,6 +3,7 @@ import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyCard, { FacultyData } from "../utils/facultyDetailCard";
 import SessionTable from "./tables/facultyDetailclassesTable";
 import { classSessions } from "../data";
+import WipOverlay from "@/app/utils/WipOverlay";
 
 interface FacultyDetailProps {
   faculty: FacultyData;
@@ -12,7 +13,7 @@ interface FacultyDetailProps {
 
 const cardData: CardProps[] = [
   {
-    value: "80",
+    value: "0",
     label: "Total Working Days",
     bgColor: "bg-[#E2DAFF]",
     icon: <UserCircle />,
@@ -20,7 +21,7 @@ const cardData: CardProps[] = [
     iconColor: "text-[#6C20CA]",
   },
   {
-    value: "220",
+    value: "0",
     label: "Days Present",
     bgColor: "bg-[#FFEDDA]",
     icon: <UserCircle />,
@@ -28,7 +29,7 @@ const cardData: CardProps[] = [
     iconColor: "text-[#FFBB70]",
   },
   {
-    value: "10",
+    value: "0",
     label: "Days Absent",
     bgColor: "bg-[#FFE6E6]",
     icon: <UserCircle />,
@@ -55,7 +56,8 @@ const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeE
         </p>
       </div>
 
-      <article className="flex gap-3 justify-center items-center mb-4">
+      <article className="relative flex gap-3 justify-center items-center mb-4">
+        <WipOverlay isMedium={true}/>
         {cardData.map((item, index) => (
           <CardComponent
             key={index}

@@ -601,10 +601,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     }
 
-    if (!roomNo.trim()) {
-      toast.error("Please enter Room No.");
-      return;
-    }
     if (!sectionIds.length) {
       toast.error("Please select at least one section.");
       return;
@@ -990,7 +986,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Room No. <span className="text-red-500">*</span>
+                  Room No.
                 </label>
                 <input
                   value={roomNo}
