@@ -201,7 +201,7 @@ export default function ResumeLanguages() {
                 className="relative flex-1 max-w-xs"
                 ref={dropdownRef}
               >
-                <div className="flex items-center gap-1.5 border border-[#D9D9D9] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
+              <div className="flex items-center gap-1.5 border border-[#C0C0C0] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
                   <MagnifyingGlass size={12} className="text-gray-400 shrink-0" />
                   <input
                     type="text"

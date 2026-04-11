@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 const now = () => new Date().toISOString();
 
-export type EducationLevel = "primary" | "secondary" | "undergraduate" | "phd";
+export type EducationLevel = "primary" | "secondary" | "undergraduate" | "masters" | "phd";
 
 // ─── FETCH ────────────────────────────────────────────────────────────────────
 
@@ -143,5 +143,22 @@ export const resumePhdEducationAPI = {
     startYear?: number;
     endYear?: number;
   }) => saveEducation(payload, "phd"),
+  delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
+};
+
+export const resumeMastersEducationAPI = {
+  fetch: (studentId: number) => fetchEducation(studentId, "masters"),
+  save: (payload: {
+    resumeEducationDetailId?: number;
+    studentId: number;
+    collegeId: number;
+    institutionName: string;
+    courseName?: string;
+    specialization?: string;
+    cgpa?: number;
+    courseType?: string;
+    startYear?: number;
+    endYear?: number;
+  }) => saveEducation(payload, "masters"),
   delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
 };

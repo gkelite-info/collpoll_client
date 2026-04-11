@@ -64,25 +64,30 @@ export default function Accomplishments() {
   const { studentId } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>("certifications");
 
-  const [certifications, setCertifications] = useState<(CertificationRecord | null)[]>([null]);
-  const [submittedCerts, setSubmittedCerts] = useState<boolean[]>([false]);
+  // ← CHANGED: saved records only (no null), separate showNew state
+  const [certifications, setCertifications] = useState<CertificationRecord[]>([]);
+  const [submittedCerts, setSubmittedCerts] = useState<boolean[]>([]);
   const [certsLoading, setCertsLoading] = useState(true);
+  const [showNewCert, setShowNewCert] = useState(false); // ← ADD
 
-  const [awards, setAwards] = useState<(AwardRecord | null)[]>([null]);
-  const [submittedAwards, setSubmittedAwards] = useState<boolean[]>([false]);
+  const [awards, setAwards] = useState<AwardRecord[]>([]);
+  const [submittedAwards, setSubmittedAwards] = useState<boolean[]>([]);
   const [awardsLoading, setAwardsLoading] = useState(true);
+  const [showNewAward, setShowNewAward] = useState(false); // ← ADD
 
-  const [clubs, setClubs] = useState<(ClubRecord | null)[]>([null]);
-  const [submittedClubs, setSubmittedClubs] = useState<boolean[]>([false]);
+  const [clubs, setClubs] = useState<ClubRecord[]>([]);
+  const [submittedClubs, setSubmittedClubs] = useState<boolean[]>([]);
   const [clubsLoading, setClubsLoading] = useState(true);
+  const [showNewClub, setShowNewClub] = useState(false); // ← ADD
 
   useEffect(() => {
     if (!studentId) return;
     setCertsLoading(true);
     getCertifications(studentId)
       .then((data) => {
-        setCertifications(data.length > 0 ? data : [null]);
-        setSubmittedCerts(data.length > 0 ? data.map(() => true) : [false]);
+        setCertifications(data.length > 0 ? data : []);
+        setSubmittedCerts(data.length > 0 ? data.map(() => true) : []);
+        setShowNewCert(data.length === 0); // ← show empty form only if no data
       })
       .catch(() => toast.error("Failed to load certifications"))
       .finally(() => setCertsLoading(false));
@@ -93,8 +98,9 @@ export default function Accomplishments() {
     setAwardsLoading(true);
     getAwards(studentId)
       .then((data) => {
-        setAwards(data.length > 0 ? data : [null]);
-        setSubmittedAwards(data.length > 0 ? data.map(() => true) : [false]);
+        setAwards(data.length > 0 ? data : []);
+        setSubmittedAwards(data.length > 0 ? data.map(() => true) : []);
+        setShowNewAward(data.length === 0); // ← ADD
       })
       .catch(() => toast.error("Failed to load awards"))
       .finally(() => setAwardsLoading(false));
@@ -105,8 +111,9 @@ export default function Accomplishments() {
     setClubsLoading(true);
     getClubs(studentId)
       .then((data) => {
-        setClubs(data.length > 0 ? data : [null]);
-        setSubmittedClubs(data.length > 0 ? data.map(() => true) : [false]);
+        setClubs(data.length > 0 ? data : []);
+        setSubmittedClubs(data.length > 0 ? data.map(() => true) : []);
+        setShowNewClub(data.length === 0); // ← ADD
       })
       .catch(() => toast.error("Failed to load clubs"))
       .finally(() => setClubsLoading(false));
@@ -114,21 +121,18 @@ export default function Accomplishments() {
 
   const handleAdd = () => {
     if (activeTab === "certifications") {
-      if (!submittedCerts[certifications.length - 1]) { toast.error("Please submit the latest form before adding a new one."); return; }
-      setCertifications((prev) => [...prev, null]);
-      setSubmittedCerts((prev) => [...prev, false]);
+      if (showNewCert) { toast.error("Please submit the latest form before adding a new one."); return; }
+      setShowNewCert(true); // ← ADD
       return;
     }
     if (activeTab === "awards") {
-      if (!submittedAwards[awards.length - 1]) { toast.error("Please submit the latest form before adding a new one."); return; }
-      setAwards((prev) => [...prev, null]);
-      setSubmittedAwards((prev) => [...prev, false]);
+      if (showNewAward) { toast.error("Please submit the latest form before adding a new one."); return; }
+      setShowNewAward(true); // ← ADD
       return;
     }
     if (activeTab === "clubs") {
-      if (!submittedClubs[clubs.length - 1]) { toast.error("Please submit the latest form before adding a new one."); return; }
-      setClubs((prev) => [...prev, null]);
-      setSubmittedClubs((prev) => [...prev, false]);
+      if (showNewClub) { toast.error("Please submit the latest form before adding a new one."); return; }
+      setShowNewClub(true); // ← ADD
     }
   };
 
@@ -144,6 +148,27 @@ export default function Accomplishments() {
   const markClubSubmitted = (index: number, record: ClubRecord) => {
     setClubs((prev) => { const u = [...prev]; u[index] = record; return u; });
     setSubmittedClubs((prev) => { const u = [...prev]; u[index] = true; return u; });
+  };
+
+  // ← ADD: on new form submit, add to saved list and hide new form
+  const handleNewCertSubmitted = () => {
+    getCertifications(studentId!).then((data) => {
+      setCertifications(data);
+      setSubmittedCerts(data.map(() => true));
+    });
+    setShowNewCert(false);
+  };
+
+  const handleNewAwardSubmitted = (record: AwardRecord) => {
+    setAwards((prev) => [...prev, record]);
+    setSubmittedAwards((prev) => [...prev, true]);
+    setShowNewAward(false);
+  };
+
+  const handleNewClubSubmitted = (record: ClubRecord) => {
+    setClubs((prev) => [...prev, record]);
+    setSubmittedClubs((prev) => [...prev, true]);
+    setShowNewClub(false);
   };
 
   const handleRemoveCertification = async (index: number) => {
@@ -202,46 +227,87 @@ export default function Accomplishments() {
         ))}
       </div>
 
+      {/* ── Certifications ── */}
       {activeTab === "certifications" && (
         certsLoading ? <><FormShimmer /><FormShimmer /></> :
-        certifications.map((cert, i) => (
-          <CertificationsForm
-            key={cert?.resumeCertificateId ?? `new-${i}`}
-            index={i}
-            studentId={studentId!}
-            existingData={cert}
-            onSubmit={() => markCertSubmitted(i)}
-            onRemove={() => handleRemoveCertification(i)}
-          />
-        ))
+        <>
+          {/* Saved certifications → trash icon */}
+          {certifications.map((cert, i) => (
+            <CertificationsForm
+              key={cert?.resumeCertificateId ?? `saved-${i}`}
+              index={i}
+              studentId={studentId!}
+              existingData={cert}
+              onSubmit={() => markCertSubmitted(i)}
+              onRemove={() => handleRemoveCertification(i)}
+            />
+          ))}
+          {/* New form → minus button, click hides it */}
+          {showNewCert && (
+            <CertificationsForm
+              key="new-cert"
+              index={certifications.length}
+              studentId={studentId!}
+              existingData={null}
+              onSubmit={handleNewCertSubmitted}
+              onRemove={() => setShowNewCert(false)}
+            />
+          )}
+        </>
       )}
 
+      {/* ── Awards ── */}
       {activeTab === "awards" && (
         awardsLoading ? <><FormShimmer /><FormShimmer /></> :
-        awards.map((award, i) => (
-          <AwardsForm
-            key={award?.awardId ?? `new-${i}`}
-            index={i}
-            studentId={studentId!}
-            existingData={award}
-            onSubmit={(record) => markAwardSubmitted(i, record)}
-            onRemove={() => handleRemoveAward(i)}
-          />
-        ))
+        <>
+          {awards.map((award, i) => (
+            <AwardsForm
+              key={award?.awardId ?? `saved-${i}`}
+              index={i}
+              studentId={studentId!}
+              existingData={award}
+              onSubmit={(record) => markAwardSubmitted(i, record)}
+              onRemove={() => handleRemoveAward(i)}
+            />
+          ))}
+          {showNewAward && (
+            <AwardsForm
+              key="new-award"
+              index={awards.length}
+              studentId={studentId!}
+              existingData={null}
+              onSubmit={handleNewAwardSubmitted}
+              onRemove={() => setShowNewAward(false)}
+            />
+          )}
+        </>
       )}
 
+      {/* ── Clubs ── */}
       {activeTab === "clubs" && (
         clubsLoading ? <><FormShimmer /><FormShimmer /></> :
-        clubs.map((club, i) => (
-          <ClubsForm
-            key={club?.resumeClubCommitteeId ?? `new-${i}`}
-            index={i}
-            studentId={studentId!}
-            existingData={club}
-            onSubmit={(record) => markClubSubmitted(i, record)}
-            onRemove={() => handleRemoveClub(i)}
-          />
-        ))
+        <>
+          {clubs.map((club, i) => (
+            <ClubsForm
+              key={club?.resumeClubCommitteeId ?? `saved-${i}`}
+              index={i}
+              studentId={studentId!}
+              existingData={club}
+              onSubmit={(record) => markClubSubmitted(i, record)}
+              onRemove={() => handleRemoveClub(i)}
+            />
+          ))}
+          {showNewClub && (
+            <ClubsForm
+              key="new-club"
+              index={clubs.length}
+              studentId={studentId!}
+              existingData={null}
+              onSubmit={handleNewClubSubmitted}
+              onRemove={() => setShowNewClub(false)}
+            />
+          )}
+        </>
       )}
     </div>
   );

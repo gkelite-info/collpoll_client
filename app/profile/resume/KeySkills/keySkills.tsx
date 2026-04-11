@@ -366,8 +366,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
 
               {/* ── Naukri-style dropdown ── */}
               {search.open && search.query.trim() && (
-               <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-15 overflow-y-auto">
-
+               <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
                   {/* First option — add keyword directly */}
                   {keywordNotAdded && (
                     <button

@@ -7,7 +7,7 @@ import { EducationType } from "./Education";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
-import { resumePhdEducationAPI, resumePrimaryEducationAPI, resumeSecondaryEducationAPI, resumeUndergraduateEducationAPI } from "@/lib/helpers/student/Resume/Resumeeducationapi";
+import { resumePhdEducationAPI, resumePrimaryEducationAPI, resumeSecondaryEducationAPI, resumeUndergraduateEducationAPI, resumeMastersEducationAPI } from "@/lib/helpers/student/Resume/Resumeeducationapi";
 import { PhdShimmer, PrimaryShimmer, SecondaryShimmer, UndergraduateShimmer } from "../../shimmers/Educationformshimmer ";
 
 // ─── Shared regex ─────────────────────────────────────────────────────────────
@@ -54,6 +54,7 @@ const TITLES: Record<EducationType, string> = {
   primary: "Primary Education",
   secondary: "Secondary Education",
   undergraduate: "Undergraduate Degree",
+  masters: "Masters Degree",
   phd: "PhD",
 };
 
@@ -99,6 +100,7 @@ export default function ResumeEducationForm({
         primary: resumePrimaryEducationAPI,
         secondary: resumeSecondaryEducationAPI,
         undergraduate: resumeUndergraduateEducationAPI,
+        masters: resumeMastersEducationAPI,
         phd: resumePhdEducationAPI,
       };
       const response = await apiMap[type].delete(recordId);
@@ -143,13 +145,7 @@ export default function ResumeEducationForm({
       <div className="flex justify-between items-center w-[85%] mb-3">
         <h3 className="text-[#43C17A] font-medium">{TITLES[type]}</h3>
         <button
-          onClick={() => {
-            if (!recordId) {
-              onRemove();
-              return;
-            }
-            setConfirmOpen(true);
-          }}
+          onClick={onRemove}
           className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
         >
           <span className="block w-3 h-[3px] bg-white rounded-full" />
@@ -161,6 +157,7 @@ export default function ResumeEducationForm({
       )}
       {type === "secondary" && <SecondaryFields {...fieldProps} />}
       {type === "undergraduate" && <UndergraduateFields {...fieldProps} />}
+      {type === "masters" && <MastersFields {...fieldProps} />}
       {type === "phd" && <PhdFields {...fieldProps} />}
     </>
   );
@@ -485,6 +482,125 @@ function UndergraduateFields({ studentId, collegeId, onSaveRef, onRecordSaved }:
   };
 
   useEffect(() => { onSaveRef.current = saveUndergraduate; }, [form]);
+
+  if (isLoading) return <UndergraduateShimmer />;
+
+  return (
+    <div className="space-y-4">
+      <ControlledInput label="Course Name" value={form.courseName} onChange={(e) => handleChange("courseName", e.target.value)} />
+      <ControlledInput label="Specialization" value={form.specialization} onChange={(e) => handleChange("specialization", e.target.value)} />
+      <ControlledInput label="College Name" value={form.institutionName} onChange={(e) => handleChange("institutionName", e.target.value)} />
+      <ControlledInput label="CGPA (out of 10)" value={form.cgpa} onChange={(e) => handleChange("cgpa", e.target.value)} />
+      <div className="flex gap-5 w-[85%]">
+        <ControlledInput label="Start Year" value={form.startYear} onChange={(e) => handleChange("startYear", e.target.value)} />
+        <ControlledInput label="End Year" value={form.endYear} onChange={(e) => handleChange("endYear", e.target.value)} />
+      </div>
+      <ControlledInput label="Course Type" value={form.courseType} onChange={(e) => handleChange("courseType", e.target.value)} />
+    </div>
+  );
+}
+
+// ─── Masters ──────────────────────────────────────────────────────────────────
+function MastersFields({ studentId, collegeId, onSaveRef, onRecordSaved }: FieldProps) {
+  const [form, setForm] = useState({
+    resumeEducationDetailId: undefined as number | undefined,
+    courseName: "",
+    specialization: "",
+    institutionName: "",
+    cgpa: "",
+    startYear: "",
+    endYear: "",
+    courseType: "",
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const res = await resumeMastersEducationAPI.fetch(studentId);
+      if (res.success && res.data) {
+        const d = res.data;
+        setForm({
+          resumeEducationDetailId: d.resumeEducationDetailId,
+          courseName: d.courseName ?? "",
+          specialization: d.specialization ?? "",
+          institutionName: d.institutionName ?? "",
+          cgpa: String(d.cgpa ?? ""),
+          startYear: String(d.startYear ?? ""),
+          endYear: String(d.endYear ?? ""),
+          courseType: d.courseType ?? "",
+        });
+        onRecordSaved(d.resumeEducationDetailId);
+      }
+      setIsLoading(false);
+    })();
+  }, [studentId]);
+
+  const handleChange = (field: string, value: string) => {
+    let v = value;
+    if (field === "courseName") v = formatTitleCase(v.replace(/[^A-Za-z& ]/g, ""), true);
+    if (field === "specialization") v = v.replace(/[^A-Za-z& ]/g, "");
+    if (field === "institutionName") v = formatTitleCase(v.replace(/[^A-Za-z ]/g, ""));
+    if (field === "cgpa") {
+      v = v.replace(/[^0-9.]/g, "");
+      const parts = v.split(".");
+      if (parts.length > 2) parts.splice(2);
+      if (parts[1]) parts[1] = parts[1].slice(0, 1);
+      v = parts.join(".");
+    }
+    if (field === "startYear" || field === "endYear") v = v.replace(/\D/g, "").slice(0, 4);
+    if (field === "courseType") v = v.replace(/[^A-Za-z. ]/g, "");
+    setForm((p) => ({ ...p, [field]: v }));
+  };
+
+  const validate = (): string | null => {
+    if (!form.courseName.trim()) return "Course Name is required";
+    if (!lettersAndAmp.test(form.courseName)) return "Course Name must contain only letters or &";
+    if (!form.specialization.trim()) return "Specialization is required";
+    if (!lettersAndAmp.test(form.specialization)) return "Specialization must contain only letters or &";
+    if (!form.institutionName.trim()) return "College Name is required";
+    if (!onlyLetters.test(form.institutionName)) return "College Name must contain only letters";
+    if (!form.cgpa.trim()) return "CGPA is required";
+    if (!cgpaRegex.test(form.cgpa)) return "CGPA must be between 0 and 10";
+    if (!form.startYear.trim()) return "Start Year is required";
+    if (!yearRegex.test(form.startYear)) return "Start Year must be exactly 4 digits";
+    if (!form.endYear.trim()) return "End Year is required";
+    if (!yearRegex.test(form.endYear)) return "End Year must be exactly 4 digits";
+    if (Number(form.endYear) < Number(form.startYear)) return "End Year must be >= Start Year";
+    if (!form.courseType.trim()) return "Course Type is required";
+    if (!courseTypeRegex.test(form.courseType)) return "Course Type must contain only letters or dot";
+    return null;
+  };
+
+  const saveMasters = async () => {
+    if (isSaving) return;
+    const error = validate();
+    if (error) { toast.error(error); throw new Error(error); }
+    setIsSaving(true);
+    try {
+      const response = await resumeMastersEducationAPI.save({
+        resumeEducationDetailId: form.resumeEducationDetailId,
+        studentId,
+        collegeId,
+        institutionName: form.institutionName,
+        courseName: form.courseName,
+        specialization: form.specialization,
+        cgpa: Number(form.cgpa),
+        startYear: Number(form.startYear),
+        endYear: Number(form.endYear),
+        courseType: form.courseType,
+      });
+      if (!response.success) throw new Error("masters_save_failed");
+      if (response.id) {
+        setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
+        onRecordSaved(response.id!);
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  useEffect(() => { onSaveRef.current = saveMasters; }, [form]);
 
   if (isLoading) return <UndergraduateShimmer />;
 

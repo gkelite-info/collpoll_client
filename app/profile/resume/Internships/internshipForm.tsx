@@ -5,6 +5,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import toast from "react-hot-toast";
 import { upsertResumeInternship } from "@/lib/helpers/student/Resume/resumeInternshipsAPI";
+import { useState } from "react";
 
 export interface InternshipFormData {
   organization: string;
@@ -54,7 +55,7 @@ const ROLES = [
 
 const LOCATIONS = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Remote"];
 
-const DOMAINS = [
+const DEFAULT_DOMAINS = [
   "Web Development",
   "Mobile Development",
   "Data Science",
@@ -82,10 +83,15 @@ export default function InternshipForm({
   initialData?: InternshipFormData;
   internshipId?: number;
 }) {
+  const [domains, setDomains] = useState<string[]>(DEFAULT_DOMAINS);
+  const [showOtherDomain, setShowOtherDomain] = useState(false);
+  const [otherDomainValue, setOtherDomainValue] = useState("");
+
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: yupResolver(schema),
@@ -104,6 +110,20 @@ export default function InternshipForm({
 
   const startDateValue = watch("startDate");
   const descriptionValue = watch("description") ?? "";
+
+  const handleAddOtherDomain = () => {
+    const value = otherDomainValue.trim();
+    if (!value) {
+      toast.error("Please enter a domain before adding.");
+      return;
+    }
+    if (!domains.includes(value)) {
+      setDomains((prev) => [...prev, value]);
+    }
+    setValue("domain", value, { shouldValidate: true });
+    setOtherDomainValue("");
+    setShowOtherDomain(false);
+  };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
@@ -228,18 +248,58 @@ export default function InternshipForm({
         </div>
         <div>
           <FieldLabel label="Domain" required />
+
+          {/* Domain select with + Other option */}
           <div className="relative">
             <select
               {...register("domain")}
               disabled={isSubmitting}
+              onChange={(e) => {
+                if (e.target.value === "__other__") {
+                  setShowOtherDomain(true);
+                  setValue("domain", "", { shouldValidate: false });
+                } else {
+                  setShowOtherDomain(false);
+                  setValue("domain", e.target.value, { shouldValidate: true });
+                }
+              }}
               className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
             >
               <option value="">Select domain</option>
-              {DOMAINS.map((d) => <option key={d} value={d}>{d}</option>)}
+              {domains.map((d) => <option key={d} value={d}>{d}</option>)}
+              <option value="__other__">+ Other</option>
             </select>
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
           </div>
           {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain.message}</p>}
+
+          {/* Other domain input — shown when + Other is selected */}
+          {showOtherDomain && (
+            <div className="flex gap-2 items-center mt-2">
+              <input
+                autoFocus
+                value={otherDomainValue}
+                onChange={(e) => setOtherDomainValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddOtherDomain()}
+                placeholder="Enter domain"
+                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
+              />
+              <button
+                type="button"
+                onClick={handleAddOtherDomain}
+                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowOtherDomain(false); setOtherDomainValue(""); }}
+                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
