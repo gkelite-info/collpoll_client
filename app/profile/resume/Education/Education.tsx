@@ -11,12 +11,14 @@ export type EducationType =
     | "primary"
     | "secondary"
     | "undergraduate"
+    | "masters"
     | "phd";
 
 const EDUCATION_ORDER: EducationType[] = [
     "primary",
     "secondary",
     "undergraduate",
+    "masters",
     "phd",
 ];
 
@@ -32,6 +34,7 @@ export default function EducationSection() {
     const primarySaveRef = useRef<any>(null);
     const secondarySaveRef = useRef<any>(null);
     const undergraduateSaveRef = useRef<any>(null);
+    const mastersSaveRef = useRef<any>(null);
     const phdSaveRef = useRef<any>(null);
 
 
@@ -78,6 +81,9 @@ export default function EducationSection() {
             if (addedForms.includes("undergraduate") && undergraduateSaveRef.current)
                 await undergraduateSaveRef.current();
 
+            if (addedForms.includes("masters") && mastersSaveRef.current)
+                await mastersSaveRef.current();
+
             if (addedForms.includes("phd") && phdSaveRef.current)
                 await phdSaveRef.current();
 
@@ -119,6 +125,11 @@ export default function EducationSection() {
                                 onClick={() => handleAdd("undergraduate")}
                             />
                             <DropdownItem
+                                label="Masters Degree"
+                                disabled={addedForms.includes("masters")}
+                                onClick={() => handleAdd("masters")}
+                            />
+                            <DropdownItem
                                 label="PhD"
                                 disabled={addedForms.includes("phd")}
                                 onClick={() => handleAdd("phd")}
@@ -148,7 +159,9 @@ export default function EducationSection() {
                                             ? secondarySaveRef
                                             : type === "undergraduate"
                                                 ? undergraduateSaveRef
-                                                : phdSaveRef
+                                                : type === "masters"
+                                                    ? mastersSaveRef
+                                                    : phdSaveRef
                                 }
                                 onRemove={() => removeSection(type)}
                             />
@@ -192,4 +205,3 @@ function DropdownItem({
         </button>
     );
 }
-

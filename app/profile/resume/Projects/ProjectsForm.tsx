@@ -31,6 +31,7 @@ export default function ProjectsForm() {
   const [projects, setProjects] = useState<ProjectData[]>([emptyProject()]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showNewForm, setShowNewForm] = useState(true); // ← ADD: controls new form visibility
 
   // ── Load existing projects ─────────────────────────────────────
   useEffect(() => {
@@ -51,10 +52,11 @@ export default function ProjectsForm() {
             isSubmitted: true,
             dbId: r.resumeProjectId,
           }));
-          // Always append an empty form at the end
-          setProjects([...mapped, emptyProject()]);
+          setProjects(mapped);
+          setShowNewForm(false); // ← ADD: hide new form if existing projects loaded
         } else {
-          setProjects([emptyProject()]);
+          setProjects([]);
+          setShowNewForm(true);
         }
       } catch (err) {
         console.error("Failed to load projects:", err);
@@ -73,12 +75,11 @@ export default function ProjectsForm() {
   };
 
   const handleAddProject = () => {
-    const last = projects[projects.length - 1];
-    if (!last.isSubmitted) {
+    if (showNewForm) {
       toast.error("Please submit the current project before adding new one");
       return;
     }
-    setProjects([...projects, emptyProject()]);
+    setShowNewForm(true); // ← ADD: show the new form
   };
 
   const handleDelete = async (index: number) => {
@@ -97,6 +98,19 @@ export default function ProjectsForm() {
     }
     setProjects((prev) => prev.filter((_, i) => i !== index));
     toast.success("Project deleted");
+  };
+
+  // ← ADD: new empty project state for the add form
+  const [newProject, setNewProject] = useState<ProjectData>(emptyProject());
+
+  const handleNewProjectUpdate = (data: ProjectData) => {
+    setNewProject(data);
+    // When submitted (dbId assigned), move to saved list and hide form
+    if (data.isSubmitted && data.dbId) {
+      setProjects((prev) => [...prev, data]);
+      setNewProject(emptyProject());
+      setShowNewForm(false);
+    }
   };
 
   if (loading || !studentId) return <ResumeProjectsShimmer />;
@@ -124,9 +138,10 @@ export default function ProjectsForm() {
         </div>
       </div>
 
+      {/* Saved projects */}
       {projects.map((project, index) => (
         <ProjectItem
-          key={project.dbId ?? `new-${index}`}
+          key={project.dbId ?? `saved-${index}`}
           index={index}
           data={project}
           onUpdate={(data) => updateProject(index, data)}
@@ -134,6 +149,20 @@ export default function ProjectsForm() {
           isDeleting={!!project.dbId && deletingId === project.dbId}
         />
       ))}
+
+      {/* New project form — shown only when Add+ clicked */}
+      {showNewForm && (
+        <ProjectItem
+          key="new-project"
+          index={projects.length}
+          data={newProject}
+          onUpdate={handleNewProjectUpdate}
+          onClose={() => {                     // ← ADD: minus button hides form
+            setShowNewForm(false);
+            setNewProject(emptyProject());
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { X, UploadSimple } from "@phosphor-icons/react";
+import { X, UploadSimple, Trash } from "@phosphor-icons/react";
 import { useRef } from "react";
 import { Input } from "@/app/utils/ReusableComponents";
 import {
@@ -208,9 +208,30 @@ export default function CertificationsForm({
 
   return (
     <div>
-      <h3 className="text-base font-semibold text-[#282828] mb-4">
-        Certification {index + 1}
-      </h3>
+      {/* ← ADDED: header with trash icon (saved) or minus button (new) */}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-base font-semibold text-[#282828]">
+          Certification {index + 1}
+        </h3>
+        {resumeCertificateId ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
+          >
+            <Trash size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
+          >
+            <span className="block w-3 h-[3px] bg-white rounded-full" />
+          </button>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Input
           label="Certification Name"

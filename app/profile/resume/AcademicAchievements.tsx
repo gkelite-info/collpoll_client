@@ -9,6 +9,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { fetchAllResumeData } from "@/lib/helpers/student/Resume/Resumedatafetcher";
+import { calculateATSScore, ATSResult } from "@/lib/helpers/student/Resume/atsScoreCalculator";
 
 const DEFAULT_ACHIEVEMENTS = [
   "College Topper",
@@ -62,7 +64,10 @@ export default function AcademicAchievements() {
   const [otherValue, setOtherValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ─── Load existing ──────────────────────────────────────────────────────────
+  const [beforeScore, setBeforeScore] = useState<ATSResult | null>(null);
+  const [scoreLoading, setScoreLoading] = useState(true);
+
+  // ─── Load existing achievements ─────────────────────────────────────────────
   useEffect(() => {
     if (!studentId) return;
 
@@ -90,6 +95,23 @@ export default function AcademicAchievements() {
     };
 
     load();
+  }, [studentId]);
+
+  // ─── Fetch resume data and calculate Before AI ATS score ────────────────────
+  // ✅ FIX: Always overwrite sessionStorage here — this page is the TRUE baseline
+  // (it comes before the AI page in the resume flow)
+  useEffect(() => {
+    if (!studentId) return;
+    setScoreLoading(true);
+    fetchAllResumeData(studentId)
+      .then((data) => {
+        const score = calculateATSScore(data);
+        setBeforeScore(score);
+        // ✅ Always overwrite — this is the entry point before AI enhancements
+        sessionStorage.setItem("ats_before_score", JSON.stringify(score));
+      })
+      .catch(() => {})
+      .finally(() => setScoreLoading(false));
   }, [studentId]);
 
   // ─── Toggle ─────────────────────────────────────────────────────────────────
@@ -253,6 +275,65 @@ export default function AcademicAchievements() {
                 {isSubmitting ? "Saving..." : "Submit"}
               </button>
 
+              {/* Before AI ATS Score compact card — breakdown rows removed */}
+              <div className="mt-4 rounded-xl border border-purple-100 bg-gradient-to-br from-[#faf7ff] to-[#f3eeff] p-4">
+                <p className="text-[11px] font-bold text-purple-500 uppercase tracking-widest mb-3">
+                  📊 Your Current ATS Score — Before AI
+                </p>
+
+                {scoreLoading ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4 text-purple-400" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    <span className="text-xs text-purple-300">Calculating...</span>
+                  </div>
+                ) : beforeScore ? (
+                  <div className="flex items-center gap-4">
+                    {/* Circular gauge */}
+                    <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
+                      <svg width="72" height="72" viewBox="0 0 72 72">
+                        <circle cx="36" cy="36" r="28" fill="none" stroke="#e9d5ff" strokeWidth="7" />
+                        <circle
+                          cx="36" cy="36" r="28"
+                          fill="none"
+                          stroke={beforeScore.color}
+                          strokeWidth="7"
+                          strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 28}
+                          strokeDashoffset={
+                            2 * Math.PI * 28 - (beforeScore.total / 100) * 2 * Math.PI * 28
+                          }
+                          transform="rotate(-90 36 36)"
+                          style={{ transition: "stroke-dashoffset 1s ease" }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-base font-black" style={{ color: beforeScore.color }}>
+                          {beforeScore.total}
+                        </span>
+                        <span className="text-[8px] text-gray-400">/100</span>
+                      </div>
+                    </div>
+
+                    {/* Right side — label + tip only, no breakdown rows */}
+                    <div className="flex-1">
+                      <span
+                        className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-2"
+                        style={{ background: `${beforeScore.color}20`, color: beforeScore.color }}
+                      >
+                        {beforeScore.label}
+                      </span>
+                      <p className="text-[11px] text-purple-500 font-semibold leading-snug">
+                        ✨ Use AI to boost your score and stand out to recruiters!
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* CTA purple box — unchanged */}
               <div className="mt-4 bg-purple-100 rounded-xl p-4 flex flex-col items-center text-center">
                 <div className="flex items-center gap-2 mb-2 w-full">
                   <img
@@ -268,7 +349,6 @@ export default function AcademicAchievements() {
                     Want to enhance it to better fit your target role?
                   </p>
                 </div>
-                {/* ✅ ONLY CHANGE: routing added to Click here button */}
                 <button
                   onClick={() => router.push("/profile?resume=profilesummaryai")}
                   className="bg-[#1e1b4b] text-white text-sm px-5 py-1.5 rounded-md font-medium hover:bg-[#2d2a6e] transition-all cursor-pointer"
@@ -276,6 +356,7 @@ export default function AcademicAchievements() {
                   Click here
                 </button>
               </div>
+
             </div>
           </div>
         )}

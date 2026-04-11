@@ -25,6 +25,7 @@ interface Props {
   onUpdate: (data: ProjectData) => void;
   onDelete?: () => void;
   isDeleting?: boolean;
+  onClose?: () => void; // ← ADD: for closing new unsubmitted form
 }
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
@@ -36,7 +37,7 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
-export default function ProjectItem({ index, data, onUpdate, onDelete, isDeleting }: Props) {
+export default function ProjectItem({ index, data, onUpdate, onDelete, isDeleting, onClose }: Props) {
   const { studentId } = useUser();
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -81,20 +82,32 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-medium text-[#282828]">Project {index + 1}</h3>
-        {onDelete && (
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={isDeleting}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
-          >
-            {isDeleting ? (
-              <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Trash size={18} />
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* ← ADD: minus button for new unsubmitted forms — same as Education */}
+          {!data.dbId && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
+            >
+              <span className="block w-3 h-[3px] bg-white rounded-full" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isDeleting}
+              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
+            >
+              {isDeleting ? (
+                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Trash size={18} />
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Row 1: Project Name | Domain | Start Date | End Date */}

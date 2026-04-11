@@ -174,36 +174,64 @@ Given a job description and a list of available skills, return ONLY the skill na
 Return ONLY a JSON array of skill name strings. No explanation.
 Example: ["Java", "Python", "Docker"]
 `;
-
-export async function suggestSkillsFromJD(
-  jobDescription: string,
+export async function suggestSkillsFromJDWithDemand(
+  jd: string,
   availableSkills: string[]
-): Promise<string[]> {
-  if (!jobDescription || availableSkills.length === 0) return [];
-
+): Promise<{
+  matching: Array<{ name: string; demand: "high" | "medium" }>;
+  missing: Array<{ name: string; demand: "high" | "medium" }>;
+}> {
   try {
-    const prompt = `
-Job Description:
-${jobDescription}
+    const systemPrompt = `You are a senior technical recruiter. Analyze a candidate's skills against a JD.
+Return ONLY a JSON object. No explanation. No markdown.`;
 
-Available Skills (pick only from this list):
-${JSON.stringify(availableSkills)}
+    const userPrompt = `=== JOB DESCRIPTION ===
+${jd}
 
-Return a JSON array of skill names from the available list that match this JD.
-`;
+=== CANDIDATE'S AVAILABLE SKILLS (skill - category) ===
+${availableSkills.join("\n")}
 
-    const raw = await callGroq(SKILLS_SYSTEM_PROMPT, prompt, 300);
+=== TASK ===
+Split into two groups:
 
-    const match = raw.match(/\[[\s\S]*\]/);
+1. "matching": Skills from candidate's list relevant to this JD
+   - Direct match: JD says "Git" → "Git" is matching
+   - Semantic: backend JD → "Java", "Python", "Spring Boot", "Docker" are matching
+   - Tools: debugging JD → "Postman", "VS Code" are matching
+   - Soft skills if mentioned in JD
+
+2. "missing": Important skills JD needs that are NOT in candidate's list at all
+   - These are skill names the JD demands but aren't in available skills
+   - Keep realistic (e.g. "React.js", "Node.js", "PostgreSQL")
+   - Max 5 missing skills
+
+Demand levels:
+- "high": explicitly required / Must Have in JD
+- "medium": good to have / implied by role
+
+Strip "- category" from matching skill names.
+Return 6-14 matching skills minimum.
+
+Return ONLY this exact JSON:
+{
+  "matching": [{"name": "Python", "demand": "high"}, {"name": "Docker", "demand": "medium"}],
+  "missing": [{"name": "Node.js", "demand": "high"}, {"name": "PostgreSQL", "demand": "medium"}]
+}`;
+
+    const raw = await callGroq(systemPrompt, userPrompt, 1000);
+    console.log("suggestSkillsFromJDWithDemand raw:", raw);
+
+    const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
       const parsed = JSON.parse(match[0]);
-      if (Array.isArray(parsed)) {
-        return parsed.map((s: string) => s.trim()).filter(Boolean);
-      }
+      return {
+        matching: Array.isArray(parsed.matching) ? parsed.matching : [],
+        missing: Array.isArray(parsed.missing) ? parsed.missing : [],
+      };
     }
-    return [];
+    return { matching: [], missing: [] };
   } catch (error) {
-    console.error("suggestSkillsFromJD error:", error);
-    return [];
+    console.error("suggestSkillsFromJDWithDemand error:", error);
+    return { matching: [], missing: [] };
   }
 }

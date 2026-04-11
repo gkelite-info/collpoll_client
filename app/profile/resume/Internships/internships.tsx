@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import InternshipForm, { InternshipFormData } from "./internshipForm";
+import { useRouter } from "next/navigation";
 
 import {
   fetchResumeInternships,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/helpers/student/Resume/resumeInternshipsAPI";
 import ResumeInternshipsShimmer from "../../shimmers/ResumeInternshipsShimmer";
 import InternshipCard from "./internshipCard";
+import toast from "react-hot-toast";
 
 
 interface InternshipEntry {
@@ -33,11 +35,13 @@ const emptyForm: InternshipFormData = {
 
 export default function Internships() {
   const { studentId } = useUser();
+  const router = useRouter();
 
   const [entries, setEntries] = useState<InternshipEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [formKey, setFormKey] = useState(0); // resets form after submit
+  const [formKey, setFormKey] = useState(0);
+  const [showForm, setShowForm] = useState(false); // ← controls Add form visibility
 
   // ── Load existing internships ──────────────────────────────────
   useEffect(() => {
@@ -62,8 +66,11 @@ export default function Internships() {
           },
         }));
         setEntries(mapped);
+        // Show form by default only if no entries exist
+        setShowForm(rows.length === 0);
       } catch (err) {
         console.error("Failed to load internships:", err);
+        setShowForm(true);
       } finally {
         setLoading(false);
       }
@@ -77,7 +84,8 @@ export default function Internships() {
     if (newDbId) {
       setEntries((prev) => [...prev, { dbId: newDbId, data, isEditing: false }]);
     }
-    setFormKey((k) => k + 1); // reset form fields
+    setFormKey((k) => k + 1);
+    setShowForm(false); // hide form after submit
   };
 
   // ── Edit existing internship ───────────────────────────────────
@@ -101,11 +109,21 @@ export default function Internships() {
     try {
       await deleteResumeInternship(dbId);
       setEntries((prev) => prev.filter((e) => e.dbId !== dbId));
+      toast.success("Internship deleted");
     } catch {
       console.error("Failed to delete internship");
+      toast.error("Failed to delete internship");
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleAddClick = () => {
+    if (showForm) {
+      toast.error("Please submit the current form before adding a new one");
+      return;
+    }
+    setShowForm(true);
   };
 
   if (loading || !studentId) return <ResumeInternshipsShimmer />;
@@ -115,7 +133,25 @@ export default function Internships() {
       <div className="bg-white rounded-lg shadow-sm p-6">
 
         {/* Header */}
-        <h2 className="text-lg font-semibold text-[#282828] mb-4">Internships</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold text-[#282828]">Internships</h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleAddClick}
+              className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium"
+            >
+              Add +
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/profile?resume=projects&Step=6")}
+              className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
+            >
+              Next
+            </button>
+          </div>
+        </div>
 
         {/* Internship Cards */}
         {entries.length > 0 && (
@@ -143,12 +179,29 @@ export default function Internships() {
           </div>
         )}
 
-        {/* Always-visible Add Form */}
-        <InternshipForm
-          key={formKey}
-          studentId={studentId}
-          onSubmitted={handleAddSubmitted}
-        />
+        {/* Add Form — shown only when Add+ clicked */}
+        {showForm && (
+          <div className={entries.length > 0 ? "border border-[#C0C0C0] rounded-lg p-4" : ""}>
+            {/* minus button to close form — same as Education */}
+            <div className="flex justify-end mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowForm(false);
+                  setFormKey((k) => k + 1);
+                }}
+                className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
+              >
+                <span className="block w-3 h-[3px] bg-white rounded-full" />
+              </button>
+            </div>
+            <InternshipForm
+              key={formKey}
+              studentId={studentId}
+              onSubmitted={handleAddSubmitted}
+            />
+          </div>
+        )}
 
       </div>
     </div>
