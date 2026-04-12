@@ -90,11 +90,12 @@ export default function ProfileInfo() {
     adminId,
     collegeAdminId,
     financeManagerId,
-    collegeHrId
+    collegeHrId,
+    identifierId
   } = useUser();
 
   const [profileData, setProfileData] = useState<ProfileInfoData>({
-    registrationId: String(userId || ""),
+    registrationId: String(identifierId || userId),
     email: email || "",
     phone: mobile || "",
     educationType: collegeEducationType || "",
@@ -128,7 +129,8 @@ export default function ProfileInfo() {
     });
 
     setProfileData({
-      registrationId: String(registrationId ?? ""),
+      // registrationId: String(registrationId ?? ""),
+      registrationId: String(identifierId ?? ""),
       email: email || "",
       phone: mobile || "",
       educationType: collegeEducationType || "",

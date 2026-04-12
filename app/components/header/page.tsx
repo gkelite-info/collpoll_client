@@ -16,10 +16,6 @@ import AnnouncementModal from "../campusBuzz/AnnouncementModal";
 import DailyNewsModal from "../modals/DailyNewsModal";
 import ProfileWrapper from "@/app/profile/ProfileWrapper";
 import { useUser } from "@/app/utils/context/UserContext";
-import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
-import { useParent } from "@/app/utils/context/parent/useParent";
-import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnreadNotificationCount";
 import { supabase } from "@/lib/supabaseClient";
 import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
@@ -43,19 +39,12 @@ function HeaderContent() {
     role,
     collegeEducationType,
     collegeBranchCode,
-    studentId,
-    facultyId,
-    adminId,
     email: currentUserEmail,
     userId,
     profilePhoto,
+    parentId,
     identifierId
   } = useUser();
-
-  const { financeManagerId } = useFinanceManager();
-  const { collegeAdminId } = useCollegeAdmin();
-  const { collegeHrId } = useCollegeHr();
-  const { parentId } = useParent();
 
   const searchParams = useSearchParams();
   const highlightedPostId = searchParams.get("post");
@@ -251,7 +240,7 @@ function HeaderContent() {
                         : "—"}
                     </p>
                     <p>
-                      ID - <span>{identifierId || studentId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}
@@ -259,7 +248,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{identifierId || financeManagerId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}
@@ -267,7 +256,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{identifierId || facultyId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}
@@ -275,7 +264,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{identifierId || adminId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}
@@ -283,7 +272,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{identifierId || collegeAdminId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}
@@ -299,7 +288,7 @@ function HeaderContent() {
                   <>
                     <p>{role}</p>
                     <p>
-                      ID - <span>{identifierId || collegeHrId}</span>
+                      ID - <span>{identifierId}</span>
                     </p>
                   </>
                 )}

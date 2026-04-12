@@ -4,12 +4,10 @@ import {
   CaretDown,
   SignOut,
   ArrowLeft,
-  PencilSimple,
   EnvelopeSimple,
   Phone,
   Headset,
   Key,
-  Palette,
   ClipboardText,
 } from "@phosphor-icons/react";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,16 +18,11 @@ import { logoutUser } from "@/lib/helpers/logoutUser";
 import toast from "react-hot-toast";
 import { extractAcademicYearNumber } from "../utils/academicYear";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
-import { useAdmin } from "../utils/context/admin/useAdmin";
-import { useFinanceManager } from "../utils/context/financeManager/useFinanceManager";
-import { useCollegeAdmin } from "../utils/context/college-admin/useCollegeAdmin";
-import { useParent } from "../utils/context/parent/useParent";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   onOpenTerms: () => void;
-  // onOpenQuickMenu: () => void;
 };
 
 interface ProfileOptions {
@@ -45,7 +38,6 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    studentId,
     fullName,
     mobile,
     email,
@@ -54,17 +46,12 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     collegeBranchCode,
     collegeAcademicYear,
     profilePhoto,
-    identifierId
+    identifierId,
+    userId
   } = useUser();
-  const { financeManagerId } = useFinanceManager();
-  const { facultyId, college_branch, faculty_edu_type } = useFaculty();
-  const { adminId } = useAdmin();
-  const { collegeAdminId } = useCollegeAdmin();
-  const { parentId } = useParent();
+  const { college_branch, faculty_edu_type } = useFaculty();
   const [loading, setLoading] = useState(false);
-
   const academicYear = extractAcademicYearNumber(collegeAcademicYear);
-
   const profileOptions: ProfileOptions[] = [
     {
       id: "terms",
@@ -154,11 +141,6 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
           }}
           className="m-4 p-4 cursor-pointer rounded-xl bg-[#43C17A26] flex gap-3 items-center"
         >
-          {/* <img
-                        src="https://randomuser.me/api/portraits/women/44.jpg"
-                        alt="profile"
-                        className="w-14 h-14 rounded-full object-cover"
-                    /> */}
           {profilePhoto ? (
             <img
               src={profilePhoto}
@@ -183,30 +165,30 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
               <div className="flex gap-2 items-center">
                 {role === "Student" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {studentId}
+                    ID - {identifierId}
                   </span>
                 )}
                 {role === "Faculty" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {identifierId || facultyId}
+                    ID - {identifierId}
                   </span>
                 )}
                 {role === "Admin" && (
-                  <span className="text-xs text-[#282828]">ID - {adminId}</span>
+                  <span className="text-xs text-[#282828]">ID - {identifierId}</span>
                 )}
                 {role === "Finance" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {financeManagerId}
+                    ID - {identifierId}
                   </span>
                 )}
                 {role === "CollegeAdmin" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {collegeAdminId}
+                    ID - {identifierId}
                   </span>
                 )}
                 {role === "Parent" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {parentId}
+                    ID - {userId}
                   </span>
                 )}
                 {/* {role === "Student" && (

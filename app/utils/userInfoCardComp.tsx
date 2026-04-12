@@ -7,7 +7,7 @@ import { useStudent } from "./context/student/useStudent";
 export default function UserInfoCard() {
 
     const [today, setToday] = useState("");
-    const { studentId, fullName, gender, collegeEducationType, collegeBranchCode } = useUser();
+    const { fullName, gender, collegeEducationType, collegeBranchCode, identifierId } = useUser();
     const { collegeAcademicYear } = useStudent();
 
     useEffect(() => {
@@ -25,7 +25,7 @@ export default function UserInfoCard() {
                 <div className="flex flex-col justify-start w-[60%] p-3 gap-5 bg-yellow-00 rounded-l-lg h-[100%]">
                     <div className="flex items-center gap-3">
                         <p className="text-[#714EF2] text-sm font-medium">{collegeEducationType && collegeBranchCode ? `${collegeEducationType} ${collegeBranchCode}` : "—"} - {collegeAcademicYear ? `${collegeAcademicYear}` : "—"}</p>
-                        <p className="text-[#089144] text-sm font-medium">Student Id - <span className="text-[#282828] text-sm">{studentId}</span></p>
+                        <p className="text-[#089144] text-sm font-medium">Student Id - <span className="text-[#282828] text-sm">{identifierId}</span></p>
                     </div>
                     <div className="flex items-center gap-3">
                         <p className="text-md text-[#282828]">Welcome Back, <span className="text-[#089144] text-md font-medium">{fullName}</span></p>

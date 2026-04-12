@@ -10,6 +10,7 @@ import {
 import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
+import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 
 type AdminForm = {
     fullName: string;
@@ -22,6 +23,9 @@ type AdminForm = {
     password: string;
     confirmPassword: string;
     gender: "Male" | "Female" | "";
+    dateOfJoining: string;
+    experienceYears: string;
+    employeeId: string;
 };
 
 const initialFormState: AdminForm = {
@@ -35,6 +39,9 @@ const initialFormState: AdminForm = {
     confirmPassword: "",
     collegeEducationId: null,
     gender: "",
+    dateOfJoining: "",
+    experienceYears: "",
+    employeeId: "",
 };
 
 const toPascalCase = (str: string) => {
@@ -43,6 +50,8 @@ const toPascalCase = (str: string) => {
         (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase(),
     );
 };
+
+const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(-[A-Za-z0-9]+)?$/;
 
 const validatePassword = (password: string) => {
     const hasUpper = /[A-Z]/.test(password);
@@ -150,6 +159,27 @@ export default function AdminRegistration() {
 
             if (!form.gender) return toast.error("Select Gender.");
 
+            if (!form.dateOfJoining) {
+                return toast.error("Date of Joining is required.");
+            }
+            if (!form.experienceYears) {
+                return toast.error("Experience is required.");
+            }
+            if (Number(form.experienceYears) < 0 || Number(form.experienceYears) > 60) {
+                return toast.error("Experience must be between 0 and 60 years.");
+            }
+            if (!form.employeeId) {
+                return toast.error("Employee Id is required.");
+            }
+            if (
+                form.employeeId.length < 6 ||
+                form.employeeId.length > 15
+            ) {
+                return toast.error("Employee Id must be between 6 and 15 characters.");
+            }
+            if (!IDENTIFIER_REGEX.test(form.employeeId)) {
+                return toast.error("Employee Id must contain letters and at least one number.");
+            }
             if (!form.password) {
                 return toast.error("Password is required.");
             }
@@ -200,6 +230,8 @@ export default function AdminRegistration() {
                 collegeId: Number(form.collegeId),
                 collegePublicId: form.collegeId,
                 gender: form.gender,
+                dateOfJoining: form.dateOfJoining,
+                professionalExperienceYears: Number(form.experienceYears),
             });
 
             if (!userRes.success || !userRes.data) {
@@ -230,6 +262,13 @@ export default function AdminRegistration() {
             if (!adminRes.success) {
                 throw new Error(adminRes.error || "Admin creation failed");
             }
+
+            await upsertIdentifier({
+                userId: createdUserId!,
+                role: "Admin",
+                identifierValue: form.employeeId,
+                collegeId: Number(form.collegeId),
+            });
 
             toast.success("Admin Registered Successfully!");
 
@@ -400,6 +439,47 @@ export default function AdminRegistration() {
                         ))}
                     </select>
                 </div>
+
+                <InputField
+                    label="Date of Joining"
+                    type="date"
+                    value={form.dateOfJoining}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleChange("dateOfJoining", e.target.value)
+                    }
+                />
+
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mt-5">
+
+                <InputField
+                    label="Experience (Years)"
+                    type="number"
+                    placeholder="e.g. 2.5"
+                    value={form.experienceYears}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const value = e.target.value.replace(/[^0-9.]/g, "");
+                        handleChange("experienceYears", value);
+                    }}
+                />
+
+                <InputField
+                    label="Employee Id"
+                    placeholder="Enter Employee Id"
+                    value={form.employeeId}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const sanitized = e.target.value
+                            .replace(/[^A-Za-z0-9-]/g, "")
+                            .toUpperCase();
+
+                        handleChange("employeeId", sanitized);
+                    }}
+                />
+
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div>
                     <label className="text-[#282828] font-semibold text-[15px] mb-3 block">
                         Gender
@@ -429,7 +509,38 @@ export default function AdminRegistration() {
                         </label>
                     </div>
                 </div>
+
             </div>
+
+            {/* <div>
+                <label className="text-[#282828] font-semibold text-[15px] mb-3 block">
+                    Gender
+                </label>
+
+                <div className="flex gap-10 mt-2">
+                    <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="gender"
+                            value="Male"
+                            checked={form.gender === "Male"}
+                            onChange={() => handleChange("gender", "Male")}
+                        />
+                        <span className="text-[#333]">Male</span>
+                    </label>
+
+                    <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="gender"
+                            value="Female"
+                            checked={form.gender === "Female"}
+                            onChange={() => handleChange("gender", "Female")}
+                        />
+                        <span className="text-[#333]">Female</span>
+                    </label>
+                </div>
+            </div> */}
 
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div className="flex flex-col w-full">

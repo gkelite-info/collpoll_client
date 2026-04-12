@@ -111,7 +111,7 @@ export default function CalendarTimeTable() {
 
   return (
     <>
-      <div className="bg-white lg:h-[784px] lg:w-[98%] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto">
+      <div className="bg-white lg:min-h-[784px] lg:w-full rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto">
         <div className="bg-red-00">
           <div className="flex bg-[#E8EAED] w-[191px] h-[54px] rounded-md shadow-md">
             <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">

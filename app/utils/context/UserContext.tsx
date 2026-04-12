@@ -462,6 +462,8 @@ type UserContextType = {
   identifierId: string | null;
 };
 
+type RoleLoaderMap = Record<string, (userId: number, collegeId: number) => Promise<void>>;
+
 const UserContext = createContext<UserContextType>({
   userId: null,
   loading: true,
@@ -574,126 +576,127 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setIdentifierId(null);
   });
 
-  const roleLoadersRef = useRef
-    <Record<string, (userId: number, collegeId: number) => Promise<void>>
-    >({
-      Student: async (uid, cid) => {
-        const s = settersRef.current;
-        const [sid, studentCtx] = await Promise.all([
-          getStudentId(),
-          fetchStudentContext(uid),
-        ]);
-        s.setStudentId(sid);
-        s.setCollegeEducationType(studentCtx?.collegeEducationType ?? null);
-        s.setCollegeBranchCode(studentCtx?.collegeBranchCode ?? null);
-        s.setCollegeAcademicYear(studentCtx?.collegeAcademicYear ?? null);
-        s.setCollegeSection(studentCtx?.collegeSections ?? null);
-        if (sid) {
-          const rn = await getStudentRollNo(sid, cid);
-          s.setIdentifierId(rn);
-        }
-      },
+  const roleLoadersRef = useRef<RoleLoaderMap>({
+    Student: async (uid, cid) => {
+      const s = settersRef.current;
+      const [sid, studentCtx] = await Promise.all([
+        getStudentId(),
+        fetchStudentContext(uid),
+      ]);
+      s.setStudentId(sid);
+      s.setCollegeEducationType(studentCtx?.collegeEducationType ?? null);
+      s.setCollegeBranchCode(studentCtx?.collegeBranchCode ?? null);
+      s.setCollegeAcademicYear(studentCtx?.collegeAcademicYear ?? null);
+      s.setCollegeSection(studentCtx?.collegeSections ?? null);
+      if (sid) {
+        const rn = await getStudentRollNo(sid, cid);
+        s.setIdentifierId(rn);
+      } else {
+        s.setIdentifierId(null);
+      }
+    },
 
-      Admin: async (uid, cid) => {
-        const s = settersRef.current;
-        const [adminData, adminCtx, empId] = await Promise.all([
-          supabase
-            .from("admins")
-            .select("adminId")
-            .eq("userId", uid)
-            .is("deletedAt", null)
-            .maybeSingle(),
-          fetchAdminContext(uid),
-          getEmployeeEmpId(uid, cid),
-        ]);
-        s.setAdminId(adminData.data?.adminId ?? null);
-        s.setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
-        s.setIdentifierId(empId);
-      },
+    Admin: async (uid, cid) => {
+      const s = settersRef.current;
+      const [adminData, adminCtx, empId] = await Promise.all([
+        supabase
+          .from("admins")
+          .select("adminId")
+          .eq("userId", uid)
+          .is("deletedAt", null)
+          .maybeSingle(),
+        fetchAdminContext(uid),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setAdminId(adminData.data?.adminId ?? null);
+      s.setCollegeEducationType(adminCtx?.collegeEducationType ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
 
-      Finance: async (uid, cid) => {
-        const s = settersRef.current;
-        const [financeData, financeCtx, empId] = await Promise.all([
-          supabase
-            .from("finance_manager")
-            .select("financeManagerId")
-            .eq("userId", uid)
-            .eq("is_deleted", false)
-            .maybeSingle(),
-          fetchFinanceManagerContext(uid),
-          getEmployeeEmpId(uid, cid),
-        ]);
-        s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
-        s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
-        s.setIdentifierId(empId);
-      },
-
-      Faculty: async (uid, cid) => {
-        const s = settersRef.current;
-        const [facultyData, facultyCtx, empId] = await Promise.all([
-          supabase
-            .from("faculty")
-            .select("facultyId")
-            .eq("userId", uid)
-            .is("deletedAt", null)
-            .maybeSingle(),
-          fetchFacultyContext(uid),
-          getEmployeeEmpId(uid, cid),
-        ]);
-        s.setFacultyId(facultyData.data?.facultyId ?? null);
-        s.setCollegeEducationType(facultyCtx?.faculty_edu_type ?? null);
-        s.setCollegeBranchCode(facultyCtx?.college_branch ?? null);
-        s.setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
-        const sections =
-          facultyCtx?.sections
-            ?.map((sec: any) => sec.college_sections.collegeSections)
-            .join(", ") ?? null;
-        s.setCollegeSection(sections);
-        s.setIdentifierId(empId);
-      },
-
-      CollegeAdmin: async (uid, cid) => {
-        const s = settersRef.current;
-        const [{ data }, empId] = await Promise.all([
-          supabase
-            .from("college_admin")
-            .select("collegeAdminId")
-            .eq("userId", uid)
-            .eq("is_deleted", false)
-            .maybeSingle(),
-          getEmployeeEmpId(uid, cid),
-        ]);
-        s.setCollegeAdminId(data?.collegeAdminId ?? null);
-        s.setIdentifierId(empId);
-      },
-
-      Parent: async (uid, _cid) => {
-        const s = settersRef.current;
-        const { data } = await supabase
-          .from("parents")
-          .select("parentId")
+    Finance: async (uid, cid) => {
+      const s = settersRef.current;
+      const [financeData, financeCtx, empId] = await Promise.all([
+        supabase
+          .from("finance_manager")
+          .select("financeManagerId")
           .eq("userId", uid)
           .eq("is_deleted", false)
-          .maybeSingle();
-        s.setParentId(data?.parentId ?? null);
-        // Parent has no identifier — identifierId stays null
-      },
+          .maybeSingle(),
+        fetchFinanceManagerContext(uid),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
+      s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
 
-      CollegeHR: async (uid, cid) => {
-        const s = settersRef.current;
-        const [{ data }, empId] = await Promise.all([
-          supabase
-            .from("college_hr")
-            .select("collegeHrId")
-            .eq("userId", uid)
-            .eq("is_deleted", false)
-            .maybeSingle(),
-          getEmployeeEmpId(uid, cid),
-        ]);
-        s.setCollegeHrId(data?.collegeHrId ?? null);
-        s.setIdentifierId(empId);
-      },
-    });
+    Faculty: async (uid, cid) => {
+      const s = settersRef.current;
+      const [facultyData, facultyCtx, empId] = await Promise.all([
+        supabase
+          .from("faculty")
+          .select("facultyId")
+          .eq("userId", uid)
+          .is("deletedAt", null)
+          .maybeSingle(),
+        fetchFacultyContext(uid),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setFacultyId(facultyData.data?.facultyId ?? null);
+      s.setCollegeEducationType(facultyCtx?.faculty_edu_type ?? null);
+      s.setCollegeBranchCode(facultyCtx?.college_branch ?? null);
+      s.setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
+      const sections =
+        facultyCtx?.sections
+          ?.map((sec: any) => sec.college_sections.collegeSections)
+          .join(", ") ?? null;
+      s.setCollegeSection(sections);
+      s.setIdentifierId(empId ?? null);
+    },
+
+    CollegeAdmin: async (uid, cid) => {
+      const s = settersRef.current;
+      const [{ data }, empId] = await Promise.all([
+        supabase
+          .from("college_admin")
+          .select("collegeAdminId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setCollegeAdminId(data?.collegeAdminId ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
+
+    Parent: async (uid, _cid) => {
+      const s = settersRef.current;
+      const { data } = await supabase
+        .from("parents")
+        .select("parentId")
+        .eq("userId", uid)
+        .eq("is_deleted", false)
+        .maybeSingle();
+      s.setParentId(data?.parentId ?? null);
+      // Parent has no identifier — identifierId stays null
+    },
+
+    CollegeHr: async (uid, cid) => {
+      const s = settersRef.current;
+      const [{ data }, empId] = await Promise.all([
+        supabase
+          .from("college_hr")
+          .select("collegeHrId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setCollegeHrId(data?.collegeHrId ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
+
+  });
 
   useEffect(() => {
     const loadUserContext = async () => {
@@ -740,7 +743,11 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           s.setProfilePhoto(photoData?.profileUrl ?? null);
         } catch { }
         const loader = roleLoadersRef.current[userData.role];
-        if (loader) await loader(userData.userId, userData.collegeId);
+        // if (loader) await loader(userData.userId, userData.collegeId);
+        const cid = Number(userData.collegeId);
+        if (loader && cid) {
+          await loader(userData.userId, cid);
+        }
         isContextLoaded.current = true;
       } catch (err) {
         console.error("Failed to load context");
