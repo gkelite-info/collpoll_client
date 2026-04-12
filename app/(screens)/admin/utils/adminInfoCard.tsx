@@ -60,9 +60,9 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
               {!item.show && `${item.pendingApprovals} pending approvals`} */}
               Everything is clear at the moment.
             </p>
-            <div className="bg-[#A3FFCB] text-[#007533] mb-3 px-2 py-1 rounded-lg w-25 font-semibold text-sm">
+            {/* <div className="bg-[#A3FFCB] text-[#007533] mb-3 px-2 py-1 rounded-lg w-25 font-semibold text-sm">
               {today ? today : "Loading..."}
-            </div>
+            </div> */}
           </div>
 
           <div className="w-[35%] h-full"></div>

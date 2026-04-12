@@ -131,7 +131,6 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
 
   const handleSubmit = async () => {
     if (isLoading) return;
-    setIsLoading(true);
 
     try {
       const superAdmin = await checkSuperAdminAuth();
@@ -140,13 +139,66 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
         return;
       }
 
-      if (!form.fullName.trim()) throw new Error("Full Name is required");
-      if (!form.email.trim()) throw new Error("Email Address is required");
-
+      if (!form.fullName.trim()) {
+        toast.error("Full name is required");
+        setIsLoading(false);
+        return;
+      }
+      if (!form.email.trim()) {
+        toast.error("Email address is required");
+        return;
+      }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(normalizedEmail)) throw new Error("Invalid email format");
+      if (!emailRegex.test(normalizedEmail)) {
+        toast.error("Invalid email format");
+        return
+      }
 
-      if (form.password !== form.confirmPassword) throw new Error("Passwords do not match");
+      if (!form.mobile.trim()) {
+        toast.error("Mobile number is required");
+        return;
+      }
+
+      if (!form.collegeId) {
+        toast.error("Please select college");
+        setIsLoading(false);
+        return;
+      }
+
+      if (!form.gender) {
+        toast.error("Please select gender");
+        return;
+      }
+
+      if (!form.password) {
+        toast.error("Password is required");
+        return;
+      }
+
+
+
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+      if (!passwordRegex.test(form.password)) {
+        toast.error(
+          "Password must contain at least 8 characters, one uppercase, one lowercase, one number and one special character"
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      if (!form.confirmPassword) {
+        toast.error("Confirm password is required");
+        return;
+      }
+
+      if (form.password !== form.confirmPassword) {
+        toast.error("Passwords do not match");
+        return;
+      }
+
+      setIsLoading(true);
 
       const collegeValidation = await validateCollegeId(form.collegeId);
       if (!collegeValidation.success) throw new Error("Invalid College ID");
@@ -173,7 +225,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
         mobile: `${form.countryCode}${form.mobile}`,
         collegeId: actualCollegeId,
         role: "CollegeAdmin",
-        gender: form.gender === "" ? undefined : (form.gender as "Male" | "Female"),
+        gender: form.gender as "Male" | "Female",
       });
 
       if (!userResult.success || !userResult.data) {
