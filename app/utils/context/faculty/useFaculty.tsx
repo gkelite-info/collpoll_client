@@ -8,6 +8,11 @@ export type FacultySubject = {
     subjectName: string;
 }
 
+export type CollegeAcademicYear = {
+    collegeAcademicYearId: number;
+    collegeAcademicYear: string;
+};
+
 export type FacultySection = {
     facultySectionId: number;
     collegeSectionsId: number;
@@ -40,7 +45,9 @@ export type FacultyContextType = {
     sectionIds: number[];
     subjectIds: number[];
     academicYearIds: number[];
-    faculty_subject: FacultySubject[]
+    faculty_subject: FacultySubject[];
+    collegeAcademicYears: CollegeAcademicYear[];
+    collegeAcademicYear: string | null;
 };
 
 
@@ -68,7 +75,9 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
         sectionIds: [],
         subjectIds: [],
         academicYearIds: [],
-        faculty_subject: []
+        faculty_subject: [],
+        collegeAcademicYears: [],
+        collegeAcademicYear: null,
     });
 
     useEffect(() => {
@@ -102,7 +111,9 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
                     sectionIds: faculty.sectionIds,
                     subjectIds: faculty.subjectIds,
                     academicYearIds: faculty.academicYearIds,
-                    faculty_subject: faculty.faculty_subject
+                    faculty_subject: faculty.faculty_subject,
+                    collegeAcademicYears: faculty.collegeAcademicYears,
+                    collegeAcademicYear: faculty.collegeAcademicYear,
                 });
             } catch (err) {
                 console.error("Failed to load faculty context", err);

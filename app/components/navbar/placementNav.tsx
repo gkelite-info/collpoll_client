@@ -107,8 +107,8 @@ export default function PlacementNavbar() {
                             // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
                             className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
                                     ${active
-                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                                    : "text-white hover:bg-[#50D689]/30"
+                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                                 }`}
                         >
                             <div className={active ? "text-[#43C17A]" : "text-white"}>
