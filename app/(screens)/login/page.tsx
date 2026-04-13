@@ -449,9 +449,9 @@ import { useState, useEffect } from "react";
 
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
-import { Icon } from "@iconify/react";
 import Image from "next/image";
 import Link from "next/link";
+import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap } from "@phosphor-icons/react";
 
 export default function LoginPage() {
 
@@ -469,44 +469,54 @@ export default function LoginPage() {
 
   const slides: Slide[] = [
     {
-      heading: "Welcome to Tekton Campus",
-      para: "Your trusted partner in digital solutions.",
-      image: "/Group 2774.png",
+      heading: "Managing Campus Excellence and Operations",
+      para: "Oversee students, faculty, academics, and daily campus activities — all in one place.",
+      image: "/loginslide1.png",
     },
     {
-      heading: "Secure & Modern",
-      para: "Cutting-edge tools for your workflow.",
-      image: "/Group 2774 (1).png",
+      heading: "Managing Operations and User Activities",
+      para: "Handle day-to-day tasks, manage users, and ensure smooth system operations — all in one place.",
+      image: "/loginslide2.png",
     },
     {
-      heading: "Grow Faster",
-      para: "Boost your productivity with us.",
-      image: "/Group 2774 (2).png",
+      heading: "Handling Faculty and Staff Operations",
+      para: "Track attendance, manage records, and streamline HR processes with ease.",
+      image: "/loginslide3.png",
     },
     {
-      heading: "Future Ready",
-      para: "Designed for performance and reliability.",
-      image: "/Group 2774 (3).png",
+      heading: "Managing Financial Operations and Transparency",
+      para: "Oversee budgets, track expenses, and manage financial records — all in one place.",
+      image: "/loginslide4.png",
     },
     {
-      heading: "Leading Campus Operations Efficiently",
-      para: "Oversee academic activities, departments, and student management across the institution.",
-      image: "/home.png",
+      heading: "Handling Financial Transactions and Operations",
+      para: "Manage fee collections, track payments, and maintain financial records — all in one place.",
+      image: "/loginslide5.png",
     },
     {
-      heading: "Managing Institutional Finances with Precision",
-      para: "Handle fee structures, payments, financial records, and reports seamlessly.",
-      image: "/Group 0021 (6).png",
+      heading: "Driving Student Placements and Success",
+      para: "Manage job opportunities, campus drives, and student career growth efficiently.",
+      image: "/loginslide6.png",
     },
     {
-      heading: "Shaping Student Careers and Opportunities",
-      para: "Coordinate placement drives, track student progress, and connect with top recruiters.",
-      image: "/Placement Home.png",
+      heading: "Empowering Teaching and Student Success",
+      para: "Manage classes, track student progress, and deliver quality education — all in one place.",
+      image: "/loginslide7.png",
     },
     {
-      heading: "Building Strong Teams for Better Education",
-      para: "Manage recruitment, staff records, payroll, and employee performance efficiently.",
-      image: "/HR home.png",
+      heading: "Managing Learning and Academic Progress",
+      para: "Track attendance, assignments, and academic performance — all in one place.",
+      image: "/loginslide8.png",
+    },
+    {
+      heading: "Staying Connected to Your Child’s Academic Journey",
+      para: "Track attendance, monitor performance, and stay updated — all in one place",
+      image: "/loginslide9.png",
+    },
+    {
+      heading: "Managing Student Well-Being Activities",
+      para: "Track issues, handle requests, and ensure student support with ease.",
+      image: "/loginslide10.png",
     },
   ];
 
@@ -578,8 +588,8 @@ export default function LoginPage() {
 
   return (
     <div className="w-full h-full flex">
-      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-8 overflow-hidden">
-        <div className="flex flex-col gap-2 items-center justify-center">
+      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-6 overflow-hidden">
+        <div className="bg-pink-00 flex flex-col items-center -mt-4 justify-center">
           <Image
             src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
             height={90}
@@ -587,13 +597,13 @@ export default function LoginPage() {
             alt=""
             className="rounded-full bg-transparent"
           />
-          <h1 className="text-white">Powered by Gk-Elite</h1>
+          <h1 className="text-gray-700 text-xs font-semibold">Powered by GK Elite-Info</h1>
         </div>
-        <div className="mt-10">
+        <div className="mt-6 bg-pink-00">
           <h2 className="text-xl font-semibold text-[#1B4D3E] text-center mb-1 transition-opacity duration-700">
             {slides[current].heading}
           </h2>
-          <p className="text-[#1F3D2F] text-center text-sm mb-6 w-full transition-opacity">
+          <p className="text-[#1F3D2F] text-center text-sm w-full transition-opacity">
             {slides[current].para}
           </p>
         </div>
@@ -615,7 +625,7 @@ export default function LoginPage() {
           return (
             <div
               key={idx}
-              className={`absolute bottom-0 left-1/2 w-[65%] h-[45%] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
+              className={`bg-red-00  absolute -bottom-12 left-1/2 w-[80%] h-[35%] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
               style={{
                 transform: `translateX(-50%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
                   }deg) translateY(-${radius}px)`,
@@ -640,7 +650,7 @@ export default function LoginPage() {
           );
         })}
 
-        <div className="flex gap-4 mt-8 absolute z-20 bottom-10">
+        <div className="flex gap-4 mt-8 absolute z-20 bottom-6">
           {slides.map((_, i) => (
             <div
               key={i}
@@ -657,7 +667,7 @@ export default function LoginPage() {
         className="w-[65%] h-screen flex justify-center items-center relative"
         style={{
           backgroundImage:
-            "url(https://thumbs.dreamstime.com/b/hall-building-college-sunrise-63035568.jpg)",
+            "url('/loginpagebg.webp')",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
@@ -680,7 +690,7 @@ export default function LoginPage() {
         >
           <div className="flex justify-center mb-6">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
-              <Icon icon="mdi:school-outline" width={26} className="text-white" />
+              <GraduationCap size={26} className="text-white" />
             </div>
           </div>
 
@@ -696,9 +706,8 @@ export default function LoginPage() {
               Email
             </label>
             <div className="relative">
-              <Icon
-                icon="mdi:email-outline"
-                width={17}
+              <EnvelopeSimple
+                size={17}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none"
               />
               <input
@@ -722,9 +731,8 @@ export default function LoginPage() {
               Password
             </label>
             <div className="relative">
-              <Icon
-                icon="mdi:lock-outline"
-                width={17}
+              <Lock
+                size={17}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none"
               />
               <input
@@ -745,21 +753,18 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white focus:outline-none cursor-pointer transition-colors"
               >
-                <Icon
-                  icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
-                  width={20}
-                />
+                {showPassword ? (
+                  <EyeSlash size={20} />
+                ) : (
+                  <Eye size={20} />
+                )}
               </button>
             </div>
           </div>
 
           <div className="flex items-start justify-between mt-4 gap-4">
             <div className="flex items-center gap-1.5">
-              <Icon
-                icon="mdi:information-outline"
-                width={15}
-                className="shrink-0 text-amber-300 mt-[2px]"
-              />
+              <Info size={15} className="shrink-0 text-amber-300 mt-[2px]" />
               <p className="text-[11.5px] text-white/70 leading-snug">
                 New account? Verify your email before logging in. Check inbox or spam.
               </p>
@@ -789,7 +794,7 @@ export default function LoginPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Icon icon="mdi:loading" width={18} className="animate-spin" />
+                  <SpinnerGap size={18} className="animate-spin" />
                   Signing in...
                 </span>
               ) : (
