@@ -37,7 +37,7 @@ type Props = {
     date: string;
     time: string;
   } | null;
-  initialEmail?: string; // 🟢 ADDED THIS PROP
+  initialEmail?: string;
 };
 
 const EMOJI_LIST = [
