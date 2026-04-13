@@ -1,7 +1,7 @@
 "use client";
 
+import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { CaretLeft } from "@phosphor-icons/react";
-import { ProjectCardProps } from "./page";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -40,16 +40,16 @@ export const ProjectCard = ({ data, onViewDetails }: ProjectCardListProps) => {
           className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7"
         >
           <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl md:text-2xl font-semibold text-[#1f2933]">
+            <div className="bg-yellow-00 lg:w-[72%]">
+              <h2 className="text-xl md:text-2xl font-semibold text-[#1f2933] truncate">
                 {project.title}
               </h2>
-              <p className="text-sm md:text-base text-[#4b5563] mt-2 max-w-md">
+              <p className="text-sm md:text-base text-[#4b5563] mt-2 max-w-md truncate">
                 {project.description}
               </p>
             </div>
             <button
-              className="shrink-0 px-5 py-2 cursor-pointer rounded-full bg-[#22c55e] text-white text-sm font-semibold shadow-sm"
+              className="shrink-0 px-5 py-2 lg:w-[28%] cursor-pointer rounded-full bg-[#22c55e] text-white text-sm font-semibold shadow-sm"
               onClick={() => onViewDetails(project)}
             >
               View Details
@@ -134,7 +134,7 @@ export const ProjectDetailsModal = ({ project, onClose }: ProjectDetailsModalPro
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10">
       <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white p-6 md:p-8 shadow-lg overflow-y-auto max-h-[90vh]">
         <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-            <CaretLeft onClick={onClose} size={22} className="cursor-pointer active:scale-90"/>
+          <CaretLeft onClick={onClose} size={22} className="cursor-pointer active:scale-90" />
           <p className="font-semibold text-lg">Project Details</p>
         </div>
 
@@ -192,7 +192,21 @@ export const ProjectDetailsModal = ({ project, onClose }: ProjectDetailsModalPro
               <div className="flex flex-col gap-3">
                 {project.mentors.length > 0 ? (
                   project.mentors.map((mentor, i) => (
-                    <MemberAvatar key={i} image={mentor.image} name={mentor.name} index={i} />
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        {mentor.image && (mentor.image.startsWith("http") || mentor.image.startsWith("data:")) ? (
+                          <img src={mentor.image} alt={mentor.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{mentor.name}</p>
+                        <p className="text-xs text-gray-500">Faculty / Guide</p>
+                      </div>
+                    </div>
                   ))
                 ) : (
                   <span className="text-gray-400 text-xs italic">No mentor assigned</span>

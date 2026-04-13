@@ -281,7 +281,7 @@ export async function fetchEnrichedProjectsByFaculty(
         uniqueStudentIds.length
             ? supabase
                 .from("students")
-                .select("studentId, userId")
+                .select("studentId, userId, users(fullName)")
                 .in("studentId", uniqueStudentIds)
             : Promise.resolve({ data: [] }),
     ]);
@@ -346,6 +346,176 @@ export async function fetchEnrichedProjectsByFaculty(
             .filter((t) => t.projectId === project.projectId)
             .map((t) => studentMap.get(t.studentId))
             .filter(Boolean) as { name: string; image: string }[];
+
+        const fileUrls = fileRows
+            .filter((f) => f.projectId === project.projectId)
+            .map((f) => f.fileUrl);
+
+        const startDate = project.startDate
+            ? new Date(project.startDate).toLocaleDateString("en-GB")
+            : "";
+        const endDate = project.endDate
+            ? new Date(project.endDate).toLocaleDateString("en-GB")
+            : "";
+
+        return {
+            projectId: project.projectId,
+            title: project.title,
+            description: project.description,
+            domain: project.domain,
+            marks: project.marks,
+            startDate: project.startDate,
+            endDate: project.endDate,
+            duration: startDate && endDate ? `${startDate} - ${endDate}` : "N/A",
+            mentors,
+            teamMembers,
+            fileUrls,
+        };
+    });
+}
+
+export async function fetchEnrichedProjectsByStudent(
+    studentId: number
+): Promise<EnrichedProject[]> {
+
+    // STEP 1: get projectIds where this student is a team member
+    const { data: memberRows, error: memberError } = await supabase
+        .from("project_team_members")
+        .select("projectId")
+        .eq("studentId", studentId);
+
+    // 🔍 DEBUG
+    console.log("=== STUDENT PROJECT DEBUG ===");
+    console.log("studentId being queried:", studentId);
+    console.log("memberRows:", memberRows);
+    console.log("memberError:", memberError);
+
+    if (memberError || !memberRows?.length) return [];
+
+    const projectIds = memberRows.map((r) => r.projectId);
+    console.log("projectIds found:", projectIds);
+
+    // STEP 2: fetch base project details
+    const { data: projects, error: projectsError } = await supabase
+        .from("projects")
+        .select("projectId, title, description, domain, marks, startDate, endDate")
+        .in("projectId", projectIds)
+        .is("deletedAt", null)
+        .order("createdAt", { ascending: false });
+
+    console.log("projects fetched:", projects);
+    console.log("projectsError:", projectsError);
+
+    if (projectsError || !projects?.length) return [];
+
+    // STEP 3: fetch mentors, team members, files in parallel
+    const [mentorsRes, teamRes, filesRes] = await Promise.all([
+        supabase
+            .from("project_mentors")
+            .select("projectId, facultyId")
+            .in("projectId", projectIds),
+
+        supabase
+            .from("project_team_members")
+            .select("projectId, studentId")
+            .in("projectId", projectIds),
+
+        supabase
+            .from("project_files")
+            .select("projectId, fileUrl")
+            .in("projectId", projectIds),
+    ]);
+
+    // 🔍 DEBUG
+    console.log("teamRows:", teamRes.data);
+    console.log("uniqueStudentIds:", [...new Set((teamRes.data ?? []).map((t) => t.studentId))]);
+
+    const mentorRows = mentorsRes.data ?? [];
+    const teamRows = teamRes.data ?? [];
+    const fileRows = filesRes.data ?? [];
+
+    const uniqueFacultyIds = [...new Set(mentorRows.map((m) => m.facultyId))];
+    const uniqueStudentIds = [...new Set(teamRows.map((t) => t.studentId))];
+
+    const [facultyRes, studentRes] = await Promise.all([
+        uniqueFacultyIds.length
+            ? supabase
+                .from("faculty")
+                .select("facultyId, fullName, userId")
+                .in("facultyId", uniqueFacultyIds)
+            : Promise.resolve({ data: [] }),
+
+        uniqueStudentIds.length
+            ? supabase
+                .from("students")
+                .select("studentId, userId, users(fullName)")
+                .in("studentId", uniqueStudentIds)
+            : Promise.resolve({ data: [] }),
+    ]);
+
+    // 🔍 DEBUG
+    console.log("studentList:", studentRes.data);
+    console.log("facultyList:", facultyRes.data);
+
+    const facultyList = facultyRes.data ?? [];
+    const studentList = studentRes.data ?? [];
+
+    const facultyUserIds = facultyList.map((f) => f.userId).filter(Boolean);
+    const studentUserIds = studentList.map((s) => s.userId).filter(Boolean);
+    const allUserIds = [...new Set([...facultyUserIds, ...studentUserIds])];
+
+    const profileRes = allUserIds.length
+        ? await supabase
+            .from("user_profile")
+            .select("userId, profileUrl")
+            .in("userId", allUserIds)
+            .eq("is_deleted", false)
+        : { data: [] };
+
+    // 🔍 DEBUG
+    console.log("allUserIds:", allUserIds);
+    console.log("profileList:", profileRes.data);
+
+    const profileList = profileRes.data ?? [];
+
+    const profileMap = new Map<number, string>(
+        profileList.map((p) => [p.userId, p.profileUrl ?? ""])
+    );
+
+    const facultyMap = new Map(
+        facultyList
+            .map((f) => ({
+                facultyId: f.facultyId,
+                name: f.fullName ?? "",
+                image: profileMap.get(f.userId) ?? "",
+            }))
+            .map((f) => [f.facultyId, f])
+    );
+
+    const studentMap = new Map(
+        studentList
+            .map((s: any) => ({
+                studentId: s.studentId,
+                name: s.users?.fullName ?? "Unknown",
+                image: profileMap.get(s.userId) ?? "",
+            }))
+            .map((s) => [s.studentId, s])
+    );
+
+    return projects.map((project) => {
+        const mentors = mentorRows
+            .filter((m) => m.projectId === project.projectId)
+            .map((m) => facultyMap.get(m.facultyId))
+            .filter(Boolean) as { name: string; image: string }[];
+
+        const teamMembers = teamRows
+            .filter((t) => t.projectId === project.projectId)
+            .map((t) => studentMap.get(t.studentId))
+            .filter(Boolean) as { name: string; image: string }[];
+
+        // 🔍 DEBUG
+        console.log(`Project ${project.projectId} teamMembers:`, teamMembers);
+        console.log(`Project ${project.projectId} mentors:`, mentors);
 
         const fileUrls = fileRows
             .filter((f) => f.projectId === project.projectId)

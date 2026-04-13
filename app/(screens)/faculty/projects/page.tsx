@@ -8,17 +8,8 @@ import { FaPlus } from "react-icons/fa6";
 import { useRouter, useSearchParams } from "next/navigation";
 import AddProjectForm from "./addProjectFrom";
 import { fetchEnrichedProjectsByFaculty } from "@/lib/helpers/projects/project";
+import { ProjectCardProps } from "@/lib/projectTypes/project";
 
-export type ProjectCardProps = {
-  title: string;
-  description: string;
-  duration: string;
-  techStack: string;
-  mentors: { name: string; image: string }[];
-  teamMembers: { name: string; image: string }[];
-  marks: number;
-  fileUrls: string[];
-};
 
 const ProjectCardShimmer = () => (
   <div className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse">

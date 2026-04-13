@@ -578,8 +578,8 @@ export default function LoginPage() {
 
   return (
     <div className="w-full h-full flex">
-      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-8 overflow-hidden">
-        <div className="flex flex-col gap-2 items-center justify-center">
+      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-6 overflow-hidden">
+        <div className="bg-pink-00 flex flex-col items-center -mt-4 justify-center">
           <Image
             src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
             height={90}
@@ -587,13 +587,13 @@ export default function LoginPage() {
             alt=""
             className="rounded-full bg-transparent"
           />
-          <h1 className="text-white">Powered by Gk-Elite</h1>
+          <h1 className="text-gray-700 text-xs font-semibold">Powered by GK Elite-Info</h1>
         </div>
-        <div className="mt-10">
+        <div className="mt-6 bg-pink-00">
           <h2 className="text-xl font-semibold text-[#1B4D3E] text-center mb-1 transition-opacity duration-700">
             {slides[current].heading}
           </h2>
-          <p className="text-[#1F3D2F] text-center text-sm mb-6 w-full transition-opacity">
+          <p className="text-[#1F3D2F] text-center text-sm w-full transition-opacity">
             {slides[current].para}
           </p>
         </div>
@@ -615,7 +615,7 @@ export default function LoginPage() {
           return (
             <div
               key={idx}
-              className={`absolute bottom-0 left-1/2 w-[65%] h-[45%] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
+              className={`bg-red-00 absolute -bottom-12 left-1/2 w-[80%] h-[35%] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
               style={{
                 transform: `translateX(-50%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
                   }deg) translateY(-${radius}px)`,
@@ -640,7 +640,7 @@ export default function LoginPage() {
           );
         })}
 
-        <div className="flex gap-4 mt-8 absolute z-20 bottom-10">
+        <div className="flex gap-4 mt-8 absolute z-20 bottom-6">
           {slides.map((_, i) => (
             <div
               key={i}
