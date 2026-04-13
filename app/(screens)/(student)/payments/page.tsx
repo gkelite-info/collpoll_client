@@ -5,11 +5,13 @@ import PaymentsSkeleton from "./shimmer/PaymentsSkeleton";
 import SharedPaymentDashboard from "@/app/components/payments/SharedPaymentDashboard";
 
 const StudentPaymentPage = () => {
-  const { userId } = useUser();
+  const { userId, profilePhoto } = useUser();
 
   if (!userId) return <PaymentsSkeleton />;
 
-  return <SharedPaymentDashboard targetUserId={userId} />;
+  return (
+    <SharedPaymentDashboard targetUserId={userId} profilePhoto={profilePhoto} />
+  );
 };
 
 export default StudentPaymentPage;

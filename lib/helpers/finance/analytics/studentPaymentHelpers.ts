@@ -53,22 +53,39 @@ export async function fetchStudentFeeDetails(studentFeeObligationId: number) {
 
 export async function fetchRecentOfflinePayments(
   studentFeeObligationId: number,
+  page: number = 1,
   limit: number = 5,
 ) {
   try {
-    const { data, error } = await supabase
+    if (!studentFeeObligationId || isNaN(studentFeeObligationId)) {
+      return { success: true, data: [], totalCount: 0 };
+    }
+
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Number(limit) || 5);
+    const from = (safePage - 1) * safeLimit;
+    const to = from + safeLimit - 1;
+
+    const { data, error, count } = await supabase
       .from("student_payment_transaction")
-      .select(`paidAmount, paymentMode, paymentDate`)
+      .select(`paidAmount, paymentMode, paymentDate`, { count: "exact" })
       .eq("studentFeeObligationId", studentFeeObligationId)
       .eq("paymentType", "offline")
       .order("createdAt", { ascending: false })
-      .limit(limit);
+      .range(from, to);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase Query Error:", error);
+      throw error;
+    }
 
-    return { success: true, data: data || [] };
+    return { success: true, data: data || [], totalCount: count || 0 };
   } catch (error: any) {
-    console.error("fetchRecentOfflinePayments error:", error);
+    const errorMsg =
+      JSON.stringify(error) !== "{}"
+        ? JSON.stringify(error)
+        : error.message || "Unknown error";
+    console.error("fetchRecentOfflinePayments error:", errorMsg);
     return { success: false, error };
   }
 }

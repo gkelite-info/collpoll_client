@@ -1,3 +1,6 @@
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { TableShimmer } from "../shimmer/TableShimmer";
+
 export interface FeePlan {
   programName: string;
   type: string;
@@ -25,9 +28,22 @@ export interface FeeSummaryItem {
 interface AcademicFeesProps {
   plan: FeePlan;
   summary: FeeSummaryItem[];
+  isLoading: boolean;
+  currentPage: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
 }
 
-const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
+const AcademicFees: React.FC<AcademicFeesProps> = ({
+  plan,
+  summary,
+  isLoading,
+  currentPage,
+  totalItems,
+  onPageChange,
+}) => {
+  const itemsPerPage = 2; // Hardcoded to 2 rows
+
   const formatCurrency = (val: number) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -37,6 +53,7 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
 
   return (
     <div className="space-y-6">
+      {/* ... Fee Plan UI stays exactly the same ... */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative max-w-5xl mx-auto">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Active Fee Plan
@@ -60,7 +77,6 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               {formatCurrency(plan.openingBalance)}
             </span>
           </div>
-
           <div className="flex justify-between items-center">
             <span className="text-gray-700 font-medium">
               Base Applicable Fees
@@ -69,7 +85,6 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               {formatCurrency(plan.applicableFees)}
             </span>
           </div>
-
           {plan.components && plan.components.length > 0 && (
             <div className="pl-5 border-l-4 border-emerald-200 bg-gray-50/50 py-3 pr-4 rounded-r-md space-y-2 my-2">
               {plan.components.map((comp, idx) => (
@@ -87,7 +102,6 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               ))}
             </div>
           )}
-
           {plan.gstAmount !== undefined && (
             <div className="flex justify-between items-center border-t border-gray-100 pt-3 text-[15px]">
               <span className="text-gray-600 font-medium">GST (18%)</span>
@@ -96,14 +110,12 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
               </span>
             </div>
           )}
-
           <div className="flex justify-between items-center pt-2">
             <span className="text-gray-700 font-medium">Scholarship</span>
             <span className="text-gray-600">
               {formatCurrency(plan.scholarship)}
             </span>
           </div>
-
           <div className="flex justify-between items-center border-t border-dashed pt-3">
             <span className="text-gray-800 font-bold">Total Payable</span>
             <span className="text-emerald-500 font-bold">
@@ -127,34 +139,38 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <h3 className="font-bold text-gray-800 text-lg">
-            {plan.programName}
-          </h3>
-          <span className="text-emerald-500 text-sm font-medium">
-            Fee Summary
-          </span>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 pb-4 border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-800 text-lg">
+              {plan.programName}
+            </h3>
+            <span className="text-emerald-500 text-sm font-medium">
+              Fee Summary
+            </span>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left whitespace-nowrap">
             <thead className="text-gray-700 bg-gray-200/70 font-semibold">
               <tr>
-                <th className="px-4 py-3 rounded-l-lg">Paid Amount</th>
+                <th className="px-4 py-3">Paid Amount</th>
                 <th className="px-4 py-3">Payment Mode</th>
                 <th className="px-4 py-3">Entity</th>
                 <th className="px-4 py-3">Paid On</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 rounded-r-lg">Comments</th>
+                <th className="px-4 py-3">Comments</th>
               </tr>
             </thead>
             <tbody>
-              {summary.length > 0 ? (
+              {isLoading ? (
+                <TableShimmer columns={6} rows={itemsPerPage} />
+              ) : summary.length > 0 ? (
                 summary.map((item, idx) => (
                   <tr
                     key={item.id || idx}
-                    className="border-b border-gray-50 last:border-0"
+                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-4 py-4 text-emerald-500 font-bold">
                       {formatCurrency(item.paidAmount)}
@@ -181,6 +197,15 @@ const AcademicFees: React.FC<AcademicFeesProps> = ({ plan, summary }) => {
             </tbody>
           </table>
         </div>
+
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={onPageChange}
+          />
+        )}
       </div>
     </div>
   );

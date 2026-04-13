@@ -18,8 +18,10 @@ import History from "@/app/(screens)/(student)/payments/components/history";
 // 1. Accept targetUserId as a prop
 export default function SharedPaymentDashboard({
   targetUserId,
+  profilePhoto,
 }: {
   targetUserId: number;
+  profilePhoto?: string | null;
 }) {
   const [activeTab, setActiveTab] = useState<
     "academic" | "additional" | "history"
@@ -114,7 +116,7 @@ export default function SharedPaymentDashboard({
           rollNo={profile.rollNo}
           email={profile.email}
           mobile={profile.mobile}
-          image="/rahul.png"
+          image={profilePhoto ? profilePhoto : "/rahul.png"}
         />
       )}
 

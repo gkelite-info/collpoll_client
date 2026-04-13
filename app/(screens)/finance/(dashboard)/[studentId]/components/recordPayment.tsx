@@ -1,10 +1,13 @@
 "use client";
 
-import React from "react";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { QRCodeSVG } from "qrcode.react";
-import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
-import { useRecordPayment } from "../useRecordPayment";
+import React from "react";
 import toast from "react-hot-toast";
+import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
+import { TableShimmer } from "../shimmer/TableShimmer";
+import { useRecordPayment } from "../useRecordPayment";
 
 interface RecordPaymentProps {
   studentFeeObligationId: number;
@@ -20,6 +23,10 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
     remainingBalance,
     recentPayments,
     isLoadingData,
+    isTableLoading,
+    currentPage,
+    setCurrentPage,
+    totalItems,
     paymentMethod,
     setPaymentMethod,
     selectedDate,
@@ -79,11 +86,7 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
   };
 
   if (isLoadingData) {
-    return (
-      <div className="p-5 text-sm text-gray-500 animate-pulse">
-        Loading payment interface...
-      </div>
-    );
+    return <Loader />;
   }
 
   return (
@@ -332,11 +335,13 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
               </tr>
             </thead>
             <tbody className="text-gray-600 text-xs font-medium">
-              {recentPayments.length > 0 ? (
+              {isTableLoading ? (
+                <TableShimmer columns={3} rows={5} />
+              ) : recentPayments.length > 0 ? (
                 recentPayments.map((row, i) => (
                   <tr
                     key={i}
-                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50"
+                    className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
                   >
                     <td className="py-3 px-5">
                       ₹ {Number(row.paidAmount).toLocaleString("en-IN")}
@@ -357,6 +362,15 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
             </tbody>
           </table>
         </div>
+
+        {!isTableLoading && totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={5}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       <PaymentSuccessModal
