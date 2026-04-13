@@ -128,7 +128,6 @@ export default function CreateMeetingModal({
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [selectedEducationType, setSelectedEducationType] = useState("");
 
-  // Validation state to control Bold/Red time fonts
   const [isPastTimeError, setIsPastTimeError] = useState(false);
 
   const [conflictData, setConflictData] = useState<{
@@ -140,7 +139,6 @@ export default function CreateMeetingModal({
   const isSelectModalOpen = !!selectModalRoleParam;
   const editMeetingId = searchParams.get("editMeetingId");
 
-  // Fix: Guarantees complete state clearance upon closing
   useEffect(() => {
     if (!isOpen) {
       resetForm();
@@ -163,24 +161,47 @@ export default function CreateMeetingModal({
   const resetForm = () => {
     setTitle("");
     setAgenda("");
-    setDate("");
     setSelectedRole("Select Role");
-    setSelectedEducationType(""); // Clean wipe
+    setSelectedEducationType("");
     setMeetingLink("");
-
-    setStartHour("09");
-    setStartMinute("00");
-    setStartPeriod("AM");
-
-    setEndHour("10");
-    setEndMinute("00");
-    setEndPeriod("AM");
 
     setSelectedUsers([]);
 
     setInAppNotification(false);
     setEmailNotification(false);
     setIsPastTimeError(false);
+
+    const start = new Date();
+    start.setMinutes(start.getMinutes() + 15);
+    const rem = start.getMinutes() % 5;
+    if (rem !== 0) start.setMinutes(start.getMinutes() + (5 - rem));
+
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+
+    const getParts = (d: Date) => {
+      let h = d.getHours();
+      const a = h >= 12 ? "PM" : "AM";
+      if (h > 12) h -= 12;
+      if (h === 0) h = 12;
+      const m = d.getMinutes();
+      return {
+        h: String(h).padStart(2, "0"),
+        m: String(m).padStart(2, "0"),
+        a: a as "AM" | "PM",
+      };
+    };
+
+    const fromP = getParts(start);
+    const toP = getParts(end);
+
+    setDate(getTodayDateString());
+    setStartHour(fromP.h);
+    setStartMinute(fromP.m);
+    setStartPeriod(fromP.a);
+    setEndHour(toP.h);
+    setEndMinute(toP.m);
+    setEndPeriod(toP.a);
   };
 
   const getDynamicSelectionText = () => {
@@ -329,8 +350,8 @@ export default function CreateMeetingModal({
 
   const validateMeetingUrl = (url: string): boolean => {
     try {
-      setIsScheduling(true);
-      toast.loading("Scheduling meeting...", { id: "schedule-loading" });
+      // 🟢 FIX: Removed setIsScheduling(true) and toast.loading from here!
+      // This function should ONLY validate and return boolean.
       const parsedUrl = new URL(url.trim());
       const hostname = parsedUrl.hostname.toLowerCase();
 
@@ -469,6 +490,7 @@ export default function CreateMeetingModal({
       return;
     }
 
+    // 🟢 ALL VALIDATIONS PASSED: Trigger Loading State NOW
     try {
       setIsScheduling(true);
       toast.loading(

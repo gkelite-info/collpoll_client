@@ -74,16 +74,16 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
 
   return (
     <div className={`flex flex-col ${gap} w-full`} ref={wrapperRef}>
-      {/* Label — matches native select exactly */}
       {label && (
         <label className={`text-sm font-medium text-gray-700`}>
-          {label} {label !== "Academic Session" && <span className="text-red-600">*</span> }
-          {required && <span className="text-red-500">*</span>}
+          {label}
+          {label !== "Academic Session" && (
+            <span className="text-red-600">*</span>
+          )}
         </label>
       )}
 
       <div className="relative">
-        {/* Select trigger */}
         <div
           onClick={() => !disabled && setIsOpen((prev) => !prev)}
           className={`
@@ -126,7 +126,6 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
           />
         </div>
 
-        {/* Dropdown */}
         {isOpen && !disabled && (
           <div
             className="
@@ -232,7 +231,6 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
         )}
       </div>
 
-      {/* Selected pills */}
       {selectedValues.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedValues.map((val) => (
