@@ -28,8 +28,6 @@ import { calculateATSScore } from "@/lib/helpers/student/Resume/atsScoreCalculat
 
 type Tab = "personal" | "keyskills";
 
-// ─── JD Skill Gap Box ─────────────────────────────────────────────────────────
-
 interface JDSkillGapBoxProps {
   jdText: string;
   matchingSkills: Array<{ name: string; demand: "high" | "medium" }>;
@@ -81,7 +79,6 @@ function JDSkillGapBox({
         </div>
       ) : (
         <>
-          {/* ── SECTION 1: Already strong ── */}
           {matchingSkills.length > 0 && (
             <div className="mb-4 bg-white rounded-xl p-4 border border-green-100">
               <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
@@ -108,8 +105,6 @@ function JDSkillGapBox({
               </div>
             </div>
           )}
-
-          {/* ── SECTION 2: Add to resume ── */}
           {suggestedSkills.length > 0 && (
             <div className="mb-4 bg-white rounded-xl p-4 border border-blue-100">
               <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1 flex items-center gap-1.5">
@@ -167,8 +162,6 @@ function JDSkillGapBox({
               </div>
             </div>
           )}
-
-          {/* ── SECTION 3: Skills to learn ── */}
           {missingSkills.length > 0 && (
             <div className="mb-4 bg-white rounded-xl p-4 border border-orange-100">
               <p className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
@@ -214,8 +207,6 @@ function JDSkillGapBox({
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
-
 export default function ProfileSummaryCard() {
   const [activeTab, setActiveTab] = useState<Tab>("personal");
   const router = useRouter();
@@ -248,14 +239,13 @@ export default function ProfileSummaryCard() {
   const [isGeneratingSkills, setIsGeneratingSkills] = useState(false);
   const [skillsJD, setSkillsJD] = useState("");
 
-  // ── JD Skill Gap — three buckets ──
+  
   const [jdMatchingSkills, setJdMatchingSkills] = useState<Array<{ name: string; demand: "high" | "medium" }>>([]);
   const [jdSuggestedSkills, setJdSuggestedSkills] = useState<Array<{ name: string; resumeSkillId: number; demand: "high" | "medium" }>>([]);
   const [jdMissingSkills, setJdMissingSkills] = useState<Array<{ name: string; demand: "high" | "medium" }>>([]);
   const [isGeneratingGap, setIsGeneratingGap] = useState(false);
   const [selectedMissingSkills, setSelectedMissingSkills] = useState<Set<string>>(new Set());
 
-  // ── Key Skills tab skill gap (separate state so tabs don't conflict) ──
   const [jdMatchingSkillsTab, setJdMatchingSkillsTab] = useState<Array<{ name: string; demand: "high" | "medium" }>>([]);
   const [jdSuggestedSkillsTab, setJdSuggestedSkillsTab] = useState<Array<{ name: string; resumeSkillId: number; demand: "high" | "medium" }>>([]);
   const [jdMissingSkillsTab, setJdMissingSkillsTab] = useState<Array<{ name: string; demand: "high" | "medium" }>>([]);
@@ -321,7 +311,6 @@ export default function ProfileSummaryCard() {
     );
   }
 
-  // ─── Shared skill gap processor ───────────────────────────────────────────
   const processSkillGap = async (
     jd: string,
     setMatching: (v: Array<{ name: string; demand: "high" | "medium" }>) => void,
@@ -384,7 +373,7 @@ export default function ProfileSummaryCard() {
     }
   };
 
-  // ─── Handlers: Summary ────────────────────────────────────────────────────
+  
   const handleGenerateSummaries = async () => {
     if (!studentId) return;
     setIsGenerating(true);
@@ -446,7 +435,6 @@ export default function ProfileSummaryCard() {
     }
   };
 
-  // ─── Handlers: Skills ─────────────────────────────────────────────────────
   const toggleSkill = (skillId: number) => {
     setSelectedSkillIds((prev) => {
       const next = new Set(prev);
@@ -519,11 +507,8 @@ export default function ProfileSummaryCard() {
     setIsGeneratingSkills(false);
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="p-6 bg-[#FFFFFF] min-h-screen rounded-xl">
-
-      {/* Back Button */}
       <button
         onClick={() => router.back()}
         className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors mb-4"
@@ -532,8 +517,6 @@ export default function ProfileSummaryCard() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
-
-      {/* Tabs */}
       <div className="flex gap-3 mb-6">
         <button
           onClick={() => setActiveTab("personal")}
@@ -548,12 +531,8 @@ export default function ProfileSummaryCard() {
           Key Skills
         </button>
       </div>
-
-      {/* ══════════════════ PERSONAL TAB ══════════════════ */}
       {activeTab === "personal" && (
         <div className="bg-white rounded-2xl p-6 max-w-4xl">
-
-          {/* ── AI Assistance label ── */}
           <div className="mb-4">
             <div
               style={{ background: "linear-gradient(90deg, #F1E7FE 0%, #D4BEFF 100%)" }}
@@ -563,11 +542,7 @@ export default function ProfileSummaryCard() {
               AI Assistance
             </div>
           </div>
-
-          {/* ── Single box: Current Summary + JD paste ── */}
           <div className="bg-white rounded-xl p-5 mb-5 shadow-sm border border-gray-100">
-
-            {/* ── Current Summary Card — inside the box ── */}
             <div className="mb-5 pb-5 border-b border-gray-100">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-[#16284F] uppercase tracking-widest">Current Summary</p>
@@ -648,7 +623,6 @@ export default function ProfileSummaryCard() {
               </div>
             </div>
 
-            {/* ── JD paste area ── */}
             <textarea
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
@@ -673,8 +647,6 @@ export default function ProfileSummaryCard() {
               </button>
             </div>
           </div>
-
-          {/* AI Summaries */}
           {aiSummaries.length > 0 && (
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 bg-[#EDE1FE] border border-[#c4a8fc] rounded-xl px-4 py-3">
@@ -685,8 +657,6 @@ export default function ProfileSummaryCard() {
                    <span className="font-black text-[#16284F]">These are 5 AI-Suggested Profile Summaries Select the one that best fits you.</span>
                 </p>
               </div>
-
-              {/* Before vs After ATS comparison */}
               {atsScore !== null && (
                 <div className="flex items-center gap-3 flex-wrap bg-gradient-to-r from-[#faf7ff] to-[#f0fdf7] border border-purple-100 rounded-xl px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -745,8 +715,6 @@ export default function ProfileSummaryCard() {
 
         </div>
       )}
-
-      {/* ══════════════════ KEY SKILLS TAB ══════════════════ */}
       {activeTab === "keyskills" && (
         <div className="bg-white rounded-2xl p-6 max-w-4xl">
 
@@ -784,8 +752,6 @@ export default function ProfileSummaryCard() {
                 ) : "Suggest Skills from JD"}
               </button>
             </div>
-
-            {/* Skill Gap Box — Key Skills tab */}
             <JDSkillGapBox
               jdText={skillsJD}
               matchingSkills={jdMatchingSkillsTab}
@@ -872,8 +838,6 @@ export default function ProfileSummaryCard() {
           </div>
         </div>
       )}
-
-      {/* View Resume Template */}
       <div className="flex justify-center mt-10">
         <button
           onClick={() => {

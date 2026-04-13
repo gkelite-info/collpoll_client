@@ -48,7 +48,6 @@ export default function KeySkillsWithModal() {
     tools: undefined,
   });
 
-  // Click outside to close dropdown
   const dropdownRefs = useRef<Record<Section, HTMLDivElement | null>>({
     technical: null,
     soft: null,
@@ -185,7 +184,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
     }
   };
 
-  // Add directly from search keyword (first option in dropdown)
   const handleAddKeyword = async (section: Section) => {
     const query = sectionSearch[section].query.trim();
     if (!query) return;
@@ -198,7 +196,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
     }
   };
 
-  // Add from dropdown result
   const handleAddFromSearch = async (section: Section, name: string) => {
     setSectionSearch((prev) => ({
       ...prev,
@@ -284,7 +281,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
           <h4 className="text-lg text-[#43C17A] font-medium">{label}</h4>
         </div>
 
-        {/* Pills box */}
         <div className="rounded-md border border-[#C0C0C0] p-3 min-h-[52px] flex flex-wrap items-center gap-2">
           {skills.map((skill) => (
             <span
@@ -308,12 +304,10 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
           )}
         </div>
 
-        {/* AI Suggestions label + Naukri-style search */}
         <div className="mt-2">
           <div className="flex items-center gap-3 mb-1.5">
             <p className="text-xs text-gray-400 shrink-0">✦ AI Suggestions — click to add</p>
 
-            {/* Search with dropdown */}
             <div
               className="relative flex-1 max-w-xs"
               ref={(el) => { dropdownRefs.current[section] = el; }}
@@ -364,10 +358,8 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
                 )}
               </div>
 
-              {/* ── Naukri-style dropdown ── */}
               {search.open && search.query.trim() && (
                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
-                  {/* First option — add keyword directly */}
                   {keywordNotAdded && (
                     <button
                       type="button"
@@ -380,8 +372,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
                       </span>
                     </button>
                   )}
-
-                  {/* AI search results below */}
                   {search.loading && searchResults.length === 0 && (
                     <div className="px-4 py-3 text-xs text-gray-400 animate-pulse">
                       Finding suggestions...
@@ -410,8 +400,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
               )}
             </div>
           </div>
-
-          {/* Default AI suggestions pills — shown when not searching */}
           {!search.query && sectionSuggestions.length > 0 && (
             <div className="flex flex-wrap">
               {sectionSuggestions.map((s) => (
