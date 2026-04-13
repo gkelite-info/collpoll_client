@@ -93,20 +93,18 @@ export default function CertificationsForm({
     link: "",
     file: "",
     fileObject: null as File | null,
-    startDate: "",   // stored as YYYY-MM-DD for input
-    endDate: "",     // optional
+    startDate: "",   
+    endDate: "",    
   });
 
   const [resumeCertificateId, setResumeCertificateId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Convert timestamptz → YYYY-MM-DD for date input
   const toInputDate = (iso: string | null): string => {
     if (!iso) return "";
     return iso.split("T")[0];
   };
 
-  // Convert YYYY-MM-DD → full ISO for DB
   const toISOString = (dateStr: string): string => {
     if (!dateStr) return "";
     return new Date(dateStr).toISOString();
@@ -208,7 +206,6 @@ export default function CertificationsForm({
 
   return (
     <div>
-      {/* ← ADDED: header with trash icon (saved) or minus button (new) */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">
           Certification {index + 1}

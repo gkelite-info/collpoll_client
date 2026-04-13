@@ -123,7 +123,6 @@ export default function ClubsForm({ index, onSubmit, onRemove, studentId, existi
 
   return (
     <div>
-      {/* ← ADDED: header with trash icon (saved) or minus button (new) */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">Club & Committee {index + 1}</h3>
         {resumeClubCommitteeId ? (

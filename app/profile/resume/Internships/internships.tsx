@@ -43,7 +43,6 @@ export default function Internships() {
   const [formKey, setFormKey] = useState(0);
   const [showForm, setShowForm] = useState(false); // ← controls Add form visibility
 
-  // ── Load existing internships ──────────────────────────────────
   useEffect(() => {
     if (!studentId) return;
 
@@ -66,10 +65,8 @@ export default function Internships() {
           },
         }));
         setEntries(mapped);
-        // Show form by default only if no entries exist
         setShowForm(rows.length === 0);
       } catch (err) {
-        console.error("Failed to load internships:", err);
         setShowForm(true);
       } finally {
         setLoading(false);
@@ -79,7 +76,6 @@ export default function Internships() {
     load();
   }, [studentId]);
 
-  // ── Add new internship ─────────────────────────────────────────
   const handleAddSubmitted = (data: InternshipFormData, newDbId?: number) => {
     if (newDbId) {
       setEntries((prev) => [...prev, { dbId: newDbId, data, isEditing: false }]);
@@ -88,7 +84,6 @@ export default function Internships() {
     setShowForm(false); // hide form after submit
   };
 
-  // ── Edit existing internship ───────────────────────────────────
   const handleEditSubmitted = (dbId: number) => (data: InternshipFormData) => {
     setEntries((prev) =>
       prev.map((e) => (e.dbId === dbId ? { ...e, data, isEditing: false } : e))
@@ -103,7 +98,6 @@ export default function Internships() {
     );
   };
 
-  // ── Delete internship ──────────────────────────────────────────
   const handleDelete = async (dbId: number) => {
     setDeletingId(dbId);
     try {
@@ -111,7 +105,6 @@ export default function Internships() {
       setEntries((prev) => prev.filter((e) => e.dbId !== dbId));
       toast.success("Internship deleted");
     } catch {
-      console.error("Failed to delete internship");
       toast.error("Failed to delete internship");
     } finally {
       setDeletingId(null);
@@ -132,7 +125,6 @@ export default function Internships() {
     <div className="mt-3">
       <div className="bg-white rounded-lg shadow-sm p-6">
 
-        {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-[#282828]">Internships</h2>
           <div className="flex gap-2">
@@ -153,7 +145,6 @@ export default function Internships() {
           </div>
         </div>
 
-        {/* Internship Cards */}
         {entries.length > 0 && (
           <div className="space-y-4 mb-6">
             {entries.map((entry) => (
@@ -178,12 +169,10 @@ export default function Internships() {
             ))}
           </div>
         )}
-
-        {/* Add Form — shown only when Add+ clicked */}
         {showForm && (
           <div className={entries.length > 0 ? "border border-[#C0C0C0] rounded-lg p-4" : ""}>
             {/* minus button to close form — same as Education */}
-            <div className="flex justify-end mb-2">
+            {/* <div className="flex justify-end mb-2">
               <button
                 type="button"
                 onClick={() => {
@@ -194,7 +183,7 @@ export default function Internships() {
               >
                 <span className="block w-3 h-[3px] bg-white rounded-full" />
               </button>
-            </div>
+            </div> */}
             <InternshipForm
               key={formKey}
               studentId={studentId}

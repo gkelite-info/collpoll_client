@@ -83,9 +83,16 @@ export default function InternshipForm({
   initialData?: InternshipFormData;
   internshipId?: number;
 }) {
+  
   const [domains, setDomains] = useState<string[]>(DEFAULT_DOMAINS);
   const [showOtherDomain, setShowOtherDomain] = useState(false);
   const [otherDomainValue, setOtherDomainValue] = useState("");
+  const [roles, setRoles] = useState<string[]>(ROLES);
+  const [showOtherRole, setShowOtherRole] = useState(false);
+  const [otherRoleValue, setOtherRoleValue] = useState("");
+  const [locations, setLocations] = useState<string[]>(LOCATIONS);
+  const [showOtherLocation, setShowOtherLocation] = useState(false);
+  const [otherLocationValue, setOtherLocationValue] = useState("");
 
   const {
     register,
@@ -125,6 +132,34 @@ export default function InternshipForm({
     setShowOtherDomain(false);
   };
 
+  const handleAddOtherRole = () => {
+    const value = otherRoleValue.trim();
+    if (!value) {
+      toast.error("Please enter a role before adding.");
+      return;
+    }
+    if (!roles.includes(value)) {
+      setRoles((prev) => [...prev, value]);
+    }
+    setValue("role", value, { shouldValidate: true });
+    setOtherRoleValue("");
+    setShowOtherRole(false);
+  };
+
+  const handleAddOtherLocation = () => {
+    const value = otherLocationValue.trim();
+    if (!value) {
+      toast.error("Please enter a location before adding.");
+      return;
+    }
+    if (!locations.includes(value)) {
+      setLocations((prev) => [...prev, value]);
+    }
+    setValue("location", value, { shouldValidate: true });
+    setOtherLocationValue("");
+    setShowOtherLocation(false);
+  };
+
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
     try {
       const result = await upsertResumeInternship({
@@ -144,7 +179,6 @@ export default function InternshipForm({
       toast.success(internshipId ? "Internship updated successfully" : "Internship saved successfully");
       onSubmitted(data as InternshipFormData, result.resumeInternshipId);
     } catch (error: any) {
-      console.error("Save Error:", error);
       toast.error(`Failed to save: ${error.message || "Unknown error"}`);
     }
   };
@@ -170,14 +204,52 @@ export default function InternshipForm({
             <select
               {...register("role")}
               disabled={isSubmitting}
+              onChange={(e) => {
+                if (e.target.value === "__other__") {
+                  setShowOtherRole(true);
+                  setValue("role", "", { shouldValidate: false });
+                } else {
+                  setShowOtherRole(false);
+                  setValue("role", e.target.value, { shouldValidate: true });
+                }
+              }}
               className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
             >
               <option value="">Select role</option>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+              {roles.map((r) => <option key={r} value={r}>{r}</option>)}
+              <option value="__other__">+ Other</option>
             </select>
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
           </div>
           {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role.message}</p>}
+
+          {/* Other role input — shown when + Other is selected */}
+          {showOtherRole && (
+            <div className="flex gap-2 items-center mt-2">
+              <input
+                autoFocus
+                value={otherRoleValue}
+                onChange={(e) => setOtherRoleValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddOtherRole()}
+                placeholder="Enter role"
+                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
+              />
+              <button
+                type="button"
+                onClick={handleAddOtherRole}
+                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowOtherRole(false); setOtherRoleValue(""); }}
+                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -237,19 +309,53 @@ export default function InternshipForm({
             <select
               {...register("location")}
               disabled={isSubmitting}
+              onChange={(e) => {
+                if (e.target.value === "__other__") {
+                  setShowOtherLocation(true);
+                  setValue("location", "", { shouldValidate: false });
+                } else {
+                  setShowOtherLocation(false);
+                  setValue("location", e.target.value, { shouldValidate: true });
+                }
+              }}
               className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
             >
               <option value="">Select location</option>
-              {LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+              {locations.map((l) => <option key={l} value={l}>{l}</option>)}
+              <option value="__other__">+ Other</option>
             </select>
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
           </div>
           {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location.message}</p>}
+          {showOtherLocation && (
+            <div className="flex gap-2 items-center mt-2">
+              <input
+                autoFocus
+                value={otherLocationValue}
+                onChange={(e) => setOtherLocationValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddOtherLocation()}
+                placeholder="Enter location"
+                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
+              />
+              <button
+                type="button"
+                onClick={handleAddOtherLocation}
+                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowOtherLocation(false); setOtherLocationValue(""); }}
+                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
         <div>
           <FieldLabel label="Domain" required />
-
-          {/* Domain select with + Other option */}
           <div className="relative">
             <select
               {...register("domain")}
@@ -273,7 +379,6 @@ export default function InternshipForm({
           </div>
           {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain.message}</p>}
 
-          {/* Other domain input — shown when + Other is selected */}
           {showOtherDomain && (
             <div className="flex gap-2 items-center mt-2">
               <input
@@ -303,7 +408,6 @@ export default function InternshipForm({
         </div>
       </div>
 
-      {/* Row 5: Description */}
       <div>
         <FieldLabel label="Short Description" />
         <textarea
@@ -317,7 +421,6 @@ export default function InternshipForm({
         <p className="text-xs text-gray-400 text-right mt-1">{descriptionValue.length}/500</p>
       </div>
 
-      {/* Submit */}
       <div className="flex justify-end">
         <button
           onClick={handleSubmit(onSubmit)}

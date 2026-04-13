@@ -111,7 +111,6 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
 
   return (
     <div>
-      {/* ← ADDED: header with trash icon (saved) or minus button (new) */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">Award {index + 1}</h3>
         {awardId ? (
