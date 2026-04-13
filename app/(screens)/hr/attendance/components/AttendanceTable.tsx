@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import TableComponent from "@/app/utils/table/table";
+import toast from "react-hot-toast";
 
 import { ExtendedColumn } from "./types";
 import { getStatusBadge } from "./statusBadge";
@@ -88,16 +89,6 @@ export default function AttendanceTable({
   const [validationErrs, setValidationErrs] = useState<
     Record<number, RowValidation>
   >({});
-  const [toast, setToast] = useState<{
-    msg: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const resetAll = () => {
     setRowEdits({});
@@ -485,18 +476,12 @@ export default function AttendanceTable({
           setIsSavingAll(false);
 
           if (results.every(Boolean)) {
-            setToast({
-              msg: "Attendance saved successfully!",
-              type: "success",
-            });
+            toast.success("Attendance saved successfully!");
             resetAll();
             onSave();
             onRefresh();
           } else {
-            setToast({
-              msg: "Some rows failed. Please check errors.",
-              type: "error",
-            });
+            toast.error("Some rows failed. Please check errors.");
           }
         }}
         className="w-[200px] bg-[#22C55E] hover:bg-[#16a34a] disabled:opacity-70 disabled:cursor-not-allowed text-white text-sm font-bold py-2.5 rounded-lg cursor-pointer transition-colors flex items-center justify-center gap-2"
@@ -582,44 +567,6 @@ export default function AttendanceTable({
 
   return (
     <>
-      {toast && (
-        <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white transition-all
-          ${toast.type === "success" ? "bg-[#22C55E]" : "bg-[#EF4444]"}`}
-        >
-          {toast.type === "success" ? (
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          ) : (
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          )}
-          {toast.msg}
-        </div>
-      )}
-
       <TableComponent
         columns={columns as any[]}
         tableData={tableData}

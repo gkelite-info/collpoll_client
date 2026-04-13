@@ -1,3 +1,6 @@
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
+import { TableShimmer } from "../shimmer/TableShimmer";
+
 export interface Transaction {
   id: number | string;
   items: string;
@@ -14,9 +17,22 @@ export interface Transaction {
 interface HistoryProps {
   amountSpend: number;
   transactions: Transaction[];
+  isLoading: boolean;
+  currentPage: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
 }
 
-const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
+const History: React.FC<HistoryProps> = ({
+  amountSpend,
+  transactions,
+  isLoading,
+  currentPage,
+  totalItems,
+  onPageChange,
+}) => {
+  const itemsPerPage = 5;
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -37,9 +53,14 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.length === 0 ? (
+              {isLoading ? (
+                <TableShimmer columns={10} rows={itemsPerPage} />
+              ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-8 text-center text-gray-500 font-medium">
+                  <td
+                    colSpan={10}
+                    className="px-6 py-8 text-center text-gray-500 font-medium"
+                  >
                     No Data Available
                   </td>
                 </tr>
@@ -49,7 +70,9 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
                     <td className="px-6 py-4 text-gray-600">{trx.id}</td>
                     <td className="px-6 py-4 text-gray-600">{trx.items}</td>
                     <td className="px-6 py-4 text-gray-600">{trx.qty}</td>
-                    <td className="px-6 py-4 text-gray-600">{trx.costCenter}</td>
+                    <td className="px-6 py-4 text-gray-600">
+                      {trx.costCenter}
+                    </td>
                     <td className="px-6 py-4 text-gray-600">
                       {trx.amount.toLocaleString()}
                     </td>
@@ -62,12 +85,13 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
                     <td className="px-6 py-4 text-gray-600">{trx.trxnId}</td>
                     <td className="px-6 py-4 text-gray-600">{trx.paidOn}</td>
                     <td
-                      className={`px-6 py-4 font-medium ${trx.status === "Success"
+                      className={`px-6 py-4 font-medium ${
+                        trx.status === "Success"
                           ? "text-emerald-500"
                           : trx.status === "Failure"
                             ? "text-red-500"
                             : "text-yellow-500"
-                        }`}
+                      }`}
                     >
                       {trx.status}
                     </td>
@@ -77,6 +101,15 @@ const History: React.FC<HistoryProps> = ({ amountSpend, transactions }) => {
             </tbody>
           </table>
         </div>
+
+        {totalItems > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={onPageChange}
+          />
+        )}
       </div>
     </div>
   );

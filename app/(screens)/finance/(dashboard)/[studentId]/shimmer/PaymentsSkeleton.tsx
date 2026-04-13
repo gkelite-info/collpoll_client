@@ -19,7 +19,6 @@ export default function PaymentsSkeleton() {
         </div>
       </div>
 
-
       <div className="flex justify-center mb-10">
         <div className="relative flex items-center bg-gray-100 p-2 rounded-full gap-3">
           <div className="h-9 w-36 bg-gray-300 rounded-full" />
@@ -28,12 +27,9 @@ export default function PaymentsSkeleton() {
         </div>
       </div>
 
-     
       <div className="bg-white rounded-xl p-8 shadow-sm min-h-[600px] space-y-6">
-       
         <div className="h-5 w-56 bg-gray-300 rounded" />
 
-       
         <div className="bg-gray-100 rounded-lg p-4 flex justify-between items-center">
           <div className="space-y-2">
             <div className="h-4 w-48 bg-gray-300 rounded" />
@@ -42,7 +38,6 @@ export default function PaymentsSkeleton() {
           <div className="h-4 w-24 bg-gray-300 rounded" />
         </div>
 
-        
         <div className="space-y-4 max-w-2xl mt-6">
           <div className="flex justify-between">
             <div className="h-4 w-48 bg-gray-200 rounded" />
@@ -62,9 +57,6 @@ export default function PaymentsSkeleton() {
           </div>
         </div>
 
-
-
-       
         <div className="mt-10 space-y-4">
           <div className="h-10 bg-gray-200 rounded" />
           <div className="h-10 bg-gray-100 rounded" />

@@ -322,13 +322,47 @@ export async function getYearWiseDetails(
   return { leftChart, rightChart, tableData, availableYears };
 }
 
+export async function fetchRecentOfflinePayments(
+  studentFeeObligationId: number,
+  page: number = 1,
+  limit: number = 5,
+) {
+  try {
+    // 1. Prevents Supabase crash if ID is missing on initial render
+    if (!studentFeeObligationId) {
+      return { success: true, data: [], totalCount: 0 };
+    }
+
+    // 2. Safe parsing prevents NaN crashes in .range()
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Number(limit) || 5);
+    const from = (safePage - 1) * safeLimit;
+    const to = from + safeLimit - 1;
+
+    const { data, error, count } = await supabase
+      .from("student_payment_transaction")
+      .select(`paidAmount, paymentMode, paymentDate`, { count: "exact" })
+      .eq("studentFeeObligationId", studentFeeObligationId)
+      .eq("paymentType", "offline")
+      .order("createdAt", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
+    return { success: true, data: data || [], totalCount: count || 0 };
+  } catch (error: any) {
+    console.error("fetchRecentOfflinePayments error:", error);
+    return { success: false, error };
+  }
+}
+
 export async function getStudentFinanceDetails(studentId: string) {
   const { data: studentData } = await supabase
     .from("students")
     .select(
       `
       studentId, collegeId, collegeEducationId, collegeBranchId, collegeSessionId,
-      users ( fullName, email, mobile ),
+      users ( fullName, email, mobile, user_profile ( profileUrl ) ),
       college_education ( collegeEducationType ),
       college_branch ( collegeBranchType ),
       student_academic_history ( isCurrent, college_academic_year ( collegeAcademicYear ) )
@@ -342,6 +376,11 @@ export async function getStudentFinanceDetails(studentId: string) {
   const userObj: any = Array.isArray(studentData.users)
     ? studentData.users[0]
     : studentData.users;
+
+  const userProfileObj: any = Array.isArray(userObj?.user_profile)
+    ? userObj?.user_profile[0]
+    : userObj?.user_profile;
+
   const educationObj: any = Array.isArray(studentData.college_education)
     ? studentData.college_education[0]
     : studentData.college_education;
@@ -362,7 +401,7 @@ export async function getStudentFinanceDetails(studentId: string) {
     rollNo: studentData.studentId.toString(),
     email: userObj?.email || "N/A",
     mobile: userObj?.mobile || "N/A",
-    imageUrl: "/adityamenon.png",
+    imageUrl: userProfileObj?.profileUrl || null,
   };
 
   let feeComponents: { name: string; amount: number }[] = [];

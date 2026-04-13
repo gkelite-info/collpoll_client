@@ -3,7 +3,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "@phosphor-icons/react";
-// Create an array of colors matching the image
 const colors = [
   "#FFC107",
   "#FF5722",
@@ -13,10 +12,8 @@ const colors = [
   "#E91E63",
 ];
 
-// Helper function for random numbers
 const random = (min: number, max: number) => Math.random() * (max - min) + min;
 
-// Individual Confetti Piece (Ribbon or Particle)
 const ConfettiPiece = ({ i }: { i: number }) => {
   const isRibbon = Math.random() < 0.35; // 35% chance of being a ribbon
   const color = colors[Math.floor(random(0, colors.length))];
@@ -119,7 +116,7 @@ export const PaymentSuccessModal = ({ isOpen, onClose, data }: Props) => {
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-300 hover:text-gray-500 transition-colors z-20"
+              className="absolute cursor-pointer top-4 right-4 text-gray-300 hover:text-gray-500 transition-colors z-20"
             >
               <X weight="bold" size={20} />
             </button>
