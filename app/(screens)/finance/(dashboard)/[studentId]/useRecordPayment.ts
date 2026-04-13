@@ -24,15 +24,18 @@ export function useRecordPayment({
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
 
+  // Table DB Pagination State
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
   const [financeManagerName, setFinanceManagerName] =
     useState("Finance Manager");
-
   const [paymentMethod, setPaymentMethod] = useState("Manual UPI");
   const [selectedDate, setSelectedDate] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [amountReceived, setAmountReceived] = useState("");
   const [notes, setNotes] = useState("");
-
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,20 +56,22 @@ export function useRecordPayment({
         .select("fullName")
         .eq("userId", userId)
         .single();
-
-      if (data && !error) {
-        setFinanceManagerName(data.fullName);
-      }
+      if (data && !error) setFinanceManagerName(data.fullName);
     }
     fetchFmName();
   }, [userId]);
 
   const fetchData = async () => {
+    // Prevent fetching if ID is missing (prevents the {} crash)
+    if (!studentFeeObligationId) return;
+
     setIsLoadingData(true);
+    setIsTableLoading(true);
 
     const [detailsResult, recentPaymentsResult] = await Promise.all([
       fetchStudentFeeDetails(studentFeeObligationId),
-      fetchRecentOfflinePayments(studentFeeObligationId),
+      // 🟢 CHANGED: Passing arguments as (ID, Page: 1, Limit: 2) to match your helper
+      fetchRecentOfflinePayments(studentFeeObligationId, 1, 2),
     ]);
 
     if (detailsResult.success && detailsResult.data) {
@@ -78,22 +83,49 @@ export function useRecordPayment({
 
     if (recentPaymentsResult.success && recentPaymentsResult.data) {
       setRecentPayments(recentPaymentsResult.data);
+      setTotalItems(recentPaymentsResult.totalCount || 0);
+      setCurrentPage(1);
     }
 
     setIsLoadingData(false);
+    setIsTableLoading(false);
   };
 
   useEffect(() => {
     if (studentFeeObligationId) fetchData();
   }, [studentFeeObligationId]);
 
-  // --- Handlers ---
-  const handleUploadClick = () => fileInputRef.current?.click();
+  // DB Call triggered when page changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (studentFeeObligationId) {
+      const fetchPaginatedData = async () => {
+        setIsTableLoading(true);
+        // 🟢 CHANGED: Passing arguments as (ID, Page: currentPage, Limit: 2)
+        const result = await fetchRecentOfflinePayments(
+          studentFeeObligationId,
+          currentPage,
+          2,
+        );
 
+        if (result.success && result.data) {
+          setRecentPayments(result.data);
+          setTotalItems(result.totalCount || 0);
+        }
+        setIsTableLoading(false);
+      };
+      fetchPaginatedData();
+    }
+  }, [currentPage, studentFeeObligationId]);
+
+  const handleUploadClick = () => fileInputRef.current?.click();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) setAttachedFile(e.target.files[0]);
   };
-
   const removeFile = () => {
     setAttachedFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -105,14 +137,11 @@ export function useRecordPayment({
         toast.error("Finance Manager session missing. Please reload.");
         return;
       }
-
       const numericAmount = Number(amountReceived.replace(/,/g, ""));
-
       if (!numericAmount || numericAmount <= 0) {
         toast.error("Please enter a valid amount");
         return;
       }
-
       if (numericAmount > remainingBalance) {
         toast.error("Amount exceeds remaining balance");
         return;
@@ -120,16 +149,13 @@ export function useRecordPayment({
 
       setIsSubmitting(true);
       let proofPath: string | null = null;
-
       if (attachedFile) {
         const fileExt = attachedFile.name.split(".").pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `${studentFeeObligationId}/${fileName}`;
-
         const { error: uploadError } = await supabase.storage
           .from("offline-payment-proofs")
           .upload(filePath, attachedFile);
-
         if (uploadError) throw new Error("Proof upload failed");
         proofPath = filePath;
       }
@@ -145,18 +171,8 @@ export function useRecordPayment({
         proof: proofPath || undefined,
       });
 
-      //   if (result.success) {
-      //     toast.success("Payment recorded successfully!");
-      //     setIsSuccessModalOpen(true);
-      //     fetchData();
-      //     setAmountReceived("");
-      //     setNotes("");
-      //     removeFile();
-      //   }
-
       if (result.success) {
         toast.success("Payment recorded successfully!");
-
         setModalData({
           amount: numericAmount.toLocaleString("en-IN"),
           payerName: studentName,
@@ -164,10 +180,8 @@ export function useRecordPayment({
             "en-IN",
           ),
         });
-
         setIsSuccessModalOpen(true);
-        fetchData();
-
+        fetchData(); // Refreshes table to page 1
         setAmountReceived("");
         setNotes("");
         removeFile();
@@ -187,6 +201,10 @@ export function useRecordPayment({
     remainingBalance,
     recentPayments,
     isLoadingData: isLoadingData || fmLoading,
+    isTableLoading,
+    currentPage,
+    setCurrentPage,
+    totalItems,
     paymentMethod,
     setPaymentMethod,
     selectedDate,

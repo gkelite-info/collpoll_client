@@ -592,7 +592,7 @@ export default function PostCard({
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmitComment()}
-                  className="flex-1 h-9 px-4 rounded-full bg-gray-100 border-none outline-none text-[14px] focus:ring-2 focus:ring-[#43C17A]/20 transition-all placeholder:text-gray-400"
+                  className="flex-1 h-9 px-4 text-[#282828] rounded-full bg-gray-100 border-none outline-none text-[14px] focus:ring-2 focus:ring-[#43C17A]/20 transition-all placeholder:text-gray-400"
                 />
                 <button
                   onClick={handleSubmitComment}

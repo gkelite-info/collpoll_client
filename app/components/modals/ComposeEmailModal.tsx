@@ -37,6 +37,7 @@ type Props = {
     date: string;
     time: string;
   } | null;
+  initialEmail?: string; // 🟢 ADDED THIS PROP
 };
 
 const EMOJI_LIST = [
@@ -65,6 +66,7 @@ export default function ComposeEmailModal({
   collegeId,
   replyData,
   onSuccess,
+  initialEmail,
 }: Props) {
   const [audience, setAudience] = useState("");
   const [manualEmail, setManualEmail] = useState("");
@@ -108,29 +110,38 @@ export default function ComposeEmailModal({
   }, [isOpen, collegeId]);
 
   useEffect(() => {
-    if (isOpen && replyData) {
-      setAudience("");
-      setManualEmail(replyData.to);
-      const newSubject = replyData.subject.toLowerCase().startsWith("re:")
-        ? replyData.subject
-        : `Re: ${replyData.subject}`;
-      setSubject(newSubject);
+    if (isOpen) {
+      if (replyData) {
+        setAudience("");
+        setManualEmail(replyData.to);
+        const newSubject = replyData.subject.toLowerCase().startsWith("re:")
+          ? replyData.subject
+          : `Re: ${replyData.subject}`;
+        setSubject(newSubject);
 
-      const doc = new DOMParser().parseFromString(replyData.body, "text/html");
-      const plainTextBody = doc.body.textContent || "";
-      const quoteHeader = `<br/><br/><div style="color: #6B7280; font-size: 12px;">On ${replyData.date} at ${replyData.time}, ${replyData.senderName} &lt;${replyData.to}&gt; wrote:</div>`;
-      const quotedBody = plainTextBody
-        .split("\n")
-        .map((line) => `> ${line}`)
-        .join("<br/>");
+        const doc = new DOMParser().parseFromString(
+          replyData.body,
+          "text/html",
+        );
+        const plainTextBody = doc.body.textContent || "";
+        const quoteHeader = `<br/><br/><div style="color: #6B7280; font-size: 12px;">On ${replyData.date} at ${replyData.time}, ${replyData.senderName} &lt;${replyData.to}&gt; wrote:</div>`;
+        const quotedBody = plainTextBody
+          .split("\n")
+          .map((line) => `> ${line}`)
+          .join("<br/>");
 
-      const finalHtml = `${quoteHeader}${quotedBody}`;
-      setDescription(finalHtml);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = finalHtml;
+        const finalHtml = `${quoteHeader}${quotedBody}`;
+        setDescription(finalHtml);
+        if (editorRef.current) {
+          editorRef.current.innerHTML = finalHtml;
+        }
+      } else if (initialEmail) {
+        // 🟢 IF NO REPLY DATA BUT WE HAVE AN INITIAL EMAIL, PREFILL IT
+        setAudience("");
+        setManualEmail(initialEmail);
       }
     }
-  }, [isOpen, replyData]);
+  }, [isOpen, replyData, initialEmail]);
 
   useEffect(() => {
     setBranch("");
@@ -318,7 +329,7 @@ export default function ComposeEmailModal({
             onClick={handleClose}
             className="p-1 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <X size={20} className="text-[#282828]" />
+            <X size={20} className="text-[#282828] cursor-pointer" />
           </button>
         </div>
 
@@ -328,79 +339,93 @@ export default function ComposeEmailModal({
               Send To
             </label>
             <div className="flex gap-3">
-              <select
-                className="w-1/3 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A] capitalize"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-              >
-                <option value="">Select Audience</option>
-                {rolesList.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="email"
-                placeholder="or enter email"
-                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A]"
-                value={manualEmail}
-                onChange={(e) => setManualEmail(e.target.value)}
-              />
+              {initialEmail ? (
+                <input
+                  type="email"
+                  placeholder="or enter email"
+                  className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A]"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                />
+              ) : (
+                <>
+                  <select
+                    className="w-1/3 px-3 py-1.5 border cursor-pointer border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A] capitalize"
+                    value={audience}
+                    onChange={(e) => setAudience(e.target.value)}
+                  >
+                    <option value="">Select Audience</option>
+                    {rolesList.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="email"
+                    placeholder="or enter email"
+                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A]"
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                  />
+                </>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-[12px] text-gray-500">
-            <FilterPill
-              label="Education Type"
-              value={edu}
-              onChange={setEdu}
-              options={eduList}
-              valKey="collegeEducationId"
-              nameKey="collegeEducationType"
-              defaultLabel="All"
-            />
-            <FilterPill
-              label="Branch"
-              value={branch}
-              onChange={setBranch}
-              options={branchList}
-              valKey="collegeBranchId"
-              nameKey="collegeBranchType"
-              defaultLabel="All"
-              disabled={!edu}
-            />
-            <FilterPill
-              label="Year"
-              value={year}
-              onChange={setYear}
-              options={yearList}
-              valKey="collegeAcademicYearId"
-              nameKey="collegeAcademicYear"
-              defaultLabel="All Years"
-              disabled={!branch}
-            />
-            <FilterPill
-              label="Sem"
-              value={sem}
-              onChange={setSem}
-              options={semList}
-              valKey="collegeSemesterId"
-              nameKey="collegeSemester"
-              defaultLabel="All"
-              disabled={!year}
-            />
-            <FilterPill
-              label="Sec"
-              value={sec}
-              onChange={setSec}
-              options={secList}
-              valKey="collegeSectionsId"
-              nameKey="collegeSections"
-              defaultLabel="All Sections"
-              disabled={!year}
-            />
-          </div>
+          {!initialEmail && (
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-gray-500">
+              <FilterPill
+                label="Education Type"
+                value={edu}
+                onChange={setEdu}
+                options={eduList}
+                valKey="collegeEducationId"
+                nameKey="collegeEducationType"
+                defaultLabel="All"
+              />
+              <FilterPill
+                label="Branch"
+                value={branch}
+                onChange={setBranch}
+                options={branchList}
+                valKey="collegeBranchId"
+                nameKey="collegeBranchType"
+                defaultLabel="All"
+                disabled={!edu}
+              />
+              <FilterPill
+                label="Year"
+                value={year}
+                onChange={setYear}
+                options={yearList}
+                valKey="collegeAcademicYearId"
+                nameKey="collegeAcademicYear"
+                defaultLabel="All Years"
+                disabled={!branch}
+              />
+              <FilterPill
+                label="Sem"
+                value={sem}
+                onChange={setSem}
+                options={semList}
+                valKey="collegeSemesterId"
+                nameKey="collegeSemester"
+                defaultLabel="All"
+                disabled={!year}
+              />
+              <FilterPill
+                label="Sec"
+                value={sec}
+                onChange={setSec}
+                options={secList}
+                valKey="collegeSectionsId"
+                nameKey="collegeSections"
+                defaultLabel="All Sections"
+                disabled={!year}
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1">
             <label className="text-[13px] font-semibold text-[#282828]">
@@ -473,7 +498,7 @@ export default function ComposeEmailModal({
                             prev.filter((_, idx) => idx !== i),
                           )
                         }
-                        className="ml-1 text-gray-400 hover:text-red-500"
+                        className="ml-1 text-gray-400 cursor-pointer hover:text-red-500"
                       >
                         <X size={12} />
                       </button>
@@ -642,7 +667,7 @@ function ToolbarIcon({
       type="button"
       onClick={onClick}
       title={title}
-      className="w-7 h-7 flex items-center justify-center rounded-md bg-transparent text-gray-600 hover:bg-gray-200 transition-colors"
+      className="w-7 h-7 cursor-pointer flex items-center justify-center rounded-md bg-transparent text-gray-600 hover:bg-gray-200 transition-colors"
     >
       {icon}
     </button>
