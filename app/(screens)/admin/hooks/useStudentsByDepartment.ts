@@ -8,22 +8,41 @@ export function useStudentsByDepartment(
   sectionId: number | null,
   collegeId: number,
   collegeEducationId: number,
+  page: number = 1,
+  limit: number = 10
 ) {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   useEffect(() => {
     async function load() {
-      if (!shouldFetch || !collegeId || !collegeEducationId || !yearId) return;
+      if (!shouldFetch || !collegeId || !collegeEducationId || !yearId) {
+        setLoading(false);
+        return;
+      }
 
       setLoading(true);
+
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
 
       let query = supabase
         .from("students")
         .select(
           `
           studentId,
-          users!inner(fullName),
+          userId,
+          users!inner(
+          fullName,
+          user_profile!left (
+            profileUrl
+          )
+          ),
+          student_pins!left(
+            pinNumber,
+            isActive
+          ),
           student_academic_history!inner(
             collegeSectionsId,
             collegeSemesterId,
@@ -34,12 +53,14 @@ export function useStudentsByDepartment(
             status
           )
         `,
+          { count: "exact" }
         )
         .eq("collegeId", collegeId)
         .eq("collegeEducationId", collegeEducationId)
         .eq("collegeBranchId", departmentId)
         .eq("student_academic_history.isCurrent", true)
-        .eq("isActive", true);
+        .eq("isActive", true)
+        .range(from, to);
 
       if (yearId) {
         query = query.filter(
@@ -56,9 +77,17 @@ export function useStudentsByDepartment(
         );
       }
 
-      const { data, error } = await query;
+      const { data, count, error } = await query;
+
+      if (error) {
+        setStudents([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
+      }
 
       if (!error && data) {
+        setTotalCount(count ?? 0);
         const mapped = data.map((s: any) => {
           const history = Array.isArray(s.student_academic_history)
             ? s.student_academic_history[0]
@@ -89,22 +118,36 @@ export function useStudentsByDepartment(
           const attendancePct =
             total > 0 ? Math.round((present / total) * 100) + "%" : "—";
 
+          const studentPin =
+            Array.isArray(s.student_pins)
+              ? s.student_pins[0]?.pinNumber
+              : s.student_pins?.pinNumber;
+
           return {
-            rollNumber: s.studentId.toString(),
+            studentId: s.studentId,
+            rollNumber: studentPin ?? s.studentId.toString(),
             semester: sem ? `Sem ${sem}` : "—",
             attendance: attendancePct,
             performance: "—",
+            userId: s.userId,
             users: {
               fullName: s.users?.fullName || "Unknown",
-              avatar: null,
+              avatar:
+                Array.isArray(s.users?.user_profile)
+                  ? s.users.user_profile[0]?.profileUrl ?? null
+                  : s.users?.user_profile?.profileUrl ?? null,
             },
           };
         });
-        setStudents(mapped);
-      }
-      setLoading(false);
-    }
 
+        setStudents(mapped);
+        setLoading(false);
+      } else {
+        setStudents([]);
+        setTotalCount(0);
+        setLoading(false);
+      }
+    }
     load();
   }, [
     departmentId,
@@ -113,7 +156,9 @@ export function useStudentsByDepartment(
     sectionId,
     collegeId,
     collegeEducationId,
+    page,
+    limit
   ]);
 
-  return { students, loading };
+  return { students, loading, totalCount };
 }

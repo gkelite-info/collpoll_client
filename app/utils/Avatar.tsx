@@ -2,7 +2,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 interface AvatarProps {
-  src?: string;
+  src?: string | null;
   alt: string;
   size?: number;
 }
@@ -10,7 +10,13 @@ interface AvatarProps {
 export const Avatar = ({ src, alt, size = 56 }: AvatarProps) => {
   const [error, setError] = useState(false);
 
-  if (!src || error) {
+  const isValid = src && !error && (
+    src.startsWith("http") ||
+    src.startsWith("data:") ||
+    src.startsWith("blob:")
+  );
+
+  if (!isValid) {
     return (
       <div
         className="rounded-full bg-gray-200 flex items-center justify-center text-gray-400"
@@ -24,13 +30,21 @@ export const Avatar = ({ src, alt, size = 56 }: AvatarProps) => {
   }
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={size}
-      height={size}
-      className="rounded-full object-cover"
-      onError={() => setError(true)}
-    />
+    <div
+      className="relative rounded-full overflow-hidden border border-gray-200 flex-shrink-0"
+      style={{ width: size, height: size }}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        // width={size}
+        // height={size}
+        sizes={`${size}px`}
+        className="w-full h-full object-cover"
+        loading="lazy"
+        onError={() => setError(true)}
+      />
+    </div>
   );
 };
