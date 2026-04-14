@@ -73,88 +73,92 @@
 //   }
 // }
 
+// app/api/generate-pdf/route.ts
+
 import { NextResponse } from "next/server";
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+async function getBrowser() {
+  const isVercel = !!process.env.VERCEL; // Vercel sets this automatically
+
+  if (isVercel) {
+    const chromium = (await import("@sparticuz/chromium")).default;
+    const puppeteer = (await import("puppeteer-core")).default;
+
+    return puppeteer.launch({
+      args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+  }
+
+  // Local: Windows / Mac / Linux — puppeteer bundles its own Chromium
+  const puppeteer = (await import("puppeteer")).default;
+  return puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+  });
+}
+
 export async function POST(req: Request) {
+  let browser = null;
+
   try {
     const { html } = await req.json();
 
     if (!html) {
-      return NextResponse.json(
-        { error: "HTML content required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "HTML content required" }, { status: 400 });
     }
 
-    const browser = await puppeteer.launch({
-      args: [
-        ...chromium.args,
-        "--hide-scrollbars",
-        "--disable-web-security"
-      ],
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
-
+    browser = await getBrowser();
     const page = await browser.newPage();
 
-    await page.setViewport({
-      width: 794,
-      height: 1123,
-      deviceScaleFactor: 1,
-    });
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 60000 });
 
-    await page.setContent(html, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
-
-    await page.evaluate(() => {
-      return new Promise<void>((resolve) => {
+    await page.evaluate(() =>
+      new Promise<void>((resolve) => {
         if (document.readyState === "complete") resolve();
         else window.addEventListener("load", () => resolve());
-      });
-    });
+      })
+    );
 
-    await page.waitForFunction(() => document.fonts.ready);
+    try {
+      await page.waitForFunction(() => document.fonts.ready, { timeout: 5000 });
+    } catch {
+      // non-fatal
+    }
 
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: {
-        top: "0mm",
-        bottom: "0mm",
-        left: "0mm",
-        right: "0mm",
-      },
+      margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
+      timeout: 60000,
     });
 
     await browser.close();
+    browser = null;
 
     return new NextResponse(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition":
-          "attachment; filename=Resume.pdf",
+        "Content-Disposition": "attachment; filename=Resume.pdf",
       },
     });
-
   } catch (error) {
-
-    console.error("PDF error:", error);
-
+    console.error("PDF generation error:", error);
+    if (browser) {
+      try { await browser.close(); } catch { /* ignore */ }
+    }
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "PDF generation failed",
-      },
+      { error: error instanceof Error ? error.message : "PDF generation failed" },
       { status: 500 }
     );
   }

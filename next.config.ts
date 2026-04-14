@@ -19,7 +19,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@sparticuz/chromium"],
+  serverExternalPackages: ["@sparticuz/chromium", "puppeteer-core", "puppeteer"],
   images: {
     remotePatterns: [
       {
@@ -36,6 +36,11 @@ const nextConfig: NextConfig = {
         destination: "http://192.168.31.170/:path*",
       },
     ];
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
   },
 };
 
