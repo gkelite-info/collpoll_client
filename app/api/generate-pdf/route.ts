@@ -76,6 +76,7 @@
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
@@ -93,7 +94,6 @@ export async function POST(req: Request) {
     let browser;
 
     if (isDev) {
-      // local → use full puppeteer (auto chromium)
       const puppeteer = (await import("puppeteer")).default;
 
       browser = await puppeteer.launch({
@@ -101,7 +101,6 @@ export async function POST(req: Request) {
       });
 
     } else {
-      // production → use serverless chromium
       const puppeteer = (await import("puppeteer-core")).default;
       const chromium = (await import("@sparticuz/chromium")).default;
 
