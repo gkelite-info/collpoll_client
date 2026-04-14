@@ -449,7 +449,6 @@ import { useState, useEffect } from "react";
 
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
-import Image from "next/image";
 import Link from "next/link";
 import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap } from "@phosphor-icons/react";
 
@@ -590,7 +589,7 @@ export default function LoginPage() {
     <div className="w-full h-full flex">
       <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-6 overflow-hidden">
         <div className="bg-pink-00 flex flex-col items-center -mt-4 justify-center">
-          <Image
+          <img
             src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
             height={90}
             width={90}
