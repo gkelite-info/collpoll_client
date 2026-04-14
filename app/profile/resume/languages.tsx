@@ -172,8 +172,6 @@ export default function ResumeLanguages() {
         </div>
 
         <div className="max-w-xl mx-auto flex flex-col gap-4">
-
-          {/* Selected Pills Box */}
           <div className="border border-[#C0C0C0] rounded-md px-3 py-3 min-h-[50px]">
             <div className="flex flex-wrap gap-2">
               {selected.length === 0 ? (
@@ -190,13 +188,9 @@ export default function ResumeLanguages() {
               )}
             </div>
           </div>
-
-          {/* ✦ AI Suggestions label + inline search bar — same as skills */}
           <div className="mt-1">
             <div className="flex items-center gap-3 mb-2">
               <p className="text-xs font-medium text-gray-500 shrink-0">✦ AI Suggestions — click to add</p>
-
-              {/* Inline search with dropdown */}
               <div
                 className="relative flex-1 max-w-xs"
                 ref={dropdownRef}
@@ -233,8 +227,6 @@ export default function ResumeLanguages() {
                     </button>
                   )}
                 </div>
-
-                {/* Dropdown */}
                 {langSearch.open && langSearch.query.trim() && (
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-[5.5rem] overflow-y-auto">
                     {keywordNotAdded && (
@@ -270,8 +262,6 @@ export default function ResumeLanguages() {
                 )}
               </div>
             </div>
-
-            {/* Suggestion pills — shown when not searching */}
             {!langSearch.query && suggestions.filter((s) => !selected.includes(s)).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {suggestions
@@ -292,8 +282,6 @@ export default function ResumeLanguages() {
               <p className="text-xs text-gray-300 animate-pulse">Loading AI suggestions...</p>
             )}
           </div>
-
-          {/* Dismissed Section */}
           {dismissed.filter((s) => !selected.includes(s)).length > 0 && (
             <div className="mt-2 pt-3 border-t border-gray-100">
               <p className="text-xs font-medium text-gray-400 mb-2">Dismissed — click to restore</p>
@@ -312,8 +300,6 @@ export default function ResumeLanguages() {
               </div>
             </div>
           )}
-
-          {/* Save Button */}
           <div className="flex justify-end mt-4">
             <button
               onClick={saveLanguages}

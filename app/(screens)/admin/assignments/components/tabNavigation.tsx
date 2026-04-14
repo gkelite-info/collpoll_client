@@ -1,4 +1,5 @@
 'use client';
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
@@ -7,6 +8,7 @@ export default function TabNavigation() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "assignments";
+  const { collegeEducationType } = useAdmin();
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -57,7 +59,7 @@ export default function TabNavigation() {
         <p className="text-[#282828] text-sm">
           {activeTab === "assignments" && "Track subjects, faculty who created assignments, raised issues, and submission progress."}
           {activeTab === "quiz" && "Monitor and manage quizzes across all departments."}
-          {activeTab === "discussion" && "Manage project discussions and forums across all departments."}
+          {activeTab === "discussion" && `Manage project discussions and forums across all ${!(collegeEducationType === "Inter") ? "branches." : "groups."}`}
         </p>
       </div>
       <div className="w-[320px]">

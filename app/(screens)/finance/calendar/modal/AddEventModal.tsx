@@ -670,7 +670,7 @@ export default function AddEventModal({
               <div className="flex flex-col gap-2">
                 <CustomMultiSelect
                   label="Section"
-                  required={true} // Triggers the asterisk internally
+                  required={true}
                   entityName="Section"
                   placeholder={
                     loadingSections ? "Loading..." : "Select Sections"

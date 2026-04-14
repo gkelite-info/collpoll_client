@@ -615,7 +615,6 @@ function AssignmentsLeftContent() {
                                         </div>
                                     ) : (
                                         attemptedQuizzes.slice((quizCurrentPage - 1) * QUIZ_PER_PAGE, quizCurrentPage * QUIZ_PER_PAGE).map((submission, index) => {
-                                            console.log("submission:", submission);
                                             const bgColors = ["bg-[#481451]", "bg-[#182142]", "bg-[#1B1A40]", "bg-[#2E1851]", "bg-[#0A2647]"];
                                             const quiz = submission.quizzes;
                                             return (

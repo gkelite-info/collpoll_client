@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import ProjectsHeader from "../compounents/ProjectsHeader";
-import ProjectFilters from "../compounents/ProjectFilters";
-import ProjectGrid from "../compounents/ProjectGrid";
+import ProjectsHeader from "../components/ProjectsHeader";
+import ProjectFilters from "../components/ProjectFilters";
+import ProjectGrid from "../components/ProjectGrid";
 import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function DepartmentProjectsPage() {

@@ -17,8 +17,8 @@ export type CollegeAcademicYearRow = {
 
 
 export async function fetchCollegeAcademicYears(
-    collegeId: number,
-    collegeBranchId: number
+    collegeId: number | null,
+    collegeBranchId: number | null
 ) {
     const { data, error } = await supabase
         .from("college_academic_year")
@@ -151,8 +151,8 @@ export async function deactivateCollegeAcademicYear(
 
 
 export async function fetchAcademicYearOptionsForAdmin(
-    userId: number,
-    collegeBranchId: number
+    userId: number | null,
+    collegeBranchId: number | null
 ) {
     const { collegeId } = await fetchAdminContext(userId);
 

@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
 import { Plus } from "@phosphor-icons/react";
-import ProjectsHeader from "../compounents/ProjectsHeader";
+import ProjectsHeader from "../components/ProjectsHeader";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WipOverlay from "@/app/utils/WipOverlay";
 

@@ -293,8 +293,6 @@ export async function fetchEnrichedProjectsByFaculty(
     const studentUserIds = studentList.map((s) => s.userId).filter(Boolean);
     const allUserIds = [...new Set([...facultyUserIds, ...studentUserIds])];
 
-
-
     const profileRes = allUserIds.length
         ? await supabase
             .from("user_profile")
@@ -378,24 +376,15 @@ export async function fetchEnrichedProjectsByStudent(
     studentId: number
 ): Promise<EnrichedProject[]> {
 
-    // STEP 1: get projectIds where this student is a team member
     const { data: memberRows, error: memberError } = await supabase
         .from("project_team_members")
         .select("projectId")
         .eq("studentId", studentId);
 
-    // 🔍 DEBUG
-    console.log("=== STUDENT PROJECT DEBUG ===");
-    console.log("studentId being queried:", studentId);
-    console.log("memberRows:", memberRows);
-    console.log("memberError:", memberError);
-
     if (memberError || !memberRows?.length) return [];
 
     const projectIds = memberRows.map((r) => r.projectId);
-    console.log("projectIds found:", projectIds);
 
-    // STEP 2: fetch base project details
     const { data: projects, error: projectsError } = await supabase
         .from("projects")
         .select("projectId, title, description, domain, marks, startDate, endDate")
@@ -403,12 +392,8 @@ export async function fetchEnrichedProjectsByStudent(
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
 
-    console.log("projects fetched:", projects);
-    console.log("projectsError:", projectsError);
-
     if (projectsError || !projects?.length) return [];
 
-    // STEP 3: fetch mentors, team members, files in parallel
     const [mentorsRes, teamRes, filesRes] = await Promise.all([
         supabase
             .from("project_mentors")
@@ -425,10 +410,6 @@ export async function fetchEnrichedProjectsByStudent(
             .select("projectId, fileUrl")
             .in("projectId", projectIds),
     ]);
-
-    // 🔍 DEBUG
-    console.log("teamRows:", teamRes.data);
-    console.log("uniqueStudentIds:", [...new Set((teamRes.data ?? []).map((t) => t.studentId))]);
 
     const mentorRows = mentorsRes.data ?? [];
     const teamRows = teamRes.data ?? [];
@@ -453,10 +434,6 @@ export async function fetchEnrichedProjectsByStudent(
             : Promise.resolve({ data: [] }),
     ]);
 
-    // 🔍 DEBUG
-    console.log("studentList:", studentRes.data);
-    console.log("facultyList:", facultyRes.data);
-
     const facultyList = facultyRes.data ?? [];
     const studentList = studentRes.data ?? [];
 
@@ -471,10 +448,6 @@ export async function fetchEnrichedProjectsByStudent(
             .in("userId", allUserIds)
             .eq("is_deleted", false)
         : { data: [] };
-
-    // 🔍 DEBUG
-    console.log("allUserIds:", allUserIds);
-    console.log("profileList:", profileRes.data);
 
     const profileList = profileRes.data ?? [];
 
@@ -512,10 +485,6 @@ export async function fetchEnrichedProjectsByStudent(
             .filter((t) => t.projectId === project.projectId)
             .map((t) => studentMap.get(t.studentId))
             .filter(Boolean) as { name: string; image: string }[];
-
-        // 🔍 DEBUG
-        console.log(`Project ${project.projectId} teamMembers:`, teamMembers);
-        console.log(`Project ${project.projectId} mentors:`, mentors);
 
         const fileUrls = fileRows
             .filter((f) => f.projectId === project.projectId)

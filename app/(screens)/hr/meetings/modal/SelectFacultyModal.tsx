@@ -20,6 +20,14 @@ const UserShimmer = () => (
   </div>
 );
 
+// 🟢 Helper to extract initials from name
+const getInitials = (name: string) => {
+  if (!name) return "";
+  const parts = name.trim().split(" ");
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function SelectFacultyModal({
   isOpen,
   onClose,
@@ -46,7 +54,6 @@ export default function SelectFacultyModal({
   const [isSelecting, setIsSelecting] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
-  // DEBOUNCE EFFECT: Wait 500ms after user stops typing to trigger DB search
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -78,13 +85,12 @@ export default function SelectFacultyModal({
     if (isOpen) loadUsers();
   }, [collegeId, roleName, educationTypeId, isOpen, debouncedSearchQuery]);
 
-  // FIX 1: Explicitly clear local selections if the parent passes an empty array
   useEffect(() => {
     if (isOpen) {
       if (selectedUsers && selectedUsers.length > 0) {
         setSelectedIds(selectedUsers.map((u) => u.userId));
       } else {
-        setSelectedIds([]); // Explicit wipe
+        setSelectedIds([]);
       }
     }
   }, [isOpen, selectedUsers]);
@@ -139,12 +145,11 @@ export default function SelectFacultyModal({
     }
   };
 
-  // FIX 2: Guarantee full cleanup of local state when the modal closes
   useEffect(() => {
     if (!isOpen) {
       setSearchQuery("");
       setDebouncedSearchQuery("");
-      setSelectedIds([]); // Ensure stray selections are destroyed
+      setSelectedIds([]);
     }
   }, [isOpen]);
 
@@ -209,6 +214,8 @@ export default function SelectFacultyModal({
               ) : filteredFaculty.length > 0 ? (
                 filteredFaculty.map((f) => {
                   const id = f.userId;
+                  const profileUrl = f.profileUrl || f.avatar;
+
                   return (
                     <div
                       key={id}
@@ -216,11 +223,20 @@ export default function SelectFacultyModal({
                       onClick={() => toggleSelection(id)}
                     >
                       <div className="flex items-center gap-3">
-                        <img
-                          src={`https://i.pravatar.cc/150?u=${f.userId}`}
-                          className="w-10 h-10 rounded-full object-cover"
-                          alt={f.name}
-                        />
+                        {/* 🟢 AVATAR LOGIC UPDATED HERE */}
+                        {profileUrl ? (
+                          <img
+                            src={profileUrl}
+                            className="w-10 h-10 rounded-full object-cover"
+                            alt={f.name}
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full object-cover bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-semibold text-gray-500">
+                              {getInitials(f.name)}
+                            </span>
+                          </div>
+                        )}
 
                         <div>
                           <p className="font-semibold text-sm text-gray-900">

@@ -44,7 +44,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
   const [usedAI, setUsedAI] = useState(false);
   const [isDoneClosing, setIsDoneClosing] = useState(false);
 
-  // ✅ FIX: Read the locked "before" score from sessionStorage ONLY.
   useEffect(() => {
     const stored = sessionStorage.getItem("ats_before_score");
     if (stored) {
@@ -54,7 +53,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
     }
   }, []);
 
-  // ✅ FIX: Fetch resume data only — no score calculation here
   useEffect(() => {
     if (!studentId) return;
     setLoading(true);
@@ -62,7 +60,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       .then((data) => {
         setResumeData(data);
       })
-      .catch((err) => console.error("Resume fetch failed:", err))
+      .catch()
       .finally(() => setLoading(false));
   }, [studentId]);
 
@@ -79,7 +77,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, [modalId]);
 
-  // ── Done button handler with brief loading ──
   const handleDone = () => {
     setIsDoneClosing(true);
     setTimeout(() => {
@@ -138,7 +135,8 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
           setBeforeDownloadScore(parsedBefore);
         }
 
-        const improved = parsedBefore
+
+        const improved = parsedBefore != null
           ? afterScore.total > parsedBefore.total
           : false;
 
@@ -149,7 +147,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       }
 
     } catch (error) {
-      console.error("PDF download failed:", error);
     } finally {
       setIsPrinting(false);
     }
@@ -326,6 +323,30 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       setIsDownloadingWord(false);
     };
 
+    
+    if (resumeData) {
+      const afterScore = calculateATSScore(resumeData);
+      setAfterDownloadScore(afterScore);
+
+      const storedBefore = sessionStorage.getItem("ats_before_score");
+      const parsedBefore: ATSResult | null = storedBefore
+        ? JSON.parse(storedBefore)
+        : null;
+
+      if (parsedBefore) {
+        setBeforeDownloadScore(parsedBefore);
+      }
+
+      const improved = parsedBefore != null
+        ? afterScore.total > parsedBefore.total
+        : false;
+
+      setUsedAI(improved);
+      setShowATSModal(true);
+
+      sessionStorage.removeItem("ats_before_score");
+    }
+
     if (profilePhoto) {
       fetch(profilePhoto)
         .then((res) => res.blob())
@@ -371,7 +392,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
 
       <div className="bg-white min-h-screen rounded-2xl p-4">
 
-        {/* Back */}
         {onBack && (
           <button
             onClick={onBack}
@@ -383,7 +403,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
           </button>
         )}
 
-        {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-32">
             <div className="flex flex-col items-center gap-3">
@@ -395,8 +414,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             </div>
           </div>
         )}
-
-        {/* Horizontal scroll cards */}
         {!loading && (
           <div className="flex gap-4 overflow-x-auto pb-4" style={{ scrollSnapType: "x mandatory" }}>
             {TEMPLATES.map((t) => {
@@ -425,9 +442,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             })}
           </div>
         )}
-      </div>
-
-      {/* ═══════════════════════════════ MODAL ══════════════════════════════ */}
+      </div> 
       {modalId !== null && ModalTemplate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -438,7 +453,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{ width: "min(700px, 95vw)", maxHeight: "92vh" }}
           >
-            {/* Modal header */}
+           
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 shrink-0">
               <div>
                 <p className="text-sm font-black text-[#16284F]">{modalTemplateName}</p>
@@ -454,7 +469,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
               </button>
             </div>
 
-            {/* Resume preview */}
             <div className="flex-1 overflow-y-auto bg-gray-100 p-5">
               <div
                 id="resume-print-area"
@@ -465,13 +479,11 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                 <ModalTemplate data={resumeData} />
               </div>
             </div>
-
-            {/* ── Download section ── */}
             <div className="shrink-0 px-5 py-4 bg-white border-t border-gray-100">
 
               {downloadOpen && (
                 <div className="flex gap-3 mb-3">
-                  {/* PDF */}
+
                   <button
                     onClick={handlePDF}
                     disabled={isPrinting}
@@ -495,8 +507,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                       </>
                     )}
                   </button>
-
-                  {/* Word */}
                   <button
                     onClick={handleWord}
                     disabled={isDownloadingWord}
@@ -521,8 +531,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                   </button>
                 </div>
               )}
-
-              {/* Main Download button */}
               <button
                 onClick={() => setDownloadOpen((o) => !o)}
                 disabled={isPrinting || isDownloadingWord}
@@ -556,8 +564,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
         </div>
       )}
 
-      {/* ══════════════ ATS Score Modal ══════════════ */}
-      {showATSModal && beforeDownloadScore && afterDownloadScore && (
+      {showATSModal && afterDownloadScore && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
@@ -568,7 +575,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             style={{ width: "min(460px, 95vw)", maxHeight: "90vh", overflowY: "auto" }}
           >
 
-            {/* ── Header ── */}
             <div
               className="px-6 py-5 text-center relative"
               style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 100%)" }}
@@ -599,12 +605,8 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
 
             <div className="px-6 py-5">
 
-              {/* ── Score circles ── */}
-              {usedAI ? (
-                /* AI used: show Before → After */
+              {usedAI && beforeDownloadScore ? (
                 <div className="flex items-center justify-center gap-4 mb-6">
-
-                  {/* Before */}
                   <div className="flex flex-col items-center gap-1">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Before AI</p>
                     <div className="relative" style={{ width: 80, height: 80 }}>
@@ -635,16 +637,12 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                       {beforeDownloadScore.label}
                     </span>
                   </div>
-
-                  {/* Arrow + pts */}
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-2xl">→</span>
                     <span className="text-xs font-black text-green-500">
                       +{afterDownloadScore.total - beforeDownloadScore.total} pts
                     </span>
                   </div>
-
-                  {/* After */}
                   <div className="flex flex-col items-center gap-1">
                     <p className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">After AI</p>
                     <div className="relative" style={{ width: 80, height: 80 }}>
@@ -677,7 +675,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                   </div>
                 </div>
               ) : (
-                /* AI NOT used: show only current score — centered, no Before/After labels */
                 <div className="flex flex-col items-center gap-2 mb-6">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Your ATS Score</p>
                   <div className="relative" style={{ width: 96, height: 96 }}>
@@ -710,7 +707,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                 </div>
               )}
 
-              {/* ── Attractive AI CTA — only when AI NOT used ── */}
               {!usedAI && (
                 <div
                   className="mb-5 rounded-2xl p-5 relative overflow-hidden"
@@ -734,7 +730,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                     <span className="text-yellow-300 font-bold">+15 pts</span> boost.
                   </p>
 
-                  {/* Current vs Potential */}
                   <div className="flex items-center justify-center gap-4 mb-4">
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-14 h-14 rounded-full border-2 border-purple-400 flex items-center justify-center"
@@ -760,7 +755,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                     </div>
                   </div>
 
-                  {/* Feature list */}
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2">
                       <span className="text-base shrink-0">✍️</span>
@@ -778,7 +772,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                 </div>
               )}
 
-              {/* Motivational message */}
               <div
                 className="rounded-xl p-3 text-center text-xs font-semibold mb-4"
                 style={{
@@ -791,14 +784,14 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                   ? afterDownloadScore.total >= 80
                     ? "🏆 Your resume is fully ATS-optimized and ready to impress recruiters!"
                     : afterDownloadScore.total >= 60
-                    ? "💪 Great progress! Add more skills and a strong summary to push past 80."
-                    : afterDownloadScore.total >= 40
-                    ? "📈 You're on the right track. Use AI suggestions to boost your score further."
-                    : "🚀 Add projects, skills, and a summary to significantly improve your ATS score."
+                      ? "💪 Great progress! Add more skills and a strong summary to push past 80."
+                      : afterDownloadScore.total >= 40
+                        ? "📈 You're on the right track. Use AI suggestions to boost your score further."
+                        : "🚀 Add projects, skills, and a summary to significantly improve your ATS score."
                   : "🚀 Try AI enhancement — make your resume stand out to top recruiters!"}
               </div>
 
-              {/* Done button with loading */}
+    
               <button
                 onClick={handleDone}
                 disabled={isDoneClosing}

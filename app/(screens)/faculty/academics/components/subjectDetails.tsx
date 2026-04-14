@@ -39,7 +39,6 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
             {year}
           </p>
         </div>
-
       </div>
     </div>
   );
@@ -80,7 +79,6 @@ type SubjectDetailsCardProps = {
   onBack: () => void;
 };
 
-
 export type TopicItem = {
   title: string;
   date: string;
@@ -98,7 +96,6 @@ export type UiTopic = {
   title: string;
   isCompleted: boolean;
 };
-
 
 export type UnitTopic = {
   id: number;
@@ -152,15 +149,18 @@ type UnitCardProps = {
   onMarkComplete: (
     unitId: number,
     topics: UnitTopic[],
-    percentage: number
+    percentage: number,
   ) => void;
   loadingUnitId: number | null;
   setHasChanges: (value: boolean) => void;
 };
 
-
-
-function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCardProps) {
+function UnitCard({
+  unit,
+  onMarkComplete,
+  setHasChanges,
+  loadingUnitId,
+}: UnitCardProps) {
   const colors = colorMap[unit.color];
   const [selectedUnitLessons, setSelectedUnitLessons] = useState<
     LessonData[] | null
@@ -175,22 +175,18 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
   }, [unit.topics]);
 
   useEffect(() => {
-    localTopics
+    localTopics;
   }, [localTopics]);
 
   const isSavingThisUnit = loadingUnitId === unit.id;
   if (selectedUnitLessons) {
-    return (
-      <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6">
-      </div>
-    );
+    return <div className="w-full px-8 bg-[#F5F5F7] min-h-screen pt-6"></div>;
   }
-  const completedCount = localTopics.filter(t => t.isCompleted).length;
+  const completedCount = localTopics.filter((t) => t.isCompleted).length;
   const percentage =
     localTopics.length === 0
       ? 0
       : Math.round((completedCount / localTopics.length) * 100);
-
 
   // const completedCount = topics.filter(t => t.isCompleted).length;
   // const totalCount = topics.length;
@@ -198,23 +194,12 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
   // const percentage =
   //   totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
-
   return (
-    <div className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full`}>
-      {/* <div className="flex items-center gap-2 mb-2">
-        <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
-        <div
-          className={`font-semibold text-md flex w-full justify-between items-center text-[${colors.solidEnd}]`}
-        >
-          {unit.unitLabel}
-          <button onClick={() => setSelectedUnitLessons(unit.lessons)}>
-            <CaretRight size={24} color="#282828" />
-          </button>
-        </div>
-      </div> */}
-
-      <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3">
+    <div
+      className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-[480px] flex flex-col`}
+    >
+      <div className="bg-white rounded-2xl shadow-md p-4 flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between mb-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
             <p className={`text-sm font-semibold ${colors.accent}`}>
@@ -223,25 +208,17 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
           </div>
         </div>
 
-        <h3 className={`text-base md:text-lg font-semibold mb-3 ${colors.title}`}>
+        <h3
+          className={`text-base md:text-lg font-semibold mb-3 shrink-0 ${colors.title}`}
+        >
           {unit.title}
         </h3>
 
-        <div className="flex justify-end text-xs md:text-sm mb-2">
-          <span className="font-semibold text-[#333333]">
-            {percentage}%
-          </span>
+        <div className="flex justify-end text-xs md:text-sm mb-2 shrink-0">
+          <span className="font-semibold text-[#333333]">{percentage}%</span>
         </div>
 
-        {/* <div className="flex items-center justify-between text-xs md:text-sm mb-2">
-          <div className="flex items-center gap-2 text-[#6C6C6C]">
-            <CalendarBlank size={16} className={colors.accent} />
-            <span>{unit.dateRange}</span>
-          </div>
-          <span className="font-semibold text-[#333333]">{percentage}%</span>
-        </div> */}
-
-        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-2 shrink-0">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -255,80 +232,55 @@ function UnitCard({ unit, onMarkComplete, setHasChanges, loadingUnitId }: UnitCa
           />
         </div>
 
-        <ul className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1">
-          {localTopics.map((topic, idx) => (
-            <li
-              key={topic.id}
-              className="flex items-center gap-2"
-            >
-              <button
-                onClick={() => {
-                  setLocalTopics(prev =>
-                    prev.map(t =>
-                      t.id === topic.id ? { ...t, isCompleted: !t.isCompleted } : t
-                    )
-                  );
+        <div className="relative flex-1 min-h-0 mt-2 mb-2">
+          <ul className="absolute inset-0 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-6 custom-scrollbar">
+            {localTopics.map((topic, idx) => (
+              <li key={topic.id} className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setLocalTopics((prev) =>
+                      prev.map((t) =>
+                        t.id === topic.id
+                          ? { ...t, isCompleted: !t.isCompleted }
+                          : t,
+                      ),
+                    );
 
-                  setIsDirty(true);
-                  setHasChanges(true);
-                }}
-              >
-                <CheckCircleIcon
-                  size={16}
-                  weight="fill"
-                  className={topic.isCompleted ? colors.accent : "text-gray-300"}
-                />
-              </button>
-              <span className={topic.isCompleted ? "" : "text-gray-400"}>
-                {topic.title}
-              </span>
-            </li>
-          ))}
+                    setIsDirty(true);
+                    setHasChanges(true);
+                  }}
+                >
+                  <CheckCircleIcon
+                    size={16}
+                    weight="fill"
+                    className={
+                      topic.isCompleted ? colors.accent : "text-gray-300"
+                    }
+                  />
+                </button>
+                <span className={topic.isCompleted ? "" : "text-gray-400"}>
+                  {topic.title}
+                </span>
+              </li>
+            ))}
+          </ul>
 
-          {/* {unit.topics.map((topic, idx) => (
-            <li key={idx} className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2">
-                <CheckCircleIcon
-                  size={16}
-                  className={`${colors.accent} flex-shrink-0 mt-[2px]`}
-                  weight="fill"
-                />
-                <span>{topic}</span>
-              </div>
-              <div
-                className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center`}
-              >
-                <FilePdf
-                  size={16}
-                  className={`${colors.accent} flex-shrink-0 mt-[2px]`}
-                  weight="duotone"
-                />
-              </div>
-            </li>
-          ))} */}
-        </ul>
-        <div className="mt-4 flex justify-end">
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-md" />
+        </div>
+
+        <div className="mt-2 flex justify-end shrink-0">
           <button
             onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
             disabled={!isDirty || isSavingThisUnit}
             className={`border px-4 py-1.5 rounded-lg cursor-pointer text-sm transition
-    ${!isDirty || isSavingThisUnit
-                ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
-                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
-              }`}
+    ${
+      !isDirty || isSavingThisUnit
+        ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
+        : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
+    }`}
           >
             {isSavingThisUnit ? "Saving..." : "Save Progress"}
           </button>
-
-          {/* <button
-            onClick={() =>
-              onMarkComplete(unit.id, topics, percentage)
-            }
-            // onClick={() => onMarkComplete(unit.id)}
-            className="border border-[#43C17A] text-[#43C17A] px-4 py-1.5 rounded-lg text-sm hover:bg-[#43C17A]/10 cursor cursor-pointer"
-          >
-            Mark As Complete
-          </button> */}
         </div>
       </div>
     </div>
@@ -339,7 +291,6 @@ export function SubjectDetailsCard({
   details,
   onBack,
 }: SubjectDetailsCardProps) {
-
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaveLoading, setIsSaveLoading] = useState<boolean>(false);
@@ -347,9 +298,6 @@ export function SubjectDetailsCard({
   const [loadingUnitId, setLoadingUnitId] = useState<number | null>(null);
   const { collegeId, facultyId } = useFaculty();
   const [cards, setCards] = useState<CardProps[]>([]);
-
-
-
 
   useEffect(() => {
     if (!details.collegeId || !details.collegeSubjectId) {
@@ -371,9 +319,7 @@ export function SubjectDetailsCard({
       setUnits(
         data.map((u: any) => ({
           id: u.id,
-          unitNumber: Number(
-            u.unitLabel.replace("Unit - ", "")
-          ),
+          unitNumber: Number(u.unitLabel.replace("Unit - ", "")),
           unitLabel: u.unitLabel,
           title: u.title,
           dateRange: u.dateRange,
@@ -381,12 +327,11 @@ export function SubjectDetailsCard({
           color: u.color,
           lessons: [],
           topics: u.topics,
-        }))
+        })),
       );
-
     } catch (err) {
       console.error("Failed to load units", err);
-      toast.error("Failed to load units")
+      toast.error("Failed to load units");
     } finally {
       setLoading(false);
     }
@@ -414,7 +359,7 @@ export function SubjectDetailsCard({
   const handleMarkComplete = async (
     unitId: number,
     topics: UnitTopic[],
-    percentage: number
+    percentage: number,
   ) => {
     try {
       setLoadingUnitId(unitId);
@@ -442,15 +387,12 @@ export function SubjectDetailsCard({
       if (unitError) {
         throw new Error(unitError.message);
       }
-      setUnits(prev =>
-        prev.map(u =>
-          u.id === unitId ? { ...u, topics, percentage } : u
-        )
+      setUnits((prev) =>
+        prev.map((u) => (u.id === unitId ? { ...u, topics, percentage } : u)),
       );
 
       toast.success("Progress saved ");
       setHasChanges(false);
-
     } catch (err: any) {
       console.error(" Mark complete failed:", err);
       toast.error(err?.message || "Failed to save progress");
@@ -490,7 +432,7 @@ export function SubjectDetailsCard({
   // };
 
   const saveProgress = async () => {
-    setIsSaveLoading(true)
+    setIsSaveLoading(true);
     try {
       for (const unit of units) {
         for (const topic of unit.topics) {
@@ -517,7 +459,7 @@ export function SubjectDetailsCard({
     } catch (err) {
       toast.error("Failed to save changes");
     } finally {
-      setIsSaveLoading(false)
+      setIsSaveLoading(false);
     }
   };
 
@@ -546,7 +488,6 @@ export function SubjectDetailsCard({
 
   // };
 
-
   return (
     <div className="w-full px-4 bg-[#F5F5F7] min-h-screen">
       <button
@@ -571,34 +512,28 @@ export function SubjectDetailsCard({
         >
           {isSaveLoading ? "Saving.." : "Save"}
         </button> */}
-
-
       </div>
 
       <div className="flex gap-6 overflow-x-auto">
-        {loading
-          ? <div className="flex justify-center w-full">
+        {loading ? (
+          <div className="flex justify-center w-full">
             <Loader />
-          </div> :
-          units.length > 0 ?
-            units.map((unit) => (
-              <div
-                key={`unit-${unit.id}`}
-                className="min-w-[300px] shrink-0"
-              >
-                <UnitCard
-                  unit={unit}
-                  onMarkComplete={handleMarkComplete}
-                  setHasChanges={setHasChanges}
-                  loadingUnitId={loadingUnitId}
-                />
-
-              </div>
-            ))
-            : <div className="text-black text-center">No units available.</div>
-        }
+          </div>
+        ) : units.length > 0 ? (
+          units.map((unit) => (
+            <div key={`unit-${unit.id}`} className="min-w-[300px] shrink-0">
+              <UnitCard
+                unit={unit}
+                onMarkComplete={handleMarkComplete}
+                setHasChanges={setHasChanges}
+                loadingUnitId={loadingUnitId}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="text-black text-center">No units available.</div>
+        )}
       </div>
-
     </div>
   );
 }

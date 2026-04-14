@@ -97,6 +97,7 @@
 
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 interface Props {
@@ -109,6 +110,11 @@ interface Props {
   pendingSubmissions: number;
   buttonText?: string;
   activeLabel?: string;
+  branchId?: number;
+  yearId?: number;
+  role?: "admin" | "faculty";
+  dept?: string | null;
+  year?: string | null;
 }
 
 export default function DiscussionCourseCard({
@@ -121,6 +127,11 @@ export default function DiscussionCourseCard({
   pendingSubmissions,
   buttonText,
   activeLabel,
+  branchId,
+  yearId,
+  role,
+  dept,
+  year
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -130,13 +141,20 @@ export default function DiscussionCourseCard({
     const params = new URLSearchParams(searchParams.toString());
     params.set("subjectId", String(id));
     params.set("facultyId", String(facultyId));
-    router.push(`${pathname}?${params.toString()}`);
+    // router.push(`${pathname}?${params.toString()}`);
+    const baseRoute =
+      role === "admin"
+        ? "/admin/projects"
+        : "/faculty/projects/create";
+    router.push(
+      `${baseRoute}?dept=${dept}&year=${year}&branchId=${branchId}&yearId=${yearId}&subjectId=${id}&facultyId=${facultyId}&subjectName=${encodeURIComponent(subject)}`
+    );
   };
 
   // Safe fallback to initials avatar
-  const displayAvatar =
-    avatar ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(facultyName || "F")}&background=random&color=fff`;
+  // const displayAvatar =
+  //   avatar ||
+  //   `https://ui-avatars.com/api/?name=${encodeURIComponent(facultyName || "F")}&background=random&color=fff`;
 
   return (
     <div className="bg-white w-auto rounded-[10px] p-5 shadow-[0_4px_20px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col">
@@ -148,11 +166,17 @@ export default function DiscussionCourseCard({
       </div>
 
       <div className="flex items-center gap-3 mb-5 px-1">
-        <img
+        {/* <img
           src={displayAvatar}
           alt={facultyName}
           className="w-12 h-12 rounded-full object-cover border border-gray-100"
+        /> */}
+        <Avatar
+          src={avatar}
+          alt={facultyName}
+          size={48}
         />
+
         <div className="flex flex-col text-left">
           <span className="text-[#282828] font-bold text-sm">
             {facultyName}

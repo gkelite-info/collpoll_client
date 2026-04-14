@@ -15,6 +15,7 @@ const convertTo24Hour = (hour: string, min: string, ampm: string) => {
   if (ampm === "AM" && h === 12) h = 0;
   return `${String(h).padStart(2, "0")}:${min}:00`;
 };
+
 const getTodayDateString = () => {
   const d = new Date();
   return d.toISOString().split("T")[0];
@@ -47,8 +48,38 @@ export default function AddEventModal({
 
   const TODAY = getTodayDateString();
 
+  // PORTED FROM FINANCE: Text Only validation
+  const TextOnly = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    value = value.replace(/[^A-Za-z\s]/g, "");
+    if (value.length > 0) {
+      value = value.charAt(0).toUpperCase() + value.slice(1);
+    }
+    e.target.value = value;
+    return value;
+  };
+
   useEffect(() => {
-    if (isOpen && editData) {
+    // 1. CLEAR DATA WHEN MODAL CLOSES
+    if (!isOpen) {
+      setEventTitle("");
+      setEventTopic("");
+      setEventDate("");
+      setRoomNo("");
+      setAssignTo("");
+      setFromHour("08");
+      setFromMinute("00");
+      setFromAmPm("AM");
+      setToHour("09");
+      setToMinute("00");
+      setToAmPm("AM");
+      setShowConflictModal(false);
+      setPendingPayload(null);
+      return;
+    }
+
+    // 2. LOAD EDIT DATA
+    if (editData) {
       setEventTitle(editData.title);
       setEventTopic(editData.topic);
       setEventDate(editData.eventDate);
@@ -66,72 +97,109 @@ export default function AddEventModal({
       setToHour(tH);
       setToMinute(tM);
       setToAmPm(tMod);
-    } else {
+    }
+    // 3. SMART DEFAULT TIME (Current + 15 mins) FOR NEW EVENTS
+    else {
+      const start = new Date();
+      start.setMinutes(start.getMinutes() + 15);
+      const rem = start.getMinutes() % 5;
+      if (rem !== 0) start.setMinutes(start.getMinutes() + (5 - rem));
+
+      const end = new Date(start);
+      end.setHours(end.getHours() + 1);
+
+      const getParts = (d: Date) => {
+        let h = d.getHours();
+        const a = h >= 12 ? "PM" : "AM";
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        const m = d.getMinutes();
+        return {
+          h: String(h).padStart(2, "0"),
+          m: String(m).padStart(2, "0"),
+          a,
+        };
+      };
+
+      const fromP = getParts(start);
+      const toP = getParts(end);
+
       setEventTitle("");
       setEventTopic("");
-      setEventDate("");
+      setEventDate(start.toISOString().split("T")[0]); // Set strictly to today
+      setFromHour(fromP.h);
+      setFromMinute(fromP.m);
+      setFromAmPm(fromP.a);
+      setToHour(toP.h);
+      setToMinute(toP.m);
+      setToAmPm(toP.a);
       setRoomNo("");
       setAssignTo("");
     }
   }, [isOpen, editData]);
 
   const handleSave = async () => {
-    const title = eventTitle?.trim();
-    const topic = eventTopic?.trim();
-
-    if (!title) return toast.error("Event title is required.");
-    if (!topic) return toast.error("Event topic is required.");
-    if (!eventDate) return toast.error("Event date is required.");
-    if (!assignTo) return toast.error("Please select a role.");
-
-    if (
-      !fromHour ||
-      !fromMinute ||
-      !fromAmPm ||
-      !toHour ||
-      !toMinute ||
-      !toAmPm
-    ) {
-      return toast.error("Please select both start and end time.");
+    // PORTED FROM FINANCE: Exact Validations
+    if (!eventTitle.trim()) {
+      toast.error("Please enter an event title.");
+      return;
     }
 
-    const selectedDate = new Date(eventDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    if (!eventTopic.trim()) {
+      toast.error("Please enter an event topic.");
+      return;
+    }
 
-    if (selectedDate < today) {
-      return toast.error("Cannot schedule an event in the past.");
+    if (!eventDate) {
+      toast.error("Please select a date for the event.");
+      return;
+    }
+
+    if (!roomNo.trim()) {
+      toast.error("Please enter a room no.");
+      return;
+    }
+
+    if (!assignTo) {
+      toast.error("Please select a role.");
+      return;
+    }
+
+    if (!collegeId || !collegeHrId) {
+      toast.error("HR context missing.");
+      return;
     }
 
     const from24 = convertTo24Hour(fromHour, fromMinute, fromAmPm);
     const to24 = convertTo24Hour(toHour, toMinute, toAmPm);
 
-    if (from24 >= to24) {
-      return toast.error("End time must be after start time.");
-    }
+    const now = new Date();
+    const startDateTime = new Date(`${eventDate}T${from24}`);
+    const endDateTime = new Date(`${eventDate}T${to24}`);
 
-    if (!collegeId || !collegeHrId) {
-      return toast.error("HR context missing.");
+    // PORTED FROM FINANCE: Future Time Validations
+    if (startDateTime <= now) {
+      toast.error("Event time must be strictly in the future.");
+      return;
+    }
+    if (startDateTime >= endDateTime) {
+      toast.error("End time must be after the start time.");
+      return;
     }
 
     const payload = {
       hrCalendarEventId: editData?.hrCalendarEventId,
-      title,
-      topic,
+      title: eventTitle.trim(),
+      topic: eventTopic.trim(),
       eventDate,
       fromTime: `${fromHour}:${fromMinute} ${fromAmPm}`,
       toTime: `${toHour}:${toMinute} ${toAmPm}`,
-      roomNo,
+      roomNo: roomNo.trim(),
       collegeId,
       role: assignTo,
     };
 
-    // OVERLAP CHECK LOGIC
-    const newStart = new Date(`${eventDate}T${from24}`);
-    const newEnd = new Date(`${eventDate}T${to24}`);
-
     const hasConflict = events.some((e: any) => {
-      // Don't compare with itself if editing
       if (
         editData &&
         String(e.hrCalendarEventId) === String(editData.hrCalendarEventId)
@@ -141,14 +209,13 @@ export default function AddEventModal({
       const eStart = new Date(e.startTime);
       const eEnd = new Date(e.endTime);
 
-      // True if the time slots overlap
-      return newStart < eEnd && newEnd > eStart;
+      return startDateTime < eEnd && endDateTime > eStart;
     });
 
     if (hasConflict) {
       setPendingPayload(payload);
       setShowConflictModal(true);
-      return; // Pause save process
+      return;
     }
 
     await submitEvent(payload);
@@ -183,7 +250,6 @@ export default function AddEventModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col relative overflow-hidden">
-        {/* CONFLICT WARNING OVERLAY */}
         {showConflictModal && (
           <div className="absolute inset-0 z-[60] flex items-center justify-center bg-white/90 backdrop-blur-sm p-6">
             <div className="bg-white border border-gray-200 shadow-2xl rounded-xl p-6 max-w-sm text-center flex flex-col items-center">
@@ -235,31 +301,33 @@ export default function AddEventModal({
         <div className="p-5 pt-0 space-y-4 overflow-y-auto">
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
-              Event title
+              Event title<span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               placeholder="Enter title"
               className={INPUT}
               value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
+              onChange={(e) => setEventTitle(TextOnly(e))}
             />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
-              Event topic
+              Event topic<span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               placeholder="Enter topic"
               className={INPUT}
               value={eventTopic}
-              onChange={(e) => setEventTopic(e.target.value)}
+              onChange={(e) => setEventTopic(TextOnly(e))}
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Date</label>
+              <label className="text-sm font-medium text-gray-700">
+                Date<span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 className={INPUT}
@@ -270,7 +338,7 @@ export default function AddEventModal({
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Room no.
+                Room no.<span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -285,10 +353,12 @@ export default function AddEventModal({
             <label className="text-sm font-medium text-gray-700">Time</label>
             <div className="flex gap-4 mt-2">
               <div className="flex-1">
-                <span className="block text-gray-500 text-xs mb-1">From</span>
+                <span className="block text-gray-500 text-xs mb-1">
+                  From<span className="text-red-500">*</span>
+                </span>
                 <div className="flex gap-2">
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={fromHour}
                     onChange={(e) => setFromHour(e.target.value)}
                   >
@@ -302,7 +372,7 @@ export default function AddEventModal({
                     })}
                   </select>
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={fromMinute}
                     onChange={(e) => setFromMinute(e.target.value)}
                   >
@@ -326,7 +396,7 @@ export default function AddEventModal({
                     ))}
                   </select>
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={fromAmPm}
                     onChange={(e) => setFromAmPm(e.target.value)}
                   >
@@ -336,10 +406,12 @@ export default function AddEventModal({
                 </div>
               </div>
               <div className="flex-1">
-                <span className="block text-gray-500 text-xs mb-1">To</span>
+                <span className="block text-gray-500 text-xs mb-1">
+                  To<span className="text-red-500">*</span>
+                </span>
                 <div className="flex gap-2">
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={toHour}
                     onChange={(e) => setToHour(e.target.value)}
                   >
@@ -353,7 +425,7 @@ export default function AddEventModal({
                     })}
                   </select>
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={toMinute}
                     onChange={(e) => setToMinute(e.target.value)}
                   >
@@ -377,7 +449,7 @@ export default function AddEventModal({
                     ))}
                   </select>
                   <select
-                    className={`${INPUT} w-16`}
+                    className={`${INPUT} w-16 cursor-pointer`}
                     value={toAmPm}
                     onChange={(e) => setToAmPm(e.target.value)}
                   >
@@ -389,9 +461,9 @@ export default function AddEventModal({
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 mt-2">
             <label className="text-sm font-medium text-gray-700">
-              Assign to
+              Assign to<span className="text-red-500">*</span>
             </label>
             <select
               value={assignTo}

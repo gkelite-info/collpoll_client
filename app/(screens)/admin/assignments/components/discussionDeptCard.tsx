@@ -147,6 +147,7 @@
 // }
 
 "use client";
+import { Avatar } from "@/app/utils/Avatar";
 import { User, UserCircle } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -202,14 +203,13 @@ export default function DiscussionDeptCard({
   const actualFacultyCount = facultyCount ?? facultyList.length;
   const displayCount = Math.min(actualFacultyCount, 4);
 
-  // Use real avatar OR fallback to initials
   const displayPhotos = facultyPhotos?.length
     ? facultyPhotos
     : facultyList.map(
-        (f) =>
-          f.avatar ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(f.name || "F")}&background=random&color=fff`,
-      );
+      (f) =>
+        f.avatar ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(f.name || "F")}&background=random&color=fff`,
+    );
 
   return (
     <div
@@ -247,10 +247,15 @@ export default function DiscussionDeptCard({
                     title={fac?.name || "Faculty"}
                     className="w-8 h-8 rounded-full border-2 border-white bg-gray-200 overflow-hidden shadow-sm relative flex items-center justify-center cursor-help"
                   >
-                    <img
+                    {/* <img
                       src={displayPhotos[i]}
                       alt={fac?.name || "faculty"}
                       className="w-full h-full object-cover"
+                    /> */}
+                    <Avatar
+                      src={displayPhotos[i]}
+                      alt={fac?.name || "faculty"}
+                      size={32}
                     />
                   </div>
                 );

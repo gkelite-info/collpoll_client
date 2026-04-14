@@ -1,7 +1,8 @@
+import Image from "next/image";
 import { useState } from "react";
 
 interface AvatarProps {
-  src?: string;
+  src?: string | null;
   alt: string;
   size?: number;
 }
@@ -30,15 +31,18 @@ export const Avatar = ({ src, alt, size = 56 }: AvatarProps) => {
 
   return (
     <div
-      className="rounded-full overflow-hidden border border-gray-200 flex-shrink-0"
+      className="relative rounded-full overflow-hidden border border-gray-200 flex-shrink-0"
       style={{ width: size, height: size }}
     >
-      <img
+      <Image
         src={src}
         alt={alt}
-        width={size}
-        height={size}
+        fill
+        // width={size}
+        // height={size}
+        sizes={`${size}px`}
         className="w-full h-full object-cover"
+        loading="lazy"
         onError={() => setError(true)}
       />
     </div>

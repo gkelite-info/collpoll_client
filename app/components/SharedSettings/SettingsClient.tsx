@@ -129,10 +129,8 @@ export default function SettingsClient({ CardIsVisible }: settingsProps) {
     setDevices((prevDevices) =>
       prevDevices.filter((device) => device.id !== deviceId),
     );
-    console.log(`Device ID ${deviceId} removed.`);
   };
 
-  // Sub-pages routing
   if (step === "current-password") return <CurrentPassword />;
   if (step === "reset") return <ResetPassword />;
   if (step === "done") return <DoneStep />;
@@ -153,11 +151,9 @@ export default function SettingsClient({ CardIsVisible }: settingsProps) {
       />
     );
 
-  // --- SHIMMER LOADING STATE ---
   if (isLoadingPrefs) {
     return (
       <div className="p-2 space-y-6 animate-pulse">
-        {/* Shimmer Header */}
         <div className="flex justify-between items-center">
           <div className="flex flex-col gap-3 mt-1">
             <div className="flex justify-start items-center gap-2">
@@ -169,7 +165,6 @@ export default function SettingsClient({ CardIsVisible }: settingsProps) {
           <div className="w-[32%] h-[70px] bg-gray-200 rounded-xl"></div>
         </div>
 
-        {/* Shimmer List */}
         <div className="bg-white shadow-md rounded-xl p-4 space-y-6">
           {[1, 2, 3, 4, 5, 6, 7].map((item, index) => (
             <div key={item}>
@@ -193,7 +188,6 @@ export default function SettingsClient({ CardIsVisible }: settingsProps) {
     );
   }
 
-  // --- MAIN SETTINGS RENDER ---
   return (
     <>
       <div className="p-2 space-y-6 pb-4">

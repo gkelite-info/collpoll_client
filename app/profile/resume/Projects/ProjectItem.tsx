@@ -70,7 +70,6 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
       onUpdate({ ...data, isSubmitted: true, dbId: result.resumeProjectId });
       toast.success(data.dbId ? `Project ${index + 1} updated` : `Project ${index + 1} saved`);
     } catch (err: any) {
-      console.error("Project save error:", err);
       toast.error(`Failed to save: ${err.message || "Unknown error"}`);
     } finally {
       setIsSaving(false);
@@ -79,20 +78,9 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
 
   return (
     <div className="mb-12">
-      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h3 className="font-medium text-[#282828]">Project {index + 1}</h3>
         <div className="flex items-center gap-2">
-          {/* ← ADD: minus button for new unsubmitted forms — same as Education */}
-          {!data.dbId && onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
-            >
-              <span className="block w-3 h-[3px] bg-white rounded-full" />
-            </button>
-          )}
           {onDelete && (
             <button
               type="button"
@@ -110,7 +98,6 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
         </div>
       </div>
 
-      {/* Row 1: Project Name | Domain | Start Date | End Date */}
       <div className="grid grid-cols-2 gap-4">
         <Field
           label="Project Name"
@@ -136,7 +123,6 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
           onChange={(v) => onUpdate({ ...data, startDate: v, isSubmitted: false })}
         />
 
-        {/* End Date - optional */}
         <div className="flex flex-col">
           <FieldLabel label="End Date" />
           <input
@@ -148,10 +134,8 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
         </div>
       </div>
 
-      {/* Row 2: Tools | Project Link */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
 
-        {/* Tools & Technologies - free text input */}
         <div className="flex flex-col" ref={containerRef}>
           <FieldLabel label="Tools & Technologies Used" />
           <div
@@ -212,27 +196,23 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
         />
       </div>
 
-      {/* Description - optional */}
       <div className="mt-4 flex flex-col">
         <FieldLabel label="Short Description" />
         <textarea
           rows={4}
           maxLength={500}
-          className="border border-[#CCCCCC] rounded-md px-3 py-1 focus:outline-none resize-none mt-1"
+          className="border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-1 focus:outline-none resize-none mt-1"
           value={data.description}
           onChange={(e) => onUpdate({ ...data, description: e.target.value, isSubmitted: false })}
         />
         <div className="text-right text-xs text-gray-400">{data.description.length}/500</div>
       </div>
-
-      {/* Submit */}
       <div className="flex justify-end mt-4">
         <button
           onClick={handleSubmit}
           disabled={isSaving}
-          className={`px-6 py-1.5 rounded-md text-sm font-medium text-white bg-[#43C17A] ${
-            isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-          }`}
+          className={`px-6 py-1.5 rounded-md text-sm font-medium text-white bg-[#43C17A] ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
         >
           {isSaving ? "Saving..." : data.isSubmitted ? "Saved ✓" : "Submit Project"}
         </button>

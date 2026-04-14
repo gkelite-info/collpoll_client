@@ -4,8 +4,6 @@ const now = () => new Date().toISOString();
 
 export type EducationLevel = "primary" | "secondary" | "undergraduate" | "masters" | "phd";
 
-// ─── FETCH ────────────────────────────────────────────────────────────────────
-
 async function fetchEducation(studentId: number, level: EducationLevel) {
   const { data, error } = await supabase
     .from("resume_education_details")
@@ -22,18 +20,32 @@ async function fetchEducation(studentId: number, level: EducationLevel) {
   return { success: true, data };
 }
 
-// ─── SAVE ─────────────────────────────────────────────────────────────────────
-
 async function saveEducation(payload: Record<string, any>, level: EducationLevel) {
   const timestamp = now();
   const id = payload.resumeEducationDetailId;
 
-  // UPDATE
+  // Map startDate/endDate → startYear/endYear (actual DB column names, type: date)
+  const startYear = payload.startDate ? payload.startDate.slice(0, 10) : undefined;
+  const endYear = payload.endDate ? payload.endDate.slice(0, 10) : undefined;
   if (id != null) {
-    const { resumeEducationDetailId, studentId, collegeId, educationLevel, ...updatable } = payload;
+    const {
+      resumeEducationDetailId,
+      studentId,
+      collegeId,
+      educationLevel,
+      startDate,
+      endDate,
+      ...updatable
+    } = payload;
+
     const { error } = await supabase
       .from("resume_education_details")
-      .update({ ...updatable, updatedAt: timestamp })
+      .update({
+        ...updatable,
+        ...(startYear !== undefined ? { startYear } : {}),
+        ...(endYear !== undefined ? { endYear } : {}),
+        updatedAt: timestamp,
+      })
       .eq("resumeEducationDetailId", id);
 
     if (error) {
@@ -43,13 +55,20 @@ async function saveEducation(payload: Record<string, any>, level: EducationLevel
     return { success: true, id };
   }
 
-  // INSERT — strip PK so serial auto-generates it
-  const { resumeEducationDetailId, ...insertPayload } = payload;
+
+  const {
+    resumeEducationDetailId,
+    startDate,
+    endDate,
+    ...insertPayload
+  } = payload;
 
   const { data, error } = await supabase
     .from("resume_education_details")
     .insert([{
       ...insertPayload,
+      ...(startYear !== undefined ? { startYear } : {}),
+      ...(endYear !== undefined ? { endYear } : {}),
       educationLevel: level,
       is_deleted: false,
       deletedAt: null,
@@ -66,7 +85,6 @@ async function saveEducation(payload: Record<string, any>, level: EducationLevel
   return { success: true, id: data.resumeEducationDetailId };
 }
 
-// ─── SOFT DELETE ──────────────────────────────────────────────────────────────
 
 async function deleteEducation(resumeEducationDetailId: number) {
   const { error } = await supabase
@@ -81,8 +99,6 @@ async function deleteEducation(resumeEducationDetailId: number) {
   return { success: true };
 }
 
-// ─── Named API objects ────────────────────────────────────────────────────────
-
 export const resumePrimaryEducationAPI = {
   fetch: (studentId: number) => fetchEducation(studentId, "primary"),
   save: (payload: {
@@ -93,6 +109,8 @@ export const resumePrimaryEducationAPI = {
     board?: string;
     mediumOfStudy?: string;
     yearOfPassing?: number;
+    startDate?: string;
+    endDate?: string;
     location?: string;
   }) => saveEducation(payload, "primary"),
   delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
@@ -108,6 +126,9 @@ export const resumeSecondaryEducationAPI = {
     board?: string;
     mediumOfStudy?: string;
     yearOfPassing?: number;
+    specialization?: string;
+    startDate?: string;
+    endDate?: string;
     percentage?: number;
     location?: string;
   }) => saveEducation(payload, "secondary"),
@@ -125,8 +146,8 @@ export const resumeUndergraduateEducationAPI = {
     specialization?: string;
     cgpa?: number;
     courseType?: string;
-    startYear?: number;
-    endYear?: number;
+    startDate?: string;
+    endDate?: string;
   }) => saveEducation(payload, "undergraduate"),
   delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
 };
@@ -140,8 +161,8 @@ export const resumePhdEducationAPI = {
     institutionName: string;
     researchArea?: string;
     supervisorName?: string;
-    startYear?: number;
-    endYear?: number;
+    startDate?: string;
+    endDate?: string;
   }) => saveEducation(payload, "phd"),
   delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
 };
@@ -157,8 +178,8 @@ export const resumeMastersEducationAPI = {
     specialization?: string;
     cgpa?: number;
     courseType?: string;
-    startYear?: number;
-    endYear?: number;
+    startDate?: string;
+    endDate?: string;
   }) => saveEducation(payload, "masters"),
   delete: (resumeEducationDetailId: number) => deleteEducation(resumeEducationDetailId),
 };

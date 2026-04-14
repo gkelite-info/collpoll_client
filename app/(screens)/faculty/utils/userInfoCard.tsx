@@ -40,10 +40,10 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   }, []);
 
   return (
-    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
+    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px]  shadow-sm">
       {cardProps.map((item, index) => (
         <div
-          className="relative z-10 flex h-full items-center px-8"
+          className="relative z-10 grid grid-cols-[70%_30%] h-full items-center justify-between px-8"
           key={index}
         >
           <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
@@ -95,7 +95,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <img
               src={item.image}
               alt="User"
-              className={`${item.imageHeight ?? "110px"} ${item.top} relative ${item.right}`}
+              className="lg:relative lg:top-[-10] bg-green-00 z-50 h-[180px]"
             />
           )}
         </div>

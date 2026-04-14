@@ -22,7 +22,7 @@ const DEFAULT_ACHIEVEMENTS = [
   "All Rounder",
 ];
 
-// ─── Shimmer ──────────────────────────────────────────────────────────────────
+
 function ShimmerBlock({ className = "" }: { className?: string }) {
   return (
     <div
@@ -49,7 +49,6 @@ function AchievementsShimmer() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 export default function AcademicAchievements() {
   const { studentId } = useUser();
@@ -67,7 +66,7 @@ export default function AcademicAchievements() {
   const [beforeScore, setBeforeScore] = useState<ATSResult | null>(null);
   const [scoreLoading, setScoreLoading] = useState(true);
 
-  // ─── Load existing achievements ─────────────────────────────────────────────
+  
   useEffect(() => {
     if (!studentId) return;
 
@@ -87,7 +86,6 @@ export default function AcademicAchievements() {
           setInitialSelected(existingNames);
         }
       } catch (error) {
-        console.error("Error loading achievements:", error);
         toast.error("Failed to load achievements.");
       } finally {
         setLoading(false);
@@ -97,9 +95,6 @@ export default function AcademicAchievements() {
     load();
   }, [studentId]);
 
-  // ─── Fetch resume data and calculate Before AI ATS score ────────────────────
-  // ✅ FIX: Always overwrite sessionStorage here — this page is the TRUE baseline
-  // (it comes before the AI page in the resume flow)
   useEffect(() => {
     if (!studentId) return;
     setScoreLoading(true);
@@ -107,21 +102,18 @@ export default function AcademicAchievements() {
       .then((data) => {
         const score = calculateATSScore(data);
         setBeforeScore(score);
-        // ✅ Always overwrite — this is the entry point before AI enhancements
         sessionStorage.setItem("ats_before_score", JSON.stringify(score));
       })
       .catch(() => {})
       .finally(() => setScoreLoading(false));
   }, [studentId]);
 
-  // ─── Toggle ─────────────────────────────────────────────────────────────────
   const toggle = (item: string) => {
     setSelected((prev) =>
       prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
     );
   };
 
-  // ─── Add other ──────────────────────────────────────────────────────────────
   const addOtherAchievement = () => {
     const value = otherValue.trim();
     if (!value) {
@@ -138,7 +130,6 @@ export default function AcademicAchievements() {
     setShowOtherInput(false);
   };
 
-  // ─── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (selected.length === 0) {
       toast.error("Please select at least one achievement.");
@@ -170,13 +161,11 @@ export default function AcademicAchievements() {
       router.push("/profile?resume=accomplishments&Step=8");
     } catch (error: any) {
       toast.error(error.message || "Failed to save achievements.");
-      console.error("Submit Error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -231,7 +220,6 @@ export default function AcademicAchievements() {
                 );
               })}
 
-              {/* Other button */}
               {!showOtherInput ? (
                 <div
                   onClick={() => setShowOtherInput(true)}
@@ -275,7 +263,6 @@ export default function AcademicAchievements() {
                 {isSubmitting ? "Saving..." : "Submit"}
               </button>
 
-              {/* Before AI ATS Score compact card — breakdown rows removed */}
               <div className="mt-4 rounded-xl border border-purple-100 bg-gradient-to-br from-[#faf7ff] to-[#f3eeff] p-4">
                 <p className="text-[11px] font-bold text-purple-500 uppercase tracking-widest mb-3">
                   📊 Your Current ATS Score — Before AI
@@ -291,7 +278,6 @@ export default function AcademicAchievements() {
                   </div>
                 ) : beforeScore ? (
                   <div className="flex items-center gap-4">
-                    {/* Circular gauge */}
                     <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
                       <svg width="72" height="72" viewBox="0 0 72 72">
                         <circle cx="36" cy="36" r="28" fill="none" stroke="#e9d5ff" strokeWidth="7" />
@@ -316,8 +302,6 @@ export default function AcademicAchievements() {
                         <span className="text-[8px] text-gray-400">/100</span>
                       </div>
                     </div>
-
-                    {/* Right side — label + tip only, no breakdown rows */}
                     <div className="flex-1">
                       <span
                         className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-2"
@@ -332,8 +316,6 @@ export default function AcademicAchievements() {
                   </div>
                 ) : null}
               </div>
-
-              {/* CTA purple box — unchanged */}
               <div className="mt-4 bg-purple-100 rounded-xl p-4 flex flex-col items-center text-center">
                 <div className="flex items-center gap-2 mb-2 w-full">
                   <img

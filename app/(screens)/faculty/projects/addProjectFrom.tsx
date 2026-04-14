@@ -7,14 +7,16 @@ import { FaAngleLeft, FaPlus } from "react-icons/fa6";
 import SelectionModal from "./modals/SelectionModal";
 import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacultyCalendar";
 import { fetchStudentsWithProfile } from "@/lib/helpers/faculty/fetchStudents";
-import { fetchFacultySections, fetchFacultySubjects, fetchFacultyYears, getFacultyIdByUserId } from "@/lib/helpers/faculty/facultyAPI";
+import { fetchFacultySections, fetchFacultySubjects, fetchFacultyYears } from "@/lib/helpers/faculty/facultyAPI";
 import toast from "react-hot-toast";
 import { FacultySectionRow } from "@/lib/helpers/faculty/facultysectionsAPI";
 import { addProjectFiles, uploadProjectFile } from "@/lib/helpers/projects/projectFiles";
 import { addStudentsToProject } from "@/lib/helpers/projects/projectTeamMembers";
 import { addMentorsToProject } from "@/lib/helpers/projects/projectMentors";
 import { saveProject } from "@/lib/helpers/projects/project";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 
 export type ProjectPayload = {
     title: string;
@@ -41,84 +43,41 @@ interface Props {
 
 const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty_edu_type }: Props) => {
 
-    const { collegeId, userId, facultyId } = useFaculty();
-    const [availableYears, setAvailableYears] = useState<{ id: number, label: string }[]>([]);
-    const [availableSubjects, setAvailableSubjects] = useState<{ id: number, label: string }[]>([]);
-    const [availableSections, setAvailableSections] = useState<FacultySectionRow[]>([]);
-    const [fId, setFId] = useState<number | null>(null);
-    const [loading, setLoading] = useState(false);
+    const { collegeId: facultyCollegeId, facultyId: contextFacultyId, role } = useFaculty();
+    const { collegeId: adminCollegeId, adminId } = useAdmin();
+    const { role: userRole } = useUser();
+
     const router = useRouter();
+    const searchParams = useSearchParams();
 
-    const handleDrag = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
+    const facultyIdFromParams = searchParams.get("facultyId");
+    const selectedYearId = searchParams.get("yearId");
+    const selectedSubjectId = searchParams.get("subjectId");
 
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    // ✅ Bug 1 & 2 fixed: resolve once, use everywhere, no fId state needed
+    const resolvedFacultyId = contextFacultyId ??
+        (facultyIdFromParams ? Number(facultyIdFromParams) : null);
+    const resolvedCollegeId = facultyCollegeId ?? adminCollegeId;
 
-        const droppedFiles = e.dataTransfer.files;
-        if (droppedFiles && droppedFiles.length > 0) {
-            const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'zip'];
-            const validFiles = Array.from(droppedFiles).filter(file =>
-                allowedExtensions.includes(file.name.split('.').pop()?.toLowerCase() || '')
-            );
+    // ✅ Bug 4 fixed: detect admin correctly
+    const isAdmin = userRole === "Admin";
 
-            if (validFiles.length > 0) {
-                setFormData((prev) => ({
-                    ...prev,
-                    files: [...prev.files, ...validFiles],
-                    fileUrls: [...prev.fileUrls, ...validFiles.map(f => f.name)],
-                }));
-            } else {
-                alert("Invalid file type. Please upload PDF, JPG, PNG, or ZIP.");
-            }
-        }
-    };
+    const [availableYears, setAvailableYears] = useState<{ id: number; label: string }[]>([]);
+    const [availableSubjects, setAvailableSubjects] = useState<{ id: number; label: string }[]>([]);
+    const [availableSections, setAvailableSections] = useState<FacultySectionRow[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
 
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleBrowseClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            const newFiles = Array.from(files);
-            setFormData((prev) => ({
-                ...prev,
-                files: [...prev.files, ...newFiles],
-                fileUrls: [...prev.fileUrls, ...newFiles.map(f => f.name)],
-            }));
-        }
-    };
-
-    const removeFile = (indexToRemove: number) => {
-        setFormData((prev) => ({
-            ...prev,
-            files: prev.files.filter((_, i) => i !== indexToRemove),
-            fileUrls: prev.fileUrls.filter((_, i) => i !== indexToRemove),
-        }));
-    };
-
     const [domainInput, setDomainInput] = useState("");
-
-    const handleAddDomain = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter" && domainInput.trim()) {
-            e.preventDefault();
-            if (!formData.domain.includes(domainInput.trim())) {
-                handleChange("domain", [...formData.domain, domainInput.trim()]);
-            }
-            setDomainInput("");
-        }
-    };
-
-    const removeDomain = (domainToRemove: string) => {
-        handleChange("domain", formData.domain.filter(d => d !== domainToRemove));
-    };
+    const [allFaculties, setAllFaculties] = useState<{ id: string; name: string; image?: string }[]>([]);
+    const [isMentorModalOpen, setIsMentorModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [allStudents, setAllStudents] = useState<{ id: number; name: string; image?: string }[]>([]);
+    const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+    const [isStudentLoading, setIsStudentLoading] = useState(true);
 
     const [formData, setFormData] = useState<ProjectPayload>({
         title: "",
@@ -140,46 +99,194 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
+    // ✅ Bug 2 fixed: depend on resolvedFacultyId directly, no userId guard
+    useEffect(() => {
+        const loadYears = async () => {
+            if (!resolvedFacultyId) return;
+
+            const years = await fetchFacultyYears(resolvedFacultyId);
+            setAvailableYears(years);
+
+            if (!isInitialized && years.length > 0) {
+                const selected = selectedYearId
+                    ? years.find(y => y.id === Number(selectedYearId))
+                    : years[0];
+
+                if (selected) {
+                    setFormData(prev => ({ ...prev, year: selected.id.toString() }));
+                }
+            }
+        };
+        loadYears();
+    }, [resolvedFacultyId]); // ✅ no longer blocked by null userId
+
+    // ✅ Subjects load correctly using resolvedFacultyId
+    useEffect(() => {
+        const loadSubjects = async () => {
+            if (!resolvedFacultyId || !formData.year) return;
+
+            const subs = await fetchFacultySubjects(resolvedFacultyId, parseInt(formData.year));
+            setAvailableSubjects(subs);
+
+            if (!isInitialized && subs.length > 0) {
+                const selected = selectedSubjectId
+                    ? subs.find(s => s.id === Number(selectedSubjectId))
+                    : subs[0];
+
+                if (selected) {
+                    setFormData(prev => ({ ...prev, subject: selected.id.toString() }));
+                }
+            }
+        };
+        loadSubjects();
+    }, [formData.year, resolvedFacultyId]); // ✅ was depending on fId (null on admin)
+
+    // ✅ Sections load correctly using resolvedFacultyId
+    useEffect(() => {
+        const loadSections = async () => {
+            const yearId = parseInt(formData.year);
+            const subjectId = parseInt(formData.subject);
+
+            if (!resolvedFacultyId || isNaN(yearId) || isNaN(subjectId)) {
+                setAvailableSections([]);
+                return;
+            }
+
+            try {
+                const sections = await fetchFacultySections(resolvedFacultyId, yearId, subjectId);
+                setAvailableSections(sections);
+
+                if (!isInitialized && sections.length > 0) {
+                    const firstSectionId =
+                        sections[0].college_sections?.collegeSectionsId.toString() ?? "";
+
+                    setFormData(prev => ({ ...prev, section: firstSectionId }));
+                    setIsInitialized(true); // ✅ lock auto-select after first full load
+                }
+            } catch (err) {
+                console.error("Failed to load sections", err);
+            }
+        };
+        loadSections();
+    }, [formData.year, formData.subject, resolvedFacultyId]); // ✅ was depending on fId
+
+    // ✅ Bug 1 fixed: use resolvedCollegeId
+    useEffect(() => {
+        const getFaculties = async () => {
+            if (!resolvedCollegeId) return;
+            setIsLoading(true);
+            try {
+                const { data } = await fetchFilteredFaculties({ collegeId: resolvedCollegeId });
+                setAllFaculties(data.map((f: any) => ({ ...f, id: Number(f.id) })));
+            } catch (error) {
+                console.error("Failed to load mentors", error);
+            } finally {
+                setTimeout(() => setIsLoading(false), 100);
+            }
+        };
+        getFaculties();
+    }, [resolvedCollegeId]); // ✅ was depending on null collegeId
+
+    // ✅ Bug 1 fixed: use resolvedCollegeId
+    useEffect(() => {
+        const getStudents = async () => {
+            const yearId = parseInt(formData.year);
+            const sectionId = parseInt(formData.section);
+
+            if (!resolvedCollegeId || isNaN(yearId) || isNaN(sectionId)) {
+                setAllStudents([]);
+                return;
+            }
+
+            setIsStudentLoading(true);
+            try {
+                const data = await fetchStudentsWithProfile(Number(resolvedCollegeId), {
+                    yearId,
+                    sectionId,
+                });
+                setAllStudents(data);
+            } catch (error) {
+                console.error("Failed to load students:", error);
+            } finally {
+                setTimeout(() => setIsStudentLoading(false), 150);
+            }
+        };
+        getStudents();
+    }, [resolvedCollegeId, formData.year, formData.section]); // ✅ was depending on null collegeId
+
+    const handleDrag = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const droppedFiles = e.dataTransfer.files;
+        if (droppedFiles?.length > 0) {
+            const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'zip'];
+            const validFiles = Array.from(droppedFiles).filter(file =>
+                allowedExtensions.includes(file.name.split('.').pop()?.toLowerCase() || '')
+            );
+            if (validFiles.length > 0) {
+                setFormData(prev => ({
+                    ...prev,
+                    files: [...prev.files, ...validFiles],
+                    fileUrls: [...prev.fileUrls, ...validFiles.map(f => f.name)],
+                }));
+            } else {
+                alert("Invalid file type. Please upload PDF, JPG, PNG, or ZIP.");
+            }
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files?.length) {
+            const newFiles = Array.from(files);
+            setFormData(prev => ({
+                ...prev,
+                files: [...prev.files, ...newFiles],
+                fileUrls: [...prev.fileUrls, ...newFiles.map(f => f.name)],
+            }));
+        }
+    };
+
+    const removeFile = (indexToRemove: number) => {
+        setFormData(prev => ({
+            ...prev,
+            files: prev.files.filter((_, i) => i !== indexToRemove),
+            fileUrls: prev.fileUrls.filter((_, i) => i !== indexToRemove),
+        }));
+    };
+
+    const handleAddDomain = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter" && domainInput.trim()) {
+            e.preventDefault();
+            if (!formData.domain.includes(domainInput.trim())) {
+                handleChange("domain", [...formData.domain, domainInput.trim()]);
+            }
+            setDomainInput("");
+        }
+    };
+
+    const removeDomain = (domainToRemove: string) => {
+        handleChange("domain", formData.domain.filter(d => d !== domainToRemove));
+    };
+
     const handleSaveProject = async () => {
-        if (!formData.title.trim()) {
-            toast.error("Project title is required.");
-            return;
-        }
-        if (formData.domain.length === 0) {
-            toast.error("Please add at least one domain.");
-            return;
-        }
-        if (!formData.description.trim()) {
-            toast.error("Project description is required.");
-            return;
-        }
-        if (formData.studentIds.length === 0) {
-            toast.error("Please assign at least one team member.");
-            return;
-        }
-        if (formData.mentorIds.length === 0) {
-            toast.error("Please assign at least one mentor.");
-            return;
-        }
-        if (formData.marks === "" || Number(formData.marks) <= 0) {
-            toast.error("Please enter valid marks.");
-            return;
-        }
-        if (!formData.startDate) {
-            toast.error("Please select a start date.");
-            return;
-        }
-        if (!formData.endDate) {
-            toast.error("Please select an end date.");
-            return;
-        }
+        if (!formData.title.trim()) { toast.error("Project title is required."); return; }
+        if (formData.domain.length === 0) { toast.error("Please add at least one domain."); return; }
+        if (!formData.description.trim()) { toast.error("Project description is required."); return; }
+        if (formData.studentIds.length === 0) { toast.error("Please assign at least one team member."); return; }
+        if (formData.mentorIds.length === 0) { toast.error("Please assign at least one mentor."); return; }
+        if (formData.marks === "" || Number(formData.marks) <= 0) { toast.error("Please enter valid marks."); return; }
+        if (!formData.startDate) { toast.error("Please select a start date."); return; }
+        if (!formData.endDate) { toast.error("Please select an end date."); return; }
         if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-            toast.error("End date must be after start date.");
-            return;
+            toast.error("End date must be after start date."); return;
         }
 
         setLoading(true);
         const loadingToast = toast.loading("Creating project...");
+
         try {
             const projectResult = await saveProject({
                 title: formData.title,
@@ -188,25 +295,22 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                 marks: formData.marks === "" ? 0 : Number(formData.marks),
                 startDate: formData.startDate,
                 endDate: formData.endDate,
-                collegeId: collegeId!,
-                facultyId: facultyId,
+                collegeId: resolvedCollegeId!,       // ✅ Bug 1 fixed
+                facultyId: resolvedFacultyId!,        // ✅ Bug 1 fixed
+                adminId: isAdmin ? adminId : null,
             });
 
             if (!projectResult.success || !projectResult.projectId) {
-                setLoading(false);
                 throw new Error("Failed to create project");
             }
 
             const newId = projectResult.projectId;
-
             const uploadedUrls: string[] = [];
+
             for (const file of formData.files) {
                 const result = await uploadProjectFile(newId, file);
-                if (result.success) {
-                    uploadedUrls.push(result.publicUrl);
-                } else {
-                    console.warn("File upload failed for:", file.name);
-                }
+                if (result.success) uploadedUrls.push(result.publicUrl);
+                else console.warn("File upload failed for:", file.name);
             }
 
             const [teamRes, mentorRes, fileRes] = await Promise.all([
@@ -217,138 +321,22 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
 
             if (teamRes.success && mentorRes.success && fileRes.success) {
                 toast.success("Project and all details saved!", { id: loadingToast });
-                router.push("/faculty/projects");
+                
+                if (isAdmin) {
+                    onCancel(); // closes form, returns to AdminProjectsList
+                } else {
+                    router.push("/faculty/projects");
+                }
             } else {
                 toast.error("Project saved, but some team/mentor data failed.", { id: loadingToast });
             }
-
         } catch (error) {
             console.error("Master Save Error:", error);
             toast.error("Something went wrong during save.", { id: loadingToast });
-        }
-        finally {
+        } finally {
             setLoading(false);
         }
     };
-
-    const [allFaculties, setAllFaculties] = useState<{
-        id: string;
-        name: string;
-        image?: string;
-    }[]>([]);
-    const [isMentorModalOpen, setIsMentorModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [allStudents, setAllStudents] = useState<{ id: number; name: string; image?: string }[]>([]);
-    const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-    const [isStudentLoading, setIsStudentLoading] = useState(true);
-
-    useEffect(() => {
-        const getFaculties = async () => {
-            setIsLoading(true);
-            try {
-                if (collegeId) {
-                    const { data } = await fetchFilteredFaculties({ collegeId });
-                    const formattedData = data.map((f: any) => ({
-                        ...f,
-                        id: Number(f.id)
-                    }));
-                    setAllFaculties(formattedData);
-                }
-            } catch (error) {
-                console.error("Failed to load mentors", error);
-            } finally {
-                setTimeout(() => setIsLoading(false), 100);
-            }
-        };
-        getFaculties();
-    }, [collegeId]);
-
-    useEffect(() => {
-        const getStudents = async () => {
-            const yearId = parseInt(formData.year);
-            const sectionId = parseInt(formData.section);
-
-            if (!collegeId || isNaN(yearId) || isNaN(sectionId)) {
-                setAllStudents([]);
-                return;
-            }
-
-            setIsStudentLoading(true);
-            try {
-                const data = await fetchStudentsWithProfile(Number(collegeId), {
-                    yearId,
-                    sectionId
-                });
-                setAllStudents(data);
-            } catch (error) {
-                console.error("Failed to load students:", error);
-            } finally {
-                setTimeout(() => setIsStudentLoading(false), 150);
-            }
-        };
-
-        getStudents();
-    }, [collegeId, formData.year, formData.section]);
-
-    useEffect(() => {
-        const loadData = async () => {
-            if (!userId) return;
-
-            const facultyId = await getFacultyIdByUserId(userId);
-            setFId(facultyId);
-
-            if (facultyId) {
-                const years = await fetchFacultyYears(facultyId);
-                setAvailableYears(years);
-
-                if (years.length > 0) {
-                    setFormData(prev => ({ ...prev, year: years[0].id.toString() }));
-                }
-            }
-        };
-        loadData();
-    }, [userId]);
-
-    useEffect(() => {
-        const loadSubjects = async () => {
-            if (fId && formData.year) {
-                const subs = await fetchFacultySubjects(fId, parseInt(formData.year));
-                setAvailableSubjects(subs);
-
-                if (subs.length > 0) {
-                    setFormData(prev => ({ ...prev, subject: subs[0].id.toString() }));
-                }
-            }
-        };
-        loadSubjects();
-    }, [formData.year, fId]);
-
-    useEffect(() => {
-        const loadSections = async () => {
-            const selectedYear = parseInt(formData.year);
-            const selectedSubject = parseInt(formData.subject);
-
-            if (fId && !isNaN(selectedYear) && !isNaN(selectedSubject)) {
-                try {
-                    const sections = await fetchFacultySections(fId, selectedYear, selectedSubject);
-                    setAvailableSections(sections);
-
-                    if (sections.length > 0) {
-                        const firstSectionId = sections[0].college_sections?.collegeSectionsId.toString() ?? "";
-                        setFormData(prev => ({ ...prev, section: firstSectionId }));
-                    } else {
-                        setFormData(prev => ({ ...prev, section: "" }));
-                    }
-                } catch (err) {
-                    console.error("Failed to load sections", err);
-                }
-            } else {
-                setAvailableSections([]);
-            }
-        };
-
-        loadSections();
-    }, [fId, formData.year, formData.subject]);
 
     return (
         <main className="p-4 min-h-screen">
@@ -358,11 +346,17 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                         <FaAngleLeft className="text-black active:scale-90 cursor-pointer" size={22} onClick={onCancel} />
                         <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
                     </div>
-                    <p className="text-[#282828] text-sm lg:ml-1.5">Create, manage, and track student projects effortlessly.</p>
+                    <p className="text-[#282828] text-sm lg:ml-1.5">
+                        Create, manage, and track student projects effortlessly.
+                    </p>
                 </div>
-                <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium">
-                    {faculty_edu_type} {college_branch} - {collegeAcademicYear}
-                </div>
+
+                {/* ✅ Bug 4 fixed: show badge for both admin and faculty */}
+                {(role === "Faculty" || isAdmin) && (
+                    <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium">
+                        {faculty_edu_type} {college_branch} - {collegeAcademicYear}
+                    </div>
+                )}
             </div>
 
             <div className="max-w-5xl mx-auto mb-4 flex justify-start items-center gap-6">
@@ -414,7 +408,10 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                             <>
                                 <option value="">Select Section</option>
                                 {availableSections.map((sec) => (
-                                    <option key={sec.facultySectionId} value={sec.college_sections?.collegeSectionsId.toString()}>
+                                    <option
+                                        key={sec.facultySectionId}
+                                        value={sec.college_sections?.collegeSectionsId.toString()}
+                                    >
                                         {sec.college_sections?.collegeSections}
                                     </option>
                                 ))}
@@ -591,9 +588,9 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                             className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-colors cursor-pointer ${isDragging ? "border-green-500 bg-green-50" : "border-gray-300 bg-gray-50"}`}
                             onDragEnter={(e) => { handleDrag(e); setIsDragging(true); }}
                             onDragOver={(e) => { handleDrag(e); setIsDragging(true); }}
-                            onDragLeave={(e) => { handleDrag(e); setIsDragging(false); }}
+                            onDragLeave={(e) => { handleDrop(e); setIsDragging(false); }}
                             onDrop={(e) => { handleDrop(e); setIsDragging(false); }}
-                            onClick={handleBrowseClick}
+                            onClick={() => fileInputRef.current?.click()}
                         >
                             <FaCloudUploadAlt className={`text-4xl mb-2 ${isDragging ? "text-green-500" : "text-gray-300"}`} />
                             <p className="text-gray-500 mb-4 text-center">
@@ -606,30 +603,27 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                             </button>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            {formData.fileUrls.length > 0 && (
-                                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {formData.fileUrls.map((name, index) => (
-                                        <div key={index} className="flex items-center justify-between bg-white border border-gray-200 px-3 py-2 rounded-md shadow-sm">
-                                            <div className="flex items-center gap-2 overflow-hidden">
-                                                <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-gray-500 text-xs font-bold uppercase">
-                                                    {name.split('.').pop()?.substring(0, 3) || "FILE"}
-                                                </div>
-                                                <span className="text-sm text-[#282828] truncate font-medium">{name}</span>
+                        {formData.fileUrls.length > 0 && (
+                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {formData.fileUrls.map((name, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-white border border-gray-200 px-3 py-2 rounded-md shadow-sm">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 text-gray-500 text-xs font-bold uppercase">
+                                                {name.split('.').pop()?.substring(0, 3) || "FILE"}
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeFile(index)}
-                                                className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer lg:ml-1"
-                                                title="Remove file"
-                                            >
-                                                <FaTimes size={14} />
-                                            </button>
+                                            <span className="text-sm text-[#282828] truncate font-medium">{name}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeFile(index)}
+                                            className="text-gray-400 hover:text-red-500 transition-colors p-1 cursor-pointer lg:ml-1"
+                                        >
+                                            <FaTimes size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -650,23 +644,20 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                 </div>
             </div>
 
+            {/* ✅ Bug 1 fixed: use resolvedCollegeId in isLoading checks */}
             <SelectionModal
                 isOpen={isMentorModalOpen}
                 onClose={() => setIsMentorModalOpen(false)}
-                isLoading={isLoading || !collegeId}
+                isLoading={isLoading || !resolvedCollegeId}
                 title="Assign Mentors"
-                items={allFaculties.map(f => ({
-                    id: Number(f.id),
-                    name: f.name,
-                    image: f.image
-                }))}
+                items={allFaculties.map(f => ({ id: Number(f.id), name: f.name, image: f.image }))}
                 selectedIds={formData.mentorIds}
                 onSelectionChange={(ids) => handleChange("mentorIds", ids)}
             />
             <SelectionModal
                 isOpen={isStudentModalOpen}
                 onClose={() => setIsStudentModalOpen(false)}
-                isLoading={isStudentLoading || !collegeId}
+                isLoading={isStudentLoading || !resolvedCollegeId}
                 title="Assign Team Members"
                 items={allStudents}
                 selectedIds={formData.studentIds}
