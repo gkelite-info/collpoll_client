@@ -74,6 +74,8 @@
 // }
 
 import { NextResponse } from "next/server";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,27 +91,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const isDev = process.env.NODE_ENV === "development";
-
-    let browser;
-
-    if (isDev) {
-      const puppeteer = (await import("puppeteer")).default;
-
-      browser = await puppeteer.launch({
-        headless: true,
-      });
-
-    } else {
-      const puppeteer = (await import("puppeteer-core")).default;
-      const chromium = (await import("@sparticuz/chromium")).default;
-
-      browser = await puppeteer.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: true,
-      });
-    }
+    const browser = await puppeteer.launch({
+      args: [
+        ...chromium.args,
+        "--hide-scrollbars",
+        "--disable-web-security"
+      ],
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
 
     const page = await browser.newPage();
 
@@ -155,6 +145,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
+
     console.error("PDF error:", error);
 
     return NextResponse.json(
