@@ -6,25 +6,33 @@ export async function getOrCreateCollegeSession(
   collegeBranchId: number,
   startYear: number,
   endYear: number,
+  totalFeeAmount: number, // 🟢 Passing the calculated total fee
 ) {
+  // 🟢 FIXED: Match strictly by the DB's unique constraint columns
   const { data: existing } = await supabase
     .from("college_session")
-    .select("collegeSessionId")
+    .select("collegeSessionId, totalFeeAmount")
     .match({
       collegeId,
-      collegeEducationId,
-      collegeBranchId,
       startYear,
       endYear,
     })
     .maybeSingle();
 
+  const now = new Date().toISOString();
+
   if (existing) {
+    // Update the total fee if it has changed or was previously null
+    if (existing.totalFeeAmount !== totalFeeAmount) {
+      await supabase
+        .from("college_session")
+        .update({ totalFeeAmount, updatedAt: now })
+        .eq("collegeSessionId", existing.collegeSessionId);
+    }
     return { success: true, collegeSessionId: existing.collegeSessionId };
   }
 
   const sessionName = `${startYear}-${endYear}`;
-  const now = new Date().toISOString();
 
   const { data: newSession, error } = await supabase
     .from("college_session")
@@ -35,6 +43,7 @@ export async function getOrCreateCollegeSession(
       sessionName,
       startYear,
       endYear,
+      totalFeeAmount, // 🟢 Save it during creation
       is_deleted: false,
       updatedAt: now,
       createdAt: now,

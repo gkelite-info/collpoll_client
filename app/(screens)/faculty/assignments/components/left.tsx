@@ -26,7 +26,12 @@ import ConfirmDeleteModal from "./confirmDeleteModal";
 import FacultyQuizForm from "./facultyQuizForm";
 import FacultyAddQuestions from "./FacultyAddQuizQuestions";
 import FacultyQuizResumeBanner from "./FacultyQuizResumeBanner";
-import { fetchQuizzesByStatus, autoCompleteExpiredQuizzes } from "@/lib/helpers/quiz/quizAPI";
+import {
+  fetchQuizzesByStatus,
+  autoCompleteExpiredQuizzes,
+  deactivateQuiz,
+  updateQuizStatus,
+} from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizShimmer from "../shimmer/FacultyQuizShimmer";
 import FacultyQuizSubmissions from "./quizSubmissions";
 
@@ -70,47 +75,84 @@ function AssignmentsLeftContent() {
     "active";
   const discussionView =
     (searchParams.get("discussionView") as "active" | "completed") || "active";
+
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [view, setView] = useState<"list" | "add" | "edit">("list");
   const [editing, setEditing] = useState<Assignment | null>(null);
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // FIX 1: Set initial isLoading state to true so shimmer appears instantly on first load
-  const [isLoading, setIsLoading] = useState(true);
+  const [quizCurrentPage, setQuizCurrentPage] = useState(1);
+  const [quizTotalCount, setQuizTotalCount] = useState(0);
 
+  const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
+  const [discussionTotalCount, setDiscussionTotalCount] = useState(0);
+
+  const [isLoading, setIsLoading] = useState(true);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   const [discussions, setDiscussions] = useState<any[]>([]);
   const [discussionsLoading, setDiscussionsLoading] = useState(true);
   const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
   const [completedDiscussionsLoading, setCompletedDiscussionsLoading] =
     useState(true);
+
   const [deleteDiscussionId, setDeleteDiscussionId] = useState<number | null>(
     null,
   );
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
   const [activeQuizzes, setActiveQuizzes] = useState<any[]>([]);
   const [draftQuizzes, setDraftQuizzes] = useState<any[]>([]);
   const [completedQuizzes, setCompletedQuizzes] = useState<any[]>([]);
   const [quizzesLoading, setQuizzesLoading] = useState(false);
+
+  // 🟢 NEW STATES FOR QUIZ DELETE MODAL
+  const [deleteQuizId, setDeleteQuizId] = useState<number | null>(null);
+  const [isDeletingQuiz, setIsDeletingQuiz] = useState(false);
 
   async function fetchQuizzes() {
     if (!facultyId) return;
     try {
       setQuizzesLoading(true);
       await autoCompleteExpiredQuizzes(facultyId);
-      const [active, drafts, completed] = await Promise.all([
-        fetchQuizzesByStatus(facultyId, "Active"),
-        fetchQuizzesByStatus(facultyId, "Draft"),
-        fetchQuizzesByStatus(facultyId, "Completed"),
-      ]);
-      setActiveQuizzes(active);
-      setDraftQuizzes(drafts);
-      setCompletedQuizzes(completed);
+
+      let result;
+      if (quizView === "active") {
+        result = await fetchQuizzesByStatus(
+          facultyId,
+          "Active",
+          quizCurrentPage,
+          ITEMS_PER_PAGE,
+        );
+        setActiveQuizzes(result.data);
+      } else if (quizView === "drafts") {
+        result = await fetchQuizzesByStatus(
+          facultyId,
+          "Draft",
+          quizCurrentPage,
+          ITEMS_PER_PAGE,
+        );
+        setDraftQuizzes(result.data);
+      } else {
+        result = await fetchQuizzesByStatus(
+          facultyId,
+          "Completed",
+          quizCurrentPage,
+          ITEMS_PER_PAGE,
+        );
+        setCompletedQuizzes(result.data);
+      }
+
+      setQuizTotalCount(result?.totalCount || 0);
+
       const params = new URLSearchParams(searchParams.toString());
-      params.delete("refreshQuiz");
-      router.replace(`${pathname}?${params.toString()}`);
+      if (params.has("refreshQuiz")) {
+        params.delete("refreshQuiz");
+        router.replace(`${pathname}?${params.toString()}`);
+      }
     } catch (err) {
       toast.error("Failed to fetch quizzes");
     } finally {
@@ -122,14 +164,19 @@ function AssignmentsLeftContent() {
     if (activeTab === "quiz") {
       fetchQuizzes();
     }
-  }, [activeTab, facultyId]);
+  }, [activeTab, facultyId, quizView, quizCurrentPage, refreshQuiz]);
 
   async function fetchCompletedDiscussions() {
     if (!facultyId) return;
     try {
       setCompletedDiscussionsLoading(true);
-      const data = await fetchCompletedDiscussionsByFacultyId(facultyId);
+      const { data, totalCount } = await fetchCompletedDiscussionsByFacultyId(
+        facultyId,
+        discussionCurrentPage,
+        ITEMS_PER_PAGE,
+      );
       setCompletedDiscussions(data);
+      setDiscussionTotalCount(totalCount);
     } catch (err) {
       toast.error("Failed to fetch completed discussions");
     } finally {
@@ -141,8 +188,13 @@ function AssignmentsLeftContent() {
     if (!facultyId) return;
     try {
       setDiscussionsLoading(true);
-      const data = await fetchDiscussionsByFacultyId(facultyId);
+      const { data, totalCount } = await fetchDiscussionsByFacultyId(
+        facultyId,
+        discussionCurrentPage,
+        ITEMS_PER_PAGE,
+      );
       setDiscussions(data);
+      setDiscussionTotalCount(totalCount);
     } catch (err) {
       toast.error("Failed to fetch discussions");
       console.error("fetchDiscussions error:", err);
@@ -151,37 +203,14 @@ function AssignmentsLeftContent() {
     }
   }
 
-  // useEffect(() => {
-  //   if (activeTab === "discussion") {
-  //     fetchDiscussions();
-  //     fetchCompletedDiscussions();
-  //   }
-  // }, [activeTab, facultyId, refreshKey, refreshQuiz]);
-
-  // BEFORE
-  // useEffect(() => {
-  //   if (activeTab === "discussion") {
-  //     fetchDiscussions();
-  //     fetchCompletedDiscussions();
-  //   }
-  // }, [activeTab, facultyId, refreshKey, refreshQuiz]);
-
   useEffect(() => {
     if (activeTab !== "discussion") return;
     if (discussionView === "active") {
-      setDiscussionsLoading(true);
       fetchDiscussions();
     } else {
-      setCompletedDiscussionsLoading(true);
       fetchCompletedDiscussions();
     }
-  }, [
-    activeTab,
-    discussionView,
-    facultyId,
-    refreshKey,
-    refreshQuiz
-  ]);
+  }, [activeTab, discussionView, facultyId, refreshKey, discussionCurrentPage]);
 
   const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -193,6 +222,9 @@ function AssignmentsLeftContent() {
     if (tab === "quiz") params.set("quizView", "active");
     if (tab === "discussion") params.set("discussionView", "active");
 
+    setCurrentPage(1);
+    setQuizCurrentPage(1);
+    setDiscussionCurrentPage(1);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -206,23 +238,14 @@ function AssignmentsLeftContent() {
   };
 
   const handleQuizViewChange = (view: "active" | "drafts" | "completed") => {
+    setQuizCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("quizView", view);
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  // const handleDiscussionViewChange = (view: "active" | "completed") => {
-  //   const params = new URLSearchParams(searchParams.toString());
-  //   params.set("discussionView", view);
-  //   router.push(`${pathname}?${params.toString()}`);
-  // };
-
   const handleDiscussionViewChange = (view: "active" | "completed") => {
-    if (view === "active") {
-      setDiscussionsLoading(true);
-    } else {
-      setCompletedDiscussionsLoading(true);
-    }
+    setDiscussionCurrentPage(1);
     const params = new URLSearchParams(searchParams.toString());
     params.set("discussionView", view);
     router.push(`${pathname}?${params.toString()}`);
@@ -233,7 +256,6 @@ function AssignmentsLeftContent() {
   }, [activeView, currentPage, activeTab]);
 
   async function fetchAssignments() {
-    // FIX 2: Show shimmer if this is a fresh fetch (like switching tabs) but ignore for pagination loads
     if (!isFetchingMore) setIsLoading(true);
 
     try {
@@ -279,7 +301,6 @@ function AssignmentsLeftContent() {
           description: a.topicName,
           fromDate: a.dateAssignedInt,
           toDate: a.submissionDeadlineInt,
-          // Mapped the exact counts fetched from the DB
           totalSubmitted: String(a.actualSubmissionsCount || 0),
           totalSubmissions: String(a.expectedStudentsCount || 0),
           marks: a.marks ? String(a.marks) : "0",
@@ -336,6 +357,49 @@ function AssignmentsLeftContent() {
     }
   };
 
+  const handleEditQuiz = (quizId: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("action", "editQuiz");
+    params.set("quizId", String(quizId));
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  // 🟢 FIXED: Now triggers the modal instead of window.confirm
+  const confirmDeleteQuiz = (quizId: number) => {
+    setDeleteQuizId(quizId);
+  };
+
+  // 🟢 FIXED: Actual deletion logic called from modal
+  const executeDeleteQuiz = async () => {
+    if (!deleteQuizId) return;
+    try {
+      setIsDeletingQuiz(true);
+      const res = await deactivateQuiz(deleteQuizId);
+      if (res.success) {
+        toast.success("Quiz deleted successfully");
+        fetchQuizzes();
+      } else {
+        toast.error("Failed to delete quiz");
+      }
+    } catch (error) {
+      toast.error("Failed to delete quiz");
+    } finally {
+      setIsDeletingQuiz(false);
+      setDeleteQuizId(null);
+    }
+  };
+
+  const handlePublishQuiz = async (quizId: number) => {
+    const res = await updateQuizStatus(quizId, "Active");
+    if (res.success) {
+      toast.success("Quiz published successfully");
+      fetchQuizzes();
+    } else {
+      toast.error("Failed to publish quiz");
+    }
+  };
+
+  // View Routing Logic
   if (
     activeTab === "discussion" &&
     (action === "editDiscussion" || action === "createDiscussion")
@@ -362,18 +426,23 @@ function AssignmentsLeftContent() {
     );
   }
 
-  if (activeTab === "quiz" && action === "createQuiz") {
+  if (
+    activeTab === "quiz" &&
+    (action === "createQuiz" || action === "editQuiz")
+  ) {
     return (
       <div className="w-[68%] h-full p-2 flex flex-col">
         <FacultyQuizForm
           onCancel={() => {
             const params = new URLSearchParams(searchParams.toString());
             params.delete("action");
+            params.delete("quizId");
             router.push(`${pathname}?${params.toString()}`);
           }}
           onSaved={() => {
             const params = new URLSearchParams(searchParams.toString());
             params.delete("action");
+            params.delete("quizId");
             router.push(`${pathname}?${params.toString()}`);
           }}
         />
@@ -471,6 +540,7 @@ function AssignmentsLeftContent() {
       <div className="w-full flex flex-col flex-1 min-h-[500px] h-full">
         <div className="flex flex-col gap-3 items-start h-full w-full">
           <div className="flex justify-between w-full h-full">
+            {/* ASSIGNMENTS SUB-TABS */}
             {activeTab === "assignments" && (
               <>
                 <div className="flex gap-4 pb-1">
@@ -496,6 +566,7 @@ function AssignmentsLeftContent() {
               </>
             )}
 
+            {/* QUIZ SUB-TABS */}
             {activeTab === "quiz" && (
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
                 <button
@@ -529,6 +600,7 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
+            {/* DISCUSSION SUB-TABS */}
             {activeTab === "discussion" && (
               <>
                 <div className="flex gap-4 pb-1">
@@ -559,7 +631,8 @@ function AssignmentsLeftContent() {
             )}
           </div>
 
-          <div className="max-h-[115vh] overflow-y-auto w-full">
+          <div className="max-h-[115vh] overflow-y-auto w-full pr-1">
+            {/* ASSIGNMENTS LIST */}
             {activeTab === "assignments" &&
               (isLoading ? (
                 <div className="w-full">
@@ -600,6 +673,7 @@ function AssignmentsLeftContent() {
                 </>
               ))}
 
+            {/* QUIZ LIST */}
             {activeTab === "quiz" && (
               <div className="grid grid-cols-2 gap-4 pb-10 h-full">
                 <div className="col-span-2">
@@ -640,6 +714,8 @@ function AssignmentsLeftContent() {
                               params.set("quizId", String(quizId));
                               router.push(`${pathname}?${params.toString()}`);
                             }}
+                            onEdit={handleEditQuiz}
+                            onDelete={confirmDeleteQuiz}
                           />
                         ))
                       ))}
@@ -662,14 +738,9 @@ function AssignmentsLeftContent() {
                               totalMarks: quiz.totalMarks,
                               status: quiz.status,
                             }}
-                            onViewSubmissions={(quizId) => {
-                              const params = new URLSearchParams(
-                                searchParams.toString(),
-                              );
-                              params.set("action", "viewQuizSubmissions");
-                              params.set("quizId", String(quizId));
-                              router.push(`${pathname}?${params.toString()}`);
-                            }}
+                            onEdit={handleEditQuiz}
+                            onDelete={confirmDeleteQuiz}
+                            onPublish={handlePublishQuiz}
                           />
                         ))
                       ))}
@@ -703,11 +774,24 @@ function AssignmentsLeftContent() {
                           />
                         ))
                       ))}
+
+                    {/* 🟢 QUIZ PAGINATION */}
+                    {quizTotalCount > ITEMS_PER_PAGE && (
+                      <div className="col-span-2 mt-4 flex justify-center">
+                        <Pagination
+                          currentPage={quizCurrentPage}
+                          totalItems={quizTotalCount}
+                          itemsPerPage={ITEMS_PER_PAGE}
+                          onPageChange={setQuizCurrentPage}
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </div>
             )}
 
+            {/* DISCUSSION LIST */}
             {activeTab === "discussion" && (
               <div className="flex flex-col gap-4 pb-10">
                 {discussionView === "active" &&
@@ -718,14 +802,16 @@ function AssignmentsLeftContent() {
                       No active discussions found.
                     </div>
                   ) : (
-                    discussions.map((discussion) => (
-                      <FacultyDiscussionCard
-                        key={discussion.discussionId}
-                        data={discussion}
-                        discussionView="active"
-                        onDelete={(id) => setDeleteDiscussionId(id)}
-                      />
-                    ))
+                    <>
+                      {discussions.map((discussion) => (
+                        <FacultyDiscussionCard
+                          key={discussion.discussionId}
+                          data={discussion}
+                          discussionView="active"
+                          onDelete={(id) => setDeleteDiscussionId(id)}
+                        />
+                      ))}
+                    </>
                   ))}
 
                 {discussionView === "completed" &&
@@ -736,14 +822,28 @@ function AssignmentsLeftContent() {
                       No completed discussions found.
                     </div>
                   ) : (
-                    completedDiscussions.map((discussion) => (
-                      <FacultyDiscussionCard
-                        key={discussion.discussionId}
-                        data={discussion}
-                        discussionView="completed"
-                      />
-                    ))
+                    <>
+                      {completedDiscussions.map((discussion) => (
+                        <FacultyDiscussionCard
+                          key={discussion.discussionId}
+                          data={discussion}
+                          discussionView="completed"
+                        />
+                      ))}
+                    </>
                   ))}
+
+                {/* 🟢 DISCUSSION PAGINATION */}
+                {discussionTotalCount > ITEMS_PER_PAGE && (
+                  <div className="mt-4 flex justify-center">
+                    <Pagination
+                      currentPage={discussionCurrentPage}
+                      totalItems={discussionTotalCount}
+                      itemsPerPage={ITEMS_PER_PAGE}
+                      onPageChange={setDiscussionCurrentPage}
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -755,6 +855,15 @@ function AssignmentsLeftContent() {
         onCancel={() => setDeleteDiscussionId(null)}
         isDeleting={isDeleting}
         name="discussion"
+      />
+
+      {/* 🟢 ADDED NEW QUIZ DELETE MODAL */}
+      <ConfirmDeleteModal
+        open={!!deleteQuizId}
+        onConfirm={executeDeleteQuiz}
+        onCancel={() => setDeleteQuizId(null)}
+        isDeleting={isDeletingQuiz}
+        name="quiz"
       />
     </div>
   );
