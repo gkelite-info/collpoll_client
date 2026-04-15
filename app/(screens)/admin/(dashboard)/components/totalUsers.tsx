@@ -118,21 +118,29 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
       {/* Scrollable Cards Section */}
       <div className="w-full mb-4">
         {/* Hides the scrollbar but allows horizontal swiping/scrolling */}
-        <article className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <article className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth
+         [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]
+          [&::-webkit-scrollbar]:h-2.5
+          [&::-webkit-scrollbar-track]:bg-transparent
+          [&::-webkit-scrollbar-track]:rounded-full
+          [&::-webkit-scrollbar-thumb]:bg-slate-300
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          hover:[&::-webkit-scrollbar-thumb]:bg-slate-400
+         ">
           {isLoading
             ? // Card Shimmer Effect
-              [...Array(6)].map((_, i) => (
-                <div
-                  key={`shimmer-card-${i}`}
-                  className="min-w-[22.5%] shrink-0 h-[135px] rounded-lg bg-gray-200 animate-pulse snap-start"
-                />
-              ))
+            [...Array(6)].map((_, i) => (
+              <div
+                key={`shimmer-card-${i}`}
+                className="min-w-[22.5%] shrink-0 h-[135px] rounded-lg bg-gray-200 animate-pulse snap-start"
+              />
+            ))
             : // Actual Cards
-              cardData.map((item, index) => (
-                <div key={index} className="min-w-[22.5%] shrink-0 snap-start">
-                  <CardComponent {...item} />
-                </div>
-              ))}
+            cardData.map((item, index) => (
+              <div key={index} className="min-w-[22.5%] shrink-0 snap-start">
+                <CardComponent {...item} />
+              </div>
+            ))}
         </article>
       </div>
 

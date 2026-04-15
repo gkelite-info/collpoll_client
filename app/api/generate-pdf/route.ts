@@ -75,28 +75,123 @@
 
 // app/api/generate-pdf/route.ts
 
+// import { NextResponse } from "next/server";
+
+// export const runtime = "nodejs";
+// export const dynamic = "force-dynamic";
+
+// async function getBrowser() {
+//   const isVercel = !!process.env.VERCEL; // Vercel sets this automatically
+
+//   if (isVercel) {
+//     const chromium = (await import("@sparticuz/chromium")).default;
+//     const puppeteer = (await import("puppeteer-core")).default;
+
+//     return puppeteer.launch({
+//       args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
+//       executablePath: await chromium.executablePath(),
+//       headless: true,
+//     });
+//   }
+
+//   // Local: Windows / Mac / Linux — puppeteer bundles its own Chromium
+//   const puppeteer = (await import("puppeteer")).default;
+//   return puppeteer.launch({
+//     headless: true,
+//     args: [
+//       "--no-sandbox",
+//       "--disable-setuid-sandbox",
+//       "--disable-dev-shm-usage",
+//       "--disable-gpu",
+//     ],
+//   });
+// }
+
+// export async function POST(req: Request) {
+//   let browser = null;
+
+//   try {
+//     const { html } = await req.json();
+
+//     if (!html) {
+//       return NextResponse.json({ error: "HTML content required" }, { status: 400 });
+//     }
+
+//     browser = await getBrowser();
+//     const page = await browser.newPage();
+
+//     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+//     await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+//     await page.evaluate(() =>
+//       new Promise<void>((resolve) => {
+//         if (document.readyState === "complete") resolve();
+//         else window.addEventListener("load", () => resolve());
+//       })
+//     );
+
+//     try {
+//       await page.waitForFunction(() => document.fonts.ready, { timeout: 5000 });
+//     } catch {
+//       // non-fatal
+//     }
+
+//     const pdf = await page.pdf({
+//       format: "A4",
+//       printBackground: true,
+//       margin: { top: "0mm", bottom: "0mm", left: "0mm", right: "0mm" },
+//       timeout: 60000,
+//     });
+
+//     await browser.close();
+//     browser = null;
+
+//     return new NextResponse(Buffer.from(pdf), {
+//       headers: {
+//         "Content-Type": "application/pdf",
+//         "Content-Disposition": "attachment; filename=Resume.pdf",
+//       },
+//     });
+//   } catch (error) {
+//     console.error("PDF generation error:", error);
+//     if (browser) {
+//       try { await browser.close(); } catch { /* ignore */ }
+//     }
+//     return NextResponse.json(
+//       { error: error instanceof Error ? error.message : "PDF generation failed" },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+// app/api/generate-pdf/route.ts
+
 import { NextResponse } from "next/server";
+import type { Browser, Page } from "puppeteer-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
-async function getBrowser() {
-  const isVercel = !!process.env.VERCEL; // Vercel sets this automatically
+const CHROMIUM_REMOTE_URL =
+  "https://github.com/Sparticuz/chromium/releases/download/v132.0.0/chromium-v132.0.0-pack.tar";
 
-  if (isVercel) {
-    const chromium = (await import("@sparticuz/chromium")).default;
+async function getBrowser(): Promise<Browser> {
+  if (process.env.NODE_ENV === "production") {
+    const chromium = (await import("@sparticuz/chromium-min")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
     return puppeteer.launch({
-      args: [...chromium.args, "--hide-scrollbars", "--disable-web-security"],
-      executablePath: await chromium.executablePath(),
-      headless: true,
-    });
+      args: chromium.args,
+      executablePath: await chromium.executablePath(CHROMIUM_REMOTE_URL),
+      headless: "shell" as const,
+      defaultViewport: null,
+    }) as Promise<Browser>;
   }
 
-  // Local: Windows / Mac / Linux — puppeteer bundles its own Chromium
+  // Local dev — puppeteer is a devDependency, cast to Browser type
   const puppeteer = (await import("puppeteer")).default;
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
     headless: true,
     args: [
       "--no-sandbox",
@@ -105,24 +200,34 @@ async function getBrowser() {
       "--disable-gpu",
     ],
   });
+
+  return browser as unknown as Browser;
 }
 
 export async function POST(req: Request) {
-  let browser = null;
+  let browser: Browser | null = null;
 
   try {
     const { html } = await req.json();
 
     if (!html) {
-      return NextResponse.json({ error: "HTML content required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "HTML content required" },
+        { status: 400 }
+      );
     }
 
     browser = await getBrowser();
-    const page = await browser.newPage();
+    const page = (await browser.newPage()) as Page;
 
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
-    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 60000 });
 
+    await page.setContent(html, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
+
+    // Wait for full DOM load
     await page.evaluate(() =>
       new Promise<void>((resolve) => {
         if (document.readyState === "complete") resolve();
@@ -133,7 +238,6 @@ export async function POST(req: Request) {
     try {
       await page.waitForFunction(() => document.fonts.ready, { timeout: 5000 });
     } catch {
-      // non-fatal
     }
 
     const pdf = await page.pdf({
@@ -155,10 +259,17 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("PDF generation error:", error);
     if (browser) {
-      try { await browser.close(); } catch { /* ignore */ }
+      try {
+        await browser.close();
+      } catch {
+        /* ignore */
+      }
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "PDF generation failed" },
+      {
+        error:
+          error instanceof Error ? error.message : "PDF generation failed",
+      },
       { status: 500 }
     );
   }
