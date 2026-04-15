@@ -15,7 +15,7 @@ import {
   XCircle,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Props {
   students: UIStudent[];
@@ -34,36 +34,146 @@ interface Props {
   loadingFilters?: boolean;
 }
 
+// 🟢 CUSTOM DROPDOWN COMPONENT for Production-Grade UX
+function AttendanceDropdown({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  disabled: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "Present":
+        return "bg-[#43C17A1C] text-[#43C17A]";
+      case "Absent":
+        return "bg-red-100 text-red-600";
+      case "Leave":
+        return "bg-blue-100 text-blue-600";
+      case "Late":
+        return "bg-yellow-100 text-yellow-600";
+      case "Not Marked":
+        return "bg-gray-50 text-gray-500 border border-gray-200";
+      default:
+        return "bg-gray-100 text-gray-600";
+    }
+  };
+
+  const options = [
+    {
+      value: "Present",
+      label: "Present",
+      textColor: "text-[#43C17A]",
+      hoverBg: "hover:bg-[#43C17A1C]",
+    },
+    {
+      value: "Absent",
+      label: "Absent",
+      textColor: "text-red-600",
+      hoverBg: "hover:bg-red-50",
+    },
+    {
+      value: "Leave",
+      label: "Leave",
+      textColor: "text-blue-600",
+      hoverBg: "hover:bg-blue-50",
+    },
+  ];
+
+  return (
+    <div className="relative inline-block w-[110px]" ref={dropdownRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between px-3 py-1.5 rounded-full text-xs font-bold transition-all ${getStatusStyle(
+          value,
+        )} ${disabled ? "cursor-default" : "cursor-pointer"}`}
+      >
+        <span>{value === "Not Marked" ? "Unmarked" : value}</span>
+        {!disabled && (
+          <CaretDown
+            size={12}
+            weight="bold"
+            className={`transition-transform duration-200 opacity-70 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        )}
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-gray-100 rounded-xl shadow-xl py-1.5 z-[100] animate-in fade-in zoom-in-95 duration-100">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-xs font-bold transition-colors cursor-pointer block ${
+                opt.textColor
+              } ${opt.hoverBg} ${
+                value === opt.value ? "bg-gray-50/50" : "bg-transparent"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TableRowSkeleton = () => (
   <tr className="border-b border-gray-50">
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-4 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-6 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-20 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
-      <div className="h-8 w-8 bg-gray-200 rounded-full shimmer-bg" />
+    <td className="px-3 py-2 whitespace-nowrap">
+      <div className="h-7 w-7 bg-gray-200 rounded-full shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-32 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-8 w-24 bg-gray-200 rounded-full shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-24 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-12 bg-gray-200 rounded shimmer-bg" />
     </td>
-    <td className="px-4 py-4">
+    <td className="px-3 py-2 whitespace-nowrap">
       <div className="h-4 w-16 bg-gray-200 rounded shimmer-bg" />
     </td>
   </tr>
@@ -126,27 +236,8 @@ export default function StuAttendanceTable({
     setSelectedIds([]);
   };
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case "Present":
-        return "bg-[#43C17A1C] text-[#43C17A]";
-      case "Absent":
-        return "bg-red-100 text-red-600";
-      case "Leave":
-        return "bg-blue-100 text-blue-600";
-      case "Late":
-        return "bg-yellow-100 text-yellow-600";
-      case "Class Cancel":
-        return "bg-gray-200 text-gray-600";
-      case "Not Marked":
-        return "bg-gray-50 text-gray-400 border border-gray-200";
-      default:
-        return "bg-gray-100 text-gray-600";
-    }
-  };
-
   const shouldShowReasonInput = (status: string) =>
-    ["Absent", "Leave", "Late", "Class Cancel"].includes(status);
+    ["Absent", "Leave", "Class Cancel"].includes(status);
 
   return (
     <div className="space-y-4">
@@ -241,7 +332,6 @@ export default function StuAttendanceTable({
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Leave">Leave</option>
-                {/* <option value="Late">Late</option> */}
                 <option value="Class Cancel">Class Cancelled</option>
               </select>
               <CaretDown
@@ -279,44 +369,39 @@ export default function StuAttendanceTable({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+      {/* 🟢 Ensures the custom dropdown menu isn't clipped by the container */}
+      <div className="overflow-visible rounded-xl border border-gray-100 bg-white shadow-sm">
         {isEditing && selectedIds.length > 0 && !loadingFilters && (
           <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-4 py-2 shadow-sm animate-in fade-in slide-in-from-top-2">
-            <span className="text-xs font-bold text-gray-500 mr-2 border-r pr-3">
+            <span className="text-xs font-bold text-gray-500 mr-2 border-r pr-3 whitespace-nowrap">
               {selectedIds.length} Selected
             </span>
             <button
               onClick={() => bulkUpdate("Present")}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-[#43C17A] text-white rounded-lg hover:opacity-90 transition"
+              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-[#43C17A] text-white rounded-lg hover:opacity-90 transition whitespace-nowrap"
             >
               <CheckCircle weight="fill" /> Present
             </button>
             <button
               onClick={() => bulkUpdate("Absent")}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-red-500 text-white rounded-lg hover:opacity-90 transition"
+              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-red-500 text-white rounded-lg hover:opacity-90 transition whitespace-nowrap"
             >
               <XCircle weight="fill" /> Absent
             </button>
             <button
               onClick={() => bulkUpdate("Leave")}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-blue-500 text-white rounded-lg hover:opacity-90 transition"
+              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-blue-500 text-white rounded-lg hover:opacity-90 transition whitespace-nowrap"
             >
               <User weight="fill" /> Leave
             </button>
-            {/* <button
-              onClick={() => bulkUpdate("Late")}
-              className="flex items-center gap-1 px-3 py-1 text-xs font-medium cursor-pointer bg-yellow-500 text-white rounded-lg hover:opacity-90 transition"
-            >
-              <Clock weight="fill" /> Late
-            </button> */}
           </div>
         )}
 
-        <div className="overflow-x-auto">
+        <div className="overflow-visible">
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAFA] text-[#282828] border-b border-gray-100">
               <tr>
-                <th className="px-4 py-4 text-left w-[40px]">
+                <th className="px-3 py-2 text-left w-[40px] whitespace-nowrap">
                   <input
                     type="checkbox"
                     className="accent-[#43C17A] h-4 w-4 rounded cursor-pointer"
@@ -328,31 +413,31 @@ export default function StuAttendanceTable({
                     disabled={!isEditing || loadingFilters}
                   />
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   S.No
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Roll No.
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Photo
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Name
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Attendance
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Attendance %
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600 w-[20%]">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 w-[20%] whitespace-nowrap">
                   Reason
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Status
                 </th>
-                <th className="px-4 py-4 text-left font-semibold text-gray-600">
+                <th className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap">
                   Actions
                 </th>
               </tr>
@@ -365,9 +450,11 @@ export default function StuAttendanceTable({
                 filtered.map((s, index) => (
                   <tr
                     key={s.id}
-                    className={`text-[#515151] transition-colors hover:bg-gray-50/50 ${selectedIds.includes(s.id) ? "bg-[#43C17A05]" : ""}`}
+                    className={`text-[#515151] transition-colors hover:bg-gray-50/50 ${
+                      selectedIds.includes(s.id) ? "bg-[#43C17A05]" : ""
+                    }`}
                   >
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <input
                         type="checkbox"
                         className="accent-[#43C17A] h-4 w-4 rounded cursor-pointer"
@@ -376,68 +463,48 @@ export default function StuAttendanceTable({
                         disabled={!isEditing}
                       />
                     </td>
-                    <td className="px-4 py-4 font-medium text-gray-500">
+                    <td className="px-3 py-2 font-medium text-gray-500 whitespace-nowrap">
                       {index + 1}
                     </td>
-                    <td className="px-4 py-4 font-medium">
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
                       <span className="text-[#43C17A]">ID </span> - {s.roll}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {s.photo ? (
                         <img
                           src={s.photo}
-                          className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                          className="h-7 w-7 rounded-full border border-gray-200 object-cover"
                           alt={s.name}
                         />
                       ) : (
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
                           {s.name?.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-4 font-semibold text-gray-800">
+                    <td className="px-3 py-2 font-semibold text-gray-800 whitespace-nowrap">
                       {s.name}
                     </td>
-                    <td className="px-4 py-4">
-                      <div
-                        className={`relative inline-flex items-center rounded-full w-max ${getStatusStyle(s.attendance)}`}
-                      >
-                        {s.attendance === "Class Cancel" ? (
-                          <span className="px-4 py-1.5 text-xs font-bold">
-                            Class Cancelled
-                          </span>
-                        ) : (
-                          <>
-                            <select
-                              value={s.attendance}
-                              onChange={(e) =>
-                                updateAttendance(s.id, e.target.value as any)
-                              }
-                              disabled={!isEditing}
-                              className={`appearance-none bg-transparent border-none outline-none text-xs font-bold pl-4 pr-8 py-1.5 cursor-pointer z-10 ${isEditing ? "px-4 cursor-pointer" : "pl-4 pr-8 cursor-default pointer-events-none"}`}
-                            >
-                              {s.attendance === "Not Marked" && (
-                                <option value="Not Marked" disabled>
-                                  Unmarked
-                                </option>
-                              )}
-                              <option value="Present">Present</option>
-                              <option value="Absent">Absent</option>
-                              <option value="Leave">Leave</option>
-                              <option value="Late">Late</option>
-                            </select>
-                            <CaretDown
-                              size={12}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 opacity-60 pointer-events-none"
-                            />
-                          </>
-                        )}
-                      </div>
+                    <td className="px-3 py-2 relative whitespace-nowrap">
+                      {/* 🟢 CUSTOM ATTENDANCE DROPDOWN INTEGRATION */}
+                      {s.attendance === "Class Cancel" ? (
+                        <span className="inline-flex items-center rounded-full bg-gray-200 text-gray-600 px-4 py-1.5 text-xs font-bold w-[110px] justify-center">
+                          Cancelled
+                        </span>
+                      ) : (
+                        <AttendanceDropdown
+                          value={s.attendance}
+                          onChange={(newStatus) =>
+                            updateAttendance(s.id, newStatus as any)
+                          }
+                          disabled={!isEditing}
+                        />
+                      )}
                     </td>
-                    <td className="px-4 py-4 font-medium text-gray-600">
+                    <td className="px-3 py-2 font-medium text-gray-600 whitespace-nowrap">
                       {s.percentage}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       {shouldShowReasonInput(s.attendance) ? (
                         <div className="relative group">
                           <input
@@ -446,11 +513,15 @@ export default function StuAttendanceTable({
                             onChange={(e) => updateReason(s.id, e.target.value)}
                             placeholder={isEditing ? "Add reason..." : ""}
                             disabled={!isEditing}
-                            className={`w-full text-xs bg-transparent border-b ${isEditing ? "border-gray-300 focus:border-[#43C17A]" : "border-transparent"} outline-none py-1 transition-colors text-gray-600 placeholder-gray-400`}
+                            className={`w-full text-xs bg-transparent border-b ${
+                              isEditing
+                                ? "border-gray-300 focus:border-[#43C17A]"
+                                : "border-transparent"
+                            } outline-none py-1 transition-colors text-gray-600 placeholder-gray-400`}
                           />
                           {isEditing && (
                             <NotePencil
-                              className="absolute right-0 top-1.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                              className="absolute right-0 top-1 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
                               size={14}
                             />
                           )}
@@ -459,9 +530,15 @@ export default function StuAttendanceTable({
                         <span className="text-gray-400 pl-2">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${parseInt(s.percentage) >= 90 ? "bg-green-100 text-green-700" : parseInt(s.percentage) >= 70 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                          parseInt(s.percentage) >= 90
+                            ? "bg-green-100 text-green-700"
+                            : parseInt(s.percentage) >= 70
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                        }`}
                       >
                         {parseInt(s.percentage) >= 90
                           ? "Top"
@@ -470,7 +547,7 @@ export default function StuAttendanceTable({
                             : "Low"}
                       </span>
                     </td>
-                    <td className="px-4 py-4">
+                    <td className="px-3 py-2 whitespace-nowrap">
                       <button
                         onClick={() =>
                           router.push(`/faculty/attendance/${s.id}`)
@@ -486,7 +563,7 @@ export default function StuAttendanceTable({
                 <tr>
                   <td
                     colSpan={10}
-                    className="px-4 py-8 text-center text-gray-400 italic"
+                    className="px-3 py-8 text-center text-gray-400 italic whitespace-nowrap"
                   >
                     No students found.
                   </td>

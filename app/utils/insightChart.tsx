@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import {
   BarChart,
   Bar,
@@ -7,11 +7,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from "recharts"
-import WipOverlay from "./WipOverlay"
+} from "recharts";
+import WipOverlay from "./WipOverlay";
 
 interface AttendanceInsightProps {
-  weeklyData?: number[]
+  weeklyData?: number[];
 }
 
 export default function AttendanceInsight({
@@ -20,11 +20,11 @@ export default function AttendanceInsight({
   const data = ["M", "TU", "W", "TH", "F", "S", "S"].map((day, index) => ({
     day,
     percentage: weeklyData[index] || 0,
-  }))
+  }));
 
   return (
     <div className="bg-white relative overflow-hidden rounded-lg p-4 shadow-sm w-full">
-      <WipOverlay/>
+      <WipOverlay />
       <h2 className="text-[#282828] font-semibold text-lg mb-4">
         Attendance Insight
       </h2>
@@ -89,5 +89,5 @@ export default function AttendanceInsight({
         </ResponsiveContainer>
       </div>
     </div>
-  )
+  );
 }

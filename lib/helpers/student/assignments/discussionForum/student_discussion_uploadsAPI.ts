@@ -1,26 +1,27 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export type StudentDiscussionUploadRow = {
-    studentDiscussionUploadId: number;
-    studentId: number;
-    discussionId: number;
-    discussionSectionId: number;
-    fileUrl: string;
-    submittedAt: string | null;
-    isActive: boolean;
-    is_deleted: boolean | null;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt: string | null;
+  studentDiscussionUploadId: number;
+  studentId: number;
+  discussionId: number;
+  discussionSectionId: number;
+  fileUrl: string;
+  submittedAt: string | null;
+  isActive: boolean;
+  is_deleted: boolean | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 };
 
 export async function fetchDiscussionUploads(
-    discussionId: number,
-    discussionSectionId?: number
+  discussionId: number,
+  discussionSectionId?: number,
 ) {
-    let query = supabase
-        .from("student_discussion_uploads")
-        .select(`
+  let query = supabase
+    .from("student_discussion_uploads")
+    .select(
+      `
       studentDiscussionUploadId,
       studentId,
       fileUrl,
@@ -39,218 +40,329 @@ export async function fetchDiscussionUploads(
           )
         )
       )
-    `)
-        .eq("discussionId", discussionId)
-        .eq("isActive", true)
-        .eq("is_deleted", false);
+    `,
+    )
+    .eq("discussionId", discussionId)
+    .eq("isActive", true)
+    .eq("is_deleted", false);
 
-    if (discussionSectionId !== undefined) {
-        query = query.eq("discussionSectionId", discussionSectionId);
-    }
+  if (discussionSectionId !== undefined) {
+    query = query.eq("discussionSectionId", discussionSectionId);
+  }
 
-    const { data, error } = await query;
+  const { data, error } = await query;
 
-    if (error) {
-        throw error;
-    }
+  if (error) {
+    throw error;
+  }
 
-    return (data ?? []).map((row: any) => {
-        const currentHistory =
-            row.students?.student_academic_history?.find(
-                (h: any) => h.isCurrent === true
-            );
+  return (data ?? []).map((row: any) => {
+    const currentHistory = row.students?.student_academic_history?.find(
+      (h: any) => h.isCurrent === true,
+    );
 
-        return {
-            studentDiscussionUploadId: row.studentDiscussionUploadId,
-            studentId: row.studentId,
-            fileUrl: row.fileUrl,
-            submittedAt: row.submittedAt,
-            marksObtained: null,
-            profiles: {
-                full_name: row.students?.user?.fullName ?? "Unknown Student",
-                avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,
-                section: currentHistory?.college_sections?.collegeSections ?? "N/A",
-            },
-        };
-    });
+    return {
+      studentDiscussionUploadId: row.studentDiscussionUploadId,
+      studentId: row.studentId,
+      fileUrl: row.fileUrl,
+      submittedAt: row.submittedAt,
+      marksObtained: null,
+      profiles: {
+        full_name: row.students?.user?.fullName ?? "Unknown Student",
+        avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,
+        section: currentHistory?.college_sections?.collegeSections ?? "N/A",
+      },
+    };
+  });
 }
 
 export async function fetchStudentDiscussionUploads(
-    studentId: number,
-    discussionId: number,
+  studentId: number,
+  discussionId: number,
 ) {
-    const { data, error } = await supabase
-        .from("student_discussion_uploads")
-        .select(`
+  const { data, error } = await supabase
+    .from("student_discussion_uploads")
+    .select(
+      `
       studentDiscussionUploadId,
       discussionSectionId,
       fileUrl,
       submittedAt,
       createdAt
-    `)
-        .eq("studentId", studentId)
-        .eq("discussionId", discussionId)
-        .eq("is_deleted", false)
-        .order("createdAt", { ascending: true });
+    `,
+    )
+    .eq("studentId", studentId)
+    .eq("discussionId", discussionId)
+    .eq("is_deleted", false)
+    .order("createdAt", { ascending: true });
 
-    if (error) {
-        console.error("fetchStudentDiscussionUploads error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchStudentDiscussionUploads error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return data ?? [];
 }
 
 export async function fetchExistingStudentUpload(
-    studentId: number,
-    discussionId: number,
-    discussionSectionId: number,
+  studentId: number,
+  discussionId: number,
+  discussionSectionId: number,
 ) {
-    const { data, error } = await supabase
-        .from("student_discussion_uploads")
-        .select("studentDiscussionUploadId")
-        .eq("studentId", studentId)
-        .eq("discussionId", discussionId)
-        .eq("discussionSectionId", discussionSectionId)
-        .eq("is_deleted", false)
-        .single();
+  const { data, error } = await supabase
+    .from("student_discussion_uploads")
+    .select("studentDiscussionUploadId")
+    .eq("studentId", studentId)
+    .eq("discussionId", discussionId)
+    .eq("discussionSectionId", discussionSectionId)
+    .eq("is_deleted", false)
+    .single();
 
-    if (error) {
-        if (error.code === "PGRST116") {
-            return { success: true, data: null };
-        }
-        throw error;
+  if (error) {
+    if (error.code === "PGRST116") {
+      return { success: true, data: null };
     }
+    throw error;
+  }
 
-    return { success: true, data };
+  return { success: true, data };
 }
 
-export async function saveStudentDiscussionUpload(
-    payload: {
-        studentDiscussionUploadId?: number;
-        studentId: number;
-        discussionId: number;
-        discussionSectionId: number;
-        fileUrl: string;
-        submittedAt?: string | null;
-    },
-) {
-    const now = new Date().toISOString();
+export async function saveStudentDiscussionUpload(payload: {
+  studentDiscussionUploadId?: number;
+  studentId: number;
+  discussionId: number;
+  discussionSectionId: number;
+  fileUrl: string;
+  submittedAt?: string | null;
+}) {
+  const now = new Date().toISOString();
 
-    const upsertPayload: any = {
-        studentId: payload.studentId,
-        discussionId: payload.discussionId,
-        discussionSectionId: payload.discussionSectionId,
-        fileUrl: payload.fileUrl,
-        submittedAt: payload.submittedAt ?? now,
-        updatedAt: now,
-    };
+  const upsertPayload: any = {
+    studentId: payload.studentId,
+    discussionId: payload.discussionId,
+    discussionSectionId: payload.discussionSectionId,
+    fileUrl: payload.fileUrl,
+    submittedAt: payload.submittedAt ?? now,
+    updatedAt: now,
+  };
 
-    if (!payload.studentDiscussionUploadId) {
-        upsertPayload.createdAt = now;
+  if (!payload.studentDiscussionUploadId) {
+    upsertPayload.createdAt = now;
 
-        const { data, error } = await supabase
-            .from("student_discussion_uploads")
-            .insert([upsertPayload])
-            .select("studentDiscussionUploadId")
-            .single();
-
-        if (error) {
-            console.error("saveStudentDiscussionUpload error:", error);
-            return { success: false, error };
-        }
-
-        return {
-            success: true,
-            studentDiscussionUploadId: data.studentDiscussionUploadId,
-        };
-    }
-
-    const { error } = await supabase
-        .from("student_discussion_uploads")
-        .update(upsertPayload)
-        .eq("studentDiscussionUploadId", payload.studentDiscussionUploadId);
+    const { data, error } = await supabase
+      .from("student_discussion_uploads")
+      .insert([upsertPayload])
+      .select("studentDiscussionUploadId")
+      .single();
 
     if (error) {
-        console.error("saveStudentDiscussionUpload error:", error);
-        return { success: false, error };
+      console.error("saveStudentDiscussionUpload error:", error);
+      return { success: false, error };
     }
 
     return {
-        success: true,
-        studentDiscussionUploadId: payload.studentDiscussionUploadId,
+      success: true,
+      studentDiscussionUploadId: data.studentDiscussionUploadId,
     };
+  }
+
+  const { error } = await supabase
+    .from("student_discussion_uploads")
+    .update(upsertPayload)
+    .eq("studentDiscussionUploadId", payload.studentDiscussionUploadId);
+
+  if (error) {
+    console.error("saveStudentDiscussionUpload error:", error);
+    return { success: false, error };
+  }
+
+  return {
+    success: true,
+    studentDiscussionUploadId: payload.studentDiscussionUploadId,
+  };
 }
 
 export async function deactivateStudentDiscussionUpload(
-    studentDiscussionUploadId: number,
+  studentDiscussionUploadId: number,
 ) {
-    const { error } = await supabase
-        .from("student_discussion_uploads")
-        .update({
-            isActive: false,
-            is_deleted: true,
-            deletedAt: new Date().toISOString(),
-        })
-        .eq("studentDiscussionUploadId", studentDiscussionUploadId);
+  const { error } = await supabase
+    .from("student_discussion_uploads")
+    .update({
+      isActive: false,
+      is_deleted: true,
+      deletedAt: new Date().toISOString(),
+    })
+    .eq("studentDiscussionUploadId", studentDiscussionUploadId);
 
-    if (error) {
-        console.error("deactivateStudentDiscussionUpload error:", error);
-        return { success: false };
-    }
+  if (error) {
+    console.error("deactivateStudentDiscussionUpload error:", error);
+    return { success: false };
+  }
 
-    return { success: true };
+  return { success: true };
 }
 
 export async function uploadStudentDiscussionFiles(
-    discussionId: number,
-    studentId: number,
-    files: File[]
+  discussionId: number,
+  studentId: number,
+  files: File[],
 ): Promise<string[]> {
-    const uploadedUrls: string[] = [];
+  const uploadedUrls: string[] = [];
 
-    for (const file of files) {
-        const fileName = `${discussionId}/${studentId}/${Date.now()}_${file.name}`;
+  for (const file of files) {
+    const fileName = `${discussionId}/${studentId}/${Date.now()}_${file.name}`;
 
-        const { error } = await supabase.storage
-            .from("student-discussion-files")
-            .upload(fileName, file, {
-                cacheControl: "3600",
-                upsert: false,
-            });
+    const { error } = await supabase.storage
+      .from("student-discussion-files")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
 
-        if (error) {
-            console.error("uploadStudentDiscussionFiles error:", error);
-            throw new Error(`Failed to upload ${file.name}`);
-        }
-
-        const { data: publicUrl } = supabase.storage
-            .from("student-discussion-files")
-            .getPublicUrl(fileName);
-
-        uploadedUrls.push(publicUrl.publicUrl);
+    if (error) {
+      console.error("uploadStudentDiscussionFiles error:", error);
+      throw new Error(`Failed to upload ${file.name}`);
     }
 
-    return uploadedUrls;
+    const { data: publicUrl } = supabase.storage
+      .from("student-discussion-files")
+      .getPublicUrl(fileName);
+
+    uploadedUrls.push(publicUrl.publicUrl);
+  }
+
+  return uploadedUrls;
 }
 
 export async function deleteStudentDiscussionFileFromStorage(fileUrl: string) {
+  const urlParts = fileUrl.split("/student-discussion-files/");
 
-    const urlParts = fileUrl.split("/student-discussion-files/");
+  if (urlParts.length < 2) return { success: false };
 
-    if (urlParts.length < 2) return { success: false };
+  const filePath = decodeURIComponent(urlParts[1]);
 
-    const filePath = decodeURIComponent(urlParts[1]);
+  const { error } = await supabase.storage
+    .from("student-discussion-files")
+    .remove([filePath]);
 
+  if (error) {
+    console.error("deleteStudentDiscussionFileFromStorage error:", error);
+    return { success: false };
+  }
 
-    const { error } = await supabase.storage
-        .from("student-discussion-files")
-        .remove([filePath]);
+  return { success: true };
+}
 
-    if (error) {
-        console.error("deleteStudentDiscussionFileFromStorage error:", error);
-        return { success: false };
+export async function fetchFacultyDiscussionSubmissions(
+  discussionId: number,
+  page: number = 1,
+  limit: number = 10,
+) {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
+    .from("student_discussion_uploads")
+    .select(
+      `
+            studentDiscussionUploadId,
+            studentId,
+            fileUrl,
+            submittedAt,
+            marksObtained,
+            students!inner (
+                users!inner (
+                    fullName,
+                    collegePublicId,
+                    user_profile (
+                        profileUrl
+                    )
+                ),
+                student_academic_history (
+                    isCurrent,
+                    college_sections (
+                        collegeSections
+                    )
+                )
+            ),
+            discussion_forum_sections!inner (
+                marks
+            )
+        `,
+      { count: "exact" },
+    )
+    .eq("discussionId", discussionId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .order("studentId", { ascending: true }) // Group student's files together
+    .order("submittedAt", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("fetchFacultyDiscussionSubmissions error:", error);
+    throw error;
+  }
+
+  // 🟢 Group the files by Student ID so each student gets exactly 1 row per page
+  const studentMap = new Map<number, any>();
+
+  (data ?? []).forEach((row: any) => {
+    const studentData = row.students;
+    const currentHistory = studentData?.student_academic_history?.find(
+      (h: any) => h.isCurrent === true,
+    );
+
+    if (!studentMap.has(row.studentId)) {
+      studentMap.set(row.studentId, {
+        studentId: row.studentId,
+        discussionId: discussionId,
+        files: [{ id: row.studentDiscussionUploadId, url: row.fileUrl }],
+        submittedAt: row.submittedAt,
+        marksObtained: row.marksObtained,
+        totalMarks: row.discussion_forum_sections?.marks ?? 0,
+        profiles: {
+          full_name: studentData?.users?.fullName ?? "Unknown Student",
+          avatar_url: studentData?.users?.user_profile?.[0]?.profileUrl ?? null,
+          section: currentHistory?.college_sections?.collegeSections ?? "N/A",
+        },
+      });
+    } else {
+      const existing = studentMap.get(row.studentId);
+      existing.files.push({
+        id: row.studentDiscussionUploadId,
+        url: row.fileUrl,
+      });
+
+      if (new Date(row.submittedAt) > new Date(existing.submittedAt)) {
+        existing.submittedAt = row.submittedAt;
+      }
     }
+  });
 
-    return { success: true };
+  return {
+    data: Array.from(studentMap.values()),
+    totalCount: count ?? 0,
+  };
+}
+
+export async function updateStudentDiscussionMarks(
+  studentId: number,
+  discussionId: number,
+  marksObtained: number,
+) {
+  const { error } = await supabase
+    .from("student_discussion_uploads")
+    .update({ marksObtained, updatedAt: new Date().toISOString() })
+    .eq("studentId", studentId)
+    .eq("discussionId", discussionId)
+    .eq("isActive", true)
+    .eq("is_deleted", false);
+
+  if (error) {
+    console.error("updateStudentDiscussionMarks error:", error);
+    return { success: false, error };
+  }
+
+  return { success: true };
 }

@@ -8,9 +8,16 @@ import {
   Buildings,
   UsersThree,
 } from "@phosphor-icons/react";
-import { FeeCollectionTrend, fetchFeeCollectionTrend, formatINR } from "@/lib/helpers/collegeAdmin/Feecollectiontrendapi";
+import {
+  FeeCollectionTrend,
+  fetchFeeCollectionTrend,
+  formatINR,
+} from "@/lib/helpers/collegeAdmin/Feecollectiontrendapi";
 import { useCollegeAdmin } from "@/app/utils/context/college-admin/useCollegeAdmin";
-import { DashboardStats, fetchCollegeAdminDashboardStats } from "@/lib/helpers/collegeAdmin/Collegeadmindashboardapi";
+import {
+  DashboardStats,
+  fetchCollegeAdminDashboardStats,
+} from "@/lib/helpers/collegeAdmin/Collegeadmindashboardapi";
 import { AdminProfileCardShimmer } from "../shimmers/AdminProfileCardShimmer";
 import { StatCardShimmer } from "../shimmers/StatCardShimmer";
 import { QuickLinkCardShimmer } from "../shimmers/QuickLinkCardShimmer";
@@ -23,15 +30,41 @@ import StudentListView from "./StudentListView";
 import ParentListView from "./ParentListView";
 import FinanceListView from "./FinanceListView";
 
-
-
 // ─── Static config (icons / colors only) ─────────────────────────────────────
 
 const statConfig = [
-  { id: 1, key: "educationTypeCount", label: "Education Types", color: "bg-[#EAE4FF]", icon: GraduationCap, iconColor: "text-[#7C3AED]" },
-  { id: 2, key: "totalAdmins", label: "Admins", color: "bg-[#FFF0D9]", icon: UserGear, iconColor: "text-[#EA580C]" },
-  { id: 3, key: "totalBranches", label: "Branches", color: "bg-[#E2F9EB]", icon: Buildings, iconColor: "text-[#10B981]" },
-  { id: 4, key: "totalUsers", label: "Total Users", color: "bg-[#D1E9FF]", icon: UsersThree, iconColor: "text-[#2563EB]" },
+  {
+    id: 1,
+    key: "educationTypeCount",
+    label: "Education Types",
+    color: "bg-[#EAE4FF]",
+    icon: GraduationCap,
+    iconColor: "text-[#7C3AED]",
+  },
+  {
+    id: 2,
+    key: "totalAdmins",
+    label: "Admins",
+    color: "bg-[#FFF0D9]",
+    icon: UserGear,
+    iconColor: "text-[#EA580C]",
+  },
+  {
+    id: 3,
+    key: "totalBranches",
+    label: "Branches",
+    color: "bg-[#E2F9EB]",
+    icon: Buildings,
+    iconColor: "text-[#10B981]",
+  },
+  {
+    id: 4,
+    key: "totalUsers",
+    label: "Total Users",
+    color: "bg-[#D1E9FF]",
+    icon: UsersThree,
+    iconColor: "text-[#2563EB]",
+  },
 ] as const;
 
 const quickLinks = [
@@ -85,8 +118,13 @@ const StatCard = ({
 //   </div>
 // );
 
-
-const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => {
+const QuickLinkCard = ({
+  title,
+  onClick,
+}: {
+  title: string;
+  onClick: () => void;
+}) => {
   const isPlacement = title === "Placement";
   const [gearRunning, setGearRunning] = useState(isPlacement);
   useEffect(() => {
@@ -105,11 +143,12 @@ const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void 
         bg-[#E4F2E7] relative
         ${!isPlacement && "hover:bg-[#d4eadd]"}
         transition-colors rounded-lg p-4 flex flex-col justify-between h-16
-        ${isPlacement
-          ? gearRunning
-            ? "cursor-pointer"
-            : "cursor-not-allowed opacity-70"
-          : "cursor-pointer"
+        ${
+          isPlacement
+            ? gearRunning
+              ? "cursor-pointer"
+              : "cursor-not-allowed opacity-70"
+            : "cursor-pointer"
         }
 
         shadow-xs
@@ -184,9 +223,20 @@ const AdminProfileCard = ({ data }: { data: any }) => (
 // ─── FeeCollectionTrendCard ───────────────────────────────────────────────────
 
 // Assign a fixed colour palette per segment index
-const SEGMENT_COLORS = ["#7C3AED", "#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#EC4899"];
+const SEGMENT_COLORS = [
+  "#7C3AED",
+  "#10B981",
+  "#3B82F6",
+  "#F59E0B",
+  "#EF4444",
+  "#EC4899",
+];
 
-const FeeCollectionTrendCard = ({ trend }: { trend: FeeCollectionTrend | null }) => {
+const FeeCollectionTrendCard = ({
+  trend,
+}: {
+  trend: FeeCollectionTrend | null;
+}) => {
   // Build arc segments from real data; fall back to empty donut while loading
   const segments = (trend?.segments ?? []).map((seg, i) => ({
     label: seg.eduType,
@@ -196,7 +246,10 @@ const FeeCollectionTrendCard = ({ trend }: { trend: FeeCollectionTrend | null })
   }));
 
   const total = segments.reduce((s, seg) => s + seg.amount, 0) || 1; // avoid /0
-  const cx = 70, cy = 70, r = 52, gap = 0.04;
+  const cx = 70,
+    cy = 70,
+    r = 52,
+    gap = 0.04;
 
   let startAngle = -Math.PI / 2;
   const arcs = segments.map((seg) => {
@@ -215,7 +268,9 @@ const FeeCollectionTrendCard = ({ trend }: { trend: FeeCollectionTrend | null })
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
-      <p className="font-bold text-[#1F2937] text-[14px]">Fee Collection Trend</p>
+      <p className="font-bold text-[#1F2937] text-[14px]">
+        Fee Collection Trend
+      </p>
 
       {/* Donut centred */}
       <div className="flex justify-center">
@@ -235,13 +290,19 @@ const FeeCollectionTrendCard = ({ trend }: { trend: FeeCollectionTrend | null })
             ) : (
               /* Empty state ring while loading */
               <circle
-                cx={cx} cy={cy} r={r}
-                stroke="#E5E7EB" strokeWidth="14" fill="none"
+                cx={cx}
+                cy={cy}
+                r={r}
+                stroke="#E5E7EB"
+                strokeWidth="14"
+                fill="none"
               />
             )}
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[15px] font-bold text-[#1F2937]">{centreLabel}</span>
+            <span className="text-[15px] font-bold text-[#1F2937]">
+              {centreLabel}
+            </span>
           </div>
         </div>
       </div>
@@ -251,10 +312,20 @@ const FeeCollectionTrendCard = ({ trend }: { trend: FeeCollectionTrend | null })
         {arcs.length > 0 ? (
           arcs.map((seg, i) => (
             <div key={i} className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: seg.color }} />
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: seg.color }}
+              />
               <div>
-                <p className="text-gray-500 font-medium leading-tight">{seg.label}</p>
-                <p className="font-bold leading-tight" style={{ color: seg.color }}>{seg.value}</p>
+                <p className="text-gray-500 font-medium leading-tight">
+                  {seg.label}
+                </p>
+                <p
+                  className="font-bold leading-tight"
+                  style={{ color: seg.color }}
+                >
+                  {seg.value}
+                </p>
               </div>
             </div>
           ))
@@ -281,16 +352,26 @@ const MeetingCard = () => (
       <div className="bg-[#43C17A] p-1.5 rounded-full flex-shrink-0">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#E9E9E9">
           <rect x="2" y="3" width="20" height="14" rx="2" />
-          <path d="M8 21h8M12 17v4" stroke="#E9E9E9" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+          <path
+            d="M8 21h8M12 17v4"
+            stroke="#E9E9E9"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            fill="none"
+          />
         </svg>
       </div>
-      <span className="text-[#11934A] font-semibold text-base">8:00 AM - 9:00 AM</span>
+      <span className="text-[#11934A] font-semibold text-base">
+        8:00 AM - 9:00 AM
+      </span>
     </div>
 
     {/* Body */}
     <div className="p-5 flex flex-col gap-5 flex-1">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[#43C17A] font-semibold text-[15px]">Fee Planning Q1</h2>
+        <h2 className="text-[#43C17A] font-semibold text-[15px]">
+          Fee Planning Q1
+        </h2>
         <span className="bg-[#43C17A26] text-[#11934A] text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
           Finance
         </span>
@@ -298,24 +379,30 @@ const MeetingCard = () => (
 
       <div className="flex flex-col gap-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-normal flex-shrink-0">Education Type :</span>
+          <span className="text-gray-500 font-normal flex-shrink-0">
+            Education Type :
+          </span>
           <PillTag label="N/A" />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-normal flex-shrink-0">Admin :</span>
+          <span className="text-gray-500 font-normal flex-shrink-0">
+            Admin :
+          </span>
           <PillTag label="N/A" />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 font-normal flex-shrink-0">Date :</span>
+          <span className="text-gray-500 font-normal flex-shrink-0">
+            Date :
+          </span>
           <PillTag label="N/A" />
           <button
             disabled
             className="ml-auto px-6 py-2.5 rounded-full text-sm font-semibold bg-gray-200 text-gray-400 cursor-not-allowed whitespace-nowrap flex-shrink-0"
             title="No meeting link available"
           >
-            Join Meeting 
+            Join Meeting
           </button>
         </div>
       </div>
@@ -341,7 +428,7 @@ export default function AdminDashboard() {
 
   const subviewParam = searchParams.get("subview");
   const [activeView, setActiveView] = useState<string | null>(
-    subviewParam ? (SUBVIEW_MAP[subviewParam] ?? null) : null
+    subviewParam ? (SUBVIEW_MAP[subviewParam] ?? null) : null,
   );
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trend, setTrend] = useState<FeeCollectionTrend | null>(null);
@@ -404,7 +491,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen">
       {/* Top Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        {statConfig.map((stat) => (
+        {statConfig.map((stat) =>
           isLoading || !stats ? (
             <StatCardShimmer key={stat.id} />
           ) : (
@@ -416,25 +503,22 @@ export default function AdminDashboard() {
               icon={stat.icon}
               iconColor={stat.iconColor}
             />
-          )
-        ))}
+          ),
+        )}
       </div>
 
       {/* Middle Quick Links Row */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {isLoading
-            ? [...Array(6)].map((_, i) => (
-              <QuickLinkCardShimmer key={i} />
-            ))
+            ? [...Array(6)].map((_, i) => <QuickLinkCardShimmer key={i} />)
             : quickLinks.map((link) => (
-              <QuickLinkCard
-                key={link}
-                title={link}
-                onClick={() => handleSetView(link)}
-              />
-            ))
-          }
+                <QuickLinkCard
+                  key={link}
+                  title={link}
+                  onClick={() => handleSetView(link)}
+                />
+              ))}
         </div>
       </div>
 
@@ -473,11 +557,7 @@ export default function AdminDashboard() {
         ) : (
           <FeeCollectionTrendCard trend={trend} />
         )}
-        {isLoading ? (
-          <MeetingCardShimmer />
-        ) : (
-          <MeetingCard />
-        )}
+        {isLoading ? <MeetingCardShimmer /> : <MeetingCard />}
       </div>
     </div>
   );

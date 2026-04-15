@@ -444,7 +444,7 @@ export async function fetchFacultyFinanceMeetings(params: {
 }
 
 export async function fetchParentFinanceMeetings(params: {
-  role?: string;
+  roles?: string[];
   type?: "upcoming" | "previous";
   page?: number;
   limit?: number;
@@ -453,7 +453,7 @@ export async function fetchParentFinanceMeetings(params: {
   collegeAcademicYearId?: number;
 }) {
   const {
-    role = "Parent",
+    roles = ["Parent"],
     type = "upcoming",
     page = 1,
     limit = 10,
@@ -496,7 +496,7 @@ export async function fetchParentFinanceMeetings(params: {
     .eq("finance_meetings.isActive", true)
     .is("finance_meetings.deletedAt", null)
     .is("deletedAt", null)
-    .eq("finance_meetings.role", role);
+    .in("finance_meetings.role", roles); // 🟢 FIXED: Now accepts ["Parent", "Student"]
 
   if (collegeBranchId) {
     query = query.eq("collegeBranchId", collegeBranchId);
@@ -542,7 +542,7 @@ export async function fetchParentFinanceMeetings(params: {
     date: row.finance_meetings.date,
     participants: 0,
     section: row.college_sections?.collegeSections ?? "N/A",
-    category: role,
+    category: row.finance_meetings.role, // Set category dynamically based on the actual meeting role
     type: type,
     meetingLink: row.finance_meetings.meetingLink ?? "",
   }));

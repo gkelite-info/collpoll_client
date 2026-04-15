@@ -11,7 +11,7 @@ type Props = {
   selectedRows: Set<number>;
   onToggleEdit: () => void;
   onMarkStatus: (status: MarkStatus) => void;
-  onDateFilter?: (date: string | null) => void; // "YYYY-MM-DD" or null to clear
+  onDateFilter?: (date: string | null) => void;
 };
 
 const LABEL_TO_STATUS: Record<string, MarkStatus> = {
