@@ -1,4 +1,5 @@
 export type ProjectCardProps = {
+    projectId?: number;
     title: string;
     description: string;
     duration: string;
@@ -7,4 +8,8 @@ export type ProjectCardProps = {
     teamMembers: { name: string; image: string }[];
     marks: number;
     fileUrls: string[];
+    subject?: string;
+    status?: string;
+    endDate?: string | null;
+    collegeSubjectId?: number | null;
 };

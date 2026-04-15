@@ -19,6 +19,7 @@ export type ProjectRow = {
 
 export type EnrichedProject = {
     projectId: number;
+    collegeSubjectId: number | null;
     title: string;
     description: string | null;
     domain: string[];
@@ -29,6 +30,8 @@ export type EnrichedProject = {
     mentors: { name: string; image: string }[];
     teamMembers: { name: string; image: string }[];
     fileUrls: string[];
+    subjectName?: string;
+    status?: string;
 };
 
 
@@ -235,16 +238,28 @@ export async function fetchEnrichedProjectsByFaculty(
     facultyId: number
 ): Promise<EnrichedProject[]> {
 
-    const { data: projects, error: projectsError } = await supabase
+    const { data: projectData, error: projectsError } = await supabase
         .from("projects")
-        .select("projectId, title, description, domain, marks, startDate, endDate")
+        .select(`
+            projectId, 
+            title, 
+            description, 
+            domain, 
+            marks, 
+            startDate, 
+            endDate,
+            collegeSubjectId,
+            college_subjects (
+                subjectName
+            )
+        `)
         .eq("facultyId", facultyId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
 
-    if (projectsError || !projects?.length) return [];
+    if (projectsError || !projectData?.length) return [];
 
-    const projectIds = projects.map((p) => p.projectId);
+    const projectIds = projectData.map((p) => p.projectId);
 
     const [mentorsRes, teamRes, filesRes] = await Promise.all([
         supabase
@@ -334,7 +349,7 @@ export async function fetchEnrichedProjectsByFaculty(
         })).map((s) => [s.studentId, s])
     );
 
-    return projects.map((project) => {
+    return projectData.map((project) => {
         const mentors = mentorRows
             .filter((m) => m.projectId === project.projectId)
             .map((m) => facultyMap.get(m.facultyId))
@@ -364,6 +379,7 @@ export async function fetchEnrichedProjectsByFaculty(
             marks: project.marks,
             startDate: project.startDate,
             endDate: project.endDate,
+            collegeSubjectId: project.collegeSubjectId,
             duration: startDate && endDate ? `${startDate} - ${endDate}` : "N/A",
             mentors,
             teamMembers,
@@ -385,14 +401,26 @@ export async function fetchEnrichedProjectsByStudent(
 
     const projectIds = memberRows.map((r) => r.projectId);
 
-    const { data: projects, error: projectsError } = await supabase
+    const { data: projectData, error: projectsError } = await supabase
         .from("projects")
-        .select("projectId, title, description, domain, marks, startDate, endDate")
+        .select(`
+            projectId, 
+            title, 
+            description, 
+            domain, 
+            marks, 
+            startDate, 
+            endDate,
+            collegeSubjectId,
+            college_subjects (
+                subjectName
+            )
+        `)
         .in("projectId", projectIds)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
 
-    if (projectsError || !projects?.length) return [];
+    if (projectsError || !projectData?.length) return [];
 
     const [mentorsRes, teamRes, filesRes] = await Promise.all([
         supabase
@@ -475,7 +503,7 @@ export async function fetchEnrichedProjectsByStudent(
             .map((s) => [s.studentId, s])
     );
 
-    return projects.map((project) => {
+    return projectData.map((project: any) => {
         const mentors = mentorRows
             .filter((m) => m.projectId === project.projectId)
             .map((m) => facultyMap.get(m.facultyId))
@@ -505,6 +533,8 @@ export async function fetchEnrichedProjectsByStudent(
             marks: project.marks,
             startDate: project.startDate,
             endDate: project.endDate,
+            collegeSubjectId: project.collegeSubjectId,
+            subjectName: project.college_subjects?.subjectName || "General",
             duration: startDate && endDate ? `${startDate} - ${endDate}` : "N/A",
             mentors,
             teamMembers,

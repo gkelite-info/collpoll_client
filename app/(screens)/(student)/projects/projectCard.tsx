@@ -1,11 +1,16 @@
 "use client";
 
+import { submitProject, uploadFileToStorage } from "@/lib/helpers/student/student_project_submissionsAPI";
 import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { CaretLeft } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
+import toast from "react-hot-toast";
+import { FaCloudUploadAlt, FaTimes } from "react-icons/fa";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
   onViewDetails: (project: ProjectCardProps) => void;
+  role?: string | null;
 };
 
 const MemberAvatar = ({ image, name, index }: { image: string; name?: string; index: number }) => {
@@ -31,7 +36,7 @@ const MemberAvatar = ({ image, name, index }: { image: string; name?: string; in
   );
 };
 
-export const ProjectCard = ({ data, onViewDetails }: ProjectCardListProps) => {
+export const ProjectCard = ({ data, onViewDetails, role }: ProjectCardListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {data.map((project, index) => (
@@ -127,10 +132,86 @@ export const ProjectCard = ({ data, onViewDetails }: ProjectCardListProps) => {
 type ProjectDetailsModalProps = {
   project: ProjectCardProps;
   onClose: () => void;
+  role: string | null;
+  studentId: number | null;
 };
 
-export const ProjectDetailsModal = ({ project, onClose }: ProjectDetailsModalProps) => {
+export const ProjectDetailsModal = ({ project, onClose, role, studentId }: ProjectDetailsModalProps) => {
+
+  console.log("What is projectId", project);
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const domains = project.techStack.split(",").map((s) => s.trim()).filter(Boolean);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFinalSubmit = async () => {
+    if (selectedFiles.length === 0) return;
+    if (!studentId) {
+      alert("Error: Student ID not found. Please log in again.");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadResult = await uploadFileToStorage(
+        selectedFiles[0],
+        project.projectId!,
+        studentId
+      );
+
+      if (!uploadResult.success || !uploadResult.url) {
+        throw new Error("Upload to storage failed");
+      }
+
+      const dbResult = await submitProject({
+        projectId: project.projectId,
+        studentId: studentId,
+        fileUrl: uploadResult.url,
+      });
+
+      if (dbResult.success) {
+        toast.success("Submission successful 🎉");
+        setSelectedFiles([]);
+        onClose();
+      } else {
+        throw new Error("Failed to save submission record.");
+      }
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      alert(error.message || "Something went wrong during submission.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10">
@@ -240,6 +321,88 @@ export const ProjectDetailsModal = ({ project, onClose }: ProjectDetailsModalPro
             <p className="text-gray-400 text-sm italic">No attachments uploaded</p>
           )}
         </section>
+
+        {role === "Student" && (
+          <div className="col-span-2 lg:mt-5 border-t pt-5">
+            <label className="block text-sm font-semibold mb-2 text-[#282828]">
+              Upload Your Project
+            </label>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              multiple
+              accept=".pdf, .jpg, .jpeg, .png, .zip"
+              className="hidden"
+            />
+
+            <div
+              className={`border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-all cursor-pointer ${isDragging
+                ? "border-green-500 bg-green-50 scale-[1.01]"
+                : "border-gray-300 bg-gray-50 hover:bg-gray-100"
+                }`}
+              onDragEnter={(e) => { handleDrag(e); setIsDragging(true); }}
+              onDragOver={(e) => { handleDrag(e); setIsDragging(true); }}
+              onDragLeave={(e) => { handleDrag(e); setIsDragging(false); }}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <FaCloudUploadAlt className={`text-4xl mb-2 ${isDragging ? "text-green-500" : "text-gray-400"}`} />
+              <p className="text-gray-500 mb-4 text-center">
+                {isDragging ? "Drop files now!" : "Drag & Drop Your File here or"}
+              </p>
+              <button
+                type="button"
+                className="border px-6 py-2 rounded bg-white font-medium text-[#282828] shadow-sm active:scale-95 transition-transform cursor-pointer"
+              >
+                Browse Files
+              </button>
+            </div>
+
+            {selectedFiles.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-white border border-gray-200 px-3 py-2 rounded-md shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <div className="w-8 h-8 bg-green-100 text-green-700 rounded flex items-center justify-center flex-shrink-0 text-[10px] font-bold uppercase">
+                        {file.name.split('.').pop()?.substring(0, 3)}
+                      </div>
+                      <span className="text-sm text-[#282828] truncate font-medium">
+                        {file.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                      className="text-gray-400 hover:text-red-500 p-1 transition-colors cursor-pointer"
+                    >
+                      <FaTimes size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedFiles.length > 0 && (
+              <button
+                onClick={handleFinalSubmit}
+                disabled={isUploading}
+                className={`w-full mt-4 flex items-center justify-center gap-2 py-2 rounded-lg font-semibold transition-all shadow-md cursor-pointer ${isUploading ? "bg-gray-400" : "bg-[#16a34a] hover:bg-[#15803d] text-white"
+                  }`}
+              >
+                {isUploading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Submit Files"
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
