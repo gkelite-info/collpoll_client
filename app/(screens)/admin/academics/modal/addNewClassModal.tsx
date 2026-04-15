@@ -155,6 +155,8 @@ export default function AddNewClassModal({
     }
   };
 
+  
+
   const handleUnitNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\b\w/g, (char) => char.toUpperCase());
     setUnitName(val);

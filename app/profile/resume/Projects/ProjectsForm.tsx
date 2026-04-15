@@ -128,13 +128,6 @@ export default function ProjectsForm() {
           >
             Add +
           </button>
-          <button
-            type="button"
-            onClick={() => router.push("/profile?resume=profile-summary&Step=7")}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
-          >
-            Next
-          </button>
         </div>
       </div>
 

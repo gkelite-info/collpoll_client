@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { CompetitiveExamPayload, getCompetitiveExams, softDeleteExam, upsertCompetitiveExams } from "@/lib/helpers/student/Resume/Resumecompetitiveexamsapi";
+import { fetchResumePersonalDetails } from "@/lib/helpers/student/Resume/Resumepersonaldetailsapi";
 
 const DEFAULT_EXAMS = ["GMAT", "TOEL", "GRE", "SAT", "IELTS"];
 
@@ -112,8 +113,42 @@ export default function CompetetiveExams() {
     setErrors((prev) => ({ ...prev, [exam]: error }));
   };
 
-  const handleNext = () => {
-    router.push("/profile?resume=employment&Step=10");
+  // ✅ UPDATED handleNext (Save + Navigate, NO validation block)
+  const handleNext = async () => {
+    setIsSubmitting(true);
+
+    try {
+      // ✅ Same payload logic as Save
+      const payload: CompetitiveExamPayload[] = selectedExams.map((exam) => ({
+        studentId: studentId!,
+        examName: exam,
+        score: scores[exam] ? Number(scores[exam]) : 0, // allow empty
+      }));
+
+      const removedExams = initialExams.filter((e) => !selectedExams.includes(e));
+
+      await Promise.all([
+        upsertCompetitiveExams(payload),
+        ...removedExams.map((exam) => softDeleteExam(studentId!, exam)),
+      ]);
+
+      setInitialExams(selectedExams);
+
+      const res = await fetchResumePersonalDetails(studentId!);
+      const workStatus = res?.data?.workStatus?.toLowerCase();
+
+      if (workStatus === "fresher") {
+        router.push("/profile?resume=academic-achievements&Step=10");
+      } else {
+        router.push("/profile?resume=employment&Step=10");
+      }
+
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to submit exams.");
+      console.error("Submission Error:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddOther = () => {
@@ -234,17 +269,11 @@ export default function CompetetiveExams() {
           <h2 className="text-lg font-medium text-[#282828]">
             Competitive Exams
           </h2>
-          <button
-            onClick={handleNext}
-            className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-4 py-1.5 rounded-md"
-          >
-            Next
-          </button>
         </div>
 
         {loading ? (
           <ExamsShimmer />
-        ) : (
+        ) : <>
           <div className="max-w-md mx-auto">
             <p className="text-sm font-medium text-[#282828] mb-3">
               Select Exam
@@ -344,17 +373,27 @@ export default function CompetetiveExams() {
               )}
             </div>
 
-            <div className="mt-8">
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full bg-[#43C17A] text-white h-11 rounded-md cursor-pointer"
-              >
-                {isSubmitting ? "Submitting..." : "Submit"}
-              </button>
-            </div>
           </div>
-        )}
+
+          <div className="mt-8 flex justify-end gap-3">
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="bg-[#43C17A] text-white h-11 px-6 rounded-md cursor-pointer"
+            >
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
+
+
+            <button
+              onClick={handleNext}
+              className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-6 py-2 rounded-md"
+            >
+              {isSubmitting ? "Saving..." : "Next"}
+            </button>
+          </div>
+        </>
+        }
       </div>
     </>
   );

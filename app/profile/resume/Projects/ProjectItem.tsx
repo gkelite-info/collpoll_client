@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Field from "./Field";
 import { upsertResumeProject } from "@/lib/helpers/student/Resume/resumeProjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
+import { useRouter } from "next/navigation";
 
 export interface ProjectData {
   projectName: string;
@@ -39,6 +40,7 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 
 export default function ProjectItem({ index, data, onUpdate, onDelete, isDeleting, onClose }: Props) {
   const { studentId } = useUser();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -207,14 +209,26 @@ export default function ProjectItem({ index, data, onUpdate, onDelete, isDeletin
         />
         <div className="text-right text-xs text-gray-400">{data.description.length}/500</div>
       </div>
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end gap-3 mt-4">
         <button
           onClick={handleSubmit}
           disabled={isSaving}
           className={`px-6 py-1.5 rounded-md text-sm font-medium text-white bg-[#43C17A] ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
             }`}
         >
-          {isSaving ? "Saving..." : data.isSubmitted ? "Saved ✓" : "Submit Project"}
+          {isSaving ? "Saving..." : data.isSubmitted ? "Saved ✓" : "Save"}
+        </button>
+         <button
+          type="button"
+          onClick={async () => {
+            await handleSubmit();
+            router.push("/profile?resume=profile-summary&Step=7");
+          }}
+          disabled={isSaving}
+          className={`px-6 py-1.5 rounded-md text-sm font-medium text-white bg-[#43C17A] ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
+        >
+          {isSaving ? "Saving..." : "Next"}
         </button>
       </div>
     </div>

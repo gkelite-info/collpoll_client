@@ -510,7 +510,7 @@ export default function ProfileSummaryCard() {
   return (
     <div className="p-6 bg-[#FFFFFF] min-h-screen rounded-xl">
       <button
-        onClick={() => router.back()}
+        onClick={() => router.push("/profile?resume=academic-achievements&Step=10")}
         className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors mb-4"
       >
         <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

@@ -20,13 +20,28 @@ async function fetchEducation(studentId: number, level: EducationLevel) {
   return { success: true, data };
 }
 
+// ONLY THIS PART UPDATED — rest unchanged
+
 async function saveEducation(payload: Record<string, any>, level: EducationLevel) {
   const timestamp = now();
   const id = payload.resumeEducationDetailId;
 
-  // Map startDate/endDate → startYear/endYear (actual DB column names, type: date)
-  const startYear = payload.startDate ? payload.startDate.slice(0, 10) : undefined;
-  const endYear = payload.endDate ? payload.endDate.slice(0, 10) : undefined;
+  // ✅ ADDED LOGIC (DO NOT REMOVE EXISTING)
+  const isPrimary = level === "primary";
+
+  const startYear = !isPrimary && payload.startDate
+    ? payload.startDate.slice(0, 10)
+    : undefined;
+
+  const endYear = !isPrimary && payload.endDate
+    ? payload.endDate.slice(0, 10)
+    : undefined;
+
+
+  const yearOfPassing = isPrimary && payload.yearOfPassing
+    ? Number(payload.yearOfPassing)   
+    : undefined;
+
   if (id != null) {
     const {
       resumeEducationDetailId,
@@ -44,6 +59,7 @@ async function saveEducation(payload: Record<string, any>, level: EducationLevel
         ...updatable,
         ...(startYear !== undefined ? { startYear } : {}),
         ...(endYear !== undefined ? { endYear } : {}),
+        ...(yearOfPassing !== undefined ? { yearOfPassing } : {}), // ✅ added
         updatedAt: timestamp,
       })
       .eq("resumeEducationDetailId", id);
@@ -54,7 +70,6 @@ async function saveEducation(payload: Record<string, any>, level: EducationLevel
     }
     return { success: true, id };
   }
-
 
   const {
     resumeEducationDetailId,
@@ -69,6 +84,7 @@ async function saveEducation(payload: Record<string, any>, level: EducationLevel
       ...insertPayload,
       ...(startYear !== undefined ? { startYear } : {}),
       ...(endYear !== undefined ? { endYear } : {}),
+      ...(yearOfPassing !== undefined ? { yearOfPassing } : {}), // ✅ added
       educationLevel: level,
       is_deleted: false,
       deletedAt: null,
@@ -108,7 +124,7 @@ export const resumePrimaryEducationAPI = {
     institutionName: string;
     board?: string;
     mediumOfStudy?: string;
-    yearOfPassing?: number;
+    yearOfPassing?: number | string;
     startDate?: string;
     endDate?: string;
     location?: string;

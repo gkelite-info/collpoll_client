@@ -2,36 +2,89 @@
 
 import { generateWithGroqFallback } from "./groqClient";
 
-
+const INVALID_UNIT_MESSAGE =
+  "The unit name does not match the selected subject.";
 
 export async function suggestTopicsAction(
   subject: string,
-  unitName: string
+  unitName: string,
+  educationType?: string,
+  branch?: string
 ): Promise<string[]> {
-  if (!subject || !unitName) return [];
+  console.log("🟡 [suggestTopicsAction] Called with:", {
+    subject,
+    unitName,
+    educationType,
+    branch,
+  });
 
-   
+  if (!subject || !unitName) {
+    console.warn("🔴 [suggestTopicsAction] Missing subject or unitName");
+    return [];
+  }
 
   const prompt = `
+You are given academic context from an Indian college syllabus.
+
+Education Type: ${educationType || "B.Tech"}
+Branch: ${branch || "CSE"}
 Subject: ${subject}
 Unit Name: ${unitName}
 
-Return ONLY a JSON array of 5 topic names.
-Do NOT wrap in markdown.
-Do NOT include \`\`\`.
+TASK:
+1. First determine whether the Unit Name is academically relevant to the Subject.
+2. If the Unit Name does NOT match the Subject, return ONLY this exact JSON array:
+["${INVALID_UNIT_MESSAGE}"]
+
+3. If the Unit Name matches the Subject, return ONLY a JSON array of exactly 8 topic strings.
+
+STRICT RULES:
+- Output must be valid raw JSON only
+- No markdown
+- No explanation
+- No extra text
+- No headings
+- No backticks
+- Topics must be directly relevant to BOTH Subject and Unit Name
+- Topics must be 6–10 words each
+- Use precise academic terminology
 `;
 
-  try {
-    let text = await generateWithGroqFallback(prompt);
-    text = text
-      .replace(/```json/gi, "")
-      .replace(/```/g, "")
-      .trim();
+  console.log("🟡 [suggestTopicsAction] Prompt:\n", prompt);
 
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed : [];
+  try {
+    const rawText = await generateWithGroqFallback(prompt);
+    console.log("🟢 [suggestTopicsAction] Raw response:", rawText);
+
+    const cleaned = rawText.replace(/```json|```/gi, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (!Array.isArray(parsed)) {
+      console.warn("🔴 [suggestTopicsAction] Not an array:", parsed);
+      return [];
+    }
+
+    // Allow exact invalid message through
+    if (
+      parsed.length === 1 &&
+      typeof parsed[0] === "string" &&
+      parsed[0].trim() === INVALID_UNIT_MESSAGE
+    ) {
+      console.log("🟡 [suggestTopicsAction] Subject/unit mismatch detected");
+      return [INVALID_UNIT_MESSAGE];
+    }
+
+    const filtered = parsed.filter(
+      (t: unknown) =>
+        typeof t === "string" &&
+        t.trim().length > 5 &&
+        t.trim() !== INVALID_UNIT_MESSAGE
+    );
+
+    console.log("🟢 [suggestTopicsAction] Final topics:", filtered);
+    return filtered.slice(0, 8);
   } catch (err) {
-    console.error("❌ Groq AI failed:", err);
-    return [];
+    console.error("🔴 [suggestTopicsAction] Failed:", err);
+    throw new Error("AI topic generation failed. Please try again.");
   }
 }

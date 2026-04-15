@@ -312,7 +312,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
               className="relative flex-1 max-w-xs"
               ref={(el) => { dropdownRefs.current[section] = el; }}
             >
-             <div className="flex items-center gap-1.5 border border-[#A0A0A0] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
+              <div className="flex items-center gap-1.5 border border-[#A0A0A0] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
                 <MagnifyingGlass size={12} className="text-gray-400 shrink-0" />
                 <input
                   type="text"
@@ -359,7 +359,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
               </div>
 
               {search.open && search.query.trim() && (
-               <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-40 overflow-y-auto">
                   {keywordNotAdded && (
                     <button
                       type="button"
@@ -424,31 +424,18 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
   return (
     <div className="mt-4">
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-start justify-between mb-6">
-          <h3 className="text-2xl font-semibold text-[#282828]">Skills</h3>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => setModalOpen(true)}
-              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium
-                ${saving ? "opacity-50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer text-white"}`}
-            >
-              {saving ? "Saving..." : "Add +"}
-            </button>
-            <button
-              onClick={() => router.push("/profile?resume=languages&Step=4")}
-              className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-
         <div className="space-y-6">
           {renderSection("technical", "Technical Skills", technical)}
           {renderSection("soft", "Soft Skills", soft)}
           {renderSection("tools", "Tools & Frameworks", tools)}
+        </div>
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={() => router.push("/profile?resume=languages&Step=4")}
+            className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm"
+          >
+            Next
+          </button>
         </div>
       </div>
 
