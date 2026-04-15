@@ -87,12 +87,12 @@ export default function EducationSection() {
             if (addedForms.includes("phd") && phdSaveRef.current)
                 await phdSaveRef.current();
 
-            toast.success("Education form submitted successfully");
+            // toast.success("Education form saved successfully");
 
             // router.push('/profile?key-skills');
         } catch (err) {
             console.error(err);
-            toast.error("Failed to submit. Try again.");
+            toast.error("Failed to save. Try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -137,11 +137,6 @@ export default function EducationSection() {
                         </div>
                     )}
 
-                    <button
-                        onClick={() => router.push('/profile?resume=key-skills&Step=3')}
-                        className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm">
-                        Next
-                    </button>
                 </div>
             </div>
 
@@ -168,15 +163,33 @@ export default function EducationSection() {
 
                         )
                 )}
-                <div className="flex justify-end mt-6">
+                <div className="flex justify-end mt-6 gap-3">
                     <button
                         onClick={handleSubmitAll}
                         disabled={isSubmitting}
                         className={`px-6 py-2 rounded-md text-sm text-white 
-            ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+        ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
                     >
-                        {isSubmitting ? "Saving..." : "Submit"}
+                        {isSubmitting ? "Saving..." : "Save"}
                     </button>
+
+                    <button
+                        onClick={async () => {
+                            try {
+                                await handleSubmitAll(); // ✅ save first
+                                router.push('/profile?resume=key-skills&Step=3'); // ✅ only if success
+                            } catch (err) {
+                                // ❌ don't navigate if save fails
+                                console.error(err);
+                            }
+                        }}
+                        disabled={isSubmitting}
+                        className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm 
+        ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                        {isSubmitting ? "Saving..." : "Next"}
+                    </button>
+
                 </div>
             </div>
         </div>

@@ -90,7 +90,7 @@ export default function Employment() {
   if (!studentId) return null;
 
   return (
-    <div className="bg-white rounded-xl p-6 w-full min-h-screen mt-2 mb-5">
+    <div className="bg-white rounded-xl p-6 pb-0.5 w-full mt-2 mb-5">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-medium text-[#282828]">Employment</h2>
 
@@ -100,13 +100,6 @@ export default function Employment() {
             className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium"
           >
             Add +
-          </button>
-
-          <button
-            onClick={() => router.push("/profile?resume=academic-achievements&Step=11")}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
-          >
-            Next
           </button>
         </div>
       </div>

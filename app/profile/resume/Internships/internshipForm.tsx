@@ -72,6 +72,117 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
+/** Reusable: renders a select that, when a custom value is active, shows a badge inside the box */
+function SelectWithCustomBadge({
+  value,
+  options,
+  placeholder,
+  isCustom,
+  showOther,
+  otherValue,
+  disabled,
+  onSelectChange,
+  onOtherChange,
+  onOtherKeyDown,
+  onOtherAdd,
+  onOtherCancel,
+  onBadgeClear,
+  otherPlaceholder,
+  error,
+  register,
+  fieldName,
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  isCustom: boolean;
+  showOther: boolean;
+  otherValue: string;
+  disabled: boolean;
+  onSelectChange: (val: string) => void;
+  onOtherChange: (val: string) => void;
+  onOtherKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onOtherAdd: () => void;
+  onOtherCancel: () => void;
+  onBadgeClear: () => void;
+  otherPlaceholder: string;
+  error?: string;
+  register: any;
+  fieldName: string;
+}) {
+  return (
+    <div>
+      <div className="relative">
+        {isCustom && !showOther ? (
+          /* Custom value active — show badge inside a select-styled box */
+          <div className="w-full border border-[#CCCCCC] rounded-md px-3 py-2 flex items-center justify-between min-h-[38px]">
+            <div className="flex items-center gap-2 px-2 py-0.5 bg-green-50 border border-[#43C17A] rounded-md">
+              <span className="text-sm text-[#282828]">{value}</span>
+              <button
+                type="button"
+                onClick={onBadgeClear}
+                className="text-gray-400 hover:text-red-500 text-xs cursor-pointer leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            <span className="text-[#525252] ml-2">▾</span>
+          </div>
+        ) : (
+          /* Normal select */
+          <>
+            <select
+              {...register(fieldName)}
+              disabled={disabled}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onSelectChange(e.target.value)}
+              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
+            >
+              <option value="">{placeholder}</option>
+              {options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+              <option value="__other__">+ Other</option>
+            </select>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
+          </>
+        )}
+      </div>
+
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+
+      {/* "Other" inline input */}
+      {showOther && (
+        <div className="flex gap-2 items-center mt-2">
+          <input
+            autoFocus
+            value={otherValue}
+            onChange={(e) => onOtherChange(e.target.value)}
+            onKeyDown={onOtherKeyDown}
+            placeholder={otherPlaceholder}
+            className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
+          />
+          <button
+            type="button"
+            onClick={onOtherAdd}
+            className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={onOtherCancel}
+            className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function InternshipForm({
   studentId,
   onSubmitted,
@@ -83,14 +194,10 @@ export default function InternshipForm({
   initialData?: InternshipFormData;
   internshipId?: number;
 }) {
-  
-  const [domains, setDomains] = useState<string[]>(DEFAULT_DOMAINS);
   const [showOtherDomain, setShowOtherDomain] = useState(false);
   const [otherDomainValue, setOtherDomainValue] = useState("");
-  const [roles, setRoles] = useState<string[]>(ROLES);
   const [showOtherRole, setShowOtherRole] = useState(false);
   const [otherRoleValue, setOtherRoleValue] = useState("");
-  const [locations, setLocations] = useState<string[]>(LOCATIONS);
   const [showOtherLocation, setShowOtherLocation] = useState(false);
   const [otherLocationValue, setOtherLocationValue] = useState("");
 
@@ -117,47 +224,62 @@ export default function InternshipForm({
 
   const startDateValue = watch("startDate");
   const descriptionValue = watch("description") ?? "";
+  const watchedRole = watch("role");
+  const watchedLocation = watch("location");
+  const watchedDomain = watch("domain");
 
-  const handleAddOtherDomain = () => {
-    const value = otherDomainValue.trim();
-    if (!value) {
-      toast.error("Please enter a domain before adding.");
-      return;
+  /* ── Role helpers ── */
+  const handleRoleSelectChange = (val: string) => {
+    if (val === "__other__") {
+      setShowOtherRole(true);
+      setValue("role", "", { shouldValidate: false });
+    } else {
+      setShowOtherRole(false);
+      setValue("role", val, { shouldValidate: true });
     }
-    if (!domains.includes(value)) {
-      setDomains((prev) => [...prev, value]);
-    }
-    setValue("domain", value, { shouldValidate: true });
-    setOtherDomainValue("");
-    setShowOtherDomain(false);
   };
-
   const handleAddOtherRole = () => {
     const value = otherRoleValue.trim();
-    if (!value) {
-      toast.error("Please enter a role before adding.");
-      return;
-    }
-    if (!roles.includes(value)) {
-      setRoles((prev) => [...prev, value]);
-    }
+    if (!value) { toast.error("Please enter a role before adding."); return; }
     setValue("role", value, { shouldValidate: true });
     setOtherRoleValue("");
     setShowOtherRole(false);
   };
 
+  /* ── Location helpers ── */
+  const handleLocationSelectChange = (val: string) => {
+    if (val === "__other__") {
+      setShowOtherLocation(true);
+      setValue("location", "", { shouldValidate: false });
+    } else {
+      setShowOtherLocation(false);
+      setValue("location", val, { shouldValidate: true });
+    }
+  };
   const handleAddOtherLocation = () => {
     const value = otherLocationValue.trim();
-    if (!value) {
-      toast.error("Please enter a location before adding.");
-      return;
-    }
-    if (!locations.includes(value)) {
-      setLocations((prev) => [...prev, value]);
-    }
+    if (!value) { toast.error("Please enter a location before adding."); return; }
     setValue("location", value, { shouldValidate: true });
     setOtherLocationValue("");
     setShowOtherLocation(false);
+  };
+
+  /* ── Domain helpers ── */
+  const handleDomainSelectChange = (val: string) => {
+    if (val === "__other__") {
+      setShowOtherDomain(true);
+      setValue("domain", "", { shouldValidate: false });
+    } else {
+      setShowOtherDomain(false);
+      setValue("domain", val, { shouldValidate: true });
+    }
+  };
+  const handleAddOtherDomain = () => {
+    const value = otherDomainValue.trim();
+    if (!value) { toast.error("Please enter a domain before adding."); return; }
+    setValue("domain", value, { shouldValidate: true });
+    setOtherDomainValue("");
+    setShowOtherDomain(false);
   };
 
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -200,56 +322,25 @@ export default function InternshipForm({
         </div>
         <div>
           <FieldLabel label="Role / Position" required />
-          <div className="relative">
-            <select
-              {...register("role")}
-              disabled={isSubmitting}
-              onChange={(e) => {
-                if (e.target.value === "__other__") {
-                  setShowOtherRole(true);
-                  setValue("role", "", { shouldValidate: false });
-                } else {
-                  setShowOtherRole(false);
-                  setValue("role", e.target.value, { shouldValidate: true });
-                }
-              }}
-              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
-            >
-              <option value="">Select role</option>
-              {roles.map((r) => <option key={r} value={r}>{r}</option>)}
-              <option value="__other__">+ Other</option>
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
-          </div>
-          {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role.message}</p>}
-
-          {/* Other role input — shown when + Other is selected */}
-          {showOtherRole && (
-            <div className="flex gap-2 items-center mt-2">
-              <input
-                autoFocus
-                value={otherRoleValue}
-                onChange={(e) => setOtherRoleValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddOtherRole()}
-                placeholder="Enter role"
-                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
-              />
-              <button
-                type="button"
-                onClick={handleAddOtherRole}
-                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowOtherRole(false); setOtherRoleValue(""); }}
-                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+          <SelectWithCustomBadge
+            value={watchedRole}
+            options={ROLES}
+            placeholder="Select role"
+            isCustom={!!watchedRole && !ROLES.includes(watchedRole)}
+            showOther={showOtherRole}
+            otherValue={otherRoleValue}
+            disabled={isSubmitting}
+            onSelectChange={handleRoleSelectChange}
+            onOtherChange={setOtherRoleValue}
+            onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherRole()}
+            onOtherAdd={handleAddOtherRole}
+            onOtherCancel={() => { setShowOtherRole(false); setOtherRoleValue(""); }}
+            onBadgeClear={() => setValue("role", "", { shouldValidate: false })}
+            otherPlaceholder="Enter role"
+            error={errors.role?.message}
+            register={register}
+            fieldName="role"
+          />
         </div>
       </div>
 
@@ -305,109 +396,49 @@ export default function InternshipForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <FieldLabel label="Location" required />
-          <div className="relative">
-            <select
-              {...register("location")}
-              disabled={isSubmitting}
-              onChange={(e) => {
-                if (e.target.value === "__other__") {
-                  setShowOtherLocation(true);
-                  setValue("location", "", { shouldValidate: false });
-                } else {
-                  setShowOtherLocation(false);
-                  setValue("location", e.target.value, { shouldValidate: true });
-                }
-              }}
-              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
-            >
-              <option value="">Select location</option>
-              {locations.map((l) => <option key={l} value={l}>{l}</option>)}
-              <option value="__other__">+ Other</option>
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
-          </div>
-          {errors.location && <p className="text-red-500 text-xs mt-1">{errors.location.message}</p>}
-          {showOtherLocation && (
-            <div className="flex gap-2 items-center mt-2">
-              <input
-                autoFocus
-                value={otherLocationValue}
-                onChange={(e) => setOtherLocationValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddOtherLocation()}
-                placeholder="Enter location"
-                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
-              />
-              <button
-                type="button"
-                onClick={handleAddOtherLocation}
-                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowOtherLocation(false); setOtherLocationValue(""); }}
-                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+          <SelectWithCustomBadge
+            value={watchedLocation}
+            options={LOCATIONS}
+            placeholder="Select location"
+            isCustom={!!watchedLocation && !LOCATIONS.includes(watchedLocation)}
+            showOther={showOtherLocation}
+            otherValue={otherLocationValue}
+            disabled={isSubmitting}
+            onSelectChange={handleLocationSelectChange}
+            onOtherChange={setOtherLocationValue}
+            onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherLocation()}
+            onOtherAdd={handleAddOtherLocation}
+            onOtherCancel={() => { setShowOtherLocation(false); setOtherLocationValue(""); }}
+            onBadgeClear={() => setValue("location", "", { shouldValidate: false })}
+            otherPlaceholder="Enter location"
+            error={errors.location?.message}
+            register={register}
+            fieldName="location"
+          />
         </div>
         <div>
           <FieldLabel label="Domain" required />
-          <div className="relative">
-            <select
-              {...register("domain")}
-              disabled={isSubmitting}
-              onChange={(e) => {
-                if (e.target.value === "__other__") {
-                  setShowOtherDomain(true);
-                  setValue("domain", "", { shouldValidate: false });
-                } else {
-                  setShowOtherDomain(false);
-                  setValue("domain", e.target.value, { shouldValidate: true });
-                }
-              }}
-              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
-            >
-              <option value="">Select domain</option>
-              {domains.map((d) => <option key={d} value={d}>{d}</option>)}
-              <option value="__other__">+ Other</option>
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
-          </div>
-          {errors.domain && <p className="text-red-500 text-xs mt-1">{errors.domain.message}</p>}
-
-          {showOtherDomain && (
-            <div className="flex gap-2 items-center mt-2">
-              <input
-                autoFocus
-                value={otherDomainValue}
-                onChange={(e) => setOtherDomainValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddOtherDomain()}
-                placeholder="Enter domain"
-                className="flex-1 h-10 px-3 border border-[#D9D9D9] rounded-md text-sm text-[#525252] focus:outline-none focus:border-[#43C17A]"
-              />
-              <button
-                type="button"
-                onClick={handleAddOtherDomain}
-                className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => { setShowOtherDomain(false); setOtherDomainValue(""); }}
-                className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+          <SelectWithCustomBadge
+            value={watchedDomain}
+            options={DEFAULT_DOMAINS}
+            placeholder="Select domain"
+            isCustom={!!watchedDomain && !DEFAULT_DOMAINS.includes(watchedDomain)}
+            showOther={showOtherDomain}
+            otherValue={otherDomainValue}
+            disabled={isSubmitting}
+            onSelectChange={handleDomainSelectChange}
+            onOtherChange={setOtherDomainValue}
+            onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherDomain()}
+            onOtherAdd={handleAddOtherDomain}
+            onOtherCancel={() => { setShowOtherDomain(false); setOtherDomainValue(""); }}
+            onBadgeClear={() => setValue("domain", "", { shouldValidate: false })}
+            otherPlaceholder="Enter domain"
+            error={errors.domain?.message}
+            register={register}
+            fieldName="domain"
+          />
         </div>
       </div>
-
       <div>
         <FieldLabel label="Short Description" />
         <textarea
@@ -428,7 +459,7 @@ export default function InternshipForm({
           className={`px-6 py-2 rounded-md text-sm text-white 
             ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
         >
-          {isSubmitting ? "Saving..." : "Submit"}
+          {isSubmitting ? "Saving..." : "Save"}
         </button>
       </div>
     </div>

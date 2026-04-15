@@ -66,7 +66,7 @@ export default function AcademicAchievements() {
   const [beforeScore, setBeforeScore] = useState<ATSResult | null>(null);
   const [scoreLoading, setScoreLoading] = useState(true);
 
-  
+
   useEffect(() => {
     if (!studentId) return;
 
@@ -104,7 +104,7 @@ export default function AcademicAchievements() {
         setBeforeScore(score);
         sessionStorage.setItem("ats_before_score", JSON.stringify(score));
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setScoreLoading(false));
   }, [studentId]);
 
@@ -131,10 +131,10 @@ export default function AcademicAchievements() {
   };
 
   const handleSubmit = async () => {
-    if (selected.length === 0) {
-      toast.error("Please select at least one achievement.");
-      return;
-    }
+    // if (selected.length === 0) {
+    //   toast.error("Please select at least one achievement.");
+    //   return;
+    // }
 
     if (!studentId) {
       toast.error("Session expired. Please refresh.");
@@ -158,7 +158,9 @@ export default function AcademicAchievements() {
 
       setInitialSelected(selected);
       toast.success("Academic achievements saved successfully.");
-      router.push("/profile?resume=accomplishments&Step=8");
+      setTimeout(() => {
+        router.push("/profile?resume=profilesummaryai&view=templates");
+      }, 500);
     } catch (error: any) {
       toast.error(error.message || "Failed to save achievements.");
     } finally {

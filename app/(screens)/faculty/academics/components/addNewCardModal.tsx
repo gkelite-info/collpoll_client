@@ -120,6 +120,10 @@ export default function AddNewCardModal({
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
   const { faculty_edu_type } = useFaculty();
 
+  // ✅ ADDED: loading and error states for AI topic suggestions
+  const [isLoadingTopics, setIsLoadingTopics] = useState(false);
+  const [topicsError, setTopicsError] = useState<string | null>(null);
+
   // const [subjectId, setSubjectId] = useState<number | null>(
   //   defaultSubjectId
   // );
@@ -674,6 +678,9 @@ export default function AddNewCardModal({
 
                   if (!filteredValue || !subject) {
                     setAvailableTopics([]);
+                    // ✅ ADDED: clear error and loading when input is cleared
+                    setTopicsError(null);
+                    setIsLoadingTopics(false);
                     return;
                   }
 
@@ -681,12 +688,53 @@ export default function AddNewCardModal({
                     clearTimeout(aiTimeoutRef.current);
                   }
 
+                  // ✅ ADDED: only debounce after a word boundary (space after word, or 2+ words typed)
+                  const trimmed = filteredValue.trim();
+
+                  // remove spaces → count only letters
+                  const letterCount = trimmed.replace(/\s+/g, "").length;
+
+                  // trigger only after 3+ characters
+                  if (letterCount < 3) {
+                    setTopicsError(null);
+                    setIsLoadingTopics(false);
+                    return;
+                  }
+
+                  // ✅ ADDED: show loading immediately when debounce is scheduled
+                  setIsLoadingTopics(true);
+                  setTopicsError(null);
+
                   aiTimeoutRef.current = setTimeout(async () => {
                     try {
-                      const suggestions = await suggestTopicsAction(subject, filteredValue);
+                      // ✅ ADDED: pass educationType and branch for richer context
+                      const educationType = educations.find(
+                        (e) => e.collegeEducationId === formData.educationId
+                      )?.collegeEducationType;
+                      const branchCode = branches.find(
+                        (b) => b.collegeBranchId === formData.branchId
+                      )?.collegeBranchCode;
+
+                      const suggestions = await suggestTopicsAction(
+                        subject,
+                        filteredValue,
+                        educationType,
+                        branchCode
+                      );
                       setAvailableTopics(suggestions);
-                    } catch (err) { }
-                  }, 1500);
+                      // ✅ ADDED: clear error on success
+                      setTopicsError(null);
+                    } catch (err: any) {
+                      // ✅ ADDED: show error message in the AI box instead of silent fail
+                      setTopicsError(
+                        err?.message || "Failed to generate topics. Please try again."
+                      );
+                      setAvailableTopics([]);
+                    } finally {
+                      // ✅ ADDED: always stop loading
+                      setIsLoadingTopics(false);
+                    }
+                  }, 900);
                 }}
 
                 onBlur={(e) => {
@@ -700,7 +748,9 @@ export default function AddNewCardModal({
                 placeholder="Enter unit name"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
               />
-              {formData.unitName && (availableTopics.length > 0 || selectedTopics.length > 0) && (
+
+              {/* ✅ ADDED: AI box now also shows when loading or error, not just when topics exist */}
+              {formData.unitName && (availableTopics.length > 0 || selectedTopics.length > 0 || isLoadingTopics || topicsError) && (
                 <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-semibold text-[#43C17A]">
@@ -742,6 +792,45 @@ export default function AddNewCardModal({
                       </button>
                     </div>
                   </div>
+
+                  {/* ✅ ADDED: loading spinner with unit name */}
+                  {isLoadingTopics && (
+                    <div className="flex items-center gap-2 py-2 text-xs text-[#43C17A]">
+                      <svg
+                        className="animate-spin h-3 w-3 text-[#43C17A] shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8z"
+                        />
+                      </svg>
+                      <span>
+                        Generating topics for{" "}
+                        <strong>{formData.unitName}</strong>…
+                      </span>
+                    </div>
+                  )}
+
+                  {/* ✅ ADDED: error message shown as a red banner inside the AI box */}
+                  {!isLoadingTopics && topicsError && (
+                    <div className="flex items-start gap-2 mt-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600">
+                      <span className="shrink-0">⚠️</span>
+                      <span>{topicsError}</span>
+                    </div>
+                  )}
+
                   {showSearch && (
                     <input
                       type="text"
@@ -769,7 +858,7 @@ export default function AddNewCardModal({
                       }}
                       className=" mt-2 text-xs font-semibold text-[#43C17A  flex items-center gap-1"
                     >
-                      + Add “{searchQuery}”
+                      + Add "{searchQuery}"
                     </button>
                   )}
                   {selectedTopics.length > 0 && (

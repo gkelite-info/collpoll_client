@@ -207,7 +207,6 @@ export default function Accomplishments() {
         <h2 className="text-lg font-medium text-center text-[#282828]">Accomplishments</h2>
         <div className="flex gap-2">
           <button type="button" onClick={handleAdd} className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium">Add +</button>
-          <button type="button" onClick={() => router.push('/profile?resume=competitive-exams&Step=9')} className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium">Next</button>
         </div>
       </div>
 

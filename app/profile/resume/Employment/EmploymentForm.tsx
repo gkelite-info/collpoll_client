@@ -9,6 +9,7 @@ import {
   deleteEmployment,
 } from "@/lib/helpers/profile/employment";
 import ConfirmDeleteModal from "@/app/components/campusBuzz/ConfirmDeleteModal";
+import { useRouter } from "next/navigation";
 
 export default function EmploymentForm({
   index,
@@ -21,15 +22,17 @@ export default function EmploymentForm({
   studentId: number;
   onSuccess: () => void;
 }) {
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [form, setForm] = useState({
     companyName: data?.companyName ?? "",
     designation: data?.designation ?? "",
-    experienceYears: data?.experienceYears ?? "",   // ✅ plain number
-    experienceMonths: data?.experienceMonths ?? "", // ✅ plain number
+    experienceYears: data?.experienceYears ?? "",
+    experienceMonths: data?.experienceMonths ?? "",
     from: data?.startDate ?? "",
     to: data?.endDate === null ? "current" : data?.endDate ?? "",
     description: data?.description ?? "",
@@ -54,6 +57,28 @@ export default function EmploymentForm({
     return null;
   };
 
+  const buildPayload = () => ({
+    studentId,
+    companyName: form.companyName,
+    designation: form.designation,
+    experienceYears: Number(form.experienceYears) || 0,
+    experienceMonths: Number(form.experienceMonths) || 0,
+    startDate: form.from,
+    endDate: form.to === "current" ? null : form.to,
+    description: form.description,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const saveEmployment = async () => {
+    const payload = buildPayload();
+    if (data?.employmentId) {
+      await updateEmployment(data.employmentId, payload);
+    } else {
+      await addEmployment({ ...payload, createdAt: new Date().toISOString() });
+    }
+  };
+
+  // Save: with validation
   const handleSubmit = async () => {
     const error = validate();
     if (error) {
@@ -62,27 +87,9 @@ export default function EmploymentForm({
     }
 
     setIsSubmitting(true);
-
-    const payload = {
-      studentId,
-      companyName: form.companyName,
-      designation: form.designation,
-      experienceYears: Number(form.experienceYears) || 0, // ✅
-      experienceMonths: Number(form.experienceMonths) || 0, // ✅
-      startDate: form.from,
-      endDate: form.to === "current" ? null : form.to,
-      description: form.description,
-      updatedAt: new Date().toISOString(),
-    };
-
     try {
-      if (data?.employmentId) {
-        await updateEmployment(data.employmentId, payload);
-        toast.success(`Employment ${index + 1} updated`);
-      } else {
-        await addEmployment({ ...payload, createdAt: new Date().toISOString() });
-        toast.success(`Employment ${index + 1} submitted`);
-      }
+      await saveEmployment();
+      toast.success(`Employment ${index + 1} saved`);
       onSuccess();
     } catch (error: any) {
       console.error("Error submitting employment:", error);
@@ -90,6 +97,25 @@ export default function EmploymentForm({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Next: save without validation + route
+  const handleNext = async () => {
+    // Only attempt save if there's something to save (at least a company name)
+    if (form.companyName.trim() || form.designation.trim()) {
+      setIsNavigating(true);
+      try {
+        await saveEmployment();
+        onSuccess();
+      } catch (error: any) {
+        console.error("Error saving on next:", error);
+        // Non-blocking — still navigate even if save fails
+      } finally {
+        setIsNavigating(false);
+      }
+    }
+
+    router.push("/profile?resume=academic-achievements&Step=11");
   };
 
   const handleDelete = async () => {
@@ -108,7 +134,7 @@ export default function EmploymentForm({
   };
 
   return (
-    <div className="mb-12">
+    <div className="mb-4">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">
           Employment {index + 1}
@@ -217,13 +243,21 @@ export default function EmploymentForm({
           placeholder="Explain your role, key contributions, and skills..."
         />
 
-        <div className="md:col-span-2 flex justify-end">
+        <div className="md:col-span-2 flex justify-end gap-3">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50"
           >
-            {isSubmitting ? "Submitting..." : "Submit"}
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
+
+          <button
+            onClick={handleNext}
+            disabled={isNavigating}
+            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50"
+          >
+            {isNavigating ? "Saving..." : "Next"}
           </button>
         </div>
       </div>
