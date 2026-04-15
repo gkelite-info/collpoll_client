@@ -205,10 +205,10 @@ function PrimaryFields({
     institutionName: "",
     board: "",
     mediumOfStudy: "",
-    startDate: "",
-    endDate: "",
+    yearOfPassing: "", // ✅ added
     location: "",
   });
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -222,9 +222,7 @@ function PrimaryFields({
           institutionName: d.institutionName ?? "",
           board: d.board ?? "",
           mediumOfStudy: d.mediumOfStudy ?? "",
-          // DB columns startYear/endYear are date type → already "YYYY-MM-DD"
-          startDate: d.startYear ?? "",
-          endDate: d.endYear ?? "",
+          yearOfPassing: d.yearOfPassing ? String(d.yearOfPassing) : "", // ✅
           location: d.location ?? "",
         });
         onRecordSaved(d.resumeEducationDetailId);
@@ -232,20 +230,6 @@ function PrimaryFields({
       setIsLoading(false);
     })();
   }, [studentId]);
-
-  useEffect(() => {
-    setResetHandler(() => () => {
-      setForm({
-        resumeEducationDetailId: undefined,
-        institutionName: "",
-        board: "",
-        mediumOfStudy: "",
-        startDate: "",
-        endDate: "",
-        location: "",
-      });
-    });
-  }, [setResetHandler]);
 
   const handleChange = (field: string, value: string) => {
     let v = value;
@@ -257,13 +241,9 @@ function PrimaryFields({
 
   const validate = (): string | null => {
     if (!form.institutionName.trim()) return "School Name is required";
-    if (!onlyLetters.test(form.institutionName)) return "School Name must contain only letters";
     if (!form.board.trim()) return "Board is required";
-    if (!onlyLetters.test(form.board)) return "Board must contain only letters";
     if (!form.mediumOfStudy.trim()) return "Medium of Study is required";
-    if (!onlyLetters.test(form.mediumOfStudy)) return "Medium of Study must contain only letters";
-    if (!form.startDate.trim()) return "Start Date is required";
-    if (!form.endDate.trim()) return "End Date is required";
+    if (!form.yearOfPassing) return "Year Of Passing is required"; // ✅
     if (!form.location.trim()) return "Location is required";
     return null;
   };
@@ -272,6 +252,7 @@ function PrimaryFields({
     if (isSaving) return;
     const error = validate();
     if (error) { toast.error(error); throw new Error(error); }
+
     setIsSaving(true);
     try {
       const response = await resumePrimaryEducationAPI.save({
@@ -281,11 +262,15 @@ function PrimaryFields({
         institutionName: form.institutionName,
         board: form.board,
         mediumOfStudy: form.mediumOfStudy,
-        startDate: form.startDate,
-        endDate: form.endDate,
+        yearOfPassing: Number(form.yearOfPassing), // ✅
         location: form.location,
       });
+
       if (!response.success) throw new Error("primary_save_failed");
+
+      if (!response.success) throw new Error("primary_save_failed");
+      const isUpdate = !!form.resumeEducationDetailId;
+      toast.success(isUpdate ? "Primary Education updated successfully" : "Primary Education saved successfully");
       if (response.id) {
         setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
         onRecordSaved(response.id!);
@@ -304,10 +289,14 @@ function PrimaryFields({
       <ControlledInput label="School Name" value={form.institutionName} onChange={(e) => handleChange("institutionName", e.target.value)} />
       <ControlledInput label="Board" value={form.board} onChange={(e) => handleChange("board", e.target.value)} />
       <ControlledInput label="Medium of Study" value={form.mediumOfStudy} onChange={(e) => handleChange("mediumOfStudy", e.target.value)} />
-      <div className="flex gap-5 w-[85%]">
-        <ControlledInput label="Start Date" type="date" value={form.startDate} onChange={(e) => handleChange("startDate", e.target.value)} />
-        <ControlledInput label="End Date" type="date" value={form.endDate} onChange={(e) => handleChange("endDate", e.target.value)} />
-      </div>
+
+      <ControlledInput
+        label="Year Of Passing"
+        type="number"           // ← was "date"
+        value={form.yearOfPassing}
+        onChange={(e) => handleChange("yearOfPassing", e.target.value)}
+      />
+
       <ControlledInput label="Location" value={form.location} onChange={(e) => handleChange("location", e.target.value)} />
     </div>
   );
@@ -397,6 +386,9 @@ function SecondaryFields({ studentId, collegeId, onSaveRef, onRecordSaved }: Fie
         location: form.location,
       });
       if (!response.success) throw new Error("secondary_save_failed");
+      if (!response.success) throw new Error("secondary_save_failed");
+      const isUpdate = !!form.resumeEducationDetailId;
+      toast.success(isUpdate ? "Secondary Education updated successfully" : "Secondary Education saved successfully");
       if (response.id) {
         setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
         onRecordSaved(response.id!);
@@ -512,6 +504,9 @@ function UndergraduateFields({ studentId, collegeId, onSaveRef, onRecordSaved }:
         courseType: form.courseType,
       });
       if (!response.success) throw new Error("undergraduate_save_failed");
+      if (!response.success) throw new Error("undergraduate_save_failed");
+      const isUpdate = !!form.resumeEducationDetailId;
+      toast.success(isUpdate ? "Undergraduate Degree updated successfully" : "Undergraduate Degree saved successfully");
       if (response.id) {
         setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
         onRecordSaved(response.id!);
@@ -631,6 +626,9 @@ function MastersFields({ studentId, collegeId, onSaveRef, onRecordSaved }: Field
         courseType: form.courseType,
       });
       if (!response.success) throw new Error("masters_save_failed");
+      if (!response.success) throw new Error("masters_save_failed");
+      const isUpdate = !!form.resumeEducationDetailId;
+      toast.success(isUpdate ? "Masters Degree updated successfully" : "Masters Degree saved successfully");
       if (response.id) {
         setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
         onRecordSaved(response.id!);
@@ -733,6 +731,9 @@ function PhdFields({ studentId, collegeId, onSaveRef, onRecordSaved }: FieldProp
         endDate: form.endDate,
       });
       if (!response.success) throw new Error("phd_save_failed");
+      if (!response.success) throw new Error("phd_save_failed");
+      const isUpdate = !!form.resumeEducationDetailId;
+      toast.success(isUpdate ? "PhD updated successfully" : "PhD saved successfully");
       if (response.id) {
         setForm((p) => ({ ...p, resumeEducationDetailId: response.id }));
         onRecordSaved(response.id!);

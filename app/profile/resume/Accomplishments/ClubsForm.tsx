@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Trash } from "@phosphor-icons/react";
 import { insertClub, updateClub } from "@/lib/helpers/student/Resume/resumeClubsAPI";
+import { useRouter } from "next/navigation";
+import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 interface ClubRecord {
   resumeClubCommitteeId: number;
@@ -32,6 +34,7 @@ const toISO = (dateStr: string): string => {
 };
 
 export default function ClubsForm({ index, onSubmit, onRemove, studentId, existingData }: ClubProps) {
+  const router = useRouter();
   const [form, setForm] = useState({
     clubName: "",
     role: "",
@@ -41,6 +44,9 @@ export default function ClubsForm({ index, onSubmit, onRemove, studentId, existi
   });
   const [resumeClubCommitteeId, setResumeClubCommitteeId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [nextLoading, setNextLoading] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!existingData) return;
@@ -81,39 +87,45 @@ export default function ClubsForm({ index, onSubmit, onRemove, studentId, existi
     return null;
   };
 
-  const handleSubmit = async () => {
+  const saveData = async (): Promise<ClubRecord | null> => {
     const error = validate();
-    if (error) { toast.error(error); return; }
+    if (error) { toast.error(error); return null; }
 
+    const payload = {
+      studentId,
+      clubName: form.clubName,
+      role: form.role,
+      fromDate: toISO(form.fromDate),
+      toDate: toISO(form.toDate),
+      description: form.description,
+    };
+
+    let savedId = resumeClubCommitteeId;
+    if (resumeClubCommitteeId) {
+      await updateClub(resumeClubCommitteeId, payload);
+    } else {
+      const result = await insertClub(payload);
+      savedId = result.resumeClubCommitteeId;
+      setResumeClubCommitteeId(result.resumeClubCommitteeId);
+    }
+
+    return {
+      resumeClubCommitteeId: savedId!,
+      clubName: form.clubName,
+      role: form.role,
+      fromDate: toISO(form.fromDate),
+      toDate: toISO(form.toDate),
+      description: form.description,
+    };
+  };
+
+  const handleSubmit = async () => {
     setLoading(true);
     try {
-      const payload = {
-        studentId,
-        clubName: form.clubName,
-        role: form.role,
-        fromDate: toISO(form.fromDate),
-        toDate: toISO(form.toDate),
-        description: form.description,
-      };
-
-      let savedId = resumeClubCommitteeId;
-      if (resumeClubCommitteeId) {
-        await updateClub(resumeClubCommitteeId, payload);
-      } else {
-        const result = await insertClub(payload);
-        savedId = result.resumeClubCommitteeId;
-        setResumeClubCommitteeId(result.resumeClubCommitteeId);
-      }
-
+      const record = await saveData();
+      if (!record) return;
       toast.success(`Club/Committee ${index + 1} saved successfully`);
-      onSubmit({
-        resumeClubCommitteeId: savedId!,
-        clubName: form.clubName,
-        role: form.role,
-        fromDate: toISO(form.fromDate),
-        toDate: toISO(form.toDate),
-        description: form.description,
-      });
+      onSubmit(record);
     } catch {
       toast.error("Something went wrong!");
     } finally {
@@ -121,27 +133,52 @@ export default function ClubsForm({ index, onSubmit, onRemove, studentId, existi
     }
   };
 
+  const handleNext = async () => {
+    setNextLoading(true);
+    try {
+      // ❌ REMOVE validation call
+      // const success = await saveData();
+      // if (!success) return;
+
+      // ✅ Direct navigation without validation
+      router.push("/profile?resume=competitive-exams&Step=9");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Something went wrong!");
+    } finally {
+      setNextLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onRemove();
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   return (
     <div>
+      <ConfirmDeleteModal
+        open={showDeleteModal}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+        isDeleting={isDeleting}
+        name="club & committee"
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">Club & Committee {index + 1}</h3>
-        {resumeClubCommitteeId ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
-          >
-            <Trash size={18} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="w-5 h-5 flex cursor-pointer items-center justify-center rounded-full bg-red-500 hover:bg-red-600"
-          >
-            <span className="block w-3 h-[3px] bg-white rounded-full" />
-          </button>
-        )}
+        {/* Unified trash icon for both saved and unsaved — confirm modal handles both */}
+        <button
+          type="button"
+          onClick={() => setShowDeleteModal(true)}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors cursor-pointer"
+        >
+          <Trash size={18} />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -155,14 +192,25 @@ export default function ClubsForm({ index, onSubmit, onRemove, studentId, existi
           </div>
         </div>
         <TextArea label="Description" name="description" value={form.description} onChange={handleChange} placeholder="Organized workshop on AI and Cloud Computing for 200+ Students" />
-        <div className="md:col-span-2 flex justify-end">
+
+        <div className="md:col-span-2 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading}
-            className={`px-6 py-2 rounded-md text-sm font-medium text-white ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+            disabled={loading || nextLoading}
+            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${loading || nextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+              }`}
           >
-            {loading ? "Saving..." : "Submit"}
+            {loading ? "Saving..." : "Save"}
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={loading || nextLoading}
+            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${loading || nextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+              }`}
+          >
+            {nextLoading ? "Saving..." : "Next"}
           </button>
         </div>
       </div>

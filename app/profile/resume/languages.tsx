@@ -60,7 +60,7 @@ export default function ResumeLanguages() {
     setLoadingSuggestions(true);
     suggestLanguagesAction(collegeEducationType, collegeBranchCode)
       .then((langs) => setSuggestions(langs))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingSuggestions(false));
   }, [collegeEducationType, collegeBranchCode]);
 
@@ -163,12 +163,6 @@ export default function ResumeLanguages() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold text-[#282828] lowercase">languages</h3>
-          <button
-            onClick={() => router.push("/profile?resume=internships&Step=5")}
-            className="bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm font-medium cursor-pointer"
-          >
-            Next
-          </button>
         </div>
 
         <div className="max-w-xl mx-auto flex flex-col gap-4">
@@ -195,7 +189,7 @@ export default function ResumeLanguages() {
                 className="relative flex-1 max-w-xs"
                 ref={dropdownRef}
               >
-              <div className="flex items-center gap-1.5 border border-[#C0C0C0] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
+                <div className="flex items-center gap-1.5 border border-[#C0C0C0] rounded-full px-3 py-1 bg-white focus-within:border-[#43C17A] transition-colors">
                   <MagnifyingGlass size={12} className="text-gray-400 shrink-0" />
                   <input
                     type="text"
@@ -300,17 +294,38 @@ export default function ResumeLanguages() {
               </div>
             </div>
           )}
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end gap-3 mt-4">
             <button
               onClick={saveLanguages}
               disabled={isSubmitting}
               className={`px-8 py-2 rounded-md text-sm font-semibold text-white cursor-pointer 
-                ${isSubmitting ? "bg-gray-400" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
+      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
             >
               {isSubmitting ? "Saving..." : "Save"}
             </button>
-          </div>
 
+            <button
+              onClick={async () => {
+                if (isSubmitting || !studentId) return;
+                if (selected.length === 0) { toast.error("Select at least one language"); return; }
+                try {
+                  setIsSubmitting(true);
+                  await upsertResumeLanguages(studentId, selected);
+                  toast.success("Languages saved successfully!");
+                  router.push("/profile?resume=internships&Step=5");
+                } catch {
+                  toast.error("Something went wrong!");
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              disabled={isSubmitting}
+              className={`px-5 py-2 rounded-md text-sm font-medium text-white cursor-pointer
+      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}`}
+            >
+              {isSubmitting ? "Saving..." : "Next"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

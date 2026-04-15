@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CheckCircleIcon } from "@phosphor-icons/react";
+import { ArrowLeft, CheckCircleIcon, FilePdf } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
@@ -233,34 +233,43 @@ function UnitCard({
         </div>
 
         <div className="relative flex-1 min-h-0 mt-2 mb-2">
-          <ul className="absolute inset-0 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-6 custom-scrollbar">
-            {localTopics.map((topic, idx) => (
-              <li key={topic.id} className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setLocalTopics((prev) =>
-                      prev.map((t) =>
-                        t.id === topic.id
-                          ? { ...t, isCompleted: !t.isCompleted }
-                          : t,
-                      ),
-                    );
+          <ul className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1">
+            {localTopics.map((topic) => (
+              <li
+                key={topic.id}
+                className="flex items-center justify-between gap-2"
+              >
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setLocalTopics(prev =>
+                        prev.map(t =>
+                          t.id === topic.id ? { ...t, isCompleted: !t.isCompleted } : t
+                        )
+                      );
+                      setIsDirty(true);
+                      setHasChanges(true);
+                    }}
+                  >
+                    <CheckCircleIcon
+                      size={16}
+                      weight="fill"
+                      className={topic.isCompleted ? colors.accent : "text-gray-300"}
+                    />
+                  </button>
+                  <span className={topic.isCompleted ? "" : "text-gray-400"}>
+                    {topic.title}
+                  </span>
+                </div>
 
-                    setIsDirty(true);
-                    setHasChanges(true);
-                  }}
-                >
-                  <CheckCircleIcon
-                    size={16}
-                    weight="fill"
-                    className={
-                      topic.isCompleted ? colors.accent : "text-gray-300"
-                    }
+                {/* PDF Icon */}
+                <div className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0`}>
+                  <FilePdf
+                    size={14}
+                    className={colors.accent}
+                    weight="duotone"
                   />
-                </button>
-                <span className={topic.isCompleted ? "" : "text-gray-400"}>
-                  {topic.title}
-                </span>
+                </div>
               </li>
             ))}
           </ul>
@@ -273,11 +282,10 @@ function UnitCard({
             onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
             disabled={!isDirty || isSavingThisUnit}
             className={`border px-4 py-1.5 rounded-lg cursor-pointer text-sm transition
-    ${
-      !isDirty || isSavingThisUnit
-        ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
-        : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
-    }`}
+    ${!isDirty || isSavingThisUnit
+                ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
+                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
+              }`}
           >
             {isSavingThisUnit ? "Saving..." : "Save Progress"}
           </button>
@@ -521,7 +529,7 @@ export function SubjectDetailsCard({
           </div>
         ) : units.length > 0 ? (
           units.map((unit) => (
-            <div key={`unit-${unit.id}`} className="min-w-[300px] shrink-0">
+            <div key={`unit-${unit.id}`} className="min-w-75 shrink-0">
               <UnitCard
                 unit={unit}
                 onMarkComplete={handleMarkComplete}

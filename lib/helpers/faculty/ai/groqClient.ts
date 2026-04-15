@@ -1,7 +1,11 @@
 import Groq from "groq-sdk";
+
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY!,
 });
+
+const INVALID_UNIT_MESSAGE =
+  "The unit name does not match the selected subject.";
 
 const GROQ_MODELS = [
   "llama-3.3-70b-versatile",
@@ -16,65 +20,111 @@ export async function generateWithGroqFallback(prompt: string): Promise<string> 
 
   for (const model of GROQ_MODELS) {
     try {
-
       const response = await groq.chat.completions.create({
         model,
         max_tokens: 600,
-        temperature: 0.6,
+        temperature: 0,
         messages: [
           {
             role: "system",
-            content: `
-You are a senior university curriculum architect specializing in detailed academic unit design.
+            content: `You are a university syllabus topic generator for Indian engineering colleges.
 
-TASK:
-Generate syllabus-ready topic suggestions for a unit.
+YOUR JOB:
+Given Education Type, Branch, Subject Name, and Unit Name:
 
-VALIDATION RULES:
-- First check whether the Unit Name logically matches the given Education Type, Branch, and Subject Name.
-- If the Unit Name does not match, do NOT generate topics.
-- In that case, return ONLY this exact JSON array:
-["The unit name does not match the selected subject."]
-- Do not reinterpret the unit.
-- Do not adapt an unrelated unit into the subject.
+1. Check whether the Unit Name is academically relevant to the Subject Name.
+2. If the Unit Name does NOT match the Subject, return ONLY this exact JSON array:
+["${INVALID_UNIT_MESSAGE}"]
+
+3. If the Unit Name matches the Subject, return ONLY a raw JSON array of exactly 8 topic strings.
+
+STRICT OUTPUT RULES:
+- Return ONLY valid raw JSON
+- No markdown
+- No backticks
+- No explanation
+- No notes
+- No headings
+- No extra text
 
 TOPIC RULES:
-- If the unit is valid, generate EXACTLY 8 distinct topics.
-- Each topic must be 6–10 academic words.
-- Use precise academic terminology.
-- Avoid generic words like "Overview" or "Introduction".
-- Return ONLY a valid JSON array.
-- No numbering.
-- No bullet points.
-- No explanations.
-`
+- Exactly 8 topics
+- Each topic must be 6–10 words
+- Precise academic terminology
+- Strongly relevant to BOTH subject and unit
+- No vague labels like "Introduction" or "Overview"
+
+EXAMPLE VALID OUTPUT:
+["Asymptotic analysis of recursive algorithms", "Recurrence relations in divide and conquer", "Best case and worst case complexity bounds", "Amortized analysis for dynamic data structures", "Complexity classes for sorting algorithms", "Time space tradeoffs in algorithm design", "Mathematical proofs for asymptotic notation", "Growth rate comparison of common functions"]
+
+EXAMPLE INVALID OUTPUT:
+["${INVALID_UNIT_MESSAGE}"]`,
           },
           {
             role: "user",
-
-            content: `${prompt}
-
-IMPORTANT:
-- Validate Education Type, Branch, Subject Name, and Unit Name first.
-- If invalid, return ONLY:
-["The unit name does not match the selected subject."]
-- If valid, return EXACTLY 8 topics in a JSON array.`
+            content: prompt,
           },
         ],
       });
 
-      const text = response.choices[0]?.message?.content;
-      if (text) return text;
+      const raw = response.choices[0]?.message?.content?.trim();
 
-    } catch (error: any) {
-      lastError = error;
-      if (error?.status === 429) {
+      if (!raw) {
+        console.warn(`⚠️ [groqClient] Empty response from ${model}, trying next`);
         continue;
       }
+
+      console.log(`🟢 [groqClient] Raw from ${model}:`, raw);
+
+      try {
+        const cleaned = raw.replace(/```json|```/gi, "").trim();
+        const parsed = JSON.parse(cleaned);
+
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          console.warn(`⚠️ [groqClient] Not an array from ${model}, trying next`);
+          continue;
+        }
+
+        // allow exact invalid message
+        if (
+          parsed.length === 1 &&
+          typeof parsed[0] === "string" &&
+          parsed[0].trim() === INVALID_UNIT_MESSAGE
+        ) {
+          console.log(`✅ [groqClient] Subject/unit mismatch from ${model}`);
+          return JSON.stringify([INVALID_UNIT_MESSAGE]);
+        }
+
+        const valid = parsed.filter(
+          (t: unknown) =>
+            typeof t === "string" &&
+            t.trim().length > 5 &&
+            t.trim() !== INVALID_UNIT_MESSAGE
+        );
+
+        if (valid.length === 0) {
+          console.warn(`⚠️ [groqClient] No valid topics from ${model}, trying next`);
+          continue;
+        }
+
+        console.log(`✅ [groqClient] Returning ${valid.length} topics from ${model}`);
+        return JSON.stringify(valid.slice(0, 8));
+      } catch (parseErr) {
+        console.warn(`⚠️ [groqClient] JSON parse failed for ${model}:`, parseErr);
+        continue;
+      }
+    } catch (error: any) {
+      lastError = error;
+
+      if (error?.status === 429 || error?.status === 503) {
+        console.warn(`⚠️ [groqClient] Rate limited on ${model}, trying next`);
+        continue;
+      }
+
       throw error;
     }
   }
 
-  console.error("❌ All Groq models exhausted");
+  console.error("❌ [groqClient] All models exhausted");
   throw lastError ?? new Error("All Groq models exhausted");
 }

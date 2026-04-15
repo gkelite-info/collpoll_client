@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
-import { Lock } from "@phosphor-icons/react";
 import { fetchResumePersonalDetails, saveResumePersonalDetails } from "@/lib/helpers/student/Resume/Resumepersonaldetailsapi";
 import { useUser } from "@/app/utils/context/UserContext";
 
@@ -102,7 +101,7 @@ export default function ResumePersonalDetails() {
     if (!ctxStudentId || !ctxCollegeId) return;
     setIsPageLoading(true);
     try {
-      // 1. set ids and locked fields from context
+      // 1. set ids and fields from context
       setStudentId(ctxStudentId);
       setCollegeId(ctxCollegeId);
       setFullName(ctxFullName || "");
@@ -126,7 +125,6 @@ export default function ResumePersonalDetails() {
         setLinkedIn(pdRes.data.linkedInId || "");
         setCurrentCity(pdRes.data.currentCity || "");
         setWorkStatus(pdRes.data.workStatus ?? "fresher");
-        // override locked fields with latest saved values if present
         setFullName(pdRes.data.fullName || ctxFullName || "");
         setMobile(pdRes.data.mobile || ctxMobile || "");
         setEmail(pdRes.data.email || ctxEmail || "");
@@ -151,21 +149,53 @@ export default function ResumePersonalDetails() {
   // ── validators ──────────────────────────────────────────────────────────────
   const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+){0,3}$/;
   const linkedInRegex = /^https:\/\/(www\.)?linkedin\.com\/.+$/;
+  const mobileRegex = /^\+?\d{10,15}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  // ── submit ──────────────────────────────────────────────────────────────────
-  const handleSubmit = async () => {
-    if (!studentId || !collegeId) return;
+  // ── save helper ─────────────────────────────────────────────────────────────
+  const savePersonalDetails = async () => {
+    if (!studentId || !collegeId) return { success: false };
 
     const trimmedName = fullName.trim();
-    if (!trimmedName) return toast.error("Full Name is required!");
-    if (!nameRegex.test(trimmedName))
-      return toast.error("Name should contain only letters and spaces");
+    const trimmedMobile = mobile.trim();
+    const trimmedEmail = email.trim();
 
-    if (!mobile) return toast.error("Mobile number is required!");
-    if (!email) return toast.error("Email is required!");
+    if (!trimmedName) {
+      toast.error("Full Name is required!");
+      return { success: false };
+    }
 
-    if (linkedIn && !linkedInRegex.test(linkedIn))
-      return toast.error("Enter a valid LinkedIn URL (must start with https://linkedin.com/)");
+    if (!nameRegex.test(trimmedName)) {
+      toast.error("Name should contain only letters and spaces");
+      return { success: false };
+    }
+
+    if (!trimmedMobile) {
+      toast.error("Mobile number is required!");
+      return { success: false };
+    }
+
+    if (!mobileRegex.test(trimmedMobile)) {
+      toast.error("Enter a valid mobile number");
+      return { success: false };
+    }
+
+    if (!trimmedEmail) {
+      toast.error("Email is required!");
+      return { success: false };
+    }
+
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error("Enter a valid email address");
+      return { success: false };
+    }
+
+    if (linkedIn && !linkedInRegex.test(linkedIn)) {
+      return {
+        success: false,
+        message: "Enter a valid LinkedIn URL (must start with https://linkedin.com/)",
+      };
+    }
 
     setIsLoading(true);
 
@@ -174,8 +204,8 @@ export default function ResumePersonalDetails() {
       studentId,
       collegeId,
       fullName: trimmedName,
-      mobile,
-      email,
+      mobile: trimmedMobile,
+      email: trimmedEmail,
       linkedInId: linkedIn || null,
       currentCity,
       workStatus,
@@ -184,11 +214,12 @@ export default function ResumePersonalDetails() {
     setIsLoading(false);
 
     if (!res.success) {
-      return toast.error(
+      toast.error(
         typeof res.error === "string"
           ? res.error
           : "Failed to save resume personal details"
       );
+      return { success: false };
     }
 
     if (res.resumePersonalDetailsId) {
@@ -196,6 +227,19 @@ export default function ResumePersonalDetails() {
     }
 
     toast.success("Personal details saved successfully");
+    return { success: true };
+  };
+
+  // ── submit ──────────────────────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    await savePersonalDetails();
+  };
+
+  const handleNext = async () => {
+    const res = await savePersonalDetails();
+    if (res.success) {
+      router.push("/profile?resume=education&Step=2");
+    }
   };
 
   // ── render ───────────────────────────────────────────────────────────────────
@@ -209,12 +253,6 @@ export default function ResumePersonalDetails() {
           <h2 className="text-lg font-semibold text-[#000000]">
             Personal Details
           </h2>
-          <button
-            onClick={() => router.push("/profile?resume=education&Step=2")}
-            className="bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium"
-          >
-            Next
-          </button>
         </div>
 
         {/* fields grid */}
@@ -234,42 +272,32 @@ export default function ResumePersonalDetails() {
             />
           </div>
 
-          {/* Mobile — locked */}
+          {/* Mobile — editable */}
           <div>
             <label className="block text-sm font-medium text-[#282828] mb-1">
               Mobile Number<span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={mobile}
-                disabled
-                className={`${inputBase} ${disabled}`}
-              />
-              <Lock
-                className="absolute cursor-not-allowed right-2 top-3 text-gray-400"
-                size={16}
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Enter Mobile Number"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              className={`${inputBase} ${enabled}`}
+            />
           </div>
 
-          {/* Email — locked */}
+          {/* Email — editable */}
           <div>
             <label className="block text-sm font-medium text-[#282828] mb-1">
               Email ID<span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <input
-                type="email"
-                value={email}
-                disabled
-                className={`${inputBase} ${disabled}`}
-              />
-              <Lock
-                className="absolute cursor-not-allowed right-2 top-3 text-gray-400"
-                size={16}
-              />
-            </div>
+            <input
+              type="email"
+              placeholder="Enter Email ID"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={`${inputBase} ${enabled}`}
+            />
           </div>
 
           {/* College Code — locked */}
@@ -284,10 +312,6 @@ export default function ResumePersonalDetails() {
                 readOnly
                 disabled
                 className={`${inputBase} ${disabled}`}
-              />
-              <Lock
-                className="absolute cursor-not-allowed right-2 top-3 text-gray-400"
-                size={16}
               />
             </div>
           </div> */}
@@ -332,10 +356,6 @@ export default function ResumePersonalDetails() {
                 disabled
                 className={`${inputBase} ${disabled}`}
               />
-              <Lock
-                className="absolute cursor-not-allowed right-2 top-3 text-gray-400"
-                size={16}
-              />
             </div>
           </div> */}
         </div>
@@ -348,18 +368,16 @@ export default function ResumePersonalDetails() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
               onClick={() => setWorkStatus("experienced")}
-              className={`border rounded-md p-4 cursor-pointer transition-all ${
-                workStatus === "experienced"
+              className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "experienced"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
-              }`}
+                }`}
             >
               <p
-                className={`font-medium ${
-                  workStatus === "experienced"
+                className={`font-medium ${workStatus === "experienced"
                     ? "text-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
               >
                 I'm experienced
               </p>
@@ -370,18 +388,16 @@ export default function ResumePersonalDetails() {
 
             <div
               onClick={() => setWorkStatus("fresher")}
-              className={`border rounded-md p-4 cursor-pointer transition-all ${
-                workStatus === "fresher"
+              className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "fresher"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
-              }`}
+                }`}
             >
               <p
-                className={`font-medium ${
-                  workStatus === "fresher"
+                className={`font-medium ${workStatus === "fresher"
                     ? "text-[#43C17A]"
                     : "text-[#282828]"
-                }`}
+                  }`}
               >
                 I'm a fresher
               </p>
@@ -392,17 +408,27 @@ export default function ResumePersonalDetails() {
           </div>
         </div>
 
-        {/* Submit */}
-        <div className="mt-6 flex justify-end">
+        {/* Submit + Next */}
+        <div className="mt-6 flex justify-end gap-3">
+
           <button
-            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${
-              isLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             onClick={handleSubmit}
             disabled={isLoading}
           >
-            {isLoading ? "Submitting..." : "Submit"}
+            {isLoading ? "Saving..." : "Save"}
           </button>
+          
+          <button
+            onClick={handleNext}
+            disabled={isLoading}
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+          >
+            {isLoading ? "Next..." : "Next"}
+          </button>
+
         </div>
       </div>
     </div>

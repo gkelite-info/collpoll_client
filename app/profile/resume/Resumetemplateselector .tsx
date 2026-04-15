@@ -11,6 +11,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAllResumeData, ResumeData } from "@/lib/helpers/student/Resume/Resumedatafetcher";
 import { generateResumePdf } from "@/lib/helpers/student/Resume/resumeDownloadAPI";
 import { calculateATSScore, ATSResult } from "@/lib/helpers/student/Resume/atsScoreCalculator";
+import { useRouter } from "next/navigation";
 
 type Props = { onBack?: () => void };
 
@@ -43,6 +44,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
   const [showATSModal, setShowATSModal] = useState(false);
   const [usedAI, setUsedAI] = useState(false);
   const [isDoneClosing, setIsDoneClosing] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const stored = sessionStorage.getItem("ats_before_score");
@@ -795,10 +797,21 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                   <p className="text-white font-black text-sm text-center mb-1">
                     Your score can go even higher!
                   </p>
+
+                  {/* ✅ UPDATED: Only Click Here (Highlighted & Visible) */}
                   <p className="text-purple-200 text-[11px] text-center mb-4 leading-relaxed">
                     Students who use AI see an average of{" "}
                     <span className="text-yellow-300 font-bold">+15 pts</span> boost.
                   </p>
+
+                  <div className="flex justify-center mb-4">
+                    <span
+                      onClick={() => router.push("/profile?resume=profilesummaryai")}
+                      className="text-white font-bold text-sm cursor-pointer hover:text-yellow-300 transition-all"
+                    >
+                      ✨ Click here to improve with AI
+                    </span>
+                  </div>
 
                   <div className="flex items-center justify-center gap-4 mb-4">
                     <div className="flex flex-col items-center gap-1">

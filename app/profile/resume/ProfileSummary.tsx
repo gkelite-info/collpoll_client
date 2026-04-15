@@ -97,12 +97,6 @@ export default function ProfileSummary() {
           <h2 className="text-xl font-medium text-[#282828]">
             Profile Summary
           </h2>
-          <button
-            onClick={handleNext}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium"
-          >
-            Next
-          </button>
         </div>
 
         <div>
@@ -110,16 +104,15 @@ export default function ProfileSummary() {
             Write Your Professional Summary
           </h3>
 
-          {/* AI BUTTON */}
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-end items-center gap-3 mb-2">
+            <p className="text-xs text-amber-500">✦ Existing content will be replaced</p>
             <button
               onClick={handleGenerateAI}
               disabled={isGenerating}
-              className={`px-4 py-1.5 text-sm rounded-md font-medium transition-all ${
-                isGenerating
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
-              }`}
+              className={`px-4 py-1.5 text-sm rounded-md font-medium transition-all ${isGenerating
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-500 text-white cursor-pointer hover:bg-blue-600"
+                }`}
             >
               {isGenerating ? "Generating..." : "Generate with AI"}
             </button>
@@ -140,17 +133,26 @@ export default function ProfileSummary() {
             </span>
           </div>
 
-          <div className="flex justify-end mt-3">
+          {/* Bottom buttons */}
+          <div className="flex justify-end gap-3 mt-3">
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm font-medium transition-all ${
-                isSubmitting
-                  ? "opacity-50 cursor-not-allowed"
-                  : "cursor-pointer hover:bg-[#3bad6d]"
-              }`}
+              className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm font-medium transition-all ${isSubmitting ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-[#3bad6d]"
+                }`}
             >
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={async () => {
+                await handleSubmit();
+                router.push("/profile?resume=accomplishments&Step=8");
+              }}
+              disabled={isSubmitting}
+              className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm font-medium transition-all ${isSubmitting ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-[#3bad6d]"
+                }`}
+            >
+              {isSubmitting ? "Saving..." : "Next"}
             </button>
           </div>
         </div>
