@@ -1,5 +1,7 @@
 import { Briefcase, Buildings, GraduationCap } from "@phosphor-icons/react";
-import React from "react";
+import { useFacultyExtras } from "./useFacultyExtras";
+import { FacultyCardShimmer } from "./FacultyCardShimmer";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface FacultyData {
   raw?: {
@@ -27,6 +29,7 @@ export interface FacultyData {
   experience: string;
   qualification: string;
   avatar: string;
+  collegeId?: number;
 }
 
 interface FacultyCardProps {
@@ -38,16 +41,31 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
 
   const raw = (data as any)?.raw ?? (data as any) ?? {};
 
+  const userId = raw?.userId as number | undefined;
+  const collegeId = raw.collegeId as number | undefined;
+  const { identifierId, avatarUrl, loading } = useFacultyExtras(
+    userId,
+    collegeId,
+  );
+
+  const formattedDateOfJoining = raw.dateOfJoining
+    ? new Date(raw.dateOfJoining).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+    : "N/A";
+
+  if (loading) {
+    return <FacultyCardShimmer />;
+  }
+
   return (
     <div className="w-full bg-white rounded-[20px] shadow-sm p-5 font-sans border border-gray-100">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <div className="relative w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0">
-            <img
-              src={data.avatar}
-              alt={data.name}
-              className="w-full h-full object-cover"
-            />
+            <Avatar src={avatarUrl} alt=""/>
           </div>
 
           <div className="flex items-center gap-3">
@@ -61,7 +79,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
         </div>
 
         <span className="rounded-full bg-[#E1F5EA] px-3 py-1 text-sm font-medium text-[#43C17A]">
-          ID - {raw.facultyId ?? "N/A"}
+          ID - {identifierId ?? "N/A"}
         </span>
       </div>
 
@@ -84,9 +102,9 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-[#666666] mb-0.5">Branch</p>
+          <p className="text-sm font-medium text-[#666666] mb-0.5">Gender</p>
           <p className="text-base font-medium text-[#333333] leading-tight">
-            {data.collegeBranchCode}
+            {raw.gender ?? 'N/A'}
           </p>
         </div>
       </div>
@@ -98,7 +116,7 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
           </div>
           <div>
             <p className="text-base font-bold text-[#1a1a1a]">
-              {raw.experienceYears ?? "N/A"} years
+              {raw.experienceYears ? `${raw.experienceYears} years` : 'N/A'}
             </p>
             <p className="text-xs font-medium text-[#444444]">Experience</p>
           </div>
@@ -110,9 +128,9 @@ const FacultyCard: React.FC<FacultyCardProps> = ({ data, collegeEdu }) => {
           </div>
           <div>
             <p className="text-base font-bold text-[#1a1a1a]">
-              {raw.qualification ?? "N/A"}
+              {formattedDateOfJoining}
             </p>
-            <p className="text-xs font-medium text-[#444444]">Qualification</p>
+            <p className="text-xs font-medium text-[#444444]">Date of joining</p>
           </div>
         </div>
 

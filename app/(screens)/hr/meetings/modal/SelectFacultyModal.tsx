@@ -20,7 +20,6 @@ const UserShimmer = () => (
   </div>
 );
 
-// 🟢 Helper to extract initials from name
 const getInitials = (name: string) => {
   if (!name) return "";
   const parts = name.trim().split(" ");

@@ -1,5 +1,8 @@
 "use client";
-import { fetchModalInitialData, persistFaculty } from "@/lib/helpers/admin/upsertFaculty";
+import {
+  fetchModalInitialData,
+  persistFaculty,
+} from "@/lib/helpers/admin/upsertFaculty";
 import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
 import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
 import { supabase } from "@/lib/supabaseClient";
@@ -7,11 +10,18 @@ import { CaretDown, Eye, EyeSlash, Lock, X } from "@phosphor-icons/react";
 import React, { useEffect, useMemo, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { CustomMultiSelect } from "./userModalComponents";
-import { createStudent } from "@/lib/helpers/admin/registrations/student/studentRegistration";
+import {
+  createStudent,
+  createStudentFeeObligation,
+} from "@/lib/helpers/admin/registrations/student/studentRegistration";
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
 import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-import { upsertAdminEntry, upsertCollegeHR, upsertUser } from "@/lib/helpers/upsertUser";
+import {
+  upsertAdminEntry,
+  upsertCollegeHR,
+  upsertUser,
+} from "@/lib/helpers/upsertUser";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
@@ -48,11 +58,7 @@ const validateIdentifier = (value: string) => {
   if (!value?.trim()) {
     return "is required.";
   }
-  if (
-    value.length < 6 ||
-    value.length > 15 ||
-    !IDENTIFIER_REGEX.test(value)
-  ) {
+  if (value.length < 6 || value.length > 15 || !IDENTIFIER_REGEX.test(value)) {
     return "Must be 6–15 characters and include at least one number. Only letters, numbers and one hyphen (-) allowed.";
   }
 
@@ -250,9 +256,9 @@ const AddUserModal: React.FC<{
     () =>
       selectedEducation
         ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId === selectedEducation.collegeEducationId,
-        )
+            (b) =>
+              b.collegeEducationId === selectedEducation.collegeEducationId,
+          )
         : [],
     [dbData.branches, selectedEducation],
   );
@@ -286,10 +292,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId ===
-            studentSelectedEducation.collegeEducationId,
-        )
+            (b) =>
+              b.collegeEducationId ===
+              studentSelectedEducation.collegeEducationId,
+          )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -306,8 +312,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-        )
+            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+          )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -324,10 +330,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -336,10 +342,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -358,8 +364,7 @@ const AddUserModal: React.FC<{
     } else if (name === "mobileCode") {
       if (!/^\+?[0-9]*$/.test(value)) return;
       formattedValue = value;
-    }
-    else if (name === "mobileNumber") {
+    } else if (name === "mobileNumber") {
       formattedValue = value.replace(/\D/g, "");
       if (basicData.mobileCode === "+91") {
         if (
@@ -370,9 +375,7 @@ const AddUserModal: React.FC<{
         }
       }
       if (formattedValue.length > 10) return;
-    }
-
-    else if (name === "identifierValue") {
+    } else if (name === "identifierValue") {
       const sanitized = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
       const hyphenCount = (sanitized.match(/-/g) || []).length;
       if (hyphenCount > 1) return;
@@ -424,6 +427,315 @@ const AddUserModal: React.FC<{
   const isFinance = basicData.role === "Finance";
   const isHR = basicData.role === "CollegeHr";
 
+  // const handleSave = async () => {
+  //   if (!basicData.fullName) return toast.error("Full Name is required.");
+  //   if (!basicData.email) return toast.error("Email is required.");
+  //   if (!basicData.mobileCode) {
+  //     return toast.error("Country code is required.");
+  //   }
+  //   if (!/^\+[0-9]+$/.test(basicData.mobileCode)) {
+  //     return toast.error("Invalid country code format.");
+  //   }
+  //   if (!basicData.mobileNumber) {
+  //     return toast.error("Mobile number is required.");
+  //   }
+  //   if (!/^[0-9]{10}$/.test(basicData.mobileNumber)) {
+  //     return toast.error("Mobile number must be exactly 10 digits.");
+  //   }
+  //   if (basicData.mobileCode === "+91") {
+  //     if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
+  //       return toast.error(
+  //         "Indian mobile number must start with 6, 7, 8, or 9.",
+  //       );
+  //     }
+  //   }
+
+  //   if (!basicData.role) return toast.error("Role is required.");
+
+  //   if (showRollNoField || showEmployeeIdField) {
+  //     const error = validateIdentifier(basicData.identifierValue);
+  //     if (error) {
+  //       const label = showRollNoField ? "Roll no" : "Employee Id";
+  //       return toast.error(`${label} ${error}`);
+  //     }
+  //   }
+
+  //   if (!basicData.gender) return toast.error("Please select a gender.");
+
+  //   if (
+  //     isFaculty &&
+  //     (!collegeEducationId ||
+  //       !selectedBranchId ||
+  //       !selectedYearId ||
+  //       !selectedSubjectId ||
+  //       selectedSectionIds.length === 0)
+  //   )
+  //     return toast.error("Complete all academic fields for Faculty.");
+
+  //   if (isStudent) {
+  //     if (
+  //       !collegeEducationId ||
+  //       !selectedDepts.length ||
+  //       !selectedYears.length ||
+  //       (!["Inter"].includes(collegeEducationType!) &&
+  //         !selectedSemester.length) ||
+  //       !selectedEntryType.length ||
+  //       !selectedSections.length
+  //     ) {
+  //       return toast.error("Complete all academic fields for Student.");
+  //     }
+  //   }
+
+  //   if (isParent && !basicData.studentId)
+  //     return toast.error("Student ID required.");
+
+  //   if (isFinance && !collegeEducationId)
+  //     return toast.error("Select Education Type for Finance.");
+
+  //   if (!user) {
+  //     if (!basicData.password) {
+  //       return toast.error("Password is required.");
+  //     }
+  //     const passwordError = validatePassword(basicData.password);
+  //     if (passwordError) {
+  //       return toast.error(passwordError);
+  //     }
+  //     if (!basicData.confirmPassword) {
+  //       return toast.error("Confirm Password is required.");
+  //     }
+  //     if (basicData.password !== basicData.confirmPassword) {
+  //       return toast.error("Password and Confirm Password do not match.");
+  //     }
+  //   }
+
+  //   const normalizedDateOfJoining = basicData.dateOfJoining
+  //     ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
+  //     : null;
+
+  //   const normalizedExperience =
+  //     basicData.professionalExperienceYears !== undefined &&
+  //     basicData.professionalExperienceYears !== null
+  //       ? Number(basicData.professionalExperienceYears)
+  //       : null;
+
+  //   setLoading(true);
+  //   let createdUserId: number | null = null;
+
+  //   try {
+  //     const timestamp = new Date().toISOString();
+
+  //     let targetUserId: number | null = null;
+
+  //     if (isAdmin && !user) {
+  //       const { data: authData, error: authError } = await supabase.auth.signUp(
+  //         {
+  //           email: basicData.email,
+  //           password: basicData.password,
+  //         },
+  //       );
+
+  //       if (authError || !authData.user) {
+  //         throw new Error(authError?.message || "Auth user creation failed");
+  //       }
+
+  //       const authId = authData.user.id;
+
+  //       const userRes = await upsertUser({
+  //         auth_id: authId,
+  //         fullName: basicData.fullName,
+  //         email: basicData.email,
+  //         mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
+  //         role: "Admin",
+  //         collegeId: basicData.collegeIntId,
+  //         collegePublicId: basicData.collegeId,
+  //         gender: basicData.gender,
+  //         dateOfJoining: normalizedDateOfJoining,
+  //         professionalExperienceYears: normalizedExperience,
+  //       });
+
+  //       if (!userRes.success || !userRes.data) {
+  //         throw new Error(userRes.error || "User creation failed");
+  //       }
+
+  //       targetUserId = userRes.data.userId;
+
+  //       const adminRes = await upsertAdminEntry({
+  //         userId: targetUserId!,
+  //         fullName: basicData.fullName,
+  //         email: basicData.email,
+  //         collegeEducationId: collegeEducationId,
+  //         mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
+  //         gender: basicData.gender,
+  //         collegeId: basicData.collegeId,
+  //         collegePublicId: basicData.collegeId,
+  //         collegeCode: basicData.collegeCode,
+  //       });
+
+  //       if (!adminRes.success) {
+  //         throw new Error(adminRes.error || "Admin creation failed");
+  //       }
+  //     } else {
+  //       targetUserId = await persistUser(
+  //         !user,
+  //         {
+  //           ...basicData,
+  //           collegePublicId: basicData.collegeId,
+  //           dateOfJoining: normalizedDateOfJoining,
+  //           professionalExperienceYears: normalizedExperience,
+  //         },
+  //         user ? user.userId : null,
+  //         timestamp,
+  //       );
+  //     }
+
+  //     if (!user) createdUserId = targetUserId;
+
+  //     if (!targetUserId) throw new Error("User creation failed");
+
+  //     if (isFinance && !user) {
+  //       await createFinanceManager({
+  //         userId: targetUserId,
+  //         collegeId: basicData.collegeIntId,
+  //         collegeEducationId: collegeEducationId!,
+  //         createdBy: basicData.adminId,
+  //         isActive: true,
+  //         createdAt: timestamp,
+  //         updatedAt: timestamp,
+  //       });
+  //     }
+
+  //     if (isHR && targetUserId) {
+  //       await upsertCollegeHR({
+  //         userId: targetUserId,
+  //         collegeId: basicData.collegeIntId,
+  //         createdBy: basicData.adminId,
+  //         isActive: true,
+  //       });
+  //     }
+
+  //     if (isFaculty) {
+  //       await persistFaculty(
+  //         targetUserId,
+  //         { ...basicData, collegePublicId: basicData.collegeId },
+  //         {
+  //           educationId: collegeEducationId!,
+  //           branchId: selectedBranchId!,
+  //           yearId: selectedYearId!,
+  //           subjectId: selectedSubjectId!,
+  //           sectionIds: selectedSectionIds,
+  //         },
+  //         timestamp,
+  //         !!user,
+  //       );
+  //     }
+
+  //     if (!targetUserId) throw new Error("User creation failed");
+
+  //     let studentId: number | null = null;
+
+  //     if (isStudent) {
+  //       const eduId = studentSelectedEducation?.collegeEducationId;
+  //       const branchId = studentSelectedBranch?.collegeBranchId;
+  //       const yearId = studentSelectedYear?.collegeAcademicYearId;
+  //       const semesterId = studentAvailableSemesters.find(
+  //         (s) => s.collegeSemester.toString() === selectedSemester[0],
+  //       )?.collegeSemesterId;
+
+  //       const sectionId = studentAvailableSections.find(
+  //         (s) => s.collegeSections === selectedSections[0],
+  //       )?.collegeSectionsId;
+
+  //       if (
+  //         !eduId ||
+  //         !branchId ||
+  //         !yearId ||
+  //         (!["Inter"].includes(collegeEducationType!) && !semesterId) ||
+  //         !sectionId
+  //       ) {
+  //         throw new Error("Invalid academic selection data");
+  //       }
+
+  //       studentId = await createStudent(
+  //         {
+  //           userId: targetUserId,
+  //           collegeEducationId: eduId,
+  //           collegeBranchId: branchId,
+  //           collegeId: basicData.collegeIntId,
+  //           collegeSessionId: selectedSessionId,
+  //           createdBy: basicData.adminId,
+  //           entryType: selectedEntryType[0] as any,
+  //           status: "Active",
+  //         },
+  //         timestamp,
+  //       );
+
+  //       await createStudentAcademicHistory({
+  //         studentId: studentId,
+  //         collegeAcademicYearId: yearId,
+  //         collegeSemesterId: semesterId,
+  //         collegeSectionsId: sectionId,
+  //         promotedBy: basicData.adminId,
+  //         createdAt: timestamp,
+  //         updatedAt: timestamp,
+  //         isCurrent: true,
+  //       });
+  //     }
+
+  //     if (isParent && targetUserId) {
+  //       await upsertParentEntry({
+  //         userId: targetUserId,
+  //         studentId: parseInt(basicData.studentId),
+  //         collegeId: basicData.collegeIntId,
+  //         createdBy: basicData.adminId,
+  //       });
+  //     }
+
+  //     if (basicData.identifierValue) {
+  //       await upsertIdentifier({
+  //         userId: targetUserId,
+  //         studentId: isStudent ? studentId! : undefined,
+  //         collegeId: basicData.collegeIntId,
+  //         role: basicData.role,
+  //         identifierValue: basicData.identifierValue,
+  //       });
+  //     }
+
+  //     toast.success("User Created Successfully");
+  //     setIsSuccess(true);
+  //     setTimeout(() => {
+  //       resetForm();
+  //       onClose();
+  //       setLoading(false);
+  //       setIsSuccess(false);
+  //     }, 2000);
+  //     setSessionOptions([]);
+  //   } catch (e: any) {
+  //     console.error(e);
+
+  //     let message = "Something went wrong. Please try again.";
+
+  //     if (e?.message) {
+  //       const errMsg = e.message.toLowerCase();
+
+  //       if (errMsg.includes("email")) {
+  //         message = "This email is already registered.";
+  //       } else if (errMsg.includes("mobile")) {
+  //         message = "This mobile number is already in use.";
+  //       } else if (errMsg.includes("duplicate")) {
+  //         message = "User already exists with provided details.";
+  //       }
+  //     }
+
+  //     toast.error(message);
+
+  //     if (createdUserId && !user) {
+  //       await supabase.from("users").delete().eq("userId", createdUserId);
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
@@ -452,10 +764,7 @@ const AddUserModal: React.FC<{
     if (showRollNoField || showEmployeeIdField) {
       const error = validateIdentifier(basicData.identifierValue);
       if (error) {
-        const label =
-          showRollNoField
-            ? "Roll no"
-            : "Employee Id";
+        const label = showRollNoField ? "Roll no" : "Employee Id";
         return toast.error(`${label} ${error}`);
       }
     }
@@ -492,8 +801,6 @@ const AddUserModal: React.FC<{
     if (isFinance && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
 
-    // Note: HR does not require extra academic validation, so we simply proceed.
-
     if (!user) {
       if (!basicData.password) {
         return toast.error("Password is required.");
@@ -510,14 +817,13 @@ const AddUserModal: React.FC<{
       }
     }
 
-    const normalizedDateOfJoining =
-      basicData.dateOfJoining
-        ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
-        : null;
+    const normalizedDateOfJoining = basicData.dateOfJoining
+      ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
+      : null;
 
     const normalizedExperience =
       basicData.professionalExperienceYears !== undefined &&
-        basicData.professionalExperienceYears !== null
+      basicData.professionalExperienceYears !== null
         ? Number(basicData.professionalExperienceYears)
         : null;
 
@@ -581,7 +887,8 @@ const AddUserModal: React.FC<{
         targetUserId = await persistUser(
           !user,
           {
-            ...basicData, collegePublicId: basicData.collegeId,
+            ...basicData,
+            collegePublicId: basicData.collegeId,
             dateOfJoining: normalizedDateOfJoining,
             professionalExperienceYears: normalizedExperience,
           },
@@ -670,21 +977,23 @@ const AddUserModal: React.FC<{
           !branchId ||
           !yearId ||
           (!["Inter"].includes(collegeEducationType!) && !semesterId) ||
-          !sectionId
+          !sectionId ||
+          !selectedSessionId // 🟢 Make sure session is selected
         ) {
           throw new Error("Invalid academic selection data");
         }
 
-        studentId = await createStudent({
-          userId: targetUserId,
-          collegeEducationId: eduId,
-          collegeBranchId: branchId,
-          collegeId: basicData.collegeIntId,
-          collegeSessionId: selectedSessionId,
-          createdBy: basicData.adminId,
-          entryType: selectedEntryType[0] as any,
-          status: "Active",
-        },
+        studentId = await createStudent(
+          {
+            userId: targetUserId,
+            collegeEducationId: eduId,
+            collegeBranchId: branchId,
+            collegeId: basicData.collegeIntId,
+            collegeSessionId: selectedSessionId,
+            createdBy: basicData.adminId,
+            entryType: selectedEntryType[0] as any,
+            status: "Active",
+          },
           timestamp,
         );
 
@@ -698,6 +1007,18 @@ const AddUserModal: React.FC<{
           updatedAt: timestamp,
           isCurrent: true,
         });
+
+        await createStudentFeeObligation(
+          {
+            studentId: studentId,
+            collegeSessionId: selectedSessionId,
+            collegeAcademicYearId: yearId,
+            collegeEducationId: eduId,
+            collegeBranchId: branchId,
+            createdBy: basicData.adminId,
+          },
+          timestamp,
+        );
       }
 
       if (isParent && targetUserId) {
@@ -712,14 +1033,11 @@ const AddUserModal: React.FC<{
       if (basicData.identifierValue) {
         await upsertIdentifier({
           userId: targetUserId,
-          studentId: isStudent
-            ? studentId!
-            : undefined,
+          studentId: isStudent ? studentId! : undefined,
           collegeId: basicData.collegeIntId,
           role: basicData.role,
           identifierValue: basicData.identifierValue,
         });
-
       }
 
       toast.success("User Created Successfully");
@@ -757,7 +1075,6 @@ const AddUserModal: React.FC<{
       setLoading(false);
     }
   };
-
   const showEmploymentFields = !isStudent && !isParent && basicData.role !== "";
 
   const showRollNoField = isStudent;
@@ -853,7 +1170,9 @@ const AddUserModal: React.FC<{
 
             <div className="grid grid-cols-2 gap-5">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">Role <span className="text-red-600">*</span></label>
+                <label className="text-xs font-bold text-[#2D3748]">
+                  Role <span className="text-red-600">*</span>
+                </label>
                 <div className="relative">
                   <select
                     name="role"
@@ -949,7 +1268,8 @@ const AddUserModal: React.FC<{
                     <label className="text-xs font-bold text-[#2D3748]">
                       {collegeEducationType === "Inter"
                         ? "Group Type"
-                        : "Branch Type"} <span className="text-red-600">*</span>
+                        : "Branch Type"}{" "}
+                      <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <select
@@ -1371,12 +1691,11 @@ const AddUserModal: React.FC<{
             )}
 
             <div className="grid grid-cols-2 gap-5">
-
               {(showRollNoField || showEmployeeIdField) && (
                 <div className="space-y-1">
-
                   <label className="text-xs font-bold text-[#2D3748]">
-                    {showRollNoField ? "Roll No" : "Employee Id"} <span className="text-red-600">*</span>
+                    {showRollNoField ? "Roll No" : "Employee Id"}{" "}
+                    <span className="text-red-600">*</span>
                   </label>
 
                   <input
@@ -1385,20 +1704,18 @@ const AddUserModal: React.FC<{
                     value={basicData.identifierValue}
                     onChange={handleBasicChange}
                     placeholder={
-                      showRollNoField
-                        ? "Enter Roll No"
-                        : "Enter Employee Id"
+                      showRollNoField ? "Enter Roll No" : "Enter Employee Id"
                     }
                     maxLength={15}
                     className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                   />
-
                 </div>
               )}
 
-
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#2D3748]">Gender <span className="text-red-600">*</span></label>
+                <label className="text-xs font-bold text-[#2D3748]">
+                  Gender <span className="text-red-600">*</span>
+                </label>
                 <div className="flex gap-6 mt-1">
                   {["Male", "Female"].map((g) => (
                     <label
@@ -1499,10 +1816,11 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
-                ? "bg-green-600 cursor-default"
-                : "bg-[#43C17A] hover:bg-[#3ea876]"
-                }`}
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
+                isSuccess
+                  ? "bg-green-600 cursor-default"
+                  : "bg-[#43C17A] hover:bg-[#3ea876]"
+              }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

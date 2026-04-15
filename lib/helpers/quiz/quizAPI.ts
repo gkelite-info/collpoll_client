@@ -1,26 +1,923 @@
+// import { supabase } from "@/lib/supabaseClient";
+
+// export type QuizRow = {
+//   quizId: number;
+//   facultyId: number;
+//   collegeSubjectId: number;
+//   collegeSectionsId: number;
+//   collegeSubjectUnitId: number;
+//   quizTitle: string;
+//   totalMarks: number;
+//   startDate: string;
+//   endDate: string;
+//   status: "Draft" | "Active" | "Completed";
+//   isActive: boolean;
+//   createdAt: string;
+//   updatedAt: string;
+//   deletedAt: string | null;
+// };
+
+// export async function fetchQuizzesByFacultyId(facultyId: number) {
+//   const { data, error } = await supabase
+//     .from("quizzes")
+//     .select(
+//       `
+//       quizId,
+//       facultyId,
+//       collegeSubjectId,
+//       collegeSectionsId,
+//       collegeSubjectUnitId,
+//       quizTitle,
+//       totalMarks,
+//       startDate,
+//       endDate,
+//       status,
+//       isActive,
+//       createdAt,
+//       updatedAt,
+//       deletedAt
+//     `,
+//     )
+//     .eq("facultyId", facultyId)
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .order("createdAt", { ascending: false });
+
+//   if (error) {
+//     console.error("fetchQuizzesByFacultyId error:", error);
+//     throw error;
+//   }
+
+//   return data ?? [];
+// }
+
+// // export async function fetchQuizzesByStatus(
+// //   facultyId: number,
+// //   status: "Draft" | "Active" | "Completed",
+// // ) {
+// //   const { data, error } = await supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //             quizId,
+// //             quizTitle,
+// //             totalMarks,
+// //             startDate,
+// //             endDate,
+// //             status,
+// //             college_subjects (
+// //                 subjectName
+// //             ),
+// //             college_sections (
+// //                 collegeSections
+// //             ),
+// //             quiz_questions (
+// //                 questionId
+// //             )
+// //         `,
+// //     )
+// //     .eq("facultyId", facultyId)
+// //     .eq("status", status)
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .order("createdAt", { ascending: false });
+
+// //   if (error) {
+// //     console.error("fetchQuizzesByStatus error:", error);
+// //     throw error;
+// //   }
+
+// //   return data ?? [];
+// // }
+
+// export async function fetchQuizzesByStatus(
+//   facultyId: number,
+//   status: "Draft" | "Active" | "Completed",
+//   page: number = 1,
+//   limit: number = 10,
+// ) {
+//   const from = (page - 1) * limit;
+//   const to = from + limit - 1;
+
+//   const { data, error, count } = await supabase
+//     .from("quizzes")
+//     .select(
+//       `
+//             quizId,
+//             quizTitle,
+//             totalMarks,
+//             startDate,
+//             endDate,
+//             status,
+//             college_subjects (
+//                 subjectName
+//             ),
+//             college_sections (
+//                 collegeSections
+//             ),
+//             quiz_questions (
+//                 questionId
+//             )
+//         `,
+//       { count: "exact" },
+//     )
+//     .eq("facultyId", facultyId)
+//     .eq("status", status)
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .order("createdAt", { ascending: false })
+//     .range(from, to);
+
+//   if (error) {
+//     console.error("fetchQuizzesByStatus error:", error);
+//     throw error;
+//   }
+
+//   return { data: data ?? [], totalCount: count ?? 0 };
+// }
+
+// export async function fetchQuizById(quizId: number) {
+//   const { data, error } = await supabase
+//     .from("quizzes")
+//     .select(
+//       `
+//       quizId,
+//       facultyId,
+//       collegeSubjectId,
+//       collegeSectionsId,
+//       collegeSubjectUnitId,
+//       quizTitle,
+//       totalMarks,
+//       startDate,
+//       endDate,
+//       status,
+//       isActive,
+//       createdAt,
+//       updatedAt,
+//       deletedAt
+//     `,
+//     )
+//     .eq("quizId", quizId)
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .single();
+
+//   if (error) {
+//     console.error("fetchQuizById error:", error);
+//     throw error;
+//   }
+
+//   return data;
+// }
+
+// export async function saveQuiz(payload: {
+//   quizId?: number;
+//   facultyId: number;
+//   collegeSubjectId: number;
+//   collegeSectionsId: number;
+//   collegeSubjectUnitId: number;
+//   collegeSubjectUnitTopicId?: number;
+//   quizTitle: string;
+//   totalMarks: number;
+//   startDate: string;
+//   endDate: string;
+//   status?: "Draft" | "Active" | "Completed";
+// }) {
+//   const now = new Date().toISOString();
+
+//   const upsertPayload: any = {
+//     facultyId: payload.facultyId,
+//     collegeSubjectId: payload.collegeSubjectId,
+//     collegeSectionsId: payload.collegeSectionsId,
+//     collegeSubjectUnitId: payload.collegeSubjectUnitId,
+//     collegeSubjectUnitTopicId: payload.collegeSubjectUnitTopicId,
+//     quizTitle: payload.quizTitle.trim(),
+//     totalMarks: payload.totalMarks,
+//     startDate: payload.startDate,
+//     endDate: payload.endDate,
+//     status: payload.status ?? "Draft",
+//     updatedAt: now,
+//   };
+
+//   if (!payload.quizId) {
+//     upsertPayload.createdAt = now;
+
+//     const { data, error } = await supabase
+//       .from("quizzes")
+//       .insert([upsertPayload])
+//       .select("quizId")
+//       .single();
+
+//     if (error) {
+//       console.error("saveQuiz insert error:", error);
+//       return { success: false, error };
+//     }
+
+//     return { success: true, quizId: data.quizId };
+//   }
+
+//   const { error } = await supabase
+//     .from("quizzes")
+//     .update(upsertPayload)
+//     .eq("quizId", payload.quizId);
+
+//   if (error) {
+//     console.error("saveQuiz update error:", error);
+//     return { success: false, error };
+//   }
+
+//   return { success: true, quizId: payload.quizId };
+// }
+
+// export async function updateQuizStatus(
+//   quizId: number,
+//   status: "Draft" | "Active" | "Completed",
+// ) {
+//   const { error } = await supabase
+//     .from("quizzes")
+//     .update({ status, updatedAt: new Date().toISOString() })
+//     .eq("quizId", quizId);
+
+//   if (error) {
+//     console.error("updateQuizStatus error:", error);
+//     return { success: false, error };
+//   }
+
+//   return { success: true };
+// }
+
+// export async function deactivateQuiz(quizId: number) {
+//   const { error } = await supabase
+//     .from("quizzes")
+//     .update({
+//       isActive: false,
+//       deletedAt: new Date().toISOString(),
+//     })
+//     .eq("quizId", quizId);
+
+//   if (error) {
+//     console.error("deactivateQuiz error:", error);
+//     return { success: false };
+//   }
+
+//   return { success: true };
+// }
+
+// export async function autoCompleteExpiredQuizzes(facultyId: number) {
+//   const today = new Date().toISOString().split("T")[0];
+
+//   const { error } = await supabase
+//     .from("quizzes")
+//     .update({
+//       status: "Completed",
+//       updatedAt: new Date().toISOString(),
+//     })
+//     .lt("endDate", today)
+//     .eq("facultyId", facultyId)
+//     .eq("isActive", true)
+//     .neq("status", "Completed");
+
+//   if (error) {
+//     console.error("autoCompleteExpiredQuizzes error:", error);
+//   }
+// }
+
+// export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
+//   const { data: quizzesWithQuestions } = await supabase
+//     .from("quiz_questions")
+//     .select("quizId")
+//     .eq("isActive", true)
+//     .is("deletedAt", null);
+
+//   const quizIdsWithQuestions =
+//     quizzesWithQuestions?.map((q: any) => q.quizId) ?? [];
+
+//   let query = supabase
+//     .from("quizzes")
+//     .select(
+//       `
+//             quizId,
+//             quizTitle,
+//             totalMarks,
+//             startDate,
+//             endDate,
+//             status
+//         `,
+//     )
+//     .eq("facultyId", facultyId)
+//     .in("status", ["Draft", "Active"])
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .order("createdAt", { ascending: false });
+
+//   if (quizIdsWithQuestions.length > 0) {
+//     query = query.not("quizId", "in", `(${quizIdsWithQuestions.join(",")})`);
+//   }
+
+//   const { data, error } = await query;
+
+//   if (error) {
+//     console.error("fetchIncompleteQuizzesByFacultyId error:", error);
+//     throw error;
+//   }
+
+//   return data ?? [];
+// }
+
+// export async function fetchActiveQuizzesForStudent(collegeSectionsId: number) {
+//   const today = new Date().toISOString().split("T")[0];
+
+//   const { data, error } = await supabase
+//     .from("quizzes")
+//     .select(
+//       `
+//             quizId,
+//             quizTitle,
+//             totalMarks,
+//             startDate,
+//             endDate,
+//             status,
+//             facultyId,
+//             college_subjects (
+//                 subjectName
+//             ),
+//             faculty (
+//                 fullName
+//             )
+//         `,
+//     )
+//     .eq("collegeSectionsId", collegeSectionsId)
+//     .eq("status", "Active")
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .lte("startDate", today)
+//     .gte("endDate", today)
+//     .order("createdAt", { ascending: false });
+
+//   if (error) {
+//     console.error("fetchActiveQuizzesForStudent error:", error);
+//     throw error;
+//   }
+
+//   return data ?? [];
+// }
+
+// export async function fetchAttemptedQuizzesForStudent(studentId: number) {
+//   const { data, error } = await supabase
+//     .from("quiz_submissions")
+//     .select(
+//       `
+//             submissionId,
+//             totalMarksObtained,
+//             submittedAt,
+//             attemptNumber,
+//             quizId
+//         `,
+//     )
+//     .eq("studentId", studentId)
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .order("submittedAt", { ascending: false });
+
+//   if (error) {
+//     console.error("fetchAttemptedQuizzesForStudent error:", error);
+//     throw error;
+//   }
+
+//   const enriched = await Promise.all(
+//     (data ?? []).map(async (submission: any) => {
+//       const { data: quizData } = await supabase
+//         .from("quizzes")
+//         .select(
+//           `
+//                     quizId,
+//                     quizTitle,
+//                     totalMarks,
+//                     startDate,
+//                     endDate,
+//                     college_subjects (
+//                         subjectName
+//                     ),
+//                     faculty (
+//                         fullName
+//                     )
+//                 `,
+//         )
+//         .eq("quizId", submission.quizId)
+//         .single();
+
+//       const { count: answersCount } = await supabase
+//         .from("quiz_submission_answers")
+//         .select("answerId", { count: "exact", head: true })
+//         .eq("submissionId", submission.submissionId);
+
+//       const { count: questionsCount } = await supabase
+//         .from("quiz_questions")
+//         .select("questionId", { count: "exact", head: true })
+//         .eq("quizId", submission.quizId)
+//         .eq("isActive", true)
+//         .is("deletedAt", null);
+
+//       return {
+//         ...submission,
+//         quizzes: quizData,
+//         answersCount: answersCount ?? 0,
+//         totalQuestionsCount: questionsCount ?? 0,
+//       };
+//     }),
+//   );
+
+//   return enriched;
+// }
+
+// // import { supabase } from "@/lib/supabaseClient";
+
+// // export type QuizRow = {
+// //   quizId: number;
+// //   facultyId: number;
+// //   collegeSubjectId: number;
+// //   collegeSectionsId: number;
+// //   collegeSubjectUnitId: number;
+// //   quizTitle: string;
+// //   totalMarks: number;
+// //   startDate: string;
+// //   endDate: string;
+// //   status: "Draft" | "Active" | "Completed";
+// //   isActive: boolean;
+// //   createdAt: string;
+// //   updatedAt: string;
+// //   deletedAt: string | null;
+// // };
+
+// // export async function fetchQuizzesByFacultyId(facultyId: number) {
+// //   const { data, error } = await supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //       quizId,
+// //       facultyId,
+// //       collegeSubjectId,
+// //       collegeSectionsId,
+// //       collegeSubjectUnitId,
+// //       quizTitle,
+// //       totalMarks,
+// //       startDate,
+// //       endDate,
+// //       status,
+// //       isActive,
+// //       createdAt,
+// //       updatedAt,
+// //       deletedAt
+// //     `,
+// //     )
+// //     .eq("facultyId", facultyId)
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .order("createdAt", { ascending: false });
+
+// //   if (error) {
+// //     console.error("fetchQuizzesByFacultyId error:", error);
+// //     throw error;
+// //   }
+
+// //   return data ?? [];
+// // }
+
+// // export async function fetchQuizzesByStatus(
+// //   facultyId: number,
+// //   status: "Draft" | "Active" | "Completed",
+// // ) {
+// //   const { data, error } = await supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //             quizId,
+// //             quizTitle,
+// //             totalMarks,
+// //             startDate,
+// //             endDate,
+// //             status,
+// //             college_subjects (
+// //                 subjectName
+// //             ),
+// //             college_sections (
+// //                 collegeSections
+// //             ),
+// //             quiz_questions (
+// //                 questionId
+// //             )
+// //         `,
+// //     )
+// //     .eq("facultyId", facultyId)
+// //     .eq("status", status)
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .order("createdAt", { ascending: false });
+
+// //   if (error) {
+// //     console.error("fetchQuizzesByStatus error:", error);
+// //     throw error;
+// //   }
+
+// //   return data ?? [];
+// // }
+
+// // export async function fetchQuizById(quizId: number) {
+// //   const { data, error } = await supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //       quizId,
+// //       facultyId,
+// //       collegeSubjectId,
+// //       collegeSectionsId,
+// //       collegeSubjectUnitId,
+// //       quizTitle,
+// //       totalMarks,
+// //       startDate,
+// //       endDate,
+// //       status,
+// //       isActive,
+// //       createdAt,
+// //       updatedAt,
+// //       deletedAt
+// //     `,
+// //     )
+// //     .eq("quizId", quizId)
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .single();
+
+// //   if (error) {
+// //     console.error("fetchQuizById error:", error);
+// //     throw error;
+// //   }
+
+// //   return data;
+// // }
+
+// // export async function saveQuiz(payload: {
+// //   quizId?: number;
+// //   facultyId: number;
+// //   collegeSubjectId: number;
+// //   collegeSectionsId: number;
+// //   collegeSubjectUnitId: number;
+// //   collegeSubjectUnitTopicId?: number;
+// //   quizTitle: string;
+// //   totalMarks: number;
+// //   startDate: string;
+// //   endDate: string;
+// //   status?: "Draft" | "Active" | "Completed";
+// // }) {
+// //   const now = new Date().toISOString();
+
+// //   const upsertPayload: any = {
+// //     facultyId: payload.facultyId,
+// //     collegeSubjectId: payload.collegeSubjectId,
+// //     collegeSectionsId: payload.collegeSectionsId,
+// //     collegeSubjectUnitId: payload.collegeSubjectUnitId,
+// //     collegeSubjectUnitTopicId: payload.collegeSubjectUnitTopicId,
+// //     quizTitle: payload.quizTitle.trim(),
+// //     totalMarks: payload.totalMarks,
+// //     startDate: payload.startDate,
+// //     endDate: payload.endDate,
+// //     status: payload.status ?? "Draft",
+// //     updatedAt: now,
+// //   };
+
+// //   if (!payload.quizId) {
+// //     upsertPayload.createdAt = now;
+
+// //     const { data, error } = await supabase
+// //       .from("quizzes")
+// //       .insert([upsertPayload])
+// //       .select("quizId")
+// //       .single();
+
+// //     if (error) {
+// //       console.error("saveQuiz insert error:", error);
+// //       return { success: false, error };
+// //     }
+
+// //     return { success: true, quizId: data.quizId };
+// //   }
+
+// //   const { error } = await supabase
+// //     .from("quizzes")
+// //     .update(upsertPayload)
+// //     .eq("quizId", payload.quizId);
+
+// //   if (error) {
+// //     console.error("saveQuiz update error:", error);
+// //     return { success: false, error };
+// //   }
+
+// //   return { success: true, quizId: payload.quizId };
+// // }
+
+// // export async function updateQuizStatus(
+// //   quizId: number,
+// //   status: "Draft" | "Active" | "Completed",
+// // ) {
+// //   const { error } = await supabase
+// //     .from("quizzes")
+// //     .update({ status, updatedAt: new Date().toISOString() })
+// //     .eq("quizId", quizId);
+
+// //   if (error) {
+// //     console.error("updateQuizStatus error:", error);
+// //     return { success: false, error };
+// //   }
+
+// //   return { success: true };
+// // }
+
+// // export async function deactivateQuiz(quizId: number) {
+// //   const { error } = await supabase
+// //     .from("quizzes")
+// //     .update({
+// //       isActive: false,
+// //       deletedAt: new Date().toISOString(),
+// //     })
+// //     .eq("quizId", quizId);
+
+// //   if (error) {
+// //     console.error("deactivateQuiz error:", error);
+// //     return { success: false };
+// //   }
+
+// //   return { success: true };
+// // }
+
+// // export async function autoCompleteExpiredQuizzes(facultyId: number) {
+// //   const today = new Date().toISOString().split("T")[0];
+
+// //   const { error } = await supabase
+// //     .from("quizzes")
+// //     .update({
+// //       status: "Completed",
+// //       updatedAt: new Date().toISOString(),
+// //     })
+// //     .lt("endDate", today)
+// //     .eq("facultyId", facultyId)
+// //     .eq("isActive", true)
+// //     .neq("status", "Completed");
+
+// //   if (error) {
+// //     console.error("autoCompleteExpiredQuizzes error:", error);
+// //   }
+// // }
+
+// // export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
+// //   const { data: quizzesWithQuestions } = await supabase
+// //     .from("quiz_questions")
+// //     .select("quizId")
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null);
+
+// //   const quizIdsWithQuestions =
+// //     quizzesWithQuestions?.map((q: any) => q.quizId) ?? [];
+
+// //   let query = supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //             quizId,
+// //             quizTitle,
+// //             totalMarks,
+// //             startDate,
+// //             endDate,
+// //             status
+// //         `,
+// //     )
+// //     .eq("facultyId", facultyId)
+// //     .in("status", ["Draft", "Active"])
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .order("createdAt", { ascending: false });
+
+// //   if (quizIdsWithQuestions.length > 0) {
+// //     query = query.not("quizId", "in", `(${quizIdsWithQuestions.join(",")})`);
+// //   }
+
+// //   const { data, error } = await query;
+
+// //   if (error) {
+// //     console.error("fetchIncompleteQuizzesByFacultyId error:", error);
+// //     throw error;
+// //   }
+
+// //   return data ?? [];
+// // }
+
+// // // 🟢 UPDATED: Accepts page and limit for DB pagination
+// // export async function fetchActiveQuizzesForStudent(
+// //   collegeSectionsId: number,
+// //   page: number = 1,
+// //   limit: number = 8,
+// // ) {
+// //   const today = new Date().toISOString().split("T")[0];
+// //   const from = (page - 1) * limit;
+// //   const to = from + limit - 1;
+
+// //   const { data, error, count } = await supabase
+// //     .from("quizzes")
+// //     .select(
+// //       `
+// //             quizId,
+// //             quizTitle,
+// //             totalMarks,
+// //             startDate,
+// //             endDate,
+// //             status,
+// //             facultyId,
+// //             college_subjects (
+// //                 subjectName
+// //             ),
+// //             faculty (
+// //                 fullName
+// //             )
+// //         `,
+// //       { count: "exact" },
+// //     )
+// //     .eq("collegeSectionsId", collegeSectionsId)
+// //     .eq("status", "Active")
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .lte("startDate", today)
+// //     .gte("endDate", today)
+// //     .order("createdAt", { ascending: false })
+// //     .range(from, to);
+
+// //   if (error) {
+// //     console.error("fetchActiveQuizzesForStudent error:", error);
+// //     throw error;
+// //   }
+
+// //   return { data: data ?? [], totalCount: count ?? 0 };
+// // }
+
+// // // 🟢 UPDATED: Accepts page and limit for DB pagination
+// // export async function fetchAttemptedQuizzesForStudent(
+// //   studentId: number,
+// //   page: number = 1,
+// //   limit: number = 8,
+// // ) {
+// //   const from = (page - 1) * limit;
+// //   const to = from + limit - 1;
+
+// //   const { data, error, count } = await supabase
+// //     .from("quiz_submissions")
+// //     .select(
+// //       `
+// //             submissionId,
+// //             totalMarksObtained,
+// //             submittedAt,
+// //             attemptNumber,
+// //             quizId
+// //         `,
+// //       { count: "exact" },
+// //     )
+// //     .eq("studentId", studentId)
+// //     .eq("isActive", true)
+// //     .is("deletedAt", null)
+// //     .order("submittedAt", { ascending: false })
+// //     .range(from, to);
+
+// //   if (error) {
+// //     console.error("fetchAttemptedQuizzesForStudent error:", error);
+// //     throw error;
+// //   }
+
+// //   const enriched = await Promise.all(
+// //     (data ?? []).map(async (submission: any) => {
+// //       const { data: quizData } = await supabase
+// //         .from("quizzes")
+// //         .select(
+// //           `
+// //                     quizId,
+// //                     quizTitle,
+// //                     totalMarks,
+// //                     startDate,
+// //                     endDate,
+// //                     college_subjects (
+// //                         subjectName
+// //                     ),
+// //                     faculty (
+// //                         fullName
+// //                     )
+// //                 `,
+// //         )
+// //         .eq("quizId", submission.quizId)
+// //         .single();
+
+// //       const { count: answersCount } = await supabase
+// //         .from("quiz_submission_answers")
+// //         .select("answerId", { count: "exact", head: true })
+// //         .eq("submissionId", submission.submissionId);
+
+// //       const { count: questionsCount } = await supabase
+// //         .from("quiz_questions")
+// //         .select("questionId", { count: "exact", head: true })
+// //         .eq("quizId", submission.quizId)
+// //         .eq("isActive", true)
+// //         .is("deletedAt", null);
+
+// //       return {
+// //         ...submission,
+// //         quizzes: quizData,
+// //         answersCount: answersCount ?? 0,
+// //         totalQuestionsCount: questionsCount ?? 0,
+// //       };
+// //     }),
+// //   );
+
+// //   return { data: enriched, totalCount: count ?? 0 };
+// // }
+
+// export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
+//   const { data, error } = await supabase
+//     .from("quiz_submissions")
+//     .select(
+//       `
+//             submissionId,
+//             totalMarksObtained,
+//             submittedAt,
+//             studentId,
+//             students!inner (
+//                 rollNumber,
+//                 users!inner (
+//                     fullName,
+//                     user_profile (
+//                         profileUrl
+//                     )
+//                 ),
+//                 student_academic_history!inner (
+//                     isCurrent,
+//                     college_sections (
+//                         collegeSections
+//                     )
+//                 )
+//             )
+//         `,
+//     )
+//     .eq("quizId", quizId)
+//     .eq("students.student_academic_history.isCurrent", true)
+//     .eq("isActive", true)
+//     .is("deletedAt", null);
+
+//   if (error) {
+//     console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
+//     throw error;
+//   }
+
+//   return (data ?? []).map((sub: any) => {
+//     const studentData = sub.students;
+//     const currentHistory = studentData?.student_academic_history?.[0];
+//     const section = currentHistory?.college_sections?.collegeSections || "-";
+
+//     const profileData = studentData?.users?.user_profile;
+//     const profileUrl = Array.isArray(profileData)
+//       ? profileData[0]?.profileUrl
+//       : profileData?.profileUrl;
+
+//     return {
+//       ...sub,
+//       students: {
+//         fullName: studentData?.users?.fullName,
+//         rollNumber: studentData?.rollNumber,
+//         section: section,
+//         profileImage: profileUrl || null,
+//       },
+//     };
+//   });
+// }
+
 import { supabase } from "@/lib/supabaseClient";
 
 export type QuizRow = {
-    quizId: number;
-    facultyId: number;
-    collegeSubjectId: number;
-    collegeSectionsId: number;
-    collegeSubjectUnitId: number;
-    quizTitle: string;
-    totalMarks: number;
-    startDate: string;
-    endDate: string;
-    status: "Draft" | "Active" | "Completed";
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt: string | null;
+  quizId: number;
+  facultyId: number;
+  collegeSubjectId: number;
+  collegeSectionsId: number;
+  collegeSubjectUnitId: number;
+  collegeSubjectUnitTopicId?: number | null;
+  quizTitle: string;
+  totalMarks: number;
+  startDate: string;
+  endDate: string;
+  status: "Draft" | "Active" | "Completed";
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
 };
 
 export async function fetchQuizzesByFacultyId(facultyId: number) {
-    const { data, error } = await supabase
-        .from("quizzes")
-        .select(`
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select(
+      `
       quizId,
       facultyId,
       collegeSubjectId,
@@ -35,27 +932,34 @@ export async function fetchQuizzesByFacultyId(facultyId: number) {
       createdAt,
       updatedAt,
       deletedAt
-    `)
-        .eq("facultyId", facultyId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("createdAt", { ascending: false });
+    `,
+    )
+    .eq("facultyId", facultyId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("createdAt", { ascending: false });
 
-    if (error) {
-        console.error("fetchQuizzesByFacultyId error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchQuizzesByFacultyId error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return data ?? [];
 }
 
 export async function fetchQuizzesByStatus(
-    facultyId: number,
-    status: "Draft" | "Active" | "Completed"
+  facultyId: number,
+  status: "Draft" | "Active" | "Completed",
+  page: number = 1,
+  limit: number = 10,
 ) {
-    const { data, error } = await supabase
-        .from("quizzes")
-        .select(`
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
+    .from("quizzes")
+    .select(
+      `
             quizId,
             quizTitle,
             totalMarks,
@@ -71,212 +975,185 @@ export async function fetchQuizzesByStatus(
             quiz_questions (
                 questionId
             )
-        `)
-        .eq("facultyId", facultyId)
-        .eq("status", status)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("createdAt", { ascending: false });
+        `,
+      { count: "exact" },
+    )
+    .eq("facultyId", facultyId)
+    .eq("status", status)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("createdAt", { ascending: false })
+    .range(from, to);
 
-    if (error) {
-        console.error("fetchQuizzesByStatus error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchQuizzesByStatus error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return { data: data ?? [], totalCount: count ?? 0 };
 }
 
-export async function fetchQuizById(quizId: number) {
+export async function saveQuiz(payload: {
+  quizId?: number;
+  facultyId: number;
+  collegeSubjectId: number;
+  collegeSectionsId: number;
+  collegeSubjectUnitId: number;
+  collegeSubjectUnitTopicId?: number;
+  quizTitle: string;
+  totalMarks: number;
+  startDate: string;
+  endDate: string;
+  status?: "Draft" | "Active" | "Completed";
+}) {
+  const now = new Date().toISOString();
+
+  const upsertPayload: any = {
+    facultyId: payload.facultyId,
+    collegeSubjectId: payload.collegeSubjectId,
+    collegeSectionsId: payload.collegeSectionsId,
+    collegeSubjectUnitId: payload.collegeSubjectUnitId,
+    collegeSubjectUnitTopicId: payload.collegeSubjectUnitTopicId,
+    quizTitle: payload.quizTitle.trim(),
+    totalMarks: payload.totalMarks,
+    startDate: payload.startDate,
+    endDate: payload.endDate,
+    status: payload.status ?? "Draft",
+    updatedAt: now,
+  };
+
+  if (!payload.quizId) {
+    upsertPayload.createdAt = now;
+
     const { data, error } = await supabase
-        .from("quizzes")
-        .select(`
-      quizId,
-      facultyId,
-      collegeSubjectId,
-      collegeSectionsId,
-      collegeSubjectUnitId,
-      quizTitle,
-      totalMarks,
-      startDate,
-      endDate,
-      status,
-      isActive,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `)
-        .eq("quizId", quizId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .single();
+      .from("quizzes")
+      .insert([upsertPayload])
+      .select("quizId")
+      .single();
 
     if (error) {
-        console.error("fetchQuizById error:", error);
-        throw error;
+      console.error("saveQuiz insert error:", error);
+      return { success: false, error };
     }
 
-    return data;
-}
+    return { success: true, quizId: data.quizId };
+  }
 
-export async function saveQuiz(
-    payload: {
-        quizId?: number;
-        facultyId: number;
-        collegeSubjectId: number;
-        collegeSectionsId: number;
-        collegeSubjectUnitId: number;
-        collegeSubjectUnitTopicId? : number;
-        quizTitle: string;
-        totalMarks: number;
-        startDate: string;
-        endDate: string;
-        status?: "Draft" | "Active" | "Completed";
-    }
-) {
-    const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("quizzes")
+    .update(upsertPayload)
+    .eq("quizId", payload.quizId);
 
-    const upsertPayload: any = {
-        facultyId: payload.facultyId,
-        collegeSubjectId: payload.collegeSubjectId,
-        collegeSectionsId: payload.collegeSectionsId,
-        collegeSubjectUnitId: payload.collegeSubjectUnitId,
-        collegeSubjectUnitTopicId : payload.collegeSubjectUnitTopicId,
-        quizTitle: payload.quizTitle.trim(),
-        totalMarks: payload.totalMarks,
-        startDate: payload.startDate,
-        endDate: payload.endDate,
-        status: payload.status ?? "Draft",
-        updatedAt: now,
-    };
+  if (error) {
+    console.error("saveQuiz update error:", error);
+    return { success: false, error };
+  }
 
-    if (!payload.quizId) {
-        upsertPayload.createdAt = now;
-
-        const { data, error } = await supabase
-            .from("quizzes")
-            .insert([upsertPayload])
-            .select("quizId")
-            .single();
-
-        if (error) {
-            console.error("saveQuiz insert error:", error);
-            return { success: false, error };
-        }
-
-        return { success: true, quizId: data.quizId };
-    }
-
-    const { error } = await supabase
-        .from("quizzes")
-        .update(upsertPayload)
-        .eq("quizId", payload.quizId);
-
-    if (error) {
-        console.error("saveQuiz update error:", error);
-        return { success: false, error };
-    }
-
-    return { success: true, quizId: payload.quizId };
+  return { success: true, quizId: payload.quizId };
 }
 
 export async function updateQuizStatus(
-    quizId: number,
-    status: "Draft" | "Active" | "Completed"
+  quizId: number,
+  status: "Draft" | "Active" | "Completed",
 ) {
-    const { error } = await supabase
-        .from("quizzes")
-        .update({ status, updatedAt: new Date().toISOString() })
-        .eq("quizId", quizId);
+  const { error } = await supabase
+    .from("quizzes")
+    .update({ status, updatedAt: new Date().toISOString() })
+    .eq("quizId", quizId);
 
-    if (error) {
-        console.error("updateQuizStatus error:", error);
-        return { success: false, error };
-    }
+  if (error) {
+    console.error("updateQuizStatus error:", error);
+    return { success: false, error };
+  }
 
-    return { success: true };
+  return { success: true };
 }
 
 export async function deactivateQuiz(quizId: number) {
-    const { error } = await supabase
-        .from("quizzes")
-        .update({
-            isActive: false,
-            deletedAt: new Date().toISOString(),
-        })
-        .eq("quizId", quizId);
+  const { error } = await supabase
+    .from("quizzes")
+    .update({
+      isActive: false,
+      deletedAt: new Date().toISOString(),
+    })
+    .eq("quizId", quizId);
 
-    if (error) {
-        console.error("deactivateQuiz error:", error);
-        return { success: false };
-    }
+  if (error) {
+    console.error("deactivateQuiz error:", error);
+    return { success: false };
+  }
 
-    return { success: true };
+  return { success: true };
 }
 
 export async function autoCompleteExpiredQuizzes(facultyId: number) {
-    const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
 
-    const { error } = await supabase
-        .from("quizzes")
-        .update({
-            status: "Completed",
-            updatedAt: new Date().toISOString(),
-        })
-        .lt("endDate", today)
-        .eq("facultyId", facultyId)
-        .eq("isActive", true)
-        .neq("status", "Completed");
+  const { error } = await supabase
+    .from("quizzes")
+    .update({
+      status: "Completed",
+      updatedAt: new Date().toISOString(),
+    })
+    .lt("endDate", today)
+    .eq("facultyId", facultyId)
+    .eq("isActive", true)
+    .neq("status", "Completed");
 
-    if (error) {
-        console.error("autoCompleteExpiredQuizzes error:", error);
-    }
+  if (error) {
+    console.error("autoCompleteExpiredQuizzes error:", error);
+  }
 }
 
 export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
-    const { data: quizzesWithQuestions } = await supabase
-        .from("quiz_questions")
-        .select("quizId")
-        .eq("isActive", true)
-        .is("deletedAt", null);
+  const { data: quizzesWithQuestions } = await supabase
+    .from("quiz_questions")
+    .select("quizId")
+    .eq("isActive", true)
+    .is("deletedAt", null);
 
-    const quizIdsWithQuestions = quizzesWithQuestions?.map((q: any) => q.quizId) ?? [];
+  const quizIdsWithQuestions =
+    quizzesWithQuestions?.map((q: any) => q.quizId) ?? [];
 
-    let query = supabase
-        .from("quizzes")
-        .select(`
+  let query = supabase
+    .from("quizzes")
+    .select(
+      `
             quizId,
             quizTitle,
             totalMarks,
             startDate,
             endDate,
             status
-        `)
-        .eq("facultyId", facultyId)
-        .in("status", ["Draft", "Active"])
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("createdAt", { ascending: false });
+        `,
+    )
+    .eq("facultyId", facultyId)
+    .in("status", ["Draft", "Active"])
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("createdAt", { ascending: false });
 
-    if (quizIdsWithQuestions.length > 0) {
-        query = query.not("quizId", "in", `(${quizIdsWithQuestions.join(",")})`);
-    }
+  if (quizIdsWithQuestions.length > 0) {
+    query = query.not("quizId", "in", `(${quizIdsWithQuestions.join(",")})`);
+  }
 
-    const { data, error } = await query;
+  const { data, error } = await query;
 
-    if (error) {
-        console.error("fetchIncompleteQuizzesByFacultyId error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchIncompleteQuizzesByFacultyId error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return data ?? [];
 }
 
 export async function fetchActiveQuizzesForStudent(collegeSectionsId: number) {
-    const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
-        .from("quizzes")
-        .select(`
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select(
+      `
             quizId,
             quizTitle,
             totalMarks,
@@ -290,49 +1167,52 @@ export async function fetchActiveQuizzesForStudent(collegeSectionsId: number) {
             faculty (
                 fullName
             )
-        `)
-        .eq("collegeSectionsId", collegeSectionsId)
-        .eq("status", "Active")
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .lte("startDate", today)
-        .gte("endDate", today)
-        .order("createdAt", { ascending: false });
+        `,
+    )
+    .eq("collegeSectionsId", collegeSectionsId)
+    .eq("status", "Active")
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .lte("startDate", today)
+    .gte("endDate", today)
+    .order("createdAt", { ascending: false });
 
-    if (error) {
-        console.error("fetchActiveQuizzesForStudent error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchActiveQuizzesForStudent error:", error);
+    throw error;
+  }
 
-    return data ?? [];
+  return data ?? [];
 }
 
 export async function fetchAttemptedQuizzesForStudent(studentId: number) {
-    const { data, error } = await supabase
-        .from("quiz_submissions")
-        .select(`
+  const { data, error } = await supabase
+    .from("quiz_submissions")
+    .select(
+      `
             submissionId,
             totalMarksObtained,
             submittedAt,
             attemptNumber,
             quizId
-        `)
-        .eq("studentId", studentId)
-        .eq("isActive", true)
-        .is("deletedAt", null)
-        .order("submittedAt", { ascending: false });
+        `,
+    )
+    .eq("studentId", studentId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("submittedAt", { ascending: false });
 
-    if (error) {
-        console.error("fetchAttemptedQuizzesForStudent error:", error);
-        throw error;
-    }
+  if (error) {
+    console.error("fetchAttemptedQuizzesForStudent error:", error);
+    throw error;
+  }
 
-    const enriched = await Promise.all(
-        (data ?? []).map(async (submission: any) => {
-
-            const { data: quizData } = await supabase
-                .from("quizzes")
-                .select(`
+  const enriched = await Promise.all(
+    (data ?? []).map(async (submission: any) => {
+      const { data: quizData } = await supabase
+        .from("quizzes")
+        .select(
+          `
                     quizId,
                     quizTitle,
                     totalMarks,
@@ -344,30 +1224,194 @@ export async function fetchAttemptedQuizzesForStudent(studentId: number) {
                     faculty (
                         fullName
                     )
-                `)
-                .eq("quizId", submission.quizId)
-                .single();
+                `,
+        )
+        .eq("quizId", submission.quizId)
+        .single();
 
-            const { count: answersCount } = await supabase
-                .from("quiz_submission_answers")
-                .select("answerId", { count: "exact", head: true })
-                .eq("submissionId", submission.submissionId);
+      const { count: answersCount } = await supabase
+        .from("quiz_submission_answers")
+        .select("answerId", { count: "exact", head: true })
+        .eq("submissionId", submission.submissionId);
 
-            const { count: questionsCount } = await supabase
-                .from("quiz_questions")
-                .select("questionId", { count: "exact", head: true })
-                .eq("quizId", submission.quizId)
-                .eq("isActive", true)
-                .is("deletedAt", null);
+      const { count: questionsCount } = await supabase
+        .from("quiz_questions")
+        .select("questionId", { count: "exact", head: true })
+        .eq("quizId", submission.quizId)
+        .eq("isActive", true)
+        .is("deletedAt", null);
 
-            return {
-                ...submission,
-                quizzes: quizData,
-                answersCount: answersCount ?? 0,
-                totalQuestionsCount: questionsCount ?? 0,
-            };
-        })
+      return {
+        ...submission,
+        quizzes: quizData,
+        answersCount: answersCount ?? 0,
+        totalQuestionsCount: questionsCount ?? 0,
+      };
+    }),
+  );
+
+  return enriched;
+}
+
+export async function fetchQuizById(quizId: number) {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select(
+      `
+      quizId,
+      facultyId,
+      collegeSubjectId,
+      collegeSectionsId,
+      collegeSubjectUnitId,
+      collegeSubjectUnitTopicId, 
+      quizTitle,
+      totalMarks,
+      startDate,
+      endDate,
+      status,
+      isActive,
+      createdAt,
+      updatedAt,
+      deletedAt
+    `,
+    )
+    .eq("quizId", quizId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .single();
+
+  if (error) {
+    console.error("fetchQuizById error:", error);
+    throw error;
+  }
+
+  return data;
+}
+
+// export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
+//   const { data, error } = await supabase
+//     .from("quiz_submissions")
+//     .select(
+//       `
+//         submissionId,
+//         quizId,
+//         studentId,
+//         totalMarksObtained,
+//         submittedAt,
+//         students!inner (
+//             users!inner (
+//                 fullName,
+//                 collegePublicId,
+//                 user_profile (
+//                     profileUrl
+//                 )
+//             ),
+//             student_academic_history (
+//                 isCurrent,
+//                 college_sections (
+//                     collegeSections
+//                 )
+//             )
+//         )
+//     `,
+//     )
+//     .eq("quizId", quizId)
+//     .eq("isActive", true)
+//     .is("deletedAt", null)
+//     .order("submittedAt", { ascending: false });
+
+//   if (error) {
+//     console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
+//     throw error;
+//   }
+
+//   return (data ?? []).map((sub: any) => {
+//     const studentData = sub.students;
+
+//     // Safely extract current section
+//     const activeHistory = studentData?.student_academic_history?.find(
+//       (h: any) => h.isCurrent,
+//     );
+//     const section = activeHistory?.college_sections?.collegeSections || "-";
+
+//     const profileData = studentData?.users?.user_profile;
+//     const profileUrl = Array.isArray(profileData)
+//       ? profileData[0]?.profileUrl
+//       : profileData?.profileUrl;
+
+//     return {
+//       ...sub,
+//       students: {
+//         fullName: studentData?.users?.fullName,
+//         // Fallback to studentId if collegePublicId is missing
+//         rollNumber: sub.studentId,
+//         section: section,
+//         profileImage: profileUrl || null,
+//       },
+//     };
+//   });
+// }
+
+// ... (keep the rest of your quizAPI.ts functions exactly the same) ...
+
+export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
+  const { data, error } = await supabase
+    .from("quiz_submissions")
+    .select(
+      `
+            submissionId,
+            quizId,
+            studentId,
+            totalMarksObtained,
+            submittedAt,
+            students!inner (
+                users!inner (
+                    fullName,
+                    user_profile (
+                        profileUrl
+                    )
+                ),
+                student_academic_history (
+                    isCurrent,
+                    college_sections (
+                        collegeSections
+                    )
+                )
+            )
+        `,
+    )
+    .eq("quizId", quizId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("submittedAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
+    throw error;
+  }
+
+  return (data ?? []).map((sub: any) => {
+    const studentData = sub.students;
+
+    // Filter for current academic history to get the section safely
+    const activeHistory = studentData?.student_academic_history?.find(
+      (h: any) => h.isCurrent,
     );
+    const section = activeHistory?.college_sections?.collegeSections || "-";
 
-    return enriched;
+    const profileData = studentData?.users?.user_profile;
+    const profileUrl = Array.isArray(profileData)
+      ? profileData[0]?.profileUrl
+      : profileData?.profileUrl;
+
+    return {
+      ...sub,
+      students: {
+        fullName: studentData?.users?.fullName,
+        rollNumber: sub.studentId,
+        section: section,
+        profileImage: profileUrl || null,
+      },
+    };
+  });
 }

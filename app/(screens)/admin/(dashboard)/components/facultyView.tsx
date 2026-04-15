@@ -15,6 +15,9 @@ import { useStudentsByDepartment } from "../../hooks/useStudentsByDepartment";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { supabase } from "@/lib/supabaseClient";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Pagination } from "../../academic-setup/components/pagination";
+import { Avatar } from "@/app/utils/Avatar";
+import { CardValueShimmer, TableShimmer } from "../utils/TableShimmer";
 
 interface FacultyViewProps {
   departmentId: number;
@@ -106,6 +109,8 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   const [availableSections, setAvailableSections] = useState<any[]>([]);
   const [sectionsLoading, setSectionsLoading] = useState(false);
   const [selectedFaculty, setSelectedFaculty] = useState<any | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
@@ -179,26 +184,30 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     fetchSections();
   }, [departmentId, collegeId, collegeEducationId, activeYearId]);
 
-  const { faculty, loading: facLoading } = useFacultyByDepartment(
+  const { faculty, totalCount: facultyTotal, loading: facLoading } = useFacultyByDepartment(
     departmentId,
     null,
-    true,
+    activeTab === "Faculty",
     null,
     collegeId,
     collegeEducationId,
+    currentPage,
+    itemsPerPage
   );
 
-  const { students, loading: stuLoading } = useStudentsByDepartment(
+  const { students, loading: stuLoading, totalCount: studentTotal } = useStudentsByDepartment(
     departmentId,
     activeYearId,
-    true,
+    activeTab === "Students",
     activeSectionId,
     collegeId,
     collegeEducationId,
+    currentPage,
+    itemsPerPage
   );
 
   const loading = activeTab === "Faculty" ? facLoading : stuLoading;
-
+  const activeTotalItems = activeTab === "Faculty" ? facultyTotal : studentTotal;
   const currentYearOption = availableYears.find((yr) => yr.id === activeYearId);
   const currentSectionOption = availableSections.find(
     (sec) => sec.id === activeSectionId,
@@ -213,6 +222,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     router.push(`?${params.toString()}`);
+    setCurrentPage(1);
   };
 
   const handleYearChange = (yrId: number) => {
@@ -220,12 +230,14 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     params.set("yearId", yrId.toString());
     params.delete("sectionId");
     router.replace(`?${params.toString()}`);
+    setCurrentPage(1);
   };
 
   const handleSectionChange = (secId: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sectionId", secId.toString());
     router.push(`?${params.toString()}`);
+    setCurrentPage(1);
   };
 
   const facultyList = faculty.map((f: any) => ({
@@ -234,9 +246,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     role: f.designation,
     contact: f.mobile,
     email: f.users.email,
-    avatar:
-      f.users.avatar ??
-      `https://api.dicebear.com/9.x/initials/svg?seed=${f.users.fullName}`,
+    avatar: f.users.avatar || null,
     raw: f,
     collegeBranchCode: f.collegeBranchCode,
     department: f.collegeBranchCode,
@@ -246,16 +256,14 @@ const FacultyView: React.FC<FacultyViewProps> = ({
     name: s.users.fullName,
     rollNo: s.rollNumber,
     semester: s.semester,
-    avatar:
-      s.users.avatar ??
-      `https://api.dicebear.com/9.x/initials/svg?seed=${s.users.fullName}`,
+    avatar: s.users.avatar || null,
     attendance: s.attendance,
     performance: s.performance,
   }));
 
   const cardData = [
     {
-      value: facLoading ? "…" : faculty.length.toString(),
+      value: facLoading ? <CardValueShimmer /> : (facultyTotal || 0).toString(),
       label: "Faculty",
       bgColor: "bg-[#E2DAFF]",
       icon: <UserCircle />,
@@ -263,7 +271,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       iconColor: "text-[#6C20CA]",
     },
     {
-      value: stuLoading ? "…" : students.length.toString(),
+      value: stuLoading ? <CardValueShimmer /> : students.length.toString(),
       label: "Students",
       bgColor: "bg-[#FFEDDA]",
       icon: <UserCircle />,
@@ -271,7 +279,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       iconColor: "text-[#FFBB70]",
     },
     {
-      value: sectionsLoading ? "…" : availableSections.length.toString(),
+      value: sectionsLoading ? <CardValueShimmer /> : availableSections.length.toString(),
       label: "Sections",
       bgColor: "bg-[#E6FBEA]",
       icon: <UserCircle />,
@@ -363,18 +371,18 @@ const FacultyView: React.FC<FacultyViewProps> = ({
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[300px] z-0">
-        {loading && (
+        {/* {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex justify-center pt-20">
             <Loader />
           </div>
-        )}
+        )} */}
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#F1F2F4]">
               <th className="py-3 px-4 w-10 text-center flex ">
-                <div className="bg-[#3EAD6F] p-2 ml-2 rounded-full inline-block">
+                {/* <div className="bg-[#3EAD6F] p-2 ml-2 rounded-full inline-block">
                   <MagnifyingGlass size={14} weight="bold" color="white" />
-                </div>
+                </div> */}
               </th>
               {activeTab === "Faculty" ? (
                 <>
@@ -389,6 +397,9 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                   </th>
                   <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
                     Contact
+                  </th>
+                  <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
+                    Actions
                   </th>
                 </>
               ) : (
@@ -405,15 +416,17 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                   <th className="py-2.5 px-2 font-semibold text-[#4A5568] text-md text-center">
                     Performance
                   </th>
-                  <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
+                  {/* <th className="py-2.5 px-6 font-semibold text-[#4A5568] text-md text-right">
                     Actions
-                  </th>
+                  </th> */}
                 </>
               )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {!loading && activeTab === "Faculty" ? (
+            {loading ? (
+              <TableShimmer columns={activeTab === "Faculty" ? 6 : 5} rows={8} />
+            ) : activeTab === "Faculty" ? (
               facultyList.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-gray-400">
@@ -426,13 +439,14 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     <td className="py-2 px-4 text-center">
                       <button
                         onClick={() => setSelectedFaculty(prof)}
-                        className="w-8 h-8 cursor-pointer rounded-full bg-gray-100 inline-flex items-center justify-center overflow-hidden border border-gray-100 hover:ring-2 hover:ring-[#3EAD6F] transition"
+                        className="w-10 h-10 cursor-pointer rounded-full bg-gray-100 inline-flex items-center justify-center overflow-hidden border border-gray-100 hover:ring-2 hover:ring-[#3EAD6F] transition"
                       >
-                        <img
+                        {/* <img
                           src={prof.avatar}
                           alt={prof.name}
                           className="w-full h-full object-cover"
-                        />
+                        /> */}
+                        <Avatar src={prof.avatar} alt={prof.name} size={40} />
                       </button>
                     </td>
                     <td className="py-2 px-2 text-center font-medium text-[#2D3748] text-[14px]">
@@ -446,6 +460,13 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     </td>
                     <td className="py-2 px-6 text-right text-[#4A5568] text-[13px]">
                       {prof.contact}
+                    </td>
+                    <td className="py-2 px-6 text-right font-bold text-[#2D3748] text-[13px] underline underline-offset-4 hover:text-black">
+                      <button
+                        className="cursor-pointer hover:underline hover:text-green-500"
+                        onClick={() => setSelectedFaculty(prof)}>
+                        View
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -462,12 +483,13 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                 studentList.map((stud, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-2 px-4 text-center">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 inline-block overflow-hidden border border-gray-100">
-                        <img
+                      <div className="w-10 h-10 rounded-full bg-gray-100 inline-block overflow-hidden border border-gray-100">
+                        {/* <img
                           src={stud.avatar}
                           alt={stud.name}
                           className="w-full h-full object-cover"
-                        />
+                        /> */}
+                        <Avatar src={stud.avatar} alt={stud.name} size={40} />
                       </div>
                     </td>
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px]">
@@ -482,15 +504,23 @@ const FacultyView: React.FC<FacultyViewProps> = ({
                     <td className="py-2 px-2 text-center text-[#4A5568] text-[13px]">
                       {stud.performance}
                     </td>
-                    <td className="py-2 px-6 text-right font-bold text-[#2D3748] text-[13px] underline underline-offset-4 cursor-pointer hover:text-black">
+                    {/* <td className="py-2 px-6 text-right font-bold text-[#2D3748] text-[13px] underline underline-offset-4 cursor-pointer hover:text-black">
                       View
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ))
             )}
           </tbody>
         </table>
+        {!loading && activeTotalItems > itemsPerPage && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={activeTotalItems || 0}
+            itemsPerPage={itemsPerPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   );

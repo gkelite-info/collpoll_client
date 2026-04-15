@@ -3,7 +3,6 @@ import CardComponent, { CardProps } from "./totalUsersCard";
 import FacultyCard, { FacultyData } from "../utils/facultyDetailCard";
 import SessionTable from "./tables/facultyDetailclassesTable";
 import { classSessions } from "../data";
-import WipOverlay from "@/app/utils/WipOverlay";
 
 interface FacultyDetailProps {
   faculty: FacultyData;
@@ -57,7 +56,6 @@ const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeE
       </div>
 
       <article className="relative flex gap-3 justify-center items-center mb-4">
-        <WipOverlay isMedium={true}/>
         {cardData.map((item, index) => (
           <CardComponent
             key={index}

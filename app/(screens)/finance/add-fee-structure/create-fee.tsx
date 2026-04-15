@@ -5,7 +5,6 @@ import AddFeeHeader from "./components/Header";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getFinanceCollegeStructure } from "@/lib/helpers/finance/financeManagerContextAPI";
-import { supabase } from "@/lib/supabaseClient";
 
 import { saveCollegeFeeStructure } from "@/lib/helpers/finance/feeStructure/academicFee/collegeFeeStructureAPI";
 import { saveFeeType } from "@/lib/helpers/finance/feeStructure/academicFee/feeTypeMasterAPI";
@@ -20,6 +19,11 @@ import { saveAdditionalFeeStructure } from "@/lib/helpers/finance/feeStructure/a
 import { saveAdditionalFeeComponent } from "@/lib/helpers/finance/feeStructure/additionalFee/additionalFeeComponentAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import {
+  fetchAvailableSessions,
+  fetchFeeStructureEditData,
+  fetchFinanceManagerIdByUserId,
+} from "@/lib/helpers/finance/feeStructure/academicFee/createFeeClientHelpers";
 
 export default function CreateFee() {
   const { userId } = useUser();
@@ -99,17 +103,12 @@ export default function CreateFee() {
   useEffect(() => {
     const loadSessions = async () => {
       if (!collegeId || !collegeEducationId || !selectedBranch) return;
-
-      const { data: sessionData } = await supabase
-        .from("college_session")
-        .select("*")
-        .eq("collegeId", collegeId)
-        .eq("collegeEducationId", collegeEducationId)
-        .eq("collegeBranchId", selectedBranch)
-        .eq("is_deleted", false)
-        .order("startYear", { ascending: false });
-
-      setAvailableSessions(sessionData || []);
+      const sessionData = await fetchAvailableSessions(
+        collegeId,
+        collegeEducationId,
+        selectedBranch,
+      );
+      setAvailableSessions(sessionData);
     };
 
     loadSessions();
@@ -175,27 +174,16 @@ export default function CreateFee() {
       setIsLoadingEditData(true);
 
       try {
-        const { data: struct, error } = await supabase
-          .from("college_fee_structure")
-          .select("*")
-          .eq("feeStructureId", editId)
-          .single();
+        const { struct, sessionData, comps } =
+          await fetchFeeStructureEditData(editId);
 
-        if (error || !struct) return;
+        if (!struct) return;
 
         setSelectedBranch(struct.collegeBranchId);
 
-        if (struct.collegeSessionId) {
-          const { data: sessionData } = await supabase
-            .from("college_session")
-            .select("startYear, endYear")
-            .eq("collegeSessionId", struct.collegeSessionId)
-            .single();
-
-          if (sessionData) {
-            setSessionStart(String(sessionData.startYear));
-            setSessionEnd(String(sessionData.endYear));
-          }
+        if (sessionData) {
+          setSessionStart(String(sessionData.startYear));
+          setSessionEnd(String(sessionData.endYear));
         }
 
         let formattedForInput = "";
@@ -213,18 +201,12 @@ export default function CreateFee() {
           remarks: struct.remarks || "",
         });
 
-        const { data: comps } = await supabase
-          .from("college_fee_components")
-          .select(`*, fee_type_master ( feeTypeName )`)
-          .eq("feeStructureId", editId)
-          .eq("isActive", true);
-
         if (comps) {
           const newFeeValues: Record<string, string> = {};
           const newCustomFees: { id: string; label: string }[] = [];
           let gstCalculated = false;
 
-          comps.forEach((c) => {
+          comps.forEach((c: any) => {
             const name = c.fee_type_master?.feeTypeName;
             const amount = String(c.amount);
 
@@ -316,26 +298,8 @@ export default function CreateFee() {
         setCollegeEducationId(data?.collegeEducationId || null);
         setBranches(data?.branches || []);
 
-        // if (data?.collegeId) {
-        //   const { data: sessionData } = await supabase
-        //     .from("college_session")
-        //     .select("*")
-        //     .eq("collegeId", data.collegeId)
-        //     .eq("collegeEducationId", data.collegeEducationId)
-        //     .eq("collegeBranchId", selectedBranch)
-        //     .eq("is_deleted", false)
-        //     .order("startYear", { ascending: false });
-
-        //   setAvailableSessions(sessionData || []);
-        // }
-
-        const { data: fmData } = await supabase
-          .from("finance_manager")
-          .select("financeManagerId")
-          .eq("userId", userId)
-          .single();
-
-        if (fmData) setFinanceManagerId(fmData.financeManagerId);
+        const fmId = await fetchFinanceManagerIdByUserId(userId);
+        if (fmId) setFinanceManagerId(fmId);
       } catch (err) {
         console.error("Error loading structure:", err);
         toast.error("Failed to load college data");
@@ -429,6 +393,7 @@ export default function CreateFee() {
     setIsSaving(true);
 
     try {
+      // 🟢 PASS totalFee TO THE HELPER HERE
       const {
         success: sessionSuccess,
         collegeSessionId,
@@ -439,6 +404,7 @@ export default function CreateFee() {
         selectedBranch!,
         Number(sessionStart),
         Number(sessionEnd),
+        totalFee,
       );
 
       if (!sessionSuccess || !collegeSessionId) {

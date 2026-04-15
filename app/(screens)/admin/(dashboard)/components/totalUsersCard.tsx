@@ -3,7 +3,7 @@ import React from "react";
 import { IconProps } from "@phosphor-icons/react";
 
 export interface CardProps {
-  value: string;
+  value: React.ReactNode;
   label: string;
   bgColor: string;
   icon: React.ReactElement<IconProps>;

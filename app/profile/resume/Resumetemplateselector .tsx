@@ -85,6 +85,74 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
     }, 600);
   };
 
+  // const handlePDF = async () => {
+  //   try {
+  //     setDownloadOpen(false);
+  //     setIsPrinting(true);
+
+  //     const element = printRef.current;
+  //     if (!element) return;
+
+  //     const html = `
+  //     <html>
+  //       <head>
+  //         <meta charset="utf-8" />
+  //         <title>Resume</title>
+  //         <script src="https://cdn.tailwindcss.com"><\/script>
+  //         <style>
+  //           @page { size: A4; margin: 0; }
+  //           body { margin: 0; padding: 0; }
+  //           * { box-sizing: border-box; }
+  //         </style>
+  //       </head>
+  //       <body>
+  //         ${element.outerHTML}
+  //       </body>
+  //     </html>
+  //   `;
+
+  //     const blob = await generateResumePdf(html);
+
+  //     const url = window.URL.createObjectURL(blob);
+  //     const a = document.createElement("a");
+  //     a.href = url;
+  //     a.download = "Resume.pdf";
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
+  //     window.URL.revokeObjectURL(url);
+
+  //     if (resumeData) {
+  //       const afterScore = calculateATSScore(resumeData);
+  //       setAfterDownloadScore(afterScore);
+
+  //       const storedBefore = sessionStorage.getItem("ats_before_score");
+  //       const parsedBefore: ATSResult | null = storedBefore
+  //         ? JSON.parse(storedBefore)
+  //         : null;
+
+  //       if (parsedBefore) {
+  //         setBeforeDownloadScore(parsedBefore);
+  //       }
+
+
+  //       const improved = parsedBefore != null
+  //         ? afterScore.total > parsedBefore.total
+  //         : false;
+
+  //       setUsedAI(improved);
+  //       setShowATSModal(true);
+
+  //       sessionStorage.removeItem("ats_before_score");
+  //     }
+
+  //   } catch (error) {
+  //   } finally {
+  //     setIsPrinting(false);
+  //   }
+  // };
+
+
   const handlePDF = async () => {
     try {
       setDownloadOpen(false);
@@ -105,48 +173,50 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             * { box-sizing: border-box; }
           </style>
         </head>
-        <body>
-          ${element.outerHTML}
-        </body>
+        <body>${element.outerHTML}</body>
       </html>
     `;
 
-      const blob = await generateResumePdf(html);
+      let downloadedViaAPI = false;
 
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "Resume.pdf";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
+      try {
+        const blob = await generateResumePdf(html);
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Resume.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        downloadedViaAPI = true;
+      } catch (apiError) {
+        console.warn("API PDF failed, falling back to window.print()", apiError);
+        // Fallback: open in new window and trigger browser print dialog
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.focus();
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 800);
+        }
+      }
 
       if (resumeData) {
         const afterScore = calculateATSScore(resumeData);
         setAfterDownloadScore(afterScore);
-
         const storedBefore = sessionStorage.getItem("ats_before_score");
-        const parsedBefore: ATSResult | null = storedBefore
-          ? JSON.parse(storedBefore)
-          : null;
-
-        if (parsedBefore) {
-          setBeforeDownloadScore(parsedBefore);
-        }
-
-
-        const improved = parsedBefore != null
-          ? afterScore.total > parsedBefore.total
-          : false;
-
-        setUsedAI(improved);
+        const parsedBefore: ATSResult | null = storedBefore ? JSON.parse(storedBefore) : null;
+        if (parsedBefore) setBeforeDownloadScore(parsedBefore);
+        setUsedAI(parsedBefore != null ? afterScore.total > parsedBefore.total : false);
         setShowATSModal(true);
-
         sessionStorage.removeItem("ats_before_score");
       }
-
     } catch (error) {
+      console.error("PDF download error:", error);
     } finally {
       setIsPrinting(false);
     }
@@ -323,7 +393,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       setIsDownloadingWord(false);
     };
 
-    
+
     if (resumeData) {
       const afterScore = calculateATSScore(resumeData);
       setAfterDownloadScore(afterScore);
@@ -442,7 +512,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             })}
           </div>
         )}
-      </div> 
+      </div>
       {modalId !== null && ModalTemplate && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -453,7 +523,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
             className="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
             style={{ width: "min(700px, 95vw)", maxHeight: "92vh" }}
           >
-           
+
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 shrink-0">
               <div>
                 <p className="text-sm font-black text-[#16284F]">{modalTemplateName}</p>
@@ -791,7 +861,7 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
                   : "🚀 Try AI enhancement — make your resume stand out to top recruiters!"}
               </div>
 
-    
+
               <button
                 onClick={handleDone}
                 disabled={isDoneClosing}
