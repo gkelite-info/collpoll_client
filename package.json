@@ -19,7 +19,7 @@
     "@mui/material": "^7.3.8",
     "@mui/x-date-pickers": "^8.27.0",
     "@phosphor-icons/react": "^2.1.10",
-    "@sparticuz/chromium": "^123.0.1",
+    "@sparticuz/chromium-min": "^132.0.0",
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.7.0",
     "@supabase/ssr": "^0.8.0",
@@ -37,7 +37,7 @@
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.552.0",
     "next": "^16.1.1",
-    "puppeteer-core": "^24.40.0",
+    "puppeteer-core": "^22.11.2",
     "qrcode.react": "^4.2.0",
     "react": "19.2.0",
     "react-big-calendar": "^1.19.4",
@@ -66,7 +66,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "postcss": "^8.5.9",
-    "puppeteer": "^24.40.0",
+    "puppeteer": "^22.11.2",
     "tailwindcss": "^4.2.2",
     "typescript": "^5"
   }
