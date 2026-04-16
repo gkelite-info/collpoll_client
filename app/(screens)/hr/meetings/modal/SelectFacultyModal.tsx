@@ -222,7 +222,6 @@ export default function SelectFacultyModal({
                       onClick={() => toggleSelection(id)}
                     >
                       <div className="flex items-center gap-3">
-                        {/* 🟢 AVATAR LOGIC UPDATED HERE */}
                         {profileUrl ? (
                           <img
                             src={profileUrl}

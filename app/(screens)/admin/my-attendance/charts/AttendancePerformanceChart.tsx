@@ -49,10 +49,7 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
     return (
       <div className="flex justify-center items-center gap-6 pt-5">
         {payload.map((entry: any, index: number) => (
-          <div
-            key={`item-${index}`}
-            className="flex items-center gap-2"
-          >
+          <div key={`item-${index}`} className="flex items-center gap-2">
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: entry.color }}
