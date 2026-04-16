@@ -134,7 +134,7 @@ export const ProjectDetailsModal = ({ project, onClose, onViewSubmissions }: Pro
   const domains = project.techStack.split(",").map((s) => s.trim()).filter(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50">
       <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white p-6 md:p-8 shadow-lg overflow-y-auto max-h-[90vh]">
         <div className="bg-red-00 flex items-start justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">

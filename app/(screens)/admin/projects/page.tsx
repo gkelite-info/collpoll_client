@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import ProjectsHeader from "./components/ProjectsHeader";
-import FacultyAcademicCard from "./components/facultyAcademicCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WipOverlay from "@/app/utils/WipOverlay";
 import { fetchBranchOptionsForAdmin } from "@/lib/helpers/admin/collegeBranchAPI";
@@ -18,6 +17,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DiscussionCourseCard from "../assignments/components/discussionCourseCard";
 import AdminProjectsList from "./AdminProjectsList";
 import { useUser } from "@/app/utils/context/UserContext";
+import { Loader } from "../../(student)/calendar/right/timetable";
+import { fetchAdminPendingStats } from "@/lib/helpers/projects/project";
 
 function ProjectsOverview() {
   const { userId, collegeEducationId, collegeId } = useAdmin();
@@ -56,7 +57,6 @@ function ProjectsOverview() {
   const normalizedRole =
     role?.toLowerCase() === "admin" ? "admin" : "faculty";
 
-  // ✅ Load branches
   useEffect(() => {
     if (!userId || !collegeEducationId) return;
 
@@ -84,7 +84,6 @@ function ProjectsOverview() {
     loadBranches();
   }, [userId, collegeEducationId]);
 
-  // ✅ Load years (handles ALL case 🔥)
   useEffect(() => {
     if (!userId || branches.length === 0) return;
 
@@ -103,7 +102,6 @@ function ProjectsOverview() {
             }))
           );
         } else {
-          // ALL branches years
           const allYearsRequests = branches.map((b) =>
             fetchAcademicYearOptionsForAdmin(
               userId,
@@ -131,7 +129,6 @@ function ProjectsOverview() {
     loadYears();
   }, [branchFilter, userId, branches]);
 
-  // ✅ Filtering logic (same as discussion forum)
   const filteredCards = useMemo(() => {
     const cards = branches.flatMap((branch) => {
       const yearsToDisplay =
@@ -197,46 +194,56 @@ function ProjectsOverview() {
     getCounts();
   }, [filteredCards, collegeEducationId]);
 
+
   useEffect(() => {
     const loadCourses = async () => {
-      if (!branchId || !yearId) return;
+      if (!branchId || !yearId || !collegeId) return;
 
       try {
         setCourseLoading(true);
 
-        // 👉 replace with your API
-        const data = await fetchSubjectFacultyList(
-          Number(yearId),
-          Number(branchId)
-        );
+        const [data, projectStats] = await Promise.all([
+          fetchSubjectFacultyList(Number(yearId), Number(branchId)),
+          fetchAdminPendingStats(Number(yearId), collegeId)
+        ]);
 
-        // 🔥 remove duplicates
+        console.log("projectStats:", projectStats);
+        console.log("courseList sample item:", data[0]);
+
+
+        const enrichedCourses = data.map((item: any) => {
+          const key = `${Number(item.subjectId)}_${Number(item.facultyId)}`;
+          const stats = projectStats ? projectStats[key] : null;
+
+          return {
+            ...item,
+            activeProjectCount: stats ? stats.active : 0,
+            pendingSubmissions: stats ? stats.pending : 0,
+          };
+        });
+
         const uniqueMap = new Map();
-
-        data.forEach((item: any) => {
-          const key = `${item.subject}-${item.facultyId}`; // unique combo
-
+        enrichedCourses.forEach((item: any) => {
+          const key = `${item.subjectId}_${item.facultyId}`;
           if (!uniqueMap.has(key)) {
             uniqueMap.set(key, item);
           }
         });
 
-        const uniqueData = Array.from(uniqueMap.values());
-
-        setCourseList(uniqueData);
-
+        setCourseList(Array.from(uniqueMap.values()));
       } catch (err) {
-        console.error("Failed to load projects:", err);
+        console.error("Failed to load enriched projects:", err);
       } finally {
         setCourseLoading(false);
       }
     };
 
     loadCourses();
-  }, [branchId, yearId]);
+  }, [branchId, yearId, collegeId]);
+
 
   useEffect(() => {
-    const getCounts = async () => {
+    const getAllOverviewCounts = async () => {
       if (!collegeEducationId || !collegeId || filteredCards.length === 0) return;
 
       try {
@@ -245,22 +252,9 @@ function ProjectsOverview() {
         const results = await Promise.all(
           filteredCards.map(async (card) => {
             const [studentCount, facultyData, activeCount] = await Promise.all([
-              fetchActiveStudentCount(
-                collegeEducationId,
-                card.branchId,
-                card.yearId
-              ),
-              fetchActiveFacultyData(
-                collegeEducationId,
-                card.branchId,
-                card.yearId
-              ),
-              // ✅ fetch real active project count
-              fetchActiveProjectCountByBranchYear(
-                collegeId,
-                card.branchId,
-                card.yearId
-              ),
+              fetchActiveStudentCount(collegeEducationId, card.branchId, card.yearId),
+              fetchActiveFacultyData(collegeEducationId, card.branchId, card.yearId),
+              fetchActiveProjectCountByBranchYear(collegeId, card.branchId, card.yearId),
             ]);
 
             return {
@@ -269,21 +263,22 @@ function ProjectsOverview() {
               studentCount,
               facultyCount: facultyData.count,
               facultyPhotos: facultyData.photos,
-              activeProjectCount: activeCount, // ✅
+              activeProjectCount: activeCount,
             };
           })
         );
 
         setCountsData(results);
       } catch (err) {
-        console.error(err);
+        console.error("Error loading overview counts:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    getCounts();
+    getAllOverviewCounts();
   }, [filteredCards, collegeEducationId, collegeId]);
+
 
   const handleBack = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -299,8 +294,6 @@ function ProjectsOverview() {
   return (
     <div className="relative overflow-hidden p-4 flex flex-col">
       {/* <WipOverlay fullHeight={true} /> */}
-
-      {/* Header */}
       <div className="flex w-full justify-between items-center">
         <ProjectsHeader />
         <div className="w-[350px]">
@@ -387,7 +380,8 @@ function ProjectsOverview() {
           </div>
         </>
       ) : subjectId ? (
-        <AdminProjectsList subjectId={subjectId}
+        <AdminProjectsList
+          subjectId={subjectId}
           college_branch={selectedBranch?.code ?? null}
           collegeAcademicYear={selectedYear?.label ?? null}
           faculty_edu_type={dept ?? null}
@@ -407,13 +401,13 @@ function ProjectsOverview() {
                 {courseList.map((course: any) => (
                   <DiscussionCourseCard
                     key={course.id}
-                    id={course.id}
+                    id={course.subjectId}
                     subject={course.subject}
                     facultyName={course.facultyName}
                     facultyId={course.facultyId}
                     avatar={course.avatar}
                     activeQuiz={course.activeQuiz || 0}
-                    pendingSubmissions={course.pendingSubmissions || 0}
+                    pendingSubmissions={course.pendingSubmissions}
                     buttonText="View Projects"
                     activeLabel="Active Projects"
                     branchId={Number(branchId)}
@@ -441,7 +435,7 @@ function ProjectsOverview() {
 
 export default function Page() {
   return (
-    <Suspense fallback={<div>Loading projects...</div>}>
+    <Suspense fallback={<div><Loader /></div>}>
       <ProjectsOverview />
     </Suspense>
   );

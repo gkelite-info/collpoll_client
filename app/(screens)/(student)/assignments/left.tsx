@@ -489,7 +489,7 @@ function AssignmentsLeftContent() {
     : null;
 
   return (
-    <div className="w-[68%] p-2 flex flex-col h-full">
+    <div className="bg-red-00 w-[68%] p-2 flex flex-col">
       {activeModal === "performance" &&
         activeQuizId &&
         (performanceLoading ? (
@@ -605,7 +605,7 @@ function AssignmentsLeftContent() {
           )}
         </div>
 
-        <div className="mt-4 h-[151vh] overflow-y-auto pr-1">
+        <div className="mt-4 lg:h-fit overflow-y-auto pr-1">
           {activeTab === "assignments" &&
             (loading || tabSwitchLoading || assignmentSubTabLoading ? (
               <AssignmentCardSkeletonGroup count={4} />

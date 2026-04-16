@@ -144,7 +144,7 @@ const Page = () => {
           Back to Details
         </button>
 
-        <StudentSubmissions projectId={projectId} />
+        <StudentSubmissions />
       </main>
     );
   }

@@ -12,8 +12,11 @@ interface StudentSubmissionsProps {
     projectId: string | null;
 }
 
-export default function StudentSubmissions({ projectId }: StudentSubmissionsProps) {
+export default function StudentSubmissions() {
     const searchParams = useSearchParams();
+
+    const projectId = searchParams.get("projectId");
+
     const [submissions, setSubmissions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 

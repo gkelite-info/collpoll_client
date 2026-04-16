@@ -247,10 +247,11 @@ export async function fetchProjectsByAdminId(adminId: number) {
 }
 
 export async function fetchEnrichedProjectsByFaculty(
-    facultyId: number
+    facultyId: number,
+    collegeSubjectId?: number
 ): Promise<EnrichedProject[]> {
 
-    const { data: projectData, error: projectsError } = await supabase
+    let query = supabase
         .from("projects")
         .select(`
             projectId, 
@@ -268,6 +269,12 @@ export async function fetchEnrichedProjectsByFaculty(
         .eq("facultyId", facultyId)
         .is("deletedAt", null)
         .order("createdAt", { ascending: false });
+
+    if (collegeSubjectId !== undefined && collegeSubjectId !== null) {
+        query = query.eq("collegeSubjectId", collegeSubjectId);
+    }
+
+    const { data: projectData, error: projectsError } = await query;
 
     if (projectsError || !projectData?.length) return [];
 
@@ -553,4 +560,93 @@ export async function fetchEnrichedProjectsByStudent(
             fileUrls,
         };
     });
+}
+
+
+export async function fetchAdminPendingStats(yearId: number, collegeId: number) {
+    const { data, error } = await supabase
+        .from("projects")
+        .select(`
+            projectId,
+            collegeSubjectId,
+            collegeSectionsId,
+            facultyId,
+            project_team_members (
+                studentId
+            ),
+            student_project_submissions (
+                studentId
+            )
+        `)
+        .eq("collegeAcademicYearId", yearId)
+        .eq("collegeId", collegeId)
+        .is("deletedAt", null);
+
+    if (error) {
+        console.error("Fetch stats error:", error);
+        return null;
+    }
+
+    const sectionIds = [
+        ...new Set(
+            data?.map((p) => p.collegeSectionsId).filter(Boolean) as number[]
+        ),
+    ];
+
+    let sectionStudentMap = new Map<number, Set<number>>();
+
+    if (sectionIds.length > 0) {
+        const { data: historyData, error: historyError } = await supabase
+            .from("student_academic_history")
+            .select("studentId, collegeSectionsId")
+            .in("collegeSectionsId", sectionIds)
+            .eq("collegeAcademicYearId", yearId)
+            .eq("isCurrent", true)
+            .is("deletedAt", null);
+
+        if (historyError) {
+            console.error("Fetch section students error:", historyError);
+            return null;
+        }
+
+        historyData?.forEach((row) => {
+            if (!sectionStudentMap.has(row.collegeSectionsId)) {
+                sectionStudentMap.set(row.collegeSectionsId, new Set());
+            }
+            sectionStudentMap.get(row.collegeSectionsId)!.add(row.studentId);
+        });
+    }
+
+    const subjectStats: Record<string, { active: number; pending: number }> = {};
+
+    data?.forEach((proj) => {
+        const subId = proj.collegeSubjectId;
+        const facId = proj.facultyId;
+        if (!subId || !facId) return;
+
+        const key = `${subId}_${facId}`;
+
+        if (!subjectStats[key]) {
+            subjectStats[key] = { active: 0, pending: 0 };
+        }
+
+        const submittedStudentIds = new Set(
+            proj.student_project_submissions?.map((s) => s.studentId) ?? []
+        );
+
+        const assignedStudentIds = proj.project_team_members?.map((m) => m.studentId) ?? [];
+
+        const sectionStudents = proj.collegeSectionsId
+            ? sectionStudentMap.get(proj.collegeSectionsId) ?? new Set<number>()
+            : new Set<number>();
+
+        const pendingCount = assignedStudentIds.filter(
+            (id) => sectionStudents.has(id) && !submittedStudentIds.has(id)
+        ).length;
+
+        subjectStats[key].active += 1;
+        subjectStats[key].pending += pendingCount;
+    });
+
+    return subjectStats;
 }
