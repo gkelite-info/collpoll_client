@@ -114,14 +114,24 @@ export async function fetchProjectSubmissionsWithStudents(projectId: number) {
     const { data, error } = await supabase
         .from("student_project_submissions")
         .select(`
-      studentProjectSubmissionId,
-      fileUrl,
-      updatedAt,
-      students (
-        studentId,
-        userId
-      )
-    `)
+            studentProjectSubmissionId,
+            fileUrl,
+            updatedAt,
+            students (
+                studentId,
+                userId,
+                student_pins (
+                    pinNumber
+                ),
+                users (
+                    fullName,
+                    email,
+                    user_profile (
+                        profileUrl
+                    )
+                )
+            )
+        `)
         .eq("projectId", projectId);
 
     if (error) {

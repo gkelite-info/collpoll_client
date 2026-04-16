@@ -12,6 +12,9 @@ export type ProjectRow = {
     collegeId: number;
     facultyId: number | null;
     adminId: number | null;
+    collegeAcademicYearId: number | null;
+    collegeSubjectId: number | null;
+    collegeSectionsId: number | null;
     createdAt: string;
     updatedAt: string;
     deletedAt: string | null;
@@ -50,6 +53,9 @@ export async function fetchProjectsByCollege(collegeId: number) {
       collegeId,
       facultyId,
       adminId,
+      collegeAcademicYearId,
+  collegeSubjectId,
+  collegeSectionsId,
       createdAt,
       updatedAt,
       deletedAt
@@ -102,6 +108,9 @@ export async function saveProject(
         collegeId: number;
         facultyId?: number | null;
         adminId?: number | null;
+        collegeAcademicYearId?: number | null;
+        collegeSubjectId?: number | null;
+        collegeSectionsId?: number | null;
     },
 ) {
     const now = new Date().toISOString();
@@ -116,6 +125,9 @@ export async function saveProject(
         collegeId: payload.collegeId,
         facultyId: payload.facultyId ?? null,
         adminId: payload.adminId ?? null,
+        collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
+        collegeSubjectId: payload.collegeSubjectId ?? null,
+        collegeSectionsId: payload.collegeSectionsId ?? null,
         updatedAt: now,
     };
 

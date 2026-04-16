@@ -6,6 +6,7 @@ import { CaretLeft } from "@phosphor-icons/react";
 type ProjectCardListProps = {
   data: ProjectCardProps[];
   onViewDetails: (project: ProjectCardProps) => void;
+  role?: string;
 };
 
 const MemberAvatar = ({ image, name, index }: { image: string; name?: string; index: number }) => {
@@ -31,7 +32,7 @@ const MemberAvatar = ({ image, name, index }: { image: string; name?: string; in
   );
 };
 
-export const ProjectCard = ({ data, onViewDetails }: ProjectCardListProps) => {
+export const ProjectCard = ({ data, onViewDetails, role }: ProjectCardListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {data.map((project, index) => (
@@ -125,17 +126,31 @@ export const ProjectCard = ({ data, onViewDetails }: ProjectCardListProps) => {
 type ProjectDetailsModalProps = {
   project: ProjectCardProps;
   onClose: () => void;
+  onViewSubmissions?: (project: ProjectCardProps) => void;
+
 };
 
-export const ProjectDetailsModal = ({ project, onClose }: ProjectDetailsModalProps) => {
+export const ProjectDetailsModal = ({ project, onClose, onViewSubmissions }: ProjectDetailsModalProps) => {
   const domains = project.techStack.split(",").map((s) => s.trim()).filter(Boolean);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/10">
       <div className="mt-8 w-full max-w-3xl rounded-3xl bg-white p-6 md:p-8 shadow-lg overflow-y-auto max-h-[90vh]">
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-          <CaretLeft onClick={onClose} size={22} className="cursor-pointer active:scale-90" />
-          <p className="font-semibold text-lg">Project Details</p>
+        <div className="bg-red-00 flex items-start justify-between">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+            <CaretLeft onClick={onClose} size={22} className="cursor-pointer active:scale-90" />
+            <p className="font-semibold text-lg">Project Details</p>
+          </div>
+          <button
+            className="bg-[#16284F] lg:rounded-md px-2.5 py-1 text-white text-sm cursor-pointer"
+            onClick={() => {
+              if (project.projectId !== null && onViewSubmissions) {
+                onViewSubmissions(project);
+              }
+            }}
+          >
+            View Submissions
+          </button>
         </div>
 
         <h1 className="text-lg lg:text-2xl font-semibold text-[#16a34a] mb-6">

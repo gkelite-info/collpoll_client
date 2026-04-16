@@ -54,12 +54,10 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
     const selectedYearId = searchParams.get("yearId");
     const selectedSubjectId = searchParams.get("subjectId");
 
-    // ✅ Bug 1 & 2 fixed: resolve once, use everywhere, no fId state needed
     const resolvedFacultyId = contextFacultyId ??
         (facultyIdFromParams ? Number(facultyIdFromParams) : null);
     const resolvedCollegeId = facultyCollegeId ?? adminCollegeId;
 
-    // ✅ Bug 4 fixed: detect admin correctly
     const isAdmin = userRole === "Admin";
 
     const [availableYears, setAvailableYears] = useState<{ id: number; label: string }[]>([]);
@@ -99,7 +97,6 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
-    // ✅ Bug 2 fixed: depend on resolvedFacultyId directly, no userId guard
     useEffect(() => {
         const loadYears = async () => {
             if (!resolvedFacultyId) return;
@@ -118,9 +115,8 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             }
         };
         loadYears();
-    }, [resolvedFacultyId]); // ✅ no longer blocked by null userId
+    }, [resolvedFacultyId]);
 
-    // ✅ Subjects load correctly using resolvedFacultyId
     useEffect(() => {
         const loadSubjects = async () => {
             if (!resolvedFacultyId || !formData.year) return;
@@ -139,9 +135,8 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             }
         };
         loadSubjects();
-    }, [formData.year, resolvedFacultyId]); // ✅ was depending on fId (null on admin)
+    }, [formData.year, resolvedFacultyId]);
 
-    // ✅ Sections load correctly using resolvedFacultyId
     useEffect(() => {
         const loadSections = async () => {
             const yearId = parseInt(formData.year);
@@ -161,16 +156,15 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                         sections[0].college_sections?.collegeSectionsId.toString() ?? "";
 
                     setFormData(prev => ({ ...prev, section: firstSectionId }));
-                    setIsInitialized(true); // ✅ lock auto-select after first full load
+                    setIsInitialized(true);
                 }
             } catch (err) {
                 console.error("Failed to load sections", err);
             }
         };
         loadSections();
-    }, [formData.year, formData.subject, resolvedFacultyId]); // ✅ was depending on fId
+    }, [formData.year, formData.subject, resolvedFacultyId]);
 
-    // ✅ Bug 1 fixed: use resolvedCollegeId
     useEffect(() => {
         const getFaculties = async () => {
             if (!resolvedCollegeId) return;
@@ -185,9 +179,8 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             }
         };
         getFaculties();
-    }, [resolvedCollegeId]); // ✅ was depending on null collegeId
+    }, [resolvedCollegeId]);
 
-    // ✅ Bug 1 fixed: use resolvedCollegeId
     useEffect(() => {
         const getStudents = async () => {
             const yearId = parseInt(formData.year);
@@ -212,7 +205,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             }
         };
         getStudents();
-    }, [resolvedCollegeId, formData.year, formData.section]); // ✅ was depending on null collegeId
+    }, [resolvedCollegeId, formData.year, formData.section]);
 
     const handleDrag = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); };
 
@@ -295,9 +288,12 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                 marks: formData.marks === "" ? 0 : Number(formData.marks),
                 startDate: formData.startDate,
                 endDate: formData.endDate,
-                collegeId: resolvedCollegeId!,       // ✅ Bug 1 fixed
-                facultyId: resolvedFacultyId!,        // ✅ Bug 1 fixed
+                collegeId: resolvedCollegeId!,
+                facultyId: resolvedFacultyId!,
                 adminId: isAdmin ? adminId : null,
+                collegeAcademicYearId: Number(formData.year),
+                collegeSubjectId: Number(formData.subject),
+                collegeSectionsId: Number(formData.section),
             });
 
             if (!projectResult.success || !projectResult.projectId) {
@@ -321,17 +317,17 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
 
             if (teamRes.success && mentorRes.success && fileRes.success) {
                 toast.success("Project and all details saved!", { id: loadingToast });
-                
+
                 if (isAdmin) {
-                    onCancel(); // closes form, returns to AdminProjectsList
+                    onCancel();
                 } else {
                     router.push("/faculty/projects");
+                    router.refresh();
                 }
             } else {
                 toast.error("Project saved, but some team/mentor data failed.", { id: loadingToast });
             }
         } catch (error) {
-            console.error("Master Save Error:", error);
             toast.error("Something went wrong during save.", { id: loadingToast });
         } finally {
             setLoading(false);
@@ -351,7 +347,6 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                     </p>
                 </div>
 
-                {/* ✅ Bug 4 fixed: show badge for both admin and faculty */}
                 {(role === "Faculty" || isAdmin) && (
                     <div className="bg-[#43C17A] text-white px-2 py-1 w-fit rounded text-sm font-medium">
                         {faculty_edu_type} {college_branch} - {collegeAcademicYear}
@@ -484,13 +479,32 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                         <div className="border rounded-md p-2 flex items-center justify-between border-[#282828] min-h-[46px]">
                             <div className="flex items-center gap-2 overflow-x-auto">
                                 {formData.studentIds.length > 0 ? (
-                                    <div className="flex -space-x-2">
-                                        {formData.studentIds.map((id) => (
-                                            <div key={id} className="w-8 h-8 rounded-full bg-gray-300 border-2 border-white flex items-center justify-center text-[10px] font-bold text-gray-600">
-                                                S{id}
+                                    formData.studentIds.map((sId) => {
+                                        const student = allStudents.find(s => s.id === sId);
+
+                                        return (
+                                            <div
+                                                key={sId}
+                                                className="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200 whitespace-nowrap"
+                                            >
+                                                <span className="text-xs font-semibold">
+                                                    {student?.name || `ID: ${sId}`}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleChange(
+                                                            "studentIds",
+                                                            formData.studentIds.filter(id => id !== sId)
+                                                        )
+                                                    }
+                                                    className="hover:text-red-500 font-bold leading-none cursor-pointer"
+                                                >
+                                                    ×
+                                                </button>
                                             </div>
-                                        ))}
-                                    </div>
+                                        );
+                                    })
                                 ) : (
                                     <span className="text-gray-400 text-xs ml-1">No members added</span>
                                 )}
@@ -644,7 +658,6 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                 </div>
             </div>
 
-            {/* ✅ Bug 1 fixed: use resolvedCollegeId in isLoading checks */}
             <SelectionModal
                 isOpen={isMentorModalOpen}
                 onClose={() => setIsMentorModalOpen(false)}

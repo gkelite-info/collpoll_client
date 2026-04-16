@@ -1,4 +1,6 @@
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+"use client";
+
+import TableShimmer from "./tableShimmer";
 
 type Column = {
   title: string;
@@ -13,41 +15,40 @@ type TableBodyProps = {
 
 export default function TableBody({ columns, tableData, isLoading = false }: TableBodyProps) {
   return (
-    <tbody>
+    <tbody className="bg-white">
       {isLoading ? (
+        <TableShimmer columnCount={columns.length} />
+      ) : tableData.length > 0 ? (
+        tableData.map((row, index) => (
+          <tr
+            key={index}
+            className="border-b border-[#DBDBDB] hover:bg-gray-50 transition-colors text-[#525252]"
+          >
+            {columns.map((col) => (
+              <td
+                key={col.key}
+                className={`px-4 py-2 whitespace-nowrap ${col.key === "notes" || col.key === "actions"
+                  ? "text-center"
+                  : col.key === "subject"
+                    ? "text-left"
+                    : "text-center"
+                  }`}
+              >
+                {row[col.key]}
+              </td>
+            ))}
+          </tr>
+        ))
+      ) : (
         <tr>
-          <td colSpan={columns.length} className="py-10">
-            <div className="flex justify-center items-center">
-              <Loader />
-            </div>
+          <td
+            colSpan={columns.length}
+            className="py-20 text-center text-gray-400 italic font-medium"
+          >
+            No data available to display.
           </td>
         </tr>
-      ) :
-        (
-          tableData.map((row, index) => (
-            <tr
-              key={index}
-              className="border-b border-[#DBDBDB] hover:bg-gray-50 transition-colors text-[#525252]"
-            >
-              {columns.map((col) => (
-                <td
-                  key={col.key}
-                  className={`px-4 py-2 whitespace-nowrap
-                ${col.key === "notes"
-                      ? "text-center"
-                      : col.key === "actions"
-                        ? "text-center"
-                        : col.key === "subject"
-                          ? "text-left"
-                          : "text-center"
-                    }`}
-                >
-                  {row[col.key]}
-                </td>
-              ))}
-            </tr>
-          ))
-        )}
+      )}
     </tbody>
   );
 }

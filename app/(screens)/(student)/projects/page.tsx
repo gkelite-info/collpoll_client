@@ -121,7 +121,7 @@ const Page = () => {
 
       <div className="flex items-center gap-4 mb-6 items-start">
         <div className="flex items-center gap-1">
-          <label className="text-xs font-medium text-gray-500 uppercase">Subject</label>
+          <label className="text-xs font-medium text-gray-500">Subject:</label>
           <select
             className="bg-white text-[#282828] border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none cursor-pointer"
             value={subjectFilter}
@@ -140,7 +140,7 @@ const Page = () => {
         </div>
 
         <div className="flex items-center gap-1">
-          <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
+          <label className="text-xs font-medium text-gray-500">Status:</label>
           <select
             className="bg-white text-[#282828] border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none cursor-pointer"
             value={statusFilter}

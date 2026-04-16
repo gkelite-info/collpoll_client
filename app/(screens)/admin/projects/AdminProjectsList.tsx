@@ -4,7 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { CaretLeft } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { AdminDiscussionShimmer } from "../assignments/components/shimmers/discussionShimmer";
-import AddProjectForm from "../../faculty/projects/addProjectFrom";
+import AddProjectForm from "../../faculty/projects/addProjectForm";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { fetchEnrichedProjectsByFaculty, EnrichedProject } from "@/lib/helpers/projects/project";
 import { ProjectCardProps } from "@/lib/projectTypes/project";
