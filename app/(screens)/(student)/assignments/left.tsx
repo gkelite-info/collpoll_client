@@ -91,7 +91,7 @@ function AssignmentsLeftContent() {
   const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
 
   const QUIZ_PER_PAGE = 8;
-  const [quizTotalRecords, setQuizTotalRecords] = useState(0); // 🟢 DB pagination state for Quiz
+  const [quizTotalRecords, setQuizTotalRecords] = useState(0);
 
   const DISCUSSION_PER_PAGE = 8;
   const MAX_ATTEMPTS = 3;
@@ -154,7 +154,6 @@ function AssignmentsLeftContent() {
     }
   }
 
-  // 🟢 UPDATED: Quiz Fetching with DB Pagination
   async function loadQuizzes() {
     if (!collegeSectionsId || !studentId) return;
     try {
@@ -199,7 +198,6 @@ function AssignmentsLeftContent() {
     }
   }
 
-  // 🟢 Re-fetch whenever the quiz page or view changes
   useEffect(() => {
     if (activeTab === "quiz") {
       loadQuizzes();
@@ -247,7 +245,6 @@ function AssignmentsLeftContent() {
     }
   }, [activeTab, collegeSectionsId]);
 
-  // Shimmer effect when switching quiz subtabs
   useEffect(() => {
     if (activeTab === "quiz") {
       setQuizSubTabLoading(true);
@@ -258,7 +255,6 @@ function AssignmentsLeftContent() {
     }
   }, [quizView, activeTab]);
 
-  // Shimmer effect when switching discussion subtabs
   useEffect(() => {
     if (activeTab === "discussion") {
       setDiscussionSubTabLoading(true);
@@ -269,7 +265,6 @@ function AssignmentsLeftContent() {
     }
   }, [discussionView, activeTab]);
 
-  // Shimmer effect when switching assignment subtabs
   useEffect(() => {
     if (activeTab === "assignments") {
       setAssignmentSubTabLoading(true);
@@ -280,7 +275,6 @@ function AssignmentsLeftContent() {
     }
   }, [activeView]);
 
-  // Shimmer effect when switching main tabs
   useEffect(() => {
     setTabSwitchLoading(true);
     const timer = setTimeout(() => {
@@ -313,7 +307,7 @@ function AssignmentsLeftContent() {
   const handleQuizViewChange = (view: "ongoing" | "attempted") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("quizView", view);
-    setQuizCurrentPage(1); // 🟢 Reset to page 1 on view switch
+    setQuizCurrentPage(1);
     router.push(`${pathname}?${params.toString()}`);
   };
 
