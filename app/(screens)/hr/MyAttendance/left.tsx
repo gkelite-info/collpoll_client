@@ -185,9 +185,16 @@ const MyAttendanceLeft = ({
       </div>
 
       <div className="transition-opacity duration-300 mt-4">
-        {activeMainTab === "attendance" && (
+        {/* {activeMainTab === "attendance" && (
           <div className=" w-full">
             <AttendancePage />
+          </div>
+        )} */}
+
+        {activeMainTab === "attendance" && profile && (
+          <div className=" w-full">
+            {/* 🟢 PASS THE DYNAMIC PROPS DOWN */}
+            <AttendancePage userId={Number(resolvedUserId)} profile={profile} />
           </div>
         )}
 
@@ -229,9 +236,18 @@ const MyAttendanceLeft = ({
           </div>
         )}
 
-        {activeMainTab === "analytics" && (
+        {/* {activeMainTab === "analytics" && (
           <div className="w-full">
             <AttendanceAnalyticsPage />
+          </div>
+        )} */}
+
+        {activeMainTab === "analytics" && profile && (
+          <div className="w-full">
+            <AttendanceAnalyticsPage
+              userId={Number(resolvedUserId)}
+              profile={profile}
+            />
           </div>
         )}
       </div>

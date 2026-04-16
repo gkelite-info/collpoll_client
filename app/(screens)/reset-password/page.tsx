@@ -15,44 +15,43 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  type Slide = {
+    heading: string;
+    para: string;
+    image: string;
+  };
 
-   type Slide = {
-      heading: string;
-      para: string;
-      image: string;
-    };
-  
-    const slides: Slide[] = [
-      {
-        heading: "Welcome to Tekton Campus",
-        para: "Your trusted partner in digital solutions.",
-        image: "/Group 2774.png",
-      },
-      {
-        heading: "Secure & Modern",
-        para: "Cutting-edge tools for your workflow.",
-        image: "/Group 2774 (1).png",
-      },
-      {
-        heading: "Grow Faster",
-        para: "Boost your productivity with us.",
-        image: "/Group 2774 (2).png",
-      },
-      {
-        heading: "Future Ready",
-        para: "Designed for performance and reliability.",
-        image: "/Group 2774 (3).png",
-      },
-    ];
-  
-    const [current, setCurrent] = useState(0);
-  
-    useEffect(() => {
-      const interval = setInterval(() => {
-        setCurrent((prev) => (prev + 1) % slides.length);
-      }, 2500);
-      return () => clearInterval(interval);
-    }, []);
+  const slides: Slide[] = [
+    {
+      heading: "Welcome to Tekton Campus",
+      para: "Your trusted partner in digital solutions.",
+      image: "/Group 2774.png",
+    },
+    {
+      heading: "Secure & Modern",
+      para: "Cutting-edge tools for your workflow.",
+      image: "/Group 2774 (1).png",
+    },
+    {
+      heading: "Grow Faster",
+      para: "Boost your productivity with us.",
+      image: "/Group 2774 (2).png",
+    },
+    {
+      heading: "Future Ready",
+      para: "Designed for performance and reliability.",
+      image: "/Group 2774 (3).png",
+    },
+  ];
+
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % slides.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   // 🔐 Password validation
   const validate = () => {
@@ -71,7 +70,7 @@ export default function ResetPasswordPage() {
 
     if (!passwordRegex.test(password)) {
       toast.error(
-        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character"
+        "Password must be at least 6 characters and include uppercase, lowercase, number, and special character",
       );
       return false;
     }
@@ -97,7 +96,7 @@ export default function ResetPasswordPage() {
     router.push("/login");
   };
 
-    const radius = 240;
+  const radius = 240;
 
   return (
     <div className="w-full h-full flex">
@@ -147,12 +146,12 @@ export default function ResetPasswordPage() {
               style={{
                 transform: `
           translateX(-50%)
-          rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                  }deg)
+          rotate(${
+            position === "left" ? -40 : position === "right" ? 40 : 0
+          }deg)
           translateY(-${radius}px)
         `,
               }}
-
             >
               {/* ROTATING CIRCLE BEHIND SLIDE */}
               <div
@@ -170,7 +169,6 @@ export default function ResetPasswordPage() {
     `,
                 }}
               ></div>
-
 
               {/* GREEN CIRCLE */}
               {/* <div className="absolute bottom-[-40%] w-[346px] h-[346px] bg-[#43C17A] rounded-full opacity-35"></div> */}
@@ -195,10 +193,11 @@ export default function ResetPasswordPage() {
           {slides.map((_, i) => (
             <div
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-24 bg-[#1A5D3C]"
-                : "w-20 bg-white/60 border border-white/40"
-                }`}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                current === i
+                  ? "w-24 bg-[#1A5D3C]"
+                  : "w-20 bg-white/60 border border-white/40"
+              }`}
             ></div>
           ))}
         </div>
@@ -234,13 +233,11 @@ export default function ResetPasswordPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute cursor-pointer right-4 top-1/2 -translate-y-1/2 text-gray-500"
               >
                 <Icon
                   icon={
-                    showPassword
-                      ? "mdi:eye-off-outline"
-                      : "mdi:eye-outline"
+                    showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"
                   }
                   width={20}
                 />
@@ -266,10 +263,8 @@ export default function ResetPasswordPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowConfirmPassword(!showConfirmPassword)
-                }
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer"
               >
                 <Icon
                   icon={
@@ -288,7 +283,7 @@ export default function ResetPasswordPage() {
             <button
               onClick={handleUpdatePassword}
               disabled={loading}
-              className="w-[200px] h-[50px] bg-[#16284F] text-white rounded text-[15px] font-medium"
+              className="w-[200px] h-[50px] cursor-pointer bg-[#16284F] text-white rounded text-[15px] font-medium"
             >
               {loading ? "Updating..." : "Confirm Password"}
             </button>

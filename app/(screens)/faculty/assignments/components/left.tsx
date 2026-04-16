@@ -775,7 +775,6 @@ function AssignmentsLeftContent() {
                         ))
                       ))}
 
-                    {/* 🟢 QUIZ PAGINATION */}
                     {quizTotalCount > ITEMS_PER_PAGE && (
                       <div className="col-span-2 mt-4 flex justify-center">
                         <Pagination
@@ -857,7 +856,6 @@ function AssignmentsLeftContent() {
         name="discussion"
       />
 
-      {/* 🟢 ADDED NEW QUIZ DELETE MODAL */}
       <ConfirmDeleteModal
         open={!!deleteQuizId}
         onConfirm={executeDeleteQuiz}
