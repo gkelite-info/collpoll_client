@@ -42,8 +42,6 @@ export default function FacultyDashLeft() {
         getFacultyDashboardStats(Number(facultyId)),
       ]);
 
-      console.log("What is classData", classesData);      
-
       setUpcomingClasses(classesData);
       setStats(statsData);
     } catch (error) {

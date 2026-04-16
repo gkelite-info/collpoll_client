@@ -105,8 +105,8 @@ export default function CollegeAdminNavbar() {
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
                 ${isActive
-                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav"
-                                    : "text-white hover:bg-[#50D689]/30"
+                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                                 }
               `}
                         >

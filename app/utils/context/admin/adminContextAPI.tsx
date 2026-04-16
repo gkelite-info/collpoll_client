@@ -17,7 +17,7 @@ type AdminJoin = {
   };
 };
 
-export async function fetchAdminContext(userId: number) {
+export async function fetchAdminContext(userId: number | null) {
   const { data: admin, error } = await supabase
     .from("admins")
     .select(`

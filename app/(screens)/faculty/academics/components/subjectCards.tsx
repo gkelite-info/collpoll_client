@@ -98,7 +98,7 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
 
   return (
     <>
-      <div className="flex justify-between items-start">
+      <div className="bg-pink-00 flex justify-between items-start">
         <div className="mb-6 flex flex-wrap gap-8">
           <div className="flex items-center gap-2">
             <p className="text-[#525252] text-sm">Subject :</p>
@@ -153,12 +153,20 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
           <FilterSelect label="Semester" options={["I", "II"]} />
           <FilterSelect label="Year" options={["1st Year", "2nd Year"]} />
         </div> */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d]"
-        >
-          Add Unit
-        </button>
+        <div className="bg-blue-00 flex items-center gap-3">
+          <button
+            className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium"
+          >
+            Add Weightage
+          </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium"
+          >
+            Add Unit
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

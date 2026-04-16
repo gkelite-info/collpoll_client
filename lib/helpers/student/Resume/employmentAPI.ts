@@ -49,8 +49,6 @@ export async function addEmployment(
     payload: EmploymentInsertPayload
 ): Promise<{ employmentId: number }> {
 
-    console.log("🔥 INSERT PAYLOAD:", payload);
-
     const { data, error } = await supabase
         .from("resume_employment_details")
         .insert({
@@ -67,8 +65,6 @@ export async function addEmployment(
             updatedAt: payload.updatedAt,
         })
         .select("employmentId");
-
-    console.log("🔥 INSERT RESPONSE:", data, error);
 
     if (error || !data || data.length === 0) {
         console.error("❌ INSERT FAILED:", error);

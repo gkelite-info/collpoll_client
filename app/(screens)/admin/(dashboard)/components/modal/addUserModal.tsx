@@ -27,6 +27,13 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 
+type SubjectBlock = {
+  id: number;
+  yearId: number | null;
+  subjectId: number | null;
+  sectionIds: number[];
+};
+
 const toPascalCase = (str: string) => {
   return str.replace(
     /\w\S*/g,
@@ -132,6 +139,16 @@ const AddUserModal: React.FC<{
   const ENTRY_TYPES = ["Regular", "Lateral", "Transfer"];
   const INTER_ENTRY = ["Regular", "Transfer"];
 
+  const [subjectBlocks, setSubjectBlocks] = useState<SubjectBlock[]>([
+    { id: 1, yearId: null, subjectId: null, sectionIds: [] }
+  ]);
+
+  const addSubjectBlock = () =>
+    setSubjectBlocks(prev => [...prev, { id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
+
+  const removeSubjectBlock = (id: number) =>
+    setSubjectBlocks(prev => prev.filter(b => b.id !== id));
+
   const resetForm = () => {
     setBasicData((prev: any) => ({
       ...initialBasicData,
@@ -145,7 +162,7 @@ const AddUserModal: React.FC<{
     setSelectedYearId(null);
     setSelectedSubjectId(null);
     setSelectedSectionIds([]);
-
+    setSubjectBlocks([{ id: 1, yearId: null, subjectId: null, sectionIds: [] }]);
     setSelectedDegrees([]);
     setSelectedDepts([]);
     setSelectedYears([]);
@@ -754,15 +771,15 @@ const AddUserModal: React.FC<{
 
     if (!basicData.gender) return toast.error("Please select a gender.");
 
-    if (
-      isFaculty &&
-      (!collegeEducationId ||
-        !selectedBranchId ||
-        !selectedYearId ||
-        !selectedSubjectId ||
-        selectedSectionIds.length === 0)
-    )
-      return toast.error("Complete all academic fields for Faculty.");
+    if (isFaculty) {
+      if (!collegeEducationId || !selectedBranchId)
+        return toast.error("Complete all academic fields for Faculty.");
+      const incomplete = subjectBlocks.some(
+        (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0
+      );
+      if (incomplete)
+        return toast.error("Complete Year, Subject and Sections for all subject blocks.");
+    }
 
     if (isStudent) {
       if (
@@ -905,20 +922,38 @@ const AddUserModal: React.FC<{
         });
       }
 
+      // if (isFaculty) {
+      //   await persistFaculty(
+      //     targetUserId,
+      //     { ...basicData, collegePublicId: basicData.collegeId },
+      //     {
+      //       educationId: collegeEducationId!,
+      //       branchId: selectedBranchId!,
+      //       yearId: selectedYearId!,
+      //       subjectId: selectedSubjectId!,
+      //       sectionIds: selectedSectionIds,
+      //     },
+      //     timestamp,
+      //     !!user,
+      //   );
+      // }
+
       if (isFaculty) {
-        await persistFaculty(
-          targetUserId,
-          { ...basicData, collegePublicId: basicData.collegeId },
-          {
-            educationId: collegeEducationId!,
-            branchId: selectedBranchId!,
-            yearId: selectedYearId!,
-            subjectId: selectedSubjectId!,
-            sectionIds: selectedSectionIds,
-          },
-          timestamp,
-          !!user,
-        );
+        for (const block of subjectBlocks) {
+          await persistFaculty(
+            targetUserId,
+            { ...basicData, collegePublicId: basicData.collegeId },
+            {
+              educationId: collegeEducationId!,
+              branchId: selectedBranchId!,
+              yearId: block.yearId!,
+              subjectId: block.subjectId!,
+              sectionIds: block.sectionIds,
+            },
+            timestamp,
+            !!user,
+          );
+        }
       }
 
       if (!targetUserId) throw new Error("User creation failed");
@@ -1226,7 +1261,7 @@ const AddUserModal: React.FC<{
               )}
             </div>
 
-            {isFaculty && (
+            {/* {isFaculty && (
               <>
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-1">
@@ -1359,6 +1394,167 @@ const AddUserModal: React.FC<{
                     gap="gap-1"
                   />
                 </div>
+              </>
+            )} */}
+
+            {isFaculty && (
+              <>
+                {/* Branch stays outside — shared across all subject blocks */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-[#2D3748]">
+                    {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}{" "}
+                    <span className="text-red-600">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={selectedBranchId || ""}
+                      disabled={!selectedEducation}
+                      onChange={(e) => {
+                        setSelectedBranchId(Number(e.target.value));
+                        setSubjectBlocks([{ id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
+                      }}
+                      className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                    >
+                      <option value="" disabled>
+                        {collegeEducationType === "Inter" ? "Select Group Type" : "Select Branch Type"}
+                      </option>
+                      {filteredBranches.map((b: any) => (
+                        <option key={b.collegeBranchId} value={b.collegeBranchId}>
+                          {b.collegeBranchCode}
+                        </option>
+                      ))}
+                    </select>
+                    <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Dynamic subject blocks */}
+                {subjectBlocks.map((block, index) => {
+                  const blockFilteredYears = dbData.years.filter((y) => y.collegeBranchId == selectedBranchId);
+                  const blockFilteredSubjects = dbData.subjects.filter((s) => s.collegeAcademicYearId == block.yearId);
+                  const blockFilteredSections = dbData.sections.filter((s) => s.collegeAcademicYearId == block.yearId);
+
+                  return (
+                    <div key={block.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50/50 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
+                          Subject {index + 1}
+                        </span>
+                        {subjectBlocks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeSubjectBlock(block.id)}
+                            className="text-gray-300 hover:text-red-400 transition-colors text-base leading-none"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-5">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-[#2D3748]">
+                            Year <span className="text-red-600">*</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={block.yearId || ""}
+                              disabled={!selectedBranchId}
+                              onChange={(e) => {
+                                const yearId = Number(e.target.value);
+                                setSubjectBlocks((prev) =>
+                                  prev.map((b) =>
+                                    b.id === block.id ? { ...b, yearId, subjectId: null, sectionIds: [] } : b
+                                  )
+                                );
+                              }}
+                              className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                            >
+                              <option value="" disabled>Select Year</option>
+                              {blockFilteredYears.map((y: any) => (
+                                <option key={y.collegeAcademicYearId} value={y.collegeAcademicYearId}>
+                                  {y.collegeAcademicYear}
+                                </option>
+                              ))}
+                            </select>
+                            <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-[#2D3748]">
+                            Subject <span className="text-red-600">*</span>
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={block.subjectId || ""}
+                              disabled={!block.yearId}
+                              onChange={(e) => {
+                                const subjectId = Number(e.target.value);
+                                setSubjectBlocks((prev) =>
+                                  prev.map((b) =>
+                                    b.id === block.id ? { ...b, subjectId } : b
+                                  )
+                                );
+                              }}
+                              className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
+                            >
+                              <option value="" disabled>Select Subject</option>
+                              {blockFilteredSubjects.map((s: any) => (
+                                <option key={s.collegeSubjectId} value={s.collegeSubjectId}>
+                                  {s.subjectName}
+                                </option>
+                              ))}
+                            </select>
+                            <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                          </div>
+                        </div>
+                      </div>
+
+                      <CustomMultiSelect
+                        label="Sections"
+                        placeholder="Select Sections"
+                        options={blockFilteredSections.map((s: any) => s.collegeSections)}
+                        selectedValues={blockFilteredSections
+                          .filter((s: any) => block.sectionIds.includes(s.collegeSectionsId))
+                          .map((s: any) => s.collegeSections)}
+                        disabled={!block.yearId}
+                        onChange={(v) => {
+                          const found = blockFilteredSections.find((s: any) => s.collegeSections === v);
+                          if (!found) return;
+                          const sid = found.collegeSectionsId;
+                          setSubjectBlocks((prev) =>
+                            prev.map((b) =>
+                              b.id === block.id
+                                ? { ...b, sectionIds: b.sectionIds.includes(sid) ? b.sectionIds.filter((i) => i !== sid) : [...b.sectionIds, sid] }
+                                : b
+                            )
+                          );
+                        }}
+                        onRemove={(v) => {
+                          const found = blockFilteredSections.find((s: any) => s.collegeSections === v);
+                          if (!found) return;
+                          const sid = found.collegeSectionsId;
+                          setSubjectBlocks((prev) =>
+                            prev.map((b) =>
+                              b.id === block.id ? { ...b, sectionIds: b.sectionIds.filter((i) => i !== sid) } : b
+                            )
+                          );
+                        }}
+                        paddingY="py-1"
+                        gap="gap-1"
+                      />
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={addSubjectBlock}
+                  className="flex items-center gap-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-md px-3 py-1.5 hover:border-[#48C78E] hover:text-[#48C78E] hover:bg-green-50 transition-all w-fit cursor-pointer"
+                >
+                  <span className="text-base leading-none">+</span> Add Subject
+                </button>
               </>
             )}
 

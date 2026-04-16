@@ -88,8 +88,8 @@ export async function fetchCollegeBranchesForLoggedInAdmin(
 }
 
 export async function fetchBranchOptionsForAdmin(
-    userId: number,
-    collegeEducationId: number
+    userId: number | null,
+    collegeEducationId: number | null
 ) {
     const { collegeId } = await fetchAdminContext(userId);
 

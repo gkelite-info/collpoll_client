@@ -484,12 +484,12 @@ function AssignmentsLeftContent() {
 
   const activeDiscussionData = activeDiscussionId
     ? [...activeDiscussions, ...completedDiscussions].find(
-        (d) => String(d.discussionId) === String(activeDiscussionId),
-      )
+      (d) => String(d.discussionId) === String(activeDiscussionId),
+    )
     : null;
 
   return (
-    <div className="w-[68%] p-2 flex flex-col h-full">
+    <div className="bg-red-00 w-[68%] p-2 flex flex-col">
       {activeModal === "performance" &&
         activeQuizId &&
         (performanceLoading ? (
@@ -518,9 +518,8 @@ function AssignmentsLeftContent() {
         <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
           <span
             onClick={() => handleTabChange("assignments")}
-            className={`cursor-pointer transition-colors ${
-              activeTab === "assignments" ? "text-[#43C17A]" : "text-[#282828]"
-            }`}
+            className={`cursor-pointer transition-colors ${activeTab === "assignments" ? "text-[#43C17A]" : "text-[#282828]"
+              }`}
           >
             Assignments
           </span>
@@ -529,9 +528,8 @@ function AssignmentsLeftContent() {
 
           <span
             onClick={() => handleTabChange("quiz")}
-            className={`cursor-pointer transition-colors ${
-              activeTab === "quiz" ? "text-[#43C17A]" : "text-[#282828]"
-            }`}
+            className={`cursor-pointer transition-colors ${activeTab === "quiz" ? "text-[#43C17A]" : "text-[#282828]"
+              }`}
           >
             Quiz
           </span>
@@ -607,7 +605,7 @@ function AssignmentsLeftContent() {
           )}
         </div>
 
-        <div className="mt-4 h-[151vh] overflow-y-auto pr-1">
+        <div className="mt-4 lg:h-fit overflow-y-auto pr-1">
           {activeTab === "assignments" &&
             (loading || tabSwitchLoading || assignmentSubTabLoading ? (
               <AssignmentCardSkeletonGroup count={4} />
@@ -761,13 +759,13 @@ function AssignmentsLeftContent() {
                                 prev.map((d) =>
                                   d.discussionId === discussion.discussionId
                                     ? {
-                                        ...d,
-                                        studentUploads: d.studentUploads.filter(
-                                          (f: any) =>
-                                            f.studentDiscussionUploadId !==
-                                            studentDiscussionUploadId,
-                                        ),
-                                      }
+                                      ...d,
+                                      studentUploads: d.studentUploads.filter(
+                                        (f: any) =>
+                                          f.studentDiscussionUploadId !==
+                                          studentDiscussionUploadId,
+                                      ),
+                                    }
                                     : d,
                                 ),
                               );

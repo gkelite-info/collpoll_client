@@ -88,8 +88,7 @@ export default function Academics() {
             My Classes
           </h1>
           <p className="text-[#282828] text-sm">
-            Track progress, add lessons and manage course content across all
-            your batches.
+            Track progress, add lessons and manage course content across all your batches.
           </p>
         </div>
 
