@@ -249,23 +249,38 @@ export async function getFacultySubjects(params: {
 //   return data ?? [];
 // }
 
+// export async function getTopicsBySubjectId(collegeSubjectId: number) {
+//   const { data, error } = await supabase
+//     .from("college_subject_unit_topics")
+//     .select(
+//       `
+//             collegeSubjectUnitId,
+//             topicTitle,
+//             displayOrder,
+//             collegeSubjectId
+//         `,
+//     )
+//     .eq("collegeSubjectId", collegeSubjectId)
+//     .eq("isActive", true)
+//     .order("displayOrder", { ascending: true });
+
+//   if (error) {
+//     console.error("Failed to fetch topics", error);
+//     throw error;
+//   }
+
+//   return data ?? [];
+// }
+
 export async function getTopicsBySubjectId(collegeSubjectId: number) {
   const { data, error } = await supabase
     .from("college_subject_unit_topics")
-    .select(
-      `
-            collegeSubjectUnitId,
-            topicTitle,
-            displayOrder,
-            collegeSubjectId
-        `,
-    )
+    .select("collegeSubjectUnitTopicId, topicTitle, collegeSubjectUnitId")
     .eq("collegeSubjectId", collegeSubjectId)
-    .eq("isActive", true)
-    .order("displayOrder", { ascending: true });
+    .eq("isActive", true);
 
   if (error) {
-    console.error("Failed to fetch topics", error);
+    console.error("Error fetching topics:", error);
     throw error;
   }
 

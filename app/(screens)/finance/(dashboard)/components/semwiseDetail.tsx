@@ -98,6 +98,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     "all" | "paid" | "pending" | "partial"
   >("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(""); // 🟢 ADDED DEBOUNCE STATE
   const [showFilter, setShowFilter] = useState(false);
 
   const [loadingTable, setLoadingTable] = useState(true);
@@ -157,9 +158,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
-
     const date = new Date(dateString);
-
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -167,16 +166,19 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     });
   };
 
+  // 🟢 DEBOUNCER EFFECT
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1); // Reset page to 1 when a new search triggers
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const processedData = useMemo(() => {
     let data = [...students];
 
-    if (search) {
-      data = data.filter(
-        (item) =>
-          item.fullName.toLowerCase().includes(search.toLowerCase()) ||
-          String(item.studentId).toLowerCase().includes(search.toLowerCase()),
-      );
-    }
+    // 🟢 REMOVED CLIENT-SIDE SEARCH FILTER (Now handled by backend)
 
     data.sort((a: any, b: any) => {
       const aVal = a[sortKey];
@@ -239,7 +241,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         </span>
       ),
     }));
-  }, [students, search, sortKey, sortDirection]);
+  }, [students, sortKey, sortDirection]);
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -252,10 +254,8 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
 
   useEffect(() => {
     const loadData = async () => {
-      // FIX 2: Check context loading first
       if (loading) return;
 
-      // FIX 3: If params are somehow permanently missing, gracefully stop the shimmer
       if (
         !collegeId ||
         !collegeEducationId ||
@@ -280,6 +280,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           },
           currentPage,
           rowsPerPage,
+          debouncedSearch,
         );
 
         if (!response) return;
@@ -322,9 +323,9 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     semesterId,
     statusFilter,
     currentPage,
+    debouncedSearch, // 🟢 TRIGGER RE-FETCH WHEN SEARCH CHANGES
   ]);
 
-  // Combined loading state for cleaner conditionals
   const isPageLoading = loading || loadingTable;
 
   return (
@@ -429,12 +430,12 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         </div>
 
         <div className="flex gap-2">
-          <div
+          {/* <div
             onClick={() => handleSort("fullName")}
             className="bg-[#43C17A1F] cursor-pointer rounded-full p-2 flex items-center justify-center"
           >
             <FunnelSimple size={20} className="text-[#00A94A]" />
-          </div>
+          </div> */}
 
           <div
             onClick={() => setShowFilter(!showFilter)}

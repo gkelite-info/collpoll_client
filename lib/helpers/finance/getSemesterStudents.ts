@@ -24,7 +24,8 @@ export type SemesterStudent = {
 export async function getSemesterFinanceSummary(
   filters: SemesterFinanceFilters,
   page: number,
-  limit: number
+  limit: number,
+  searchQuery?: string,
 ) {
   const {
     collegeId,
@@ -37,12 +38,23 @@ export async function getSemesterFinanceSummary(
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  /* 1) Students in selected academicYear + semester */
-  const { data: students, error: studentError, count } = await supabase
+  let matchingUserIds: number[] = [];
+  if (searchQuery) {
+    const { data: usersMatch } = await supabase
+      .from("users")
+      .select("userId")
+      .ilike("fullName", `%${searchQuery}%`);
+    if (usersMatch) {
+      matchingUserIds = usersMatch.map((u) => u.userId);
+    }
+  }
+
+  let studentQuery = supabase
     .from("students")
     .select(
       `
     studentId,
+    userId,
     users!students_userId_fkey(fullName),
     college_branch(collegeBranchCode),
     student_academic_history!inner(
@@ -51,7 +63,7 @@ export async function getSemesterFinanceSummary(
       deletedAt
     )
   `,
-      { count: "exact" }
+      { count: "exact" },
     )
     .eq("collegeId", collegeId)
     .eq("collegeEducationId", collegeEducationId)
@@ -61,18 +73,44 @@ export async function getSemesterFinanceSummary(
     .is("deletedAt", null)
     .eq("student_academic_history.collegeAcademicYearId", collegeAcademicYearId)
     .eq("student_academic_history.collegeSemesterId", collegeSemesterId)
-    .is("student_academic_history.deletedAt", null)
-    .range(from, to);
+    .is("student_academic_history.deletedAt", null);
+
+  /* 🟢 DB-LEVEL SEARCH FILTER INJECTION */
+  if (searchQuery) {
+    const isNumeric = /^\d+$/.test(searchQuery);
+    if (isNumeric) {
+      // Search by Exact StudentID OR matched FullName
+      const userIdsStr =
+        matchingUserIds.length > 0 ? matchingUserIds.join(",") : "0";
+      studentQuery = studentQuery.or(
+        `studentId.eq.${searchQuery},userId.in.(${userIdsStr})`,
+      );
+    } else {
+      // Search ONLY by matching FullName
+      if (matchingUserIds.length > 0) {
+        studentQuery = studentQuery.in("userId", matchingUserIds);
+      } else {
+        // Force empty result gracefully if no name matched
+        studentQuery = studentQuery.in("userId", [0]);
+      }
+    }
+  }
+
+  const {
+    data: students,
+    error: studentError,
+    count,
+  } = await studentQuery.range(from, to);
 
   if (studentError) {
     return null;
   }
 
-  if (!students?.length) return emptyResponse();
+  if (!students?.length) return emptyResponse(count ?? 0);
 
   const studentIds = students.map((s) => s.studentId);
 
-  /* 2) Obligations for those students (prefer semester filter if column exists) */
+  /* 2) Obligations for those students */
   let obligationQuery = supabase
     .from("student_fee_obligation")
     .select("studentFeeObligationId, studentId, totalAmount")
@@ -82,29 +120,25 @@ export async function getSemesterFinanceSummary(
     .eq("isActive", true)
     .is("deletedAt", null);
 
-  // ✅ IMPORTANT: if your table has this column, keep it ON
-  // obligationQuery = obligationQuery.eq("collegeSemesterId", collegeSemesterId);
-
   const { data: obligations, error: obligationError } = await obligationQuery;
 
   if (obligationError) {
     return null;
   }
 
-  if (!obligations?.length) return emptyResponse();
+  if (!obligations?.length) return emptyResponse(count ?? 0);
 
-  // ✅ Keep only students who exist in student_fee_obligation
   const obligationStudentIds = new Set(
-    obligations.map((o: any) => o.studentId)
+    obligations.map((o: any) => o.studentId),
   );
 
   const filteredStudents = students.filter((student: any) =>
-    obligationStudentIds.has(student.studentId)
+    obligationStudentIds.has(student.studentId),
   );
 
   const obligationIds = obligations.map((o) => o.studentFeeObligationId);
 
-  /* 3) Success Transactions for these obligations (need obligationId mapping) */
+  /* 3) Success Transactions for these obligations */
   const { data: transactions, error: txnError } = await supabase
     .from("student_payment_transaction")
     .select("studentPaymentTransactionId, studentFeeObligationId")
@@ -116,21 +150,22 @@ export async function getSemesterFinanceSummary(
   }
 
   if (!transactions?.length) {
-    // No payments done yet - still return expected totals
-    return buildFromNoPayments(students, obligations);
+    return buildFromNoPayments(students, obligations, count ?? 0);
   }
 
   const transactionIds = transactions.map((t) => t.studentPaymentTransactionId);
 
-  /* 4) Collections (THIS is semester-scoped) */
+  /* 4) Collections (semester-scoped) */
   const { data: collections, error: collError } = await supabase
     .from("student_fee_collection")
-    .select("collectedAmount, collegeSemesterId, studentPaymentTransactionId, createdAt")
+    .select(
+      "collectedAmount, collegeSemesterId, studentPaymentTransactionId, createdAt",
+    )
     .in("studentPaymentTransactionId", transactionIds)
     .eq("collegeSemesterId", collegeSemesterId);
 
   const semesterTransactionIds = new Set(
-    (collections || []).map((c: any) => c.studentPaymentTransactionId)
+    (collections || []).map((c: any) => c.studentPaymentTransactionId),
   );
 
   if (collError) {
@@ -140,12 +175,14 @@ export async function getSemesterFinanceSummary(
 
   const { data: ledgers, error: ledgerError } = await supabase
     .from("student_fee_ledger")
-    .select(`
+    .select(
+      `
     amount,
     studentFeeObligationId,
     studentPaymentTransactionId,
     createdAt
-  `)
+  `,
+    )
     .in("studentPaymentTransactionId", Array.from(semesterTransactionIds));
 
   if (ledgerError) {
@@ -156,20 +193,20 @@ export async function getSemesterFinanceSummary(
   /* 5) Paid map per obligation using collections (semester-wise) */
   const txnToObligation = new Map<number, number>();
   transactions.forEach((t: any) => {
-    txnToObligation.set(t.studentPaymentTransactionId, t.studentFeeObligationId);
+    txnToObligation.set(
+      t.studentPaymentTransactionId,
+      t.studentFeeObligationId,
+    );
   });
 
-  const paidMap = new Map<number, number>(); // obligationId -> paidAmount
-  const lastPayMap = new Map<number, string>(); // studentId -> last payment date
+  const paidMap = new Map<number, number>();
+  const lastPayMap = new Map<number, string>();
 
   (ledgers || []).forEach((l: any) => {
     const obligationId = l.studentFeeObligationId;
     const amt = Number(l.amount) || 0;
 
-    paidMap.set(
-      obligationId,
-      (paidMap.get(obligationId) || 0) + amt
-    );
+    paidMap.set(obligationId, (paidMap.get(obligationId) || 0) + amt);
 
     const prev = lastPayMap.get(obligationId);
     if (!prev || new Date(l.createdAt) > new Date(prev)) {
@@ -185,21 +222,19 @@ export async function getSemesterFinanceSummary(
   let pendingStudents = 0;
 
   const result = filteredStudents.map((student: any) => {
-    const obligation = obligations.find((o: any) => o.studentId === student.studentId);
+    const obligation = obligations.find(
+      (o: any) => o.studentId === student.studentId,
+    );
 
     const totalAmount = Number(obligation?.totalAmount) || 0;
     const paidAmount = obligation
-      ? (paidMap.get(obligation.studentFeeObligationId) || 0)
+      ? paidMap.get(obligation.studentFeeObligationId) || 0
       : 0;
 
     const balance = totalAmount - paidAmount;
 
     const status: PaymentStatus =
-      paidAmount === 0
-        ? "Pending"
-        : balance === 0
-          ? "Paid"
-          : "Partial";
+      paidAmount === 0 ? "Pending" : balance === 0 ? "Paid" : "Partial";
 
     expected += totalAmount;
     collected += paidAmount;
@@ -253,19 +288,25 @@ function emptyResponse(count: number = 0) {
   };
 }
 
-function buildFromNoPayments(students: any[], obligations: any[], count: number = 0) {
+function buildFromNoPayments(
+  students: any[],
+  obligations: any[],
+  count: number = 0,
+) {
   let expected = 0;
 
   const obligationStudentIds = new Set(
-    obligations.map((o: any) => o.studentId)
+    obligations.map((o: any) => o.studentId),
   );
 
   const filteredStudents = students.filter((student: any) =>
-    obligationStudentIds.has(student.studentId)
+    obligationStudentIds.has(student.studentId),
   );
 
   const result = filteredStudents.map((student: any) => {
-    const obligation = obligations.find((o: any) => o.studentId === student.studentId);
+    const obligation = obligations.find(
+      (o: any) => o.studentId === student.studentId,
+    );
     const totalAmount = Number(obligation?.totalAmount) || 0;
     expected += totalAmount;
 
