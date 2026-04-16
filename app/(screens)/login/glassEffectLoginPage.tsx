@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
-import { Icon } from "@iconify/react";
-import Image from "next/image";
 import Link from "next/link";
+import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function LoginPage() {
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [current, setCurrent] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
 
   type Slide = {
     heading: string;
@@ -23,53 +24,81 @@ export default function LoginPage() {
 
   const slides: Slide[] = [
     {
-      heading: "Welcome to Tekton Campus",
-      para: "Your trusted partner in digital solutions.",
-      image: "/Group 2774.png",
+      heading: "Managing Campus Excellence and Operations",
+      para: "Oversee students, faculty, academics, and daily campus activities — all in one place.",
+      image: "/loginslide1.png",
     },
     {
-      heading: "Secure & Modern",
-      para: "Cutting-edge tools for your workflow.",
-      image: "/Group 2774 (1).png",
+      heading: "Managing Operations and User Activities",
+      para: "Handle day-to-day tasks, manage users, and ensure smooth system operations — all in one place.",
+      image: "/loginslide2.png",
     },
     {
-      heading: "Grow Faster",
-      para: "Boost your productivity with us.",
-      image: "/Group 2774 (2).png",
+      heading: "Handling Faculty and Staff Operations",
+      para: "Track attendance, manage records, and streamline HR processes with ease.",
+      image: "/loginslide3.png",
     },
     {
-      heading: "Future Ready",
-      para: "Designed for performance and reliability.",
-      image: "/Group 2774 (3).png",
+      heading: "Managing Financial Operations and Transparency",
+      para: "Oversee budgets, track expenses, and manage financial records — all in one place.",
+      image: "/loginslide4.png",
     },
     {
-      heading: "Leading Campus Operations Efficiently",
-      para: "Oversee academic activities, departments, and student management across the institution.",
-      image: "/home.png",
+      heading: "Handling Financial Transactions and Operations",
+      para: "Manage fee collections, track payments, and maintain financial records — all in one place.",
+      image: "/loginslide5.png",
     },
     {
-      heading: "Managing Institutional Finances with Precision",
-      para: "Handle fee structures, payments, financial records, and reports seamlessly.",
-      image: "/Group 0021 (6).png",
+      heading: "Driving Student Placements and Success",
+      para: "Manage job opportunities, campus drives, and student career growth efficiently.",
+      image: "/loginslide6.png",
     },
     {
-      heading: "Shaping Student Careers and Opportunities",
-      para: "Coordinate placement drives, track student progress, and connect with top recruiters.",
-      image: "/Placement Home.png",
+      heading: "Empowering Teaching and Student Success",
+      para: "Manage classes, track student progress, and deliver quality education — all in one place.",
+      image: "/loginslide7.png",
     },
     {
-      heading: "Building Strong Teams for Better Education",
-      para: "Manage recruitment, staff records, payroll, and employee performance efficiently.",
-      image: "/HR home.png",
+      heading: "Managing Learning and Academic Progress",
+      para: "Track attendance, assignments, and academic performance — all in one place.",
+      image: "/loginslide8.png",
+    },
+    {
+      heading: "Staying Connected to Your Child’s Academic Journey",
+      para: "Track attendance, monitor performance, and stay updated — all in one place",
+      image: "/loginslide9.png",
+    },
+    {
+      heading: "Managing Student Well-Being Activities",
+      para: "Track issues, handle requests, and ensure student support with ease.",
+      image: "/loginslide10.png",
     },
   ];
 
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setCurrent((prev) => (prev + 1) % slides.length);
+  //   }, 2500);
+  //   return () => clearInterval(interval);
+  // }, []);
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrent((prev) => (prev + 1) % slides.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, []);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    if (!isHovered) {
+      intervalRef.current = setInterval(() => {
+        setCurrent(prev => (prev + 1) % slides.length);
+      }, 2500);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isHovered, slides.length]);
 
   const validate = () => {
     if (!email.trim()) {
@@ -128,90 +157,228 @@ export default function LoginPage() {
     }
   };
 
-  const radius = 240;
-
   return (
     <div className="w-full h-full flex">
-      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center p-8 overflow-hidden">
-        <div className="flex flex-col gap-2 items-center justify-center">
-          <Image
-            src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
-            height={90}
-            width={90}
-            alt=""
-            className="rounded-full bg-transparent"
-          />
-          <h1 className="text-white">Powered by Gk-Elite</h1>
-        </div>
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold text-[#1B4D3E] text-center mb-1 transition-opacity duration-700">
-            {slides[current].heading}
-          </h2>
-          <p className="text-[#1F3D2F] text-center text-sm mb-6 w-full transition-opacity">
-            {slides[current].para}
-          </p>
-        </div>
 
-        {slides.map((slide, idx) => {
-          let position = "hidden";
-          if (idx === current) position = "center";
-          else if (idx === (current - 1 + slides.length) % slides.length)
-            position = "left";
-          else if (idx === (current + 1) % slides.length) position = "right";
-
-          const positionStyles: any = {
-            center: "rotate-0 opacity-100 z-0",
-            left: "-rotate-[40deg] opacity-0 z-10",
-            right: "rotate-[40deg] opacity-0 z-10",
-            hidden: "opacity-0 pointer-events-none",
-          };
-
-          return (
-            <div
-              key={idx}
-              className={`absolute bottom-0 left-1/2 w-[65%] h-[45%] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
-              style={{
-                transform: `translateX(-50%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                  }deg) translateY(-${radius}px)`,
-              }}
-            >
-              <div
-                className="absolute w-[480px] h-[450px] opacity-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-1.5 z-[-1] transition-all duration-700 ease-in-out"
-                style={{
-                  transform: `translate(0%, 25%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                    }deg)`,
-                }}
+      {/* <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col justify-between items-center py-6">
+        <div className="w-full flex flex-col bg-red-00 justify-between items-center flex-shrink-0 mt-2 md:mt-2">
+          <div className="w-full z-20 px-8 flex flex-col items-center text-center">
+            <div className="flex flex-col items-center">
+              <img
+                src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
+                height={85}
+                width={85}
+                alt=""
+                className="rounded-full bg-transparent"
               />
-              <div className="relative w-[480px] h-[350px] mt-35 rounded-xl flex items-center justify-center">
-                <img
-                  src={encodeURI(slide.image)}
-                  alt={`Slide ${idx + 1}`}
-                  className="w-[450px] h-[300px] object-cover"
-                  loading="lazy"
-                />
-              </div>
+              <h1 className="text-gray-700 text-[11px] font-bold tracking-wide mt-1">Powered by GK Elite-Info</h1>
             </div>
-          );
-        })}
+            
 
-        <div className="flex gap-4 mt-8 absolute z-20 bottom-10">
+            <div className="mt-5 w-full overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={current}
+                  initial={{ opacity: 0, x: 60 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 60 }}
+                  transition={{
+                    duration: 0.45,
+                    ease: [0.22, 1, 0.36, 1]
+                  }}
+                >
+                  <h2 className="text-[19px] leading-tight font-bold text-[#1B4D3E]">
+                    {slides[current].heading}
+                  </h2>
+
+                  <p className="text-[#1F3D2F] text-[13.5px] mt-2 w-full opacity-90">
+                    {slides[current].para}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <div className="flex justify-center items-center w-full h-[380px] sm:h-[400px] md:h-[400px] bg-red-00 mt-10">
+            {slides.map((slide, idx) => {
+              let position = "hidden";
+              if (idx === current) position = "center";
+              else if (idx === (current - 1 + slides.length) % slides.length) position = "left";
+              else if (idx === (current + 1) % slides.length) position = "right";
+
+              const positionStyles: any = {
+                center: "rotate-0 opacity-100 z-10",
+                left: "-rotate-[40deg] opacity-0 z-0",
+                right: "rotate-[40deg] opacity-0 z-0",
+                hidden: "opacity-0 pointer-events-none",
+              };
+
+              return (
+                <div
+                  key={idx}
+                  className={`absolute bottom-[-30px] bg-green-00 mx-auto mt-10 left-1/2 w-[85%] max-w-[380px] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
+                  style={{
+                    transform: `translateX(-50%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
+                      }deg) translateY(-220px)`,
+                  }}
+                >
+                  <div
+                    className="absolute w-[110%] h-[120%] opacity-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-1.5 z-[-1] transition-all duration-700 ease-in-out"
+                    style={{
+                      transform: `translate(0%, 25%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
+                        }deg)`,
+                    }}
+                  />
+                  <div className="relative w-full aspect-4/3 rounded-2xl flex items-center justify-center p-2.5">
+                    <img
+                      src={encodeURI(slide.image)}
+                      alt={`Slide ${idx + 1}`}
+                      className="w-full h-full object-cover rounded-[14px]"
+                      loading="lazy"
+                    />
+                    
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        
+        <div className="flex-grow w-full"></div>
+
+        
+        <div className="flex gap-4 z-20 shrink-0 mb-8">
           {slides.map((_, i) => (
             <div
               key={i}
               className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-18 bg-[#1A5D3C]"
-                : "w-5 bg-white/60 border border-white/40"
+                ? "w-16 bg-[#1A5D3C]"
+                : "w-4 bg-white/60 border border-white/40"
                 }`}
             />
           ))}
         </div>
+      </div> */}
+
+      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center py-6 overflow-hidden">
+        <div className="w-full z-20 px-8 flex flex-col items-center text-center shrink-0">
+          <div className="flex flex-col items-center">
+            <img
+              src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
+              height={85}
+              width={85}
+              alt=""
+              className="rounded-full bg-transparent"
+            />
+            <h1 className="text-gray-700 text-[11px] font-bold tracking-wide mt-1">
+              Powered by GK Elite-Info
+            </h1>
+          </div>
+
+          <div className="mt-5 w-full overflow-hidden min-h-[95px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, x: 60 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 60 }}
+                transition={{ duration: 0.50, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <h2 className="text-[19px] leading-tight font-bold text-[#1B4D3E]">
+                  {slides[current].heading}
+                </h2>
+                <p className="text-[#1F3D2F] text-[13.5px] mt-2 w-full opacity-90">
+                  {slides[current].para}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        <div
+          className="relative w-full flex-1 min-h-0 mt-8 overflow-hidden"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {slides.map((slide, idx) => {
+            let position = "hidden";
+            if (idx === current) position = "center";
+            else if (idx === (current - 1 + slides.length) % slides.length) position = "left";
+            else if (idx === (current + 1) % slides.length) position = "right";
+
+            const rotateMap: Record<string, number> = {
+              center: 0,
+              left: -40,
+              right: 40,
+              hidden: 0,
+            };
+
+            const opacityMap: Record<string, number> = {
+              center: 1,
+              left: 0,
+              right: 0,
+              hidden: 0,
+            };
+
+            const transformMap: Record<string, string> = {
+              center: "translate(-50%, 0px) rotate(0deg)",
+              right: "translate(-30%, 60px) rotate(35deg)",
+              left: "translate(-70%, 60px) rotate(-35deg)",
+              hidden: "translate(-50%, 80px) rotate(0deg)",
+            };
+
+            const rotate = rotateMap[position];
+            const opacity = opacityMap[position];
+            const transformValue = transformMap[position];
+
+            return (
+              <div
+                key={idx}
+                className="absolute left-1/2 w-[85%] max-w-[340px] transition-all duration-900 ease-in-out origin-bottom pointer-events-none"
+                style={{
+                  top: "0px",
+                  // transform: `translateX(-50%) rotate(${rotate}deg)`,
+                  transform: transformValue,
+                  opacity,
+                  zIndex: position === "center" ? 10 : 0,
+                }}
+              >
+                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden">
+                  <img
+                    src={encodeURI(slide.image)}
+                    alt={`Slide ${idx + 1}`}
+                    className="w-full h-full object-cover rounded-[14px]"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div
+          className="flex gap-3 z-20 shrink-0 mt-1 mb-0 flex-wrap justify-center px-4"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {slides.map((_, i) => (
+            <div
+              key={i}
+              className={`h-2 rounded-full transition-all duration-300 ${current === i
+                ? "w-10 bg-[#1A5D3C]"
+                : "w-3 bg-white/60 border border-white/40"
+                }`}
+            />
+          ))}
+        </div>
+
       </div>
 
       <div
         className="w-[65%] h-screen flex justify-center items-center relative"
         style={{
-          backgroundImage:
-            "url(https://thumbs.dreamstime.com/b/hall-building-college-sunrise-63035568.jpg)",
+          backgroundImage: "url('/loginpagebg.webp')",
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
@@ -234,7 +401,7 @@ export default function LoginPage() {
         >
           <div className="flex justify-center mb-6">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/10 border border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
-              <Icon icon="mdi:school-outline" width={26} className="text-white" />
+              <GraduationCap size={26} className="text-white" />
             </div>
           </div>
 
@@ -245,14 +412,24 @@ export default function LoginPage() {
             Please enter your credentials to proceed.
           </p>
 
+          <style>{`
+            input:-webkit-autofill,
+            input:-webkit-autofill:hover, 
+            input:-webkit-autofill:focus, 
+            input:-webkit-autofill:active {
+              -webkit-text-fill-color: white !important;
+              transition: background-color 5000s ease-in-out 0s !important;
+              background-color: transparent !important;
+            }
+          `}</style>
+
           <div className="mt-2">
             <label className="block text-[13px] font-semibold text-white mb-1.5 tracking-wide uppercase drop-shadow-md">
               Email
             </label>
             <div className="relative">
-              <Icon
-                icon="mdi:email-outline"
-                width={17}
+              <EnvelopeSimple
+                size={17}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none"
               />
               <input
@@ -276,9 +453,8 @@ export default function LoginPage() {
               Password
             </label>
             <div className="relative">
-              <Icon
-                icon="mdi:lock-outline"
-                width={17}
+              <Lock
+                size={17}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/70 pointer-events-none"
               />
               <input
@@ -299,21 +475,18 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white focus:outline-none cursor-pointer transition-colors"
               >
-                <Icon
-                  icon={showPassword ? "mdi:eye-off-outline" : "mdi:eye-outline"}
-                  width={20}
-                />
+                {showPassword ? (
+                  <EyeSlash size={20} />
+                ) : (
+                  <Eye size={20} />
+                )}
               </button>
             </div>
           </div>
 
           <div className="flex items-start justify-between mt-4 gap-4">
             <div className="flex items-center gap-1.5">
-              <Icon
-                icon="mdi:information-outline"
-                width={15}
-                className="shrink-0 text-amber-300 mt-[2px]"
-              />
+              <Info size={15} className="shrink-0 text-amber-300 mt-[2px]" />
               <p className="text-[11.5px] text-white/70 leading-snug">
                 New account? Verify your email before logging in. Check inbox or spam.
               </p>
@@ -343,11 +516,11 @@ export default function LoginPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <Icon icon="mdi:loading" width={18} className="animate-spin" />
-                  Signing in...
+                  <SpinnerGap size={18} className="animate-spin" />
+                  Logging in...
                 </span>
               ) : (
-                "Sign In"
+                "Login"
               )}
             </button>
           </div>

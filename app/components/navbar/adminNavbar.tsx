@@ -14,6 +14,7 @@ import {
   Laptop,
   Note,
   Student,
+  UsersThreeIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -123,6 +124,13 @@ export default function AdminNavbar() {
       ),
       label: "My Attendance",
       path: "/admin/my-attendance",
+    },
+    {
+      icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Clubs",
+      path: "/admin/clubs",
     },
     {
       icon: (isActive) => (
