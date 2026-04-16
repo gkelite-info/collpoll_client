@@ -3,8 +3,8 @@
 import CardComponent from "@/app/utils/card";
 import {
   ArrowsClockwise,
-  BookOpenIcon,
   HourglassIcon,
+  LaptopIcon,
   UsersThree,
 } from "@phosphor-icons/react";
 import { AdminInfoCard } from "../../utils/adminInfoCard";
@@ -94,7 +94,7 @@ export default function AdminDashLeft({
     {
       id: "SYSTEM_HEALTH",
       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
-      icon: <BookOpenIcon size={32} weight="fill" color="#74FF8F" />,
+      icon: <LaptopIcon size={32} weight="fill" color="#74FF8F" />,
       value: "Good",
       label: "System Health",
     },
