@@ -38,6 +38,9 @@ export default function FacultyDashRight() {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [view, setView] = useState<"my" | "others">("others");
+  const [isAnnouncementsLoading, setIsAnnouncementsLoading] = useState(true);
 
   const {
     facultyId,
@@ -49,9 +52,6 @@ export default function FacultyDashRight() {
   } = useFaculty();
 
   const collegeSubjectId = subjectIds?.[0] ?? null;
-
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [view, setView] = useState<"my" | "others">("my");
 
   const loadTasks = async () => {
     if (!collegeSubjectId || !facultyId) return;
@@ -81,7 +81,7 @@ export default function FacultyDashRight() {
   const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
-
+      setIsAnnouncementsLoading(true);
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
@@ -113,6 +113,8 @@ export default function FacultyDashRight() {
       setAnnouncements(formatted);
     } catch (err) {
       console.error("Fetch announcements error:", err);
+    } finally {
+      setIsAnnouncementsLoading(false);
     }
   };
 
@@ -199,6 +201,8 @@ export default function FacultyDashRight() {
       <AnnouncementsCard
         announceCard={announcements}
         height="80vh"
+        currentView={view}
+        isLoading={isAnnouncementsLoading}
         onViewChange={(v) => setView(v)}
         refreshAnnouncements={fetchAnnouncements}
       />

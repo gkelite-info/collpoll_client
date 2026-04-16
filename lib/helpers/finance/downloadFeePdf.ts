@@ -4,7 +4,6 @@ import autoTable from "jspdf-autotable";
 export const downloadFeePdf = (data: any, collegeName: string) => {
   const doc = new jsPDF();
 
-  // 1. Header
   doc.setFontSize(20);
   doc.setTextColor(31, 47, 86); // #1F2F56
   doc.text(collegeName, 14, 22);
@@ -50,7 +49,6 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
     },
   });
 
-  // 4. Total & Footer
   // @ts-ignore
   const finalY = doc.lastAutoTable.finalY + 10;
 
@@ -62,7 +60,6 @@ export const downloadFeePdf = (data: any, collegeName: string) => {
     finalY,
   );
 
-  // Calculated percent passed from the Card component
   if (data.calculatedGstPercent > 0) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");

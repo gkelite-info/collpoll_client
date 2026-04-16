@@ -49,7 +49,13 @@ const CardShimmer = () => (
 );
 
 // ─── Shimmer: Table rows ───────────────────────────────────────────────────────
-const TableShimmer = ({ rows = 8, cols = 5 }: { rows?: number; cols?: number }) => (
+const TableShimmer = ({
+  rows = 8,
+  cols = 5,
+}: {
+  rows?: number;
+  cols?: number;
+}) => (
   <div className="w-full overflow-hidden rounded-lg border border-gray-100">
     <div className="flex gap-3 bg-gray-50 px-4 py-3 border-b border-gray-100">
       {Array.from({ length: cols }).map((_, i) => (
@@ -124,11 +130,7 @@ export default function YearFinanceBreakdown() {
     {
       style: "bg-[#E2DAFF]",
       icon: (
-        <CurrencyDollarSimpleIcon
-          size={24}
-          color="#6C20CA"
-          weight="fill"
-        />
+        <CurrencyDollarSimpleIcon size={24} color="#6C20CA" weight="fill" />
       ),
       value: formatCurrency(summary?.totalExpected || 0),
       label: "Total Fee Expected",
@@ -136,11 +138,7 @@ export default function YearFinanceBreakdown() {
     {
       style: "bg-[#E6FBEA]",
       icon: (
-        <CurrencyDollarSimpleIcon
-          size={24}
-          color="#43C17A"
-          weight="fill"
-        />
+        <CurrencyDollarSimpleIcon size={24} color="#43C17A" weight="fill" />
       ),
       value: formatCurrency(summary?.totalCollected || 0),
       label: "Total Collected",
@@ -148,24 +146,14 @@ export default function YearFinanceBreakdown() {
     {
       style: "bg-[#FFE2E2]",
       icon: (
-        <CurrencyDollarSimpleIcon
-          size={24}
-          color="#FF0000"
-          weight="fill"
-        />
+        <CurrencyDollarSimpleIcon size={24} color="#FF0000" weight="fill" />
       ),
       value: formatCurrency(summary?.totalPending || 0),
       label: "Total Pending",
     },
     {
       style: "bg-[#CEE6FF]",
-      icon: (
-        <BuildingApartmentIcon
-          size={24}
-          color="#60AEFF"
-          weight="fill"
-        />
-      ),
+      icon: <BuildingApartmentIcon size={24} color="#60AEFF" weight="fill" />,
       value: `${summary?.overallPercentage || 0}%`,
       label: "Collection Rate",
     },
@@ -190,7 +178,7 @@ export default function YearFinanceBreakdown() {
           },
           currentPage,
           rowsPerPage,
-          debouncedSearch
+          debouncedSearch,
         );
 
         setYearData(response.data);
@@ -284,10 +272,11 @@ export default function YearFinanceBreakdown() {
           onClick={handleDownload}
           disabled={downloadLoading}
           className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
-          ${downloadLoading
+          ${
+            downloadLoading
               ? "opacity-70 cursor-not-allowed"
               : "hover:bg-[#1E3A8A]"
-            }`}
+          }`}
         >
           {downloadLoading ? "Downloading..." : "Download Report"}
           {!downloadLoading && <DownloadSimple size={18} />}
@@ -295,20 +284,18 @@ export default function YearFinanceBreakdown() {
       </div>
 
       {/* ── Cards: shimmer only on initial load, real cards always after ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
-        {cardsLoading ? (
-          [0, 1, 2, 3].map((i) => <CardShimmer key={i} />)
-        ) : (
-          cardsData.map((card, index) => (
-            <CardComponent
-              key={index}
-              style={card.style}
-              icon={card.icon}
-              value={card.value}
-              label={card.label}
-            />
-          ))
-        )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {cardsLoading
+          ? [0, 1, 2, 3].map((i) => <CardShimmer key={i} />)
+          : cardsData.map((card, index) => (
+              <CardComponent
+                key={index}
+                style={card.style}
+                icon={card.icon}
+                value={card.value}
+                label={card.label}
+              />
+            ))}
       </div>
 
       <div className="flex items-center gap-6">
@@ -331,11 +318,7 @@ export default function YearFinanceBreakdown() {
       {loading ? (
         <TableShimmer rows={8} cols={5} />
       ) : (
-        <TableComponent
-          columns={columns}
-          tableData={tableData}
-          height="55vh"
-        />
+        <TableComponent columns={columns} tableData={tableData} height="55vh" />
       )}
 
       {totalPages > 1 && (
@@ -344,10 +327,11 @@ export default function YearFinanceBreakdown() {
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border
-            ${currentPage === 1
+            ${
+              currentPage === 1
                 ? "border-gray-200 text-gray-300"
                 : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
+            }`}
           >
             <CaretLeft size={18} weight="bold" />
           </button>
@@ -357,27 +341,25 @@ export default function YearFinanceBreakdown() {
               key={i}
               onClick={() => setCurrentPage(i + 1)}
               className={`w-10 h-10 rounded-lg font-semibold
-              ${currentPage === i + 1
+              ${
+                currentPage === i + 1
                   ? "bg-[#16284F] text-white"
                   : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+              }`}
             >
               {i + 1}
             </button>
           ))}
 
           <button
-            onClick={() =>
-              setCurrentPage((p) =>
-                Math.min(totalPages, p + 1)
-              )
-            }
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border
-            ${currentPage === totalPages
+            ${
+              currentPage === totalPages
                 ? "border-gray-200 text-gray-300"
                 : "border-gray-300 text-gray-600 hover:bg-gray-100"
-              }`}
+            }`}
           >
             <CaretRight size={18} weight="bold" />
           </button>

@@ -20,10 +20,7 @@ import {
 } from "@/lib/helpers/collegeAdmin/Collegeadmindashboardapi";
 import { AdminProfileCardShimmer } from "../shimmers/AdminProfileCardShimmer";
 import { StatCardShimmer } from "../shimmers/StatCardShimmer";
-import { QuickLinkCardShimmer } from "../shimmers/QuickLinkCardShimmer";
 import { FeeCollectionTrendCardShimmer } from "../shimmers/FeeCollectionTrendCardShimmer";
-import { MeetingCardShimmer } from "../shimmers/MeetingCardShimmer";
-import { AdminSectionShimmer } from "../shimmers/AdminSectionShimmer";
 import AdminListView from "./AdminListView";
 import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
@@ -106,18 +103,6 @@ const StatCard = ({
 
 // ─── QuickLinkCard ────────────────────────────────────────────────────────────
 
-// const QuickLinkCard = ({ title, onClick }: { title: string; onClick: () => void }) => (
-//   <div
-//     onClick={onClick}
-//     className="bg-[#E4F2E7] relative hover:bg-[#d4eadd] transition-colors rounded-lg p-4 flex flex-col justify-between h-16 cursor-pointer shadow-xs"
-//   >
-//     <span className="font-semibold text-[#1F2937] text-[14px]">{title}</span>
-//     <span className="text-xs font-medium text-[#1F2937] underline decoration-1 underline-offset-2">
-//       View
-//     </span>
-//   </div>
-// );
-
 const QuickLinkCard = ({
   title,
   onClick,
@@ -127,6 +112,7 @@ const QuickLinkCard = ({
 }) => {
   const isPlacement = title === "Placement";
   const [gearRunning, setGearRunning] = useState(isPlacement);
+
   useEffect(() => {
     if (!isPlacement) return;
 
@@ -150,7 +136,6 @@ const QuickLinkCard = ({
               : "cursor-not-allowed opacity-70"
             : "cursor-pointer"
         }
-
         shadow-xs
       `}
     >
@@ -160,7 +145,7 @@ const QuickLinkCard = ({
         text-xs font-medium
         ${!isPlacement ? "text-[#1F2937] hover:text-[#089144] hover:underline underline-offset-2" : "text-gray-400"}
           transition-colors
-      `}
+        `}
       >
         View
       </span>
@@ -222,7 +207,6 @@ const AdminProfileCard = ({ data }: { data: any }) => (
 
 // ─── FeeCollectionTrendCard ───────────────────────────────────────────────────
 
-// Assign a fixed colour palette per segment index
 const SEGMENT_COLORS = [
   "#7C3AED",
   "#10B981",
@@ -237,7 +221,6 @@ const FeeCollectionTrendCard = ({
 }: {
   trend: FeeCollectionTrend | null;
 }) => {
-  // Build arc segments from real data; fall back to empty donut while loading
   const segments = (trend?.segments ?? []).map((seg, i) => ({
     label: seg.eduType,
     value: formatINR(seg.collected),
@@ -245,7 +228,7 @@ const FeeCollectionTrendCard = ({
     amount: seg.collected,
   }));
 
-  const total = segments.reduce((s, seg) => s + seg.amount, 0) || 1; // avoid /0
+  const total = segments.reduce((s, seg) => s + seg.amount, 0) || 1;
   const cx = 70,
     cy = 70,
     r = 52,
@@ -288,7 +271,6 @@ const FeeCollectionTrendCard = ({
                 />
               ))
             ) : (
-              /* Empty state ring while loading */
               <circle
                 cx={cx}
                 cy={cy}
@@ -417,7 +399,6 @@ export default function AdminDashboard() {
   const searchParams = useSearchParams();
   const { collegeId, loading: contextLoading } = useCollegeAdmin();
 
-  // Map URL subview param → activeView label
   const SUBVIEW_MAP: Record<string, string> = {
     admins: "Admins",
     faculty: "Faculty",
@@ -466,26 +447,16 @@ export default function AdminDashboard() {
     setActiveView(view);
   };
 
-  // ── Sub-view: Admins list ──
-  if (activeView === "Admins") {
+  if (activeView === "Admins")
     return <AdminListView onBack={() => handleSetView(null)} />;
-  }
-
-  if (activeView === "Faculty") {
+  if (activeView === "Faculty")
     return <FacultyListView onBack={() => handleSetView(null)} />;
-  }
-
-  if (activeView === "Students") {
+  if (activeView === "Students")
     return <StudentListView onBack={() => handleSetView(null)} />;
-  }
-
-  if (activeView === "Parents") {
+  if (activeView === "Parents")
     return <ParentListView onBack={() => handleSetView(null)} />;
-  }
-
-  if (activeView === "Finance") {
+  if (activeView === "Finance")
     return <FinanceListView onBack={() => handleSetView(null)} />;
-  }
 
   return (
     <div className="min-h-screen">
@@ -507,57 +478,62 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Middle Quick Links Row */}
+      {/* Middle Quick Links Row - STATIC: No Shimmer */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {isLoading
-            ? [...Array(6)].map((_, i) => <QuickLinkCardShimmer key={i} />)
-            : quickLinks.map((link) => (
-                <QuickLinkCard
-                  key={link}
-                  title={link}
-                  onClick={() => handleSetView(link)}
-                />
+          {quickLinks.map((link) => (
+            <QuickLinkCard
+              key={link}
+              title={link}
+              onClick={() => handleSetView(link)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Admins Section - STATIC Header, DYNAMIC Cards */}
+      <div>
+        {/* Header remains visible instantly */}
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[#1F2937] text-xl font-bold">Admins</h2>
+          <button
+            onClick={() => router.push("/college-admin/add-admin")}
+            className="bg-[#089144] hover:bg-[#06723a] text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
+          >
+            Add Admin
+          </button>
+        </div>
+
+        {/* Cards container horizontally scrollable */}
+        <div
+          className="flex gap-4 overflow-x-auto pb-2"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {isLoading || !stats
+            ? [...Array(4)].map((_, i) => (
+                <div key={i} className="min-w-[260px] flex-shrink-0">
+                  <AdminProfileCardShimmer />
+                </div>
+              ))
+            : (stats?.adminDetails ?? []).map((admin) => (
+                <div
+                  key={admin.adminId}
+                  className="min-w-[260px] flex-shrink-0"
+                >
+                  <AdminProfileCard data={admin} />
+                </div>
               ))}
         </div>
       </div>
 
-      {/* Admins — horizontal scroll, single row */}
-      {isLoading ? (
-        <AdminSectionShimmer />
-      ) : (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[#1F2937] text-xl font-bold">Admins</h2>
-            <button
-              onClick={() => router.push("/college-admin/add-admin")}
-              className="bg-[#089144] hover:bg-[#06723a] text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Add Admin
-            </button>
-          </div>
-
-          <div
-            className="flex gap-4 overflow-x-auto pb-2"
-            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          >
-            {(stats?.adminDetails ?? []).map((admin) => (
-              <div key={admin.adminId} className="min-w-[260px] flex-shrink-0">
-                <AdminProfileCard data={admin} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Fee Collection Trend + Meeting Card */}
       <div className="grid grid-cols-2 gap-4 mt-6">
-        {isLoading ? (
+        {isLoading || !trend ? (
           <FeeCollectionTrendCardShimmer />
         ) : (
           <FeeCollectionTrendCard trend={trend} />
         )}
-        {isLoading ? <MeetingCardShimmer /> : <MeetingCard />}
+
+        <MeetingCard />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ interface Props {
 
 const AnalyticsFacultyInfo: React.FC<Props> = ({ profile }) => {
   return (
-    <div className="w-full mb-5 text-[14px]">
+    <div className="w-full mb-5 px-4 text-[14px]">
       <h2 className="text-[#282828] font-bold text-[17px] mb-4">
         Faculty Information
       </h2>

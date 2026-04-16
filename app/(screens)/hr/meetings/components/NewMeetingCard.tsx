@@ -26,7 +26,7 @@ interface Meeting {
   description: string;
   date: string;
   participants: number;
-  participantAvatars?: string[]; // Added to interface
+  participantAvatars?: string[];
   year: string;
   section: string;
   tags: string;
@@ -73,7 +73,6 @@ export default function NewMeetingCard({
   const [participants, setParticipants] = useState<any[]>([]);
   const [isParticipantsLoading, setIsParticipantsLoading] = useState(false);
 
-  // Dynamic Avatars from DB
   const displayAvatars = data.participantAvatars || [];
 
   const loadParticipants = async () => {
@@ -250,9 +249,25 @@ export default function NewMeetingCard({
                   </button>
                 </div>
                 <div className=" pb-5 overflow-y-auto flex-1">
-                  <p className="text-sm text-[#555555] mb-6 leading-relaxed">
-                    {data.description.toLowerCase()}
-                  </p>
+                  <div className="flex flex-col gap-2 mb-8">
+                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 ml-1">
+                      Agenda
+                    </h3>
+
+                    <div className="relative">
+                      <div className="h-[100px] overflow-y-auto bg-gray-50/80 rounded-lg border border-gray-100 p-3 scrollbar-hide">
+                        <div className="flex gap-3">
+                          <div className="w-1 bg-[#43C17A]/40 rounded-full shrink-0" />
+
+                          <p className="text-sm text-[#434343] leading-relaxed first-letter:capitalize">
+                            {data.description.toLowerCase()}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-gray-50/80 to-transparent pointer-events-none rounded-b-lg" />
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-y-4 gap-x-8">
                     <div className="flex flex-col gap-y-4">

@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAnnouncementRoles, saveAnnouncementRole } from "@/lib/helpers/announcements/announcementRoles";
-import { deactivateCollegeAnnouncement, saveCollegeAnnouncement, updateCollegeAnnouncement } from "@/lib/helpers/announcements/announcementAPI";
+import {
+  fetchAnnouncementRoles,
+  saveAnnouncementRole,
+} from "@/lib/helpers/announcements/announcementRoles";
+import {
+  deactivateCollegeAnnouncement,
+  saveCollegeAnnouncement,
+  updateCollegeAnnouncement,
+} from "@/lib/helpers/announcements/announcementAPI";
 import { supabase } from "@/lib/supabaseClient";
 
 type Props = {
@@ -14,8 +21,6 @@ type Props = {
   refreshAnnouncements?: () => Promise<void>;
   editData?: any;
 };
-
-
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -32,15 +37,8 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-
 const roleOptionsMap: Record<string, string[]> = {
-  Finance: [
-    "CollegeAdmin",
-    "Faculty",
-    "Admin",
-    "Student",
-    "Parent",
-  ],
+  Finance: ["CollegeAdmin", "Faculty", "Admin", "Student", "Parent"],
 
   CollegeAdmin: [
     "Admin",
@@ -49,7 +47,7 @@ const roleOptionsMap: Record<string, string[]> = {
     "Parent",
     "Finance",
     "Finance Manager",
-    "Placement",
+    // "Placement", //
     "CollegeHr",
   ],
 
@@ -60,22 +58,17 @@ const roleOptionsMap: Record<string, string[]> = {
     "Parent",
     "Finance",
     "Finance Manager",
-    "Placement",
+    // "Placement", //
     "CollegeHr",
   ],
 
-  Faculty: [
-    "CollegeAdmin",
-    "Admin",
-    "Student",
-    "Parent",
-  ],
+  Faculty: ["CollegeAdmin", "Admin", "Student", "Parent"],
 
   Student: [
     "Admin",
     "Faculty",
     "Finance",
-    "Placement",
+    // "Placement", //
     "CollegeHr",
   ],
 
@@ -83,15 +76,15 @@ const roleOptionsMap: Record<string, string[]> = {
     "Admin",
     "Faculty",
     "Finance",
-    "Placement",
+    // "Placement", //
   ],
 
   CollegeHr: [
     "CollegeAdmin",
     "Admin",
     "Faculty",
-    "Placement",
-  ]
+    // "Placement", //
+  ],
 };
 
 const formatRole = (role: string) =>
@@ -100,7 +93,6 @@ const formatRole = (role: string) =>
     .replace(/_/g, " ")
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase());
-
 
 export default function AddAnnouncementModal({
   open,
@@ -118,8 +110,6 @@ export default function AddAnnouncementModal({
   const { userId, collegeId, role } = useUser();
   const availableRoles = role ? roleOptionsMap[role] || [] : [];
 
-
-  // const roles = ["CollegeAdmin", "Admin", "Student", "Parent"];
   const selectedIcon = typeIcons[type];
 
   useEffect(() => {
@@ -129,7 +119,7 @@ export default function AddAnnouncementModal({
       setDate(
         editData.date
           ? new Date(editData.date).toISOString().split("T")[0]
-          : ""
+          : "",
       );
 
       setType(editData.type || "");
@@ -156,10 +146,8 @@ export default function AddAnnouncementModal({
     }
 
     try {
-
       setSaving(true);
       if (editData) {
-
         const updateRes = await updateCollegeAnnouncement(
           editData.collegeAnnouncementId,
           {
@@ -167,7 +155,7 @@ export default function AddAnnouncementModal({
             date,
             type,
             targetRoles,
-          }
+          },
         );
 
         if (!updateRes.success) {
@@ -200,10 +188,10 @@ export default function AddAnnouncementModal({
           announcementTitle: title,
           date,
           type,
-          collegeId
+          collegeId,
         },
         userId,
-        role
+        role,
       );
 
       if (!announcementRes.success) {
@@ -228,16 +216,11 @@ export default function AddAnnouncementModal({
 
       resetForm();
       await refreshAnnouncements?.();
-
     } catch (error) {
-
       console.error("handleSave error:", error);
       toast.error("Something went wrong");
-
     } finally {
-
       setSaving(false);
-
     }
   };
 
@@ -266,7 +249,7 @@ export default function AddAnnouncementModal({
     setTargetRoles((prev) =>
       prev.includes(roleValue)
         ? prev.filter((r) => r !== roleValue)
-        : [...prev, roleValue]
+        : [...prev, roleValue],
     );
   };
 
@@ -278,15 +261,12 @@ export default function AddAnnouncementModal({
     setTargetRoles([]);
   };
 
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-
       <div
         className="bg-white w-[540px] rounded-xl shadow-xl p-7 relative"
         onClick={(e) => e.stopPropagation()}
       >
-
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-[20px] font-semibold text-[#2F2F2F]">
@@ -303,15 +283,13 @@ export default function AddAnnouncementModal({
 
         {/* Title */}
         <div className="flex flex-col gap-1 mb-5">
-          <label className="text-base font-medium text-[#2F2F2F]">
-            Title
-          </label>
+          <label className="text-base font-medium text-[#2F2F2F]">Title</label>
 
           <input
             type="text"
             placeholder="Short title of the announcement"
             value={title}
-           onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
             className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] placeholder:text-[#B0B0B0] outline-none focus:ring-2 focus:ring-[#43C17A]"
           />
         </div>
@@ -334,7 +312,6 @@ export default function AddAnnouncementModal({
               onChange={(e) => setDate(e.target.value)}
               className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
             />
-
           </div>
 
           <div className="flex gap-4">
@@ -357,22 +334,11 @@ export default function AddAnnouncementModal({
                 <option value="notice">Notice</option>
                 <option value="result">Result</option>
                 <option value="timetable">Timetable</option>
-                <option value="placement">Placement</option>
+                {/* <option value="placement">Placement</option> */} {/*  */}
                 <option value="emergency">Emergency</option>
                 <option value="finance">Finance</option>
                 <option value="other">Other</option>
               </select>
-
-              {/* Show custom input when Other selected */}
-              {/* {type === "other" && (
-                <input
-                  type="text"
-                  placeholder="Enter type"
-                  value={customType}
-                  onChange={(e) => setCustomType(e.target.value)}
-                  className="mt-2 border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
-                />
-              )} */}
 
               {/* Icon Preview (only for predefined types) */}
               {type && typeIcons[type] && (
@@ -406,20 +372,24 @@ export default function AddAnnouncementModal({
 
                 {/* Caret Down */}
                 <svg
-                  className={`w-4 h-4 text-gray-500 transition-transform ${showRoleDropdown ? "rotate-180" : ""
-                    }`}
+                  className={`w-4 h-4 text-gray-500 transition-transform ${
+                    showRoleDropdown ? "rotate-180" : ""
+                  }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </div>
 
               {showRoleDropdown && (
                 <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[110px] overflow-y-auto p-3">
-
-                  {/* 🔥 Select All / Clear */}
                   <div className="flex justify-between items-center mb-2">
                     <button
                       onClick={handleSelectAll}
@@ -460,13 +430,11 @@ export default function AddAnnouncementModal({
                 </div>
               )}
             </div>
-
           </div>
         </div>
 
         {/* Buttons */}
         <div className="flex gap-4">
-
           <button
             onClick={onClose}
             className="flex-1 border border-[#CBD5E1] rounded-md py-2 text-[14px] text-[#4B5563] cursor-pointer"
@@ -477,16 +445,15 @@ export default function AddAnnouncementModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex-1 py-2 rounded-md text-[14px] text-white ${saving
-              ? "bg-[#A7DDBE] cursor-not-allowed"
-              : "bg-[#43C17A] hover:bg-[#3AAA6B] cursor-pointer"
-              }`}
+            className={`flex-1 py-2 rounded-md text-[14px] text-white ${
+              saving
+                ? "bg-[#A7DDBE] cursor-not-allowed"
+                : "bg-[#43C17A] hover:bg-[#3AAA6B] cursor-pointer"
+            }`}
           >
             {saving ? "Saving..." : "Save Announcement"}
           </button>
-
         </div>
-
       </div>
     </div>
   );
