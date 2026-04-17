@@ -176,7 +176,7 @@ export default function AddSubject({
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Education Type
+              Education Type <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && options.educations.length === 0 ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -198,7 +198,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
+              {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && ui.education && !ui.branch ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -224,7 +224,7 @@ export default function AddSubject({
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Year
+              Year <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && ui.branch && !ui.year ? (
               <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -247,7 +247,7 @@ export default function AddSubject({
           {!["Inter"].includes(collegeEducationType!) && (
             <div>
               <label className="block text-sm font-medium text-[#16284F] mb-1">
-                Semester
+                Semester <span className="text-red-500">*</span>
               </label>
               {isLoadingOptions && ui.year && !ui.semester ? (
                 <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
@@ -270,7 +270,7 @@ export default function AddSubject({
           )}
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Name
+              Subject Name <span className="text-red-500">*</span>
             </label>
             <input
               name="subjectName"
@@ -282,7 +282,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Code
+              Subject Code <span className="text-red-500">*</span>
             </label>
             <input
               name="subjectCode"
@@ -294,7 +294,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Key
+              Subject Key <span className="text-red-500">*</span>
             </label>
             <input
               name="subjectKey"
@@ -307,7 +307,7 @@ export default function AddSubject({
 
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Credits
+              Credits <span className="text-red-500">*</span>
               {collegeEducationType === "Inter" && (
                 <span className="ml-1 text-[#16284F] text-sm">(Optional)</span>
               )}

@@ -46,7 +46,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           className="relative z-10 grid grid-cols-[70%_30%] h-full items-center justify-between px-8"
           key={index}
         >
-          <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
+          <div className="bg-blue-00 flex flex-col max-w-[90%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
               {item.show && "StudentID:"} {item.studentId}
               {item.show && ", "} {item.studentBranch}
@@ -62,11 +62,13 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                 {!item.show ? `Prof. ${item.user}` : item.user}
               </h1>
 
-              {!item.show && faculty_subject?.length > 0 && (
-                <span className="text-[#454545] text-md font-medium">
-                  {faculty_subject.map((s) => s.subjectName).join(", ")}
-                </span>
-              )}
+              <div className="bg-yellow-00 min-w-0 overflow-x-auto">
+                {!item.show && faculty_subject?.length > 0 && (
+                  <span className="text-[#454545] text-md font-medium whitespace-nowrap">
+                    {faculty_subject.map((s) => s.subjectName).join(", ")}
+                  </span>
+                )}
+              </div>
 
               {item.show && item.studentName && (
                 <p className="text-[#454545] italic text-sm font-medium">

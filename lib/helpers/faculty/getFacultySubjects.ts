@@ -27,6 +27,9 @@ export async function getFacultySubjects(params: {
       subjectName,
       collegeEducationId,
       collegeBranchId,
+      college_branch (
+      collegeBranchCode
+      ),
       collegeAcademicYearId,
       collegeSemesterId,
       collegeId,
@@ -105,10 +108,14 @@ export async function getFacultySubjects(params: {
   }
 
   const result: CardProps[] = await Promise.all(
-    (subjects ?? []).map(async (s) => {
+    (subjects ?? []).map(async (s: any) => {
       const subjectUnits = (units ?? []).filter(
         (u) => u.collegeSubjectId === s.collegeSubjectId,
       );
+
+      const branchCode = Array.isArray(s.college_branch)
+        ? s.college_branch[0]?.collegeBranchCode
+        : s.college_branch?.collegeBranchCode;
 
       const sectionRow = facultySections?.find(
         (fs) => fs.collegeSubjectId === s.collegeSubjectId,
@@ -155,30 +162,30 @@ export async function getFacultySubjects(params: {
       const fromDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.min(
-                ...subjectUnitDates.map((u) => new Date(u.startDate).getTime()),
-              ),
-            ).toLocaleDateString("en-GB")
+            Math.min(
+              ...subjectUnitDates.map((u) => new Date(u.startDate).getTime()),
+            ),
+          ).toLocaleDateString("en-GB")
           : "-";
 
       const toDate =
         subjectUnitDates.length > 0
           ? new Date(
-              Math.max(
-                ...subjectUnitDates.map((u) => new Date(u.endDate).getTime()),
-              ),
-            ).toLocaleDateString("en-GB")
+            Math.max(
+              ...subjectUnitDates.map((u) => new Date(u.endDate).getTime()),
+            ),
+          ).toLocaleDateString("en-GB")
           : "-";
 
       const subjectPercentage =
         subjectUnits.length === 0
           ? 0
           : Math.round(
-              subjectUnits.reduce(
-                (sum, u) => sum + (u.completionPercentage ?? 0),
-                0,
-              ) / subjectUnits.length,
-            );
+            subjectUnits.reduce(
+              (sum, u) => sum + (u.completionPercentage ?? 0),
+              0,
+            ) / subjectUnits.length,
+          );
 
       const joinedYear = Array.isArray(s.college_academic_year)
         ? s.college_academic_year[0]
@@ -205,6 +212,7 @@ export async function getFacultySubjects(params: {
         collegeId,
         collegeEducationId: s.collegeEducationId,
         collegeBranchId: s.collegeBranchId,
+        branchCode: branchCode || "-",
         collegeAcademicYearId: s.collegeAcademicYearId,
         collegeSemesterId: s.collegeSemesterId,
         collegeSubjectId: s.collegeSubjectId,

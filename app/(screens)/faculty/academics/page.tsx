@@ -9,6 +9,7 @@ import { Loader } from "../../(student)/calendar/right/timetable";
 import { getFacultySubjects } from "@/lib/helpers/faculty/getFacultySubjects";
 import { CardProps } from "@/lib/types/faculty";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import toast from "react-hot-toast";
 
 export default function Academics() {
   const { userId, collegeId } = useUser();
@@ -64,7 +65,7 @@ export default function Academics() {
           setSubjects(data);
         }
       } catch (err) {
-        console.error("❌ Failed to load faculty subjects", err);
+        toast.error("Failed to load subjects");
       } finally {
         if (!isCancelled) {
           setPageLoading(false);

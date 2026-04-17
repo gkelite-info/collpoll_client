@@ -3,6 +3,7 @@ export type CardProps = {
 
   collegeEducationId: number;
   collegeBranchId: number;
+  branchCode: string;
   collegeAcademicYearId: number;
   collegeSemesterId: number;
 
