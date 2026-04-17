@@ -127,12 +127,212 @@ export async function getBranchWiseCollection(
   return { chartData, gridData, tableData, availableYears };
 }
 
+// export async function getYearWiseDetails(
+//   collegeId: number,
+//   educationId: number,
+//   branchCode: string,
+//   transactionYear: string,
+// ) {
+//   const { data: branchData, error: branchError } = await supabase
+//     .from("college_branch")
+//     .select("collegeBranchId")
+//     .eq("collegeId", collegeId)
+//     .eq("collegeEducationId", educationId)
+//     .eq("collegeBranchCode", branchCode)
+//     .maybeSingle();
+
+//   if (branchError) {
+//     console.error("Error fetching branch:", branchError);
+//     return null;
+//   }
+
+//   if (!branchData) {
+//     console.warn(`No branch found for code: ${branchCode}`);
+//     return { leftChart: [], rightChart: [], tableData: [] };
+//   }
+
+//   // 1. Fetch Obligations + newly added student_academic_history for the accurate semester
+//   const { data: obligations, error: obError } = await supabase
+//     .from("student_fee_obligation")
+//     .select(
+//       `
+//       studentFeeObligationId,
+//       totalAmount,
+//       college_academic_year!inner ( collegeAcademicYear ),
+//       students!inner (
+//         studentId,
+//         users ( fullName, email ),
+//         student_academic_history (
+//           isCurrent,
+//           college_semester (
+//             collegeSemester
+//           )
+//         )
+//       ),
+//       student_fee_collection (
+//         collectedAmount,
+//         createdAt,
+//         college_semester!inner ( collegeSemester )
+//       )
+//     `,
+//     )
+//     .eq("collegeBranchId", branchData.collegeBranchId);
+
+//   if (obError) {
+//     console.error("Error fetching year-wise data:", obError);
+//     return null;
+//   }
+
+//   const chartMap = {
+//     "4th Year": {
+//       year: "4th yr",
+//       oddSem: 7,
+//       evenSem: 8,
+//       oddLabel: "4-1",
+//       evenLabel: "4-2",
+//     },
+//     "3rd Year": {
+//       year: "3rd yr",
+//       oddSem: 5,
+//       evenSem: 6,
+//       oddLabel: "3-1",
+//       evenLabel: "3-2",
+//     },
+//     "2nd Year": {
+//       year: "2nd yr",
+//       oddSem: 3,
+//       evenSem: 4,
+//       oddLabel: "2-1",
+//       evenLabel: "2-2",
+//     },
+//     "1st Year": {
+//       year: "1st yr",
+//       oddSem: 1,
+//       evenSem: 2,
+//       oddLabel: "1-1",
+//       evenLabel: "1-2",
+//     },
+//   };
+
+//   const leftChartData: Record<string, any> = {};
+//   const rightChartData: Record<string, any> = {};
+//   const tableData: any[] = [];
+
+//   Object.values(chartMap).forEach((map) => {
+//     leftChartData[map.year] = {
+//       year: map.year,
+//       collected: 0,
+//       totalExpected: 0,
+//       label: map.oddLabel,
+//     };
+//     rightChartData[map.year] = {
+//       year: map.year,
+//       collected: 0,
+//       totalExpected: 0,
+//       label: map.evenLabel,
+//     };
+//   });
+
+//   const availableYearsSet = new Set<string>();
+
+//   obligations?.forEach((ob: any) => {
+//     const acYear = ob.college_academic_year?.collegeAcademicYear || "1st Year";
+//     const mappedYear = chartMap[acYear as keyof typeof chartMap];
+//     if (!mappedYear) return;
+
+//     const yearlyTotal = Number(ob.totalAmount) || 0;
+//     const semExpected = yearlyTotal / 2;
+
+//     leftChartData[mappedYear.year].totalExpected += semExpected;
+//     rightChartData[mappedYear.year].totalExpected += semExpected;
+
+//     // 🟢 Separate tracking: One for the selected year, one for overall pending calculation
+//     let studentPaidThisYear = 0;
+//     let studentPaidAllTime = 0;
+
+//     ob.student_fee_collection?.forEach((coll: any) => {
+//       const collYear = new Date(coll.createdAt).getFullYear().toString();
+
+//       // 🟢 ADDED: Capture every unique transaction year found in the DB
+//       availableYearsSet.add(collYear);
+
+//       const amount = Number(coll.collectedAmount) || 0;
+//       const semNum = coll.college_semester?.collegeSemester;
+
+//       // Track all time to calculate true pending amount
+//       studentPaidAllTime += amount;
+
+//       // Strictly filter chart and table paid amounts by the selected year
+//       if (collYear === transactionYear) {
+//         studentPaidThisYear += amount;
+
+//         // Left Chart = 1st Sem of the year (Odd numbers: 1, 3, 5, 7)
+//         if (semNum % 2 !== 0) {
+//           leftChartData[mappedYear.year].collected += amount;
+//         }
+//         // Right Chart = 2nd Sem of the year (Even numbers: 2, 4, 6, 8)
+//         else {
+//           rightChartData[mappedYear.year].collected += amount;
+//         }
+//       }
+//     });
+
+//     // Populate Table Data
+//     const studentInfo = ob.students?.users;
+//     const studentName = studentInfo?.fullName || "Unknown Student";
+//     const rollNo = ob.students?.studentId?.toString() || "N/A";
+
+//     const activeHistory = ob.students?.student_academic_history?.find(
+//       (history: any) => history.isCurrent === true,
+//     );
+//     const currentSemNum = activeHistory?.college_semester?.collegeSemester;
+//     const semesterLabel = currentSemNum ? `Sem ${currentSemNum}` : "N/A";
+
+//     tableData.push({
+//       studentName: studentName,
+//       rollNo: rollNo,
+//       department: branchCode,
+//       year: acYear,
+//       semester: semesterLabel,
+
+//       // 🟢 Table Paid Amount now strictly reflects the selected dropdown year
+//       paidAmount: studentPaidThisYear,
+
+//       // Pending Amount is what they still owe overall
+//       pendingAmount: Math.max(yearlyTotal - studentPaidAllTime, 0),
+//     });
+//   });
+
+//   // Format Chart Arrays
+//   const leftChart = Object.values(leftChartData)
+//     .map((d) => ({ ...d, pending: Math.max(d.totalExpected - d.collected, 0) }))
+//     .sort((a, b) => b.year.localeCompare(a.year));
+
+//   const rightChart = Object.values(rightChartData)
+//     .map((d) => ({ ...d, pending: Math.max(d.totalExpected - d.collected, 0) }))
+//     .sort((a, b) => b.year.localeCompare(a.year));
+//   const availableYears = Array.from(availableYearsSet).sort((a, b) =>
+//     b.localeCompare(a),
+//   );
+//   if (availableYears.length === 0) {
+//     availableYears.push(new Date().getFullYear().toString());
+//   }
+
+//   // 🟢 CHANGED: Return availableYears alongside the rest of your data
+//   return { leftChart, rightChart, tableData, availableYears };
+// }
+
 export async function getYearWiseDetails(
   collegeId: number,
   educationId: number,
   branchCode: string,
   transactionYear: string,
+  page: number = 1,
+  limit: number = 10,
+  searchQuery?: string,
+  semesterFilter?: string,
 ) {
+  // 1. Get Branch ID
   const { data: branchData, error: branchError } = await supabase
     .from("college_branch")
     .select("collegeBranchId")
@@ -141,18 +341,9 @@ export async function getYearWiseDetails(
     .eq("collegeBranchCode", branchCode)
     .maybeSingle();
 
-  if (branchError) {
-    console.error("Error fetching branch:", branchError);
-    return null;
-  }
+  if (branchError || !branchData) return null;
 
-  if (!branchData) {
-    console.warn(`No branch found for code: ${branchCode}`);
-    return { leftChart: [], rightChart: [], tableData: [] };
-  }
-
-  // 1. Fetch Obligations + newly added student_academic_history for the accurate semester
-  const { data: obligations, error: obError } = await supabase
+  const { data: allObligations } = await supabase
     .from("student_fee_obligation")
     .select(
       `
@@ -164,9 +355,7 @@ export async function getYearWiseDetails(
         users ( fullName, email ),
         student_academic_history (
           isCurrent,
-          college_semester (
-            collegeSemester
-          )
+          college_semester ( collegeSemester )
         )
       ),
       student_fee_collection (
@@ -177,11 +366,6 @@ export async function getYearWiseDetails(
     `,
     )
     .eq("collegeBranchId", branchData.collegeBranchId);
-
-  if (obError) {
-    console.error("Error fetching year-wise data:", obError);
-    return null;
-  }
 
   const chartMap = {
     "4th Year": {
@@ -216,7 +400,6 @@ export async function getYearWiseDetails(
 
   const leftChartData: Record<string, any> = {};
   const rightChartData: Record<string, any> = {};
-  const tableData: any[] = [];
 
   Object.values(chartMap).forEach((map) => {
     leftChartData[map.year] = {
@@ -234,10 +417,21 @@ export async function getYearWiseDetails(
   });
 
   const availableYearsSet = new Set<string>();
+  const availableSemestersSet = new Set<string>();
 
-  obligations?.forEach((ob: any) => {
+  allObligations?.forEach((ob: any) => {
     const acYear = ob.college_academic_year?.collegeAcademicYear || "1st Year";
     const mappedYear = chartMap[acYear as keyof typeof chartMap];
+
+    const activeHistory = ob.students?.student_academic_history?.find(
+      (h: any) => h.isCurrent,
+    );
+    if (activeHistory?.college_semester?.collegeSemester) {
+      availableSemestersSet.add(
+        `Sem ${activeHistory.college_semester.collegeSemester}`,
+      );
+    }
+
     if (!mappedYear) return;
 
     const yearlyTotal = Number(ob.totalAmount) || 0;
@@ -246,64 +440,21 @@ export async function getYearWiseDetails(
     leftChartData[mappedYear.year].totalExpected += semExpected;
     rightChartData[mappedYear.year].totalExpected += semExpected;
 
-    // 🟢 Separate tracking: One for the selected year, one for overall pending calculation
-    let studentPaidThisYear = 0;
-    let studentPaidAllTime = 0;
-
     ob.student_fee_collection?.forEach((coll: any) => {
       const collYear = new Date(coll.createdAt).getFullYear().toString();
-
-      // 🟢 ADDED: Capture every unique transaction year found in the DB
       availableYearsSet.add(collYear);
 
       const amount = Number(coll.collectedAmount) || 0;
       const semNum = coll.college_semester?.collegeSemester;
 
-      // Track all time to calculate true pending amount
-      studentPaidAllTime += amount;
-
-      // Strictly filter chart and table paid amounts by the selected year
       if (collYear === transactionYear) {
-        studentPaidThisYear += amount;
-
-        // Left Chart = 1st Sem of the year (Odd numbers: 1, 3, 5, 7)
-        if (semNum % 2 !== 0) {
+        if (semNum % 2 !== 0)
           leftChartData[mappedYear.year].collected += amount;
-        }
-        // Right Chart = 2nd Sem of the year (Even numbers: 2, 4, 6, 8)
-        else {
-          rightChartData[mappedYear.year].collected += amount;
-        }
+        else rightChartData[mappedYear.year].collected += amount;
       }
-    });
-
-    // Populate Table Data
-    const studentInfo = ob.students?.users;
-    const studentName = studentInfo?.fullName || "Unknown Student";
-    const rollNo = ob.students?.studentId?.toString() || "N/A";
-
-    const activeHistory = ob.students?.student_academic_history?.find(
-      (history: any) => history.isCurrent === true,
-    );
-    const currentSemNum = activeHistory?.college_semester?.collegeSemester;
-    const semesterLabel = currentSemNum ? `Sem ${currentSemNum}` : "N/A";
-
-    tableData.push({
-      studentName: studentName,
-      rollNo: rollNo,
-      department: branchCode,
-      year: acYear,
-      semester: semesterLabel,
-
-      // 🟢 Table Paid Amount now strictly reflects the selected dropdown year
-      paidAmount: studentPaidThisYear,
-
-      // Pending Amount is what they still owe overall
-      pendingAmount: Math.max(yearlyTotal - studentPaidAllTime, 0),
     });
   });
 
-  // Format Chart Arrays
   const leftChart = Object.values(leftChartData)
     .map((d) => ({ ...d, pending: Math.max(d.totalExpected - d.collected, 0) }))
     .sort((a, b) => b.year.localeCompare(a.year));
@@ -311,15 +462,155 @@ export async function getYearWiseDetails(
   const rightChart = Object.values(rightChartData)
     .map((d) => ({ ...d, pending: Math.max(d.totalExpected - d.collected, 0) }))
     .sort((a, b) => b.year.localeCompare(a.year));
+
   const availableYears = Array.from(availableYearsSet).sort((a, b) =>
     b.localeCompare(a),
   );
-  if (availableYears.length === 0) {
+  if (availableYears.length === 0)
     availableYears.push(new Date().getFullYear().toString());
+
+  const availableSemesters = Array.from(availableSemestersSet).sort((a, b) => {
+    const numA = parseInt(a.replace(/\D/g, "")) || 0;
+    const numB = parseInt(b.replace(/\D/g, "")) || 0;
+    return numA - numB;
+  });
+
+  // 3. 🟢 DB-LEVEL SEARCH & FILTER PREPARATION FOR TABLE
+  let validStudentIds: number[] | null = null;
+
+  if (searchQuery) {
+    const { data: usersMatch } = await supabase
+      .from("users")
+      .select("userId")
+      .ilike("fullName", `%${searchQuery}%`);
+    const matchedUserIds = usersMatch?.map((u) => u.userId) || [];
+
+    let stuQuery = supabase
+      .from("students")
+      .select("studentId")
+      .eq("collegeBranchId", branchData.collegeBranchId);
+
+    const isNum = /^\d+$/.test(searchQuery);
+    if (isNum) {
+      const uIds = matchedUserIds.length ? matchedUserIds.join(",") : "0";
+      stuQuery = stuQuery.or(`studentId.eq.${searchQuery},userId.in.(${uIds})`);
+    } else {
+      stuQuery = stuQuery.in(
+        "userId",
+        matchedUserIds.length ? matchedUserIds : [0],
+      );
+    }
+
+    const { data: stuMatch } = await stuQuery;
+    validStudentIds = stuMatch?.map((s) => s.studentId) || [];
   }
 
-  // 🟢 CHANGED: Return availableYears alongside the rest of your data
-  return { leftChart, rightChart, tableData, availableYears };
+  if (semesterFilter && semesterFilter !== "All Semesters") {
+    const semNum = semesterFilter.replace(/\D/g, ""); // Extract number
+    const { data: semMatch } = await supabase
+      .from("student_academic_history")
+      .select("studentId, college_semester!inner(collegeSemester)")
+      .eq("isCurrent", true)
+      .eq("college_semester.collegeSemester", semNum);
+
+    const semStudentIds = semMatch?.map((s) => s.studentId) || [];
+
+    if (validStudentIds === null) {
+      validStudentIds = semStudentIds;
+    } else {
+      validStudentIds = validStudentIds.filter((id) =>
+        semStudentIds.includes(id),
+      );
+    }
+  }
+
+  // 4. 🟢 PAGINATED TABLE FETCH
+  let tableQuery = supabase
+    .from("student_fee_obligation")
+    .select(
+      `
+      studentFeeObligationId,
+      totalAmount,
+      college_academic_year!inner ( collegeAcademicYear ),
+      students!inner (
+        studentId,
+        users ( fullName, email ),
+        student_academic_history (
+          isCurrent,
+          college_semester ( collegeSemester )
+        )
+      ),
+      student_fee_collection (
+        collectedAmount,
+        createdAt,
+        college_semester ( collegeSemester )
+      )
+    `,
+      { count: "exact" },
+    )
+    .eq("collegeBranchId", branchData.collegeBranchId);
+
+  if (validStudentIds !== null) {
+    if (validStudentIds.length > 0) {
+      tableQuery = tableQuery.in("studentId", validStudentIds);
+    } else {
+      tableQuery = tableQuery.in("studentId", [0]); // Force empty
+    }
+  }
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data: pagedObligations, count } = await tableQuery.range(from, to);
+
+  // 5. 🟢 BUILD PAGINATED TABLE DATA
+  const tableData: any[] = [];
+
+  pagedObligations?.forEach((ob: any) => {
+    let studentPaidThisYear = 0;
+    let studentPaidAllTime = 0;
+
+    ob.student_fee_collection?.forEach((coll: any) => {
+      const collYear = new Date(coll.createdAt).getFullYear().toString();
+      const amount = Number(coll.collectedAmount) || 0;
+
+      studentPaidAllTime += amount;
+      if (collYear === transactionYear) {
+        studentPaidThisYear += amount;
+      }
+    });
+
+    const studentInfo = ob.students?.users;
+    const studentName = studentInfo?.fullName || "Unknown Student";
+    const rollNo = ob.students?.studentId?.toString() || "N/A";
+    const acYear = ob.college_academic_year?.collegeAcademicYear || "N/A";
+
+    const activeHistory = ob.students?.student_academic_history?.find(
+      (h: any) => h.isCurrent === true,
+    );
+    const currentSemNum = activeHistory?.college_semester?.collegeSemester;
+    const semesterLabel = currentSemNum ? `Sem ${currentSemNum}` : "N/A";
+    const yearlyTotal = Number(ob.totalAmount) || 0;
+
+    tableData.push({
+      studentName: studentName,
+      rollNo: rollNo,
+      department: branchCode,
+      year: acYear,
+      semester: semesterLabel,
+      paidAmount: studentPaidThisYear,
+      pendingAmount: Math.max(yearlyTotal - studentPaidAllTime, 0),
+    });
+  });
+
+  return {
+    leftChart,
+    rightChart,
+    tableData,
+    availableYears,
+    availableSemesters,
+    totalCount: count ?? 0,
+  };
 }
 
 export async function fetchRecentOfflinePayments(

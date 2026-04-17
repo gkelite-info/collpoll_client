@@ -37,9 +37,15 @@ export default function FacultyQuizForm({
   const [sections, setSections] = useState<
     { collegeSectionsId: number; collegeSections: string }[]
   >([]);
+
   const [topics, setTopics] = useState<
-    { topicTitle: string; collegeSubjectUnitId: number }[]
+    {
+      topicTitle: string;
+      collegeSubjectUnitId: number;
+      collegeSubjectUnitTopicId: number;
+    }[]
   >([]);
+
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
     null,
   );
@@ -93,7 +99,6 @@ export default function FacultyQuizForm({
       .catch(() => toast.error("Failed to fetch topics"));
   }, [selectedSubjectId]);
 
-  // 🟢 PREFILL DATA IF EDITING
   useEffect(() => {
     if (isEditMode && quizId) {
       fetchQuizById(Number(quizId))
@@ -132,13 +137,22 @@ export default function FacultyQuizForm({
       setIsSaving(true);
       setIsDraftSaving(true);
 
+      const selectedTopicObj = topics.find(
+        (t) => t.collegeSubjectUnitTopicId === selectedTopicId,
+      );
+
+      if (!selectedTopicObj) {
+        toast.error("Invalid topic selected.");
+        return;
+      }
+
       const result = await saveQuiz({
         quizId: isEditMode && quizId ? Number(quizId) : undefined,
         facultyId,
         collegeSubjectId: subjects[0].collegeSubjectId,
         collegeSectionsId: sections[0].collegeSectionsId,
-        collegeSubjectUnitId: selectedTopicId,
-        collegeSubjectUnitTopicId: selectedTopicId,
+        collegeSubjectUnitId: selectedTopicObj.collegeSubjectUnitId, // This will be 10
+        collegeSubjectUnitTopicId: selectedTopicObj.collegeSubjectUnitTopicId, // This will be 21
         quizTitle: quizTitle.trim(),
         totalMarks: Number(totalMarks),
         startDate,
@@ -223,13 +237,16 @@ export default function FacultyQuizForm({
             <label className="text-sm font-bold text-[#282828]">Topic</label>
             <div className="relative">
               <select
-                value={selectedTopicId ?? ""}
-                onChange={(e) => setSelectedTopicId(Number(e.target.value))}
+                value={selectedTopicId || ""}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setSelectedTopicId(isNaN(val) ? null : val);
+                }}
                 className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors appearance-none bg-white cursor-pointer w-full"
               >
                 <option value="">Select Topic</option>
                 {topics.map((topic, index) => (
-                  <option key={index} value={topic.collegeSubjectUnitId}>
+                  <option key={index} value={topic.collegeSubjectUnitTopicId}>
                     {topic.topicTitle}
                   </option>
                 ))}

@@ -6,7 +6,6 @@ import TableComponent from "@/app/utils/table/table";
 import { getYearWiseDetails } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
 import {
   CaretLeftIcon,
-  FunnelSimple,
   MagnifyingGlass,
   CaretLeft,
   CaretRight,
@@ -105,23 +104,23 @@ function YearWiseFeeCollectionContent() {
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const [semester, setSemester] = useState("All Semesters");
   const [academicYear, setAcademicYear] = useState(
     new Date().getFullYear().toString(),
   );
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const [isLoading, setIsLoading] = useState(true);
   const [leftChart, setLeftChart] = useState<any[]>([]);
   const [rightChart, setRightChart] = useState<any[]>([]);
   const [initialData, setInitialData] = useState<any[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
 
   const [availableYears, setAvailableYears] = useState<string[]>([
     new Date().getFullYear().toString(),
   ]);
+  const [availableSemesters, setAvailableSemesters] = useState<string[]>([]);
 
   const {
     collegeId,
@@ -129,19 +128,19 @@ function YearWiseFeeCollectionContent() {
     loading: fmLoading,
   } = useFinanceManager();
 
+  // 🟢 CLEAN DEBOUNCER: Only updates state after typing completely stops for 400ms
   useEffect(() => {
-    setIsSearching(true);
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1);
-      setIsSearching(false);
+      if (search !== debouncedSearch) {
+        setCurrentPage(1);
+      }
     }, 400);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [search]);
+    return () => clearTimeout(handler);
+  }, [search, debouncedSearch]);
 
+  // 🟢 API FETCH CALL
   useEffect(() => {
     async function fetchYearData() {
       if (fmLoading || !collegeId || !collegeEducationId || !branchCode) return;
@@ -152,6 +151,10 @@ function YearWiseFeeCollectionContent() {
         collegeEducationId,
         branchCode,
         academicYear,
+        currentPage,
+        ITEMS_PER_PAGE,
+        debouncedSearch,
+        semester === "All Semesters" ? undefined : semester,
       );
 
       if (result) {
@@ -159,12 +162,26 @@ function YearWiseFeeCollectionContent() {
         setRightChart(result.rightChart);
         setInitialData(result.tableData);
         setAvailableYears(result.availableYears!);
+        setTotalRecords(result.totalCount);
+
+        if (result.availableSemesters) {
+          setAvailableSemesters(result.availableSemesters);
+        }
       }
       setIsLoading(false);
     }
 
     fetchYearData();
-  }, [academicYear, collegeId, collegeEducationId, branchCode, fmLoading]);
+  }, [
+    academicYear,
+    collegeId,
+    collegeEducationId,
+    branchCode,
+    fmLoading,
+    currentPage,
+    debouncedSearch,
+    semester,
+  ]);
 
   const formatAmount = (value: number | string | undefined) => {
     if (typeof value !== "number") return "";
@@ -186,48 +203,24 @@ function YearWiseFeeCollectionContent() {
     { title: "Action", key: "action" },
   ];
 
-  const availableSemesters = useMemo(() => {
-    const uniqueSems = new Set(initialData.map((item) => item.semester));
-    return Array.from(uniqueSems)
-      .filter((sem) => sem && sem !== "N/A")
-      .sort((a, b) => {
-        const numA = parseInt(a.replace(/\D/g, "")) || 0;
-        const numB = parseInt(b.replace(/\D/g, "")) || 0;
-        return numA - numB;
-      });
-  }, [initialData]);
-
   const processedData = useMemo(() => {
-    let data = initialData.filter(
-      (item) =>
-        item.studentName
-          .toLowerCase()
-          .includes(debouncedSearch.toLowerCase()) ||
-        item.rollNo.toLowerCase().includes(debouncedSearch.toLowerCase()),
-    );
-
-    if (semester !== "All Semesters") {
-      data = data.filter((item) => item.semester === semester);
-    }
-
-    data.sort((a, b) => {
-      const totalA = a.paidAmount + a.pendingAmount;
-      const totalB = b.paidAmount + b.pendingAmount;
-
-      return sortOrder === "asc" ? totalA - totalB : totalB - totalA;
-    });
+    let data = [...initialData];
 
     return data.map((item) => {
       let status: "paid" | "pending" | "partial" = "paid";
 
-      if (item.pendingAmount > 0 && item.paidAmount > 0) status = "partial";
-      else if (item.pendingAmount > 0 && item.paidAmount === 0)
-        status = "pending";
+      const pAmount =
+        parseFloat(item.paidAmount.toString().replace(/,/g, "")) || 0;
+      const pendAmount =
+        parseFloat(item.pendingAmount.toString().replace(/,/g, "")) || 0;
+
+      if (pendAmount > 0 && pAmount > 0) status = "partial";
+      else if (pendAmount > 0 && pAmount === 0) status = "pending";
 
       return {
         ...item,
-        paidAmount: `₹ ${item.paidAmount.toLocaleString("en-IN")}`,
-        pendingAmount: `₹ ${item.pendingAmount.toLocaleString("en-IN")}`,
+        paidAmount: `₹ ${pAmount.toLocaleString("en-IN")}`,
+        pendingAmount: `₹ ${pendAmount.toLocaleString("en-IN")}`,
         status: (
           <div className="flex items-center gap-2 justify-center">
             <span
@@ -266,14 +259,9 @@ function YearWiseFeeCollectionContent() {
         ),
       };
     });
-  }, [debouncedSearch, sortOrder, initialData, semester, router]);
+  }, [initialData, router]);
 
-  const totalPages = Math.ceil(processedData.length / ITEMS_PER_PAGE);
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return processedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [processedData, currentPage]);
-
+  const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
   const isPageLoading = fmLoading || isLoading;
 
   return (
@@ -286,7 +274,6 @@ function YearWiseFeeCollectionContent() {
         {breadcrumb}
       </h2>
 
-      {/* HEADER INFO PRESERVED DURING LOADING */}
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-lg -mb-2 text-[#282828]">
           Fee Collection Trends
@@ -321,7 +308,6 @@ function YearWiseFeeCollectionContent() {
         </div>
       </div>
 
-      {/* CHARTS SECTION */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {isPageLoading ? (
           <>
@@ -389,7 +375,6 @@ function YearWiseFeeCollectionContent() {
         )}
       </div>
 
-      {/* OVERVIEW & TABLE SECTION */}
       <div className="space-y-4 pb-10 pt-4">
         <h3 className="font-semibold text-lg text-[#282828]">
           Students Overview
@@ -416,45 +401,28 @@ function YearWiseFeeCollectionContent() {
               className="bg-[#43C17A1F] text-[#00A94A] cursor-pointer px-3 py-1 rounded-md outline-none"
             >
               <option value="All Semesters">All Semesters</option>
-
               {availableSemesters.map((sem) => (
                 <option key={sem} value={sem}>
                   {sem.replace("Sem", "Semester")}
                 </option>
               ))}
             </select>
-
-            <div
-              onClick={() => {
-                setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                setCurrentPage(1);
-              }}
-              className="bg-[#43C17A1F] cursor-pointer rounded-full p-2"
-            >
-              <FunnelSimple size={18} className="text-[#00A94A]" />
-            </div>
           </div>
         </div>
 
         <div className="relative min-h-[400px]">
-          {isSearching && !isPageLoading ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm rounded-xl">
-              <Loader />
-            </div>
-          ) : null}
-
           {isPageLoading ? (
             <TableSkeleton columns={columns} height="60vh" />
           ) : (
             <TableComponent
               columns={columns}
-              tableData={paginatedData}
+              tableData={processedData}
               height="60vh"
             />
           )}
         </div>
 
-        {totalPages > 1 && !isSearching && !isPageLoading && (
+        {totalPages > 1 && !isPageLoading && (
           <div className="flex justify-center items-center gap-2 mt-8 mb-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
