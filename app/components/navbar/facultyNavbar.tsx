@@ -11,6 +11,7 @@ import {
   Laptop,
   Note,
   Student,
+  UsersThreeIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 
@@ -116,6 +117,13 @@ export default function FacultyNavbar() {
     //     label: "Payments",
     //     path: "/faculty/payments",
     // },
+    {
+      icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Clubs",
+      path: "/faculty/clubs",
+    },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />

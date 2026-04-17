@@ -122,7 +122,7 @@ export default function ConfirmDeleteModal({
                 <button
                   onClick={onConfirm}
                   disabled={isDeleting}
-                  className="flex-1 flex items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
+                  className="flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
                 >
                   {isDeleting ? (
                     <>

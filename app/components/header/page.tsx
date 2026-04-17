@@ -20,6 +20,7 @@ import { getUnreadNotificationCount } from "@/lib/helpers/notifications/getUnrea
 import { supabase } from "@/lib/supabaseClient";
 import { getUnreadEmailCount } from "@/lib/helpers/notifications/emailsAPI";
 import { useSearchParams } from "next/navigation";
+import ProfileShimmer from "./ProfileShimmer";
 
 function HeaderContent() {
   const [openProfile, setOpenProfile] = useState(false);
@@ -43,7 +44,8 @@ function HeaderContent() {
     userId,
     profilePhoto,
     parentId,
-    identifierId
+    identifierId,
+    loading
   } = useUser();
 
   const searchParams = useSearchParams();
@@ -194,108 +196,106 @@ function HeaderContent() {
               <Megaphone size={20} color="#282828" className="cursor-pointer" />
             </button>
           </div>
-
-          <div
-            className="w-[60%] h-full flex bg-[#43C17A] cursor-pointer rounded-l-full"
-            onClick={() => setOpenProfile(true)}
-          >
-            <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
-              {/* <div className="bg-black w-13 h-13 border-2 rounded-full flex items-center justify-center text-white">
-                V
-              </div> */}
-              {profilePhoto ? (
-                <img
-                  src={profilePhoto}
-                  alt="profile"
-                  className="w-13 h-13 rounded-full object-cover border-2 border-white"
-                />
-              ) : (
-                <div className="w-13 h-13 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center">
-                  <svg
-                    className="w-7 h-7 text-gray-400"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+          {loading ? <ProfileShimmer /> :
+            <div
+              className="w-[60%] max-h-[90%] flex bg-[#43C17A] cursor-pointer rounded-l-full"
+              onClick={() => setOpenProfile(true)}
+            >
+              <div className="w-[25%] h-full bg-green-00 flex items-center justify-center">
+                {profilePhoto ? (
+                  <img
+                    src={profilePhoto}
+                    alt="profile"
+                    className="w-13 h-13 rounded-full object-cover border-2 border-white"
+                  />
+                ) : (
+                  <div className="w-13 h-13 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center">
+                    <svg
+                      className="w-7 h-7 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
+                <div className="flex items-center justify-between w-full bg-gray-00">
+                  <p className="text-sm text-[#ffffff]">{fullName}</p>
+                  <CaretDown
+                    size={20}
+                    weight="bold"
+                    color="#ffffff"
+                    className="cursor-pointer"
+                  />
                 </div>
-              )}
-            </div>
-            <div className="bg-pink-00 w-[75%] flex flex-col items-start justify-center gap-2 px-2 text-[#282828] font-semibold">
-              <div className="flex items-center justify-between w-full bg-gray-00">
-                <p className="text-sm text-[#ffffff]">{fullName}</p>
-                <CaretDown
-                  size={20}
-                  weight="bold"
-                  color="#ffffff"
-                  className="cursor-pointer"
-                />
-              </div>
-              <div className="bg-red-00 flex items-center justify-between text-[#E5E5E5] w-full text-xs">
-                {role === "Student" && (
-                  <>
-                    <p>
-                      {collegeEducationType && collegeBranchCode
-                        ? `${collegeEducationType} ${collegeBranchCode}`
-                        : "—"}
-                    </p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "Finance" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "Faculty" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "Admin" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "CollegeAdmin" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "Parent" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId || parentId}</span>
-                    </p>
-                  </>
-                )}
-                {role === "CollegeHr" && (
-                  <>
-                    <p>{role}</p>
-                    <p>
-                      ID - <span>{identifierId}</span>
-                    </p>
-                  </>
-                )}
-                {["SuperAdmin"].includes(role as string) && <p>{role}</p>}
+                <div className="bg-red-00 flex items-center justify-between text-[#E5E5E5] w-full text-xs">
+                  {role === "Student" && (
+                    <>
+                      <p>
+                        {collegeEducationType && collegeBranchCode
+                          ? `${collegeEducationType} ${collegeBranchCode}`
+                          : "—"}
+                      </p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Finance" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Faculty" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Admin" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "CollegeAdmin" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Parent" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId || parentId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "CollegeHr" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {["SuperAdmin"].includes(role as string) && <p>{role}</p>}
+                </div>
               </div>
             </div>
-          </div>
+          }
         </div>
       </div>
 
