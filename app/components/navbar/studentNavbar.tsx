@@ -14,6 +14,7 @@ import {
   Laptop,
   Note,
   Student,
+  UsersThreeIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -109,6 +110,13 @@ export default function Navbar() {
       ),
       label: "Payments",
       path: "/payments",
+    },
+    {
+      icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Clubs",
+      path: "/clubs",
     },
     {
       icon: (isActive) => (

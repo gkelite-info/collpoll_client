@@ -197,3 +197,36 @@ html {
   font-size: 100%;
   transition: font-size 0.2s ease;
 }
+
+.profile-active {
+  position: relative;
+  border-radius: 9999px 0 0 9999px;
+}
+
+.profile-active::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 280px;
+  background: transparent;
+  right: 0;
+  top: -20px;
+  box-shadow: 5px 5px 0px 5px #F4F4F4;
+  border-bottom-right-radius: 25px;
+  transition: all 0s ease;
+  z-index: 10;
+}
+
+.profile-active::after {
+  content: "";
+  position: absolute;
+  height: 20px;
+  width: 260px;
+  background: transparent;
+  right: 0;
+  bottom: -22px;
+  box-shadow: 5px -5px 0px 5px #F4F4F4;
+  border-bottom-right-radius: 25px;
+  transition: all 0s ease;
+  z-index: 10;
+}
