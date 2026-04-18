@@ -53,12 +53,14 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
   const yearQuery = searchParams.get("year");
 
   const handleClick = () => {
+
+    sessionStorage.setItem("selectedSubject", JSON.stringify(item));
+
     if (item.subjectId) {
       router.push(
         `/admin/academics/${params.category}/${item.subjectId}?year=${yearQuery}`,
       );
     } else {
-      // Fallback for mock data
       const slug = item.subjectTitle.toLowerCase().replace(/\s+/g, "-");
       router.push(
         `/admin/academics/${params.category}/${slug}?year=${yearQuery}`,

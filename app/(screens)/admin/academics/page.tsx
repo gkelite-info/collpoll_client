@@ -6,10 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-import {
-  getAdminAcademicsCards,
-  mapAcademicCards,
-} from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
+import { getAdminAcademicsCards, mapAcademicCards } from "@/lib/helpers/admin/academics/getAdminAcademicsCards";
 import { useAcademicFilters } from "@/lib/helpers/admin/academics/useAcademicFilters";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import FacultyAcademicCard from "./components/facultyAcademicCard";
@@ -75,7 +72,7 @@ const AcademicPage = () => {
   const [loading, setLoading] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
   const [mounted, setMounted] = useState(false);
-  const { collegeEducationId, collegeEducationType } = useAdmin()
+  const { collegeEducationId, collegeEducationType } = useAdmin();
 
   const cardsPerPage = 15;
   const searchParams = useSearchParams();
@@ -269,8 +266,6 @@ const AcademicPage = () => {
             onChange={(val) => {
               if (val === "All") {
                 selectBranch(null);
-
-                // 🔥 ADD THIS
                 selectYear(null);
                 setSection(null);
                 setSubject(null);
@@ -293,15 +288,11 @@ const AcademicPage = () => {
             }
           />
 
-          {/* Year - REMOVED disabled={!branch} */}
           <FilterDropdown
             label="Year"
-            // If year is null, we MUST pass the string "All"
             value={year?.collegeAcademicYearId?.toString() ?? "All"}
             placeholder="All"
-            // Keep it enabled so users can see the "All" state
             disabled={false}
-            // Ensure "All" is always the first option regardless of whether 'years' is empty
             options={["All", ...years.map((y) => y.collegeAcademicYearId.toString())]}
             onChange={(val) => {
               if (val === "All") {
@@ -314,13 +305,11 @@ const AcademicPage = () => {
               yr && selectYear(yr);
             }}
             displayModifier={(val) => {
-              // This is the critical fix for the blank UI
               if (val === "All") return "All";
               return years.find((y) => y.collegeAcademicYearId.toString() === val)?.collegeAcademicYear ?? "All";
             }}
           />
 
-          {/* Section - REMOVED disabled={!year} */}
           <FilterDropdown
             label="Section"
             value={section?.collegeSectionsId?.toString() ?? "All"}
@@ -341,7 +330,6 @@ const AcademicPage = () => {
             }
           />
 
-          {/* Subject - REMOVED disabled={!section} */}
           <FilterDropdown
             label="Subject"
             value={subject?.collegeSubjectId?.toString() ?? "All"}

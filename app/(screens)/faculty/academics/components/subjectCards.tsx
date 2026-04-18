@@ -23,9 +23,10 @@ type FacultySection = {
 type SubjectCardProps = {
   subjectProps: CardProps[];
   facultyCtx: any;
+  role: string | null;
 };
 
-export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardProps) {
+export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectCardProps) {
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
@@ -209,6 +210,7 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
         isOpen={isWeightageOpen}
         onClose={() => setIsWeightageOpen(false)}
         facultyCtx={facultyCtx}
+        role={role}
       />
     </>
   );

@@ -12,7 +12,7 @@ import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import toast from "react-hot-toast";
 
 export default function Academics() {
-  const { userId, collegeId } = useUser();
+  const { userId, collegeId, role } = useUser();
   const [pageLoading, setPageLoading] = useState(true);
   const [subjects, setSubjects] = useState<CardProps[]>([]);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
@@ -107,7 +107,7 @@ export default function Academics() {
               No classes assigned
             </p>
           ) : (
-            <SubjectCard subjectProps={subjects} facultyCtx={facultyCtx} />
+            <SubjectCard subjectProps={subjects} facultyCtx={facultyCtx} role={role} />
           )}
         </div>
       )}

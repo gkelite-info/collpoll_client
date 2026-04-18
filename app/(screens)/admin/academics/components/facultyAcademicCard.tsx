@@ -36,6 +36,8 @@ const FacultyAcademicCard = ({
   const router = useRouter();
 
   const handleViewDetails = () => {
+    sessionStorage.setItem("cardFaculties", JSON.stringify(faculties ?? []));
+    sessionStorage.setItem("cardYear", year ?? "");
     router.push(`/admin/academics/${id}?year=${year}`);
   };
 
@@ -66,9 +68,9 @@ const FacultyAcademicCard = ({
         <div className="flex -space-x-2.5">
           {faculties && faculties.length > 0 ? (
             <>
-              {faculties.slice(0, 5).map((f) => (
+              {faculties.slice(0, 5).map((f, i) => (
                 <div
-                  key={f.facultyId}
+                  key={i}
                   title={f.fullName}
                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >
@@ -92,9 +94,9 @@ const FacultyAcademicCard = ({
       </div>
 
       <div className="flex items-center gap-3 mb-6">
-        <div>
+        {/* <div>
           <p className="text-[#282828] text-sm">Last Update - Nov 15, 2025</p>
-        </div>
+        </div> */}
       </div>
 
       <div className="flex justify-between items-center">

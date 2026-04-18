@@ -14,15 +14,26 @@ interface AddWeightageModalProps {
     isOpen: boolean;
     onClose: () => void;
     facultyCtx: any;
+    role: string | null;
+    initialSubjectId?: number;
+    initialSectionId?: number;
+    preselectedSubject?: any;
+    cardFaculties?: any[];
 }
 
-export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWeightageModalProps) {
-
+export default function AddWeightageModal({ isOpen, onClose, facultyCtx, role, initialSubjectId, initialSectionId, preselectedSubject, cardFaculties = [], }: AddWeightageModalProps) {
     const [subjects, setSubjects] = useState<CardProps[]>([]);
     const [selectedSubject, setSelectedSubject] = useState<CardProps | null>(null);
     const [loading, setLoading] = useState(false);
     const [facultySections, setFacultySections] = useState<FacultySectionRow[]>([]);
     const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
+    const [faculties, setFaculties] = useState<any[]>([]);
+    const [selectedFacultyId, setSelectedFacultyId] = useState<number | null>(null);
+
+    const handleFacultyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const id = e.target.value ? Number(e.target.value) : null;
+        setSelectedFacultyId(id);
+    };
 
     const availableSections = useMemo(() => {
         if (!selectedSubject || facultySections.length === 0) return [];
@@ -33,12 +44,26 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
     }, [selectedSubject, facultySections]);
 
     useEffect(() => {
-        if (availableSections.length > 0) {
-            setSelectedSectionId(availableSections[0].collegeSectionsId);
-        } else {
-            setSelectedSectionId(null);
+        if (!loading && subjects.length > 0) {
+            const targetSub = initialSubjectId
+                ? subjects.find(s => s.collegeSubjectId === initialSubjectId)
+                : subjects[0];
+
+            if (targetSub) {
+                setSelectedSubject(targetSub);
+            }
         }
-    }, [availableSections]);
+    }, [loading, subjects, initialSubjectId]);
+
+    useEffect(() => {
+        if (availableSections.length > 0) {
+            const targetSec = initialSectionId
+                ? availableSections.find(as => as.collegeSectionsId === initialSectionId)
+                : availableSections[0];
+
+            setSelectedSectionId(targetSec ? targetSec.collegeSectionsId : availableSections[0].collegeSectionsId);
+        }
+    }, [availableSections, initialSectionId]);
 
     const [activeWeights, setActiveWeights] = useState([
         { id: "attendance", label: "Attendance", value: "50%", isCustom: false },
@@ -49,36 +74,83 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
 
     useEffect(() => {
         async function loadInitialData() {
-            if (!isOpen || !facultyCtx?.facultyId) return;
+            if (!isOpen) return;
+
+            const effectiveId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
+
+            if (!effectiveId) {
+                console.warn("loadInitialData aborted: No valid ID found in faculty", facultyCtx);
+                return;
+            }
+
             try {
                 setLoading(true);
 
                 const [subjectsData, sectionsData] = await Promise.all([
                     getFacultySubjects({
-                        collegeId: facultyCtx.collegeId,
-                        collegeEducationId: facultyCtx.collegeEducationId,
-                        collegeBranchId: facultyCtx.collegeBranchId,
+                        collegeId: Number(facultyCtx.collegeId),
+                        collegeEducationId: Number(facultyCtx.collegeEducationId),
+                        collegeBranchId: Number(facultyCtx.collegeBranchId),
                         academicYearIds: facultyCtx.academicYearIds || [],
-                        subjectIds: facultyCtx.subjectIds || [],
+                        subjectIds: preselectedSubject?.subjectId
+                            ? [Number(preselectedSubject.subjectId)]
+                            : (facultyCtx.subjectIds || []),
                         sectionIds: facultyCtx.sectionIds || [],
                     }),
-                    fetchFacultySections(facultyCtx.facultyId)
+                    fetchFacultySections(effectiveId)
                 ]);
 
                 setSubjects(subjectsData);
                 setFacultySections(sectionsData);
 
-                if (subjectsData.length > 0) {
-                    setSelectedSubject(subjectsData[0]);
+                if (preselectedSubject) {
+                    const matched = subjectsData.find(
+                        s => s.collegeSubjectId === preselectedSubject.subjectId
+                    );
+                    setSelectedSubject(matched || subjectsData[0]);
+                } else {
+                    const preselected = initialSubjectId
+                        ? subjectsData.find(s => s.collegeSubjectId === initialSubjectId)
+                        : subjectsData[0];
+                    setSelectedSubject(preselected || subjectsData[0]);
+                }
+
+                if (initialSectionId) {
+                    setSelectedSectionId(initialSectionId);
                 }
             } catch (err) {
-                console.error("Failed to load modal data:", err);
+                toast.error("Failed to load");
             } finally {
                 setLoading(false);
             }
         }
         loadInitialData();
-    }, [isOpen, facultyCtx]);
+    }, [isOpen, facultyCtx, preselectedSubject]);
+
+    useEffect(() => {
+        async function updateSections() {
+            const targetFacultyId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
+            const targetSubjectId = selectedSubject?.collegeSubjectId;
+
+            if (targetFacultyId && targetSubjectId) {
+                try {
+                    const sectionsData = await fetchFacultySections(targetFacultyId, targetSubjectId);
+                    setFacultySections(sectionsData);
+
+                    if (sectionsData.length > 0) {
+                        setSelectedSectionId(sectionsData[0].collegeSectionsId);
+                    } else {
+                        setSelectedSectionId(null);
+                    }
+                } catch (err) {
+                    toast.error("Failed to refresh sections");
+                }
+            }
+        }
+
+        updateSections();
+    }, [selectedFacultyId, selectedSubject?.collegeSubjectId]);
+
 
     useEffect(() => {
         async function loadExistingWeightages() {
@@ -123,6 +195,7 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
 
         loadExistingWeightages();
     }, [selectedSubject, selectedSectionId, isOpen]);
+
 
     const resetToDefaultWeights = () => {
         setActiveWeights([
@@ -170,11 +243,26 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
         }));
     };
 
+    useEffect(() => {
+        if (!isOpen) {
+            setFacultySections([]);
+            setSelectedSectionId(null);
+        }
+    }, [isOpen]);
+
     const handleSave = async () => {
         if (!isTotalValid || !selectedSubject || !selectedSectionId) return;
 
         setLoading(true);
         try {
+
+            const targetFacultyId = selectedFacultyId || facultyCtx?.facultyId || facultyCtx?.adminId;
+
+            if (!targetFacultyId) {
+                toast.error("No Faculty ID found. Cannot save.");
+                return;
+            }
+
             const existingConfig = await fetchExistingFacultyWeightageConfig(
                 selectedSubject.collegeSubjectId,
                 selectedSectionId,
@@ -187,13 +275,14 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
                 facultyWeightageConfigId: configId,
                 collegeId: facultyCtx.collegeId,
                 collegeEducationId: facultyCtx.collegeEducationId,
-                collegeBranchId: facultyCtx.collegeBranchId,
+                collegeBranchId: Number(selectedSubject?.collegeBranchId || facultyCtx?.collegeBranchId),
                 collegeSubjectId: selectedSubject.collegeSubjectId,
                 collegeSectionsId: selectedSectionId,
                 collegeSemesterId: selectedSubject.collegeSemesterId,
                 totalPercentage: totalPercentage,
             }, {
-                facultyId: facultyCtx.facultyId
+                facultyId: selectedFacultyId || facultyCtx?.facultyId,
+                adminId: facultyCtx?.adminId
             });
 
             if (!configResponse.success) throw new Error("Config Save Failed");
@@ -235,7 +324,9 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
 
                 <div className="flex-1 overflow-y-auto pr-2 space-y-8 custom-scrollbar">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                        <div className="col-span-2">
+
+
+                        {/* <div className="col-span-2">
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">Subject Name</label>
                             <div className="relative">
                                 <select
@@ -250,7 +341,49 @@ export default function AddWeightageModal({ isOpen, onClose, facultyCtx }: AddWe
                                 </select>
                                 <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                             </div>
+                        </div> */}
+
+                        <div className={role === "Faculty" ? "col-span-2" : "col-span-1"}>
+                            <label className="block text-base font-semibold text-[#282828] mb-2.5">Subject Name</label>
+                            <div className="relative">
+                                <select
+                                    onChange={handleSubjectChange}
+                                    value={selectedSubject?.collegeSubjectId || ""}
+                                    className="w-full p-3 bg-white text-[#282828] border border-gray-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-[#43C17A] cursor-pointer"
+                                >
+                                    {loading ? <option>Loading subjects...</option> :
+                                        subjects.map(s => (
+                                            <option key={s.collegeSubjectId} value={s.collegeSubjectId}>{s.subjectTitle}</option>
+                                        ))}
+                                </select>
+                                <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
+
+                        {role !== "Faculty" && (
+                            <div className="col-span-1">
+                                <label className="block text-base font-semibold text-[#282828] mb-2.5">
+                                    Select Faculty
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedFacultyId || ""}
+                                        onChange={(e) => setSelectedFacultyId(Number(e.target.value))}
+                                        className="w-full p-3 bg-white text-[#282828] border border-gray-200 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-[#43C17A] cursor-pointer"
+                                    >
+                                        <option value="">Select Faculty</option>
+                                        {Array.from(new Map(cardFaculties.map(f => [f.facultyId, f])).values()).map((f) => (
+                                            <option key={f.facultyId} value={f.facultyId}>
+                                                {f.fullName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <FaChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                </div>
+                            </div>
+                        )}
+
+
                         <div>
                             <label className="block text-base font-semibold text-[#282828] mb-2.5">
                                 {facultyCtx?.collegeEducationType === "Inter" ? "Group" : "Branch"}
