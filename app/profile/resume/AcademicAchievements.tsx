@@ -189,7 +189,7 @@ export default function AcademicAchievements() {
         ) : (
           <div className="max-w-lg mx-auto">
             <p className="text-sm font-medium text-[#282828] mb-4">
-              Received During B.A
+              Received During Academics
             </p>
 
             <div className="space-y-3">

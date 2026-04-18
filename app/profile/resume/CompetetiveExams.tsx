@@ -114,15 +114,15 @@ export default function CompetetiveExams() {
   };
 
   // ✅ UPDATED handleNext (Save + Navigate, NO validation block)
+
   const handleNext = async () => {
     setIsSubmitting(true);
 
     try {
-      // ✅ Same payload logic as Save
       const payload: CompetitiveExamPayload[] = selectedExams.map((exam) => ({
         studentId: studentId!,
         examName: exam,
-        score: scores[exam] ? Number(scores[exam]) : 0, // allow empty
+        score: scores[exam] ? Number(scores[exam]) : 0,
       }));
 
       const removedExams = initialExams.filter((e) => !selectedExams.includes(e));
@@ -133,6 +133,7 @@ export default function CompetetiveExams() {
       ]);
 
       setInitialExams(selectedExams);
+      toast.success("Competitive Exams saved successfully"); // ✅ ADD THIS
 
       const res = await fetchResumePersonalDetails(studentId!);
       const workStatus = res?.data?.workStatus?.toLowerCase();

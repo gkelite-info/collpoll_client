@@ -143,12 +143,69 @@ export default function ResumePersonalDetails() {
     return clean.replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  // Full Name: allow letters, dot (.), and spaces only
+  const sanitizeFullName = (value: string) =>
+    value.replace(/[^A-Za-z. ]/g, "");
+
+  // Mobile: + only at position 0, then digits only
+  // Format: +<countrycode><10 digits> — max 13 chars total (+91 + 10 digits)
+  const sanitizeMobile = (value: string) => {
+    const hasPlus = value.startsWith("+");
+    // Extract digits only
+    const digitsOnly = value.replace(/\D/g, "");
+    // Max 12 digits when + present (+91xxxxxxxxxx = 13 chars), 10 digits without +
+    const digits = hasPlus ? digitsOnly.slice(0, 12) : digitsOnly.slice(0, 10);
+    return hasPlus ? "+" + digits : digits;
+  };
+
+  // Email: strict keystroke-level enforcement
+  // - only letters, digits, @, . allowed
+  // - only one @ allowed
+  // - no consecutive dots
+  // - after the last dot in domain, max 4 letters allowed (blocks typing beyond .com/.in etc.)
+  const sanitizeEmail = (value: string) => {
+    // Strip disallowed chars
+    let clean = value.replace(/[^A-Za-z0-9@.]/g, "");
+
+    // Only one @ — keep first, strip rest
+    const atIdx = clean.indexOf("@");
+    if (atIdx !== -1) {
+      const local = clean.slice(0, atIdx);
+      const afterAt = clean.slice(atIdx + 1).replace(/@/g, "");
+      clean = local + "@" + afterAt;
+    }
+
+    // No consecutive dots
+    clean = clean.replace(/\.{2,}/g, ".");
+
+    // After @: find the last dot in domain and cap extension at 4 letters
+    const atPos = clean.indexOf("@");
+    if (atPos !== -1) {
+      const local = clean.slice(0, atPos);
+      const domain = clean.slice(atPos + 1);
+      const lastDotIdx = domain.lastIndexOf(".");
+      if (lastDotIdx !== -1) {
+        const beforeLastDot = domain.slice(0, lastDotIdx);
+        const extension = domain.slice(lastDotIdx + 1);
+        // Only keep up to 4 letters in extension, no digits
+        const cleanExt = extension.replace(/[^A-Za-z]/g, "").slice(0, 3);
+        clean = local + "@" + beforeLastDot + "." + cleanExt;
+      }
+    }
+
+    return clean;
+  };
+
+  // LinkedIn: allow characters valid in a LinkedIn URL
   const sanitizeLinkedIn = (value: string) =>
     value.replace(/[^a-zA-Z0-9:/._-]/g, "");
 
   // ── validators ──────────────────────────────────────────────────────────────
-  const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+){0,3}$/;
-  const linkedInRegex = /^https:\/\/(www\.)?linkedin\.com\/.+$/;
+  // Full Name: letters, dots, spaces; e.g. "K . Sai Saraswathi"
+  const nameRegex = /^[A-Za-z][A-Za-z. ]{0,}[A-Za-z.]$/;
+  // LinkedIn: accept www.linkedin.com/... or https://linkedin.com/...
+  const linkedInRegex = /^(https?:\/\/)?(www\.)?linkedin\.com\/.+$/;
+  // Mobile: optional leading +, then 10–15 digits
   const mobileRegex = /^\+?\d{10,15}$/;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -166,7 +223,7 @@ export default function ResumePersonalDetails() {
     }
 
     if (!nameRegex.test(trimmedName)) {
-      toast.error("Name should contain only letters and spaces");
+      toast.error("Name should contain only letters, dots and spaces");
       return { success: false };
     }
 
@@ -176,7 +233,7 @@ export default function ResumePersonalDetails() {
     }
 
     if (!mobileRegex.test(trimmedMobile)) {
-      toast.error("Enter a valid mobile number");
+      toast.error("Enter a valid mobile number, only + and digits allowed, min 10 digits");
       return { success: false };
     }
 
@@ -191,11 +248,12 @@ export default function ResumePersonalDetails() {
     }
 
     if (linkedIn && !linkedInRegex.test(linkedIn)) {
-      return {
-        success: false,
-        message: "Enter a valid LinkedIn URL (must start with https://linkedin.com/)",
-      };
+      toast.error("Enter a valid LinkedIn URL");
+      return { success: false };
     }
+
+    // Track whether this is an insert or update before saving
+    const isUpdate = !!resumePersonalDetailsId;
 
     setIsLoading(true);
 
@@ -226,7 +284,13 @@ export default function ResumePersonalDetails() {
       setResumePersonalDetailsId(res.resumePersonalDetailsId);
     }
 
-    toast.success("Personal details saved successfully");
+    // Conditional toast: updated vs saved
+    if (isUpdate) {
+      toast.success("Personal details updated successfully");
+    } else {
+      toast.success("Personal details saved successfully");
+    }
+
     return { success: true };
   };
 
@@ -267,7 +331,7 @@ export default function ResumePersonalDetails() {
               type="text"
               placeholder="Enter Full Name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => setFullName(sanitizeFullName(e.target.value))}
               className={`${inputBase} ${enabled}`}
             />
           </div>
@@ -281,7 +345,7 @@ export default function ResumePersonalDetails() {
               type="text"
               placeholder="Enter Mobile Number"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
+              onChange={(e) => setMobile(sanitizeMobile(e.target.value))}
               className={`${inputBase} ${enabled}`}
             />
           </div>
@@ -295,7 +359,7 @@ export default function ResumePersonalDetails() {
               type="email"
               placeholder="Enter Email ID"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
               className={`${inputBase} ${enabled}`}
             />
           </div>

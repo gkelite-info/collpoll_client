@@ -14,6 +14,8 @@ import { KeySkillsShimmer } from "./KeySkillsShimmer";
 import SuggestedPill from "./SuggestedPill";
 import { suggestSkillsAction } from "@/lib/helpers/student/ai/suggestSkillsAction";
 import AddSkillModal from "./addSkillModel";
+import { resumeMastersEducationAPI, resumePhdEducationAPI, resumePrimaryEducationAPI, resumeSecondaryEducationAPI, resumeUndergraduateEducationAPI } from "@/lib/helpers/student/Resume/Resumeeducationapi";
+
 
 type Skill = { resumeSkillId: number; name: string };
 type Suggestions = { technical: string[]; soft: string[]; tools: string[] };
@@ -26,6 +28,9 @@ export default function KeySkillsWithModal() {
   const [tools, setTools] = useState<Skill[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // ← NEW: stores student's actual education rows
+  const [educationDetails, setEducationDetails] = useState<Record<string, any>[]>([]);
 
   const [suggestions, setSuggestions] = useState<Suggestions>({
     technical: [],
@@ -73,33 +78,48 @@ export default function KeySkillsWithModal() {
   }, []);
 
   const router = useRouter();
-  const { studentId, collegeEducationType, collegeBranchCode } = useUser();
+  const { studentId } = useUser(); // ← removed collegeEducationType, collegeBranchCode
 
+  // ── Fetch skills + all education levels in one shot ───────────────────────
   useEffect(() => {
     if (!studentId) return;
     setLoading(true);
-    fetchStudentResumeSkills(studentId)
-      .then((data) => {
-        setTechnical(data.filter((d) => d.category === "Technical Skills"));
-        setSoft(data.filter((d) => d.category === "Soft Skills"));
-        setTools(data.filter((d) => d.category === "Tools & Frameworks"));
+    Promise.all([
+      fetchStudentResumeSkills(studentId),
+      resumePrimaryEducationAPI.fetch(studentId),
+      resumeSecondaryEducationAPI.fetch(studentId),
+      resumeUndergraduateEducationAPI.fetch(studentId),
+      resumeMastersEducationAPI.fetch(studentId),
+      resumePhdEducationAPI.fetch(studentId),
+    ])
+      .then(([skillsData, primary, secondary, undergrad, masters, phd]) => {
+        setTechnical(skillsData.filter((d) => d.category === "Technical Skills"));
+        setSoft(skillsData.filter((d) => d.category === "Soft Skills"));
+        setTools(skillsData.filter((d) => d.category === "Tools & Frameworks"));
+
+        // Only keep levels the student has actually filled in
+        const edu = [primary, secondary, undergrad, masters, phd]
+          .filter((e) => e.success && e.data)
+          .map((e) => e.data);
+        setEducationDetails(edu);
       })
       .catch(() => toast.error("Failed to load skills"))
       .finally(() => setLoading(false));
   }, [studentId]);
 
+  // ── Trigger AI suggestions once education data is ready ───────────────────
   useEffect(() => {
-    if (!collegeEducationType || !collegeBranchCode) return;
+    if (!educationDetails.length) return;
     setLoadingSuggestions(true);
     Promise.all([
-      suggestSkillsAction(collegeEducationType, collegeBranchCode, "technical"),
-      suggestSkillsAction(collegeEducationType, collegeBranchCode, "soft"),
-      suggestSkillsAction(collegeEducationType, collegeBranchCode, "tools"),
+      suggestSkillsAction(educationDetails, "technical"),
+      suggestSkillsAction(educationDetails, "soft"),
+      suggestSkillsAction(educationDetails, "tools"),
     ])
       .then(([tech, s, t]) => setSuggestions({ technical: tech, soft: s, tools: t }))
-      .catch(() => { })
+      .catch(() => {})
       .finally(() => setLoadingSuggestions(false));
-  }, [collegeEducationType, collegeBranchCode]);
+  }, [educationDetails]);
 
   const handleSearchChange = (section: Section, query: string) => {
     setSectionSearch((prev) => ({
@@ -129,9 +149,9 @@ Return ONLY skills whose name contains or is directly related to "${query}".
 Do NOT return random branch skills. Every single skill in the array must be related to "${query}".
 Category must stay as ${section === "technical" ? "Technical Skills only" : section === "soft" ? "Soft Skills only" : "Tools & Frameworks only"}.`;
 
+        // ← now passes educationDetails instead of educationType + branchCode
         const results = await suggestSkillsAction(
-          collegeEducationType ?? "",
-          collegeBranchCode ?? "",
+          educationDetails,
           section,
           strictContext
         );
@@ -268,7 +288,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
       (s) => !addedNames[section].includes(s)
     );
 
-    // Keyword option — show only if not already added and not in results
     const keywordNotAdded =
       search.query.trim() &&
       !addedNames[section].some(
@@ -377,13 +396,11 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
                       Finding suggestions...
                     </div>
                   )}
-
                   {!search.loading && searchResults.length === 0 && !keywordNotAdded && (
                     <div className="px-4 py-3 text-xs text-gray-400">
                       No results found
                     </div>
                   )}
-
                   {searchResults.map((s) => (
                     <button
                       key={s}
@@ -400,6 +417,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
               )}
             </div>
           </div>
+
           {!search.query && sectionSuggestions.length > 0 && (
             <div className="flex flex-wrap">
               {sectionSuggestions.map((s) => (

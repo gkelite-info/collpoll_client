@@ -186,13 +186,13 @@ export default function Internships() {
         )}
 
         <div className="flex justify-end mt-4">
-          <button
+          {/* <button
             type="button"
             onClick={() => router.push("/profile?resume=projects&Step=6")}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
           >
             Next
-          </button>
+          </button> */}
         </div>
 
       </div>

@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchResumeLanguages, upsertResumeLanguages } from "@/lib/helpers/student/Resume/resumeLanguagesAPI";
 import ResumeLanguagesShimmer from "./ResumeLanguagesShimmer";
-import { suggestLanguagesAction } from "@/lib/helpers/student/ai/Suggestlanguagesaction";
+import { suggestLanguagesAction, searchLanguagesAction } from "@/lib/helpers/student/ai/Suggestlanguagesaction";
 import SuggestedPill from "./KeySkills/SuggestedPill";
 
 const toPascalCase = (str: string) =>
@@ -76,11 +76,10 @@ export default function ResumeLanguages() {
     searchDebounceRef.current = setTimeout(async () => {
       setLangSearch((prev) => ({ ...prev, loading: true }));
       try {
-        const matched = suggestions.filter((s) =>
-          s.toLowerCase().includes(query.toLowerCase()) && !selected.includes(s)
-        );
+        const matched = await searchLanguagesAction(query);
+        const filtered = matched.filter((s) => !selected.includes(s));
         setLangSearch((prev) => ({
-          ...prev, results: matched, loading: false, open: true,
+          ...prev, results: filtered, loading: false, open: true,
         }));
       } catch {
         setLangSearch((prev) => ({ ...prev, loading: false }));
@@ -99,13 +98,6 @@ export default function ResumeLanguages() {
     setDismissed((prev) => prev.filter((s) => s !== name && s !== formatted));
   };
 
-  const handleAddKeyword = () => {
-    const query = langSearch.query.trim();
-    if (!query) return;
-    addLanguage(query);
-    setLangSearch({ query: "", results: [], loading: false, open: false });
-  };
-
   const handleAddFromSearch = (name: string) => {
     addLanguage(name);
     setLangSearch({ query: "", results: [], loading: false, open: false });
@@ -113,7 +105,6 @@ export default function ResumeLanguages() {
 
   const remove = (lang: string) => {
     setSelected((s) => s.filter((x) => x !== lang));
-    // Restore back to suggestions
     setSuggestions((prev) => prev.includes(lang) ? prev : [lang, ...prev]);
     setDismissed((prev) => prev.filter((s) => s !== lang));
   };
@@ -149,10 +140,6 @@ export default function ResumeLanguages() {
   };
 
   if (loading) return <ResumeLanguagesShimmer />;
-
-  const keywordNotAdded =
-    langSearch.query.trim() &&
-    !selected.some((s) => s.toLowerCase() === langSearch.query.trim().toLowerCase());
 
   const searchResults = langSearch.results.filter((s) => !selected.includes(s));
 
@@ -197,10 +184,6 @@ export default function ResumeLanguages() {
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onFocus={() => setLangSearch((prev) => ({ ...prev, open: true }))}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && langSearch.query.trim()) {
-                        e.preventDefault();
-                        handleAddKeyword();
-                      }
                       if (e.key === "Escape") {
                         setLangSearch({ query: "", results: [], loading: false, open: false });
                       }
@@ -223,22 +206,10 @@ export default function ResumeLanguages() {
                 </div>
                 {langSearch.open && langSearch.query.trim() && (
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-[5.5rem] overflow-y-auto">
-                    {keywordNotAdded && (
-                      <button
-                        type="button"
-                        onClick={handleAddKeyword}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F6FDF9] text-left border-b border-gray-100 transition-colors"
-                      >
-                        <Plus size={13} className="text-[#43C17A] shrink-0" weight="bold" />
-                        <span className="text-sm text-[#282828] font-medium">
-                          Add "<span className="text-[#43C17A]">{langSearch.query.trim()}</span>"
-                        </span>
-                      </button>
-                    )}
                     {langSearch.loading && searchResults.length === 0 && (
                       <div className="px-4 py-3 text-xs text-gray-400 animate-pulse">Finding suggestions...</div>
                     )}
-                    {!langSearch.loading && searchResults.length === 0 && !keywordNotAdded && (
+                    {!langSearch.loading && searchResults.length === 0 && (
                       <div className="px-4 py-3 text-xs text-gray-400">No results found</div>
                     )}
                     {searchResults.map((s) => (

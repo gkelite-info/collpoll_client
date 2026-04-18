@@ -5,7 +5,7 @@ import Groq from "groq-sdk";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY! });
 
 const GROQ_MODELS = [
-   "llama-3.3-70b-versatile",
+  "llama-3.3-70b-versatile",
   "llama-3.1-8b-instant",
   "groq/compound",
   "groq/compound-mini",
@@ -77,5 +77,73 @@ No markdown. No explanation. Just the JSON array of language name strings.
   }
 
   console.error("❌ All Groq models exhausted for language suggestions");
+  return [];
+}
+
+export async function searchLanguagesAction(query: string): Promise<string[]> {
+  if (!query.trim()) return [];
+
+  const prompt = `The user typed "${query}" in a language search field on a resume builder.
+
+Task: Return ALL real human languages (spoken/written) whose names START WITH the letters "${query}" (case-insensitive).
+
+Rules:
+- Match must BEGIN with "${query}" — not just contain it somewhere in the middle or end
+- Include both widely-spoken AND regional/minority languages that genuinely start with "${query}"
+- Do NOT include programming languages, coding languages, or markup languages
+- Do NOT include dialects unless they are commonly recognized as distinct languages
+- Sort results: most widely spoken first, then lesser-known ones
+- If zero languages start with "${query}", return []
+- Return ONLY a raw JSON array of strings. No markdown, no backticks, no explanation, no preamble.
+
+Examples of correct output:
+- query "hi" → ["Hindi", "Hiligaynon", "Hiri Motu", "Hittite"]
+- query "fr" → ["French", "Frisian"]
+- query "ta" → ["Tamil", "Tagalog", "Tatar", "Tamazight", "Tajik"]
+- query "ar" → ["Arabic", "Aragonese", "Aramaic", "Armenian"]
+- query "te" → ["Telugu", "Tetum", "Teso"]
+- query "ma" → ["Malay", "Mandarin", "Marathi", "Macedonian", "Malagasy", "Maltese", "Maori"]
+
+Now return the JSON array for query: "${query}"`;
+
+  let lastError: any = null;
+
+  for (const model of GROQ_MODELS) {
+    try {
+      const response = await groq.chat.completions.create({
+        model,
+        max_tokens: 200,
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content: `You are a linguistics expert. Your only job is to return a valid JSON array of real human language names that START WITH the user's query string. Return ONLY the JSON array — no markdown, no backticks, no explanation, no extra text before or after.`,
+          },
+          { role: "user", content: prompt },
+        ],
+      });
+
+      let text = response.choices[0]?.message?.content ?? "";
+      text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const match = text.match(/\[[\s\S]*\]/);
+      if (!match) throw new Error("No JSON array found");
+
+      const parsed = JSON.parse(match[0]);
+      if (!Array.isArray(parsed)) throw new Error("Not an array");
+
+      const results = [...new Set(parsed.filter((s) => typeof s === "string"))] as string[];
+
+      // Client-side safety filter: ensure all results actually start with the query
+      return results.filter((lang) =>
+        lang.toLowerCase().startsWith(query.toLowerCase())
+      );
+    } catch (error: any) {
+      lastError = error;
+      if (error?.status === 429) continue;
+      throw error;
+    }
+  }
+
+  console.error("❌ All Groq models exhausted for language search");
   return [];
 }

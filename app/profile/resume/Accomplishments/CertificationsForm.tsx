@@ -27,6 +27,39 @@ interface CertificationsProps {
   } | null;
 }
 
+// ── Sanitizers ────────────────────────────────────────────────────────────────
+
+const sanitizeDate = (value: string): string => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  const cappedYear = (year || "").slice(0, 4);
+  return [cappedYear, month, day].join("-");
+};
+
+// ── Validators ────────────────────────────────────────────────────────────────
+
+const isValidDateString = (val: string): boolean => {
+  if (!val || val.trim() === "") return false;
+  const parts = val.split("-");
+  if (parts.length !== 3) return false;
+  const [yearStr, monthStr, dayStr] = parts;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+  if (yearStr.length !== 4) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  const date = new Date(year, month - 1, day);
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
+// ── Sub-component ─────────────────────────────────────────────────────────────
+
 function CertificateUpload({ form, setForm }: any) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -82,6 +115,8 @@ function CertificateUpload({ form, setForm }: any) {
   );
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
+
 export default function CertificationsForm({
   index,
   studentId,
@@ -90,6 +125,7 @@ export default function CertificationsForm({
   existingData,
 }: CertificationsProps) {
   const router = useRouter();
+
   const [form, setForm] = useState({
     name: "",
     id: "",
@@ -106,6 +142,8 @@ export default function CertificationsForm({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
   const toInputDate = (iso: string | null): string => {
     if (!iso) return "";
     return iso.split("T")[0];
@@ -116,22 +154,25 @@ export default function CertificationsForm({
     return new Date(dateStr).toISOString();
   };
 
+  // ── Pre-fill on edit ────────────────────────────────────────────────────────
+
   useEffect(() => {
-    if (existingData) {
-      setResumeCertificateId(existingData.resumeCertificateId);
-      setForm({
-        name: existingData.certificationName,
-        id: existingData.certificationCompletionId,
-        link: existingData.certificateLink,
-        file: existingData.uploadCertificate
-          ? existingData.uploadCertificate.split("/").pop() ?? "Uploaded"
-          : "",
-        fileObject: null,
-        startDate: toInputDate(existingData.startDate),
-        endDate: toInputDate(existingData.endDate),
-      });
-    }
+    if (!existingData) return;
+    setResumeCertificateId(existingData.resumeCertificateId);
+    setForm({
+      name: existingData.certificationName,
+      id: existingData.certificationCompletionId,
+      link: existingData.certificateLink,
+      file: existingData.uploadCertificate
+        ? existingData.uploadCertificate.split("/").pop() ?? "Uploaded"
+        : "",
+      fileObject: null,
+      startDate: toInputDate(existingData.startDate),
+      endDate: toInputDate(existingData.endDate),
+    });
   }, [existingData]);
+
+  // ── Change handler ──────────────────────────────────────────────────────────
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
@@ -147,35 +188,92 @@ export default function CertificationsForm({
       setForm({ ...form, link: value.replace(/[^A-Za-z0-9:/?&%=._\-#]/g, "") });
       return;
     }
+    if (name === "startDate" || name === "endDate") {
+      setForm({ ...form, [name]: sanitizeDate(value) });
+      return;
+    }
     setForm({ ...form, [name]: value });
   };
 
-  const validateCertification = () => {
-    if (!form.name.trim()) return "Certification Name is required";
-    if (form.name.length < 3) return "Certification Name must be at least 3 characters";
-    if (!/^[A-Za-z0-9 .,-]+$/.test(form.name)) return "Certification Name contains invalid characters";
-    if (form.id.trim()) {
-      if (!/^[A-Za-z0-9\-_ ]{2,50}$/.test(form.id)) return "Completion ID format invalid";
+  // ── Validate ────────────────────────────────────────────────────────────────
+
+  const validate = (): boolean => {
+    const trimmedName = form.name.trim();
+    const trimmedLink = form.link.trim();
+
+    // Required: Certification Name
+    if (!trimmedName) {
+      toast.error("Please fill Certification Name field");
+      return false;
     }
-    if (!form.link.trim()) return "Certificate Link is required";
-    if (!/^(https?:\/\/)[^\s]+$/.test(form.link)) return "Certificate Link must start with http or https";
-    if (!form.startDate) return "Start date is required";
-    return null;
+    if (trimmedName.length < 3) {
+      toast.error("Certification Name must be at least 3 characters");
+      return false;
+    }
+    if (trimmedName.length > 100) {
+      toast.error("Certification Name must not exceed 100 characters");
+      return false;
+    }
+    if (!/^[A-Za-z0-9 .,-]+$/.test(trimmedName)) {
+      toast.error("Certification Name contains invalid characters");
+      return false;
+    }
+
+    // Required: Upload Certificate
+    if (!form.file) {
+      toast.error("Please upload a Certificate");
+      return false;
+    }
+
+    // Optional: Completion ID format check (only if filled)
+    if (form.id.trim()) {
+      if (!/^[A-Za-z0-9\-_ ]{2,50}$/.test(form.id.trim())) {
+        toast.error("Completion ID format is invalid");
+        return false;
+      }
+    }
+
+    // Optional: Certificate Link format check (only if filled)
+    if (trimmedLink) {
+      if (!/^(https?:\/\/)[^\s]+$/.test(trimmedLink)) {
+        toast.error("Certificate Link must start with http or https");
+        return false;
+      }
+    }
+
+    // Optional: Start Date (validate format only if filled)
+    if (form.startDate && !isValidDateString(form.startDate)) {
+      toast.error("Enter a valid start date (day 1–31, month 1–12, 4-digit year)");
+      return false;
+    }
+
+    // Optional: End Date (only validate if filled)
+    if (form.endDate) {
+      if (!isValidDateString(form.endDate)) {
+        toast.error("Enter a valid end date (day 1–31, month 1–12, 4-digit year)");
+        return false;
+      }
+      if (form.startDate && new Date(form.endDate) <= new Date(form.startDate)) {
+        toast.error("End date must be after start date");
+        return false;
+      }
+    }
+
+    return true;
   };
 
-  const saveData = async (): Promise<boolean> => {
-    const error = validateCertification();
-    if (error) { toast.error(error); return false; }
+  // ── API Call ────────────────────────────────────────────────────────────────
 
+  const callApi = async (): Promise<boolean> => {
     let uploadedUrl = existingData?.uploadCertificate ?? "";
     if (form.fileObject) {
       uploadedUrl = await uploadCertificateFile(studentId, form.fileObject);
     }
 
     const payload = {
-      certificationName: form.name,
-      certificationCompletionId: form.id,
-      certificateLink: form.link,
+      certificationName: form.name.trim(),
+      certificationCompletionId: form.id.trim(),
+      certificateLink: form.link.trim(),
       uploadCertificate: uploadedUrl,
       startDate: toISOString(form.startDate),
       endDate: form.endDate ? toISOString(form.endDate) : null,
@@ -183,20 +281,24 @@ export default function CertificationsForm({
 
     if (resumeCertificateId) {
       await updateCertification(resumeCertificateId, payload);
+      toast.success(`Certification ${index + 1} updated successfully`);
     } else {
       const result = await insertCertification({ studentId, ...payload });
       setResumeCertificateId(result.resumeCertificateId);
+      toast.success(`Certification ${index + 1} saved successfully`);
     }
 
     return true;
   };
 
+  // ── Save handler ────────────────────────────────────────────────────────────
+
   const handleSubmit = async () => {
+    if (!validate()) return;
     setLoading(true);
     try {
-      const success = await saveData();
+      const success = await callApi();
       if (!success) return;
-      toast.success(`Certification ${index + 1} saved successfully`);
       onSubmit();
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
@@ -205,14 +307,31 @@ export default function CertificationsForm({
     }
   };
 
+  // ── Next handler ────────────────────────────────────────────────────────────
+
   const handleNext = async () => {
+    const isFormEmpty =
+      !form.name.trim() &&
+      !form.id.trim() &&
+      !form.link.trim() &&
+      !form.file &&
+      !form.startDate &&
+      !form.endDate;
+
+    // Fully empty → skip everything, navigate directly
+    if (isFormEmpty) {
+      router.push("/profile?resume=competitive-exams&Step=9");
+      return;
+    }
+
+    // Partially or fully filled → must validate, no API hit if invalid
+    if (!validate()) return;
+
     setNextLoading(true);
     try {
-      // ❌ REMOVE validation call
-      // const success = await saveData();
-      // if (!success) return;
-
-      // ✅ Direct navigation without validation
+      const success = await callApi();
+      if (!success) return;
+      onSubmit();
       router.push("/profile?resume=competitive-exams&Step=9");
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
@@ -220,6 +339,8 @@ export default function CertificationsForm({
       setNextLoading(false);
     }
   };
+
+  // ── Delete handler ──────────────────────────────────────────────────────────
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
@@ -230,6 +351,8 @@ export default function CertificationsForm({
       setShowDeleteModal(false);
     }
   };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div>
@@ -245,7 +368,6 @@ export default function CertificationsForm({
         <h3 className="text-base font-semibold text-[#282828]">
           Certification {index + 1}
         </h3>
-        {/* Unified trash icon for both saved and unsaved — confirm modal handles both */}
         <button
           type="button"
           onClick={() => setShowDeleteModal(true)}
@@ -256,19 +378,27 @@ export default function CertificationsForm({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Input
-          label="Certification Name"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          placeholder="Java Full Stack"
-        />
+        <div>
+          <label className="block text-sm font-medium text-[#282828] mb-1">
+            Certification Name <span className="text-red-500 ml-0.5">*</span>
+          </label>
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            placeholder="Java Full Stack"
+            maxLength={100}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
+          />
+        </div>
         <Input
           label="Certification Completion ID"
           name="id"
           value={form.id}
           onChange={handleChange}
           placeholder="WD-12345"
+          disabled={loading || nextLoading}
         />
         <Input
           label="Certificate Link"
@@ -276,36 +406,56 @@ export default function CertificationsForm({
           value={form.link}
           onChange={handleChange}
           placeholder="https://example.com"
+          disabled={loading || nextLoading}
         />
         <div className="flex flex-col">
           <label className="mb-1 text-sm font-medium text-[#282828]">
-            Upload Certificate
+            Upload Certificate <span className="text-red-500 ml-0.5">*</span>
           </label>
           <CertificateUpload form={form} setForm={setForm} />
         </div>
 
-        <Input
-          label="Start Date"
-          name="startDate"
-          type="date"
-          value={form.startDate}
-          onChange={handleChange}
-        />
-        <Input
-          label="End Date (Optional)"
-          name="endDate"
-          type="date"
-          value={form.endDate}
-          onChange={handleChange}
-        />
+        <div>
+          <label className="block text-sm font-medium text-[#282828] mb-1">
+            Start Date
+          </label>
+          <input
+            type="date"
+            name="startDate"
+            value={form.startDate}
+            onChange={handleChange}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[#282828] mb-1">
+            End Date <span className="text-gray-400 text-xs">(Optional)</span>
+          </label>
+          <input
+            type="date"
+            name="endDate"
+            value={form.endDate}
+            onChange={handleChange}
+            disabled={loading || nextLoading || !form.startDate}
+            min={form.startDate}
+            className={`w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer ${
+              !form.startDate ? "bg-gray-50 cursor-not-allowed" : ""
+            }`}
+          />
+        </div>
 
         <div className="md:col-span-2 flex justify-end gap-3">
           <button
             type="button"
             onClick={handleSubmit}
             disabled={loading || nextLoading}
-            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${loading || nextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
-              }`}
+            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${
+              loading || nextLoading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#43C17A] cursor-pointer"
+            }`}
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -313,8 +463,11 @@ export default function CertificationsForm({
             type="button"
             onClick={handleNext}
             disabled={loading || nextLoading}
-            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${loading || nextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
-              }`}
+            className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${
+              loading || nextLoading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#43C17A] cursor-pointer"
+            }`}
           >
             {nextLoading ? "Saving..." : "Next"}
           </button>

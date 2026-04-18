@@ -1,4 +1,3 @@
-import { Input, Select, TextArea } from "@/app/utils/ReusableComponents";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Trash } from "@phosphor-icons/react";
@@ -23,8 +22,62 @@ interface AwardProps {
   existingData?: AwardRecord | null;
 }
 
-export default function AwardsForm({ index, onSubmit, onRemove, studentId, existingData }: AwardProps) {
+// ── Sanitizers ────────────────────────────────────────────────────────────────
+
+const sanitizeText = (value: string) =>
+  value.replace(/[^A-Za-z\s\-&.,()']/g, "");
+
+const sanitizeDate = (value: string): string => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  const cappedYear = (year || "").slice(0, 4);
+  return [cappedYear, month, day].join("-");
+};
+
+// ── Validators ────────────────────────────────────────────────────────────────
+
+const isValidDateString = (val: string): boolean => {
+  if (!val || val.trim() === "") return false;
+  const parts = val.split("-");
+  if (parts.length !== 3) return false;
+  const [yearStr, monthStr, dayStr] = parts;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+  if (yearStr.length !== 4) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  const date = new Date(year, month - 1, day);
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
+// ── FieldLabel ────────────────────────────────────────────────────────────────
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <label className="block text-sm font-medium text-[#282828] mb-1">
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+
+export default function AwardsForm({
+  index,
+  onSubmit,
+  onRemove,
+  studentId,
+  existingData,
+}: AwardProps) {
   const router = useRouter();
+
   const [form, setForm] = useState({
     awardName: "",
     issuedBy: "",
@@ -38,6 +91,7 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // ── Pre-fill on edit ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!existingData) return;
     setAwardId(existingData.awardId);
@@ -50,69 +104,98 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
     });
   }, [existingData?.awardId]);
 
-  const handleChange = (e: any) => {
+  // ── Change handler ──────────────────────────────────────────────────────────
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
     if (name === "awardName" || name === "issuedBy") {
-      setForm({ ...form, [name]: value.replace(/[^A-Za-z ]/g, "") });
+      setForm((prev) => ({ ...prev, [name]: sanitizeText(value) }));
+      return;
+    }
+    if (name === "dateReceived") {
+      setForm((prev) => ({ ...prev, dateReceived: sanitizeDate(value) }));
       return;
     }
     if (name === "description") {
-      setForm({ ...form, description: value.replace(/[^A-Za-z \n]/g, "") });
+      setForm((prev) => ({ ...prev, description: value }));
       return;
     }
-    setForm({ ...form, [name]: value });
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const validate = (): string | null => {
-    const onlyLetters = /^[A-Za-z ]+$/;
-    if (!form.awardName.trim()) return "Award Name is required";
-    if (!onlyLetters.test(form.awardName)) return "Award Name should contain only letters";
-    if (!form.issuedBy.trim()) return "Issued By is required";
-    if (!onlyLetters.test(form.issuedBy)) return "Issued By should contain only letters";
-    if (!form.dateReceived) return "Date Received is required";
-    if (!form.description.trim()) return "Description is required";
-    if (!onlyLetters.test(form.description.replace(/\n/g, " "))) return "Description should contain only letters";
-    return null;
+  // ── Validate ────────────────────────────────────────────────────────────────
+  const validate = (): boolean => {
+    const trimmedName = form.awardName.trim();
+    const trimmedIssuedBy = form.issuedBy.trim();
+
+    if (!trimmedName) {
+      toast.error("Please fill Award Name field"); return false;
+    }
+    if (trimmedName.length < 2) {
+      toast.error("Award Name must be at least 2 characters"); return false;
+    }
+    if (trimmedName.length > 100) {
+      toast.error("Award Name must not exceed 100 characters"); return false;
+    }
+    if (!trimmedIssuedBy) {
+      toast.error("Please fill Issued By field"); return false;
+    }
+    if (trimmedIssuedBy.length < 2) {
+      toast.error("Issued By must be at least 2 characters"); return false;
+    }
+    if (trimmedIssuedBy.length > 100) {
+      toast.error("Issued By must not exceed 100 characters"); return false;
+    }
+    if (!form.dateReceived) {
+      toast.error("Please fill Date Received field"); return false;
+    }
+    if (!isValidDateString(form.dateReceived)) {
+      toast.error("Enter a valid date received (day 1–31, month 1–12, 4-digit year)"); return false;
+    }
+
+    return true;
   };
 
-  const saveData = async (): Promise<AwardRecord | null> => {
-    const error = validate();
-    if (error) { toast.error(error); return null; }
-
+  // ── API Call ────────────────────────────────────────────────────────────────
+  const callApi = async (): Promise<AwardRecord | null> => {
     const payload = {
       studentId,
-      awardName: form.awardName,
-      issuedBy: form.issuedBy,
+      awardName: form.awardName.trim(),
+      issuedBy: form.issuedBy.trim(),
       dateReceived: form.dateReceived,
       category: form.category,
-      description: form.description,
+      description: form.description.trim(),
     };
 
     let savedId = awardId;
+
     if (awardId) {
       await updateAward(awardId, payload);
+      toast.success(`Award ${index + 1} updated successfully`);
     } else {
       const result = await insertAward(payload);
       savedId = result.awardId;
       setAwardId(result.awardId);
+      toast.success(`Award ${index + 1} saved successfully`);
     }
 
     return {
       awardId: savedId!,
-      awardName: form.awardName,
-      issuedBy: form.issuedBy,
+      awardName: form.awardName.trim(),
+      issuedBy: form.issuedBy.trim(),
       dateReceived: form.dateReceived,
       category: form.category,
-      description: form.description,
+      description: form.description.trim(),
     };
   };
 
+  // ── Save handler ────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    if (!validate()) return;
     setLoading(true);
     try {
-      const record = await saveData();
+      const record = await callApi();
       if (!record) return;
-      toast.success(`Award ${index + 1} saved successfully`);
       onSubmit(record);
     } catch {
       toast.error("Something went wrong!");
@@ -121,14 +204,35 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
     }
   };
 
+  // ── Next handler ────────────────────────────────────────────────────────────
   const handleNext = async () => {
+    const isFormEmpty =
+      !form.awardName.trim() &&
+      !form.issuedBy.trim() &&
+      !form.dateReceived &&
+      !form.category &&
+      !form.description.trim();
+
+    // fully empty → skip everything
+    if (isFormEmpty) {
+      router.push("/profile?resume=competitive-exams&Step=9");
+      return;
+    }
+
+    // partially filled → MUST validate
+    const isValid = validate();
+
+     if (!isValid) {
+    //   toast.error("Please fill all required fields");
+      return;
+     }
+
     setNextLoading(true);
     try {
-      // ❌ REMOVE validation call
-      // const success = await saveData();
-      // if (!success) return;
+      const record = await callApi();
+      if (!record) return;
 
-      // ✅ Direct navigation without validation
+      onSubmit(record);
       router.push("/profile?resume=competitive-exams&Step=9");
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
@@ -137,6 +241,7 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
     }
   };
 
+  // ── Delete handler ──────────────────────────────────────────────────────────
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
     try {
@@ -147,6 +252,7 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
     }
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div>
       <ConfirmDeleteModal
@@ -159,7 +265,6 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
 
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold text-[#282828]">Award {index + 1}</h3>
-        {/* Unified trash icon for both saved and unsaved — confirm modal handles both */}
         <button
           type="button"
           onClick={() => setShowDeleteModal(true)}
@@ -169,13 +274,83 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 text-[#282828] gap-8">
-        <Input label="Award Name" name="awardName" value={form.awardName} onChange={handleChange} placeholder="Best Coder Award" />
-        <Input label="Issued By" name="issuedBy" value={form.issuedBy} onChange={handleChange} placeholder="Google Developer Student Club" />
-        <Input label="Date Received" name="dateReceived" type="date" value={form.dateReceived} onChange={handleChange} />
-        <Select label="Category (Optional)" name="category" value={form.category} options={["Hackathon", "Academic", "Sports", "Other"]} onChange={handleChange} />
-        <TextArea label="Description" name="description" value={form.description} onChange={handleChange} placeholder="Describe your achievement..." />
+      <div className="grid grid-cols-1 md:grid-cols-2 text-[#282828] gap-6">
 
+        {/* Award Name — required */}
+        <div>
+          <FieldLabel label="Award Name" required />
+          <input
+            name="awardName"
+            value={form.awardName}
+            onChange={handleChange}
+            placeholder="Best Coder Award"
+            maxLength={100}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
+          />
+        </div>
+
+        {/* Issued By — required */}
+        <div>
+          <FieldLabel label="Issued By" required />
+          <input
+            name="issuedBy"
+            value={form.issuedBy}
+            onChange={handleChange}
+            placeholder="Google Developer Student Club"
+            maxLength={100}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
+          />
+        </div>
+
+        {/* Date Received — required */}
+        <div>
+          <FieldLabel label="Date Received" required />
+          <input
+            type="date"
+            name="dateReceived"
+            value={form.dateReceived}
+            onChange={handleChange}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer"
+          />
+        </div>
+
+        {/* Category — optional */}
+        <div>
+          <FieldLabel label="Category" />
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleChange}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer bg-white"
+          >
+            <option value="">Select category (optional)</option>
+            {["Hackathon", "Academic", "Sports", "Other"].map((opt) => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Description — optional */}
+        <div className="md:col-span-2">
+          <FieldLabel label="Description" />
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Describe your achievement..."
+            rows={4}
+            maxLength={500}
+            disabled={loading || nextLoading}
+            className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none resize-none"
+          />
+          <p className="text-xs text-gray-400 text-right mt-1">{form.description.length}/500</p>
+        </div>
+
+        {/* Buttons */}
         <div className="md:col-span-2 flex justify-end gap-3">
           <button
             type="button"
@@ -196,6 +371,7 @@ export default function AwardsForm({ index, onSubmit, onRemove, studentId, exist
             {nextLoading ? "Saving..." : "Next"}
           </button>
         </div>
+
       </div>
     </div>
   );

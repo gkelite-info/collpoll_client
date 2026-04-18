@@ -1,11 +1,9 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { upsertResumeInternship } from "@/lib/helpers/student/Resume/resumeInternshipsAPI";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export interface InternshipFormData {
   organization: string;
@@ -19,49 +17,406 @@ export interface InternshipFormData {
   description: string;
 }
 
-const schema = yup.object({
-  organization: yup.string().required("Organization is required"),
-  role: yup.string().required("Role is required"),
-  startDate: yup.string().required("Start date is required"),
-  endDate: yup.string().optional().default(""),
-  projectName: yup.string().optional().default(""),
-  projectUrl: yup
-    .string()
-    .optional()
-    .default("")
-    .test("url-or-empty", "Must be a valid URL", (val) => {
-      if (!val || val.trim() === "") return true;
-      try {
-        new URL(val);
-        return true;
-      } catch {
-        return false;
-      }
-    }),
-  location: yup.string().required("Location is required"),
-  domain: yup.string().required("Domain is required"),
-  description: yup.string().max(500, "Max 500 characters").optional().default(""),
-});
+// ── Sanitizers ────────────────────────────────────────────────────────────────
 
-type FormValues = yup.InferType<typeof schema>;
+const sanitizeOrganization = (value: string) =>
+  value.replace(/[^a-zA-Z0-9\s\-&.,()']/g, "");
+
+const sanitizeProjectName = (value: string) =>
+  value.replace(/[^a-zA-Z0-9\s\-_().'"]/g, "");
+
+const sanitizeProjectUrl = (value: string) =>
+  value.replace(/[^a-zA-Z0-9:/._\-~?#[\]@!$&'()*+,;=%]/g, "");
+
+const sanitizeDate = (value: string): string => {
+  if (!value) return "";
+  const [year, month, day] = value.split("-");
+  const cappedYear = (year || "").slice(0, 4);
+  return [cappedYear, month, day].join("-");
+};
+
+// ── Validators ────────────────────────────────────────────────────────────────
+
+const isValidDateString = (val: string): boolean => {
+  if (!val || val.trim() === "") return false;
+  const parts = val.split("-");
+  if (parts.length !== 3) return false;
+  const [yearStr, monthStr, dayStr] = parts;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false;
+  if (yearStr.length !== 4) return false;
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  const date = new Date(year, month - 1, day);
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
+const isValidUrl = (val: string): boolean => {
+  try {
+    const url = new URL(val);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const ROLES = [
+  // ── IT & Software ──
   "Software Developer Intern",
-  "Frontend Intern",
-  "Backend Intern",
-  "Data Science Intern",
+  "Frontend Developer Intern",
+  "Backend Developer Intern",
+  "Full Stack Developer Intern",
   "Mobile Developer Intern",
+  "Android Developer Intern",
+  "iOS Developer Intern",
+  "Data Science Intern",
+  "Data Analyst Intern",
+  "Machine Learning Intern",
+  "AI/ML Intern",
+  "DevOps Intern",
+  "Cloud Computing Intern",
+  "Cybersecurity Intern",
+  "QA / Testing Intern",
+  "UI/UX Designer Intern",
+  "Graphic Designer Intern",
+  "Product Designer Intern",
+  "Embedded Systems Intern",
+  "IoT Intern",
+  "Blockchain Intern",
+  "Game Developer Intern",
+  "IT Support Intern",
+  "Network Engineer Intern",
+  "Database Intern",
+  // ── Non-IT ──
+  "Mechanical Engineering Intern",
+  "Civil Engineering Intern",
+  "Electrical Engineering Intern",
+  "Electronics Intern",
+  "Chemical Engineering Intern",
+  "Biotechnology Intern",
+  "Research Intern",
+  "Operations Intern",
+  "Supply Chain Intern",
+  "Logistics Intern",
+  "Manufacturing Intern",
+  "Quality Control Intern",
+  // ── Sales ──
+  "Sales Intern",
+  "Business Development Intern",
+  "Inside Sales Intern",
+  "Pre-Sales Intern",
+  "Retail Sales Intern",
+  "B2B Sales Intern",
+  // ── Marketing ──
+  "Marketing Intern",
+  "Digital Marketing Intern",
+  "Social Media Marketing Intern",
+  "Content Marketing Intern",
+  "SEO Intern",
+  "Performance Marketing Intern",
+  "Brand Management Intern",
+  "Market Research Intern",
+  "Email Marketing Intern",
+  // ── Design ──
+  "Graphic Design Intern",
+  "Product Design Intern",
+  "Motion Graphics Intern",
+  "Video Editing Intern",
+  "Photography Intern",
+  "Fashion Design Intern",
+  "Interior Design Intern",
+  // ── Finance & Accounting ──
+  "Finance Intern",
+  "Accounting Intern",
+  "Investment Banking Intern",
+  "Equity Research Intern",
+  "Audit Intern",
+  "Tax Intern",
+  "Financial Analysis Intern",
+  // ── HR ──
+  "HR Intern",
+  "Talent Acquisition Intern",
+  "Recruitment Intern",
+  "HR Operations Intern",
+  "Learning & Development Intern",
+  // ── Management & Strategy ──
+  "Business Analyst Intern",
+  "Strategy Intern",
+  "Management Intern",
+  "Consulting Intern",
+  "Project Management Intern",
+  "Product Management Intern",
+  // ── Legal & Compliance ──
+  "Legal Intern",
+  "Compliance Intern",
+  "Paralegal Intern",
+  // ── Media & Communication ──
+  "Content Writing Intern",
+  "Journalism Intern",
+  "Public Relations Intern",
+  "Copywriting Intern",
+  "Video Production Intern",
+  "Podcast Intern",
+  // ── Education ──
+  "Teaching Intern",
+  "Curriculum Development Intern",
+  "EdTech Intern",
+  // ── Healthcare ──
+  "Healthcare Intern",
+  "Pharmacy Intern",
+  "Clinical Research Intern",
+  "Hospital Management Intern",
+  // ── Other ──
+  "Event Management Intern",
+  "NGO / Social Work Intern",
+  "Agriculture Intern",
+  "Architecture Intern",
 ];
 
-const LOCATIONS = ["Bangalore", "Hyderabad", "Chennai", "Mumbai", "Remote"];
+const LOCATIONS = [
+  // ── Metro Cities ──
+  "Mumbai",
+  "Delhi",
+  "Bengaluru",
+  "Hyderabad",
+  "Chennai",
+  "Kolkata",
+  "Pune",
+  "Ahmedabad",
+  // ── Tier 2 Cities ──
+  "Jaipur",
+  "Lucknow",
+  "Kanpur",
+  "Nagpur",
+  "Indore",
+  "Thane",
+  "Bhopal",
+  "Visakhapatnam",
+  "Patna",
+  "Vadodara",
+  "Ghaziabad",
+  "Ludhiana",
+  "Agra",
+  "Nashik",
+  "Faridabad",
+  "Meerut",
+  "Rajkot",
+  "Varanasi",
+  "Srinagar",
+  "Aurangabad",
+  "Amritsar",
+  "Ranchi",
+  "Howrah",
+  "Coimbatore",
+  "Jabalpur",
+  "Gwalior",
+  "Vijayawada",
+  "Jodhpur",
+  "Madurai",
+  "Raipur",
+  "Kota",
+  "Chandigarh",
+  "Guwahati",
+  "Solapur",
+  "Hubli",
+  "Tiruchirappalli",
+  "Bareilly",
+  "Mysuru",
+  "Tiruppur",
+  "Gurgaon",
+  "Aligarh",
+  "Jalandhar",
+  "Bhubaneswar",
+  "Salem",
+  "Warangal",
+  "Guntur",
+  "Bhiwandi",
+  "Saharanpur",
+  "Gorakhpur",
+  "Bikaner",
+  "Amravati",
+  "Noida",
+  "Jamshedpur",
+  "Bhilai",
+  "Cuttack",
+  "Firozabad",
+  "Kochi",
+  "Nellore",
+  "Dehradun",
+  "Mangalore",
+  "Belgaum",
+  "Ambattur",
+  "Tirunelveli",
+  "Malegaon",
+  "Gaya",
+  "Jalgaon",
+  "Udaipur",
+  "Maheshtala",
+  "Davanagere",
+  "Kozhikode",
+  "Akola",
+  "Kurnool",
+  "Rajpur Sonarpur",
+  "Rajahmundry",
+  "Bokaro",
+  "South Dumdum",
+  "Bellary",
+  "Patiala",
+  "Gopalpur",
+  "Agartala",
+  "Bhagalpur",
+  "Muzaffarnagar",
+  "Bhatpara",
+  "Panihati",
+  "Latur",
+  "Dhule",
+  "Rohtak",
+  "Korba",
+  "Bhilwara",
+  "Brahmapur",
+  "Muzaffarpur",
+  "Ahmednagar",
+  "Mathura",
+  "Kollam",
+  "Avadi",
+  "Kadapa",
+  "Kamarhati",
+  "Bilaspur",
+  "Shahjahanpur",
+  "Bijapur",
+  "Rampur",
+  "Shimla",
+  "Durgapur",
+  "Thrissur",
+  "Alwar",
+  "Bardhaman",
+  "Kulti",
+  "Kakinada",
+  "Nizamabad",
+  "Parbhani",
+  "Tumkur",
+  "Hisar",
+  "Ozhukarai",
+  "Panipat",
+  "Secunderabad",
+  // ── Remote ──
+  "Remote",
+];
+
 
 const DEFAULT_DOMAINS = [
+  // ── IT & Software ──
   "Web Development",
-  "Mobile Development",
+  "Frontend Development",
+  "Backend Development",
+  "Full Stack Development",
+  "Mobile App Development",
+  "Android Development",
+  "iOS Development",
   "Data Science",
+  "Data Analytics",
   "Machine Learning",
-  "DevOps",
+  "Artificial Intelligence",
+  "Deep Learning",
+  "Natural Language Processing",
+  "Computer Vision",
+  "DevOps & Cloud",
+  "Cloud Computing",
+  "Cybersecurity",
+  "Software Testing & QA",
+  "Embedded Systems",
+  "Internet of Things (IoT)",
+  "Blockchain",
+  "Game Development",
+  "Database Administration",
+  "Networking & IT Infrastructure",
+  "AR / VR Development",
+  // ── Design ──
+  "UI/UX Design",
+  "Graphic Design",
+  "Product Design",
+  "Motion Graphics",
+  "Video Editing",
+  "Photography",
+  "Fashion Design",
+  "Interior Design",
+  // ── Sales ──
+  "Sales",
+  "Business Development",
+  "Inside Sales",
+  "B2B Sales",
+  "Retail Sales",
+  // ── Marketing ──
+  "Digital Marketing",
+  "Social Media Marketing",
+  "Content Marketing",
+  "SEO / SEM",
+  "Performance Marketing",
+  "Brand Management",
+  "Market Research",
+  "Email Marketing",
+  "Public Relations",
+  // ── Finance & Accounting ──
+  "Finance",
+  "Accounting",
+  "Investment Banking",
+  "Equity Research",
+  "Audit & Taxation",
+  "Financial Analysis",
+  // ── HR ──
+  "Human Resources",
+  "Talent Acquisition",
+  "HR Operations",
+  "Learning & Development",
+  // ── Management & Strategy ──
+  "Business Analysis",
+  "Strategy & Consulting",
+  "Project Management",
+  "Product Management",
+  "Operations Management",
+  "Supply Chain & Logistics",
+  // ── Engineering (Non-IT) ──
+  "Mechanical Engineering",
+  "Civil Engineering",
+  "Electrical Engineering",
+  "Electronics & Communication",
+  "Chemical Engineering",
+  "Biotechnology",
+  "Manufacturing & Production",
+  "Quality Control",
+  // ── Media & Communication ──
+  "Content Writing",
+  "Journalism",
+  "Copywriting",
+  "Video Production",
+  "Podcast & Broadcasting",
+  // ── Education ──
+  "Education & Teaching",
+  "EdTech",
+  "Curriculum Development",
+  // ── Healthcare ──
+  "Healthcare",
+  "Pharmacy",
+  "Clinical Research",
+  "Hospital Management",
+  // ── Legal ──
+  "Legal & Compliance",
+  // ── Other ──
+  "Event Management",
+  "Agriculture",
+  "Architecture",
+  "Research & Development",
+  "NGO / Social Work",
 ];
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function FieldLabel({ label, required }: { label: string; required?: boolean }) {
   return (
@@ -72,7 +427,6 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
   );
 }
 
-/** Reusable: renders a select that, when a custom value is active, shows a badge inside the box */
 function SelectWithCustomBadge({
   value,
   options,
@@ -89,8 +443,6 @@ function SelectWithCustomBadge({
   onBadgeClear,
   otherPlaceholder,
   error,
-  register,
-  fieldName,
 }: {
   value: string;
   options: string[];
@@ -107,14 +459,25 @@ function SelectWithCustomBadge({
   onBadgeClear: () => void;
   otherPlaceholder: string;
   error?: string;
-  register: any;
-  fieldName: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div>
+    <div ref={ref}>
       <div className="relative">
         {isCustom && !showOther ? (
-          /* Custom value active — show badge inside a select-styled box */
           <div className="w-full border border-[#CCCCCC] rounded-md px-3 py-2 flex items-center justify-between min-h-[38px]">
             <div className="flex items-center gap-2 px-2 py-0.5 bg-green-50 border border-[#43C17A] rounded-md">
               <span className="text-sm text-[#282828]">{value}</span>
@@ -129,30 +492,72 @@ function SelectWithCustomBadge({
             <span className="text-[#525252] ml-2">▾</span>
           </div>
         ) : (
-          /* Normal select */
           <>
-            <select
-              {...register(fieldName)}
-              disabled={disabled}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onSelectChange(e.target.value)}
-              className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer appearance-none"
+            {/* Trigger */}
+            <div
+              onClick={() => !disabled && setOpen((prev) => !prev)}
+              className={`w-full border border-[#CCCCCC] rounded-md px-3 py-2 text-sm flex justify-between ${disabled ? "bg-gray-50 cursor-not-allowed" : "cursor-pointer"
+                }`}
             >
-              <option value="">{placeholder}</option>
-              {options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-              <option value="__other__">+ Other</option>
-            </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#525252]">▾</span>
+              <span className={value ? "text-[#282828]" : "text-[#9CA3AF]"}>
+                {value || placeholder}
+              </span>
+              <span>▾</span>
+            </div>
+
+            {/* Dropdown */}
+            {open && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-[#CCCCCC] rounded-md shadow-md max-h-48 overflow-y-auto">
+
+                {/* Placeholder */}
+                <div
+                  onClick={() => {
+                    onSelectChange("");
+                    setOpen(false);
+                  }}
+                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-gray-500"
+                >
+                  {placeholder}
+                </div>
+
+                {/* Options */}
+                {options.map((o) => (
+                  <div
+                    key={o}
+                    onClick={() => {
+                      onSelectChange(o);
+                      setOpen(false);
+                    }}
+                    className={`px-3 py-2 cursor-pointer transition-colors
+      ${value === o
+                        ? "bg-green-100 text-green-700 font-medium"
+                        : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                  >
+                    {o}
+                  </div>
+                ))}
+
+                {/* Other */}
+                <div
+                  onClick={() => {
+                    onSelectChange("__other__");
+                    setOpen(false);
+                  }}
+                  className="px-3 py-2 text-green-600 hover:bg-gray-100 cursor-pointer font-medium"
+                >
+                  + Other
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
 
+      {/* Error */}
       {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
 
-      {/* "Other" inline input */}
+      {/* Custom Input */}
       {showOther && (
         <div className="flex gap-2 items-center mt-2">
           <input
@@ -166,14 +571,14 @@ function SelectWithCustomBadge({
           <button
             type="button"
             onClick={onOtherAdd}
-            className="px-4 h-10 cursor-pointer bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A] transition"
+            className="px-4 h-10 bg-[#43C17A] text-white text-sm font-medium rounded-md hover:bg-[#16A34A]"
           >
             Add
           </button>
           <button
             type="button"
             onClick={onOtherCancel}
-            className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md cursor-pointer hover:bg-[#F5F5F5] transition"
+            className="px-4 h-10 border border-[#CCCCCC] text-[#525252] text-sm font-medium rounded-md hover:bg-[#F5F5F5]"
           >
             Cancel
           </button>
@@ -182,129 +587,215 @@ function SelectWithCustomBadge({
     </div>
   );
 }
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function InternshipForm({
   studentId,
   onSubmitted,
   initialData,
   internshipId,
+  onNext,
 }: {
   studentId: number;
   onSubmitted: (data: InternshipFormData, dbId?: number) => void;
   initialData?: InternshipFormData;
   internshipId?: number;
+  onNext?: (nextRoute: string) => void;
 }) {
-  const [showOtherDomain, setShowOtherDomain] = useState(false);
-  const [otherDomainValue, setOtherDomainValue] = useState("");
+  const router = useRouter();
+
+  // ── field state ──────────────────────────────────────────────────────────────
+  const [organization, setOrganization] = useState(initialData?.organization || "");
+  const [role, setRole] = useState(initialData?.role || "");
+  const [startDate, setStartDate] = useState(initialData?.startDate || "");
+  const [endDate, setEndDate] = useState(initialData?.endDate || "");
+  const [projectName, setProjectName] = useState(initialData?.projectName || "");
+  const [projectUrl, setProjectUrl] = useState(initialData?.projectUrl || "");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [domain, setDomain] = useState(initialData?.domain || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+
+
+  // ── other / custom select state ──────────────────────────────────────────────
   const [showOtherRole, setShowOtherRole] = useState(false);
   const [otherRoleValue, setOtherRoleValue] = useState("");
   const [showOtherLocation, setShowOtherLocation] = useState(false);
   const [otherLocationValue, setOtherLocationValue] = useState("");
+  const [showOtherDomain, setShowOtherDomain] = useState(false);
+  const [otherDomainValue, setOtherDomainValue] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: yupResolver(schema),
-    defaultValues: initialData || {
-      organization: "",
-      role: "",
-      startDate: "",
-      endDate: "",
-      projectName: "",
-      projectUrl: "",
-      location: "",
-      domain: "",
-      description: "",
-    },
-  });
 
-  const startDateValue = watch("startDate");
-  const descriptionValue = watch("description") ?? "";
-  const watchedRole = watch("role");
-  const watchedLocation = watch("location");
-  const watchedDomain = watch("domain");
+  // ── ui state ─────────────────────────────────────────────────────────────────
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  /* ── Role helpers ── */
+  // ── Role helpers ─────────────────────────────────────────────────────────────
   const handleRoleSelectChange = (val: string) => {
-    if (val === "__other__") {
-      setShowOtherRole(true);
-      setValue("role", "", { shouldValidate: false });
-    } else {
-      setShowOtherRole(false);
-      setValue("role", val, { shouldValidate: true });
-    }
+    if (val === "__other__") { setShowOtherRole(true); setRole(""); }
+    else { setShowOtherRole(false); setRole(val); }
   };
   const handleAddOtherRole = () => {
-    const value = otherRoleValue.trim();
-    if (!value) { toast.error("Please enter a role before adding."); return; }
-    setValue("role", value, { shouldValidate: true });
-    setOtherRoleValue("");
-    setShowOtherRole(false);
+    const val = otherRoleValue.trim();
+    if (!val) { toast.error("Please enter a role before adding."); return; }
+    setRole(val); setOtherRoleValue(""); setShowOtherRole(false);
   };
 
-  /* ── Location helpers ── */
+  // ── Location helpers ─────────────────────────────────────────────────────────
   const handleLocationSelectChange = (val: string) => {
-    if (val === "__other__") {
-      setShowOtherLocation(true);
-      setValue("location", "", { shouldValidate: false });
-    } else {
-      setShowOtherLocation(false);
-      setValue("location", val, { shouldValidate: true });
-    }
+    if (val === "__other__") { setShowOtherLocation(true); setLocation(""); }
+    else { setShowOtherLocation(false); setLocation(val); }
   };
   const handleAddOtherLocation = () => {
-    const value = otherLocationValue.trim();
-    if (!value) { toast.error("Please enter a location before adding."); return; }
-    setValue("location", value, { shouldValidate: true });
-    setOtherLocationValue("");
-    setShowOtherLocation(false);
+    const val = otherLocationValue.trim();
+    if (!val) { toast.error("Please enter a location before adding."); return; }
+    setLocation(val); setOtherLocationValue(""); setShowOtherLocation(false);
   };
 
-  /* ── Domain helpers ── */
+  // ── Domain helpers ───────────────────────────────────────────────────────────
   const handleDomainSelectChange = (val: string) => {
-    if (val === "__other__") {
-      setShowOtherDomain(true);
-      setValue("domain", "", { shouldValidate: false });
-    } else {
-      setShowOtherDomain(false);
-      setValue("domain", val, { shouldValidate: true });
-    }
+    if (val === "__other__") { setShowOtherDomain(true); setDomain(""); }
+    else { setShowOtherDomain(false); setDomain(val); }
   };
   const handleAddOtherDomain = () => {
-    const value = otherDomainValue.trim();
-    if (!value) { toast.error("Please enter a domain before adding."); return; }
-    setValue("domain", value, { shouldValidate: true });
-    setOtherDomainValue("");
-    setShowOtherDomain(false);
+    const val = otherDomainValue.trim();
+    if (!val) { toast.error("Please enter a domain before adding."); return; }
+    setDomain(val); setOtherDomainValue(""); setShowOtherDomain(false);
   };
 
-  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+  // ── Validate ─────────────────────────────────────────────────────────────────
+  const validate = (): boolean => {
+    const trimmedOrg = organization.trim();
+    const trimmedProject = projectName.trim();
+    const trimmedUrl = projectUrl.trim();
+
+    if (!trimmedOrg) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (trimmedOrg.length < 2) {
+      toast.error("Organization name must be at least 2 characters"); return false;
+    }
+    if (trimmedOrg.length > 100) {
+      toast.error("Organization name must not exceed 100 characters"); return false;
+    }
+    if (!role) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (!startDate) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (!isValidDateString(startDate)) {
+      toast.error("Enter a valid start date (day 1–31, month 1–12, 4-digit year)"); return false;
+    }
+    if (endDate) {
+      if (!isValidDateString(endDate)) {
+        toast.error("Enter a valid end date (day 1–31, month 1–12, 4-digit year)"); return false;
+      }
+      if (new Date(endDate) <= new Date(startDate)) {
+        toast.error("End date must be after start date"); return false;
+      }
+    }
+    if (!trimmedProject) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (trimmedProject.length < 2) {
+      toast.error("Project name must be at least 2 characters"); return false;
+    }
+    if (trimmedProject.length > 100) {
+      toast.error("Project name must not exceed 100 characters"); return false;
+    }
+    if (!trimmedUrl) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (!isValidUrl(trimmedUrl)) {
+      toast.error("Enter a valid project URL starting with http:// or https://"); return false;
+    }
+    if (!location) {
+      toast.error("Please fill all required fields"); return false;
+    }
+    if (!domain) {
+      toast.error("Please fill all required fields"); return false;
+    }
+
+    return true;
+  };
+
+  // ── API Call ─────────────────────────────────────────────────────────────────
+  const callApi = async (): Promise<boolean> => {
+    const trimmedOrg = organization.trim();
+    const trimmedProject = projectName.trim();
+    const trimmedUrl = projectUrl.trim();
+
+    setIsSubmitting(true);
     try {
       const result = await upsertResumeInternship({
         resumeInternshipId: internshipId,
         studentId,
-        organizationName: data.organization,
-        role: data.role,
-        startDate: data.startDate,
-        endDate: data.endDate || null,
-        projectName: data.projectName || null,
-        projectUrl: data.projectUrl || null,
-        location: data.location,
-        domain: data.domain,
-        description: data.description || null,
+        organizationName: trimmedOrg,
+        role,
+        startDate,
+        endDate: endDate || null,
+        projectName: trimmedProject,
+        projectUrl: trimmedUrl,
+        location,
+        domain,
+        description: description.trim() || null,
       });
 
       toast.success(internshipId ? "Internship updated successfully" : "Internship saved successfully");
-      onSubmitted(data as InternshipFormData, result.resumeInternshipId);
+      onSubmitted(
+        {
+          organization: trimmedOrg,
+          role,
+          startDate,
+          endDate,
+          projectName: trimmedProject,
+          projectUrl: trimmedUrl,
+          location,
+          domain,
+          description: description.trim(),
+        },
+        result.resumeInternshipId
+      );
+      return true;
     } catch (error: any) {
       toast.error(`Failed to save: ${error.message || "Unknown error"}`);
+      return false;
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // ── Save handler ─────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!validate()) return;
+    await callApi();
+  };
+
+  // ── Next handler ─────────────────────────────────────────────────────────────
+  const handleNext = async () => {
+    const isFormEmpty =
+      !organization.trim() &&
+      !role &&
+      !startDate &&
+      !endDate &&
+      !projectName.trim() &&
+      !projectUrl.trim() &&
+      !location &&
+      !domain &&
+      !description.trim();
+
+    if (isFormEmpty) {
+      router.push("/profile?resume=projects&Step=6");
+      return;
+    }
+
+    if (!validate()) return;
+    const success = await callApi();
+    if (success) {
+      router.push("/profile?resume=projects&Step=6");
+    }
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="mt-4 space-y-4">
 
@@ -313,20 +804,21 @@ export default function InternshipForm({
         <div>
           <FieldLabel label="Organization Name" required />
           <input
-            {...register("organization")}
+            value={organization}
+            onChange={(e) => setOrganization(sanitizeOrganization(e.target.value))}
             placeholder="Organization Name"
             disabled={isSubmitting}
+            maxLength={100}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
-          {errors.organization && <p className="text-red-500 text-xs mt-1">{errors.organization.message}</p>}
         </div>
         <div>
           <FieldLabel label="Role / Position" required />
           <SelectWithCustomBadge
-            value={watchedRole}
+            value={role}
             options={ROLES}
             placeholder="Select role"
-            isCustom={!!watchedRole && !ROLES.includes(watchedRole)}
+            isCustom={!!role && !ROLES.includes(role)}
             showOther={showOtherRole}
             otherValue={otherRoleValue}
             disabled={isSubmitting}
@@ -335,11 +827,8 @@ export default function InternshipForm({
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherRole()}
             onOtherAdd={handleAddOtherRole}
             onOtherCancel={() => { setShowOtherRole(false); setOtherRoleValue(""); }}
-            onBadgeClear={() => setValue("role", "", { shouldValidate: false })}
+            onBadgeClear={() => setRole("")}
             otherPlaceholder="Enter role"
-            error={errors.role?.message}
-            register={register}
-            fieldName="role"
           />
         </div>
       </div>
@@ -349,46 +838,49 @@ export default function InternshipForm({
         <div>
           <FieldLabel label="Start Date" required />
           <input
-            {...register("startDate")}
             type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(sanitizeDate(e.target.value))}
             disabled={isSubmitting}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer"
           />
-          {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
         </div>
         <div>
           <FieldLabel label="End Date" />
           <input
-            {...register("endDate")}
             type="date"
-            disabled={isSubmitting || !startDateValue}
-            min={startDateValue}
-            className={`w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer ${!startDateValue ? "bg-gray-50 cursor-not-allowed" : ""}`}
+            value={endDate}
+            onChange={(e) => setEndDate(sanitizeDate(e.target.value))}
+            disabled={isSubmitting || !startDate}
+            min={startDate}
+            className={`w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer ${!startDate ? "bg-gray-50 cursor-not-allowed" : ""
+              }`}
           />
-          {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
         </div>
       </div>
 
       {/* Row 3: Project Name | Project URL */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <FieldLabel label="Project Name" />
+          <FieldLabel label="Project Name" required />
           <input
-            {...register("projectName")}
+            value={projectName}
+            onChange={(e) => setProjectName(sanitizeProjectName(e.target.value))}
             placeholder="Enter the name of the project"
             disabled={isSubmitting}
+            maxLength={100}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
         </div>
         <div>
-          <FieldLabel label="Project URL" />
+          <FieldLabel label="Project URL" required />
           <input
-            {...register("projectUrl")}
-            placeholder="Project URL"
+            value={projectUrl}
+            onChange={(e) => setProjectUrl(sanitizeProjectUrl(e.target.value))}
+            placeholder="https://example.com"
             disabled={isSubmitting}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
-          {errors.projectUrl && <p className="text-red-500 text-xs mt-1">{errors.projectUrl.message}</p>}
         </div>
       </div>
 
@@ -397,10 +889,10 @@ export default function InternshipForm({
         <div>
           <FieldLabel label="Location" required />
           <SelectWithCustomBadge
-            value={watchedLocation}
+            value={location}
             options={LOCATIONS}
             placeholder="Select location"
-            isCustom={!!watchedLocation && !LOCATIONS.includes(watchedLocation)}
+            isCustom={!!location && !LOCATIONS.includes(location)}
             showOther={showOtherLocation}
             otherValue={otherLocationValue}
             disabled={isSubmitting}
@@ -409,20 +901,17 @@ export default function InternshipForm({
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherLocation()}
             onOtherAdd={handleAddOtherLocation}
             onOtherCancel={() => { setShowOtherLocation(false); setOtherLocationValue(""); }}
-            onBadgeClear={() => setValue("location", "", { shouldValidate: false })}
+            onBadgeClear={() => setLocation("")}
             otherPlaceholder="Enter location"
-            error={errors.location?.message}
-            register={register}
-            fieldName="location"
           />
         </div>
         <div>
           <FieldLabel label="Domain" required />
           <SelectWithCustomBadge
-            value={watchedDomain}
+            value={domain}
             options={DEFAULT_DOMAINS}
             placeholder="Select domain"
-            isCustom={!!watchedDomain && !DEFAULT_DOMAINS.includes(watchedDomain)}
+            isCustom={!!domain && !DEFAULT_DOMAINS.includes(domain)}
             showOther={showOtherDomain}
             otherValue={otherDomainValue}
             disabled={isSubmitting}
@@ -431,37 +920,49 @@ export default function InternshipForm({
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherDomain()}
             onOtherAdd={handleAddOtherDomain}
             onOtherCancel={() => { setShowOtherDomain(false); setOtherDomainValue(""); }}
-            onBadgeClear={() => setValue("domain", "", { shouldValidate: false })}
+            onBadgeClear={() => setDomain("")}
             otherPlaceholder="Enter domain"
-            error={errors.domain?.message}
-            register={register}
-            fieldName="domain"
           />
         </div>
       </div>
+
+      {/* Description */}
       <div>
         <FieldLabel label="Short Description" />
         <textarea
-          {...register("description")}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           disabled={isSubmitting}
           placeholder="Describe your key responsibilities, achievements, and skills gained during the internship.........."
           rows={4}
           maxLength={500}
           className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none resize-none"
         />
-        <p className="text-xs text-gray-400 text-right mt-1">{descriptionValue.length}/500</p>
+        <p className="text-xs text-gray-400 text-right mt-1">{description.length}/500</p>
       </div>
 
-      <div className="flex justify-end">
+      {/* Buttons */}
+      <div className="flex justify-end gap-3">
         <button
-          onClick={handleSubmit(onSubmit)}
+          onClick={handleSave}
           disabled={isSubmitting}
-          className={`px-6 py-2 rounded-md text-sm text-white 
-            ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+          className={`px-6 py-2 rounded-md text-sm text-white ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+            }`}
         >
           {isSubmitting ? "Saving..." : "Save"}
         </button>
+
+        <button
+          type="button"
+          onClick={handleNext}
+          disabled={isSubmitting}
+          className={`px-6 py-1.5 rounded-md text-sm font-medium text-white ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+            }`}
+        >
+          {isSubmitting ? "Saving..." : "Next"}
+        </button>
       </div>
+
     </div>
   );
 }
