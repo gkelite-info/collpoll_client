@@ -12,66 +12,87 @@ const GROQ_MODELS = [
   "qwen/qwen3-32b",
 ];
 
+// ── Build education summary from student's actual education rows ──────────────
+
+function buildEducationSummary(educationDetails: Record<string, any>[]): string {
+  if (!educationDetails.length) return "No education details available.";
+
+  return educationDetails
+    .map((ed) => {
+      const parts: string[] = [];
+      if (ed.educationLevel)   parts.push(`Level: ${ed.educationLevel}`);
+      if (ed.institutionName)  parts.push(`Institution: ${ed.institutionName}`);
+      if (ed.courseName)       parts.push(`Course: ${ed.courseName}`);
+      if (ed.specialization)   parts.push(`Specialization: ${ed.specialization}`);
+      if (ed.researchArea)     parts.push(`Research Area: ${ed.researchArea}`);
+      if (ed.cgpa)             parts.push(`CGPA: ${ed.cgpa}`);
+      if (ed.percentage)       parts.push(`Percentage: ${ed.percentage}%`);
+      return parts.join(", ");
+    })
+    .join("\n");
+}
+
 // ── Per-category system prompts ───────────────────────────────────────────────
 
 const SYSTEM_PROMPTS: Record<string, string> = {
-technical: `
-You are a resume assistant. Suggest ONLY Technical Skills — knowledge areas and concepts — related to the user's search keyword.
+  technical: `
+You are a resume assistant. Suggest ONLY Technical Skills — knowledge areas and concepts.
+Base your suggestions on the student's actual education background provided in the prompt.
 
-EXAMPLES by search keyword:
-- "Java"       → J2EE, JSP, Servlets, JVM Internals, Java Collections, Multithreading, JDBC, Design Patterns, OOP Concepts, Java Memory Management
-- "Python"     → Object Oriented Programming, Functional Programming, Data Structures, Algorithm Design, Web Scraping, REST API Design, Scripting, Automation
-- "database"   → Database Normalization, SQL Queries, Indexing, Transaction Management, Database Design, Query Optimization, Stored Procedures, ERD Modeling
-- "networking" → TCP/IP Protocol, Network Security, Routing Algorithms, OSI Model, Subnetting, Firewall Configuration, VPN, DNS Management
-- "machine learning" → Supervised Learning, Unsupervised Learning, Neural Networks, Feature Engineering, Model Evaluation, Regression Analysis, Classification
-- "embedded"   → Microcontroller Programming, RTOS, Interrupt Handling, Memory Management, Low-level Programming, I2C Protocol, SPI Protocol, PWM
-- "web"        → REST API Design, HTTP Protocol, Web Security, MVC Architecture, Authentication, Session Management, Web Performance, Browser Rendering
+EXAMPLES of valid technical skills by field:
+- CSE/IT        → Data Structures, Algorithm Design, OOP Concepts, Operating Systems, Computer Networks, Database Management, Compiler Design, Software Engineering
+- AI/ML         → Supervised Learning, Neural Networks, Feature Engineering, Model Evaluation, NLP, Computer Vision, Reinforcement Learning, Deep Learning
+- ECE/EEE       → Circuit Analysis, Signals & Systems, Digital Electronics, Embedded Systems, Power Systems, Control Systems, VLSI Design, Microprocessor Architecture
+- Mechanical    → Thermodynamics, Fluid Mechanics, CAD Design, Manufacturing Processes, Heat Transfer, Finite Element Analysis, Robotics, Material Science
+- Civil         → Structural Analysis, Geotechnical Engineering, Surveying, Construction Management, Hydrology, Transportation Engineering, Environmental Engineering
 
 STRICT RULES:
 - Return ONLY a valid JSON array of strings. No markdown, no backticks, no explanation.
 - Each item must be 1–4 words.
 - Return EXACTLY 12 items.
-- ALL items must be REAL technical concepts/knowledge areas related to the search keyword.
-- Do NOT prefix every item with the keyword (no "Java Framework", "Java Runtime", "Java Server" — these are meaningless).
+- Base suggestions on the student's specialization, course, and research area.
 - Do NOT return tool names (no Spring Boot, no MATLAB) — those belong in Tools & Frameworks.
 - Do NOT return soft skills.
-- Return specific, meaningful technical concepts a student would actually learn and list on a resume.
 `,
 
   soft: `
 You are a resume assistant. Suggest ONLY Soft Skills — interpersonal and professional behavioral skills.
+Consider the student's education level and field when suggesting appropriate soft skills.
 
-EXAMPLES of valid soft skills: "Communication", "Team Leadership", "Problem Solving", "Time Management", "Critical Thinking", "Adaptability", "Conflict Resolution", "Active Listening", "Decision Making", "Emotional Intelligence", "Collaboration", "Presentation Skills".
+EXAMPLES of valid soft skills: "Communication", "Team Leadership", "Problem Solving", "Time Management", 
+"Critical Thinking", "Adaptability", "Conflict Resolution", "Active Listening", "Decision Making", 
+"Emotional Intelligence", "Collaboration", "Presentation Skills".
 
 STRICT RULES:
 - Return ONLY a valid JSON array of strings. No markdown, no backticks, no explanation.
 - Each item must be 1–4 words.
 - Return EXACTLY 12 items.
-- ONLY human/behavioral skills. NOT technical topics (no Power Systems, Circuit Analysis, Java). NOT tools (no Python, MATLAB).
+- ONLY human/behavioral skills. NOT technical topics. NOT tools.
 - If it sounds like something you'd learn in an engineering class, it is WRONG. Reject it.
 `,
 
   tools: `
-You are a resume assistant. Suggest ONLY Tools & Frameworks — actual developer tools, frameworks, and libraries. NOT raw programming language names.
+You are a resume assistant. Suggest ONLY Tools & Frameworks — actual software, frameworks, and libraries.
+Base your suggestions on the student's specialization, course, and research area.
 
-Return a balanced mix:
-- Frameworks: Spring Boot, Django, Flask, React, Angular, Vue.js, Next.js, Express.js, Laravel, FastAPI
-- Developer Tools: VS Code, Postman, Git, GitHub, Docker, Figma, Jira, MATLAB, PSpice, AutoCAD, Simulink, IntelliJ IDEA
-- Libraries: TensorFlow, PyTorch, Pandas, NumPy, Scikit-learn, Hibernate, Axios
-- Platforms/Cloud: AWS, Firebase, Linux, Supabase, Azure, Vercel, Kubernetes
+EXAMPLES by field:
+- CSE/IT/Web    → VS Code, Git, GitHub, Docker, Postman, Jira, Linux, Firebase, Vercel, MySQL, MongoDB, Redis
+- AI/ML         → TensorFlow, PyTorch, Pandas, NumPy, Scikit-learn, Jupyter Notebook, Keras, OpenCV, Hugging Face, MLflow
+- ECE/Embedded  → MATLAB, Simulink, PSpice, Keil uVision, Arduino IDE, Multisim, Xilinx Vivado, AutoCAD
+- Mechanical    → MATLAB, AutoCAD, SolidWorks, ANSYS, CATIA, Fusion 360, Abaqus, Creo
+- Civil         → AutoCAD, STAAD Pro, SAP2000, ETABS, Revit, ArcGIS, Primavera, MATLAB
 
 STRICT RULES:
 - Return ONLY a valid JSON array of strings. No markdown, no backticks, no explanation.
 - Each item must be 1–4 words.
 - Return EXACTLY 12 items.
-- Do NOT return raw programming language names like "Python", "Java", "C++", "JavaScript" — return their FRAMEWORKS and TOOLS instead.
-- Do NOT return concepts (no "Machine Learning", no "Data Structures").
-- Do NOT return soft skills.
-- Every item must be something a developer literally installs, opens, or uses.
+- Do NOT return raw programming language names like "Python", "Java", "C++" — return frameworks/tools instead.
+- Do NOT return concepts or soft skills.
+- Every item must be something a student literally installs, opens, or uses.
 `,
 };
 
-// ── Search-specific system prompts ────────────────────────────────────────────
+// ── Search-specific system prompts (unchanged) ────────────────────────────────
 
 const SEARCH_SYSTEM_PROMPTS: Record<string, string> = {
   technical: `
@@ -113,20 +134,19 @@ STRICT RULES:
 - Each item must be 1–4 words.
 - Return EXACTLY 12 items.
 - ALL items must be real frameworks, tools, or libraries from the ecosystem of the search keyword.
-- Do NOT return the search keyword itself (e.g. searching "Java" → do NOT include "Java").
+- Do NOT return the search keyword itself.
 - Do NOT return concepts or soft skills.
 `,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Main export ───────────────────────────────────────────────────────────────
 
 export async function suggestSkillsAction(
-  educationType: string,
-  branch: string,
+  educationDetails: Record<string, any>[],   // ← changed: was (educationType, branch)
   category: "technical" | "soft" | "tools",
   extraContext?: string
 ): Promise<string[]> {
-  if (!educationType || !branch) return [];
+  if (!educationDetails.length) return [];
 
   const isSearchQuery = !!extraContext?.startsWith("IMPORTANT:");
 
@@ -141,23 +161,28 @@ export async function suggestSkillsAction(
       ? "Soft Skills"
       : "Tools & Frameworks";
 
+  const educationSummary = buildEducationSummary(educationDetails);
+
   const prompt = isSearchQuery
     ? `
 ${extraContext}
 
-Education Type: ${educationType}
-Branch: ${branch}
+Student Education Background:
+${educationSummary}
+
 Category: ${categoryLabel}
 
 Return ONLY a JSON array of exactly 12 items all related to the search keyword.
 No markdown. No explanation. Just the JSON array.
 `
     : `
-Education Type: ${educationType}
-Branch: ${branch}
+Student Education Background:
+${educationSummary}
+
 Category: ${categoryLabel}
 
-Return ONLY a JSON array of exactly 12 ${categoryLabel} for this student's resume.
+Suggest exactly 12 ${categoryLabel} that are most relevant to this student's actual education background.
+Prioritize their highest education level and specialization/research area.
 No markdown. No explanation. Just the JSON array.
 `;
 

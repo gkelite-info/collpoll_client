@@ -48,6 +48,43 @@ export async function insertProfileSummary(
     return data;
 }
 
+export async function upsertProfileSummary(
+    studentId: number,
+    summary: string
+): Promise<{ resumeSummaryId: number }> {
+    const now = new Date().toISOString();
+
+    console.log("Upserting summary for studentId:", studentId);
+
+    const { data, error } = await supabase
+        .from("resume_profile_summary")
+        .upsert(
+            {
+                studentId,
+                summary,
+                is_deleted: false,
+                updatedAt: now,
+            },
+            {
+                onConflict: "studentId",
+            }
+        )
+        .select("resumeSummaryId")
+        .single();
+
+    if (error) {
+        console.error("upsertProfileSummary error:", JSON.stringify(error, null, 2));
+        console.error("code:", error.code);
+        console.error("message:", error.message);
+        console.error("details:", error.details);
+        console.error("hint:", error.hint);
+        throw error;
+    }
+
+    console.log("Upsert success:", data);
+    return data;
+}
+
 export async function updateProfileSummary(studentId: number, summary: string) {
     console.log("Updating summary for studentId:", studentId);
 

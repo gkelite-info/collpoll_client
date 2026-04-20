@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
-import InternshipForm, { InternshipFormData } from "./internshipForm";
-import { useRouter } from "next/navigation";
+import InternshipForm, { InternshipFormActions, InternshipFormData } from "./internshipForm";
 
 import {
   fetchResumeInternships,
@@ -33,15 +32,21 @@ const emptyForm: InternshipFormData = {
   description: "",
 };
 
+type InternshipFormState = {
+  isSaving: boolean;
+  isNavigating: boolean;
+};
+
 export default function Internships() {
   const { studentId } = useUser();
-  const router = useRouter();
 
   const [entries, setEntries] = useState<InternshipEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [showForm, setShowForm] = useState(false); // ← controls Add form visibility
+  const [formStates, setFormStates] = useState<Record<string, InternshipFormState>>({});
+  const actionRefs = useRef<Record<string, InternshipFormActions>>({});
 
   useEffect(() => {
     if (!studentId) return;
@@ -119,6 +124,62 @@ export default function Internships() {
     setShowForm(true);
   };
 
+  const setFormState = (key: string, state: InternshipFormState) => {
+    setFormStates((prev) => {
+      const current = prev[key];
+      if (
+        current &&
+        current.isSaving === state.isSaving &&
+        current.isNavigating === state.isNavigating
+      ) {
+        return prev;
+      }
+      return { ...prev, [key]: state };
+    });
+  };
+
+  const activeEditingEntry = entries.find((entry) => entry.isEditing);
+  const activeFormKey = activeEditingEntry
+    ? `edit-${activeEditingEntry.dbId}`
+    : showForm
+      ? "new"
+      : null;
+
+  const renderExternalButtons = (key: string, className = "mt-4") => {
+    const state = formStates[key] ?? { isSaving: false, isNavigating: false };
+    const disabled = state.isSaving || state.isNavigating;
+
+    const runAction = async (action: "handleSave" | "handleNext") => {
+      try {
+        await actionRefs.current[key]?.[action]();
+      } catch (error) {
+        console.error(`Internship ${action} failed`, error);
+        toast.error("Something went wrong while saving the internship");
+      }
+    };
+
+    return (
+      <div className={`flex justify-end gap-3 ${className}`.trim()}>
+        <button
+          type="button"
+          onClick={() => { void runAction("handleSave"); }}
+          disabled={disabled}
+          className={`px-6 py-2 rounded-md text-sm text-white ${disabled ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+        >
+          {state.isSaving ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { void runAction("handleNext"); }}
+          disabled={disabled}
+          className={`px-6 py-2 rounded-md text-sm text-white ${disabled ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"}`}
+        >
+          {state.isNavigating ? "Saving..." : "Next"}
+        </button>
+      </div>
+    );
+  };
+
   if (loading || !studentId) return <ResumeInternshipsShimmer />;
 
   return (
@@ -155,6 +216,14 @@ export default function Internships() {
                       internshipId={entry.dbId}
                       initialData={entry.data}
                       onSubmitted={handleEditSubmitted(entry.dbId)}
+                      hideActions
+                      registerActions={(actions) => {
+                        actionRefs.current[`edit-${entry.dbId}`] = actions;
+                        setFormState(`edit-${entry.dbId}`, {
+                          isSaving: actions.isSaving,
+                          isNavigating: actions.isNavigating,
+                        });
+                      }}
                     />
                   </div>
                 )}
@@ -163,7 +232,8 @@ export default function Internships() {
           </div>
         )}
         {showForm && (
-          <div className={entries.length > 0 ? "border border-[#C0C0C0] rounded-lg p-4" : ""}>
+          <>
+            <div className={entries.length > 0 ? "border border-[#C0C0C0] rounded-lg p-4" : ""}>
             {/* minus button to close form — same as Education */}
             {/* <div className="flex justify-end mb-2">
               <button
@@ -181,19 +251,20 @@ export default function Internships() {
               key={formKey}
               studentId={studentId}
               onSubmitted={handleAddSubmitted}
+              hideActions
+              registerActions={(actions) => {
+                actionRefs.current.new = actions;
+                setFormState("new", {
+                  isSaving: actions.isSaving,
+                  isNavigating: actions.isNavigating,
+                });
+              }}
             />
-          </div>
+            </div>
+          </>
         )}
 
-        <div className="flex justify-end mt-4">
-          <button
-            type="button"
-            onClick={() => router.push("/profile?resume=projects&Step=6")}
-            className="bg-[#43C17A] cursor-pointer text-white px-6 py-1.5 rounded-md text-sm font-medium"
-          >
-            Next
-          </button>
-        </div>
+        {activeFormKey && renderExternalButtons(activeFormKey, "mt-6")}
 
       </div>
     </div>
