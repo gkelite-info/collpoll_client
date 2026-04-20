@@ -35,6 +35,7 @@ type UserContextType = {
   collegeAdminId: number | null;
   parentId: number | null;
   collegeHrId: number | null;
+  placementEmployeeId: number | null;
   collegeEducationType: string | null;
   collegeBranchCode: string | null;
   collegeAcademicYear: string | null;
@@ -66,6 +67,7 @@ const UserContext = createContext<UserContextType>({
   collegeAdminId: null,
   parentId: null,
   collegeHrId: null,
+  placementEmployeeId: null,
   collegeEducationType: null,
   collegeBranchCode: null,
   collegeAcademicYear: null,
@@ -94,6 +96,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [collegeAdminId, setCollegeAdminId] = useState<number | null>(null);
   const [parentId, setParentId] = useState<number | null>(null);
   const [collegeHrId, setCollegeHrId] = useState<number | null>(null);
+  const [placementEmployeeId, setPlacementEmployeeId] = useState<number | null>(null);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
@@ -122,6 +125,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setCollegeAdminId,
     setParentId,
     setCollegeHrId,
+    setPlacementEmployeeId,
     setCollegeEducationType,
     setCollegeBranchCode,
     setCollegeAcademicYear,
@@ -150,6 +154,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setCollegeAdminId(null);
     s.setParentId(null);
     s.setCollegeHrId(null);
+    s.setPlacementEmployeeId(null);
     s.setCollegeEducationType(null);
     s.setCollegeBranchCode(null);
     s.setCollegeAcademicYear(null);
@@ -280,6 +285,21 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setIdentifierId(empId ?? null);
     },
 
+    PlacementOfficer: async (uid, cid) => {
+      const s = settersRef.current;
+      const [{ data }, empId] = await Promise.all([
+        supabase
+          .from("placement_employee")
+          .select("placementEmployeeId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setPlacementEmployeeId(data?.placementEmployeeId ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
+
   });
 
   useEffect(() => {
@@ -389,6 +409,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       collegeAdminId,
       parentId,
       collegeHrId,
+      placementEmployeeId,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,
@@ -416,6 +437,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       collegeAdminId,
       parentId,
       collegeHrId,
+      placementEmployeeId,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,

@@ -228,6 +228,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             {role === "Finance" && (
               <p className="text-xs text-[#282828] font-medium">{role}</p>
             )}
+            {role === "PlacementOfficer" && (
+                  <span className="text-xs text-[#282828]">
+                    ID - {identifierId}
+                  </span>
+                )}
             <div className="flex gap-3 flex-wrap">
               <div className="flex items-center gap-2 mt-2">
                 <EnvelopeSimple
