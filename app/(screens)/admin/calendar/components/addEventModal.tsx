@@ -38,8 +38,16 @@ const TODAY = getTodayDateString();
 const INPUT_HEIGHT = "h-[44px]";
 const CHIP_CONTAINER_HEIGHT = "h-[32px]";
 
-const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, value, degreeOptions, isSaving = false, mode }) => {
-  const [selectedType, setSelectedType] = useState("Class");
+const AddEventModal: React.FC<AddEventModalProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  value,
+  degreeOptions,
+  isSaving = false,
+  mode,
+}) => {
+  const [selectedType, setSelectedType] = useState("class");
   const [date, setDate] = useState(TODAY);
   const [startHour, setStartHour] = useState("09");
   const [startMinute, setStartMinute] = useState("00");
@@ -50,7 +58,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
   const closedByUserRef = useRef(false);
   const [roomNo, setRoomNo] = useState("");
   const [year, setYear] = useState<string>("");
-  const [selectedSections, setSelectedSections] = useState<FacultySection[]>([]);
+  const [selectedSections, setSelectedSections] = useState<FacultySection[]>(
+    [],
+  );
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
   const [degree, setDegree] = useState("");
@@ -69,11 +79,19 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
   const [topics, setTopics] = useState<any[]>([]);
   const [sections, setSections] = useState<FacultySection[]>([]);
   const [semesterLabel, setSemesterLabel] = useState<number | null>(null);
+
+  // 🟢 Platform & Meeting States
   const [meetingTitle, setMeetingTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
+  const [meetingPlatform, setMeetingPlatform] = useState<
+    "meet" | "zoom" | "others"
+  >("meet");
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingPassword, setMeetingPassword] = useState("");
+
   const isMeeting = selectedType.toLowerCase() === "meeting";
-  const { collegeId } = useUser()
-  const { collegeEducationType } = useAdmin()
+  const { collegeId } = useUser();
+  const { collegeEducationType } = useAdmin();
 
   const isEditMode = mode === "edit";
   const selectedDegreeObj = React.useMemo(() => {
@@ -103,9 +121,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       type: "branch",
       collegeId,
       educationId: facultyCtx.collegeEducationId,
-    }).then(branches => {
+    }).then((branches) => {
       const b = branches.find(
-        br => br.collegeBranchId === facultyCtx.collegeBranchId
+        (br) => br.collegeBranchId === facultyCtx.collegeBranchId,
       );
       setBranchName(b?.collegeBranchCode || b?.collegeBranchType || "");
     });
@@ -114,9 +132,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       collegeId,
       educationId: facultyCtx.collegeEducationId,
       branchId: facultyCtx.collegeBranchId,
-    }).then(years => {
-      const y = years.find(yr =>
-        facultyCtx.academicYearIds.includes(yr.collegeAcademicYearId)
+    }).then((years) => {
+      const y = years.find((yr) =>
+        facultyCtx.academicYearIds.includes(yr.collegeAcademicYearId),
       );
       setAcademicYearLabel(y?.collegeAcademicYear || "");
     });
@@ -135,20 +153,22 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
           academicYearId: facultyCtx.academicYearIds?.[0],
         });
         const filteredSections = (sectionRows ?? []).filter((s: any) =>
-          facultyCtx.sectionIds.includes(s.collegeSectionsId)
+          facultyCtx.sectionIds.includes(s.collegeSectionsId),
         );
         if (!cancelled) {
           setSections(filteredSections);
         }
         const { data: subjectRows } = await supabase
           .from("college_subject_unit_topics")
-          .select(`
+          .select(
+            `
           collegeSubjectId,
           college_subjects (
             collegeSubjectId,
             subjectName
           )
-        `)
+        `,
+          )
           .eq("collegeId", collegeId)
           .in("collegeSubjectId", facultyCtx.subjectIds);
         if (cancelled) return;
@@ -157,7 +177,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
           if (row.college_subjects) {
             subjectMap.set(
               row.college_subjects.collegeSubjectId,
-              row.college_subjects
+              row.college_subjects,
             );
           }
         });
@@ -171,7 +191,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       }
     };
     loadFacultyAcademics();
-    return () => { cancelled = true };
+    return () => {
+      cancelled = true;
+    };
   }, [collegeId, facultyCtx]);
 
   useEffect(() => {
@@ -203,7 +225,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
           academicYearId: facultyCtx.academicYearIds[0],
         });
         const sem = semesters.find(
-          s => s.collegeSemesterId === data.collegeSemesterId
+          (s) => s.collegeSemesterId === data.collegeSemesterId,
         );
         setSemesterLabel(sem?.collegeSemester ?? null);
       });
@@ -218,7 +240,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
     }
   }, [degree, isEditMode, yearOptions]);
 
-  const normalizeYear = (y: any) => ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(String(y)) ? String(y) : "";
+  const normalizeYear = (y: any) =>
+    ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].includes(String(y))
+      ? String(y)
+      : "";
 
   useEffect(() => {
     if (!isOpen || !value) return;
@@ -237,6 +262,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
     if (isEditMode && typeof value.semester === "number") {
       setSemester(value.semester);
     }
+
+    // 🟢 Setup Edit Mode Meeting State
+    setMeetingTitle(value.title ?? "");
+    setMeetingLink(value.meetingLink ?? "");
+    setMeetingId(value.meetingId ?? "");
+    setMeetingPassword(value.meetingPassword ?? "");
+
+    if (value.meetingId) setMeetingPlatform("zoom");
+    else if (value.meetingLink?.includes("meet.google"))
+      setMeetingPlatform("meet");
+    else setMeetingPlatform("others");
+
     if (value.startTime && value.endTime) {
       const start = parse24HourTo12Hour(value.startTime);
       const end = parse24HourTo12Hour(value.endTime);
@@ -271,6 +308,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       setTopicId(undefined);
       setMeetingTitle("");
       setMeetingLink("");
+      setMeetingId("");
+      setMeetingPassword("");
+      setMeetingPlatform("meet");
     }
   }, [isOpen]);
 
@@ -285,10 +325,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
     if (!isOpen) return;
     const handleDropdownClose = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (isDeptOpen && deptDropdownRef.current && !deptDropdownRef.current.contains(target)) {
+      if (
+        isDeptOpen &&
+        deptDropdownRef.current &&
+        !deptDropdownRef.current.contains(target)
+      ) {
         setIsDeptOpen(false);
       }
-      if (isSectionOpen && sectionDropdownRef.current && !sectionDropdownRef.current.contains(target)) {
+      if (
+        isSectionOpen &&
+        sectionDropdownRef.current &&
+        !sectionDropdownRef.current.contains(target)
+      ) {
         setIsSectionOpen(false);
       }
     };
@@ -331,27 +379,48 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
         toast.error("Please enter a Meeting Title.");
         return;
       }
-      if (!meetingLink.trim()) {
-        toast.error("Please enter the Meeting Link.");
-        return;
-      }
-      if (!isValidMeetingLink(meetingLink.trim())) {
-        toast.error(
-          "Please enter a valid meeting link."
-        );
-        return;
+
+      // 🟢 Platform validations
+      if (meetingPlatform === "zoom") {
+        if (!meetingId.trim()) {
+          toast.error("Please enter Zoom Meeting ID");
+          return;
+        }
+        if (!meetingPassword.trim()) {
+          toast.error("Please enter Meeting Password");
+          return;
+        }
+      } else if (meetingPlatform === "meet") {
+        if (!meetingLink.trim()) {
+          toast.error("Please enter Google Meet Link");
+          return;
+        }
+        if (!meetingLink.includes("meet.google.com")) {
+          toast.error("Please enter a valid Google Meet link");
+          return;
+        }
+      } else if (meetingPlatform === "others") {
+        if (!meetingLink.trim()) {
+          toast.error("Please enter Meeting Link");
+          return;
+        }
+        if (!isValidMeetingLink(meetingLink.trim())) {
+          toast.error("Please enter a valid meeting link");
+          return;
+        }
       }
     }
-    if (!isMeeting) {
-      if (!subjectId) {
-        toast.error("Please select Subject.");
-        return;
-      }
-      if (!topicId) {
-        toast.error("Please select Event Topic.");
-        return;
-      }
+
+    // 🟢 Subject and topic required globally
+    if (!subjectId) {
+      toast.error("Please select Subject.");
+      return;
     }
+    if (!topicId) {
+      toast.error("Please select Event Topic.");
+      return;
+    }
+
     if (!date) {
       toast.error("Please select a Date.");
       return;
@@ -395,6 +464,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       toast.error("Events must be between 08:00 AM and 10:00 PM");
       return;
     }
+
     const newEvent = {
       calendarEventId: isEditMode ? value?.calendarEventId : undefined,
       facultyId: Number(value.facultyId),
@@ -402,17 +472,23 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
       branchId,
       academicYearId: facultyCtx?.academicYearIds?.[0],
       semester,
-      sections: selectedSections.map(sec => ({
+      sections: selectedSections.map((sec) => ({
         collegeSectionId: sec.collegeSectionsId,
       })),
-      subjectId: isMeeting ? null : subjectId ?? null,
-      eventTopic: isMeeting ? null : topicId ?? null,
+
+      subjectId: subjectId ?? null,
+      eventTopic: topicId ?? null,
+
       type: selectedType.toLowerCase(),
       date,
       roomNo,
       fromTime: startTime,
       toTime: endTime,
-      meetingLink: isMeeting ? meetingLink : null,
+
+      meetingLink: isMeeting && meetingPlatform !== "zoom" ? meetingLink : null,
+      meetingId: isMeeting && meetingPlatform === "zoom" ? meetingId : null,
+      meetingPassword:
+        isMeeting && meetingPlatform === "zoom" ? meetingPassword : null,
       meetingTitle: isMeeting ? meetingTitle.trim() : null,
     };
     onSave(newEvent);
@@ -452,16 +528,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
 
   if (!isOpen) return null;
   const eventTypes = ["class", "meeting", "exam"];
-  const formatLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+  const formatLabel = (value: string) =>
+    value.charAt(0).toUpperCase() + value.slice(1);
   const handleClose = () => {
     closedByUserRef.current = true;
     onClose();
   };
   const toggleSection = (section: FacultySection) => {
-    setSelectedSections(prev =>
-      prev.some(s => s.collegeSectionsId === section.collegeSectionsId)
-        ? prev.filter(s => s.collegeSectionsId !== section.collegeSectionsId)
-        : [...prev, section]
+    setSelectedSections((prev) =>
+      prev.some((s) => s.collegeSectionsId === section.collegeSectionsId)
+        ? prev.filter((s) => s.collegeSectionsId !== section.collegeSectionsId)
+        : [...prev, section],
     );
   };
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -477,10 +554,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
     }
   };
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
         ref={modalContentRef}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-112.5 max-h-[90vh] flex flex-col relative"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-[450px] max-h-[90vh] flex flex-col relative"
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky  z-10">
           <h2 className="text-xl font-bold text-gray-800">
@@ -504,81 +581,166 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
+                    selectedType === type
+                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   {formatLabel(type)}
                 </button>
               ))}
             </div>
           </div>
-          {!isMeeting && <>
-            <div className="space-y-1">
-              <label htmlFor="event-title" className="block text-gray-700 font-medium text-sm">
-                Subject <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="event-title"
-                type="text"
-                disabled
-                value={subjects.find(s => s.collegeSubjectId === subjectId)?.subjectName || ""}
-                placeholder="e.g., Project Kickoff or Physics Exam"
-                className="w-full cursor-not-allowed border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">Event Topic <span className="text-red-600">*</span></label>
-              <select
-                value={topicId ?? ""}
-                onChange={(e) => setTopicId(Number(e.target.value))}
-                className="w-full cursor-pointer h-11 border border-[#C9C9C9] rounded-lg px-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-              >
-                <option value="">Select Topic</option>
-                {topics.map(t => (
-                  <option
-                    key={t.collegeSubjectUnitTopicId}
-                    value={t.collegeSubjectUnitTopicId}
-                  >
-                    {t.topicTitle}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>}
-          {isMeeting && <>
-            <div className="space-y-1">
-              <label htmlFor="event-title" className="block text-gray-700 font-medium text-sm">
-                Meeting Title <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="event-title"
-                type="text"
-                value={meetingTitle}
-                onChange={(e) => setMeetingTitle(e.target.value)}
-                placeholder="e.g., Parent–Teacher Meeting, Project Review, Sprint Planning"
-                className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-              />
-            </div>
-            <div className="space-y-1">
-              <label htmlFor="event-title" className="block text-gray-700 font-medium text-sm">
-                Meeting Link <span className="text-red-600">*</span>
-              </label>
-              <input
-                id="event-title"
-                type="text"
-                value={meetingLink}
-                onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="e.g., https://meet.google.com/abc-defg-hij"
-                className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-              />
-            </div>
-          </>}
+
+          {/* 🟢 Subject is always rendered */}
+          <div className="space-y-1">
+            <label
+              htmlFor="event-title"
+              className="block text-gray-700 font-medium text-sm"
+            >
+              Subject <span className="text-red-600">*</span>
+            </label>
+            <input
+              id="event-title"
+              type="text"
+              disabled
+              value={
+                subjects.find((s) => s.collegeSubjectId === subjectId)
+                  ?.subjectName || ""
+              }
+              placeholder="e.g., Project Kickoff or Physics Exam"
+              className="w-full cursor-not-allowed border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+            />
+          </div>
+
+          {/* 🟢 Topic is always rendered */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Event Topic <span className="text-red-600">*</span>
+            </label>
+            <select
+              value={topicId ?? ""}
+              onChange={(e) => setTopicId(Number(e.target.value))}
+              className="w-full cursor-pointer h-11 border border-[#C9C9C9] rounded-lg px-3 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+            >
+              <option value="">Select Topic</option>
+              {topics.map((t) => (
+                <option
+                  key={t.collegeSubjectUnitTopicId}
+                  value={t.collegeSubjectUnitTopicId}
+                >
+                  {t.topicTitle}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isMeeting && (
+            <>
+              <div className="space-y-1">
+                <label
+                  htmlFor="event-title"
+                  className="block text-gray-700 font-medium text-sm"
+                >
+                  Meeting Title <span className="text-red-600">*</span>
+                </label>
+                <input
+                  id="event-title"
+                  type="text"
+                  value={meetingTitle}
+                  onChange={(e) => setMeetingTitle(e.target.value)}
+                  placeholder="e.g., Parent–Teacher Meeting, Project Review, Sprint Planning"
+                  className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                />
+              </div>
+
+              <div className="space-y-2 mt-2 mb-2">
+                <label className="block text-gray-700 font-medium text-sm">
+                  Meeting Platform
+                </label>
+                <div className="flex gap-4">
+                  {[
+                    { id: "meet", label: "Google Meet" },
+                    { id: "zoom", label: "Zoom Meeting" },
+                    { id: "others", label: "Others" },
+                  ].map((platform) => (
+                    <label
+                      key={platform.id}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="meetingPlatform"
+                        value={platform.id}
+                        checked={meetingPlatform === platform.id}
+                        onChange={() => setMeetingPlatform(platform.id as any)}
+                        className="accent-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700 whitespace-nowrap">
+                        {platform.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {meetingPlatform === "zoom" ? (
+                <div className="flex gap-4 animate-in fade-in duration-200">
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-gray-700 font-medium text-sm">
+                      Zoom ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={meetingId}
+                      onChange={(e) => setMeetingId(e.target.value)}
+                      placeholder="Enter Zoom ID"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-gray-700 font-medium text-sm">
+                      Password <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={meetingPassword}
+                      onChange={(e) => setMeetingPassword(e.target.value)}
+                      placeholder="Enter Password"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1 animate-in fade-in duration-200">
+                  <label className="block text-gray-700 font-medium text-sm">
+                    {meetingPlatform === "meet"
+                      ? "Google Meet Link"
+                      : "Meeting Link"}{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder={
+                      meetingPlatform === "meet"
+                        ? "https://meet.google.com/..."
+                        : "https://..."
+                    }
+                    className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
+            </>
+          )}
           <div>
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Date <span className="text-red-600">*</span></label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Date <span className="text-red-600">*</span>
+                </label>
                 <input
                   type="date"
                   value={date}
@@ -589,7 +751,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700">Room No.</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Room No.
+                </label>
                 <input
                   value={roomNo}
                   onChange={(e) => setRoomNo(e.target.value.toUpperCase())}
@@ -628,7 +792,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                     </select>
                     <select
                       value={startPeriod}
-                      onChange={(e) => setStartPeriod(e.target.value as "AM" | "PM")}
+                      onChange={(e) =>
+                        setStartPeriod(e.target.value as "AM" | "PM")
+                      }
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -661,7 +827,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                     </select>
                     <select
                       value={endPeriod}
-                      onChange={(e) => setEndPeriod(e.target.value as "AM" | "PM")}
+                      onChange={(e) =>
+                        setEndPeriod(e.target.value as "AM" | "PM")
+                      }
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -737,8 +905,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                 <span className="mr-1 -mt-3">⌄</span>
               </button>
               {isSectionOpen && (
-                <div className="absolute left-0 top-full mt-1 w-full bg-white border 
-        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto">
+                <div
+                  className="absolute left-0 top-full mt-1 w-full bg-white border 
+        rounded-lg shadow-lg z-50 max-h-52 overflow-y-auto"
+                >
                   {sections.map((sec) => (
                     <label
                       key={`section-chip-${sec.collegeSectionsId}`}
@@ -747,7 +917,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                       <input
                         type="checkbox"
                         checked={selectedSections.some(
-                          s => s.collegeSectionsId === sec.collegeSectionsId
+                          (s) => s.collegeSectionsId === sec.collegeSectionsId,
                         )}
                         onChange={() => toggleSection(sec)}
                       />
@@ -757,7 +927,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                 </div>
               )}
             </div>
-            {selectedSections.length > 0 &&
+            {selectedSections.length > 0 && (
               <div
                 className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2 overflow-x-auto 
       whitespace-nowrap scrollbar-hide`}
@@ -777,7 +947,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
                   </span>
                 ))}
               </div>
-            }
+            )}
           </div>
           <div className="pt-2">
             <button
@@ -785,12 +955,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isOpen, onClose, onSave, 
               disabled={isSaving}
               className="w-full cursor-pointer bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base"
             >
-              {isSaving ? isEditMode ? "Updating..." : "Saving..." : isEditMode ? "Update Event" : "Save Event"}
+              {isSaving
+                ? isEditMode
+                  ? "Updating..."
+                  : "Saving..."
+                : isEditMode
+                  ? "Update Event"
+                  : "Save Event"}
             </button>
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 

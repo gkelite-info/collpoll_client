@@ -386,7 +386,8 @@ export default function StuDashLeft() {
                 <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <h6 className="text-[#282828] font-semibold">
-                      Upcoming Classes
+                      {/* 🟢 Updated Title */}
+                      Upcoming Events
                     </h6>
                     <FaChevronRight
                       className="cursor-pointer text-black"
@@ -401,7 +402,7 @@ export default function StuDashLeft() {
                     ) : lectures.length === 0 ? (
                       <div className="bg-red-00 min-h-[25vh] flex items-center justify-center">
                         <p className="text-[#282828] text-sm">
-                          No classes yet..
+                          No events scheduled..
                         </p>
                       </div>
                     ) : (
@@ -415,7 +416,7 @@ export default function StuDashLeft() {
                             title={lec.eventTitle}
                             professor={`Prof. ${lec.facultyName}`}
                             description={`${lec.eventTopic} • ${formatDate(lec.date)}`}
-                            status={lec.isCancelled ? "Class Cancel" : ""}
+                            status={lec.isCancelled ? "Cancelled" : ""}
                           />
 
                           {lec.meetingLink && !lec.isCancelled && (
