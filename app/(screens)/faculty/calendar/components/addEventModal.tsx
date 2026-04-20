@@ -5,7 +5,6 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAcademicDropdowns } from "@/lib/helpers/faculty/academicDropdown.helper";
 import { supabase } from "@/lib/supabaseClient";
 import { X } from "@phosphor-icons/react";
-// import type { CalendarEventPayload } from "../page";
 import type { CalendarEventPayload } from "../page";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -39,29 +38,6 @@ type TopicRow = {
   topicTitle: string;
 };
 
-type AcademicDropdownMap = {
-  education: {
-    collegeEducationId: number;
-    collegeEducationType: string;
-  };
-  branch: {
-    collegeBranchId: number;
-    collegeBranchType: string;
-    collegeBranchCode: string;
-  };
-  academicYear: {
-    collegeAcademicYearId: number;
-    collegeAcademicYear: string;
-  };
-  semester: {
-    collegeSemesterId: number;
-    collegeSemester: number;
-  };
-  section: {
-    collegeSectionsId: number;
-    collegeSections: string;
-  };
-};
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -93,7 +69,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 }) => {
   const [title, setTitle] = useState("");
   const [meetingLink, setMeetingLink] = useState("");
-  const [selectedType, setSelectedType] = useState("Class");
+  const [meetingPlatform, setMeetingPlatform] = useState<
+    "meet" | "zoom" | "others"
+  >("meet");
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingPassword, setMeetingPassword] = useState("");
+
+  const [selectedType, setSelectedType] = useState("class");
   const [date, setDate] = useState(getTodayDateString());
   const TODAY = getTodayDateString();
   const [startHour, setStartHour] = useState("09");
@@ -121,7 +103,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const [topics, setTopics] = useState<TopicRow[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [facultyCtx, setFacultyCtx] = useState<any>(null);
-  // const [topics, setTopics] = useState<{ topicTitle: string }[]>([]);
   const [educationId, setEducationId] = useState<number | undefined>(undefined);
   const [branchId, setBranchId] = useState<number | undefined>(undefined);
   const [academicYearId, setAcademicYearId] = useState<number | undefined>(
@@ -129,14 +110,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   );
   const [sectionId, setSectionId] = useState<number | undefined>(undefined);
   const [subjectId, setSubjectId] = useState<number | undefined>(undefined);
-  const [unitId, setUnitId] = useState<number | undefined>(undefined);
   const [semesters, setSemesters] = useState<SemesterRow[]>([]);
   const [educations, setEducations] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
   const [sectionIds, setSectionIds] = useState<number[]>([]);
   const [editSectionIds, setEditSectionIds] = useState<number[] | null>(null);
   const { faculty_edu_type } = useFaculty();
@@ -144,6 +123,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const resetFormState = () => {
     setTitle("");
     setMeetingLink("");
+    setMeetingId("");
+    setMeetingPassword("");
+    setMeetingPlatform("meet");
     setSelectedType("class");
     setDate(getTodayDateString());
     setStartHour("09");
@@ -196,8 +178,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   const dateInputRef = useRef<HTMLInputElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
-  // const YEARS = ["1", "2", "3", "4"];
-  // const SEMESTERS = ["1", "2"];
   const isEditMode = mode === "edit";
 
   const selectedDegreeObj = React.useMemo(() => {
@@ -211,7 +191,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
   const yearOptions = useMemo(() => {
     if (!selectedDegreeObj?.years) return [];
-    // return selectedDegreeObj.years.map((y: string) => y.trim());
     return selectedDegreeObj?.years ?? [];
   }, [selectedDegreeObj?.years]);
 
@@ -229,109 +208,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     ["1", "2", "3", "4", "5", "6", "7", "8"].includes(String(y))
       ? String(y)
       : "";
-
-  // useEffect(() => {
-  //   if (!degree) return;
-  //   if (!isEditMode) return;
-  //   if (value) return;
-  //   // setYear("");
-  //   setSemester("");
-  //   setSelectedDepartments([]);
-  //   setSelectedSections([]);
-  //   // if (year && !yearOptions.some((y: any) => y.value === year)) {
-  //   //   setYear("");
-  //   // }
-  //   // setYear(normalizeYear(value.year));
-  // }, [degree, value, isEditMode]);
-
-  // const resetForm = () => {
-  //   setTitle("");
-  //   setTopic("");
-  //   setRoomNo("");
-  //   setDegree("");
-  //   setSelectedDepartments([]);
-  //   setSelectedSections([]);
-  //   setYear("");
-  //   setSemester("");
-  //   setSelectedType("class");
-  //   setDate(getTodayDateString());
-
-  //   setStartHour("09");
-  //   setStartMinute("00");
-  //   setStartPeriod("AM");
-  //   setEndHour("10");
-  //   setEndMinute("00");
-  //   setEndPeriod("AM");
-  // };
-
-  // const parse24HourTo12Hour = (time: string) => {
-  //   const [h, m] = time.split(":").map(Number);
-
-  //   const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
-  //   const hour12 = h % 12 === 0 ? 12 : h % 12;
-
-  //   return {
-  //     hour: String(hour12).padStart(2, "0"),
-  //     minute: String(m).padStart(2, "0"),
-  //     period,
-  //   };
-  // };
-
-  // useEffect(() => {
-  //   if (!isOpen) return;
-
-  //   if (!value) {
-  //     resetForm();
-  //     return;
-  //   }
-
-  //   setTitle(value.title || "");
-  //   setTopic(value.topic || "");
-  //   setRoomNo(value.roomNo || "");
-  //   setDegree(value.degree || "");
-  //   setSelectedDepartments(
-  //     Array.isArray(value.departments)
-  //       ? value.departments.filter(
-  //         (d: any) => typeof d === "string" && d.trim() !== "",
-  //       )
-  //       : [],
-  //   );
-  //   setSelectedSections(
-  //     Array.isArray(value.sections)
-  //       ? value.sections.filter(
-  //         (s: any) => typeof s === "string" && s.trim() !== "",
-  //       )
-  //       : [],
-  //   );
-  //   // setYear(value.year ? String(value.year) : "");
-  //   // setYear(value.year || "");
-  //   // setYear(normalizeYear(value.year));
-  //   const normalizedYear = String(value.year || "").trim();
-  //   if (
-  //     normalizedYear &&
-  //     ["1", "2", "3", "4", "5", "6", "7", "8"].includes(normalizedYear)
-  //   ) {
-  //     setYear(normalizedYear);
-  //   } else {
-  //     setYear("");
-  //   }
-  //   setSemester(value.semester || "");
-  //   setSelectedType(value.type || "class");
-  //   setDate(value.date || getTodayDateString());
-
-  //   if (value.startTime && value.endTime) {
-  //     const start = parse24HourTo12Hour(value.startTime);
-  //     const end = parse24HourTo12Hour(value.endTime);
-
-  //     setStartHour(start.hour);
-  //     setStartMinute(start.minute);
-  //     setStartPeriod(start.period);
-
-  //     setEndHour(end.hour);
-  //     setEndMinute(end.minute);
-  //     setEndPeriod(end.period);
-  //   }
-  // }, [isOpen, value]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -362,12 +238,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     if (!degree) return;
     if (!yearOptions.length) return;
 
-    // const exists = yearOptions.some((y: any) => y.value === value.year);
-
-    // if (exists) {
-    //   setYear(value.year);
-    // }
-    // setYear(String(value.year));
     const incomingYear = String(value.year).trim();
 
     const exists = yearOptions.some((y: any) => {
@@ -477,9 +347,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           .eq("isActive", true)
           .is("deletedAt", null);
 
-        if (error) {
-        }
-
         if (cancelled) return;
 
         const subjects: SubjectRow[] = subjectRows ?? [];
@@ -489,7 +356,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           setSubjectId(subjects[0].collegeSubjectId);
           setSubject(subjects[0].subjectName);
         }
-      } catch (err) { }
+      } catch (err) {}
     };
 
     loadAcademics();
@@ -514,8 +381,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         }
 
         if (data?.collegeSemesterId) {
-          setSemester(data.collegeSemesterId); 
-          setIsSemesterAuto(true);             
+          setSemester(data.collegeSemesterId);
+          setIsSemesterAuto(true);
         }
       });
   }, [subjectId]);
@@ -533,36 +400,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         setTopics(data ?? []);
       });
   }, [subjectId]);
-
-  // const validateTimeRange = (
-  //   newEndHour?: string,
-  //   newEndMinute?: string,
-  //   newEndPeriod?: "AM" | "PM",
-  // ) => {
-  //   const startTime = to24Hour(startHour, startMinute, startPeriod);
-
-  //   const endTime = to24Hour(
-  //     newEndHour ?? endHour,
-  //     newEndMinute ?? endMinute,
-  //     newEndPeriod ?? endPeriod,
-  //   );
-  //   if (startTime === endTime) {
-  //     toast.error("Start and End time cannot be the same", {
-  //       id: "time-error",
-  //     });
-  //     return false;
-  //   }
-  //   if (startTime > endTime) {
-  //     toast.error("End time must be after start time");
-  //     return false;
-  //   }
-  //   if (startTime < "08:00" || endTime > "22:00") {
-  //     toast.error("Events must be between 08:00 AM and 10:00 PM");
-  //     return false;
-  //   }
-  //   return true;
-  // };
-
 
   const validateTimeRange = () => {
     const startTime = to24Hour(startHour, startMinute, startPeriod);
@@ -601,6 +438,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     }
 
+    if (!roomNo.trim()) {
+      toast.error("Please enter Room No.");
+      return;
+    }
     if (!sectionIds.length) {
       toast.error("Please select at least one section.");
       return;
@@ -616,19 +457,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-
-    // if (date === currentDate) {
-    //   const currentTime = now.toTimeString().slice(0, 5);
-    //   if (startTime <= currentTime) {
-    //     toast.error("Start time must be in the future");
-    //     return;
-    //   }
-    // }
-
-    if (selectedType !== "meeting" && !topicId) {
-      toast.error("Please select topic");
+    // 🟢 Topic is now REQUIRED for ALL event types including meetings
+    if (!topicId) {
+      toast.error("Please select a topic");
       return;
     }
 
@@ -638,20 +469,43 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
         return;
       }
 
-      if (meetingLink && !isValidMeetingLink(meetingLink.trim())) {
-        toast.error("Please enter a valid meeting link");
-        return;
+      if (meetingPlatform === "zoom") {
+        if (!meetingId.trim()) {
+          toast.error("Please enter Zoom Meeting ID");
+          return;
+        }
+        if (!meetingPassword.trim()) {
+          toast.error("Please enter Meeting Password");
+          return;
+        }
+      } else if (meetingPlatform === "meet") {
+        if (!meetingLink.trim()) {
+          toast.error("Please enter Google Meet Link");
+          return;
+        }
+        if (!meetingLink.includes("meet.google.com")) {
+          toast.error("Please enter a valid Google Meet link");
+          return;
+        }
+      } else if (meetingPlatform === "others") {
+        if (!meetingLink.trim()) {
+          toast.error("Please enter Meeting Link");
+          return;
+        }
+        if (!isValidMeetingLink(meetingLink.trim())) {
+          toast.error("Please enter a valid meeting link");
+          return;
+        }
       }
     }
 
     const payload: CalendarEventPayload = {
       facultyId: userId!,
-      subjectId: selectedType === "meeting" ? null : subjectId!,
+      subjectId: subjectId!, // 🟢 Always passed
+      eventTopic: topicId, // 🟢 Always passed
 
       eventTitle:
         selectedType === "meeting" ? title.trim() || "Meeting" : subject,
-
-      eventTopic: selectedType === "meeting" ? null : topicId,
 
       type: selectedType.toLowerCase() as any,
       date,
@@ -659,7 +513,18 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       toTime: endTime,
       roomNo,
 
-      meetingLink: selectedType === "meeting" ? meetingLink : null,
+      meetingLink:
+        selectedType === "meeting" && meetingPlatform !== "zoom"
+          ? meetingLink
+          : null,
+      meetingId:
+        selectedType === "meeting" && meetingPlatform === "zoom"
+          ? meetingId
+          : null,
+      meetingPassword:
+        selectedType === "meeting" && meetingPlatform === "zoom"
+          ? meetingPassword
+          : null,
 
       collegeEducationId: educationId!,
       collegeBranchId: branchId!,
@@ -730,6 +595,16 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     setEndMinute(value.endMinute ?? "00");
     setEndPeriod(value.endPeriod ?? "AM");
 
+    setTitle(value.title ?? "");
+    setMeetingLink(value.meetingLink ?? "");
+    setMeetingId(value.meetingId ?? "");
+    setMeetingPassword(value.meetingPassword ?? "");
+
+    if (value.meetingId) setMeetingPlatform("zoom");
+    else if (value.meetingLink?.includes("meet.google"))
+      setMeetingPlatform("meet");
+    else setMeetingPlatform("others");
+
     setTopicId(value.topicId ?? null);
     if (value.semesterId) {
       setSemester(value.semesterId);
@@ -760,78 +635,19 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   const formatLabel = (value: string) =>
     value.charAt(0).toUpperCase() + value.slice(1);
 
-  const dateInputType = date || isDateInputFocused ? "date" : "text";
-
-  const openDatePicker = () => {
-    setIsDateInputFocused(true);
-    dateInputRef.current?.focus();
-    if (
-      dateInputRef.current &&
-      typeof dateInputRef.current.showPicker === "function"
-    ) {
-      dateInputRef.current.showPicker();
-    }
-  };
-
   const handleClose = () => {
     closedByUserRef.current = true;
     resetFormState();
     onClose();
   };
 
-  const handleClickOutside = (e: MouseEvent) => {
-    const target = e.target as Node | null;
-
-    if (
-      modalContentRef.current &&
-      target &&
-      !modalContentRef.current.contains(target)
-    ) {
-      handleClose();
-    }
-  };
-
-  const availableSections = selectedDepartments
-    .filter(
-      (dep): dep is string => typeof dep === "string" && dep.trim() !== "",
-    )
-    .flatMap((dep) => {
-      const key = dep.trim();
-      const secs = sectionMap[key] ?? [];
-      return secs.map((s) => `${key}-${s}`);
-    });
-
-  const toggleDepartment = (dep: string) => {
-    setSelectedDepartments((prev) => {
-      const updated = prev.includes(dep)
-        ? prev.filter((d) => d !== dep)
-        : [...prev, dep];
-
-      setSelectedSections((prevSections) =>
-        prevSections.filter((sec) =>
-          updated.some((d) => sec.startsWith(`${d}-`)),
-        ),
-      );
-
-      return updated;
-    });
-  };
-
-  const toggleSection = (section: string) => {
-    setSelectedSections((prev) =>
-      prev.includes(section)
-        ? prev.filter((s) => s !== section)
-        : [...prev, section],
-    );
-  };
-
   return (
-    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
         ref={modalContentRef}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-112.5 max-h-[90vh] flex flex-col relative"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-[450px] max-h-[90vh] flex flex-col relative"
       >
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky  z-10">
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky z-10">
           <h2 className="text-xl font-bold text-gray-800">
             {value ? "Edit Event" : "New Calendar Event"}
           </h2>
@@ -854,10 +670,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
-                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                    }`}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
+                    selectedType === type
+                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   {formatLabel(type)}
                 </button>
@@ -865,49 +682,64 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
 
-          {selectedType !== "meeting" && (
-            // <div className="space-y-1">
-            //   <label
-            //     htmlFor="event-title"
-            //     className="block text-gray-700 font-medium text-sm"
-            //   >
-            //     Event Title
-            //   </label>
-            //   <input
-            //     id="event-title"
-            //     type="text"
-            //     value={title}
-            //     onChange={(e) => setTitle(e.target.value)}
-            //     placeholder="e.g., Project Kickoff or Physics Exam"
-            //     className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
-            //   />
-            // </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Subject <span className="text-red-500">*</span>
-              </label>
+          {/* 🟢 Subject is unconditionally rendered here so it's always available */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subject <span className="text-red-500">*</span>
+            </label>
 
-              <input
-                type="text"
-                readOnly
-                value={
-                  subjects.find((s) => s.collegeSubjectId === subjectId)
-                    ?.subjectName ||
-                  subject ||
-                  ""
-                }
-                className={`
-      w-full ${INPUT_HEIGHT}
-      border border-[#C9C9C9]
-      rounded-lg px-3
-      bg-gray-50 text-gray-900
-      cursor-not-allowed
-      outline-none
-    `}
-              />
+            <input
+              type="text"
+              readOnly
+              value={
+                subjects.find((s) => s.collegeSubjectId === subjectId)
+                  ?.subjectName ||
+                subject ||
+                ""
+              }
+              className={`
+    w-full ${INPUT_HEIGHT}
+    border border-[#C9C9C9]
+    rounded-lg px-3
+    bg-gray-50 text-gray-900
+    cursor-not-allowed
+    outline-none
+  `}
+            />
+          </div>
+
+          {/* 🟢 Topic is unconditionally rendered here so it's always available */}
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Topic <span className="text-red-500">*</span>
+            </label>
+
+            <div className="relative">
+              <select
+                value={topicId ?? ""}
+                onChange={(e) => setTopicId(Number(e.target.value))}
+                className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg px-3 pr-10
+      bg-white text-gray-900 outline-none cursor-pointer
+      focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+      transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
+              >
+                <option value="" disabled>
+                  Select Topic
+                </option>
+
+                {topics.map((t) => (
+                  <option
+                    key={t.collegeSubjectUnitTopicId}
+                    value={t.collegeSubjectUnitTopicId}
+                  >
+                    {t.topicTitle}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+          </div>
 
+          {/* 🟢 Meeting specific inputs */}
           {selectedType === "meeting" && (
             <>
               <div className="space-y-1">
@@ -919,56 +751,91 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Parent Meeting / Dept Review"
-                  className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5"
+                  className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-2 mt-2 mb-2">
                 <label className="block text-gray-700 font-medium text-sm">
-                  Meeting Link <span className="text-red-500">*</span>
+                  Meeting Platform
                 </label>
-                <input
-                  type="text"
-                  value={meetingLink}
-                  onChange={(e) => setMeetingLink(e.target.value)}
-                  placeholder="https://meet.google.com/..."
-                  className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5"
-                />
+                <div className="flex gap-4">
+                  {[
+                    { id: "meet", label: "Google Meet" },
+                    { id: "zoom", label: "Zoom Meeting" },
+                    { id: "others", label: "Others" },
+                  ].map((platform) => (
+                    <label
+                      key={platform.id}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name="meetingPlatform"
+                        value={platform.id}
+                        checked={meetingPlatform === platform.id}
+                        onChange={() => setMeetingPlatform(platform.id as any)}
+                        className="accent-emerald-500 cursor-pointer"
+                      />
+                      <span className="text-sm text-gray-700 whitespace-nowrap">
+                        {platform.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
+
+              {meetingPlatform === "zoom" ? (
+                <div className="flex gap-4 animate-in fade-in duration-200 mt-4">
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-gray-700 font-medium text-sm">
+                      Zoom ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={meetingId}
+                      onChange={(e) => setMeetingId(e.target.value)}
+                      placeholder="Enter Zoom ID"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="block text-gray-700 font-medium text-sm">
+                      Password <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={meetingPassword}
+                      onChange={(e) => setMeetingPassword(e.target.value)}
+                      placeholder="Enter Password"
+                      className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1 animate-in fade-in duration-200 mt-4">
+                  <label className="block text-gray-700 font-medium text-sm">
+                    {meetingPlatform === "meet"
+                      ? "Google Meet Link"
+                      : "Meeting Link"}{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={meetingLink}
+                    onChange={(e) => setMeetingLink(e.target.value)}
+                    placeholder={
+                      meetingPlatform === "meet"
+                        ? "https://meet.google.com/..."
+                        : "https://..."
+                    }
+                    className="w-full border border-[#C9C9C9] rounded-lg px-4 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              )}
             </>
           )}
 
-          {selectedType !== "meeting" && (
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Topic <span className="text-red-500">*</span>
-              </label>
-
-              <div className="relative">
-                <select
-                  value={topicId ?? ""}
-                  onChange={(e) => setTopicId(Number(e.target.value))}
-                  className={`w-full h-[44px] border border-[#C9C9C9] rounded-lg px-3 pr-10
-        bg-white text-gray-900 outline-none cursor-pointer
-        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
-        transition-all ${!topicId ? "text-gray-400" : "text-gray-900"}`}
-                >
-                  <option value="" disabled>
-                    Select Topic
-                  </option>
-
-                  {topics.map((t) => (
-                    <option
-                      key={t.collegeSubjectUnitTopicId}
-                      value={t.collegeSubjectUnitTopicId}
-                    >
-                      {t.topicTitle}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
           <div>
             <div className="flex gap-4">
               <div className="flex-1">
@@ -986,11 +853,13 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Room No.
+                  Room No. <span className="text-red-500">*</span>
                 </label>
                 <input
                   value={roomNo}
-                  onChange={(e) => setRoomNo(e.target.value.toLocaleUpperCase())}
+                  onChange={(e) =>
+                    setRoomNo(e.target.value.toLocaleUpperCase())
+                  }
                   className="w-full border border-[#C9C9C9] rounded-lg px-3 py-2.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                   placeholder="Enter Room no."
                 />
@@ -1005,14 +874,16 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               <div className="flex gap-4">
                 <div className="flex-1">
                   <div className="flex gap-0.5">
-                    <span className="block text-gray-500 text-xs mb-1">From</span>
+                    <span className="block text-gray-500 text-xs mb-1">
+                      From
+                    </span>
                     <span className="text-red-500 -mt-1">*</span>
                   </div>
                   <div className="flex gap-1.5">
                     <select
                       value={startHour}
                       onChange={(e) => setStartHour(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       {Array.from({ length: 12 }, (_, i) => {
                         const h = String(i + 1).padStart(2, "0");
@@ -1052,14 +923,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                   <div className="flex gap-1.5">
                     <select
                       value={endHour}
-                      // onChange={(e) => {
-                      //   const value = e.target.value;
-                      //   if (validateTimeRange(value, undefined, undefined)) {
-                      //     setEndHour(value);
-                      //   }
-                      // }}
                       onChange={(e) => setEndHour(e.target.value)}
-                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14.5 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
+                      className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-14 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       {Array.from({ length: 12 }, (_, i) => {
                         const h = String(i + 1).padStart(2, "0");
@@ -1069,12 +934,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={endMinute}
-                      // onChange={(e) => {
-                      //   const value = e.target.value;
-                      //   if (validateTimeRange(undefined, value, undefined)) {
-                      //     setEndMinute(value);
-                      //   }
-                      // }}
                       onChange={(e) => setEndMinute(e.target.value)}
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
@@ -1086,13 +945,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                     <select
                       value={endPeriod}
-                      // onChange={(e) => {
-                      //   const value = e.target.value as "AM" | "PM";
-                      //   if (validateTimeRange(undefined, undefined, value)) {
-                      //     setEndPeriod(value);
-                      //   }
-                      // }}
-                      onChange={(e) => setEndPeriod(e.target.value as "AM" | "PM")}
+                      onChange={(e) =>
+                        setEndPeriod(e.target.value as "AM" | "PM")
+                      }
                       className="border cursor-pointer border-[#C9C9C9] rounded-lg px-2 py-2 w-16 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 bg-white"
                     >
                       <option>AM</option>
@@ -1124,19 +979,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
   `}
               />
 
-              {/* <select
-                value={degree}
-                onChange={(e) => setDegree(e.target.value)}
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
-      rounded-lg px-3 bg-white outline-none cursor-pointer`}
-              >
-                <option value="">Select Edu. Type</option>
-                {degreeOptions.map((deg) => (
-                  <option key={deg.degreeType} value={deg.degreeType}>
-                    {deg.degreeType}
-                  </option>
-                ))}
-              </select> */}
               {degree && (
                 <div className={`${CHIP_CONTAINER_HEIGHT} mt-2 flex gap-2`}>
                   <span
@@ -1199,25 +1041,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     outline-none
   `}
               />
-
-              {/* <select
-                value={year}
-                onChange={(e) => setYear(e.target.value)}
-                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9] outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all text-gray-700 cursor-pointer
-        rounded-lg px-3 bg-white`}
-              >
-                <option value="">Select Year</option>
-                {/* {yearOptions.map((y: any) => (
-                  <option key={y.uuid} value={y.value} className="cursor-pointer">{y.label}</option>
-                ))} */}
-              {yearOptions.map((y: any) => {
-                const yearValue = String(y.label);
-                return (
-                  <option key={yearValue} value={yearValue}>
-                    {yearValue}
-                  </option>
-                );
-              })}
             </div>
             {!["Inter"].includes(faculty_edu_type!) && (
               <div className="flex-1 min-w-0">
@@ -1227,7 +1050,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
                 <select
                   value={semester ?? ""}
-                  disabled={isSemesterAuto}
                   onChange={(e) => {
                     if (isSemesterAuto) return;
                     setSemester(Number(e.target.value));
@@ -1238,10 +1060,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     rounded-lg px-3 text-sm
     focus:ring-2 focus:ring-[#43C17A]
     focus:outline-none
-    ${isSemesterAuto
-                      ? "bg-gray-50 cursor-not-allowed text-gray-900"
-                      : "bg-white cursor-pointer text-gray-900"
-                    }
+    ${
+      isSemesterAuto
+        ? "s text-gray-900"
+        : "bg-white cursor-pointer text-gray-900"
+    }
   `}
                 >
                   <option value="" disabled hidden>
@@ -1286,9 +1109,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 {sectionIds.length === 0
                   ? "Select sections"
                   : sections
-                    .filter((s) => sectionIds.includes(s.collegeSectionsId))
-                    .map((s) => s.collegeSections)
-                    .join(", ")}
+                      .filter((s) => sectionIds.includes(s.collegeSectionsId))
+                      .map((s) => s.collegeSections)
+                      .join(", ")}
               </span>
 
               <span className="text-gray-400">▾</span>
@@ -1330,10 +1153,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             <button
               onClick={handleSave}
               disabled={isSubmitting}
-              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
-                ? "bg-emerald-400 cursor-not-allowed"
-                : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-                }`}
+              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${
+                isSubmitting
+                  ? "bg-emerald-400 cursor-not-allowed"
+                  : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+              }`}
             >
               {isSubmitting
                 ? isEditMode

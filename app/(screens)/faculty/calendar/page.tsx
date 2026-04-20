@@ -29,7 +29,10 @@ import { getFacultyIdByUserId } from "@/lib/helpers/faculty/facultyAPI";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import EventDetailsModal from "./modal/EventDetailsModal";
 import { fetchHrCalendarEvents } from "@/lib/helpers/Hr/calendar/hrCalendarEventsAPI";
-import { checkSectionConflict, ConflictingSection } from "@/lib/helpers/calendar/checkSectionConflict";
+import {
+  checkSectionConflict,
+  ConflictingSection,
+} from "@/lib/helpers/calendar/checkSectionConflict";
 
 export type CalendarEventPayload = {
   facultyId: number;
@@ -44,6 +47,8 @@ export type CalendarEventPayload = {
   toTime: string;
   roomNo: string;
   meetingLink?: string | null;
+  meetingId?: string | null;
+  meetingPassword?: string | null;
 
   collegeEducationId: number;
   collegeBranchId: number;
@@ -68,7 +73,9 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(null);
+  const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(
+    null,
+  );
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(
@@ -80,7 +87,9 @@ export default function Page() {
   const [degreeOptions, setDegreeOptions] = useState<any[]>([]);
   const { userId, role, collegeId } = useUser();
   const [facultyId, setFacultyId] = useState<number | null>(null);
-  const [conflictDetails, setConflictDetails] = useState<ConflictingSection[]>([]);
+  const [conflictDetails, setConflictDetails] = useState<ConflictingSection[]>(
+    [],
+  );
 
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +101,7 @@ export default function Page() {
     null,
   );
   const [showDetails, setShowDetails] = useState(false);
-  const [isDeleteLoading, setIsDeleteLoading] = useState<boolean>(false)
+  const [isDeleteLoading, setIsDeleteLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!userId || role !== "Faculty") return;
@@ -220,16 +229,20 @@ export default function Page() {
 
         const sectionIds = sectionMap.get(row.calendarEventId) ?? [];
 
+        const safelyExtractedTopic =
+          row.college_subject_unit_topics?.topicTitle ||
+          (Array.isArray(row.college_subject_unit_topics)
+            ? row.college_subject_unit_topics[0]?.topicTitle
+            : null);
+
         sectionIds.forEach((sectionId) => {
           expandedEvents.push({
             id: `${row.calendarEventId}-${sectionId}`,
 
             title:
               row.type === "meeting"
-                ? "Meeting"
-                : (row.college_subject_unit_topics?.topicTitle ??
-                  row.college_subject_unit_topics?.[0]?.topicTitle ??
-                  ""),
+                ? row.meetingTitle || "Meeting"
+                : (safelyExtractedTopic ?? ""),
 
             type: row.type,
             subjectName: row.college_subjects?.subjectName ?? "-",
@@ -252,7 +265,11 @@ export default function Page() {
 
             rawFormData: {
               topicId: row.eventTopic,
+              topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
               roomNo: row.roomNo,
+              meetingLink: row.meetingLink,
+              meetingId: row.meetingId,
+              meetingPassword: row.meetingPassword,
             },
           });
         });
@@ -286,7 +303,6 @@ export default function Page() {
     setCurrentDate(prev);
   };
 
-  // AFTER
   const hasDbConflict = async (
     payload: CalendarEventPayload,
     ignoreEventId?: number,
@@ -323,7 +339,6 @@ export default function Page() {
       return { success: false };
     }
 
-    // AFTER
     const conflict = await hasDbConflict(
       payload,
       editingEventId ? Number(editingEventId) : undefined,
@@ -341,15 +356,17 @@ export default function Page() {
       const eventRes = await saveCalendarEvent({
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,
-        subjectId:
-          payload.type === "meeting" ? null : (payload.subjectId ?? null),
+        subjectId: payload.subjectId ?? null,
         eventTopic: payload.eventTopic,
+        eventTitle: payload.eventTitle,
         type: payload.type,
         date: payload.date,
         roomNo: payload.roomNo,
         fromTime: payload.fromTime,
         toTime: payload.toTime,
         meetingLink: payload.meetingLink ?? null,
+        meetingId: payload.meetingId ?? null,
+        meetingPassword: payload.meetingPassword ?? null,
       });
 
       if (!eventRes.success) {
@@ -359,13 +376,13 @@ export default function Page() {
 
       const calendarEventId = eventRes.calendarEventId;
 
-      // On edit, remove all existing sections first to avoid duplicates
       if (editingEventId) {
-        const existingSections = await fetchCalendarEventSections(calendarEventId);
+        const existingSections =
+          await fetchCalendarEventSections(calendarEventId);
         await Promise.all(
           (existingSections ?? []).map((s: any) =>
-            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId)
-          )
+            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId),
+          ),
         );
       }
 
@@ -411,20 +428,19 @@ export default function Page() {
 
     try {
       const eventRes = await saveCalendarEvent({
-        // Forward the editing ID so the backend does UPDATE not INSERT
         calendarEventId: editingEventId ? Number(editingEventId) : undefined,
         facultyId,
-        subjectId:
-          pendingEvent.type === "meeting"
-            ? null
-            : (pendingEvent.subjectId ?? null),
+        subjectId: pendingEvent.subjectId ?? null,
         eventTopic: pendingEvent.eventTopic,
+        eventTitle: pendingEvent.eventTitle,
         type: pendingEvent.type,
         date: pendingEvent.date,
         roomNo: pendingEvent.roomNo,
         fromTime: pendingEvent.fromTime,
         toTime: pendingEvent.toTime,
         meetingLink: pendingEvent.meetingLink ?? null,
+        meetingId: pendingEvent.meetingId ?? null,
+        meetingPassword: pendingEvent.meetingPassword ?? null,
       });
 
       if (!eventRes.success) {
@@ -434,13 +450,13 @@ export default function Page() {
 
       const calendarEventId = eventRes.calendarEventId;
 
-      // On edit, remove all existing sections first to avoid duplicates
       if (editingEventId) {
-        const existingSections = await fetchCalendarEventSections(calendarEventId);
+        const existingSections =
+          await fetchCalendarEventSections(calendarEventId);
         await Promise.all(
           (existingSections ?? []).map((s: any) =>
-            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId)
-          )
+            softDeleteCalendarEventSection(calendarEventId, s.collegeSectionId),
+          ),
         );
       }
 
@@ -470,7 +486,7 @@ export default function Page() {
   };
 
   const handleDeleteEvent = async (event: CalendarEvent) => {
-    setIsDeleteLoading(true)
+    setIsDeleteLoading(true);
     try {
       const calendarEventId = event.calendarEventId;
       const sectionId = event.sectionId;
@@ -489,7 +505,7 @@ export default function Page() {
       toast.error("Failed to delete section");
       console.error(err);
     } finally {
-      setIsDeleteLoading(false)
+      setIsDeleteLoading(false);
     }
   };
 
@@ -541,6 +557,9 @@ export default function Page() {
       title: event.title ?? "",
       topicId: event.rawFormData?.topicId ?? null,
       roomNo: event.rawFormData?.roomNo ?? "",
+      meetingLink: event.rawFormData?.meetingLink ?? "",
+      meetingId: event.rawFormData?.meetingId ?? "",
+      meetingPassword: event.rawFormData?.meetingPassword ?? "",
 
       date: startDate,
 
@@ -569,7 +588,7 @@ export default function Page() {
             Calendar & Events
           </h1>
           <p className="text-black text-sm">
-            Stay organized and on track with your personalised calendar
+            Stay Organized And On Track With Your Personalised Calendar
           </p>
         </div>
 
@@ -583,12 +602,6 @@ export default function Page() {
         >
           Academics Calendar
         </button>
-        {/* <button
-          onClick={() => setMainTab("HR")}
-          className={`px-5 cursor-pointer py-2 rounded-lg text-sm font-semibold transition-all shadow-sm ${mainTab === "HR" ? "bg-[#43C17A] text-white" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
-        >
-          My Calendar
-        </button> */}
       </div>
 
       <div className="flex justify-between items-end mb-1">
