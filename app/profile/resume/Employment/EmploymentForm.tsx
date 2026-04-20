@@ -23,7 +23,7 @@ export default function EmploymentForm({
   onSuccess: () => void;
 }) {
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -80,42 +80,55 @@ export default function EmploymentForm({
 
   // Save: with validation
   const handleSubmit = async () => {
+    if (isSaving || isNavigating) return;
     const error = validate();
     if (error) {
       toast.error(error);
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSaving(true);
     try {
       await saveEmployment();
-      toast.success(`Employment ${index + 1} saved`);
+      toast.success(
+        data?.employmentId
+          ? `Employment ${index + 1} updated successfully`
+          : `Employment ${index + 1} saved successfully`
+      );
       onSuccess();
     } catch (error: any) {
       console.error("Error submitting employment:", error);
       toast.error(error.message || "Failed to save employment");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
-  // Next: save without validation + route
   const handleNext = async () => {
-    // Only attempt save if there's something to save (at least a company name)
-    if (form.companyName.trim() || form.designation.trim()) {
-      setIsNavigating(true);
-      try {
-        await saveEmployment();
-        onSuccess();
-      } catch (error: any) {
-        console.error("Error saving on next:", error);
-        // Non-blocking — still navigate even if save fails
-      } finally {
-        setIsNavigating(false);
-      }
+    if (isSaving || isNavigating) return;
+
+    const error = validate();
+    if (error) {
+      toast.error(error);
+      return;
     }
 
-    router.push("/profile?resume=academic-achievements&Step=11");
+    setIsNavigating(true);
+    try {
+      await saveEmployment();
+      toast.success(
+        data?.employmentId
+          ? `Employment ${index + 1} updated successfully`
+          : `Employment ${index + 1} saved successfully`
+      );
+      onSuccess();
+      router.push("/profile?resume=profile-summary&Step=10");
+    } catch (error: any) {
+      console.error("Error saving on next:", error);
+      toast.error(error.message || "Failed to save employment");
+    } finally {
+      setIsNavigating(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -246,15 +259,15 @@ export default function EmploymentForm({
         <div className="md:col-span-2 flex justify-end gap-3">
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50"
           >
-            {isSubmitting ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
 
           <button
             onClick={handleNext}
-            disabled={isNavigating}
+            disabled={isSaving || isNavigating}
             className="bg-[#43C17A] cursor-pointer text-white px-6 py-2 rounded-md text-sm font-medium disabled:opacity-50"
           >
             {isNavigating ? "Saving..." : "Next"}

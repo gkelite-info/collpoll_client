@@ -78,7 +78,8 @@ export default function ResumePersonalDetails() {
   const [currentCity, setCurrentCity] = useState("");
   const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
   // ── ui state ────────────────────────────────────────────────────────────────
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   // ── shared styles ───────────────────────────────────────────────────────────
@@ -255,8 +256,6 @@ export default function ResumePersonalDetails() {
     // Track whether this is an insert or update before saving
     const isUpdate = !!resumePersonalDetailsId;
 
-    setIsLoading(true);
-
     const res = await saveResumePersonalDetails({
       resumePersonalDetailsId: resumePersonalDetailsId || undefined,
       studentId,
@@ -268,8 +267,6 @@ export default function ResumePersonalDetails() {
       currentCity,
       workStatus,
     });
-
-    setIsLoading(false);
 
     if (!res.success) {
       toast.error(
@@ -296,13 +293,25 @@ export default function ResumePersonalDetails() {
 
   // ── submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    await savePersonalDetails();
+    if (isSaving || isNavigating) return;
+    setIsSaving(true);
+    try {
+      await savePersonalDetails();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNext = async () => {
-    const res = await savePersonalDetails();
-    if (res.success) {
-      router.push("/profile?resume=education&Step=2");
+    if (isSaving || isNavigating) return;
+    setIsNavigating(true);
+    try {
+      const res = await savePersonalDetails();
+      if (res.success) {
+        router.push("/profile?resume=education&Step=2");
+      }
+    } finally {
+      setIsNavigating(false);
     }
   };
 
@@ -333,6 +342,7 @@ export default function ResumePersonalDetails() {
               value={fullName}
               onChange={(e) => setFullName(sanitizeFullName(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -347,6 +357,7 @@ export default function ResumePersonalDetails() {
               value={mobile}
               onChange={(e) => setMobile(sanitizeMobile(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -361,6 +372,7 @@ export default function ResumePersonalDetails() {
               value={email}
               onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -391,6 +403,7 @@ export default function ResumePersonalDetails() {
               value={linkedIn}
               onChange={(e) => setLinkedIn(sanitizeLinkedIn(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -405,6 +418,7 @@ export default function ResumePersonalDetails() {
               value={currentCity}
               onChange={(e) => setCurrentCity(sanitizeCity(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -431,7 +445,10 @@ export default function ResumePersonalDetails() {
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
-              onClick={() => setWorkStatus("experienced")}
+              onClick={() => {
+                if (isSaving || isNavigating) return;
+                setWorkStatus("experienced");
+              }}
               className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "experienced"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
@@ -451,7 +468,10 @@ export default function ResumePersonalDetails() {
             </div>
 
             <div
-              onClick={() => setWorkStatus("fresher")}
+              onClick={() => {
+                if (isSaving || isNavigating) return;
+                setWorkStatus("fresher");
+              }}
               className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "fresher"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
@@ -476,21 +496,21 @@ export default function ResumePersonalDetails() {
         <div className="mt-6 flex justify-end gap-3">
 
           <button
-            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${(isSaving || isNavigating) ? "opacity-50 cursor-not-allowed" : ""
               }`}
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isSaving || isNavigating}
           >
-            {isLoading ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
           
           <button
             onClick={handleNext}
-            disabled={isLoading}
-            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+            disabled={isSaving || isNavigating}
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${(isSaving || isNavigating) ? "opacity-50 cursor-not-allowed" : ""
               }`}
           >
-            {isLoading ? "Next..." : "Next"}
+            {isNavigating ? "Saving..." : "Next"}
           </button>
 
         </div>

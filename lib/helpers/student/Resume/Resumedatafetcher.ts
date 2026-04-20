@@ -108,6 +108,7 @@ export type ResumeData = {
   internships: ResumeInternship[];
   projects: ResumeProject[];
   summary: string;
+  resumeSummaryId: number | null;
   certifications: ResumeCertification[];
   awards: ResumeAward[];
   clubs: ResumeClub[];
@@ -116,6 +117,32 @@ export type ResumeData = {
   achievements: ResumeAchievement[];
   languages: string[];
 };
+
+const EDUCATION_PRIORITY: Record<string, number> = {
+  phd: 5,
+  masters: 4,
+  postgraduate: 4,
+  undergraduate: 3,
+  diploma: 2,
+  secondary: 1,
+  primary: 0,
+};
+
+function sortEducationHighToPrimary(items: ResumeEducation[]): ResumeEducation[] {
+  return [...items].sort((a, b) => {
+    const levelDiff =
+      (EDUCATION_PRIORITY[b.educationLevel?.toLowerCase()] ?? -1) -
+      (EDUCATION_PRIORITY[a.educationLevel?.toLowerCase()] ?? -1);
+
+    if (levelDiff !== 0) return levelDiff;
+
+    const yearA = a.endYear ?? a.yearOfPassing ?? a.startYear ?? 0;
+    const yearB = b.endYear ?? b.yearOfPassing ?? b.startYear ?? 0;
+    if (yearB !== yearA) return yearB - yearA;
+
+    return b.resumeEducationDetailId - a.resumeEducationDetailId;
+  });
+}
 
 // ─── Main Fetcher ─────────────────────────────────────────────────────────────
 
@@ -170,7 +197,7 @@ export async function fetchAllResumeData(studentId: number): Promise<ResumeData>
 
     supabase
       .from("resume_profile_summary")
-      .select("summary")
+      .select("resumeSummaryId, summary")
       .eq("studentId", studentId)
       .eq("is_deleted", false)
       .maybeSingle(),
@@ -236,11 +263,12 @@ export async function fetchAllResumeData(studentId: number): Promise<ResumeData>
 
   return {
     personal: personal ?? null,
-    education: education ?? [],
+    education: sortEducationHighToPrimary(education ?? []),
     skillGroups,
     internships: internships ?? [],
     projects: projects ?? [],
     summary: summaryRow?.summary ?? "",
+    resumeSummaryId: summaryRow?.resumeSummaryId ?? null,
     certifications: certifications ?? [],
     awards: awards ?? [],
     clubs: clubs ?? [],

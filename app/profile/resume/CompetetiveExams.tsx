@@ -50,7 +50,6 @@ function ExamsShimmer() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function CompetetiveExams() {
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [availableExams, setAvailableExams] = useState<string[]>(DEFAULT_EXAMS);
   const [selectedExams, setSelectedExams] = useState<string[]>([]);
@@ -63,6 +62,14 @@ export default function CompetetiveExams() {
 
   const router = useRouter();
   const { studentId } = useUser();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const showSuccessToast = (message: string) =>
+    toast.success(message, { duration: 3000 });
+
+  const waitForToast = () =>
+    new Promise((resolve) => setTimeout(resolve, 700));
 
   const validateScore = (exam: string, value?: string) => {
     if (!value) return "Score is required";
@@ -116,7 +123,8 @@ export default function CompetetiveExams() {
   // ✅ UPDATED handleNext (Save + Navigate, NO validation block)
 
   const handleNext = async () => {
-    setIsSubmitting(true);
+    if (isSaving || isNavigating) return;
+    setIsNavigating(true);
 
     try {
       const payload: CompetitiveExamPayload[] = selectedExams.map((exam) => ({
@@ -132,23 +140,32 @@ export default function CompetetiveExams() {
         ...removedExams.map((exam) => softDeleteExam(studentId!, exam)),
       ]);
 
+      const hadExistingExams = initialExams.length > 0;
+      const hasChanges =
+        selectedExams.length !== initialExams.length ||
+        selectedExams.some((exam) => !initialExams.includes(exam));
       setInitialExams(selectedExams);
-      toast.success("Competitive Exams saved successfully"); // ✅ ADD THIS
+      showSuccessToast(
+        hadExistingExams && hasChanges
+          ? "Competitive exams updated successfully"
+          : "Competitive exams saved successfully"
+      );
+      await waitForToast();
 
       const res = await fetchResumePersonalDetails(studentId!);
       const workStatus = res?.data?.workStatus?.toLowerCase();
 
       if (workStatus === "fresher") {
-        router.push("/profile?resume=academic-achievements&Step=10");
+        router.push("/profile?resume=academic-achievements&Step=9");
       } else {
-        router.push("/profile?resume=employment&Step=10");
+        router.push("/profile?resume=employment&Step=9");
       }
 
     } catch (error: any) {
       toast.error(error?.message || "Failed to submit exams.");
       console.error("Submission Error:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsNavigating(false);
     }
   };
 
@@ -172,6 +189,7 @@ export default function CompetetiveExams() {
   };
 
   const handleSubmit = async () => {
+    if (isSaving || isNavigating) return;
     const validationErrors: Record<string, string> = {};
     selectedExams.forEach((exam) => {
       const err = validateScore(exam, scores[exam]);
@@ -189,7 +207,7 @@ export default function CompetetiveExams() {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSaving(true);
 
     try {
       // ✅ Clean — helper handles timestamps & is_deleted
@@ -206,15 +224,22 @@ export default function CompetetiveExams() {
         ...removedExams.map((exam) => softDeleteExam(studentId!, exam)),
       ]);
 
+      const hadExistingExams = initialExams.length > 0;
+      const hasChanges =
+        selectedExams.length !== initialExams.length ||
+        selectedExams.some((exam) => !initialExams.includes(exam));
       setInitialExams(selectedExams);
-      toast.success("Competitive Exams Submitted Successfully");
-      setTimeout(() => handleNext(), 500);
+      showSuccessToast(
+        hadExistingExams && hasChanges
+          ? "Competitive exams updated successfully"
+          : "Competitive exams saved successfully"
+      );
 
     } catch (error: any) {
       toast.error(error?.message || "Failed to submit exams.");
       console.error("Submission Error:", error);
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -377,20 +402,21 @@ export default function CompetetiveExams() {
           </div>
 
           <div className="mt-8 flex justify-end gap-3">
-            <button
+              <button
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSaving || isNavigating}
               className="bg-[#43C17A] text-white h-11 px-6 rounded-md cursor-pointer"
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
 
 
             <button
               onClick={handleNext}
+              disabled={isSaving || isNavigating}
               className="bg-[#43C17A] cursor-pointer text-white text-sm font-medium px-6 py-2 rounded-md"
             >
-              {isSubmitting ? "Saving..." : "Next"}
+              {isNavigating ? "Saving..." : "Next"}
             </button>
           </div>
         </>

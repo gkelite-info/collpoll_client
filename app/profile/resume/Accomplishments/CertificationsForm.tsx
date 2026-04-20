@@ -142,6 +142,12 @@ export default function CertificationsForm({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const showSuccessToast = (message: string) =>
+    toast.success(message, { duration: 3000 });
+
+  const waitForToast = () =>
+    new Promise((resolve) => setTimeout(resolve, 700));
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   const toInputDate = (iso: string | null): string => {
@@ -281,11 +287,11 @@ export default function CertificationsForm({
 
     if (resumeCertificateId) {
       await updateCertification(resumeCertificateId, payload);
-      toast.success(`Certification ${index + 1} updated successfully`);
+      showSuccessToast(`Certification ${index + 1} updated successfully`);
     } else {
       const result = await insertCertification({ studentId, ...payload });
       setResumeCertificateId(result.resumeCertificateId);
-      toast.success(`Certification ${index + 1} saved successfully`);
+      showSuccessToast(`Certification ${index + 1} saved successfully`);
     }
 
     return true;
@@ -299,7 +305,7 @@ export default function CertificationsForm({
     try {
       const success = await callApi();
       if (!success) return;
-      onSubmit();
+      await Promise.resolve(onSubmit());
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
     } finally {
@@ -320,7 +326,7 @@ export default function CertificationsForm({
 
     // Fully empty → skip everything, navigate directly
     if (isFormEmpty) {
-      router.push("/profile?resume=competitive-exams&Step=9");
+      router.push("/profile?resume=competitive-exams&Step=8");
       return;
     }
 
@@ -331,8 +337,9 @@ export default function CertificationsForm({
     try {
       const success = await callApi();
       if (!success) return;
-      onSubmit();
-      router.push("/profile?resume=competitive-exams&Step=9");
+      await Promise.resolve(onSubmit());
+      await waitForToast();
+      router.push("/profile?resume=competitive-exams&Step=8");
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
     } finally {

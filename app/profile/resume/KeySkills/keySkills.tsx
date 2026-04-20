@@ -26,7 +26,13 @@ export default function KeySkillsWithModal() {
   const [technical, setTechnical] = useState<Skill[]>([]);
   const [soft, setSoft] = useState<Skill[]>([]);
   const [tools, setTools] = useState<Skill[]>([]);
-  const [saving, setSaving] = useState(false);
+  const [initialSkills, setInitialSkills] = useState<Record<Section, Skill[]>>({
+    technical: [],
+    soft: [],
+    tools: [],
+  });
+  const [isSavingChanges, setIsSavingChanges] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // ← NEW: stores student's actual education rows
@@ -52,6 +58,7 @@ export default function KeySkillsWithModal() {
     soft: undefined,
     tools: undefined,
   });
+  const tempSkillIdRef = useRef(-1);
 
   const dropdownRefs = useRef<Record<Section, HTMLDivElement | null>>({
     technical: null,
@@ -93,9 +100,18 @@ export default function KeySkillsWithModal() {
       resumePhdEducationAPI.fetch(studentId),
     ])
       .then(([skillsData, primary, secondary, undergrad, masters, phd]) => {
-        setTechnical(skillsData.filter((d) => d.category === "Technical Skills"));
-        setSoft(skillsData.filter((d) => d.category === "Soft Skills"));
-        setTools(skillsData.filter((d) => d.category === "Tools & Frameworks"));
+        const nextTechnical = skillsData.filter((d) => d.category === "Technical Skills");
+        const nextSoft = skillsData.filter((d) => d.category === "Soft Skills");
+        const nextTools = skillsData.filter((d) => d.category === "Tools & Frameworks");
+
+        setTechnical(nextTechnical);
+        setSoft(nextSoft);
+        setTools(nextTools);
+        setInitialSkills({
+          technical: nextTechnical,
+          soft: nextSoft,
+          tools: nextTools,
+        });
 
         // Only keep levels the student has actually filled in
         const edu = [primary, secondary, undergrad, masters, phd]
@@ -179,7 +195,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
   };
 
   const handleAdd = async (section: Section, value: string): Promise<boolean> => {
-    if (!studentId) { toast.error("Student not loaded"); return false; }
     const trimmed = value.trim();
     if (!trimmed) return false;
 
@@ -189,19 +204,15 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
       return false;
     }
 
-    try {
-      setSaving(true);
-      const newSkill = await createStudentResumeSkill(studentId, section, trimmed);
-      if (section === "technical") setTechnical((p) => [...p, newSkill]);
-      if (section === "soft") setSoft((p) => [...p, newSkill]);
-      if (section === "tools") setTools((p) => [...p, newSkill]);
-      return true;
-    } catch {
-      toast.error("Failed to add skill");
-      return false;
-    } finally {
-      setSaving(false);
-    }
+    const newSkill = {
+      resumeSkillId: tempSkillIdRef.current--,
+      name: trimmed,
+    };
+
+    if (section === "technical") setTechnical((p) => [...p, newSkill]);
+    if (section === "soft") setSoft((p) => [...p, newSkill]);
+    if (section === "tools") setTools((p) => [...p, newSkill]);
+    return true;
   };
 
   const handleAddKeyword = async (section: Section) => {
@@ -242,20 +253,6 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
       ...prev,
       [section]: prev[section].includes(name) ? prev[section] : [name, ...prev[section]],
     }));
-
-    if (studentId) {
-      deleteStudentResumeSkill(studentId, resumeSkillId).catch(() => {
-        toast.error("Failed to remove skill");
-        const restoredSkill = { resumeSkillId, name };
-        if (section === "technical") setTechnical((p) => [...p, restoredSkill]);
-        if (section === "soft") setSoft((p) => [...p, restoredSkill]);
-        if (section === "tools") setTools((p) => [...p, restoredSkill]);
-        setSuggestions((prev) => ({
-          ...prev,
-          [section]: prev[section].filter((s) => s !== name),
-        }));
-      });
-    }
   };
 
   const handleAddSuggestion = async (section: Section, name: string) => {
@@ -264,11 +261,90 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
       [section]: prev[section].filter((s) => s !== name),
     }));
     setAddingSuggestion(name);
-    const success = await handleAdd(section, name);
+    const success = handleAdd(section, name);
     if (!success) {
       setSuggestions((prev) => ({ ...prev, [section]: [name, ...prev[section]] }));
     }
     setAddingSuggestion(null);
+  };
+
+  const reloadSkills = async () => {
+    if (!studentId) return;
+    const skillsData = await fetchStudentResumeSkills(studentId);
+    const nextTechnical = skillsData.filter((d) => d.category === "Technical Skills");
+    const nextSoft = skillsData.filter((d) => d.category === "Soft Skills");
+    const nextTools = skillsData.filter((d) => d.category === "Tools & Frameworks");
+
+    setTechnical(nextTechnical);
+    setSoft(nextSoft);
+    setTools(nextTools);
+    setInitialSkills({
+      technical: nextTechnical,
+      soft: nextSoft,
+      tools: nextTools,
+    });
+  };
+
+  const syncSkills = async (navigateAfterSave: boolean) => {
+    if (!studentId) {
+      toast.error("Student not loaded");
+      return;
+    }
+
+    const sections: Section[] = ["technical", "soft", "tools"];
+    const currentSkills: Record<Section, Skill[]> = {
+      technical,
+      soft,
+      tools,
+    };
+
+    try {
+      if (navigateAfterSave) {
+        setIsNavigating(true);
+      } else {
+        setIsSavingChanges(true);
+      }
+
+      for (const section of sections) {
+        const initialByName = new Map(
+          initialSkills[section].map((skill) => [skill.name.toLowerCase(), skill])
+        );
+        const currentByName = new Map(
+          currentSkills[section].map((skill) => [skill.name.toLowerCase(), skill])
+        );
+
+        const removedSkills = initialSkills[section].filter(
+          (skill) => !currentByName.has(skill.name.toLowerCase())
+        );
+        const addedSkills = currentSkills[section].filter(
+          (skill) => !initialByName.has(skill.name.toLowerCase())
+        );
+
+        await Promise.all(
+          removedSkills.map((skill) =>
+            deleteStudentResumeSkill(studentId, skill.resumeSkillId)
+          )
+        );
+
+        await Promise.all(
+          addedSkills.map((skill) =>
+            createStudentResumeSkill(studentId, section, skill.name)
+          )
+        );
+      }
+
+      await reloadSkills();
+      toast.success("Key skills saved successfully");
+
+      if (navigateAfterSave) {
+        router.push("/profile?resume=languages&Step=4");
+      }
+    } catch {
+      toast.error("Failed to save key skills");
+    } finally {
+      setIsSavingChanges(false);
+      setIsNavigating(false);
+    }
   };
 
   if (loading) return <KeySkillsShimmer />;
@@ -405,7 +481,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
                     <button
                       key={s}
                       type="button"
-                      disabled={saving}
+                      disabled={isSavingChanges || isNavigating}
                       onClick={() => handleAddFromSearch(section, s)}
                       className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F6FDF9] text-left transition-colors disabled:opacity-50"
                     >
@@ -424,7 +500,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
                 <SuggestedPill
                   key={s}
                   label={s}
-                  disabled={addingSuggestion === s || saving}
+                  disabled={addingSuggestion === s || isSavingChanges || isNavigating}
                   onAdd={() => handleAddSuggestion(section, s)}
                 />
               ))}
@@ -432,7 +508,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
           )}
 
           {loadingSuggestions && suggestions[section].length === 0 && !search.query && (
-            <p className="text-xs text-gray-300 animate-pulse">Loading AI suggestions...</p>
+            <p className="text-xs text-[#43C17A] animate-pulse font-medium">Loading Suggestions...</p>
           )}
         </div>
       </section>
@@ -447,12 +523,20 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
           {renderSection("soft", "Soft Skills", soft)}
           {renderSection("tools", "Tools & Frameworks", tools)}
         </div>
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-end gap-3 mt-6">
           <button
-            onClick={() => router.push("/profile?resume=languages&Step=4")}
-            className="bg-[#43C17A] cursor-pointer text-white px-5 py-1.5 rounded-md text-sm"
+            onClick={() => syncSkills(false)}
+            disabled={isSavingChanges || isNavigating}
+            className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm ${isSavingChanges || isNavigating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
-            Next
+            {isSavingChanges ? "Saving..." : "Save"}
+          </button>
+          <button
+            onClick={() => syncSkills(true)}
+            disabled={isSavingChanges || isNavigating}
+            className={`bg-[#43C17A] text-white px-5 py-1.5 rounded-md text-sm ${isSavingChanges || isNavigating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            {isNavigating ? "Saving..." : "Next"}
           </button>
         </div>
       </div>
@@ -461,7 +545,7 @@ Category must stay as ${section === "technical" ? "Technical Skills only" : sect
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onAdd={handleAdd}
-        isLoading={saving}
+        isLoading={isSavingChanges || isNavigating}
         defaultSection="technical"
       />
     </div>

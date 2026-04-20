@@ -13,17 +13,17 @@ type StepItem = {
 };
 
 const STEP_DATA: StepItem[] = [
-    { id: 1, title: "Personal Details", query: "personal-details" },
-    { id: 2, title: "Education", query: "education" },
-    { id: 3, title: "Key Skills", query: "key-skills" },
-    { id: 4, title: "Languages", query: "languages" },
-    { id: 5, title: "Internships", query: "internships" },
-    { id: 6, title: "Projects", query: "projects" },
-    { id: 7, title: "Profile Summary", query: "profile-summary" },
-    { id: 8, title: "Accomplishments", query: "accomplishments" },
-    { id: 9, title: "Competitive Exams", query: "competitive-exams" },
-    { id: 10, title: "Employment", query: "employment" },
-    { id: 11, title: "Academic Achievements", query: "academic-achievements" },
+    { id: 1,  title: "Personal Details",      query: "personal-details" },
+    { id: 2,  title: "Education",             query: "education" },
+    { id: 3,  title: "Key Skills",            query: "key-skills" },
+    { id: 4,  title: "Languages",             query: "languages" },
+    { id: 5,  title: "Internships",           query: "internships" },
+    { id: 6,  title: "Projects",              query: "projects" },
+    { id: 7,  title: "Accomplishments",       query: "accomplishments" },
+    { id: 8,  title: "Competitive Exams",     query: "competitive-exams" },
+    { id: 9,  title: "Employment",            query: "employment" },
+    { id: 10, title: "Academic Achievements", query: "academic-achievements" },
+    { id: 11, title: "Profile Summary",       query: "profile-summary" },
 ];
 
 export default function ResumeSteps() {
@@ -54,7 +54,6 @@ export default function ResumeSteps() {
         if (newIndex !== -1) {
             setCurrentStep(newIndex + 1);
         } else if (stepQuery === null && !searchParams.toString()) {
-            // Default to first step if no query params
             setCurrentStep(1);
         }
     }, [searchParams.toString()]);
@@ -62,13 +61,10 @@ export default function ResumeSteps() {
     useEffect(() => {
         const loadData = async () => {
             const res = await fetchResumePersonalDetails(studentId!);
-
             if (res?.success && res?.data) {
-                // ✅ ADDED
                 setWorkStatus(res.data.workStatus);
             }
         };
-
         loadData();
     }, [studentId]);
 
@@ -78,7 +74,7 @@ export default function ResumeSteps() {
             return STEP_DATA.filter(step => step.query !== "employment");
         }
         return STEP_DATA;
-    }, [workStatus, STEP_DATA]);
+    }, [workStatus]);
 
     stepRefs.current = stepRefs.current.slice(0, filteredSteps.length);
     const addRef = (el: HTMLDivElement | null, index: number) => {
@@ -129,10 +125,10 @@ export default function ResumeSteps() {
 
                             return (
                                 <div
-                                    key={index + 1}
+                                    key={step.id}
                                     ref={(el) => addRef(el, index)}
                                     onClick={() => {
-                                        setCurrentStep(step.id);
+                                        setCurrentStep(index + 1);
                                         router.push(`/profile?resume=${step.query}&Step=${index + 1}`, {
                                             scroll: false,
                                         });
@@ -140,8 +136,7 @@ export default function ResumeSteps() {
                                     className="flex items-center justify-center cursor-pointer relative select-none"
                                 >
                                     <div
-                                        className={`flex flex-col items-center transition-all ${isActive ? "scale-110" : ""
-                                            }`}
+                                        className={`flex flex-col items-center transition-all ${isActive ? "scale-110" : ""}`}
                                     >
                                         <div>
                                             {isCompleted ? (
@@ -154,8 +149,7 @@ export default function ResumeSteps() {
                                         </div>
 
                                         <span
-                                            className={`text-xs mt-2 w-20 text-center text-nowrap ${isActive ? "text-[#74CB64] font-medium" : "text-[#878787]"
-                                                }`}
+                                            className={`text-xs mt-2 w-20 text-center text-nowrap ${isActive ? "text-[#74CB64] font-medium" : "text-[#878787]"}`}
                                         >
                                             {step.title}
                                         </span>
@@ -184,30 +178,6 @@ export default function ResumeSteps() {
                 </button>
 
             </div>
-
-            {/* <div className="mt-4 flex items-center gap-3">
-                <button
-                    onClick={() =>
-                        setCurrentStep((s) => Math.max(1, STEP_DATA.find((x) => x.id === s - 1)?.id ?? 1))
-                    }
-                    className="px-3 py-2 bg-gray-100 border rounded-md text-sm"
-                >
-                    Prev
-                </button>
-
-                <button
-                    onClick={() =>
-                        setCurrentStep((s) => Math.min(STEP_DATA[STEP_DATA.length - 1].id, s + 1))
-                    }
-                    className="px-3 py-2 bg-emerald-500 text-white rounded-md text-sm"
-                >
-                    Next
-                </button>
-
-                <div className="ml-3 text-sm text-gray-600">
-                    Step <span className="font-medium">{currentStep}</span> of {STEP_DATA.length}
-                </div>
-            </div> */}
         </div>
     );
 }

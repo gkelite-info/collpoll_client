@@ -9,8 +9,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { fetchAllResumeData } from "@/lib/helpers/student/Resume/Resumedatafetcher";
-import { calculateATSScore, ATSResult } from "@/lib/helpers/student/Resume/atsScoreCalculator";
+import { fetchResumePersonalDetails } from "@/lib/helpers/student/Resume/Resumepersonaldetailsapi";
 
 const DEFAULT_ACHIEVEMENTS = [
   "College Topper",
@@ -22,14 +21,14 @@ const DEFAULT_ACHIEVEMENTS = [
   "All Rounder",
 ];
 
+// ── Shimmer ───────────────────────────────────────────────────────────────────
 
 function ShimmerBlock({ className = "" }: { className?: string }) {
   return (
     <div
       className={`rounded-md ${className}`}
       style={{
-        background:
-          "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
+        background: "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
         backgroundSize: "200% 100%",
         animation: "shimmer 1.4s infinite",
       }}
@@ -49,23 +48,26 @@ function AchievementsShimmer() {
   );
 }
 
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function AcademicAchievements() {
   const { studentId } = useUser();
   const router = useRouter();
 
-  const [achievements, setAchievements] =
-    useState<string[]>(DEFAULT_ACHIEVEMENTS);
+  const [achievements, setAchievements] = useState<string[]>(DEFAULT_ACHIEVEMENTS);
   const [selected, setSelected] = useState<string[]>([]);
   const [initialSelected, setInitialSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherValue, setOtherValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isNextLoading, setIsNextLoading] = useState(false);
 
-  const [beforeScore, setBeforeScore] = useState<ATSResult | null>(null);
-  const [scoreLoading, setScoreLoading] = useState(true);
+  const showSuccessToast = (message: string) =>
+    toast.success(message, { duration: 3000 });
 
+  const waitForToast = () =>
+    new Promise((resolve) => setTimeout(resolve, 700));
 
   useEffect(() => {
     if (!studentId) return;
@@ -76,12 +78,10 @@ export default function AcademicAchievements() {
         const data = await getAcademicAchievements(studentId);
         if (data && data.length > 0) {
           const existingNames = data.map((item: any) => item.achievementName);
-
           setAchievements((prev) => {
             const combined = [...prev, ...existingNames];
             return Array.from(new Set(combined));
           });
-
           setSelected(existingNames);
           setInitialSelected(existingNames);
         }
@@ -93,19 +93,6 @@ export default function AcademicAchievements() {
     };
 
     load();
-  }, [studentId]);
-
-  useEffect(() => {
-    if (!studentId) return;
-    setScoreLoading(true);
-    fetchAllResumeData(studentId)
-      .then((data) => {
-        const score = calculateATSScore(data);
-        setBeforeScore(score);
-        sessionStorage.setItem("ats_before_score", JSON.stringify(score));
-      })
-      .catch(() => { })
-      .finally(() => setScoreLoading(false));
   }, [studentId]);
 
   const toggle = (item: string) => {
@@ -130,43 +117,83 @@ export default function AcademicAchievements() {
     setShowOtherInput(false);
   };
 
-  const handleSubmit = async () => {
-    // if (selected.length === 0) {
-    //   toast.error("Please select at least one achievement.");
-    //   return;
-    // }
+  // ── Shared save logic ───────────────────────────────────────────────────────
 
+  const saveAchievements = async (): Promise<boolean> => {
     if (!studentId) {
       toast.error("Session expired. Please refresh.");
-      return;
+      return false;
     }
 
+    const payload = selected.map((name) => ({
+      studentId: studentId!,
+      achievementName: name,
+    }));
+
+    const removed = initialSelected.filter((name) => !selected.includes(name));
+
+    await Promise.all([
+      upsertAcademicAchievements(payload),
+      ...removed.map((name) => softDeleteAcademicAchievement(studentId!, name)),
+    ]);
+
+    setInitialSelected(selected);
+    return true;
+  };
+
+  const getSuccessMessage = () => {
+    const hadExistingAchievements = initialSelected.length > 0;
+    const hasChanges =
+      selected.length !== initialSelected.length ||
+      selected.some((achievement) => !initialSelected.includes(achievement));
+
+    if (hadExistingAchievements && hasChanges) {
+      return "Academic achievements updated successfully.";
+    }
+
+    return "Academic achievements saved successfully.";
+  };
+
+  // ── Save handler ────────────────────────────────────────────────────────────
+
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-
     try {
-      const payload = selected.map((name) => ({
-        studentId: studentId!,
-        achievementName: name,
-      }));
-
-      const removed = initialSelected.filter((name) => !selected.includes(name));
-
-      await Promise.all([
-        upsertAcademicAchievements(payload),
-        ...removed.map((name) => softDeleteAcademicAchievement(studentId!, name)),
-      ]);
-
-      setInitialSelected(selected);
-      toast.success("Academic achievements saved successfully.");
-      setTimeout(() => {
-        router.push("/profile?resume=profilesummaryai&view=templates");
-      }, 500);
+      const success = await saveAchievements();
+      if (!success) return;
+      showSuccessToast(getSuccessMessage());
     } catch (error: any) {
       toast.error(error.message || "Failed to save achievements.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // ── Next handler ────────────────────────────────────────────────────────────
+
+  const handleNext = async () => {
+    setIsNextLoading(true);
+    try {
+      const success = await saveAchievements();
+      if (!success) return;
+      showSuccessToast(getSuccessMessage());
+      await waitForToast();
+      const res = await fetchResumePersonalDetails(studentId!);
+      const workStatus = res?.data?.workStatus?.toLowerCase();
+      // router.push("/profile?resume=profile-summary&Step=11");
+      if (workStatus === "fresher") {
+        router.push("/profile?resume=profile-summary&Step=10");
+      } else {
+        router.push("/profile?resume=profile-summary&Step=11");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save achievements.");
+    } finally {
+      setIsNextLoading(false);
+    }
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -256,91 +283,24 @@ export default function AcademicAchievements() {
               )}
             </div>
 
-            <div className="mt-8">
+            {/* Save + Next buttons */}
+            <div className="mt-8 flex justify-end gap-3">
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="w-full bg-[#43C17A] text-white text-sm font-medium h-11 rounded-md cursor-pointer disabled:opacity-50"
+                disabled={isSubmitting || isNextLoading}
+                className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${isSubmitting || isNextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+                  }`}
               >
-                {isSubmitting ? "Saving..." : "Submit"}
+                {isSubmitting ? "Saving..." : "Save"}
               </button>
-
-              <div className="mt-4 rounded-xl border border-purple-100 bg-gradient-to-br from-[#faf7ff] to-[#f3eeff] p-4">
-                <p className="text-[11px] font-bold text-purple-500 uppercase tracking-widest mb-3">
-                  📊 Your Current ATS Score — Before AI
-                </p>
-
-                {scoreLoading ? (
-                  <div className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-purple-400" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                    </svg>
-                    <span className="text-xs text-purple-300">Calculating...</span>
-                  </div>
-                ) : beforeScore ? (
-                  <div className="flex items-center gap-4">
-                    <div className="relative shrink-0" style={{ width: 72, height: 72 }}>
-                      <svg width="72" height="72" viewBox="0 0 72 72">
-                        <circle cx="36" cy="36" r="28" fill="none" stroke="#e9d5ff" strokeWidth="7" />
-                        <circle
-                          cx="36" cy="36" r="28"
-                          fill="none"
-                          stroke={beforeScore.color}
-                          strokeWidth="7"
-                          strokeLinecap="round"
-                          strokeDasharray={2 * Math.PI * 28}
-                          strokeDashoffset={
-                            2 * Math.PI * 28 - (beforeScore.total / 100) * 2 * Math.PI * 28
-                          }
-                          transform="rotate(-90 36 36)"
-                          style={{ transition: "stroke-dashoffset 1s ease" }}
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-base font-black" style={{ color: beforeScore.color }}>
-                          {beforeScore.total}
-                        </span>
-                        <span className="text-[8px] text-gray-400">/100</span>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <span
-                        className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mb-2"
-                        style={{ background: `${beforeScore.color}20`, color: beforeScore.color }}
-                      >
-                        {beforeScore.label}
-                      </span>
-                      <p className="text-[11px] text-purple-500 font-semibold leading-snug">
-                        ✨ Use AI to boost your score and stand out to recruiters!
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-              <div className="mt-4 bg-purple-100 rounded-xl p-4 flex flex-col items-center text-center">
-                <div className="flex items-center gap-2 mb-2 w-full">
-                  <img
-                    src="/AI Robot.png"
-                    alt="AI Robot"
-                    width={70}
-                    height={70}
-                    className="object-contain shrink-0"
-                  />
-                  <p className="flex-1 text-sm font-medium text-gray-700">
-                    Do you feel your current resume doesn't fully showcase your skills or match the job you're aiming for?
-                    <br />
-                    Want to enhance it to better fit your target role?
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push("/profile?resume=profilesummaryai")}
-                  className="bg-[#1e1b4b] text-white text-sm px-5 py-1.5 rounded-md font-medium hover:bg-[#2d2a6e] transition-all cursor-pointer"
-                >
-                  Click here
-                </button>
-              </div>
-
+              <button
+                onClick={handleNext}
+                disabled={isSubmitting || isNextLoading}
+                className={`px-6 py-2 rounded-md text-sm font-medium text-white min-w-[90px] ${isSubmitting || isNextLoading ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+                  }`}
+              >
+                {isNextLoading ? "Saving..." : "Next"}
+              </button>
             </div>
           </div>
         )}

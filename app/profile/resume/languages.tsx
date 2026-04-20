@@ -18,8 +18,10 @@ const toPascalCase = (str: string) =>
 type LangSearch = { query: string; results: string[]; loading: boolean; open: boolean };
 
 export default function ResumeLanguages() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [initialSelected, setInitialSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { studentId, collegeEducationType, collegeBranchCode } = useUser();
@@ -50,7 +52,10 @@ export default function ResumeLanguages() {
     if (!studentId) return;
     setLoading(true);
     fetchResumeLanguages(studentId)
-      .then((langs) => setSelected(langs))
+      .then((langs) => {
+        setSelected(langs);
+        setInitialSelected(langs);
+      })
       .catch(() => toast.error("Failed to load languages"))
       .finally(() => setLoading(false));
   }, [studentId]);
@@ -109,17 +114,38 @@ export default function ResumeLanguages() {
     setDismissed((prev) => prev.filter((s) => s !== lang));
   };
 
+  const getSuccessMessage = (nextSelected: string[]) => {
+    const hadExistingLanguages = initialSelected.length > 0;
+    const hasChanges =
+      nextSelected.length !== initialSelected.length ||
+      nextSelected.some((lang) => !initialSelected.includes(lang));
+
+    if (hadExistingLanguages && hasChanges) {
+      return "Languages updated successfully!";
+    }
+
+    return "Languages saved successfully!";
+  };
+
+  const persistLanguages = async (): Promise<boolean> => {
+    if (!studentId) return false;
+    if (selected.length === 0) { toast.error("Select at least one language"); return false; }
+
+    await upsertResumeLanguages(studentId, selected);
+    setInitialSelected(selected);
+    toast.success(getSuccessMessage(selected));
+    return true;
+  };
+
   const saveLanguages = async () => {
-    if (isSubmitting || !studentId) return;
-    if (selected.length === 0) { toast.error("Select at least one language"); return; }
+    if (isSaving || isNavigating || !studentId) return;
     try {
-      setIsSubmitting(true);
-      await upsertResumeLanguages(studentId, selected);
-      toast.success("Languages saved successfully!");
+      setIsSaving(true);
+      await persistLanguages();
     } catch {
       toast.error("Something went wrong!");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -268,33 +294,33 @@ export default function ResumeLanguages() {
           <div className="flex justify-end gap-3 mt-4">
             <button
               onClick={saveLanguages}
-              disabled={isSubmitting}
+              disabled={isSaving || isNavigating}
               className={`px-8 py-2 rounded-md text-sm font-semibold text-white cursor-pointer 
-      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
+      ${isSaving || isNavigating ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
 
             <button
               onClick={async () => {
-                if (isSubmitting || !studentId) return;
+                if (isSaving || isNavigating || !studentId) return;
                 if (selected.length === 0) { toast.error("Select at least one language"); return; }
                 try {
-                  setIsSubmitting(true);
-                  await upsertResumeLanguages(studentId, selected);
-                  toast.success("Languages saved successfully!");
+                  setIsNavigating(true);
+                  const success = await persistLanguages();
+                  if (!success) return;
                   router.push("/profile?resume=internships&Step=5");
                 } catch {
                   toast.error("Something went wrong!");
                 } finally {
-                  setIsSubmitting(false);
+                  setIsNavigating(false);
                 }
               }}
-              disabled={isSubmitting}
+              disabled={isSaving || isNavigating}
               className={`px-5 py-2 rounded-md text-sm font-medium text-white cursor-pointer
-      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}`}
+      ${isSaving || isNavigating ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}`}
             >
-              {isSubmitting ? "Saving..." : "Next"}
+              {isNavigating ? "Saving..." : "Next"}
             </button>
           </div>
         </div>

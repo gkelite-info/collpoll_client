@@ -399,16 +399,30 @@ export default function ProjectItem({
     }
   };
 
-  const handleSave = async () => { if (!validate()) return; await callApi(); };
+  const handleSave = async () => {
+    if (!validate()) return;
+    try {
+      await callApi();
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong while saving the project.");
+    }
+  };
 
   const handleNext = async () => {
-    const isFormEmpty =
-      !data.projectName.trim() && !data.domain.trim() && !data.startDate &&
-      !data.endDate && !data.tools.length && !data.projectLink.trim() && !data.description.trim();
-    if (isFormEmpty) { router.push("/profile?resume=profile-summary&Step=7"); return; }
-    if (!validate()) return;
-    const success = await callApi();
-    if (success) router.push("/profile?resume=profile-summary&Step=7");
+    try {
+      const isFormEmpty =
+        !data.projectName.trim() && !data.domain.trim() && !data.startDate &&
+        !data.endDate && !data.tools.length && !data.projectLink.trim() && !data.description.trim();
+      if (isFormEmpty) { router.push("/profile?resume=accomplishments&Step=7"); return; }
+      if (isFormEmpty) { router.push("/profile?resume=accomplishments"); return; }
+      if (!validate()) return;
+      const success = await callApi();
+      if (success) router.push("/profile?resume=accomplishments&Step=7");
+    } catch (err) {
+      console.error(err);
+      toast.error("Something went wrong while saving the project.");
+    }
   };
 
   useEffect(() => {
@@ -654,11 +668,10 @@ export default function ProjectItem({
                   type="button"
                   onClick={() => setShowSearchBar((prev) => !prev)}
                   title="Search for more tools"
-                  className={`p-1 rounded-md transition-colors cursor-pointer ${
-                    showSearchBar
+                  className={`p-1 rounded-md transition-colors cursor-pointer ${showSearchBar
                       ? "bg-purple-200 text-purple-700"
                       : "text-purple-400 hover:text-purple-600 hover:bg-purple-100"
-                  }`}
+                    }`}
                 >
                   <MagnifyingGlass size={14} weight="bold" />
                 </button>

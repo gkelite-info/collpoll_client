@@ -91,6 +91,12 @@ export default function AwardsForm({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const showSuccessToast = (message: string) =>
+    toast.success(message, { duration: 3000 });
+
+  const waitForToast = () =>
+    new Promise((resolve) => setTimeout(resolve, 700));
+
   // ── Pre-fill on edit ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!existingData) return;
@@ -171,12 +177,12 @@ export default function AwardsForm({
 
     if (awardId) {
       await updateAward(awardId, payload);
-      toast.success(`Award ${index + 1} updated successfully`);
+      showSuccessToast(`Award ${index + 1} updated successfully`);
     } else {
       const result = await insertAward(payload);
       savedId = result.awardId;
       setAwardId(result.awardId);
-      toast.success(`Award ${index + 1} saved successfully`);
+      showSuccessToast(`Award ${index + 1} saved successfully`);
     }
 
     return {
@@ -196,7 +202,7 @@ export default function AwardsForm({
     try {
       const record = await callApi();
       if (!record) return;
-      onSubmit(record);
+      await Promise.resolve(onSubmit(record));
     } catch {
       toast.error("Something went wrong!");
     } finally {
@@ -215,7 +221,7 @@ export default function AwardsForm({
 
     // fully empty → skip everything
     if (isFormEmpty) {
-      router.push("/profile?resume=competitive-exams&Step=9");
+      router.push("/profile?resume=competitive-exams&Step=8");
       return;
     }
 
@@ -232,8 +238,9 @@ export default function AwardsForm({
       const record = await callApi();
       if (!record) return;
 
-      onSubmit(record);
-      router.push("/profile?resume=competitive-exams&Step=9");
+      await Promise.resolve(onSubmit(record));
+      await waitForToast();
+      router.push("/profile?resume=competitive-exams&Step=8");
     } catch (err: any) {
       toast.error(err?.message ?? "Something went wrong!");
     } finally {

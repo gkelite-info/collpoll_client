@@ -17,6 +17,13 @@ export interface InternshipFormData {
   description: string;
 }
 
+export interface InternshipFormActions {
+  handleSave: () => Promise<void>;
+  handleNext: () => Promise<void>;
+  isSaving: boolean;
+  isNavigating: boolean;
+}
+
 // ── Sanitizers ────────────────────────────────────────────────────────────────
 
 const sanitizeOrganization = (value: string) =>
@@ -595,14 +602,24 @@ export default function InternshipForm({
   initialData,
   internshipId,
   onNext,
+  hideActions = false,
+  registerActions,
 }: {
   studentId: number;
   onSubmitted: (data: InternshipFormData, dbId?: number) => void;
   initialData?: InternshipFormData;
   internshipId?: number;
   onNext?: (nextRoute: string) => void;
+  hideActions?: boolean;
+  registerActions?: (actions: InternshipFormActions) => void;
 }) {
   const router = useRouter();
+
+  const getErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === "string" && error.trim()) return error;
+    return "Unknown error";
+  };
 
   // ── field state ──────────────────────────────────────────────────────────────
   const [organization, setOrganization] = useState(initialData?.organization || "");
@@ -626,7 +643,8 @@ export default function InternshipForm({
 
 
   // ── ui state ─────────────────────────────────────────────────────────────────
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // ── Role helpers ─────────────────────────────────────────────────────────────
   const handleRoleSelectChange = (val: string) => {
@@ -724,7 +742,6 @@ export default function InternshipForm({
     const trimmedProject = projectName.trim();
     const trimmedUrl = projectUrl.trim();
 
-    setIsSubmitting(true);
     try {
       const result = await upsertResumeInternship({
         resumeInternshipId: internshipId,
@@ -741,7 +758,8 @@ export default function InternshipForm({
       });
 
       toast.success(internshipId ? "Internship updated successfully" : "Internship saved successfully");
-      onSubmitted(
+      await Promise.resolve(
+        onSubmitted(
         {
           organization: trimmedOrg,
           role,
@@ -754,24 +772,29 @@ export default function InternshipForm({
           description: description.trim(),
         },
         result.resumeInternshipId
-      );
+      ));
       return true;
-    } catch (error: any) {
-      toast.error(`Failed to save: ${error.message || "Unknown error"}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to save: ${getErrorMessage(error)}`);
       return false;
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // ── Save handler ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
+    if (isSaving || isNavigating) return;
     if (!validate()) return;
-    await callApi();
+    setIsSaving(true);
+    try {
+      await callApi();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // ── Next handler ─────────────────────────────────────────────────────────────
   const handleNext = async () => {
+    if (isSaving || isNavigating) return;
     const isFormEmpty =
       !organization.trim() &&
       !role &&
@@ -784,16 +807,39 @@ export default function InternshipForm({
       !description.trim();
 
     if (isFormEmpty) {
-      router.push("/profile?resume=projects&Step=6");
+      if (onNext) {
+        onNext("/profile?resume=projects&Step=6");
+      } else {
+        router.push("/profile?resume=projects&Step=6");
+      }
       return;
     }
 
     if (!validate()) return;
-    const success = await callApi();
-    if (success) {
-      router.push("/profile?resume=projects&Step=6");
+    setIsNavigating(true);
+    try {
+      const success = await callApi();
+      if (success) {
+        if (onNext) {
+          onNext("/profile?resume=projects&Step=6");
+        } else {
+          router.push("/profile?resume=projects&Step=6");
+        }
+      }
+    } finally {
+      setIsNavigating(false);
     }
   };
+
+  useEffect(() => {
+    if (!registerActions) return;
+    registerActions({
+      handleSave,
+      handleNext,
+      isSaving,
+      isNavigating,
+    });
+  }, [registerActions, isSaving, isNavigating, organization, role, startDate, endDate, projectName, projectUrl, location, domain, description]);
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -807,7 +853,7 @@ export default function InternshipForm({
             value={organization}
             onChange={(e) => setOrganization(sanitizeOrganization(e.target.value))}
             placeholder="Organization Name"
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             maxLength={100}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
@@ -821,7 +867,7 @@ export default function InternshipForm({
             isCustom={!!role && !ROLES.includes(role)}
             showOther={showOtherRole}
             otherValue={otherRoleValue}
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             onSelectChange={handleRoleSelectChange}
             onOtherChange={setOtherRoleValue}
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherRole()}
@@ -841,7 +887,7 @@ export default function InternshipForm({
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(sanitizeDate(e.target.value))}
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer"
           />
         </div>
@@ -851,7 +897,7 @@ export default function InternshipForm({
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(sanitizeDate(e.target.value))}
-            disabled={isSubmitting || !startDate}
+            disabled={isSaving || isNavigating || !startDate}
             min={startDate}
             className={`w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none cursor-pointer ${!startDate ? "bg-gray-50 cursor-not-allowed" : ""
               }`}
@@ -867,7 +913,7 @@ export default function InternshipForm({
             value={projectName}
             onChange={(e) => setProjectName(sanitizeProjectName(e.target.value))}
             placeholder="Enter the name of the project"
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             maxLength={100}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
@@ -878,7 +924,7 @@ export default function InternshipForm({
             value={projectUrl}
             onChange={(e) => setProjectUrl(sanitizeProjectUrl(e.target.value))}
             placeholder="https://example.com"
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             className="w-full border border-[#CCCCCC] text-[#525252] rounded-md px-3 py-2 text-sm focus:outline-none"
           />
         </div>
@@ -895,7 +941,7 @@ export default function InternshipForm({
             isCustom={!!location && !LOCATIONS.includes(location)}
             showOther={showOtherLocation}
             otherValue={otherLocationValue}
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             onSelectChange={handleLocationSelectChange}
             onOtherChange={setOtherLocationValue}
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherLocation()}
@@ -914,7 +960,7 @@ export default function InternshipForm({
             isCustom={!!domain && !DEFAULT_DOMAINS.includes(domain)}
             showOther={showOtherDomain}
             otherValue={otherDomainValue}
-            disabled={isSubmitting}
+            disabled={isSaving || isNavigating}
             onSelectChange={handleDomainSelectChange}
             onOtherChange={setOtherDomainValue}
             onOtherKeyDown={(e) => e.key === "Enter" && handleAddOtherDomain()}
@@ -932,7 +978,7 @@ export default function InternshipForm({
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          disabled={isSubmitting}
+          disabled={isSaving || isNavigating}
           placeholder="Describe your key responsibilities, achievements, and skills gained during the internship.........."
           rows={4}
           maxLength={500}
@@ -942,26 +988,28 @@ export default function InternshipForm({
       </div>
 
       {/* Buttons */}
-      <div className="flex justify-end gap-3">
-        <button
-          onClick={handleSave}
-          disabled={isSubmitting}
-          className={`px-6 py-2 rounded-md text-sm text-white ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
-            }`}
-        >
-          {isSubmitting ? "Saving..." : "Save"}
-        </button>
+      {!hideActions && (
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={handleSave}
+            disabled={isSaving || isNavigating}
+            className={`px-6 py-2 rounded-md text-sm text-white ${(isSaving || isNavigating) ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+              }`}
+          >
+            {isSaving ? "Saving..." : "Save"}
+          </button>
 
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={isSubmitting}
-          className={`px-6 py-1.5 rounded-md text-sm font-medium text-white ${isSubmitting ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
-            }`}
-        >
-          {isSubmitting ? "Saving..." : "Next"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={handleNext}
+            disabled={isSaving || isNavigating}
+            className={`px-6 py-1.5 rounded-md text-sm font-medium text-white ${(isSaving || isNavigating) ? "bg-[#43C17A]/50 cursor-not-allowed" : "bg-[#43C17A] cursor-pointer"
+              }`}
+          >
+            {isNavigating ? "Saving..." : "Next"}
+          </button>
+        </div>
+      )}
 
     </div>
   );
