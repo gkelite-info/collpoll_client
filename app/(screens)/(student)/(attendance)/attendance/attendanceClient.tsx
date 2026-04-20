@@ -11,14 +11,17 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import SubjectAttendance from "../../(attendance)/subject-attendance/page";
 import SubjectAttendanceDetails from "../../(attendance)/subject-attendance-details/page";
 import { useUser } from "@/app/utils/context/UserContext";
-import { DashboardSkeleton, TableSkeleton } from "../shimmer/attendanceDashSkeleton";
+import {
+  DashboardSkeleton,
+  TableSkeleton,
+} from "../shimmer/attendanceDashSkeleton";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 
 interface TableRow {
   Subject: string;
   Faculty: string;
-  "Today's Status": React.ReactNode; // ← CHANGED: ReactNode to support badge
+  "Today's Status": React.ReactNode;
   "Percentage %": string;
   Notes: React.ReactNode;
 }
@@ -35,14 +38,7 @@ interface CardItem {
   totalPercentage?: string | number;
 }
 
-// ── CHANGED: removed "Class Attendance" ──────────────────────────────────────
-const columns = [
-  "Subject",
-  "Faculty",
-  "Today's Status",
-  "Percentage %",
-  // "Notes",
-];
+const columns = ["Subject", "Faculty", "Today's Status", "Percentage %"];
 
 function getStatusClass(status: string) {
   switch (status.toLowerCase()) {
@@ -61,10 +57,9 @@ function formatAttendanceStatus(status: string) {
   return status
     .toLowerCase()
     .replace(/_/g, " ")
-    .replace(/\b\w/g, c => c.toUpperCase());
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// ── ADDED: colored badge only for Class Cancel ───────────────────────────────
 function StatusBadge({ status }: { status: string }) {
   const label = formatAttendanceStatus(status);
   if (status === "CLASS_CANCEL") {
@@ -88,7 +83,6 @@ function StatusBadge({ status }: { status: string }) {
   return <span>{label}</span>;
 }
 
-
 export default function AttendanceClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -96,10 +90,14 @@ export default function AttendanceClient() {
   const tab = searchParams.get("tab");
   const showSubjectAttendanceTable = tab === "subject-attendance";
   const showSubjectAttendanceDetails = tab === "subject-attendance-details";
-  const hideRightSection = showSubjectAttendanceTable || showSubjectAttendanceDetails;
+  const hideRightSection =
+    showSubjectAttendanceTable || showSubjectAttendanceDetails;
   const [dataLoading, setDataLoading] = useState(false);
   const [dashboardData, setDashboardData] = useState<any>(null);
+
   const { collegeEducationType } = useStudent();
+  const isInter = collegeEducationType === "Inter";
+
   const [viewDate, setViewDate] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -110,9 +108,7 @@ export default function AttendanceClient() {
   const [tableLoading, setTableLoading] = useState(false);
 
   useEffect(() => {
-    if (userLoading) {
-      return;
-    }
+    if (userLoading) return;
 
     if (!userId) {
       setDataLoading(false);
@@ -138,13 +134,12 @@ export default function AttendanceClient() {
 
         const safeUserId = userId;
 
-        const isInter = collegeEducationType === "Inter";
         const data = await getStudentDashboardData(
           safeUserId,
           dateStr,
           currentPage,
           rowsPerPage,
-          isInter
+          isInter,
         );
 
         if (isMounted) {
@@ -165,8 +160,7 @@ export default function AttendanceClient() {
     return () => {
       isMounted = false;
     };
-  }, [userId, viewDate, currentPage]);
-
+  }, [userId, viewDate, currentPage, isInter]);
 
   const handleCardClick = (cardId: number) => {
     if (cardId === 2) {
@@ -178,7 +172,6 @@ export default function AttendanceClient() {
     dashboardData?.tableData?.map((row: any) => ({
       Subject: row.subject,
       Faculty: row.faculty,
-      // "Today's Status": formatAttendanceStatus(row.status),
       "Today's Status": (
         <span className={getStatusClass(row.status)}>
           {formatAttendanceStatus(row.status)}
@@ -186,7 +179,6 @@ export default function AttendanceClient() {
       ),
       "Class Attendance": row.classAttendance,
       "Percentage %": row.percentage,
-      // Notes: <FilePdf size={17} />,
     })) || [];
 
   const dynamicCards: CardItem[] = [
@@ -229,8 +221,9 @@ export default function AttendanceClient() {
     <>
       <div className="bg-red-00 flex w-full h-fit lg:pb-5 p-2">
         <div
-          className={`flex flex-col gap-2 ${hideRightSection ? "w-full" : "w-[68%]"
-            }`}
+          className={`flex flex-col gap-2 ${
+            hideRightSection ? "w-full" : "w-[68%]"
+          }`}
         >
           {!showSubjectAttendanceTable && !showSubjectAttendanceDetails && (
             <>
@@ -267,10 +260,7 @@ export default function AttendanceClient() {
                     presentPercent={dashboardData?.semesterStats.present || 0}
                     absentPercent={dashboardData?.semesterStats.absent || 0}
                     leavePercent={dashboardData?.semesterStats.leave || 0}
-                    overallPercent={
-                      (dashboardData?.semesterStats.present || 0)
-                      // + (dashboardData?.semesterStats.leave || 0)
-                    }
+                    overallPercent={dashboardData?.cards.percentage || 0}
                   />
                 </div>
               )}
@@ -290,22 +280,21 @@ export default function AttendanceClient() {
                   </div>
                 ) : (
                   <>
-                    <Table
-                      columns={columns}
-                      data={tableRows}
-                    />
+                    <Table columns={columns} data={tableRows} />
 
                     {totalPages > 1 && (
                       <div className="flex justify-end items-center gap-3 mt-6 mb-4 w-full">
-
                         <button
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          onClick={() =>
+                            setCurrentPage((p) => Math.max(1, p - 1))
+                          }
                           disabled={currentPage === 1}
                           className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${currentPage === 1
-                              ? "border-gray-200 text-gray-300"
-                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                            }`}
+      ${
+        currentPage === 1
+          ? "border-gray-200 text-gray-300"
+          : "border-gray-300 text-gray-600 hover:bg-gray-100"
+      }`}
                         >
                           ‹
                         </button>
@@ -315,10 +304,11 @@ export default function AttendanceClient() {
                             key={i}
                             onClick={() => setCurrentPage(i + 1)}
                             className={`w-10 h-10 rounded-lg font-semibold
-        ${currentPage === i + 1
-                                ? "bg-[#16284F] text-white"
-                                : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                              }`}
+        ${
+          currentPage === i + 1
+            ? "bg-[#16284F] text-white"
+            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+        }`}
                           >
                             {i + 1}
                           </button>
@@ -330,14 +320,14 @@ export default function AttendanceClient() {
                           }
                           disabled={currentPage === totalPages}
                           className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${currentPage === totalPages
-                              ? "border-gray-200 text-gray-300"
-                              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                            }`}
+      ${
+        currentPage === totalPages
+          ? "border-gray-200 text-gray-300"
+          : "border-gray-300 text-gray-600 hover:bg-gray-100"
+      }`}
                         >
                           ›
                         </button>
-
                       </div>
                     )}
 

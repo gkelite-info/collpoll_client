@@ -143,14 +143,17 @@ const AddUserModal: React.FC<{
   const INTER_ENTRY = ["Regular", "Transfer"];
 
   const [subjectBlocks, setSubjectBlocks] = useState<SubjectBlock[]>([
-    { id: 1, yearId: null, subjectId: null, sectionIds: [] }
+    { id: 1, yearId: null, subjectId: null, sectionIds: [] },
   ]);
 
   const addSubjectBlock = () =>
-    setSubjectBlocks(prev => [...prev, { id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
+    setSubjectBlocks((prev) => [
+      ...prev,
+      { id: Date.now(), yearId: null, subjectId: null, sectionIds: [] },
+    ]);
 
   const removeSubjectBlock = (id: number) =>
-    setSubjectBlocks(prev => prev.filter(b => b.id !== id));
+    setSubjectBlocks((prev) => prev.filter((b) => b.id !== id));
 
   const resetForm = () => {
     setBasicData((prev: any) => ({
@@ -165,7 +168,9 @@ const AddUserModal: React.FC<{
     setSelectedYearId(null);
     setSelectedSubjectId(null);
     setSelectedSectionIds([]);
-    setSubjectBlocks([{ id: 1, yearId: null, subjectId: null, sectionIds: [] }]);
+    setSubjectBlocks([
+      { id: 1, yearId: null, subjectId: null, sectionIds: [] },
+    ]);
     setSelectedDegrees([]);
     setSelectedDepts([]);
     setSelectedYears([]);
@@ -259,9 +264,9 @@ const AddUserModal: React.FC<{
     () =>
       selectedEducation
         ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId === selectedEducation.collegeEducationId,
-        )
+            (b) =>
+              b.collegeEducationId === selectedEducation.collegeEducationId,
+          )
         : [],
     [dbData.branches, selectedEducation],
   );
@@ -295,10 +300,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-          (b) =>
-            b.collegeEducationId ===
-            studentSelectedEducation.collegeEducationId,
-        )
+            (b) =>
+              b.collegeEducationId ===
+              studentSelectedEducation.collegeEducationId,
+          )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -315,8 +320,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-        )
+            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+          )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -333,10 +338,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -345,10 +350,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
+            (s) =>
+              s.collegeAcademicYearId ===
+              studentSelectedYear.collegeAcademicYearId,
+          )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -432,315 +437,6 @@ const AddUserModal: React.FC<{
   // ✅ NEW: Placement Officer role flag
   const isPlacement = basicData.role === "PlacementOfficer";
 
-  // const handleSave = async () => {
-  //   if (!basicData.fullName) return toast.error("Full Name is required.");
-  //   if (!basicData.email) return toast.error("Email is required.");
-  //   if (!basicData.mobileCode) {
-  //     return toast.error("Country code is required.");
-  //   }
-  //   if (!/^\+[0-9]+$/.test(basicData.mobileCode)) {
-  //     return toast.error("Invalid country code format.");
-  //   }
-  //   if (!basicData.mobileNumber) {
-  //     return toast.error("Mobile number is required.");
-  //   }
-  //   if (!/^[0-9]{10}$/.test(basicData.mobileNumber)) {
-  //     return toast.error("Mobile number must be exactly 10 digits.");
-  //   }
-  //   if (basicData.mobileCode === "+91") {
-  //     if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
-  //       return toast.error(
-  //         "Indian mobile number must start with 6, 7, 8, or 9.",
-  //       );
-  //     }
-  //   }
-
-  //   if (!basicData.role) return toast.error("Role is required.");
-
-  //   if (showRollNoField || showEmployeeIdField) {
-  //     const error = validateIdentifier(basicData.identifierValue);
-  //     if (error) {
-  //       const label = showRollNoField ? "Roll no" : "Employee Id";
-  //       return toast.error(`${label} ${error}`);
-  //     }
-  //   }
-
-  //   if (!basicData.gender) return toast.error("Please select a gender.");
-
-  //   if (
-  //     isFaculty &&
-  //     (!collegeEducationId ||
-  //       !selectedBranchId ||
-  //       !selectedYearId ||
-  //       !selectedSubjectId ||
-  //       selectedSectionIds.length === 0)
-  //   )
-  //     return toast.error("Complete all academic fields for Faculty.");
-
-  //   if (isStudent) {
-  //     if (
-  //       !collegeEducationId ||
-  //       !selectedDepts.length ||
-  //       !selectedYears.length ||
-  //       (!["Inter"].includes(collegeEducationType!) &&
-  //         !selectedSemester.length) ||
-  //       !selectedEntryType.length ||
-  //       !selectedSections.length
-  //     ) {
-  //       return toast.error("Complete all academic fields for Student.");
-  //     }
-  //   }
-
-  //   if (isParent && !basicData.studentId)
-  //     return toast.error("Student ID required.");
-
-  //   if (isFinance && !collegeEducationId)
-  //     return toast.error("Select Education Type for Finance.");
-
-  //   if (!user) {
-  //     if (!basicData.password) {
-  //       return toast.error("Password is required.");
-  //     }
-  //     const passwordError = validatePassword(basicData.password);
-  //     if (passwordError) {
-  //       return toast.error(passwordError);
-  //     }
-  //     if (!basicData.confirmPassword) {
-  //       return toast.error("Confirm Password is required.");
-  //     }
-  //     if (basicData.password !== basicData.confirmPassword) {
-  //       return toast.error("Password and Confirm Password do not match.");
-  //     }
-  //   }
-
-  //   const normalizedDateOfJoining = basicData.dateOfJoining
-  //     ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
-  //     : null;
-
-  //   const normalizedExperience =
-  //     basicData.professionalExperienceYears !== undefined &&
-  //     basicData.professionalExperienceYears !== null
-  //       ? Number(basicData.professionalExperienceYears)
-  //       : null;
-
-  //   setLoading(true);
-  //   let createdUserId: number | null = null;
-
-  //   try {
-  //     const timestamp = new Date().toISOString();
-
-  //     let targetUserId: number | null = null;
-
-  //     if (isAdmin && !user) {
-  //       const { data: authData, error: authError } = await supabase.auth.signUp(
-  //         {
-  //           email: basicData.email,
-  //           password: basicData.password,
-  //         },
-  //       );
-
-  //       if (authError || !authData.user) {
-  //         throw new Error(authError?.message || "Auth user creation failed");
-  //       }
-
-  //       const authId = authData.user.id;
-
-  //       const userRes = await upsertUser({
-  //         auth_id: authId,
-  //         fullName: basicData.fullName,
-  //         email: basicData.email,
-  //         mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-  //         role: "Admin",
-  //         collegeId: basicData.collegeIntId,
-  //         collegePublicId: basicData.collegeId,
-  //         gender: basicData.gender,
-  //         dateOfJoining: normalizedDateOfJoining,
-  //         professionalExperienceYears: normalizedExperience,
-  //       });
-
-  //       if (!userRes.success || !userRes.data) {
-  //         throw new Error(userRes.error || "User creation failed");
-  //       }
-
-  //       targetUserId = userRes.data.userId;
-
-  //       const adminRes = await upsertAdminEntry({
-  //         userId: targetUserId!,
-  //         fullName: basicData.fullName,
-  //         email: basicData.email,
-  //         collegeEducationId: collegeEducationId,
-  //         mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
-  //         gender: basicData.gender,
-  //         collegeId: basicData.collegeId,
-  //         collegePublicId: basicData.collegeId,
-  //         collegeCode: basicData.collegeCode,
-  //       });
-
-  //       if (!adminRes.success) {
-  //         throw new Error(adminRes.error || "Admin creation failed");
-  //       }
-  //     } else {
-  //       targetUserId = await persistUser(
-  //         !user,
-  //         {
-  //           ...basicData,
-  //           collegePublicId: basicData.collegeId,
-  //           dateOfJoining: normalizedDateOfJoining,
-  //           professionalExperienceYears: normalizedExperience,
-  //         },
-  //         user ? user.userId : null,
-  //         timestamp,
-  //       );
-  //     }
-
-  //     if (!user) createdUserId = targetUserId;
-
-  //     if (!targetUserId) throw new Error("User creation failed");
-
-  //     if (isFinance && !user) {
-  //       await createFinanceManager({
-  //         userId: targetUserId,
-  //         collegeId: basicData.collegeIntId,
-  //         collegeEducationId: collegeEducationId!,
-  //         createdBy: basicData.adminId,
-  //         isActive: true,
-  //         createdAt: timestamp,
-  //         updatedAt: timestamp,
-  //       });
-  //     }
-
-  //     if (isHR && targetUserId) {
-  //       await upsertCollegeHR({
-  //         userId: targetUserId,
-  //         collegeId: basicData.collegeIntId,
-  //         createdBy: basicData.adminId,
-  //         isActive: true,
-  //       });
-  //     }
-
-  //     if (isFaculty) {
-  //       await persistFaculty(
-  //         targetUserId,
-  //         { ...basicData, collegePublicId: basicData.collegeId },
-  //         {
-  //           educationId: collegeEducationId!,
-  //           branchId: selectedBranchId!,
-  //           yearId: selectedYearId!,
-  //           subjectId: selectedSubjectId!,
-  //           sectionIds: selectedSectionIds,
-  //         },
-  //         timestamp,
-  //         !!user,
-  //       );
-  //     }
-
-  //     if (!targetUserId) throw new Error("User creation failed");
-
-  //     let studentId: number | null = null;
-
-  //     if (isStudent) {
-  //       const eduId = studentSelectedEducation?.collegeEducationId;
-  //       const branchId = studentSelectedBranch?.collegeBranchId;
-  //       const yearId = studentSelectedYear?.collegeAcademicYearId;
-  //       const semesterId = studentAvailableSemesters.find(
-  //         (s) => s.collegeSemester.toString() === selectedSemester[0],
-  //       )?.collegeSemesterId;
-
-  //       const sectionId = studentAvailableSections.find(
-  //         (s) => s.collegeSections === selectedSections[0],
-  //       )?.collegeSectionsId;
-
-  //       if (
-  //         !eduId ||
-  //         !branchId ||
-  //         !yearId ||
-  //         (!["Inter"].includes(collegeEducationType!) && !semesterId) ||
-  //         !sectionId
-  //       ) {
-  //         throw new Error("Invalid academic selection data");
-  //       }
-
-  //       studentId = await createStudent(
-  //         {
-  //           userId: targetUserId,
-  //           collegeEducationId: eduId,
-  //           collegeBranchId: branchId,
-  //           collegeId: basicData.collegeIntId,
-  //           collegeSessionId: selectedSessionId,
-  //           createdBy: basicData.adminId,
-  //           entryType: selectedEntryType[0] as any,
-  //           status: "Active",
-  //         },
-  //         timestamp,
-  //       );
-
-  //       await createStudentAcademicHistory({
-  //         studentId: studentId,
-  //         collegeAcademicYearId: yearId,
-  //         collegeSemesterId: semesterId,
-  //         collegeSectionsId: sectionId,
-  //         promotedBy: basicData.adminId,
-  //         createdAt: timestamp,
-  //         updatedAt: timestamp,
-  //         isCurrent: true,
-  //       });
-  //     }
-
-  //     if (isParent && targetUserId) {
-  //       await upsertParentEntry({
-  //         userId: targetUserId,
-  //         studentId: parseInt(basicData.studentId),
-  //         collegeId: basicData.collegeIntId,
-  //         createdBy: basicData.adminId,
-  //       });
-  //     }
-
-  //     if (basicData.identifierValue) {
-  //       await upsertIdentifier({
-  //         userId: targetUserId,
-  //         studentId: isStudent ? studentId! : undefined,
-  //         collegeId: basicData.collegeIntId,
-  //         role: basicData.role,
-  //         identifierValue: basicData.identifierValue,
-  //       });
-  //     }
-
-  //     toast.success("User Created Successfully");
-  //     setIsSuccess(true);
-  //     setTimeout(() => {
-  //       resetForm();
-  //       onClose();
-  //       setLoading(false);
-  //       setIsSuccess(false);
-  //     }, 2000);
-  //     setSessionOptions([]);
-  //   } catch (e: any) {
-  //     console.error(e);
-
-  //     let message = "Something went wrong. Please try again.";
-
-  //     if (e?.message) {
-  //       const errMsg = e.message.toLowerCase();
-
-  //       if (errMsg.includes("email")) {
-  //         message = "This email is already registered.";
-  //       } else if (errMsg.includes("mobile")) {
-  //         message = "This mobile number is already in use.";
-  //       } else if (errMsg.includes("duplicate")) {
-  //         message = "User already exists with provided details.";
-  //       }
-  //     }
-
-  //     toast.error(message);
-
-  //     if (createdUserId && !user) {
-  //       await supabase.from("users").delete().eq("userId", createdUserId);
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
@@ -780,10 +476,12 @@ const AddUserModal: React.FC<{
       if (!collegeEducationId || !selectedBranchId)
         return toast.error("Complete all academic fields for Faculty.");
       const incomplete = subjectBlocks.some(
-        (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0
+        (b) => !b.yearId || !b.subjectId || b.sectionIds.length === 0,
       );
       if (incomplete)
-        return toast.error("Complete Year, Subject and Sections for all subject blocks.");
+        return toast.error(
+          "Complete Year, Subject and Sections for all subject blocks.",
+        );
     }
 
     if (isStudent) {
@@ -832,7 +530,7 @@ const AddUserModal: React.FC<{
 
     const normalizedExperience =
       basicData.professionalExperienceYears !== undefined &&
-        basicData.professionalExperienceYears !== null
+      basicData.professionalExperienceYears !== null
         ? Number(basicData.professionalExperienceYears)
         : null;
 
@@ -981,8 +679,7 @@ const AddUserModal: React.FC<{
           !branchId ||
           !yearId ||
           (!["Inter"].includes(collegeEducationType!) && !semesterId) ||
-          !sectionId ||
-          !selectedSessionId // 🟢 Make sure session is selected
+          !sectionId
         ) {
           throw new Error("Invalid academic selection data");
         }
@@ -1012,17 +709,20 @@ const AddUserModal: React.FC<{
           isCurrent: true,
         });
 
-        await createStudentFeeObligation(
-          {
-            studentId: studentId,
-            collegeSessionId: selectedSessionId,
-            collegeAcademicYearId: yearId,
-            collegeEducationId: eduId,
-            collegeBranchId: branchId,
-            createdBy: basicData.adminId,
-          },
-          timestamp,
-        );
+        // 🟢 Only attempt to create a fee obligation if a session exists
+        if (selectedSessionId) {
+          await createStudentFeeObligation(
+            {
+              studentId: studentId,
+              collegeSessionId: selectedSessionId,
+              collegeAcademicYearId: yearId,
+              collegeEducationId: eduId,
+              collegeBranchId: branchId,
+              createdBy: basicData.adminId,
+            },
+            timestamp,
+          );
+        }
       }
 
       if (isParent && targetUserId) {
@@ -1410,7 +1110,9 @@ const AddUserModal: React.FC<{
                 {/* Branch stays outside — shared across all subject blocks */}
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}{" "}
+                    {collegeEducationType === "Inter"
+                      ? "Group Type"
+                      : "Branch Type"}{" "}
                     <span className="text-red-600">*</span>
                   </label>
                   <div className="relative">
@@ -1419,31 +1121,55 @@ const AddUserModal: React.FC<{
                       disabled={!selectedEducation}
                       onChange={(e) => {
                         setSelectedBranchId(Number(e.target.value));
-                        setSubjectBlocks([{ id: Date.now(), yearId: null, subjectId: null, sectionIds: [] }]);
+                        setSubjectBlocks([
+                          {
+                            id: Date.now(),
+                            yearId: null,
+                            subjectId: null,
+                            sectionIds: [],
+                          },
+                        ]);
                       }}
                       className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                     >
                       <option value="" disabled>
-                        {collegeEducationType === "Inter" ? "Select Group Type" : "Select Branch Type"}
+                        {collegeEducationType === "Inter"
+                          ? "Select Group Type"
+                          : "Select Branch Type"}
                       </option>
                       {filteredBranches.map((b: any) => (
-                        <option key={b.collegeBranchId} value={b.collegeBranchId}>
+                        <option
+                          key={b.collegeBranchId}
+                          value={b.collegeBranchId}
+                        >
                           {b.collegeBranchCode}
                         </option>
                       ))}
                     </select>
-                    <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <CaretDown
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                    />
                   </div>
                 </div>
 
                 {/* Dynamic subject blocks */}
                 {subjectBlocks.map((block, index) => {
-                  const blockFilteredYears = dbData.years.filter((y) => y.collegeBranchId == selectedBranchId);
-                  const blockFilteredSubjects = dbData.subjects.filter((s) => s.collegeAcademicYearId == block.yearId);
-                  const blockFilteredSections = dbData.sections.filter((s) => s.collegeAcademicYearId == block.yearId);
+                  const blockFilteredYears = dbData.years.filter(
+                    (y) => y.collegeBranchId == selectedBranchId,
+                  );
+                  const blockFilteredSubjects = dbData.subjects.filter(
+                    (s) => s.collegeAcademicYearId == block.yearId,
+                  );
+                  const blockFilteredSections = dbData.sections.filter(
+                    (s) => s.collegeAcademicYearId == block.yearId,
+                  );
 
                   return (
-                    <div key={block.id} className="border border-gray-100 rounded-lg p-3 bg-gray-50/50 flex flex-col gap-3">
+                    <div
+                      key={block.id}
+                      className="border border-gray-100 rounded-lg p-3 bg-gray-50/50 flex flex-col gap-3"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
                           Subject {index + 1}
@@ -1472,20 +1198,35 @@ const AddUserModal: React.FC<{
                                 const yearId = Number(e.target.value);
                                 setSubjectBlocks((prev) =>
                                   prev.map((b) =>
-                                    b.id === block.id ? { ...b, yearId, subjectId: null, sectionIds: [] } : b
-                                  )
+                                    b.id === block.id
+                                      ? {
+                                          ...b,
+                                          yearId,
+                                          subjectId: null,
+                                          sectionIds: [],
+                                        }
+                                      : b,
+                                  ),
                                 );
                               }}
                               className="w-full border appearance-none border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                             >
-                              <option value="" disabled>Select Year</option>
+                              <option value="" disabled>
+                                Select Year
+                              </option>
                               {blockFilteredYears.map((y: any) => (
-                                <option key={y.collegeAcademicYearId} value={y.collegeAcademicYearId}>
+                                <option
+                                  key={y.collegeAcademicYearId}
+                                  value={y.collegeAcademicYearId}
+                                >
                                   {y.collegeAcademicYear}
                                 </option>
                               ))}
                             </select>
-                            <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <CaretDown
+                              size={14}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
                           </div>
                         </div>
 
@@ -1501,20 +1242,28 @@ const AddUserModal: React.FC<{
                                 const subjectId = Number(e.target.value);
                                 setSubjectBlocks((prev) =>
                                   prev.map((b) =>
-                                    b.id === block.id ? { ...b, subjectId } : b
-                                  )
+                                    b.id === block.id ? { ...b, subjectId } : b,
+                                  ),
                                 );
                               }}
                               className="w-full border border-gray-200 appearance-none rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] cursor-pointer disabled:bg-gray-50"
                             >
-                              <option value="" disabled>Select Subject</option>
+                              <option value="" disabled>
+                                Select Subject
+                              </option>
                               {blockFilteredSubjects.map((s: any) => (
-                                <option key={s.collegeSubjectId} value={s.collegeSubjectId}>
+                                <option
+                                  key={s.collegeSubjectId}
+                                  value={s.collegeSubjectId}
+                                >
                                   {s.subjectName}
                                 </option>
                               ))}
                             </select>
-                            <CaretDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <CaretDown
+                              size={14}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                            />
                           </div>
                         </div>
                       </div>
@@ -1522,31 +1271,51 @@ const AddUserModal: React.FC<{
                       <CustomMultiSelect
                         label="Sections"
                         placeholder="Select Sections"
-                        options={blockFilteredSections.map((s: any) => s.collegeSections)}
+                        options={blockFilteredSections.map(
+                          (s: any) => s.collegeSections,
+                        )}
                         selectedValues={blockFilteredSections
-                          .filter((s: any) => block.sectionIds.includes(s.collegeSectionsId))
+                          .filter((s: any) =>
+                            block.sectionIds.includes(s.collegeSectionsId),
+                          )
                           .map((s: any) => s.collegeSections)}
                         disabled={!block.yearId}
                         onChange={(v) => {
-                          const found = blockFilteredSections.find((s: any) => s.collegeSections === v);
+                          const found = blockFilteredSections.find(
+                            (s: any) => s.collegeSections === v,
+                          );
                           if (!found) return;
                           const sid = found.collegeSectionsId;
                           setSubjectBlocks((prev) =>
                             prev.map((b) =>
                               b.id === block.id
-                                ? { ...b, sectionIds: b.sectionIds.includes(sid) ? b.sectionIds.filter((i) => i !== sid) : [...b.sectionIds, sid] }
-                                : b
-                            )
+                                ? {
+                                    ...b,
+                                    sectionIds: b.sectionIds.includes(sid)
+                                      ? b.sectionIds.filter((i) => i !== sid)
+                                      : [...b.sectionIds, sid],
+                                  }
+                                : b,
+                            ),
                           );
                         }}
                         onRemove={(v) => {
-                          const found = blockFilteredSections.find((s: any) => s.collegeSections === v);
+                          const found = blockFilteredSections.find(
+                            (s: any) => s.collegeSections === v,
+                          );
                           if (!found) return;
                           const sid = found.collegeSectionsId;
                           setSubjectBlocks((prev) =>
                             prev.map((b) =>
-                              b.id === block.id ? { ...b, sectionIds: b.sectionIds.filter((i) => i !== sid) } : b
-                            )
+                              b.id === block.id
+                                ? {
+                                    ...b,
+                                    sectionIds: b.sectionIds.filter(
+                                      (i) => i !== sid,
+                                    ),
+                                  }
+                                : b,
+                            ),
                           );
                         }}
                         paddingY="py-1"
@@ -1824,10 +1593,11 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
-                ? "bg-green-600 cursor-default"
-                : "bg-[#43C17A] hover:bg-[#3ea876]"
-                }`}
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
+                isSuccess
+                  ? "bg-green-600 cursor-default"
+                  : "bg-[#43C17A] hover:bg-[#3ea876]"
+              }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

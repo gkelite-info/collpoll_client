@@ -38,11 +38,13 @@ export async function getParentDashboardWidgets(userId: number) {
     getFirst(studentInfo.college_branch)?.collegeBranchCode || "Unknown Branch";
   const studentName = getFirst(studentInfo.user)?.fullName || "Student";
 
+  // 🟢 We pull collegeSemesterId here to use for the subjects fetch!
   const { data: sah } = await supabase
     .from("student_academic_history")
     .select(
       `
         collegeAcademicYearId,
+        collegeSemesterId,
         college_academic_year (
             collegeAcademicYear
         )
@@ -193,6 +195,111 @@ export async function getParentDashboardWidgets(userId: number) {
           ),
   }));
 
+  // 🟢 FETCH SUBJECTS SAFELY ON THE SERVER FOR THE PARENT
+  let subjectsData: any[] = [];
+
+  if (sah?.collegeAcademicYearId) {
+    let subQuery = supabase
+      .from("college_subjects")
+      .select(
+        `
+        collegeSubjectId,
+        subjectName,
+        college_subject_units (
+          completionPercentage,
+          createdBy
+        )
+      `,
+      )
+      .eq("collegeBranchId", studentInfo.collegeBranchId)
+      .eq("collegeEducationId", studentInfo.collegeEducationId)
+      .eq("collegeAcademicYearId", sah.collegeAcademicYearId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (sah.collegeSemesterId !== null && sah.collegeSemesterId !== undefined) {
+      subQuery = subQuery.eq("collegeSemesterId", sah.collegeSemesterId);
+    }
+
+    const { data: subjectRows } = await subQuery;
+
+    if (subjectRows && subjectRows.length > 0) {
+      const facultyIds = new Set<number>();
+      subjectRows.forEach((sub: any) => {
+        sub.college_subject_units?.forEach((unit: any) => {
+          if (unit.createdBy) facultyIds.add(unit.createdBy);
+        });
+      });
+
+      const facultyMap: Record<number, string> = {};
+      if (facultyIds.size > 0) {
+        const { data: facultyData } = await supabase
+          .from("faculty")
+          .select("facultyId, fullName")
+          .in("facultyId", Array.from(facultyIds));
+        facultyData?.forEach((f: any) => {
+          facultyMap[f.facultyId] = f.fullName;
+        });
+      }
+
+      const colorPalettes = [
+        {
+          radialStart: "#10FD77",
+          radialEnd: "#1C6B3F",
+          remainingColor: "#A1FFCA",
+        },
+        {
+          radialStart: "#EFEDFF",
+          radialEnd: "#705CFF",
+          remainingColor: "#E8E4FF",
+        },
+        {
+          radialStart: "#FFFFFF",
+          radialEnd: "#FFBE48",
+          remainingColor: "#F7EBD5",
+        },
+        {
+          radialStart: "#FEFFFF",
+          radialEnd: "#008993",
+          remainingColor: "#C4FBFF",
+        },
+      ];
+
+      subjectsData = subjectRows.map((sub: any, index: number) => {
+        const units = sub.college_subject_units || [];
+        const totalUnits = units.length;
+
+        const avgPercentage =
+          totalUnits > 0
+            ? Math.round(
+                units.reduce(
+                  (acc: number, curr: any) =>
+                    acc + (curr.completionPercentage || 0),
+                  0,
+                ) / totalUnits,
+              )
+            : 0;
+
+        const firstUnit = units[0];
+        const professor =
+          firstUnit && facultyMap[firstUnit.createdBy]
+            ? `Prof. ${facultyMap[firstUnit.createdBy]}`
+            : "Faculty Assigned";
+        const colors = colorPalettes[index % colorPalettes.length];
+
+        return {
+          title: sub.subjectName,
+          professor: professor,
+          image: "/subject-default.png",
+          percentage: avgPercentage,
+          radialStart: colors.radialStart,
+          radialEnd: colors.radialEnd,
+          remainingColor: colors.remainingColor,
+        };
+      });
+    }
+  }
+
   const formatInr = (num: number) => num.toLocaleString("en-IN");
 
   return {
@@ -205,16 +312,14 @@ export async function getParentDashboardWidgets(userId: number) {
     academicYear,
     attendancePercentage: overallPercentage,
     attendanceChartData,
+    subjects: subjectsData,
   };
 }
 
-// Add this to your server actions file
 export async function getChildUserIdForParent(userId: number) {
-  // 1. Get the parent's record
   const parent = await fetchParentContext(userId);
   if (!parent || !parent.studentId) return null;
 
-  // 2. Fetch the student's actual userId safely on the server
   const { data: studentInfo } = await supabase
     .from("students")
     .select("userId")

@@ -1051,21 +1051,17 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <select
                   value={semester ?? ""}
                   onChange={(e) => {
-                    if (isSemesterAuto) return;
-                    setSemester(Number(e.target.value));
+                    const selected = Number(e.target.value);
+                    setSemester(selected);
                   }}
                   className={`
-    w-full ${INPUT_HEIGHT}
-    border border-[#C9C9C9]
-    rounded-lg px-3 text-sm
-    focus:ring-2 focus:ring-[#43C17A]
-    focus:outline-none
-    ${
-      isSemesterAuto
-        ? "s text-gray-900"
-        : "bg-white cursor-pointer text-gray-900"
-    }
-  `}
+      w-full ${INPUT_HEIGHT}
+      border border-[#C9C9C9]
+      rounded-lg px-3 text-sm
+      focus:ring-2 focus:ring-[#43C17A]
+      focus:outline-none
+      bg-white cursor-pointer text-gray-900
+    `}
                 >
                   <option value="" disabled hidden>
                     Select Semester
