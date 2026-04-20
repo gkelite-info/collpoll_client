@@ -154,7 +154,7 @@ function HeaderContent() {
           </div>
         </div>
 
-        <div className="w-[40%] flex justify-between">
+        <div className="w-[40%] flex justify-between ">
           <div className="w-[40%] h-[100%] flex items-center justify-center gap-3">
             <button onClick={() => setIsNewsOpen(true)} className="relative">
               <Newspaper size={21} color="#282828" className="cursor-pointer" />
@@ -196,7 +196,132 @@ function HeaderContent() {
               <Megaphone size={20} color="#282828" className="cursor-pointer" />
             </button>
           </div>
-          {loading ? <ProfileShimmer /> :
+          {loading ? (
+            <ProfileShimmer />
+          ) : (
+            <div
+              className="w-[60%] flex items-center bg-[#43C17A] cursor-pointer rounded-l-full py-1.5"
+              onClick={() => setOpenProfile(true)}
+            >
+              <div className="w-[25%] flex items-center justify-center">
+                {profilePhoto ? (
+                  <img
+                    src={profilePhoto}
+                    alt="profile"
+                    className="w-11 h-11 rounded-full object-cover border-2 border-white shrink-0"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center shrink-0">
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              
+              {/* FIX: Removed 'gap-2' and added 'gap-0.5' to keep lines tight so they don't touch the bottom */}
+              <div className="w-[75%] flex flex-col justify-center px-2 gap-[2px] text-[#282828] font-semibold min-w-0">
+                
+                <div className="flex items-center justify-between w-full">
+                  <p className="text-sm text-[#ffffff] truncate leading-none" title={fullName || ""}>
+                    {fullName}
+                  </p>
+                  <CaretDown
+                    size={20}
+                    weight="bold"
+                    color="#ffffff"
+                    className="cursor-pointer shrink-0"
+                  />
+                </div>
+
+                {/* FIX: leading-[1.2] tightly packs the stacked text specifically for PlacementOfficer */}
+                <div className={`w-full text-[#E5E5E5] ${
+                  role === "PlacementOfficer" 
+                    ? "flex flex-col items-start text-[11px] leading-[1.2]" 
+                    : "flex items-center justify-between text-xs"
+                }`}>
+                  {role === "Student" && (
+                    <>
+                      <p className="truncate">
+                        {collegeEducationType && collegeBranchCode
+                          ? `${collegeEducationType} ${collegeBranchCode}`
+                          : "—"}
+                      </p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Finance" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Faculty" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Admin" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "CollegeAdmin" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "Parent" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId || parentId}</span>
+                      </p>
+                    </>
+                  )}
+                  {role === "CollegeHr" && (
+                    <>
+                      <p className="truncate">{role}</p>
+                      <p className="whitespace-nowrap shrink-0">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  
+                  {role === "PlacementOfficer" && (
+                    <>
+                      <p className="truncate w-full" title={role}>{role}</p>
+                      <p className="whitespace-nowrap shrink-0 text-white/90">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+                  
+                  {["SuperAdmin"].includes(role as string) && (
+                    <p className="truncate">{role}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* {loading ? <ProfileShimmer /> :
             <div
               className="w-[60%] max-h-[90%] flex bg-[#43C17A] cursor-pointer rounded-l-full"
               onClick={() => setOpenProfile(true)}
@@ -291,11 +416,19 @@ function HeaderContent() {
                       </p>
                     </>
                   )}
+                   {role === "PlacementOfficer" && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
                   {["SuperAdmin"].includes(role as string) && <p>{role}</p>}
                 </div>
               </div>
             </div>
-          }
+          } */}
         </div>
       </div>
 

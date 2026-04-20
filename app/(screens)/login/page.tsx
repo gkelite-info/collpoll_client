@@ -144,6 +144,7 @@ export default function LoginPage() {
         finance: "/finance",
         collegeadmin: "/college-admin",
         collegehr: "/hr",
+        placementofficer: "/placement",
       };
 
       const redirectPath = roleRouteMap[role] || "/login";

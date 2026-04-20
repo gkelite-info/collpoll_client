@@ -543,15 +543,21 @@ const AddUserModal: React.FC<{
       let targetUserId: number | null = null;
 
       if (isAdmin && !user) {
-        const { data: authData, error: authError } = await supabase.auth.signUp(
-          {
-            email: basicData.email,
-            password: basicData.password,
-            options: {
-              emailRedirectTo: `https://${basicData.collegeCode.toLowerCase()}.tektoncampus.com/`,
-            },
+        // const { data: authData, error: authError } = await supabase.auth.signUp(
+        //   {
+        //     email: basicData.email,
+        //     password: basicData.password,
+        //   },
+        // );
+
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: basicData.email,
+          password: basicData.password!,
+          options: {
+            data: { full_name: basicData.fullName, role: basicData.role },
+            emailRedirectTo: `https://${basicData.collegeCode?.toLowerCase()}.tektoncampus.com/`,
           },
-        );
+        });
 
         if (authError || !authData.user) {
           throw new Error(authError?.message || "Auth user creation failed");

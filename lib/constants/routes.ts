@@ -212,7 +212,7 @@ export const normalizeRole = (role: string | null): UserRole | null => {
     finance: ROLES.FINANCE,
     hr: ROLES.HR,
     collegehr: ROLES.HR, // Map CollegeHr to HR portal
-    placement: ROLES.PLACEMENT,
+    placementofficer: ROLES.PLACEMENT,
     parent: ROLES.PARENT,
   };
 
