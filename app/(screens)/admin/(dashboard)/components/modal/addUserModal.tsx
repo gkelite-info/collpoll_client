@@ -26,6 +26,9 @@ import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
+import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
+// ✅ NEW: Placement Officer helper
+// import { upsertPlacementOfficer } from "@/lib/helpers/admin/registrations/placement/placementRegistration";
 
 type SubjectBlock = {
   id: number;
@@ -256,9 +259,9 @@ const AddUserModal: React.FC<{
     () =>
       selectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId === selectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId === selectedEducation.collegeEducationId,
+        )
         : [],
     [dbData.branches, selectedEducation],
   );
@@ -292,10 +295,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedEducation
         ? dbData.branches.filter(
-            (b) =>
-              b.collegeEducationId ===
-              studentSelectedEducation.collegeEducationId,
-          )
+          (b) =>
+            b.collegeEducationId ===
+            studentSelectedEducation.collegeEducationId,
+        )
         : [],
     [studentSelectedEducation, dbData.branches],
   );
@@ -312,8 +315,8 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedBranch
         ? dbData.years.filter(
-            (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-          )
+          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+        )
         : [],
     [studentSelectedBranch, dbData.years],
   );
@@ -330,10 +333,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.semesters.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.semesters],
   );
@@ -342,10 +345,10 @@ const AddUserModal: React.FC<{
     () =>
       studentSelectedYear
         ? dbData.sections.filter(
-            (s) =>
-              s.collegeAcademicYearId ===
-              studentSelectedYear.collegeAcademicYearId,
-          )
+          (s) =>
+            s.collegeAcademicYearId ===
+            studentSelectedYear.collegeAcademicYearId,
+        )
         : [],
     [studentSelectedYear, dbData.sections],
   );
@@ -426,6 +429,8 @@ const AddUserModal: React.FC<{
   const isParent = basicData.role === "Parent";
   const isFinance = basicData.role === "Finance";
   const isHR = basicData.role === "CollegeHr";
+  // ✅ NEW: Placement Officer role flag
+  const isPlacement = basicData.role === "PlacementOfficer";
 
   // const handleSave = async () => {
   //   if (!basicData.fullName) return toast.error("Full Name is required.");
@@ -801,6 +806,10 @@ const AddUserModal: React.FC<{
     if (isFinance && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
 
+    // ✅ NEW: Placement Officer validation
+    if (isPlacement && !collegeEducationId)
+      return toast.error("Select Education Type for Placement Officer.");
+
     if (!user) {
       if (!basicData.password) {
         return toast.error("Password is required.");
@@ -823,7 +832,7 @@ const AddUserModal: React.FC<{
 
     const normalizedExperience =
       basicData.professionalExperienceYears !== undefined &&
-      basicData.professionalExperienceYears !== null
+        basicData.professionalExperienceYears !== null
         ? Number(basicData.professionalExperienceYears)
         : null;
 
@@ -840,6 +849,9 @@ const AddUserModal: React.FC<{
           {
             email: basicData.email,
             password: basicData.password,
+            options: {
+              emailRedirectTo: `https://${basicData.collegeCode.toLowerCase()}.tektoncampus.com/`,
+            },
           },
         );
 
@@ -922,21 +934,13 @@ const AddUserModal: React.FC<{
         });
       }
 
-      // if (isFaculty) {
-      //   await persistFaculty(
-      //     targetUserId,
-      //     { ...basicData, collegePublicId: basicData.collegeId },
-      //     {
-      //       educationId: collegeEducationId!,
-      //       branchId: selectedBranchId!,
-      //       yearId: selectedYearId!,
-      //       subjectId: selectedSubjectId!,
-      //       sectionIds: selectedSectionIds,
-      //     },
-      //     timestamp,
-      //     !!user,
-      //   );
-      // }
+      if (isPlacement && targetUserId) {
+        await upsertPlacementEmployee({
+          userId: targetUserId,
+          collegeId: basicData.collegeIntId,
+          createdBy: basicData.adminId,
+        });
+      }
 
       if (isFaculty) {
         for (const block of subjectBlocks) {
@@ -1085,9 +1089,9 @@ const AddUserModal: React.FC<{
   return (
     <>
       <Toaster position="top-right" />
-      <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-sans">
-        <div className="bg-white text-black w-full max-w-[550px] max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 flex-shrink-0">
+      <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-sans">
+        <div className="bg-white text-black w-full max-w-137.5 max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-clip animate-in fade-in zoom-in duration-200">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
             <h2 className="text-lg font-medium text-[#282828]">Add User</h2>
             <X
               size={20}
@@ -1178,6 +1182,7 @@ const AddUserModal: React.FC<{
                     name="role"
                     value={basicData.role}
                     onChange={handleBasicChange}
+                    size={1}
                     className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
                   >
                     <option value="" disabled>
@@ -1190,6 +1195,8 @@ const AddUserModal: React.FC<{
                     <option value="Finance">Finance</option>
                     {/* <option value="CollegeHr">College HR</option> */}
                     <option value="CollegeHr">College HR</option>
+                    {/* ✅ NEW: Placement Officer option */}
+                    <option value="PlacementOfficer">Placement Officer</option>
                   </select>
                   <CaretDown
                     size={14}
@@ -1198,7 +1205,8 @@ const AddUserModal: React.FC<{
                 </div>
               </div>
 
-              {(isFaculty || isFinance || isAdmin) && (
+              {/* ✅ UPDATED: Added isPlacement to show locked Education Type */}
+              {(isFaculty || isFinance || isAdmin || isPlacement) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Education Type <span className="text-red-600">*</span>
@@ -1816,11 +1824,10 @@ const AddUserModal: React.FC<{
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${
-                isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>
