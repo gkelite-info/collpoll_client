@@ -7,9 +7,14 @@ interface TabNavigationProps {
   onTabChange: (tab: "add" | "view") => void;
 }
 
+// const TABS = [
+//   { id: "add", label: "Add New Club" },
+//   { id: "view", label: "View Clubs" },
+// ] as const;
+
 const TABS = [
-  { id: "add", label: "Add New Club" },
   { id: "view", label: "View Clubs" },
+  { id: "add", label: "Add New Club" },
 ] as const;
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
@@ -21,7 +26,7 @@ export default function TabNavigation({ activeTab, onTabChange }: TabNavigationP
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id as "add" | "view")}
-            className={`relative z-10 cursor-pointer px-6 py-2 rounded-full text-sm font-medium transition-colors ${
+            className={`relative z-10 cursor-pointer w-36 px-6 py-2 rounded-full text-sm font-medium transition-colors ${
               isActive ? "text-[#ffffff]" : "text-[#282828]"
             }`}
           >
