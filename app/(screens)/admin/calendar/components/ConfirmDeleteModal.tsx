@@ -59,7 +59,12 @@ interface Props {
   onConfirm: () => void;
   onCancel: () => void;
   isDeleting?: boolean;
+  title?: string;
+  confirmText?: string;
+  loadingText?: string;
   name?: string;
+  itemName?: string;
+  customDescription?: React.ReactNode;
 }
 
 export default function ConfirmDeleteModal({
@@ -67,13 +72,18 @@ export default function ConfirmDeleteModal({
   onConfirm,
   onCancel,
   isDeleting = false,
-  name = "event"
+  title = "Delete",
+  confirmText = "Yes, Delete",
+  loadingText = "Deleting...",
+  name = "event",
+  itemName,
+  customDescription
 }: Props) {
   return (
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-          
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -88,26 +98,32 @@ export default function ConfirmDeleteModal({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             className="relative bg-white rounded-2xl w-full max-w-[400px] p-8 shadow-2xl border border-gray-100"
           >
-            <button
+            {/* <button
               onClick={onCancel}
               disabled={isDeleting}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
             >
               <X size={20} weight="bold" />
-            </button>
+            </button> */}
 
             <div className="flex flex-col items-center text-center mt-2">
-              
+
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-red-50/50">
                 <Trash size={32} weight="duotone" className="text-red-500" />
               </div>
 
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Delete {name}?
+                {title} {name}?
               </h3>
 
               <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
-                Are you sure you want to delete this <span className="font-semibold text-gray-700">{name}</span>? This action cannot be undone and will permanently remove the data.
+                {customDescription ? (
+                  customDescription
+                ) : (
+                  <>
+                    Are you sure you want to delete this <span className="font-semibold text-gray-700">{name}</span>? This action cannot be undone and will permanently remove the data.
+                  </>
+                )}
               </p>
 
               <div className="flex gap-3 w-full">
@@ -118,7 +134,7 @@ export default function ConfirmDeleteModal({
                 >
                   Cancel
                 </button>
-                
+
                 <button
                   onClick={onConfirm}
                   disabled={isDeleting}
@@ -130,15 +146,17 @@ export default function ConfirmDeleteModal({
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Deleting...
+                      {/* Deleting... */}
+                      {loadingText}
                     </>
                   ) : (
-                    "Yes, Delete"
+                    // "Yes, Delete"
+                    confirmText
                   )}
                 </button>
               </div>
             </div>
-            
+
           </motion.div>
         </div>
       )}
