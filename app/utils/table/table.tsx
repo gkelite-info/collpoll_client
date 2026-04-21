@@ -28,6 +28,7 @@
 
 "use client";
 
+import { ReactNode } from "react";
 import TableBody from "./tableBody";
 import TableHead from "./tableHead";
 
@@ -38,7 +39,7 @@ type Column = {
 
 type TableComponentProps = {
   columns: Column[];
-  tableData: Record<string, any>[];
+  tableData: Record<string, ReactNode>[];
   height?: string;
   isLoading?: boolean;
 };
@@ -52,7 +53,7 @@ export default function TableComponent({
   return (
     <div className="mt-2 w-full">
       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        <div className={`max-h-[${height || "55vh"}] overflow-auto`}>
+        <div className="overflow-auto" style={{ maxHeight: height || "55vh" }}>
           <table className="w-full border-collapse">
             <TableHead columns={columns} />
             <TableBody columns={columns} tableData={tableData} isLoading={isLoading}/>

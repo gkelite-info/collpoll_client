@@ -168,6 +168,8 @@ export async function saveCollegeAnnouncement(
       collegeId: payload.collegeId,
       createdBy: userId,
       createdByRole: role,
+      is_deleted: false,  
+      isActive: true,
       createdAt: now,
       updatedAt: now,
     })

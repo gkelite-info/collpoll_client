@@ -1,0 +1,1117 @@
+"use client";
+
+import { ReactNode, useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
+import {
+  CaretLeft,
+  CaretDown,
+  UploadSimple,
+  X,
+  ImageSquare,
+  FilePdf,
+  Trash,
+} from "@phosphor-icons/react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type CreateCompanyScreenProps = {
+  onCancel: () => void;
+  initialData?: Partial<
+    Omit<CompanyFormState, "companyLogo" | "certificates">
+  > & { id?: string };
+};
+
+type CompanyFormState = {
+  companyName: string;
+  email: string;
+  countryCode: string;
+  phone: string;
+  description: string;
+  website: string;
+  jobRole: string;      // selected option or "Other"
+  jobRoleOther: string; // custom value when "Other"
+  requiredSkills: string;
+  jobType: string;
+  workMode: string;
+  locations: string;
+  annualPackage: string;
+  driveType: string;
+  startDate: string;
+  endDate: string;
+  educationTypes: string[];
+  branches: string[];
+  years: string[];
+  eligibilityCriteria: string;
+  companyLogo: File | null;
+  certificates: File[];
+};
+
+const initialFormState: CompanyFormState = {
+  companyName: "",
+  email: "",
+  countryCode: "+91",
+  phone: "",
+  description: "",
+  website: "",
+  jobRole: "",
+  jobRoleOther: "",
+  requiredSkills: "",
+  jobType: "",
+  workMode: "",
+  locations: "",
+  annualPackage: "",
+  driveType: "",
+  startDate: "",
+  endDate: "",
+  educationTypes: [],
+  branches: [],
+  years: [],
+  eligibilityCriteria: "",
+  companyLogo: null,
+  certificates: [],
+};
+
+const JOB_ROLE_OPTIONS = [
+  "Software Engineer",
+  "SDE Intern",
+  "Analyst",
+  "QA Engineer",
+];
+
+const EDUCATION_TYPE_OPTIONS = [
+  "B.Tech", "M.Tech", "MBA", "BCA", "MCA",
+  "B.Sc", "M.Sc", "B.Com", "M.Com", "BBA", "Diploma", "Ph.D",
+];
+
+const BRANCH_OPTIONS = [
+  "Computer Science & Engineering",
+  "Information Technology",
+  "Electronics & Communication",
+  "Electrical Engineering",
+  "Mechanical Engineering",
+  "Civil Engineering",
+  "Chemical Engineering",
+  "Biotechnology",
+  "Aerospace Engineering",
+  "Data Science",
+  "Artificial Intelligence & ML",
+  "Cyber Security",
+];
+
+const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+
+// ─── Sanitizers ───────────────────────────────────────────────────────────────
+
+/** Letters, digits, spaces, - ' ( ) only */
+const sanitizeName = (v: string) => v.replace(/[^a-zA-Z0-9\s\-'()]/g, "");
+
+/** Lowercase, valid email chars only — and nothing after the TLD (e.g. .com) */
+const sanitizeEmail = (v: string): string => {
+  // Step 1: lowercase + strip invalid chars
+  const cleaned = v.toLowerCase().replace(/[^a-z0-9@._\-+]/g, "");
+
+  // Step 2: if there's an @, check for a TLD and truncate after it
+  const atIndex = cleaned.indexOf("@");
+  if (atIndex !== -1) {
+    const domain = cleaned.slice(atIndex + 1); // e.g. "gmail.com" or "gmail.comaaa"
+    // Match the last dot-segment that looks like a TLD (2+ letters)
+    const tldMatch = domain.match(/^([a-z0-9.\-]+\.[a-z]{2,})/);
+    if (tldMatch) {
+      // Only keep up to the end of that TLD match
+      return cleaned.slice(0, atIndex + 1) + tldMatch[1];
+    }
+  }
+
+  return cleaned;
+};
+
+/** Digits only, max 10 */
+const sanitizePhone = (v: string) =>
+  v.replace(/\D/g, "").slice(0, 10);
+
+/** Letters, digits, spaces, - ' only */
+const sanitizeLocation = (v: string) =>
+  v.replace(/[^a-zA-Z0-9\s\-']/g, "");
+
+/** Letters and digits only */
+const sanitizePackage = (v: string) =>
+  v.replace(/[^a-zA-Z0-9\s]/g, "");
+
+// ─── Validators ───────────────────────────────────────────────────────────────
+
+type FormErrors = Partial<
+  Record<keyof CompanyFormState | "jobRoleOther", string>
+>;
+
+function validate(form: CompanyFormState): FormErrors {
+  const errors: FormErrors = {};
+
+  // Company Name
+  if (!form.companyName.trim()) {
+    errors.companyName = "Company name is required";
+  } else if (form.companyName.trim().length < 2) {
+    errors.companyName = "Must be at least 2 characters";
+  }
+
+  // Email – lowercase, standard format, nothing weird after TLD
+  if (!form.email.trim()) {
+    errors.email = "Email is required";
+  } else if (
+    !/^[a-z0-9._+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(form.email.trim())
+  ) {
+    errors.email = "Enter a valid email (all lowercase, e.g. info@company.com)";
+  }
+
+  // Phone is optional, but if entered it must be exactly 10 digits.
+  if (form.phone.trim() && !/^\d{10}$/.test(form.phone.trim())) {
+    errors.phone = "Phone must be exactly 10 digits";
+  }
+
+  // Description – min 20 chars
+  if (!form.description.trim()) {
+    errors.description = "Company Job description is required";
+  } else if (form.description.trim().length < 20) {
+    errors.description = "Description must be at least 20 characters";
+  }
+
+  // Website – must start with https://
+  if (!form.website.trim()) {
+    errors.website = "Website URL is required";
+  } else if (!/^https:\/\/.+\..+/.test(form.website.trim())) {
+    errors.website = "Website must start with https://";
+  }
+
+  // Job Role
+  if (!form.jobRole) {
+    errors.jobRole = "Job role is required";
+  } else if (form.jobRole === "Other" && !form.jobRoleOther.trim()) {
+    errors.jobRoleOther = "Please specify the job role";
+  }
+
+  if (!form.requiredSkills.trim())
+    errors.requiredSkills = "Required skills are needed";
+  if (!form.jobType) errors.jobType = "Job type is required";
+  if (!form.workMode) errors.workMode = "Work mode is required";
+  if (!form.locations.trim()) errors.locations = "Location is required";
+  if (!form.annualPackage.trim())
+    errors.annualPackage = "Annual package is required";
+  if (!form.driveType) errors.driveType = "Drive type is required";
+
+  // Start Date + End Date
+  if (!form.startDate) errors.startDate = "Start date is required";
+  if (!form.endDate) {
+    errors.endDate = "End date is required";
+  } else if (form.startDate && form.endDate <= form.startDate) {
+    errors.endDate = "End date must be after start date";
+  }
+
+  // Education Type, Branch, Year
+  if (!form.educationTypes.length)
+    errors.educationTypes = "Select at least one education type";
+  if (!form.branches.length)
+    errors.branches = "Select at least one branch";
+  if (!form.years.length)
+    errors.years = "Select at least one year";
+  if (!form.eligibilityCriteria.trim())
+    errors.eligibilityCriteria = "Eligibility criteria is required";
+
+  if (!form.companyLogo) errors.companyLogo = "Company logo is required";
+  if (!form.certificates.length)
+    errors.certificates = "At least one certificate is required";
+
+  return errors;
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+
+function SectionLabel({
+  children,
+  required,
+}: {
+  children: ReactNode;
+  required?: boolean;
+}) {
+  return (
+    <label className="mb-1.5 block text-[15px] font-semibold text-[#282828]">
+      {children}
+      {required && <span className="ml-0.5 text-red-500">*</span>}
+    </label>
+  );
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs text-red-500">{msg}</p>;
+}
+
+function inputCls(hasError?: boolean) {
+  return `w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${
+    hasError ? "border-red-400" : "border-[#CCCCCC]"
+  }`;
+}
+
+function SelectField({
+  value,
+  onChange,
+  placeholder,
+  options,
+  hasError,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  options: string[];
+  hasError?: boolean;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={`w-full rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-[#49C77F] ${
+        value ? "text-[#525252]" : "text-gray-400"
+      } ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// ─── Multi-Select Dropdown ────────────────────────────────────────────────────
+
+function MultiSelectDropdown({
+  options,
+  selected,
+  onChange,
+  placeholder,
+  hasError,
+}: {
+  options: string[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+  placeholder: string;
+  hasError?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (option: string) => {
+    onChange(
+      selected.includes(option)
+        ? selected.filter((s) => s !== option)
+        : [...selected, option]
+    );
+  };
+
+  const remove = (option: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(selected.filter((s) => s !== option));
+  };
+
+  return (
+    <div ref={ref} className="relative">
+      <div
+        onClick={() => setOpen((p) => !p)}
+        className={`relative min-h-[42px] w-full cursor-pointer rounded-lg border bg-white px-3 py-2 shadow-sm ${
+          hasError ? "border-red-400" : "border-[#CCCCCC]"
+        }`}
+      >
+        {selected.length === 0 ? (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">{placeholder}</span>
+            <CaretDown size={16} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-1.5 pr-6">
+            {selected.map((s) => (
+              <span
+                key={s}
+                className="flex items-center gap-1 rounded-full border border-[#49C77F] bg-green-50 px-2.5 py-0.5 text-xs font-medium text-[#1e7a4a]"
+              >
+                {s}
+                <button type="button" onClick={(e) => remove(s, e)} className="ml-0.5 text-green-400 hover:text-red-500">
+                  <X size={11} weight="bold" />
+                </button>
+              </span>
+            ))}
+            <CaretDown size={16} className={`absolute right-3 top-3 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+          </div>
+        )}
+      </div>
+      {open && (
+        <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+          {options.map((option) => {
+            const isSelected = selected.includes(option);
+            return (
+              <div
+                key={option}
+                onClick={() => toggle(option)}
+                className={`flex cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm transition ${
+                  isSelected ? "bg-green-50 text-[#1e7a4a]" : "text-[#525252] hover:bg-gray-50"
+                }`}
+              >
+                <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-[#49C77F] bg-[#49C77F]" : "border-gray-300"}`}>
+                  {isSelected && (
+                    <svg viewBox="0 0 12 12" className="h-2.5 w-2.5">
+                      <path d="M1 6l3.5 3.5L11 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </span>
+                {option}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Job Role Dropdown with "Other" (mirrors reference file) ──────────────────
+
+function JobRoleDropdown({
+  value,
+  otherValue,
+  onValueChange,
+  onOtherChange,
+  hasError,
+  hasOtherError,
+}: {
+  value: string;
+  otherValue: string;
+  onValueChange: (v: string) => void;
+  onOtherChange: (v: string) => void;
+  hasError?: boolean;
+  hasOtherError?: boolean;
+}) {
+  const [openDropdown, setOpenDropdown] = useState(false);
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherInput, setOtherInput] = useState(otherValue);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpenDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const commitOther = () => {
+    const v = otherInput.trim();
+    if (!v) {
+      toast.error("Please enter a job role before adding.");
+      return;
+    }
+    onValueChange("Other");
+    onOtherChange(v);
+    setShowOtherInput(false);
+  };
+
+  const cancelOther = () => {
+    setShowOtherInput(false);
+    setOtherInput("");
+    onValueChange("");
+    onOtherChange("");
+  };
+
+  // Show chip when a custom "Other" value is committed
+  if (value === "Other" && otherValue.trim()) {
+    return (
+      <div
+        className={`flex min-h-[42px] w-full items-center justify-between rounded-lg border bg-white px-4 py-2 shadow-sm ${
+          hasError ? "border-red-400" : "border-[#CCCCCC]"
+        }`}
+      >
+        <span className="flex items-center gap-2 rounded-md border border-[#49C77F] bg-green-50 px-2 py-0.5 text-sm text-[#282828]">
+          {otherValue}
+          <button
+            type="button"
+            onClick={() => {
+              onValueChange("");
+              onOtherChange("");
+              setOtherInput("");
+              setShowOtherInput(false);
+            }}
+            className="text-xs text-gray-400 hover:text-red-500"
+          >
+            ✕
+          </button>
+        </span>
+        <span className="text-[#525252]">▾</span>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      {/* Trigger */}
+      <div
+        onClick={() => setOpenDropdown((p) => !p)}
+        className={`flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm ${
+          hasError ? "border-red-400" : "border-[#CCCCCC]"
+        } ${value && value !== "Other" ? "text-[#525252]" : "text-gray-400"}`}
+      >
+        <span>
+          {value && value !== "Other" ? value : "Select Job Role"}
+        </span>
+        <span className="text-[#525252]">▾</span>
+      </div>
+
+      {/* Dropdown list */}
+      {openDropdown && (
+        <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">
+          <div
+            onClick={() => {
+              onValueChange("");
+              setOpenDropdown(false);
+            }}
+            className="cursor-pointer px-3 py-2 text-gray-400 hover:bg-gray-100"
+          >
+            Select Job Role
+          </div>
+          {JOB_ROLE_OPTIONS.map((o) => (
+            <div
+              key={o}
+              onClick={() => {
+                onValueChange(o);
+                onOtherChange("");
+                setShowOtherInput(false);
+                setOtherInput("");
+                setOpenDropdown(false);
+              }}
+              className={`cursor-pointer px-3 py-2 transition ${
+                value === o
+                  ? "bg-green-100 font-medium text-green-700"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              {o}
+            </div>
+          ))}
+          <div
+            onClick={() => {
+              setShowOtherInput(true);
+              onValueChange("Other");
+              setOpenDropdown(false);
+            }}
+            className="cursor-pointer px-3 py-2 font-medium text-[#49C77F] hover:bg-green-50"
+          >
+            + Other
+          </div>
+        </div>
+      )}
+
+      {/* Other text input */}
+      {showOtherInput && (
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            autoFocus
+            value={otherInput}
+            onChange={(e) => setOtherInput(sanitizeName(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitOther();
+              if (e.key === "Escape") cancelOther();
+            }}
+            placeholder="Enter custom job role"
+            className={`h-10 flex-1 rounded-md border px-3 text-sm text-[#525252] outline-none focus:border-[#49C77F] ${
+              hasOtherError ? "border-red-400" : "border-[#D9D9D9]"
+            }`}
+          />
+          <button
+            type="button"
+            onClick={commitOther}
+            className="h-10 rounded-md bg-[#49C77F] px-4 text-sm text-white hover:bg-[#3ab36e] cursor-pointer"
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={cancelOther}
+            className="h-10 rounded-md border border-[#CCCCCC] px-4 text-sm text-[#525252] hover:bg-gray-50 cursor-pointer"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Company Logo (single, with image preview) ────────────────────────────────
+
+function LogoUpload({
+  file,
+  onChange,
+  hasError,
+}: {
+  file: File | null;
+  onChange: (f: File | null) => void;
+  hasError?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    onChange(f);
+    e.target.value = "";
+  };
+
+  return (
+    <div
+      className={`rounded-lg border bg-white shadow-sm ${
+        hasError ? "border-red-400" : "border-[#CCCCCC]"
+      }`}
+    >
+      {file ? (
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-gray-100 bg-gray-50 text-[#49C77F]">
+            <ImageSquare size={20} />
+          </span>
+          <span className="flex-1 truncate text-sm text-[#525252]">
+            {file.name}
+          </span>
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+            aria-label="Remove logo"
+          >
+            <X size={15} weight="bold" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="text-[#49C77F]">
+            <ImageSquare size={20} />
+          </span>
+          <span className="flex-1 text-sm text-gray-400">
+            Upload company logo (PNG, JPG, SVG)
+          </span>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer"
+          >
+            <UploadSimple size={13} weight="bold" />
+            Upload
+          </button>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
+        className="hidden"
+        onChange={handleChange}
+      />
+    </div>
+  );
+}
+
+// ─── Certificates (multiple files, list) ─────────────────────────────────────
+
+function CertificatesUpload({
+  files,
+  onChange,
+  hasError,
+}: {
+  files: File[];
+  onChange: (files: File[]) => void;
+  hasError?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const incoming = Array.from(e.target.files ?? []);
+    if (!incoming.length) return;
+    const existing = new Set(files.map((f) => `${f.name}-${f.size}`));
+    const fresh = incoming.filter(
+      (f) => !existing.has(`${f.name}-${f.size}`)
+    );
+    onChange([...files, ...fresh]);
+    e.target.value = "";
+  };
+
+  const handleRemove = (index: number) =>
+    onChange(files.filter((_, i) => i !== index));
+
+  const FileIcon = ({ file }: { file: File }) =>
+    file.type === "application/pdf" ? (
+      <FilePdf size={16} className="flex-shrink-0 text-red-400" />
+    ) : (
+      <ImageSquare size={16} className="flex-shrink-0 text-blue-400" />
+    );
+
+  return (
+    <div
+      className={`rounded-lg border bg-white shadow-sm ${
+        hasError ? "border-red-400" : "border-[#CCCCCC]"
+      }`}
+    >
+      {/* File list */}
+      {files.length > 0 && (
+        <ul className="divide-y divide-gray-100">
+          {files.map((file, i) => (
+            <li
+              key={`${file.name}-${i}`}
+              className="flex items-center gap-2 px-4 py-2.5"
+            >
+              <FileIcon file={file} />
+              <span className="flex-1 truncate text-sm text-[#525252]">
+                {file.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => handleRemove(i)}
+                className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                aria-label="Remove file"
+              >
+                <Trash size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Upload row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <span className="text-[#49C77F]">
+          <FilePdf size={20} />
+        </span>
+        <span className="flex-1 text-sm text-gray-400">
+          {files.length === 0
+            ? "Upload certificate(s) (PDF, PNG, JPG)"
+            : `${files.length} file${files.length > 1 ? "s" : ""} selected`}
+        </span>
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer"
+        >
+          <UploadSimple size={13} weight="bold" />
+          {files.length ? "Add More" : "Upload"}
+        </button>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,image/png,image/jpeg,image/jpg"
+        multiple
+        className="hidden"
+        onChange={handleChange}
+      />
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function CreateCompanyScreen({
+  onCancel,
+  initialData,
+}: CreateCompanyScreenProps) {
+  const isEditMode = Boolean(initialData?.id);
+
+  const [form, setForm] = useState<CompanyFormState>({
+    ...initialFormState,
+    ...(initialData ?? {}),
+    companyLogo: null,
+    certificates: [],
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  function set<K extends keyof CompanyFormState>(
+    key: K,
+    value: CompanyFormState[K]
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
+  const handleSave = async () => {
+    const errs = validate(form);
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+      toast.error("Please fix the errors before saving");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const formData = new FormData();
+      (
+        Object.entries(form) as [keyof CompanyFormState, CompanyFormState[keyof CompanyFormState]][]
+      ).forEach(([key, value]) => {
+        if (value instanceof File) {
+          formData.append(key, value);
+        } else if (Array.isArray(value)) {
+          value.forEach(
+            (v) => v instanceof File && formData.append(key, v)
+          );
+        } else if (value !== null && value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+
+      // ── Replace with your real API call ──
+      // const res = await fetch("/api/companies", {
+      //   method: isEditMode ? "PUT" : "POST",
+      //   body: formData,
+      // });
+      // if (!res.ok) throw new Error("API error");
+      await new Promise((r) => setTimeout(r, 600)); // simulated delay
+      // ─────────────────────────────────────
+
+      toast.success(isEditMode ? "Updated successfully" : "Saved successfully");
+      onCancel();
+    } catch {
+      toast.error(
+        isEditMode
+          ? "Failed to update. Please try again."
+          : "Failed to save. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="m-2 rounded-2xl bg-white p-8 shadow-sm">
+      {/* Header */}
+      <div className="mb-8 flex items-start gap-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mt-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#D7D7D7] text-[#333] transition hover:bg-gray-50"
+          aria-label="Back"
+        >
+          <CaretLeft size={18} weight="bold" />
+        </button>
+        <div>
+          <h2 className="text-2xl font-bold text-[#333]">
+            {isEditMode ? "Edit Company" : "Add Company"}
+          </h2>
+          <p className="mt-2 text-sm text-gray-500">
+            {isEditMode
+              ? "Update the company details below."
+              : "Add a new company to the placement network by providing verified details below."}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+
+        {/* Company Name */}
+        <div>
+          <SectionLabel required>Company Name</SectionLabel>
+          <input
+            value={form.companyName}
+            onChange={(e) => set("companyName", sanitizeName(e.target.value))}
+            placeholder="Enter company name (e.g., Infosys)"
+            className={inputCls(!!errors.companyName)}
+          />
+          <FieldError msg={errors.companyName} />
+        </div>
+
+        {/* Email + Phone */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Email Address</SectionLabel>
+            <input
+              type="text"
+              value={form.email}
+              onChange={(e) => set("email", sanitizeEmail(e.target.value))}
+              placeholder="e.g., info@infosys.com"
+              className={inputCls(!!errors.email)}
+            />
+            <FieldError msg={errors.email} />
+          </div>
+          <div>
+            <SectionLabel>Phone</SectionLabel>
+            <div className="grid grid-cols-[88px_1fr] gap-3">
+              <input
+                value={form.countryCode}
+                onChange={(e) => set("countryCode", e.target.value)}
+                placeholder="+91"
+                className={inputCls()}
+              />
+              <input
+                value={form.phone}
+                onChange={(e) =>
+                  set("phone", sanitizePhone(e.target.value))
+                }
+                placeholder="10-digit number"
+                inputMode="numeric"
+                maxLength={10}
+                className={inputCls(!!errors.phone)}
+              />
+            </div>
+            <FieldError msg={errors.phone} />
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <SectionLabel required>Company Job Description</SectionLabel>
+          <textarea
+            value={form.description}
+            onChange={(e) => set("description", e.target.value)}
+            placeholder="Brief about company, e.g., Infosys is a global leader in technology services.."
+            className={`min-h-[110px] w-full rounded-lg border px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${
+              errors.description ? "border-red-400" : "border-[#CCCCCC]"
+            }`}
+          />
+          <div className="flex items-start justify-between">
+            <FieldError msg={errors.description} />
+            <span className="ml-auto text-xs text-gray-400">
+              {form.description.length} chars
+            </span>
+          </div>
+        </div>
+
+        {/* Website + Job Role */}
+        <div className="-mt-2 grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Website</SectionLabel>
+            <input
+              value={form.website}
+              onChange={(e) => set("website", e.target.value)}
+              placeholder="https://company.com"
+              className={inputCls(!!errors.website)}
+            />
+            <FieldError msg={errors.website} />
+          </div>
+          <div>
+            <SectionLabel required>Job Role Offered</SectionLabel>
+            <JobRoleDropdown
+              value={form.jobRole}
+              otherValue={form.jobRoleOther}
+              onValueChange={(v) => {
+                set("jobRole", v);
+                if (v !== "Other") set("jobRoleOther", "");
+              }}
+              onOtherChange={(v) => set("jobRoleOther", v)}
+              hasError={!!errors.jobRole}
+              hasOtherError={!!errors.jobRoleOther}
+            />
+            <FieldError msg={errors.jobRole ?? errors.jobRoleOther} />
+          </div>
+        </div>
+
+        {/* Required Skills + Job Type */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Required Skills</SectionLabel>
+            <input
+              value={form.requiredSkills}
+              onChange={(e) => set("requiredSkills", e.target.value)}
+              placeholder="e.g., React, Node.js, SQL"
+              className={inputCls(!!errors.requiredSkills)}
+            />
+            <FieldError msg={errors.requiredSkills} />
+          </div>
+          <div>
+            <SectionLabel required>Job Type</SectionLabel>
+            <SelectField
+              value={form.jobType}
+              onChange={(v) => set("jobType", v)}
+              placeholder="Select Job Type"
+              options={["Full Time", "Internship", "Contract"]}
+              hasError={!!errors.jobType}
+            />
+            <FieldError msg={errors.jobType} />
+          </div>
+        </div>
+
+        {/* Work Mode + Locations */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Work Mode</SectionLabel>
+            <SelectField
+              value={form.workMode}
+              onChange={(v) => set("workMode", v)}
+              placeholder="Select Work Mode"
+              options={["Onsite", "Hybrid", "Remote"]}
+              hasError={!!errors.workMode}
+            />
+            <FieldError msg={errors.workMode} />
+          </div>
+          <div>
+            <SectionLabel required>Location(s)</SectionLabel>
+            <input
+              value={form.locations}
+              onChange={(e) =>
+                set("locations", sanitizeLocation(e.target.value))
+              }
+              placeholder="e.g., Bengaluru, Hyderabad, Pune"
+              className={inputCls(!!errors.locations)}
+            />
+            <FieldError msg={errors.locations} />
+          </div>
+        </div>
+
+        {/* Annual Package + Drive Type */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Annual Package</SectionLabel>
+            <input
+              value={form.annualPackage}
+              onChange={(e) =>
+                set("annualPackage", sanitizePackage(e.target.value))
+              }
+              placeholder="e.g., 6 LPA, 12 LPA"
+              className={inputCls(!!errors.annualPackage)}
+            />
+            <FieldError msg={errors.annualPackage} />
+          </div>
+          <div>
+            <SectionLabel required>Drive Type</SectionLabel>
+            <SelectField
+              value={form.driveType}
+              onChange={(v) => set("driveType", v)}
+              placeholder="Select Drive type"
+              options={["Virtual", "In Person(Office)", ]}
+              hasError={!!errors.driveType}
+            />
+            <FieldError msg={errors.driveType} />
+          </div>
+        </div>
+
+        {/* Start Date + End Date */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Start Date</SectionLabel>
+            <input
+              type="date"
+              value={form.startDate}
+              onChange={(e) => set("startDate", e.target.value)}
+              className={`${inputCls(!!errors.startDate)} cursor-pointer`}
+            />
+            <FieldError msg={errors.startDate} />
+          </div>
+          <div>
+            <SectionLabel required>End Date</SectionLabel>
+            <input
+              type="date"
+              value={form.endDate}
+              onChange={(e) => set("endDate", e.target.value)}
+              min={form.startDate || undefined}
+              disabled={!form.startDate}
+              className={`${inputCls(!!errors.endDate)} cursor-pointer ${!form.startDate ? "cursor-not-allowed opacity-50" : ""}`}
+            />
+            <FieldError msg={errors.endDate} />
+          </div>
+        </div>
+
+        {/* Education Type + Branch */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Education Type</SectionLabel>
+            <MultiSelectDropdown
+              options={EDUCATION_TYPE_OPTIONS}
+              selected={form.educationTypes}
+              onChange={(v) => set("educationTypes", v)}
+              placeholder="Select Education Type(s)"
+              hasError={!!errors.educationTypes}
+            />
+            <FieldError msg={errors.educationTypes} />
+          </div>
+          <div>
+            <SectionLabel required>Branch</SectionLabel>
+            <MultiSelectDropdown
+              options={BRANCH_OPTIONS}
+              selected={form.branches}
+              onChange={(v) => set("branches", v)}
+              placeholder="Select Branch(es)"
+              hasError={!!errors.branches}
+            />
+            <FieldError msg={errors.branches} />
+          </div>
+        </div>
+
+        {/* Year + Eligibility Criteria */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Year</SectionLabel>
+            <MultiSelectDropdown
+              options={YEAR_OPTIONS}
+              selected={form.years}
+              onChange={(v) => set("years", v)}
+              placeholder="Select Year(s)"
+              hasError={!!errors.years}
+            />
+            <FieldError msg={errors.years} />
+          </div>
+          <div>
+            <SectionLabel required>Eligibility Criteria</SectionLabel>
+            <input
+              value={form.eligibilityCriteria}
+              onChange={(e) => set("eligibilityCriteria", e.target.value)}
+              placeholder="e.g., Min 7.0 CGPA"
+              className={inputCls(!!errors.eligibilityCriteria)}
+            />
+            <FieldError msg={errors.eligibilityCriteria} />
+          </div>
+        </div>
+
+        {/* Upload Company Logo + Upload Certificate(s) */}
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <SectionLabel required>Upload Company Logo</SectionLabel>
+            <LogoUpload
+              file={form.companyLogo}
+              onChange={(f) => set("companyLogo", f)}
+              hasError={!!errors.companyLogo}
+            />
+            <FieldError msg={errors.companyLogo} />
+          </div>
+          <div>
+            <SectionLabel required>Upload PDF</SectionLabel>
+            <CertificatesUpload
+              files={form.certificates}
+              onChange={(files) => set("certificates", files)}
+              hasError={!!errors.certificates}
+            />
+            <FieldError msg={errors.certificates} />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid gap-4 pt-2 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="h-10 cursor-pointer rounded-sm border border-[#CFD6E3] bg-white text-base font-medium text-[#2B2B2B] disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="h-10 cursor-pointer rounded-sm bg-[#49C77F] text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isSaving ? "Saving..." : isEditMode ? "Update" : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

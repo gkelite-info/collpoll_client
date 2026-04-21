@@ -47,7 +47,7 @@ const roleOptionsMap: Record<string, string[]> = {
     "Parent",
     "Finance",
     "Finance Manager",
-    // "Placement", //
+     "PlacementOfficer",
     "CollegeHr",
   ],
 
@@ -58,7 +58,7 @@ const roleOptionsMap: Record<string, string[]> = {
     "Parent",
     "Finance",
     "Finance Manager",
-    // "Placement", //
+     "PlacementOfficer",
     "CollegeHr",
   ],
 
@@ -68,7 +68,7 @@ const roleOptionsMap: Record<string, string[]> = {
     "Admin",
     "Faculty",
     "Finance",
-    // "Placement", //
+     "PlacementOfficer",
     "CollegeHr",
   ],
 
@@ -76,14 +76,24 @@ const roleOptionsMap: Record<string, string[]> = {
     "Admin",
     "Faculty",
     "Finance",
-    // "Placement", //
+     "PlacementOfficer",
   ],
 
   CollegeHr: [
     "CollegeAdmin",
     "Admin",
     "Faculty",
-    // "Placement", //
+    "PlacementOfficer",
+  ],
+
+
+  PlacementOfficer: [  
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "CollegeHr", 
   ],
 };
 
@@ -334,7 +344,7 @@ export default function AddAnnouncementModal({
                 <option value="notice">Notice</option>
                 <option value="result">Result</option>
                 <option value="timetable">Timetable</option>
-                {/* <option value="placement">Placement</option> */} {/*  */}
+                 <option value="placement">Placement</option>
                 <option value="emergency">Emergency</option>
                 <option value="finance">Finance</option>
                 <option value="other">Other</option>
@@ -372,9 +382,8 @@ export default function AddAnnouncementModal({
 
                 {/* Caret Down */}
                 <svg
-                  className={`w-4 h-4 text-gray-500 transition-transform ${
-                    showRoleDropdown ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 text-gray-500 transition-transform ${showRoleDropdown ? "rotate-180" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -445,11 +454,10 @@ export default function AddAnnouncementModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex-1 py-2 rounded-md text-[14px] text-white ${
-              saving
+            className={`flex-1 py-2 rounded-md text-[14px] text-white ${saving
                 ? "bg-[#A7DDBE] cursor-not-allowed"
                 : "bg-[#43C17A] hover:bg-[#3AAA6B] cursor-pointer"
-            }`}
+              }`}
           >
             {saving ? "Saving..." : "Save Announcement"}
           </button>
