@@ -346,6 +346,40 @@ export async function fetchFacultyDiscussionSubmissions(
   };
 }
 
+export async function fetchStudentDiscussionMarks(
+  discussionId: number,
+  studentId: number,
+) {
+  const { data, error } = await supabase
+    .from("student_discussion_uploads")
+    .select(
+      `
+        marksObtained,
+        discussion_forum_sections (
+          marks
+        )
+      `,
+    )
+    .eq("discussionId", discussionId)
+    .eq("studentId", studentId)
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .order("submittedAt", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    console.error("fetchStudentDiscussionMarks error:", error);
+    throw error;
+  }
+
+  return {
+    marksObtained: data?.marksObtained ?? null,
+    totalMarks:
+      data?.discussion_forum_sections?.[0]?.marks ?? null,
+  };
+}
+
 export async function updateStudentDiscussionMarks(
   studentId: number,
   discussionId: number,

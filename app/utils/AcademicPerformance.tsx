@@ -1,25 +1,40 @@
 "use client";
 
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    Cell,
-    LabelList,
-} from "recharts";
+import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPerformance/calculations";
+import { useEffect, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 
-export default function AcademicPerformance({ overlayVisible = true }: { overlayVisible?: boolean }) {
-    const data = [
-        { subject: "Sub 1", value: 0, full: 100 },
-        { subject: "Sub 2", value: 0, full: 100 },
-        { subject: "Sub 3", value: 0, full: 100 },
-        { subject: "Sub 4", value: 0, full: 100 },
-        { subject: "Sub 5", value: 0, full: 100 },
-        { subject: "Sub 6", value: 0, full: 100 },
-    ];
+export default function AcademicPerformance({ studentId }: { studentId: number | null }) {
+    console.log("Do we got studentId here", studentId);
+    
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        console.log("Step 1");
+
+        async function loadData() {
+            try {
+                const performance = await getStudentAcademicPerformance(studentId);
+                console.log("What is performance", performance);
+
+                setData(performance);
+            } catch (error) {
+                console.error("Failed to load performance:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, [studentId]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg h-80 flex items-center justify-center shadow-md">
+                <p className="text-gray-500 animate-pulse">Calculating performance...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white relative overflow-hidden rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
@@ -123,7 +138,7 @@ export default function AcademicPerformance({ overlayVisible = true }: { overlay
                                             <circle
                                                 cx={x + width / 2}
                                                 cy={adjustedY}
-                                                r={10}
+                                                r={11.5}
                                                 fill="#E8F6E2"
                                             />
                                             <text

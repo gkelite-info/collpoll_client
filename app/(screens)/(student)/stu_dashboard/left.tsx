@@ -470,6 +470,7 @@ import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studen
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
 import { Loader } from "../calendar/right/timetable";
+import { useStudent } from "@/app/utils/context/student/useStudent";
 
 const formatTimeToAMPM = (time24: string) => {
   const [h, m] = time24.split(":");
@@ -495,6 +496,10 @@ export default function StuDashLeft() {
   const [feeLoading, setFeeLoading] = useState(true);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
+  const { studentId } = useStudent();
+
+  console.log("What is studentId", studentId);
+  
 
   useEffect(() => {
     loadUpcomingClasses();
@@ -791,7 +796,7 @@ export default function StuDashLeft() {
       value: assignmentsLoading ? (
         <ValueShimmer />
       ) : (
-        `${dueAssignmentsCount} Due`
+        `${dueAssignmentsCount} Active`
       ),
       label: "Assignments",
       to: "/assignments",
@@ -855,7 +860,7 @@ export default function StuDashLeft() {
               ))}
             </div>
             <div className="mt-5">
-              <AcademicPerformance />
+              <AcademicPerformance studentId={studentId} />
             </div>
             <div className="mt-5 flex items-center justify-between rounded-lg">
               <SubjectProgressCards
