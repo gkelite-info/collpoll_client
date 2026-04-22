@@ -1,3 +1,121 @@
+// "use client";
+
+// import { useState } from "react";
+// import toast from "react-hot-toast";
+// import { updateAdminAssignment } from "@/lib/helpers/admin/assignments/updateAdminAssignment";
+// import { useRouter } from "next/navigation";
+// import { CaretLeftIcon } from "@phosphor-icons/react";
+
+// export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
+//   const [deadline, setDeadline] = useState(initialData.toDate || "");
+//   const [status, setStatus] = useState(initialData.status || "Active");
+//   const [isSaving, setIsSaving] = useState(false);
+//   const router = useRouter();
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setIsSaving(true);
+//     const res = await updateAdminAssignment(
+//       initialData.assignmentId,
+//       deadline,
+//       status,
+//     );
+
+//     if (res.success) {
+//       toast.success("Assignment updated successfully");
+//       onSave({ ...initialData, toDate: deadline, status });
+//     } else {
+//       toast.error(res.error);
+//     }
+//     setIsSaving(false);
+//   };
+
+//   return (
+//     <div className="w-[68%] mx-1 max-w-3xl">
+//       <div className="flex items-center gap-1 mb-6">
+//         <CaretLeftIcon size={20} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>router.back()}/>
+//         <h2 className="text-xl font-semibold text-gray-900 ">
+//           Edit Assignment (Admin)
+//         </h2>
+//       </div>
+//       <form
+//         onSubmit={handleSubmit}
+//         className="bg-white p-4 rounded-xl text-[#282828]"
+//       >
+//         <div className="mb-4">
+//           <label className="mb-1 block text-sm font-medium text-gray-400">
+//             Topic Name (Read-Only)
+//           </label>
+//           <textarea
+//             disabled
+//             value={initialData.description}
+//             className="w-full rounded-md cursor-not-allowed border border-[#CCCCCC] focus:outline-none bg-gray-50 px-3 py-2 text-sm"
+//             rows={3}
+//           />
+//         </div>
+
+//         <div className="grid grid-cols-2 gap-4 mb-4">
+//           <div>
+//             <label className="mb-1 block text-sm font-medium text-gray-400">
+//               Total Marks (Read-Only)
+//             </label>
+//             <input
+//               disabled
+//               value={initialData.marks}
+//               className="w-full rounded-md border cursor-not-allowed border-[#CCCCCC] focus:outline-none bg-gray-50 px-3 py-2 text-sm"
+//             />
+//           </div>
+//           <div>
+//             <label className="mb-1 block text-sm font-medium text-gray-700">
+//               Status
+//             </label>
+//             <select
+//               value={status}
+//               onChange={(e) => setStatus(e.target.value)}
+//               className="w-full rounded-md cursor-pointer border border-[#CCCCCC] focus:outline-none px-3 py-2 text-sm"
+//             >
+//               <option value="Active">Active</option>
+//               <option value="Cancelled">Cancelled</option>
+//               <option value="Expired">Expired</option>
+//             </select>
+//           </div>
+//         </div>
+
+//         <div className="mb-6">
+//           <label className="mb-1 block text-sm font-medium text-gray-700">
+//             Submission deadline
+//           </label>
+//           <input
+//             type="date"
+//             required
+//             min={new Date().toISOString().split("T")[0]}
+//             value={deadline}
+//             onChange={(e) => setDeadline(e.target.value)}
+//             className="w-full cursor-pointer rounded-md border border-[#CCCCCC] focus:outline-none px-3 py-2 text-sm"
+//           />
+//         </div>
+
+//         <div className="flex gap-3">
+//           <button
+//             type="submit"
+//             disabled={isSaving}
+//             className="flex-1 cursor-pointer bg-[#43C17A] text-white py-2 rounded-md hover:bg-green-600"
+//           >
+//             {isSaving ? "Saving..." : "Update Deadline"}
+//           </button>
+//           <button
+//             type="button"
+//             onClick={onCancel}
+//             className="flex-1 cursor-pointer border py-2 rounded-md hover:bg-gray-100"
+//           >
+//             Cancel
+//           </button>
+//         </div>
+//       </form>
+//     </div>
+//   );
+// }
+
 "use client";
 
 import { useState } from "react";
@@ -6,8 +124,22 @@ import { updateAdminAssignment } from "@/lib/helpers/admin/assignments/updateAdm
 import { useRouter } from "next/navigation";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 
+// 🟢 Safely parses your integer dates (20241231) into YYYY-MM-DD for the HTML input
+function toHtmlDate(dateStr: string | number | undefined) {
+  if (!dateStr) return "";
+  const str = dateStr.toString();
+  if (/^\d{8}$/.test(str)) {
+    return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return str;
+}
+
 export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
-  const [deadline, setDeadline] = useState(initialData.toDate || "");
+  // 🟢 Wrapped initialData.toDate in the formatter
+  const [deadline, setDeadline] = useState(
+    toHtmlDate(initialData.toDate) || "",
+  );
   const [status, setStatus] = useState(initialData.status || "Active");
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -33,7 +165,11 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
   return (
     <div className="w-[68%] mx-1 max-w-3xl">
       <div className="flex items-center gap-1 mb-6">
-        <CaretLeftIcon size={20} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>router.back()}/>
+        <CaretLeftIcon
+          size={20}
+          className="text-[#282828] cursor-pointer -ml-1"
+          onClick={() => router.back()}
+        />
         <h2 className="text-xl font-semibold text-gray-900 ">
           Edit Assignment (Admin)
         </h2>
