@@ -51,12 +51,13 @@
 
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash, X } from "@phosphor-icons/react";
+import { Trash } from "@phosphor-icons/react";
 
 interface Props {
   open: boolean;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   isDeleting?: boolean;
   title?: string;
@@ -79,6 +80,21 @@ export default function ConfirmDeleteModal({
   itemName,
   customDescription
 }: Props) {
+  const [isConfirming, setIsConfirming] = useState(false);
+  const isDeleteLoading = isDeleting || isConfirming;
+  const deleteLabel = itemName || name;
+
+  const handleConfirm = async () => {
+    if (isDeleteLoading) return;
+
+    setIsConfirming(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -88,7 +104,7 @@ export default function ConfirmDeleteModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={!isDeleting ? onCancel : undefined}
+            onClick={!isDeleteLoading ? onCancel : undefined}
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
           />
 
@@ -113,7 +129,7 @@ export default function ConfirmDeleteModal({
               </div>
 
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {title} {name}?
+                {title} {deleteLabel}?
               </h3>
 
               <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
@@ -121,7 +137,7 @@ export default function ConfirmDeleteModal({
                   customDescription
                 ) : (
                   <>
-                    Are you sure you want to delete this <span className="font-semibold text-gray-700">{name}</span>? This action cannot be undone and will permanently remove the data.
+                    Are you sure you want to delete this <span className="font-semibold text-gray-700">{deleteLabel}</span>? This action cannot be undone and will permanently remove the data.
                   </>
                 )}
               </p>
@@ -129,18 +145,18 @@ export default function ConfirmDeleteModal({
               <div className="flex gap-3 w-full">
                 <button
                   onClick={onCancel}
-                  disabled={isDeleting}
+                  disabled={isDeleteLoading}
                   className="flex-1 px-4 py-3 text-gray-700 font-semibold bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
 
                 <button
-                  onClick={onConfirm}
-                  disabled={isDeleting}
+                  onClick={handleConfirm}
+                  disabled={isDeleteLoading}
                   className="flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
                 >
-                  {isDeleting ? (
+                  {isDeleteLoading ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

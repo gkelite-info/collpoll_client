@@ -14,17 +14,18 @@ type PlacementCompanyCardProps = {
   company: PlacementCompany;
   onClick: () => void;
   onEdit: () => void;
+  onDelete: () => void;
 };
 
 function CompanyLogo({ company }: { company: PlacementCompany }) {
   return (
-    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white">
+    <div className="flex h-20 w-36 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
       <Image
         src={company.logo}
         alt={`${company.name} logo`}
-        width={80}
+        width={144}
         height={80}
-        className="h-16 w-16 object-cover rounded-full"
+        className="h-full w-full object-contain"
       />
     </div>
   );
@@ -34,6 +35,7 @@ export default function PlacementCompanyCard({
   company,
   onClick,
   onEdit,
+  onDelete,
 }: PlacementCompanyCardProps) {
   const timeTag =
     company.tags.find((tag) => tag === "Part Time") ??
@@ -67,40 +69,48 @@ export default function PlacementCompanyCard({
             {company.role}
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-1 pr-28 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C9D3DE] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1">
             {company.skills.map((skill) => (
               <span
                 key={skill}
-                className="rounded-full bg-[#E8F8EF] px-3 py-1 text-[12px] font-medium text-[#43C17A]"
+                className="shrink-0 rounded-full bg-[#E8F8EF] px-3 py-1 text-[12px] font-medium text-[#43C17A]"
               >
                 {skill}
               </span>
             ))}
           </div>
 
-          <p className="mt-4 w-full text-sm leading-5 text-[#525252]">
+          <p className="mt-4 max-h-[46px] w-full overflow-y-auto pr-2 text-sm leading-5 text-[#525252] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C9D3DE] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:w-1">
             {company.description}
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <p className="mt-2 text-[12px] font-medium text-[#43C17A]">
+            Click card to see more
+          </p>
+
+          <div className="mt-3 flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-1 pr-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C9D3DE] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1">
             {timeTag && (
-              <div className="flex items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
                 <ClockCountdown weight="fill" className="h-3.5 w-3.5" />
-                <span className="text-[14px]">{timeTag}</span>
+                <span className="whitespace-nowrap text-[14px]">{timeTag}</span>
               </div>
             )}
 
             {locationTag && (
-              <div className="flex items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
                 <MapPin weight="fill" className="h-3.5 w-3.5" />
-                <span className="text-[14px]">{locationTag}</span>
+                <span className="whitespace-nowrap text-[14px]">
+                  {locationTag}
+                </span>
               </div>
             )}
 
             {salaryTag && (
-              <div className="flex items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
                 <CurrencyInr weight="fill" className="h-3.5 w-3.5" />
-                <span className="text-[14px]">{salaryTag}</span>
+                <span className="whitespace-nowrap text-[14px]">
+                  {salaryTag}
+                </span>
               </div>
             )}
           </div>
@@ -120,7 +130,9 @@ export default function PlacementCompanyCard({
         </button>
         <button
           type="button"
+          onClick={onDelete}
           className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#FFE9E9] text-[#FF6B6B]"
+          aria-label={`Delete ${company.name}`}
         >
           <Trash size={16} weight="bold" />
         </button>
