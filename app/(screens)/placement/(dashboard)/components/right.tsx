@@ -1,12 +1,35 @@
-"use client"; 
+"use client";
 
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { useEffect, useState } from "react"; 
-import { useUser } from "@/app/utils/context/UserContext"; 
-import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI"; 
+import { useCallback, useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
+type AnnouncementItem = {
+  collegeAnnouncementId?: number;
+  image: string;
+  imgHeight: string;
+  title: string;
+  professor: string;
+  date?: string;
+  createdAt?: string;
+  cardBg: string;
+  imageBg: string;
+  type?: string;
+  targetRoles?: string[];
+};
+
+type CollegeAnnouncementResponseItem = {
+  collegeAnnouncementId: number;
+  title: string;
+  date?: string;
+  createdAt?: string;
+  type: string;
+  targetRoles?: string[];
+  createdByRole: string;
+};
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -23,20 +46,18 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-
 export default function SemwiseDetailsRight() {
-  const { collegeId, userId, role } = useUser(); 
-  const [announcements, setAnnouncements] = useState<any[]>([]); 
-  const [view, setView] = useState<"my" | "others">("my"); 
+  const { collegeId, userId, role } = useUser();
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [view, setView] = useState<"my" | "others">("my");
 
- 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       if (!collegeId || !userId || !role) return;
+
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
@@ -45,33 +66,42 @@ export default function SemwiseDetailsRight() {
         page: 1,
         limit: 20,
       });
-      const formatted = res.data.map((item: any) => ({
-        collegeAnnouncementId: item.collegeAnnouncementId,
-        title: item.title,
-        date: item.date,
-        createdAt: item.createdAt,
-        type: item.type,
-        targetRoles: item.targetRoles,
-        image: typeIcons[item.type] || "/clip.png",
-        imgHeight: "h-10",
-        cardBg: "#E8F8EF",
-        imageBg: "#D3F1E0",
-        professor:
-          view === "my"
-            ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-            : `By ${formatRole(item.createdByRole)}`,
-      }));
+
+      const formatted = (res.data as CollegeAnnouncementResponseItem[]).map(
+        (item) => ({
+          collegeAnnouncementId: item.collegeAnnouncementId,
+          title: item.title,
+          date: item.date,
+          createdAt: item.createdAt,
+          type: item.type,
+          targetRoles: item.targetRoles,
+          image: typeIcons[item.type] || "/clip.png",
+          imgHeight: "h-10",
+          cardBg: "#E8F8EF",
+          imageBg: "#D3F1E0",
+          professor:
+            view === "my"
+              ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
+              : `By ${formatRole(item.createdByRole)}`,
+        }),
+      );
+
       setAnnouncements(formatted);
     } catch (err) {
-      console.error(err);
+      console.error("Placement dashboard announcements fetch failed", err);
+      setAnnouncements([]);
     }
-  };
+  }, [collegeId, role, userId, view]);
 
-  
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
-    fetchData();
-  }, [collegeId, userId, role, view]);
+
+    const timer = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [collegeId, userId, role, fetchData]);
 
   return (
     <div className="w-[32%] p-2 flex flex-col">

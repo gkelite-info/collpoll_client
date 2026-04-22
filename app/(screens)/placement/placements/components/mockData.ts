@@ -24,10 +24,26 @@ export type PlacementCompany = {
   website: string;
   packageDetails: string;
   driveType: string;
+  driveTypeValue?: string;
+  jobTypeValue?: string;
+  workMode?: string;
+  workModeValue?: string;
+  eligibilityCriteria?: string;
+  collegeEducationId?: number;
+  educationTypeName?: string;
+  collegeId?: number;
+  collegeBranchId?: number;
+  branchName?: string;
+  collegeAcademicYearId?: number;
+  academicYear?: string;
+  createdBy?: number;
+  placementCompanyIds?: number[];
   studentsPlaced: number;
   locations: string[];
   attachments: string[];
   logo: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 export type PlacementDriveStat = {

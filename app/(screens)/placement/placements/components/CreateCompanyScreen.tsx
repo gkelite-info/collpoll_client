@@ -1,16 +1,11 @@
 "use client";
 
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchAcademicYears, fetchBranches, fetchEducations } from "@/lib/helpers/admin/academics/academicDropdowns";
+import { createPlacementCompany, updatePlacementCompany } from "@/lib/helpers/placements/createPlacementCompany";
+import { CaretDown, CaretLeft, FilePdf, ImageSquare, Trash, UploadSimple, X } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import {
-  CaretLeft,
-  CaretDown,
-  UploadSimple,
-  X,
-  ImageSquare,
-  FilePdf,
-  Trash,
-} from "@phosphor-icons/react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,8 +13,13 @@ type CreateCompanyScreenProps = {
   onCancel: () => void;
   initialData?: Partial<
     Omit<CompanyFormState, "companyLogo" | "certificates">
-  > & { id?: string };
+  > & {
+    id?: string;
+    placementCompanyIds?: number[];
+  };
 };
+
+type CascadeOption = { id: number; label: string; code?: string };
 
 type CompanyFormState = {
   companyName: string;
@@ -28,8 +28,8 @@ type CompanyFormState = {
   phone: string;
   description: string;
   website: string;
-  jobRole: string;      // selected option or "Other"
-  jobRoleOther: string; // custom value when "Other"
+  jobRole: string;
+  jobRoleOther: string;
   requiredSkills: string;
   jobType: string;
   workMode: string;
@@ -38,12 +38,14 @@ type CompanyFormState = {
   driveType: string;
   startDate: string;
   endDate: string;
-  educationTypes: string[];
-  branches: string[];
-  years: string[];
+  educationType: CascadeOption | null;
+  branch: CascadeOption | null;
+  academicYear: CascadeOption | null;
   eligibilityCriteria: string;
   companyLogo: File | null;
   certificates: File[];
+  existingLogoName: string;
+  existingCertificates: string[];
 };
 
 const initialFormState: CompanyFormState = {
@@ -63,12 +65,14 @@ const initialFormState: CompanyFormState = {
   driveType: "",
   startDate: "",
   endDate: "",
-  educationTypes: [],
-  branches: [],
-  years: [],
+  educationType: null,
+  branch: null,
+  academicYear: null,
   eligibilityCriteria: "",
   companyLogo: null,
   certificates: [],
+  existingLogoName: "",
+  existingCertificates: [],
 };
 
 const JOB_ROLE_OPTIONS = [
@@ -78,126 +82,97 @@ const JOB_ROLE_OPTIONS = [
   "QA Engineer",
 ];
 
-const EDUCATION_TYPE_OPTIONS = [
-  "B.Tech", "M.Tech", "MBA", "BCA", "MCA",
-  "B.Sc", "M.Sc", "B.Com", "M.Com", "BBA", "Diploma", "Ph.D",
+// ─── Enum value maps (DB value → display label) ───────────────────────────────
+
+const JOB_TYPE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Full Time", value: "fulltime" },
+  { label: "Internship", value: "internship" },
+  { label: "Contract", value: "contract" },
 ];
 
-const BRANCH_OPTIONS = [
-  "Computer Science & Engineering",
-  "Information Technology",
-  "Electronics & Communication",
-  "Electrical Engineering",
-  "Mechanical Engineering",
-  "Civil Engineering",
-  "Chemical Engineering",
-  "Biotechnology",
-  "Aerospace Engineering",
-  "Data Science",
-  "Artificial Intelligence & ML",
-  "Cyber Security",
+const WORK_MODE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Onsite", value: "onsite" },
+  { label: "Hybrid", value: "hybrid" },
+  { label: "Remote", value: "remote" },
 ];
 
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+const DRIVE_TYPE_OPTIONS: { label: string; value: string }[] = [
+  { label: "Virtual", value: "virtual" },
+  { label: "In Person", value: "inperson" },
+];
 
 // ─── Sanitizers ───────────────────────────────────────────────────────────────
 
-/** Letters, digits, spaces, - ' ( ) only */
 const sanitizeName = (v: string) => v.replace(/[^a-zA-Z0-9\s\-'()]/g, "");
 
-/** Lowercase, valid email chars only — and nothing after the TLD (e.g. .com) */
 const sanitizeEmail = (v: string): string => {
-  // Step 1: lowercase + strip invalid chars
   const cleaned = v.toLowerCase().replace(/[^a-z0-9@._\-+]/g, "");
-
-  // Step 2: if there's an @, check for a TLD and truncate after it
   const atIndex = cleaned.indexOf("@");
   if (atIndex !== -1) {
-    const domain = cleaned.slice(atIndex + 1); // e.g. "gmail.com" or "gmail.comaaa"
-    // Match the last dot-segment that looks like a TLD (2+ letters)
+    const domain = cleaned.slice(atIndex + 1);
     const tldMatch = domain.match(/^([a-z0-9.\-]+\.[a-z]{2,})/);
     if (tldMatch) {
-      // Only keep up to the end of that TLD match
       return cleaned.slice(0, atIndex + 1) + tldMatch[1];
     }
   }
-
   return cleaned;
 };
 
-/** Digits only, max 10 */
-const sanitizePhone = (v: string) =>
-  v.replace(/\D/g, "").slice(0, 10);
-
-/** Letters, digits, spaces, - ' only */
-const sanitizeLocation = (v: string) =>
-  v.replace(/[^a-zA-Z0-9\s\-']/g, "");
-
-/** Letters and digits only */
-const sanitizePackage = (v: string) =>
-  v.replace(/[^a-zA-Z0-9\s]/g, "");
+const sanitizePhone = (v: string) => v.replace(/\D/g, "").slice(0, 10);
+const sanitizeLocation = (v: string) => v.replace(/[^a-zA-Z0-9\s\-']/g, "");
+const sanitizePackage = (v: string) => v.replace(/[^a-zA-Z0-9\s.]/g, "");
 
 // ─── Validators ───────────────────────────────────────────────────────────────
 
-type FormErrors = Partial<
-  Record<keyof CompanyFormState | "jobRoleOther", string>
->;
+type FormErrors = Partial<Record<keyof CompanyFormState | "jobRoleOther", string>>;
 
-function validate(form: CompanyFormState): FormErrors {
+function validate(
+  form: CompanyFormState,
+  { isEditMode }: { isEditMode: boolean },
+): FormErrors {
   const errors: FormErrors = {};
 
-  // Company Name
   if (!form.companyName.trim()) {
     errors.companyName = "Company name is required";
   } else if (form.companyName.trim().length < 2) {
     errors.companyName = "Must be at least 2 characters";
   }
 
-  // Email – lowercase, standard format, nothing weird after TLD
   if (!form.email.trim()) {
     errors.email = "Email is required";
-  } else if (
-    !/^[a-z0-9._+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(form.email.trim())
-  ) {
+  } else if (!/^[a-z0-9._+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/.test(form.email.trim())) {
     errors.email = "Enter a valid email (all lowercase, e.g. info@company.com)";
   }
 
-  // Phone is optional, but if entered it must be exactly 10 digits.
   if (form.phone.trim() && !/^\d{10}$/.test(form.phone.trim())) {
     errors.phone = "Phone must be exactly 10 digits";
   }
 
-  // Description – min 20 chars
   if (!form.description.trim()) {
     errors.description = "Company Job description is required";
   } else if (form.description.trim().length < 20) {
     errors.description = "Description must be at least 20 characters";
   }
 
-  // Website – must start with https://
   if (!form.website.trim()) {
     errors.website = "Website URL is required";
   } else if (!/^https:\/\/.+\..+/.test(form.website.trim())) {
     errors.website = "Website must start with https://";
   }
 
-  // Job Role
   if (!form.jobRole) {
     errors.jobRole = "Job role is required";
   } else if (form.jobRole === "Other" && !form.jobRoleOther.trim()) {
     errors.jobRoleOther = "Please specify the job role";
   }
 
-  if (!form.requiredSkills.trim())
-    errors.requiredSkills = "Required skills are needed";
+  if (!form.requiredSkills.trim()) errors.requiredSkills = "Required skills are needed";
   if (!form.jobType) errors.jobType = "Job type is required";
   if (!form.workMode) errors.workMode = "Work mode is required";
   if (!form.locations.trim()) errors.locations = "Location is required";
-  if (!form.annualPackage.trim())
-    errors.annualPackage = "Annual package is required";
+  if (!form.annualPackage.trim()) errors.annualPackage = "Annual package is required";
   if (!form.driveType) errors.driveType = "Drive type is required";
 
-  // Start Date + End Date
   if (!form.startDate) errors.startDate = "Start date is required";
   if (!form.endDate) {
     errors.endDate = "End date is required";
@@ -205,18 +180,17 @@ function validate(form: CompanyFormState): FormErrors {
     errors.endDate = "End date must be after start date";
   }
 
-  // Education Type, Branch, Year
-  if (!form.educationTypes.length)
-    errors.educationTypes = "Select at least one education type";
-  if (!form.branches.length)
-    errors.branches = "Select at least one branch";
-  if (!form.years.length)
-    errors.years = "Select at least one year";
+  if (!form.educationType) errors.educationType = "Education type is required";
+  if (!form.branch) errors.branch = "Branch is required";
+  if (!form.academicYear) errors.academicYear = "Academic year is required";
+
   if (!form.eligibilityCriteria.trim())
     errors.eligibilityCriteria = "Eligibility criteria is required";
 
-  if (!form.companyLogo) errors.companyLogo = "Company logo is required";
-  if (!form.certificates.length)
+  if (!form.companyLogo && !(isEditMode && form.existingLogoName)) {
+    errors.companyLogo = "Company logo is required";
+  }
+  if (!form.certificates.length && !(isEditMode && form.existingCertificates.length))
     errors.certificates = "At least one certificate is required";
 
   return errors;
@@ -224,13 +198,7 @@ function validate(form: CompanyFormState): FormErrors {
 
 // ─── UI Helpers ───────────────────────────────────────────────────────────────
 
-function SectionLabel({
-  children,
-  required,
-}: {
-  children: ReactNode;
-  required?: boolean;
-}) {
+function SectionLabel({ children, required }: { children: ReactNode; required?: boolean }) {
   return (
     <label className="mb-1.5 block text-[15px] font-semibold text-[#282828]">
       {children}
@@ -245,12 +213,13 @@ function FieldError({ msg }: { msg?: string }) {
 }
 
 function inputCls(hasError?: boolean) {
-  return `w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${
-    hasError ? "border-red-400" : "border-[#CCCCCC]"
-  }`;
+  return `w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${hasError ? "border-red-400" : "border-[#CCCCCC]"
+    }`;
 }
 
-function SelectField({
+// ─── Enum Select Field (label/value pairs) ────────────────────────────────────
+
+function EnumSelectField({
   value,
   onChange,
   placeholder,
@@ -260,41 +229,48 @@ function SelectField({
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
-  options: string[];
+  options: { label: string; value: string }[];
   hasError?: boolean;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`w-full rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-[#49C77F] ${
-        value ? "text-[#525252]" : "text-gray-400"
-      } ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}
+      className={`w-full rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-[#49C77F] ${value ? "text-[#525252]" : "text-gray-400"
+        } ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}
     >
       <option value="">{placeholder}</option>
       {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
+        <option key={o.value} value={o.value}>{o.label}</option>
       ))}
     </select>
   );
 }
 
-// ─── Multi-Select Dropdown ────────────────────────────────────────────────────
+// ─── Cascade Single-Select Dropdown ──────────────────────────────────────────
 
-function MultiSelectDropdown({
-  options,
-  selected,
-  onChange,
+function CascadeSelect({
+  label,
+  required,
   placeholder,
+  options,
+  value,
+  onChange,
+  disabled,
+  loading,
   hasError,
+  errorMsg,
 }: {
-  options: string[];
-  selected: string[];
-  onChange: (values: string[]) => void;
+  label: string;
+  required?: boolean;
   placeholder: string;
+  options: CascadeOption[];
+  value: CascadeOption | null;
+  onChange: (opt: CascadeOption | null) => void;
+  disabled?: boolean;
+  loading?: boolean;
   hasError?: boolean;
+  errorMsg?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -308,79 +284,69 @@ function MultiSelectDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const toggle = (option: string) => {
-    onChange(
-      selected.includes(option)
-        ? selected.filter((s) => s !== option)
-        : [...selected, option]
-    );
-  };
-
-  const remove = (option: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange(selected.filter((s) => s !== option));
-  };
-
   return (
-    <div ref={ref} className="relative">
-      <div
-        onClick={() => setOpen((p) => !p)}
-        className={`relative min-h-[42px] w-full cursor-pointer rounded-lg border bg-white px-3 py-2 shadow-sm ${
-          hasError ? "border-red-400" : "border-[#CCCCCC]"
-        }`}
-      >
-        {selected.length === 0 ? (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">{placeholder}</span>
-            <CaretDown size={16} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center gap-1.5 pr-6">
-            {selected.map((s) => (
-              <span
-                key={s}
-                className="flex items-center gap-1 rounded-full border border-[#49C77F] bg-green-50 px-2.5 py-0.5 text-xs font-medium text-[#1e7a4a]"
-              >
-                {s}
-                <button type="button" onClick={(e) => remove(s, e)} className="ml-0.5 text-green-400 hover:text-red-500">
-                  <X size={11} weight="bold" />
-                </button>
-              </span>
-            ))}
-            <CaretDown size={16} className={`absolute right-3 top-3 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-          </div>
+    <div>
+      <SectionLabel required={required}>{label}</SectionLabel>
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          disabled={disabled || loading}
+          onClick={() => setOpen((p) => !p)}
+          className={`flex w-full items-center justify-between rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm outline-none transition focus:border-[#49C77F]
+            ${hasError ? "border-red-400" : "border-[#CCCCCC]"}
+            ${disabled || loading ? "cursor-not-allowed opacity-50" : "cursor-pointer"}
+            ${value ? "text-[#525252]" : "text-gray-400"}
+          `}
+        >
+          <span className="truncate">
+            {loading ? "Loading..." : value ? value.label : placeholder}
+          </span>
+          <CaretDown
+            size={15}
+            weight="bold"
+            className={`ml-2 flex-shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {open && !disabled && !loading && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+            <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+              {options.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-gray-400">No options available</div>
+              ) : (
+                options.map((opt) => {
+                  const isSelected = value?.id === opt.id;
+                  return (
+                    <div
+                      key={opt.id}
+                      onClick={() => { onChange(opt); setOpen(false); }}
+                      className={`flex cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm transition
+                        ${isSelected ? "bg-green-50 font-medium text-[#1e7a4a]" : "text-[#525252] hover:bg-gray-50"}
+                      `}
+                    >
+                      {isSelected ? (
+                        <svg viewBox="0 0 12 12" className="h-3 w-3 flex-shrink-0">
+                          <path d="M1 6l3.5 3.5L11 2" stroke="#49C77F" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : (
+                        <span className="h-3 w-3 flex-shrink-0" />
+                      )}
+                      {opt.label}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
         )}
       </div>
-      {open && (
-        <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-          {options.map((option) => {
-            const isSelected = selected.includes(option);
-            return (
-              <div
-                key={option}
-                onClick={() => toggle(option)}
-                className={`flex cursor-pointer items-center gap-2.5 px-4 py-2.5 text-sm transition ${
-                  isSelected ? "bg-green-50 text-[#1e7a4a]" : "text-[#525252] hover:bg-gray-50"
-                }`}
-              >
-                <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${isSelected ? "border-[#49C77F] bg-[#49C77F]" : "border-gray-300"}`}>
-                  {isSelected && (
-                    <svg viewBox="0 0 12 12" className="h-2.5 w-2.5">
-                      <path d="M1 6l3.5 3.5L11 2" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </span>
-                {option}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <FieldError msg={errorMsg} />
     </div>
   );
 }
 
-// ─── Job Role Dropdown with "Other" (mirrors reference file) ──────────────────
+// ─── Job Role Dropdown ────────────────────────────────────────────────────────
 
 function JobRoleDropdown({
   value,
@@ -413,10 +379,7 @@ function JobRoleDropdown({
 
   const commitOther = () => {
     const v = otherInput.trim();
-    if (!v) {
-      toast.error("Please enter a job role before adding.");
-      return;
-    }
+    if (!v) { toast.error("Please enter a job role before adding."); return; }
     onValueChange("Other");
     onOtherChange(v);
     setShowOtherInput(false);
@@ -429,28 +392,16 @@ function JobRoleDropdown({
     onOtherChange("");
   };
 
-  // Show chip when a custom "Other" value is committed
   if (value === "Other" && otherValue.trim()) {
     return (
-      <div
-        className={`flex min-h-[42px] w-full items-center justify-between rounded-lg border bg-white px-4 py-2 shadow-sm ${
-          hasError ? "border-red-400" : "border-[#CCCCCC]"
-        }`}
-      >
+      <div className={`flex min-h-[42px] w-full items-center justify-between rounded-lg border bg-white px-4 py-2 shadow-sm ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}>
         <span className="flex items-center gap-2 rounded-md border border-[#49C77F] bg-green-50 px-2 py-0.5 text-sm text-[#282828]">
           {otherValue}
           <button
             type="button"
-            onClick={() => {
-              onValueChange("");
-              onOtherChange("");
-              setOtherInput("");
-              setShowOtherInput(false);
-            }}
+            onClick={() => { onValueChange(""); onOtherChange(""); setOtherInput(""); setShowOtherInput(false); }}
             className="text-xs text-gray-400 hover:text-red-500"
-          >
-            ✕
-          </button>
+          >✕</button>
         </span>
         <span className="text-[#525252]">▾</span>
       </div>
@@ -459,107 +410,62 @@ function JobRoleDropdown({
 
   return (
     <div ref={ref} className="relative">
-      {/* Trigger */}
       <div
         onClick={() => setOpenDropdown((p) => !p)}
-        className={`flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm ${
-          hasError ? "border-red-400" : "border-[#CCCCCC]"
-        } ${value && value !== "Other" ? "text-[#525252]" : "text-gray-400"}`}
+        className={`flex w-full cursor-pointer items-center justify-between rounded-lg border bg-white px-4 py-2.5 text-sm shadow-sm ${hasError ? "border-red-400" : "border-[#CCCCCC]"
+          } ${value && value !== "Other" ? "text-[#525252]" : "text-gray-400"}`}
       >
-        <span>
-          {value && value !== "Other" ? value : "Select Job Role"}
-        </span>
+        <span>{value && value !== "Other" ? value : "Select Job Role"}</span>
         <span className="text-[#525252]">▾</span>
       </div>
 
-      {/* Dropdown list */}
       {openDropdown && (
         <div className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-gray-300 bg-white shadow-lg">
-          <div
-            onClick={() => {
-              onValueChange("");
-              setOpenDropdown(false);
-            }}
-            className="cursor-pointer px-3 py-2 text-gray-400 hover:bg-gray-100"
-          >
+          <div onClick={() => { onValueChange(""); setOpenDropdown(false); }} className="cursor-pointer px-3 py-2 text-gray-400 hover:bg-gray-100">
             Select Job Role
           </div>
           {JOB_ROLE_OPTIONS.map((o) => (
             <div
               key={o}
-              onClick={() => {
-                onValueChange(o);
-                onOtherChange("");
-                setShowOtherInput(false);
-                setOtherInput("");
-                setOpenDropdown(false);
-              }}
-              className={`cursor-pointer px-3 py-2 transition ${
-                value === o
-                  ? "bg-green-100 font-medium text-green-700"
-                  : "text-gray-700 hover:bg-gray-100"
-              }`}
-            >
-              {o}
-            </div>
+              onClick={() => { onValueChange(o); onOtherChange(""); setShowOtherInput(false); setOtherInput(""); setOpenDropdown(false); }}
+              className={`cursor-pointer px-3 py-2 transition ${value === o ? "bg-green-100 font-medium text-green-700" : "text-gray-700 hover:bg-gray-100"}`}
+            >{o}</div>
           ))}
           <div
-            onClick={() => {
-              setShowOtherInput(true);
-              onValueChange("Other");
-              setOpenDropdown(false);
-            }}
+            onClick={() => { setShowOtherInput(true); onValueChange("Other"); setOpenDropdown(false); }}
             className="cursor-pointer px-3 py-2 font-medium text-[#49C77F] hover:bg-green-50"
-          >
-            + Other
-          </div>
+          >+ Other</div>
         </div>
       )}
 
-      {/* Other text input */}
       {showOtherInput && (
         <div className="mt-2 flex items-center gap-2">
           <input
             autoFocus
             value={otherInput}
             onChange={(e) => setOtherInput(sanitizeName(e.target.value))}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") commitOther();
-              if (e.key === "Escape") cancelOther();
-            }}
+            onKeyDown={(e) => { if (e.key === "Enter") commitOther(); if (e.key === "Escape") cancelOther(); }}
             placeholder="Enter custom job role"
-            className={`h-10 flex-1 rounded-md border px-3 text-sm text-[#525252] outline-none focus:border-[#49C77F] ${
-              hasOtherError ? "border-red-400" : "border-[#D9D9D9]"
-            }`}
+            className={`h-10 flex-1 rounded-md border px-3 text-sm text-[#525252] outline-none focus:border-[#49C77F] ${hasOtherError ? "border-red-400" : "border-[#D9D9D9]"}`}
           />
-          <button
-            type="button"
-            onClick={commitOther}
-            className="h-10 rounded-md bg-[#49C77F] px-4 text-sm text-white hover:bg-[#3ab36e] cursor-pointer"
-          >
-            Add
-          </button>
-          <button
-            type="button"
-            onClick={cancelOther}
-            className="h-10 rounded-md border border-[#CCCCCC] px-4 text-sm text-[#525252] hover:bg-gray-50 cursor-pointer"
-          >
-            Cancel
-          </button>
+          <button type="button" onClick={commitOther} className="h-10 rounded-md bg-[#49C77F] px-4 text-sm text-white hover:bg-[#3ab36e] cursor-pointer">Add</button>
+          <button type="button" onClick={cancelOther} className="h-10 rounded-md border border-[#CCCCCC] px-4 text-sm text-[#525252] hover:bg-gray-50 cursor-pointer">Cancel</button>
         </div>
       )}
     </div>
   );
 }
 
-// ─── Company Logo (single, with image preview) ────────────────────────────────
+// ─── Logo Upload ──────────────────────────────────────────────────────────────
 
 function LogoUpload({
   file,
+  existingLogoName,
   onChange,
   hasError,
 }: {
   file: File | null;
+  existingLogoName?: string;
   onChange: (f: File | null) => void;
   hasError?: boolean;
 }) {
@@ -572,65 +478,48 @@ function LogoUpload({
   };
 
   return (
-    <div
-      className={`rounded-lg border bg-white shadow-sm ${
-        hasError ? "border-red-400" : "border-[#CCCCCC]"
-      }`}
-    >
-      {file ? (
+    <div className={`rounded-lg border bg-white shadow-sm ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}>
+      {file || existingLogoName ? (
         <div className="flex items-center gap-3 px-4 py-3">
           <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-gray-100 bg-gray-50 text-[#49C77F]">
             <ImageSquare size={20} />
           </span>
           <span className="flex-1 truncate text-sm text-[#525252]">
-            {file.name}
+            {file?.name || existingLogoName}
           </span>
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-            aria-label="Remove logo"
-          >
-            <X size={15} weight="bold" />
+          <button type="button" onClick={() => inputRef.current?.click()} className="flex-shrink-0 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer">
+            Replace
           </button>
+          {file && (
+            <button type="button" onClick={() => onChange(null)} className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
+              <X size={15} weight="bold" />
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex items-center gap-3 px-4 py-3">
-          <span className="text-[#49C77F]">
-            <ImageSquare size={20} />
-          </span>
-          <span className="flex-1 text-sm text-gray-400">
-            Upload company logo (PNG, JPG, SVG)
-          </span>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer"
-          >
-            <UploadSimple size={13} weight="bold" />
-            Upload
+          <span className="text-[#49C77F]"><ImageSquare size={20} /></span>
+          <span className="flex-1 text-sm text-gray-400">Upload company logo (PNG, JPG, SVG)</span>
+          <button type="button" onClick={() => inputRef.current?.click()} className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer">
+            <UploadSimple size={13} weight="bold" />Upload
           </button>
         </div>
       )}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml"
-        className="hidden"
-        onChange={handleChange}
-      />
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" className="hidden" onChange={handleChange} />
     </div>
   );
 }
 
-// ─── Certificates (multiple files, list) ─────────────────────────────────────
+// ─── Certificates Upload ──────────────────────────────────────────────────────
 
 function CertificatesUpload({
   files,
+  existingCertificates,
   onChange,
   hasError,
 }: {
   files: File[];
+  existingCertificates?: string[];
   onChange: (files: File[]) => void;
   hasError?: boolean;
 }) {
@@ -640,91 +529,63 @@ function CertificatesUpload({
     const incoming = Array.from(e.target.files ?? []);
     if (!incoming.length) return;
     const existing = new Set(files.map((f) => `${f.name}-${f.size}`));
-    const fresh = incoming.filter(
-      (f) => !existing.has(`${f.name}-${f.size}`)
-    );
+    const fresh = incoming.filter((f) => !existing.has(`${f.name}-${f.size}`));
     onChange([...files, ...fresh]);
     e.target.value = "";
   };
 
-  const handleRemove = (index: number) =>
-    onChange(files.filter((_, i) => i !== index));
+  const handleRemove = (index: number) => onChange(files.filter((_, i) => i !== index));
 
   const FileIcon = ({ file }: { file: File }) =>
     file.type === "application/pdf" ? (
-      <FilePdf size={16} className="flex-shrink-0 text-red-400" />
+      <FilePdf size={16} className="shrink-0 text-red-400" />
     ) : (
-      <ImageSquare size={16} className="flex-shrink-0 text-blue-400" />
+      <ImageSquare size={16} className="shrink-0 text-blue-400" />
     );
 
   return (
-    <div
-      className={`rounded-lg border bg-white shadow-sm ${
-        hasError ? "border-red-400" : "border-[#CCCCCC]"
-      }`}
-    >
-      {/* File list */}
-      {files.length > 0 && (
+    <div className={`rounded-lg border bg-white shadow-sm ${hasError ? "border-red-400" : "border-[#CCCCCC]"}`}>
+      {(existingCertificates?.length || files.length > 0) && (
         <ul className="divide-y divide-gray-100">
-          {files.map((file, i) => (
-            <li
-              key={`${file.name}-${i}`}
-              className="flex items-center gap-2 px-4 py-2.5"
-            >
-              <FileIcon file={file} />
-              <span className="flex-1 truncate text-sm text-[#525252]">
-                {file.name}
+          {existingCertificates?.map((certificate) => (
+            <li key={certificate} className="flex items-center gap-2 px-4 py-2.5">
+              <FilePdf size={16} className="shrink-0 text-red-400" />
+              <span className="flex-1 truncate text-sm text-[#525252]">{certificate}</span>
+              <span className="shrink-0 text-xs font-medium text-[#49C77F]">
+                Existing
               </span>
-              <button
-                type="button"
-                onClick={() => handleRemove(i)}
-                className="flex-shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
-                aria-label="Remove file"
-              >
+            </li>
+          ))}
+          {files.map((file, i) => (
+            <li key={`${file.name}-${i}`} className="flex items-center gap-2 px-4 py-2.5">
+              <FileIcon file={file} />
+              <span className="flex-1 truncate text-sm text-[#525252]">{file.name}</span>
+              <button type="button" onClick={() => handleRemove(i)} className="shrink-0 rounded-full p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500">
                 <Trash size={14} />
               </button>
             </li>
           ))}
         </ul>
       )}
-
-      {/* Upload row */}
       <div className="flex items-center gap-3 px-4 py-3">
-        <span className="text-[#49C77F]">
-          <FilePdf size={20} />
-        </span>
+        <span className="text-[#49C77F]"><FilePdf size={20} /></span>
         <span className="flex-1 text-sm text-gray-400">
-          {files.length === 0
-            ? "Upload certificate(s) (PDF, PNG, JPG)"
-            : `${files.length} file${files.length > 1 ? "s" : ""} selected`}
+          {files.length === 0 ? "Upload replacement certificate(s)" : `${files.length} new file${files.length > 1 ? "s" : ""} selected`}
         </span>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer"
-        >
+        <button type="button" onClick={() => inputRef.current?.click()} className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer">
           <UploadSimple size={13} weight="bold" />
           {files.length ? "Add More" : "Upload"}
         </button>
       </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf,image/png,image/jpeg,image/jpg"
-        multiple
-        className="hidden"
-        onChange={handleChange}
-      />
+      <input ref={inputRef} type="file" accept="application/pdf,image/png,image/jpeg,image/jpg" multiple className="hidden" onChange={handleChange} />
     </div>
   );
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function CreateCompanyScreen({
-  onCancel,
-  initialData,
-}: CreateCompanyScreenProps) {
+export default function CreateCompanyScreen({ onCancel, initialData }: CreateCompanyScreenProps) {
+  const { collegeId, placementEmployeeId } = useUser();
   const isEditMode = Boolean(initialData?.id);
 
   const [form, setForm] = useState<CompanyFormState>({
@@ -736,56 +597,128 @@ export default function CreateCompanyScreen({
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  function set<K extends keyof CompanyFormState>(
-    key: K,
-    value: CompanyFormState[K]
-  ) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  // ── Cascade data ──────────────────────────────────────────────────────────
+  const [educations, setEducations] = useState<CascadeOption[]>([]);
+  const [branches, setBranches] = useState<CascadeOption[]>([]);
+  const [academicYears, setAcademicYears] = useState<CascadeOption[]>([]);
+  const [loadingEdu, setLoadingEdu] = useState(false);
+  const [loadingBranch, setLoadingBranch] = useState(false);
+  const [loadingYear, setLoadingYear] = useState(false);
+  const educationTypeId = form.educationType?.id;
+  const branchId = form.branch?.id;
+
+  // 1️⃣ Fetch education types on mount
+  useEffect(() => {
+    if (!collegeId) return;
+    setLoadingEdu(true);
+    fetchEducations(collegeId)
+      .then((data) => setEducations(data.map((e) => ({ id: e.collegeEducationId, label: e.collegeEducationType }))))
+      .catch(console.error)
+      .finally(() => setLoadingEdu(false));
+  }, [collegeId]);
+
+  // 2️⃣ Fetch branches when education type changes
+  useEffect(() => {
+    if (!collegeId || !educationTypeId) { setBranches([]); return; }
+    setLoadingBranch(true);
+    fetchBranches(collegeId, educationTypeId)
+      .then((data) => setBranches(data.map((b) => ({
+        id: b.collegeBranchId,
+        label: b.collegeBranchCode,
+        code: b.collegeBranchCode
+      }))))
+      .catch(console.error)
+      .finally(() => setLoadingBranch(false));
+  }, [collegeId, educationTypeId]);
+
+  // 3️⃣ Fetch academic years when branch changes
+  useEffect(() => {
+    if (!collegeId || !educationTypeId || !branchId) { setAcademicYears([]); return; }
+    setLoadingYear(true);
+    fetchAcademicYears(collegeId, educationTypeId, branchId)
+      .then((data) => setAcademicYears(data.map((y) => ({ id: y.collegeAcademicYearId, label: y.collegeAcademicYear }))))
+      .catch(console.error)
+      .finally(() => setLoadingYear(false));
+  }, [collegeId, educationTypeId, branchId]);
+
+  function set<K extends keyof CompanyFormState>(key: K, value: CompanyFormState[K]) {
+    setForm((prev: CompanyFormState) => ({ ...prev, [key]: value }));
+    setErrors((prev: FormErrors) => ({ ...prev, [key]: undefined }));
   }
 
   const handleSave = async () => {
-    const errs = validate(form);
+    const errs = validate(form, { isEditMode });
     if (Object.keys(errs).length) {
       setErrors(errs);
       toast.error("Please fix the errors before saving");
       return;
     }
 
+    if (!collegeId || !placementEmployeeId) {
+      toast.error("Session expired. Please login again.");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const formData = new FormData();
-      (
-        Object.entries(form) as [keyof CompanyFormState, CompanyFormState[keyof CompanyFormState]][]
-      ).forEach(([key, value]) => {
-        if (value instanceof File) {
-          formData.append(key, value);
-        } else if (Array.isArray(value)) {
-          value.forEach(
-            (v) => v instanceof File && formData.append(key, v)
-          );
-        } else if (value !== null && value !== undefined) {
-          formData.append(key, String(value));
-        }
-      });
+      const packageNum = parseFloat(form.annualPackage.replace(/[^0-9.]/g, ""));
+      if (isNaN(packageNum)) {
+        toast.error("Invalid annual package value");
+        throw new Error("Invalid package");
+      }
 
-      // ── Replace with your real API call ──
-      // const res = await fetch("/api/companies", {
-      //   method: isEditMode ? "PUT" : "POST",
-      //   body: formData,
-      // });
-      // if (!res.ok) throw new Error("API error");
-      await new Promise((r) => setTimeout(r, 600)); // simulated delay
-      // ─────────────────────────────────────
+      const skillsArray = form.requiredSkills
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const jobRoleOffered =
+        form.jobRole === "Other" ? form.jobRoleOther : form.jobRole;
+
+      const basePayload = {
+        companyName: form.companyName,
+        companyEmail: form.email,
+        companyPhone: form.phone ? `${form.countryCode}${form.phone}` : "",
+        companyJobDescription: form.description,
+        companyWebsite: form.website,
+        jobRoleOffered,
+        requiredSkills: skillsArray,
+        jobType: form.jobType,       // already the DB enum value e.g. "fulltime"
+        workMode: form.workMode,     // already the DB enum value e.g. "hybrid"
+        location: form.locations,
+        annualPackage: packageNum,
+        driveType: form.driveType,   // already the DB enum value e.g. "virtual"
+        startDate: form.startDate,
+        endDate: form.endDate,
+        eligibilityCriteria: form.eligibilityCriteria,
+        collegeId,
+        collegeBranchId: form.branch!.id,
+        collegeAcademicYearId: form.academicYear!.id,
+        createdBy: placementEmployeeId,
+      };
+
+      if (isEditMode) {
+        await updatePlacementCompany({
+          ...basePayload,
+          placementCompanyIds: initialData?.placementCompanyIds ?? [
+            Number(initialData?.id),
+          ],
+          updatedBy: placementEmployeeId,
+          companyLogo: form.companyLogo,
+          companyCertificates: form.certificates,
+        });
+      } else {
+        await createPlacementCompany({
+          ...basePayload,
+          companyLogo: form.companyLogo!,
+          companyCertificates: form.certificates,
+        });
+      }
 
       toast.success(isEditMode ? "Updated successfully" : "Saved successfully");
       onCancel();
     } catch {
-      toast.error(
-        isEditMode
-          ? "Failed to update. Please try again."
-          : "Failed to save. Please try again."
-      );
+      toast.error(isEditMode ? "Failed to update. Please try again." : "Failed to save. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -804,13 +737,9 @@ export default function CreateCompanyScreen({
           <CaretLeft size={18} weight="bold" />
         </button>
         <div>
-          <h2 className="text-2xl font-bold text-[#333]">
-            {isEditMode ? "Edit Company" : "Add Company"}
-          </h2>
+          <h2 className="text-2xl font-bold text-[#333]">{isEditMode ? "Edit Company" : "Add Company"}</h2>
           <p className="mt-2 text-sm text-gray-500">
-            {isEditMode
-              ? "Update the company details below."
-              : "Add a new company to the placement network by providing verified details below."}
+            {isEditMode ? "Update the company details below." : "Add a new company to the placement network by providing verified details below."}
           </p>
         </div>
       </div>
@@ -853,9 +782,7 @@ export default function CreateCompanyScreen({
               />
               <input
                 value={form.phone}
-                onChange={(e) =>
-                  set("phone", sanitizePhone(e.target.value))
-                }
+                onChange={(e) => set("phone", sanitizePhone(e.target.value))}
                 placeholder="10-digit number"
                 inputMode="numeric"
                 maxLength={10}
@@ -873,15 +800,12 @@ export default function CreateCompanyScreen({
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             placeholder="Brief about company, e.g., Infosys is a global leader in technology services.."
-            className={`min-h-[110px] w-full rounded-lg border px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${
-              errors.description ? "border-red-400" : "border-[#CCCCCC]"
-            }`}
+            className={`min-h-[110px] w-full rounded-lg border px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${errors.description ? "border-red-400" : "border-[#CCCCCC]"
+              }`}
           />
           <div className="flex items-start justify-between">
             <FieldError msg={errors.description} />
-            <span className="ml-auto text-xs text-gray-400">
-              {form.description.length} chars
-            </span>
+            <span className="ml-auto text-xs text-gray-400">{form.description.length} chars</span>
           </div>
         </div>
 
@@ -902,10 +826,7 @@ export default function CreateCompanyScreen({
             <JobRoleDropdown
               value={form.jobRole}
               otherValue={form.jobRoleOther}
-              onValueChange={(v) => {
-                set("jobRole", v);
-                if (v !== "Other") set("jobRoleOther", "");
-              }}
+              onValueChange={(v) => { set("jobRole", v); if (v !== "Other") set("jobRoleOther", ""); }}
               onOtherChange={(v) => set("jobRoleOther", v)}
               hasError={!!errors.jobRole}
               hasOtherError={!!errors.jobRoleOther}
@@ -928,11 +849,11 @@ export default function CreateCompanyScreen({
           </div>
           <div>
             <SectionLabel required>Job Type</SectionLabel>
-            <SelectField
+            <EnumSelectField
               value={form.jobType}
               onChange={(v) => set("jobType", v)}
               placeholder="Select Job Type"
-              options={["Full Time", "Internship", "Contract"]}
+              options={JOB_TYPE_OPTIONS}
               hasError={!!errors.jobType}
             />
             <FieldError msg={errors.jobType} />
@@ -943,11 +864,11 @@ export default function CreateCompanyScreen({
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Work Mode</SectionLabel>
-            <SelectField
+            <EnumSelectField
               value={form.workMode}
               onChange={(v) => set("workMode", v)}
               placeholder="Select Work Mode"
-              options={["Onsite", "Hybrid", "Remote"]}
+              options={WORK_MODE_OPTIONS}
               hasError={!!errors.workMode}
             />
             <FieldError msg={errors.workMode} />
@@ -956,9 +877,7 @@ export default function CreateCompanyScreen({
             <SectionLabel required>Location(s)</SectionLabel>
             <input
               value={form.locations}
-              onChange={(e) =>
-                set("locations", sanitizeLocation(e.target.value))
-              }
+              onChange={(e) => set("locations", sanitizeLocation(e.target.value))}
               placeholder="e.g., Bengaluru, Hyderabad, Pune"
               className={inputCls(!!errors.locations)}
             />
@@ -972,9 +891,7 @@ export default function CreateCompanyScreen({
             <SectionLabel required>Annual Package</SectionLabel>
             <input
               value={form.annualPackage}
-              onChange={(e) =>
-                set("annualPackage", sanitizePackage(e.target.value))
-              }
+              onChange={(e) => set("annualPackage", sanitizePackage(e.target.value))}
               placeholder="e.g., 6 LPA, 12 LPA"
               className={inputCls(!!errors.annualPackage)}
             />
@@ -982,11 +899,11 @@ export default function CreateCompanyScreen({
           </div>
           <div>
             <SectionLabel required>Drive Type</SectionLabel>
-            <SelectField
+            <EnumSelectField
               value={form.driveType}
               onChange={(v) => set("driveType", v)}
-              placeholder="Select Drive type"
-              options={["Virtual", "In Person(Office)", ]}
+              placeholder="Select Drive Type"
+              options={DRIVE_TYPE_OPTIONS}
               hasError={!!errors.driveType}
             />
             <FieldError msg={errors.driveType} />
@@ -1021,43 +938,52 @@ export default function CreateCompanyScreen({
 
         {/* Education Type + Branch */}
         <div className="grid gap-5 md:grid-cols-2">
-          <div>
-            <SectionLabel required>Education Type</SectionLabel>
-            <MultiSelectDropdown
-              options={EDUCATION_TYPE_OPTIONS}
-              selected={form.educationTypes}
-              onChange={(v) => set("educationTypes", v)}
-              placeholder="Select Education Type(s)"
-              hasError={!!errors.educationTypes}
-            />
-            <FieldError msg={errors.educationTypes} />
-          </div>
-          <div>
-            <SectionLabel required>Branch</SectionLabel>
-            <MultiSelectDropdown
-              options={BRANCH_OPTIONS}
-              selected={form.branches}
-              onChange={(v) => set("branches", v)}
-              placeholder="Select Branch(es)"
-              hasError={!!errors.branches}
-            />
-            <FieldError msg={errors.branches} />
-          </div>
+          <CascadeSelect
+            label="Education Type"
+            required
+            placeholder="Select Education Type"
+            options={educations}
+            value={form.educationType}
+            onChange={(opt) => {
+              set("educationType", opt);
+              set("branch", null);
+              set("academicYear", null);
+            }}
+            loading={loadingEdu}
+            hasError={!!errors.educationType}
+            errorMsg={errors.educationType}
+          />
+          <CascadeSelect
+            label="Branch"
+            required
+            placeholder="Select Branch"
+            options={branches}
+            value={form.branch}
+            onChange={(opt) => {
+              set("branch", opt);
+              set("academicYear", null);
+            }}
+            disabled={!form.educationType}
+            loading={loadingBranch}
+            hasError={!!errors.branch}
+            errorMsg={errors.branch}
+          />
         </div>
 
-        {/* Year + Eligibility Criteria */}
+        {/* Academic Year + Eligibility Criteria */}
         <div className="grid gap-5 md:grid-cols-2">
-          <div>
-            <SectionLabel required>Year</SectionLabel>
-            <MultiSelectDropdown
-              options={YEAR_OPTIONS}
-              selected={form.years}
-              onChange={(v) => set("years", v)}
-              placeholder="Select Year(s)"
-              hasError={!!errors.years}
-            />
-            <FieldError msg={errors.years} />
-          </div>
+          <CascadeSelect
+            label="Academic Year"
+            required
+            placeholder="Select Academic Year"
+            options={academicYears}
+            value={form.academicYear}
+            onChange={(opt) => set("academicYear", opt)}
+            disabled={!form.branch}
+            loading={loadingYear}
+            hasError={!!errors.academicYear}
+            errorMsg={errors.academicYear}
+          />
           <div>
             <SectionLabel required>Eligibility Criteria</SectionLabel>
             <input
@@ -1076,6 +1002,7 @@ export default function CreateCompanyScreen({
             <SectionLabel required>Upload Company Logo</SectionLabel>
             <LogoUpload
               file={form.companyLogo}
+              existingLogoName={form.existingLogoName}
               onChange={(f) => set("companyLogo", f)}
               hasError={!!errors.companyLogo}
             />
@@ -1085,6 +1012,7 @@ export default function CreateCompanyScreen({
             <SectionLabel required>Upload PDF</SectionLabel>
             <CertificatesUpload
               files={form.certificates}
+              existingCertificates={form.existingCertificates}
               onChange={(files) => set("certificates", files)}
               hasError={!!errors.certificates}
             />
@@ -1111,6 +1039,7 @@ export default function CreateCompanyScreen({
             {isSaving ? "Saving..." : isEditMode ? "Update" : "Save"}
           </button>
         </div>
+
       </div>
     </div>
   );

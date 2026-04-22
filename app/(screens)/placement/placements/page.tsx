@@ -1,7 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
+import { useUser } from "@/app/utils/context/UserContext";
+import { getPlacementCompanies } from "@/lib/helpers/placements/getPlacementCompanies";
+import { deletePlacementCompany } from "@/lib/helpers/placements/createPlacementCompany";
 import PlacementTabs from "./components/PlacementTabs";
 import PlacementRightPanel from "./components/PlacementRightPanel";
 import CompanyManagementView from "./components/CompanyManagementView";
@@ -15,6 +19,7 @@ import DriveStudentsScreen from "./components/DriveStudentsScreen";
 import {
   placementTabs,
   PlacementTabId,
+  PlacementCompany,
   placementTabContent,
 } from "./components/mockData";
 import CompanyDetailsModal from "./modal/CompanyDetailsModal";
@@ -30,6 +35,62 @@ const validTabs = new Set<PlacementTabId>([
   "student-applications",
   "results-offers",
 ]);
+
+function getFileNameFromUrl(value: string) {
+  const cleanValue = value.split("?")[0];
+  return decodeURIComponent(cleanValue.split("/").pop() || value);
+}
+
+function splitPhone(phone: string) {
+  const phoneMatch = phone.match(/^(\+\d{1,3})(\d{10})$/);
+  if (!phoneMatch) return { countryCode: "+91", phone };
+  return { countryCode: phoneMatch[1], phone: phoneMatch[2] };
+}
+
+function mapCompanyToInitialForm(company: PlacementCompany) {
+  const phoneParts = splitPhone(company.phone === "Not provided" ? "" : company.phone);
+
+  return {
+    id: String(company.id),
+    placementCompanyIds: company.placementCompanyIds ?? [company.id],
+    companyName: company.name,
+    email: company.email,
+    ...phoneParts,
+    description: company.longDescription || company.description,
+    website: company.website,
+    jobRole: company.role,
+    jobRoleOther: "",
+    requiredSkills: company.skills.join(", "),
+    jobType: company.jobTypeValue || "",
+    workMode: company.workModeValue || "",
+    locations: company.locations.join(", "),
+    annualPackage: company.packageDetails,
+    driveType: company.driveTypeValue || "",
+    startDate: company.startDate || "",
+    endDate: company.endDate || "",
+    educationType: company.collegeEducationId
+      ? {
+          id: company.collegeEducationId,
+          label: company.educationTypeName || "Selected Education",
+        }
+      : null,
+    branch: company.collegeBranchId
+      ? {
+          id: company.collegeBranchId,
+          label: company.branchName || String(company.collegeBranchId),
+        }
+      : null,
+    academicYear: company.collegeAcademicYearId
+      ? {
+          id: company.collegeAcademicYearId,
+          label: company.academicYear || String(company.collegeAcademicYearId),
+        }
+      : null,
+    eligibilityCriteria: company.eligibilityCriteria || "",
+    existingLogoName: getFileNameFromUrl(company.logo),
+    existingCertificates: company.attachments.map(getFileNameFromUrl),
+  };
+}
 
 function PlacementPageFallback() {
   return (
@@ -55,12 +116,42 @@ function PlacementPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { collegeId, placementEmployeeId, loading: userLoading } = useUser();
   const [isPlacementLoading, setIsPlacementLoading] = useState(true);
+  const [companies, setCompanies] = useState<PlacementCompany[]>([]);
+  const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsPlacementLoading(false), 350);
     return () => window.clearTimeout(timer);
   }, []);
+
+  const loadCompanies = useCallback(async () => {
+    if (userLoading) return;
+
+    if (!collegeId) {
+      setCompanies([]);
+      setIsCompaniesLoading(false);
+      return;
+    }
+
+    setIsCompaniesLoading(true);
+    try {
+      const fetchedCompanies = await getPlacementCompanies({
+        collegeId,
+        placementOfficerId: placementEmployeeId,
+      });
+      setCompanies(fetchedCompanies);
+    } catch {
+      setCompanies([]);
+    } finally {
+      setIsCompaniesLoading(false);
+    }
+  }, [collegeId, placementEmployeeId, userLoading]);
+
+  useEffect(() => {
+    void loadCompanies();
+  }, [loadCompanies]);
 
   const activeTabParam = searchParams.get("tab");
   const activeTab: PlacementTabId =
@@ -69,6 +160,7 @@ function PlacementPageContent() {
       : "company-management";
 
   const selectedCompanyId = Number(searchParams.get("companyId"));
+  const editCompanyId = Number(searchParams.get("editCompanyId"));
   const selectedDriveId = Number(searchParams.get("driveId"));
   const isCreateCompanyOpen = searchParams.get("createCompany") === "1";
   const isCreateDriveOpen = searchParams.get("createDrive") === "1";
@@ -82,6 +174,7 @@ function PlacementPageContent() {
 
     if (options?.replaceAllModalKeys) {
       params.delete("companyId");
+      params.delete("editCompanyId");
       params.delete("driveId");
       params.delete("createCompany");
       params.delete("createDrive");
@@ -116,7 +209,15 @@ function PlacementPageContent() {
         { createCompany: "1" },
         { replaceAllModalKeys: true },
       ),
-    closeCreateCompany: () => updateQuery({ createCompany: null }),
+    openEditCompany: (companyId: number) =>
+      updateQuery(
+        { tab: "company-management", editCompanyId: String(companyId) },
+        { replaceAllModalKeys: true },
+      ),
+    closeCreateCompany: () => {
+      updateQuery({ createCompany: null, editCompanyId: null });
+      void loadCompanies();
+    },
     openCreateDrive: () =>
       updateQuery(
         { tab: "placement-drives", createDrive: "1" },
@@ -137,12 +238,30 @@ function PlacementPageContent() {
     closeAddStudent: () => updateQuery({ addStudent: null }),
   };
 
+  const handleDeleteCompany = async (company: PlacementCompany) => {
+    const placementCompanyIds = company.placementCompanyIds ?? [company.id];
+
+    try {
+      await deletePlacementCompany(placementCompanyIds);
+      toast.success("Company deleted successfully");
+      await loadCompanies();
+    } catch {
+      toast.error("Failed to delete company. Please try again.");
+      throw new Error("Failed to delete company");
+    }
+  };
+
   const selectedCompany =
     Number.isNaN(selectedCompanyId)
       ? null
-      : placementTabContent.companyManagement.companies.find(
+      : companies.find(
           (company) => company.id === selectedCompanyId,
         ) ?? null;
+
+  const editingCompany =
+    Number.isNaN(editCompanyId)
+      ? null
+      : companies.find((company) => company.id === editCompanyId) ?? null;
 
   const selectedDrive =
     Number.isNaN(selectedDriveId)
@@ -155,10 +274,15 @@ function PlacementPageContent() {
     return <PlacementPageFallback />;
   }
 
-  if (isCreateCompanyOpen) {
+  if (isCreateCompanyOpen || editingCompany) {
     return (
       <section className="min-h-screen overflow-y-auto px-2 pb-4">
-        <CreateCompanyScreen onCancel={modalActions.closeCreateCompany} />
+        <CreateCompanyScreen
+          onCancel={modalActions.closeCreateCompany}
+          initialData={
+            editingCompany ? mapCompanyToInitialForm(editingCompany) : undefined
+          }
+        />
       </section>
     );
   }
@@ -190,8 +314,8 @@ function PlacementPageContent() {
 
   return (
     <>
-      <section className="flex min-h-screen gap-3 overflow-hidden">
-        <div className="flex min-w-11.25 flex-1 flex-col px-2 ">
+      <section className="flex h-screen gap-3 overflow-hidden">
+        <div className="flex min-w-11.25 flex-1 flex-col px-2">
           <div className="shrink-0">
             <h1 className="text-[32px] font-semibold text-[#282828]">
               Placements
@@ -207,13 +331,21 @@ function PlacementPageContent() {
             />
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             {activeTab === "company-management" && (
-              <CompanyManagementView
-                companies={placementTabContent.companyManagement.companies}
-                onCardClick={modalActions.openCompany}
-                onCreateCompany={modalActions.openCreateCompany}
-              />
+              isCompaniesLoading ? (
+                <div className="h-full overflow-y-auto pr-2 pb-4">
+                  <CompanyCardsShimmer />
+                </div>
+              ) : (
+                <CompanyManagementView
+                  companies={companies}
+                  onCardClick={modalActions.openCompany}
+                  onCreateCompany={modalActions.openCreateCompany}
+                  onEditCompany={modalActions.openEditCompany}
+                  onDeleteCompany={handleDeleteCompany}
+                />
+              )
             )}
 
             {activeTab === "placement-drives" && (

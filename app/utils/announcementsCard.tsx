@@ -5,7 +5,6 @@ import {
   Plus,
   Trash,
   X,
-  UserCircle,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +28,15 @@ type AnnounceCard = {
   cardBg: string;
   imageBg: string;
   type?: string;
+  targetRoles?: string[];
+};
+
+type AnnouncementDetails = {
+  creatorImage: string;
+  creatorName: string;
+  creatorRole: string;
+  formattedDate?: string;
+  date?: string;
   targetRoles?: string[];
 };
 
@@ -89,7 +97,7 @@ function ViewAnnouncementModal({
   onClose,
 }: {
   basicData: AnnounceCard;
-  fullData: any;
+  fullData: AnnouncementDetails | null;
   isLoading: boolean;
   onClose: () => void;
 }) {
@@ -224,12 +232,13 @@ export default function AnnouncementsCard({
   const activeView = currentView || localView;
 
   const [openModal, setOpenModal] = useState(false);
-  const [editData, setEditData] = useState<any>(null);
+  const [editData, setEditData] = useState<AnnounceCard | null>(null);
 
   // 🟢 States for fetching full details dynamically on click
   const [viewingAnnouncement, setViewingAnnouncement] =
     useState<AnnounceCard | null>(null);
-  const [fullDetailsData, setFullDetailsData] = useState<any>(null);
+  const [fullDetailsData, setFullDetailsData] =
+    useState<AnnouncementDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const formatRelativeTime = (createdAt?: string) => {
@@ -397,7 +406,7 @@ export default function AnnouncementsCard({
           isReadOnlyUser ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
-                You don't have any announcements today
+                You don&apos;t have any announcements today
               </p>
             </div>
           ) : activeView === "my" ? (
@@ -408,7 +417,7 @@ export default function AnnouncementsCard({
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-gray-400">
               <p className="text-sm font-medium">
-                You don't have any announcements today
+                You don&apos;t have any announcements today
               </p>
             </div>
           )

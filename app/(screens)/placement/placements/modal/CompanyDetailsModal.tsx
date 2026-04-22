@@ -11,13 +11,13 @@ type CompanyDetailsModalProps = {
 
 function CompanyLogo({ company }: { company: PlacementCompany }) {
   return (
-    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+    <div className="flex h-12 w-28 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white">
       <Image
         src={company.logo}
         alt={`${company.name} logo`}
-        width={48}
+        width={112}
         height={48}
-        className="h-8 w-8 object-contain"
+        className="h-full w-full object-contain"
       />
     </div>
   );
@@ -38,10 +38,39 @@ function DetailRow({
   );
 }
 
+function getAttachmentName(attachment: string) {
+  const cleanAttachment = attachment.split("?")[0];
+  return decodeURIComponent(cleanAttachment.split("/").pop() || attachment);
+}
+
+function formatDisplayDate(date?: string) {
+  if (!date) return "-";
+
+  const parsedDate = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) return date;
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+function getWebsiteHref(website: string) {
+  const trimmedWebsite = website.trim();
+  if (!trimmedWebsite) return "";
+
+  return /^https?:\/\//i.test(trimmedWebsite)
+    ? trimmedWebsite
+    : `https://${trimmedWebsite}`;
+}
+
 export default function CompanyDetailsModal({
   company,
   onClose,
 }: CompanyDetailsModalProps) {
+  const websiteHref = getWebsiteHref(company.website);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 backdrop-blur-sm"
@@ -77,7 +106,21 @@ export default function CompanyDetailsModal({
           </DetailRow>
           <DetailRow label="Email">{company.email}</DetailRow>
           <DetailRow label="Contact No.">{company.phone}</DetailRow>
-          <DetailRow label="Website">{company.website}</DetailRow>
+          <DetailRow label="Website">
+            {websiteHref ? (
+              <a
+                href={websiteHref}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[#43C17A] underline-offset-2 transition hover:underline"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {company.website}
+              </a>
+            ) : (
+              "-"
+            )}
+          </DetailRow>
           <DetailRow label="Required Skills">
             {company.skills.join(", ")}
           </DetailRow>
@@ -86,6 +129,22 @@ export default function CompanyDetailsModal({
             {company.packageDetails}
           </DetailRow>
           <DetailRow label="Drive Type">{company.driveType}</DetailRow>
+          <DetailRow label="Work Mode">{company.workMode || "-"}</DetailRow>
+          <DetailRow label="Start Date">
+            {formatDisplayDate(company.startDate)}
+          </DetailRow>
+          <DetailRow label="End Date">
+            {formatDisplayDate(company.endDate)}
+          </DetailRow>
+          <DetailRow label="Eligibility Criteria">
+            {company.eligibilityCriteria || "-"}
+          </DetailRow>
+          <DetailRow label="Branch Name">
+            {company.branchName || company.collegeBranchId || "-"}
+          </DetailRow>
+          <DetailRow label="Academic Year">
+            {company.academicYear || company.collegeAcademicYearId || "-"}
+          </DetailRow>
           {/* <DetailRow label="No. of Students Placed">
             {company.studentsPlaced}
           </DetailRow> */}
@@ -96,12 +155,16 @@ export default function CompanyDetailsModal({
           <DetailRow label="Documents / Attachments">
             <div className="flex flex-wrap gap-2">
               {company.attachments.map((attachment) => (
-                <span
+                <a
                   key={attachment}
-                  className="rounded-full bg-[#E8F8EF] px-2.5 py-0.5 text-[10px] font-medium text-[#43C17A]"
+                  href={attachment}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full bg-[#E8F8EF] px-2.5 py-0.5 text-[10px] font-medium text-[#43C17A] transition hover:bg-[#D9F3E5] hover:underline"
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  {attachment}
-                </span>
+                  {getAttachmentName(attachment)}
+                </a>
               ))}
             </div>
           </DetailRow>

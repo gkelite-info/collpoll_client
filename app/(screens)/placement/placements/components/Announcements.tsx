@@ -44,46 +44,12 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-const fallbackAnnouncements: AnnouncementItem[] = [
-  {
-    title: "Submit internal marks for all subjects before 25 Oct 2025.",
-    professor: "By Stephen Jones",
-    image: "/clip.png",
-    imgHeight: "h-10",
-    cardBg: "#E8F8EF",
-    imageBg: "#D3F1E0",
-    createdAt: new Date().toISOString(),
-    type: "notice",
-  },
-  {
-    title: "Upload final project abstracts by 1 Dec 2025.",
-    professor: "By Stephen Jones",
-    image: "/placement.png",
-    imgHeight: "h-10",
-    cardBg: "#EEF2FF",
-    imageBg: "#DDE5FF",
-    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-    type: "placement",
-  },
-  {
-    title: "Mid-semester exams scheduled from 5 to 10 Dec 2025.",
-    professor: "By Stephen Jones",
-    image: "/calendar-3d.png",
-    imgHeight: "h-10",
-    cardBg: "#FFF6E9",
-    imageBg: "#FFE7BA",
-    createdAt: new Date(Date.now() - 75 * 60 * 1000).toISOString(),
-    type: "event",
-  },
-];
-
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 export default function Announcements() {
   const { collegeId, userId, role } = useUser();
-  const [announcements, setAnnouncements] =
-    useState<AnnouncementItem[]>(fallbackAnnouncements);
+  const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
 
   const fetchData = useCallback(async () => {
@@ -118,63 +84,22 @@ export default function Announcements() {
         }),
       );
 
-      if (formatted.length > 0) {
-        setAnnouncements(formatted);
-      }
+      setAnnouncements(formatted);
     } catch (error) {
       console.error("Placement announcements fetch failed", error);
+      setAnnouncements([]);
     }
   }, [collegeId, role, userId, view]);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!collegeId || !userId || !role) return;
 
-    const loadAnnouncements = async () => {
-      if (!collegeId || !userId || !role) return;
+    const timer = window.setTimeout(() => {
+      void fetchData();
+    }, 0);
 
-      try {
-        const response = await fetchCollegeAnnouncements({
-          collegeId,
-          userId,
-          role,
-          view,
-          page: 1,
-          limit: 20,
-        });
-
-        const formatted = (response.data as CollegeAnnouncementResponseItem[]).map(
-          (item) => ({
-            collegeAnnouncementId: item.collegeAnnouncementId,
-            title: item.title,
-            date: item.date,
-            createdAt: item.createdAt,
-            type: item.type,
-            targetRoles: item.targetRoles,
-            image: typeIcons[item.type] || "/clip.png",
-            imgHeight: "h-10",
-            cardBg: "#E8F8EF",
-            imageBg: "#D3F1E0",
-            professor:
-              view === "my"
-                ? `For ${item.targetRoles?.map(formatRole).join(", ")}`
-                : `By ${formatRole(item.createdByRole)}`,
-          }),
-        );
-
-        if (isMounted && formatted.length > 0) {
-          setAnnouncements(formatted);
-        }
-      } catch (error) {
-        console.error("Placement announcements fetch failed", error);
-      }
-    };
-
-    void loadAnnouncements();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [collegeId, role, userId, view]);
+    return () => window.clearTimeout(timer);
+  }, [collegeId, userId, role, fetchData]);
 
   return (
     <AnnouncementsCard
