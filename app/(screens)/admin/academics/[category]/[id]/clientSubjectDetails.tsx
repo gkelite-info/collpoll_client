@@ -9,12 +9,15 @@ import {
   FilePdf,
   FloppyDisk,
   ArrowCounterClockwise,
+  Trash,
 } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import {
   getAdminSubjectDetails,
   updateUnitProgress,
+  deleteUnit,
+  deleteTopic,
   UiUnit,
   UiTopic,
   SubjectContext,
@@ -102,10 +105,65 @@ function FilterBanner({
   );
 }
 
-function UnitCard({ unit, onSave }: { unit: UiUnit; onSave: any }) {
+function ConfirmDeleteModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  isDeleting,
+}: any) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-red-100 text-red-600 p-2.5 rounded-full">
+            <Trash size={22} weight="fill" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+        </div>
+        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{message}</p>
+        <div className="flex gap-3 justify-end mt-4">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnitCard({
+  unit,
+  onSave,
+  onDeleteUnit,
+  onDeleteTopic,
+}: {
+  unit: UiUnit;
+  onSave: any;
+  onDeleteUnit: any;
+  onDeleteTopic: any;
+}) {
   const colors = colorMap[unit.color] || colorMap.purple;
   const [localTopics, setLocalTopics] = useState<UiTopic[]>(unit.topics);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "unit" | "topic";
+    id?: number;
+  } | null>(null);
 
   useEffect(() => {
     setLocalTopics(unit.topics);
@@ -149,124 +207,170 @@ function UnitCard({ unit, onSave }: { unit: UiUnit; onSave: any }) {
   };
 
   return (
-    <div
-      className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-full flex flex-col`}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
-        <div className="font-semibold text-md flex w-full justify-between items-center text-[#282828]">
-          {unit.unitLabel}
-          {hasChanges && (
-            <span className="text-[10px] bg-white/50 px-2 py-0.5 rounded-full font-bold animate-pulse text-red-500">
-              Unsaved
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col min-h-[300px] relative">
-        <h3
-          className={`text-base md:text-lg font-semibold mb-3 ${colors.title} line-clamp-2`}
-        >
-          {unit.title || "Untitled Unit"}
-        </h3>
-
-        <div className="flex items-center justify-between text-xs md:text-sm mb-2">
-          <div className="flex items-center gap-2 text-[#6C6C6C]">
-            <CalendarBlank size={16} className={colors.accent} />
-            <span>{unit.dateRange}</span>
+    <>
+      <div
+        className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-full flex flex-col`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between w-full mb-2">
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
+            <div className="font-semibold text-md flex items-center gap-2 text-[#282828]">
+              {unit.unitLabel}
+              {hasChanges && (
+                <span className="text-[10px] bg-white/50 px-2 py-0.5 rounded-full font-bold animate-pulse text-red-500">
+                  Unsaved
+                </span>
+              )}
+            </div>
           </div>
-          <span
-            className={`font-semibold transition-colors duration-300 ${hasChanges ? colors.accent : "text-[#333333]"}`}
+
+          <button
+            onClick={() => setDeleteTarget({ type: "unit" })}
+            className="text-gray-400 hover:text-red-600 hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer"
+            title="Delete Unit"
           >
-            {localPercentage}%
-          </span>
+            <Trash size={16} weight="regular" />
+          </button>
         </div>
 
-        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
-          <div
-            className="h-full rounded-full transition-all duration-500 ease-out"
-            style={{
-              width: `${localPercentage}%`,
-              background: `linear-gradient(to right, ${colors.fadeStart}, ${colors.solidEnd})`,
-            }}
-          />
-        </div>
+        <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col min-h-[300px] relative">
+          <h3
+            className={`text-base md:text-lg font-semibold mb-3 ${colors.title} line-clamp-2`}
+          >
+            {unit.title || "Untitled Unit"}
+          </h3>
 
-        <ul className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1 custom-scrollbar pb-12">
-          {localTopics.length > 0 ? (
-            localTopics.map((topic) => (
-              <li
-                key={topic.id}
-                className="flex items-start justify-between gap-2"
-              >
-                <div
-                  className="flex items-start gap-2 cursor-pointer group"
-                  onClick={() => handleLocalToggle(topic.id)}
+          <div className="flex items-center justify-between text-xs md:text-sm mb-2">
+            <div className="flex items-center gap-2 text-[#6C6C6C]">
+              <CalendarBlank size={16} className={colors.accent} />
+              <span>{unit.dateRange}</span>
+            </div>
+            <span
+              className={`font-semibold transition-colors duration-300 ${hasChanges ? colors.accent : "text-[#333333]"}`}
+            >
+              {localPercentage}%
+            </span>
+          </div>
+
+          <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+            <div
+              className="h-full rounded-full transition-all duration-500 ease-out"
+              style={{
+                width: `${localPercentage}%`,
+                background: `linear-gradient(to right, ${colors.fadeStart}, ${colors.solidEnd})`,
+              }}
+            />
+          </div>
+
+          <ul className="flex-1 space-y-1 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1 custom-scrollbar pb-12">
+            {localTopics.length > 0 ? (
+              localTopics.map((topic) => (
+                <li
+                  key={topic.id}
+                  className="flex items-start justify-between gap-2 group/topic py-1 -my-1 rounded-md hover:bg-gray-50 transition-colors px-1"
                 >
-                  <button className="mt-[2px] transition-colors cursor-pointer">
-                    <CheckCircle
-                      size={16}
-                      weight="fill"
-                      className={
-                        topic.isCompleted
-                          ? colors.accent
-                          : "text-gray-300 group-hover:text-gray-400"
-                      }
-                    />
-                  </button>
-                  <span
-                    className={`transition-colors duration-200 select-none ${topic.isCompleted ? "text-[#3F3F3F]" : "text-gray-400"
-                      }`}
+                  <div
+                    className="flex items-start gap-2 cursor-pointer flex-1"
+                    onClick={() => handleLocalToggle(topic.id)}
                   >
-                    {topic.title}
-                  </span>
-                </div>
-                <div
-                  className={`${colors.cardBg} cursor-pointer rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0`}
-                >
-                  <FilePdf
-                    size={16}
-                    className={`${colors.accent}`}
-                    weight="duotone"
-                  />
-                </div>
-              </li>
-            ))
-          ) : (
-            <li className="text-gray-400 italic text-center py-4">
-              No topics found.
-            </li>
-          )}
-        </ul>
+                    <button className="mt-[2px] transition-colors cursor-pointer shrink-0">
+                      <CheckCircle
+                        size={16}
+                        weight="fill"
+                        className={
+                          topic.isCompleted
+                            ? colors.accent
+                            : "text-gray-300 hover:text-gray-400"
+                        }
+                      />
+                    </button>
+                    <span
+                      className={`transition-colors duration-200 select-none pt-0.5 ${topic.isCompleted ? "text-[#3F3F3F]" : "text-gray-400"}`}
+                    >
+                      {topic.title}
+                    </span>
+                  </div>
 
-        <div
-          className={`absolute bottom-4 left-0 w-full px-4 flex gap-2 transition-all duration-300 ${hasChanges ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
-        >
-          <button
-            onClick={handleDiscard}
-            disabled={isSaving}
-            className="flex-1 py-2 cursor-pointer rounded-lg text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center gap-1"
-          >
-            <ArrowCounterClockwise size={16} /> Discard
-          </button>
-          <button
-            onClick={handleSaveClick}
-            disabled={isSaving}
-            className={`flex-[2] py-2 cursor-pointer rounded-lg text-xs font-bold text-white shadow-md transition-all flex items-center justify-center gap-1 ${colors.button} ${isSaving ? "opacity-70 cursor-wait" : ""}`}
-          >
-            {isSaving ? (
-              "Saving..."
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ type: "topic", id: topic.id });
+                      }}
+                      className="text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md opacity-0 group-hover/topic:opacity-100 cursor-pointer"
+                      title="Delete Topic"
+                    >
+                      <Trash size={15} weight="regular" />
+                    </button>
+                    <div
+                      className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center`}
+                    >
+                      <FilePdf
+                        size={14}
+                        className={colors.accent}
+                        weight="duotone"
+                      />
+                    </div>
+                  </div>
+                </li>
+              ))
             ) : (
-              <>
-                <FloppyDisk size={16} /> Save
-              </>
+              <li className="text-gray-400 italic text-center py-4">
+                No topics found.
+              </li>
             )}
-          </button>
+          </ul>
+
+          <div
+            className={`absolute bottom-4 left-0 w-full px-4 flex gap-2 transition-all duration-300 ${hasChanges ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
+          >
+            <button
+              onClick={handleDiscard}
+              disabled={isSaving}
+              className="flex-1 py-2 cursor-pointer rounded-lg text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center gap-1"
+            >
+              <ArrowCounterClockwise size={16} /> Discard
+            </button>
+            <button
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className={`flex-[2] py-2 cursor-pointer rounded-lg text-xs font-bold text-white shadow-md transition-all flex items-center justify-center gap-1 ${colors.button} ${isSaving ? "opacity-70 cursor-wait" : ""}`}
+            >
+              {isSaving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <FloppyDisk size={16} /> Save
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        isDeleting={isSaving}
+        title={deleteTarget?.type === "unit" ? "Delete Unit" : "Delete Topic"}
+        message={
+          deleteTarget?.type === "unit"
+            ? "Are you sure you want to permanently delete this unit and all its topics?"
+            : "Are you sure you want to permanently delete this topic?"
+        }
+        onConfirm={async () => {
+          setIsSaving(true);
+          if (deleteTarget?.type === "unit") {
+            await onDeleteUnit(unit.id);
+          } else if (deleteTarget?.type === "topic" && deleteTarget.id) {
+            await onDeleteTopic(unit.id, deleteTarget.id);
+          }
+          setIsSaving(false);
+          setDeleteTarget(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -348,6 +452,39 @@ export default function ClientSubjectDetails({
     }
   };
 
+  const handleDeleteUnit = async (unitId: number) => {
+    if (!adminId) return;
+    const res = await deleteUnit(unitId, adminId);
+    if (res.success) {
+      toast.success("Unit deleted successfully");
+      setUnits((prev) => prev.filter((u) => u.id !== unitId));
+    } else {
+      toast.error(res.error || "Failed to delete unit");
+    }
+  };
+
+  const handleDeleteTopic = async (unitId: number, topicId: number) => {
+    if (!adminId) return;
+    const res = await deleteTopic(unitId, topicId, adminId);
+    if (res.success) {
+      toast.success("Topic deleted successfully");
+      setUnits((prevUnits) =>
+        prevUnits.map((unit) => {
+          if (unit.id === unitId) {
+            return {
+              ...unit,
+              topics: unit.topics.filter((t) => t.id !== topicId),
+              percentage: res.newPercentage ?? unit.percentage,
+            };
+          }
+          return unit;
+        }),
+      );
+    } else {
+      toast.error(res.error || "Failed to delete topic");
+    }
+  };
+
   const handleBack = () => router.back();
   const handleRefresh = () => {
     init();
@@ -390,7 +527,12 @@ export default function ClientSubjectDetails({
               key={unit.id}
               className="min-w-[320px] w-[350px] shrink-0 snap-start h-full"
             >
-              <UnitCard unit={unit} onSave={handleSaveUnit} />
+              <UnitCard
+                unit={unit}
+                onSave={handleSaveUnit}
+                onDeleteUnit={handleDeleteUnit}
+                onDeleteTopic={handleDeleteTopic}
+              />
             </div>
           ))
         ) : (
@@ -399,7 +541,7 @@ export default function ClientSubjectDetails({
           </div>
         )}
       </div>
-      // Inside ClientSubjectDetails.tsx
+
       <AddNewClassModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
