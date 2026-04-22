@@ -15,7 +15,7 @@ function ClubsClientContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
-    const activeTab = searchParams.get("tab") || "add";
+    const activeTab = searchParams.get("tab") || "view";
     const editId = searchParams.get("edit");
     const viewClubId = searchParams.get("viewClubId");
 

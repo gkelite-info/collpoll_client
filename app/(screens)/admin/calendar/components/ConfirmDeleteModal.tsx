@@ -8,6 +8,7 @@
 //   name?: string;
 // }
 
+
 // export default function ConfirmDeleteModal({
 //   open,
 //   onConfirm,
@@ -16,7 +17,6 @@
 //   name = "event"
 // }: Props) {
 //   if (!open) return null;
-
 //   return (
 //     <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center">
 //       <div className="bg-white rounded-xl w-[380px] p-6">
@@ -51,13 +51,12 @@
 
 "use client";
 
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash } from "@phosphor-icons/react";
+import { CheckCircle, Trash, X, XCircle } from "@phosphor-icons/react";
 
 interface Props {
   open: boolean;
-  onConfirm: () => void | Promise<void>;
+  onConfirm: () => void;
   onCancel: () => void;
   isDeleting?: boolean;
   title?: string;
@@ -66,6 +65,7 @@ interface Props {
   name?: string;
   itemName?: string;
   customDescription?: React.ReactNode;
+  actionType?: "accept" | "reject" | "remove" | null;
 }
 
 export default function ConfirmDeleteModal({
@@ -78,42 +78,39 @@ export default function ConfirmDeleteModal({
   loadingText = "Deleting...",
   name = "event",
   itemName,
-  customDescription
+  customDescription,
+  actionType = "remove"
 }: Props) {
-  const [isConfirming, setIsConfirming] = useState(false);
-  const isDeleteLoading = isDeleting || isConfirming;
-  const deleteLabel = itemName || name;
+  const isAccept = actionType === "accept";
+  const isRemove = actionType === "remove";
+  const IconComponent = isAccept ? CheckCircle : isRemove ? Trash : XCircle;
+  const iconColor = isAccept ? "text-[#43C17A]" : isRemove ? "text-red-600" : "text-[#FF2A2A]";
+  const ringColor = isAccept ? "bg-green-50 ring-green-50/50" : isRemove ? "bg-gray-100 ring-gray-50" : "bg-red-50 ring-red-50/50";
+  const btnColor = isAccept
+    ? "bg-[#43C17A] hover:bg-green-600 shadow-green-200"
+    : isRemove
+      ? "bg-[#16284F] hover:bg-opacity-90 shadow-slate-200"
+      : "bg-[#FF2A2A] hover:bg-red-700 shadow-red-200";
 
-  const handleConfirm = async () => {
-    if (isDeleteLoading) return;
-
-    setIsConfirming(true);
-    try {
-      await onConfirm();
-    } finally {
-      setIsConfirming(false);
-    }
-  };
 
   return (
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={!isDeleteLoading ? onCancel : undefined}
+            onClick={!isDeleting ? onCancel : undefined}
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
           />
-
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             className="relative bg-white rounded-2xl w-full max-w-[400px] p-8 shadow-2xl border border-gray-100"
           >
+
             {/* <button
               onClick={onCancel}
               disabled={isDeleting}
@@ -123,21 +120,40 @@ export default function ConfirmDeleteModal({
             </button> */}
 
             <div className="flex flex-col items-center text-center mt-2">
-
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-red-50/50">
-                <Trash size={32} weight="duotone" className="text-red-500" />
+                {/* <Trash size={32} weight="duotone" className="text-red-500" /> */}
+                <IconComponent size={32} weight="duotone" className={iconColor} />
               </div>
-
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                {title} {deleteLabel}?
+                {title} {name}?
               </h3>
 
-              <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
+              {/* <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
                 {customDescription ? (
                   customDescription
                 ) : (
                   <>
-                    Are you sure you want to delete this <span className="font-semibold text-gray-700">{deleteLabel}</span>? This action cannot be undone and will permanently remove the data.
+                    Are you sure you want to {title.toLowerCase()} <span className="font-semibold text-gray-700">{name}</span>?
+                    {actionType === "remove" && "This action cannot be undone and will permanently remove the data."}
+                  </>
+                )}
+              </p> */}
+
+              <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
+                {customDescription ? (
+                  customDescription
+                ) : actionType === "accept" ? (
+                  <>
+                    Please confirm if you would like to approve the request for <span className="font-semibold text-gray-700">{name}</span>. They will be officially added to your club members list.
+                  </>
+                ) : actionType === "reject" ? (
+                  <>
+                    Please confirm if you would like to decline the request for <span className="font-semibold text-gray-700">{name}</span>. This will clear them from your pending approvals.
+                  </>
+                ) : (
+                  <>
+                    Are you sure you want to {title.toLowerCase()} <span className="font-semibold text-gray-700">{name}</span>?
+                    {actionType === "remove" && " This action cannot be undone and will permanently remove the data."}
                   </>
                 )}
               </p>
@@ -145,18 +161,20 @@ export default function ConfirmDeleteModal({
               <div className="flex gap-3 w-full">
                 <button
                   onClick={onCancel}
-                  disabled={isDeleteLoading}
+                  disabled={isDeleting}
                   className="flex-1 px-4 py-3 text-gray-700 font-semibold bg-white border border-gray-300 hover:bg-gray-50 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
                 >
                   Cancel
                 </button>
 
                 <button
-                  onClick={handleConfirm}
-                  disabled={isDeleteLoading}
-                  className="flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
+                  onClick={onConfirm}
+                  disabled={isDeleting}
+                  // className="flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all disabled:opacity-70 shadow-sm shadow-red-200 cursor-pointer"
+                  className={`flex-1 flex disabled:cursor-not-allowed items-center justify-center px-4 py-3 font-semibold text-white rounded-xl transition-all disabled:opacity-70 shadow-sm cursor-pointer ${btnColor}`}
+
                 >
-                  {isDeleteLoading ? (
+                  {isDeleting ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -172,10 +190,10 @@ export default function ConfirmDeleteModal({
                 </button>
               </div>
             </div>
-
           </motion.div>
         </div>
       )}
     </AnimatePresence>
   );
+
 }

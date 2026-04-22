@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { ArrowLeft, MagnifyingGlass } from "@phosphor-icons/react";
 import { Avatar } from "@/app/utils/Avatar";
 import { decryptId } from "@/app/utils/encryption";
 import { useMemo, useState, useEffect } from "react";
@@ -127,8 +127,16 @@ export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     }));
 
     return (
-        <div className="w-full flex flex-col items-center">
-
+        <div className="w-full flex flex-col items-center relative">
+            <div className="w-full flex justify-start mb-2">
+                <button
+                    onClick={() => router.push("/admin/clubs?tab=view")}
+                    className="flex items-center gap-2 text-[#16284F] hover:text-[#43C17A] font-semibold transition-colors cursor-pointer"
+                >
+                    <ArrowLeft size={20} weight="bold" />
+                    Back
+                </button>
+            </div>
             <div className="bg-[#E9E9E9] p-2 rounded-full inline-flex gap-2 mx-auto self-center mb-8 relative">
                 {['active', 'inactive'].map((s) => {
                     const isActive = status === s;
