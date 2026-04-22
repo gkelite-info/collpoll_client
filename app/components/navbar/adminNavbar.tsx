@@ -99,6 +99,13 @@ export default function AdminNavbar() {
     // },
     {
       icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Clubs",
+      path: "/admin/clubs",
+    },
+    {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
@@ -125,13 +132,7 @@ export default function AdminNavbar() {
       label: "My Attendance",
       path: "/admin/my-attendance",
     },
-    {
-      icon: (isActive) => (
-        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Clubs",
-      path: "/admin/clubs",
-    },
+
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />

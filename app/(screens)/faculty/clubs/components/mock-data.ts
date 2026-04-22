@@ -1,13 +1,56 @@
+// export const clubInfo = {
+//     name: "All Stars Sports Club",
+//     logo : "",
+//     president: { name: "Rohith Sharma", role: "President" },
+//     vicePresident: { name: "Ayan Reddy", role: "Vice President" },
+//     responsibleFaculty : { name: "Ayan Reddy", role: "Responsible Faculty" },
+//     mentors: [
+//         { name: "Ananya", id: "1" },
+//         { name: "Arav", id: "2" },
+//         { name: "Sharmila", id: "3" },
+//         { name: "Poojith", id: "4" },
+//     ]
+// };
+
 export const clubInfo = {
-    name: "All Stars Sports Club",
-    president: { name: "Rohith Sharma", role: "President" },
-    vicePresident: { name: "Ayan Reddy", role: "Vice President" },
+    name: "Coding Club",
+    logo: "/logos/coding-club.png",
+
+    president: {
+        name: "Alice",
+        role: "President",
+        avatar: "/avatars/alice.png",
+    },
+
+    vicePresident: {
+        name: "Bob",
+        role: "Vice President",
+        avatar: "/avatars/bob.png",
+    },
+
+    responsibleFaculty: {
+        name: "Dr. Smith",
+        role: "Faculty Incharge",
+        avatar: "/avatars/faculty.png",
+    },
+
     mentors: [
-        { name: "Ananya", id: "1" },
-        { name: "Arav", id: "2" },
-        { name: "Sharmila", id: "3" },
-        { name: "Poojith", id: "4" },
-    ]
+        {
+            name: "Charlie",
+            id: "M1",
+            avatar: "/avatars/charlie.png",
+        },
+        {
+            name: "Rohan",
+            id: "M2",
+            avatar: "/avatars/charlie.png",
+        },
+        {
+            name: "Madhan",
+            id: "M3",
+            avatar: "/avatars/charlie.png",
+        },
+    ],
 };
 
 export const requestsData = Array.from({ length: 8 }).map((_, i) => ({

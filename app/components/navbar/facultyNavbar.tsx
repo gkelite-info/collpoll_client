@@ -88,6 +88,13 @@ export default function FacultyNavbar() {
     },
     {
       icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Clubs",
+      path: "/faculty/clubs",
+    },
+    {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
@@ -117,13 +124,7 @@ export default function FacultyNavbar() {
     //     label: "Payments",
     //     path: "/faculty/payments",
     // },
-    {
-      icon: (isActive) => (
-        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Clubs",
-      path: "/faculty/clubs",
-    },
+
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />

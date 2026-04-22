@@ -89,10 +89,10 @@ export default function Navbar() {
     },
     {
       icon: (isActive) => (
-        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Meetings",
-      path: "/meetings",
+      label: "Clubs",
+      path: "/clubs",
     },
     {
       icon: (isActive) => (
@@ -100,6 +100,13 @@ export default function Navbar() {
       ),
       label: "Drive",
       path: "/drive",
+    },
+    {
+      icon: (isActive) => (
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Meetings",
+      path: "/meetings",
     },
     {
       icon: (isActive) => (
@@ -111,13 +118,7 @@ export default function Navbar() {
       label: "Payments",
       path: "/payments",
     },
-    {
-      icon: (isActive) => (
-        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Clubs",
-      path: "/clubs",
-    },
+
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
