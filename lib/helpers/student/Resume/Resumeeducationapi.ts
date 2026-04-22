@@ -125,6 +125,7 @@ export const resumePrimaryEducationAPI = {
     board?: string;
     mediumOfStudy?: string;
     yearOfPassing?: number | string;
+    cgpa?: number;
     startDate?: string;
     endDate?: string;
     location?: string;

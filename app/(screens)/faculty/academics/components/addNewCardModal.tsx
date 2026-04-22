@@ -66,7 +66,6 @@ export default function AddNewCardModal({
   defaultSubjectId,
   facultySections,
 }: AddNewCardModalProps) {
-
   const [formData, setFormData] = useState<FacultyAcademicForm>({
     educationId: undefined,
     branchId: undefined,
@@ -84,7 +83,7 @@ export default function AddNewCardModal({
     topics: [],
   });
 
-  const [facultyId, setFacultyId] = useState<number | null>(null);;
+  const [facultyId, setFacultyId] = useState<number | null>(null);
   const [isSemesterAuto, setIsSemesterAuto] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   // const [formData, setFormData] = useState({
@@ -147,7 +146,10 @@ export default function AddNewCardModal({
           ...prev,
           educationId: ctx.collegeEducationId,
           branchId: ctx.collegeBranchId,
-          academicYearId: ctx.academicYearIds?.length === 1 ? ctx.academicYearIds[0] : prev.academicYearId,
+          academicYearId:
+            ctx.academicYearIds?.length === 1
+              ? ctx.academicYearIds[0]
+              : prev.academicYearId,
         }));
       })
       .catch((err) => {
@@ -156,14 +158,13 @@ export default function AddNewCardModal({
       });
   }, [userId, loading]);
 
-
   useEffect(() => {
     if (!facultyCtx) return;
 
     const yearIds = facultyCtx.academicYearIds ?? [];
 
     if (yearIds.length === 1) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         academicYearId: yearIds[0],
       }));
@@ -174,7 +175,7 @@ export default function AddNewCardModal({
     if (facultySubjects.length === 1) {
       const only = facultySubjects[0];
 
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         subjectId: only.collegeSubjectId,
         subjectName: only.subjectName,
@@ -183,7 +184,7 @@ export default function AddNewCardModal({
   }, [facultySubjects]);
 
   useEffect(() => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       topics: selectedTopics,
     }));
@@ -201,8 +202,8 @@ export default function AddNewCardModal({
   //   setFormData(prev => ({
   //     ...prev,
   //     topics: prev.topics.includes(topic)
-  //       ? prev.topics
-  //       : [...prev.topics, topic],
+  //     ? prev.topics
+  //     : [...prev.topics, topic],
   //   }));
   //   setAiTopics(prev => prev.filter(t => t !== topic));
   // };
@@ -212,11 +213,11 @@ export default function AddNewCardModal({
 
     if (!q) return { type: "empty" as const };
 
-    if (selectedTopics.some(t => t.toLowerCase() === q)) {
+    if (selectedTopics.some((t) => t.toLowerCase() === q)) {
       return { type: "selected" as const };
     }
 
-    if (availableTopics.some(t => t.toLowerCase() === q)) {
+    if (availableTopics.some((t) => t.toLowerCase() === q)) {
       return { type: "available" as const };
     }
 
@@ -259,7 +260,9 @@ export default function AddNewCardModal({
         setAcademicYears(years ?? []);
 
         const selectedYearId =
-          facultyCtx.academicYearIds?.length === 1 ? facultyCtx.academicYearIds[0] : formData.academicYearId;
+          facultyCtx.academicYearIds?.length === 1
+            ? facultyCtx.academicYearIds[0]
+            : formData.academicYearId;
 
         if (selectedYearId && selectedYearId !== formData.academicYearId) {
           setFormData((prev) => ({ ...prev, academicYearId: selectedYearId }));
@@ -277,7 +280,10 @@ export default function AddNewCardModal({
           setSemesters(sems ?? []);
 
           if ((sems ?? []).length === 1) {
-            setFormData((prev) => ({ ...prev, semester: sems[0].collegeSemesterId }));
+            setFormData((prev) => ({
+              ...prev,
+              semester: sems[0].collegeSemesterId,
+            }));
             setIsSemesterAuto(true);
           } else {
             setIsSemesterAuto(false);
@@ -291,15 +297,20 @@ export default function AddNewCardModal({
             academicYearId: selectedYearId,
           });
 
-          const filteredSections = (secs ?? []).filter((s: any) =>
-            Array.isArray(facultyCtx.sectionIds) && facultyCtx.sectionIds.includes(s.collegeSectionsId)
+          const filteredSections = (secs ?? []).filter(
+            (s: any) =>
+              Array.isArray(facultyCtx.sectionIds) &&
+              facultyCtx.sectionIds.includes(s.collegeSectionsId),
           );
 
           if (cancelled) return;
           setSections(filteredSections);
 
           if (filteredSections.length === 1) {
-            setFormData((prev) => ({ ...prev, sectionId: filteredSections[0].collegeSectionsId }));
+            setFormData((prev) => ({
+              ...prev,
+              sectionId: filteredSections[0].collegeSectionsId,
+            }));
           }
 
           const { data: subjectRows, error } = await supabase
@@ -330,9 +341,7 @@ export default function AddNewCardModal({
             }));
           }
         }
-      } catch (err) {
-
-      }
+      } catch (err) {}
     };
 
     loadAcademics();
@@ -345,7 +354,7 @@ export default function AddNewCardModal({
   useEffect(() => {
     if (subjects.length === 1) {
       const onlySubject = subjects[0];
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         subjectId: onlySubject.collegeSubjectId,
         subjectName: onlySubject.subjectName,
@@ -368,9 +377,11 @@ export default function AddNewCardModal({
 
   if (!isOpen) return null;
 
-  const filteredAvailableTopics = availableTopics.filter(topic =>
-    topic.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  const filteredAvailableTopics = availableTopics.filter((topic) =>
+    topic.toLowerCase().includes(searchQuery.trim().toLowerCase()),
   );
+
+  const isInvalidUnit = availableTopics.includes(INVALID_UNIT_MESSAGE);
 
   const handleSave = async () => {
     if (loading || isSaving) return;
@@ -405,8 +416,13 @@ export default function AddNewCardModal({
       return;
     }
 
-    if (selectedTopics.length === 0) {
-      toast.error("Please add at least one topic");
+    // Filter out the invalid message just in case it got selected somehow
+    const validTopics = selectedTopics.filter(
+      (t) => t !== INVALID_UNIT_MESSAGE,
+    );
+
+    if (validTopics.length === 0) {
+      toast.error("Please add at least one valid topic");
       return;
     }
 
@@ -421,7 +437,7 @@ export default function AddNewCardModal({
         unitTitle: formData.unitName,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate || undefined,
-        topics: selectedTopics,
+        topics: validTopics, // Save only valid topics
       });
 
       const collegeSubjectUnitId = unitResult.collegeSubjectUnitId;
@@ -468,31 +484,30 @@ export default function AddNewCardModal({
   };
 
   const uniqueSections = Array.from(
-    new Map(
-      sections.map((s) => [s.collegeSections, s])
-    ).values()
+    new Map(sections.map((s) => [s.collegeSections, s])).values(),
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[95vh] overflow-y-auto">
         <div className="p-6 overflow-y-auto">
-          <h2 className="text-xl font-bold text-[#282828] mb-1">
-            Add Unit
-          </h2>
+          <h2 className="text-xl font-bold text-[#282828] mb-1">Add Unit</h2>
           <p className="text-[#525252] text-xs mb-6">
-            Track progress, add lessons, and manage course content across all your batches.
+            Track progress, add lessons, and manage course content across all
+            your batches.
           </p>
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Education</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Education
+              </label>
 
               <input
                 type="text"
                 value={
                   educations.find(
-                    e => e.collegeEducationId === formData.educationId
+                    (e) => e.collegeEducationId === formData.educationId,
                   )?.collegeEducationType || ""
                 }
                 readOnly
@@ -505,14 +520,15 @@ export default function AddNewCardModal({
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Branch</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Branch
+              </label>
 
               <input
                 type="text"
                 value={
-                  branches.find(
-                    b => b.collegeBranchId === formData.branchId
-                  )?.collegeBranchCode || ""
+                  branches.find((b) => b.collegeBranchId === formData.branchId)
+                    ?.collegeBranchCode || ""
                 }
                 readOnly
                 placeholder="Branch"
@@ -525,12 +541,14 @@ export default function AddNewCardModal({
             </div>
 
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Year</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Year
+              </label>
               <input
                 type="text"
                 value={
                   academicYears.find(
-                    y => y.collegeAcademicYearId === formData.academicYearId
+                    (y) => y.collegeAcademicYearId === formData.academicYearId,
                   )?.collegeAcademicYear || ""
                 }
                 readOnly
@@ -542,20 +560,22 @@ export default function AddNewCardModal({
     "
               />
             </div>
-            {!['Inter'].includes(faculty_edu_type!) &&
+            {!["Inter"].includes(faculty_edu_type!) && (
               <div>
-                <label className="text-sm font-semibold text-[#282828]">Semester</label>
+                <label className="text-sm font-semibold text-[#282828]">
+                  Semester
+                </label>
                 <select
                   value={formData.semester ?? ""}
                   onChange={(e) =>
-                    setFormData(prev => ({
+                    setFormData((prev) => ({
                       ...prev,
-                      semester: e.target.value === ""
-                        ? undefined
-                        : Number(e.target.value),
+                      semester:
+                        e.target.value === ""
+                          ? undefined
+                          : Number(e.target.value),
                     }))
                   }
-
                   className={`
     w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-white
     focus:ring-2 focus:ring-[#43C17A] focus:outline-none
@@ -576,9 +596,11 @@ export default function AddNewCardModal({
                   ))}
                 </select>
               </div>
-            }
+            )}
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Subject Name</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Subject Name
+              </label>
               <input
                 type="text"
                 value={formData.subjectName || ""}
@@ -599,7 +621,7 @@ export default function AddNewCardModal({
               <div className="w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white min-h-[42px] flex flex-wrap gap-2">
                 {formData.sectionIds.map((id) => {
                   const section = filteredSections.find(
-                    (s) => s.collegeSectionsId === id
+                    (s) => s.collegeSectionsId === id,
                   );
 
                   return (
@@ -615,7 +637,7 @@ export default function AddNewCardModal({
                           setFormData((prev) => ({
                             ...prev,
                             sectionIds: prev.sectionIds.filter(
-                              (sid) => sid !== id
+                              (sid) => sid !== id,
                             ),
                           }))
                         }
@@ -646,7 +668,7 @@ export default function AddNewCardModal({
 
                   {filteredSections
                     .filter(
-                      (s) => !formData.sectionIds.includes(s.collegeSectionsId)
+                      (s) => !formData.sectionIds.includes(s.collegeSectionsId),
                     )
                     .map((s) => (
                       <option
@@ -660,7 +682,9 @@ export default function AddNewCardModal({
               </div>
             </div>
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Unit Name</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Unit Name
+              </label>
               <input
                 type="text"
                 value={formData.unitName}
@@ -669,7 +693,7 @@ export default function AddNewCardModal({
                   const filteredValue = rawValue.replace(/[^a-zA-Z\s]/g, "");
                   const pascalValue = toPascalCase(filteredValue);
 
-                  setFormData(prev => ({
+                  setFormData((prev) => ({
                     ...prev,
                     unitName: pascalValue,
                   }));
@@ -678,7 +702,6 @@ export default function AddNewCardModal({
 
                   if (!filteredValue || !subject) {
                     setAvailableTopics([]);
-                    // ✅ ADDED: clear error and loading when input is cleared
                     setTopicsError(null);
                     setIsLoadingTopics(false);
                     return;
@@ -688,253 +711,268 @@ export default function AddNewCardModal({
                     clearTimeout(aiTimeoutRef.current);
                   }
 
-                  // ✅ ADDED: only debounce after a word boundary (space after word, or 2+ words typed)
                   const trimmed = filteredValue.trim();
 
-                  // remove spaces → count only letters
                   const letterCount = trimmed.replace(/\s+/g, "").length;
 
-                  // trigger only after 3+ characters
                   if (letterCount < 3) {
                     setTopicsError(null);
                     setIsLoadingTopics(false);
                     return;
                   }
 
-                  // ✅ ADDED: show loading immediately when debounce is scheduled
                   setIsLoadingTopics(true);
                   setTopicsError(null);
 
                   aiTimeoutRef.current = setTimeout(async () => {
                     try {
-                      // ✅ ADDED: pass educationType and branch for richer context
                       const educationType = educations.find(
-                        (e) => e.collegeEducationId === formData.educationId
+                        (e) => e.collegeEducationId === formData.educationId,
                       )?.collegeEducationType;
                       const branchCode = branches.find(
-                        (b) => b.collegeBranchId === formData.branchId
+                        (b) => b.collegeBranchId === formData.branchId,
                       )?.collegeBranchCode;
 
                       const suggestions = await suggestTopicsAction(
                         subject,
                         filteredValue,
                         educationType,
-                        branchCode
+                        branchCode,
                       );
                       setAvailableTopics(suggestions);
-                      // ✅ ADDED: clear error on success
                       setTopicsError(null);
                     } catch (err: any) {
-                      // ✅ ADDED: show error message in the AI box instead of silent fail
                       setTopicsError(
-                        err?.message || "Failed to generate topics. Please try again."
+                        err?.message ||
+                          "Failed to generate topics. Please try again.",
                       );
                       setAvailableTopics([]);
                     } finally {
-                      // ✅ ADDED: always stop loading
                       setIsLoadingTopics(false);
                     }
                   }, 900);
                 }}
-
                 onBlur={(e) => {
                   const pascalValue = toPascalCase(e.target.value);
-                  setFormData(prev => ({
+                  setFormData((prev) => ({
                     ...prev,
                     unitName: pascalValue,
                   }));
                 }}
-
                 placeholder="Enter unit name"
                 className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-[#43C17A] focus:outline-none"
               />
 
-              {/* ✅ ADDED: AI box now also shows when loading or error, not just when topics exist */}
-              {formData.unitName && (availableTopics.length > 0 || selectedTopics.length > 0 || isLoadingTopics || topicsError) && (
-                <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-[#43C17A]">
-                      AI Suggested Topics
-                    </p>
+              {formData.unitName &&
+                (availableTopics.length > 0 ||
+                  selectedTopics.length > 0 ||
+                  isLoadingTopics ||
+                  topicsError) && (
+                  <div className="mt-3 border border-[#BBF7D0] bg-[#F0FDF4] rounded-lg p-3 col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-[#43C17A]">
+                        AI Suggested Topics
+                      </p>
 
-                    <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 text-xs font-medium text-[#43C17A]">
-                        <input
-                          type="checkbox"
-                          checked={selectAll}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setSelectAll(checked);
+                      {!isInvalidUnit && (
+                        <div className="flex items-center gap-2">
+                          <label className="flex items-center gap-2 text-xs font-medium text-[#43C17A]">
+                            <input
+                              type="checkbox"
+                              checked={selectAll}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setSelectAll(checked);
 
-                            if (checked) {
-                              setSelectedTopics(prev => [
-                                ...new Set([...prev, ...availableTopics]),
-                              ]);
-                              setAvailableTopics([]);
-                            } else {
-                              setAvailableTopics(prev => [
-                                ...new Set([...prev, ...selectedTopics]),
-                              ]);
-                              setSelectedTopics([]);
-                            }
-                          }}
-                          className="accent-[#43C17A]"
-                        />
-                        Select All
-                      </label>
+                                if (checked) {
+                                  const validAvailable = availableTopics.filter(
+                                    (t) => t !== INVALID_UNIT_MESSAGE,
+                                  );
+                                  setSelectedTopics((prev) => [
+                                    ...new Set([...prev, ...validAvailable]),
+                                  ]);
+                                  setAvailableTopics([]);
+                                } else {
+                                  setAvailableTopics((prev) => [
+                                    ...new Set([...prev, ...selectedTopics]),
+                                  ]);
+                                  setSelectedTopics([]);
+                                }
+                              }}
+                              className="accent-[#43C17A]"
+                            />
+                            Select All
+                          </label>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowSearch(prev => !prev)}
-                        className="p-1 rounded-md hover:bg-white/70"
-                      >
-                        <MagnifyingGlass size={16} className="text-[#43C17A]" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ✅ ADDED: loading spinner with unit name */}
-                  {isLoadingTopics && (
-                    <div className="flex items-center gap-2 py-2 text-xs text-[#43C17A]">
-                      <svg
-                        className="animate-spin h-3 w-3 text-[#43C17A] shrink-0"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8z"
-                        />
-                      </svg>
-                      <span>
-                        Generating topics for{" "}
-                        <strong>{formData.unitName}</strong>…
-                      </span>
-                    </div>
-                  )}
-
-                  {/* ✅ ADDED: error message shown as a red banner inside the AI box */}
-                  {!isLoadingTopics && topicsError && (
-                    <div className="flex items-start gap-2 mt-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600">
-                      <span className="shrink-0">⚠️</span>
-                      <span>{topicsError}</span>
-                    </div>
-                  )}
-
-                  {showSearch && (
-                    <input
-                      type="text"
-                      placeholder="Search topics..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className=" w-full rounded-lg px-3 py-2 text-xs border border-[#BBF7D0]   bg-[#ECFDF5]   text-[#065F46]   placeholder:text-[#86EFAC]   focus:ring-2 focus:ring-[#43C17A] "
-                    />
-                  )}
-
-                  {searchQuery && searchState.type === "new" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newTopic = searchQuery.trim();
-                        if (!newTopic) return;
-                        setSelectedTopics(prev =>
-                          prev.includes(newTopic) ? prev : [...prev, newTopic]
-                        );
-                        setAvailableTopics(prev =>
-                          prev.filter(t => t.toLowerCase() !== newTopic.toLowerCase())
-                        );
-                        setSearchQuery("");
-                        setSelectAll(false);
-                      }}
-                      className=" mt-2 text-xs font-semibold text-[#43C17A  flex items-center gap-1"
-                    >
-                      + Add "{searchQuery}"
-                    </button>
-                  )}
-                  {selectedTopics.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {selectedTopics.map(topic => (
-                        <div
-                          key={topic}
-                          className="flex items-center gap-2 bg-white border border-[#D1FAE5]rounded-full px-3 py-1 text-xs  text-[#065F46]"
-                        >
-                          <span>{topic}</span>
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedTopics(prev => prev.filter(t => t !== topic));
-                              setAvailableTopics(prev => [...prev, topic]);
-                              setSelectAll(false);
-                            }}
-                            className="text-red-500 font-bold"
+                            onClick={() => setShowSearch((prev) => !prev)}
+                            className="p-1 rounded-md hover:bg-white/70"
                           >
-                            ×
+                            <MagnifyingGlass
+                              size={16}
+                              className="text-[#43C17A]"
+                            />
                           </button>
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {availableTopics
-                      .filter(t =>
-                        t.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map(topic => {
-                        const isInvalidMessage = topic === INVALID_UNIT_MESSAGE;
 
-                        return (
+                    {isLoadingTopics && (
+                      <div className="flex items-center gap-2 py-2 text-xs text-[#43C17A]">
+                        <svg
+                          className="animate-spin h-3 w-3 text-[#43C17A] shrink-0"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8z"
+                          />
+                        </svg>
+                        <span>
+                          Generating topics for{" "}
+                          <strong>{formData.unitName}</strong>…
+                        </span>
+                      </div>
+                    )}
+
+                    {!isLoadingTopics && topicsError && (
+                      <div className="flex items-start gap-2 mt-1 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-600">
+                        <span className="shrink-0">⚠️</span>
+                        <span>{topicsError}</span>
+                      </div>
+                    )}
+
+                    {showSearch && !isInvalidUnit && (
+                      <input
+                        type="text"
+                        placeholder="Search topics..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className=" w-full rounded-lg px-3 py-2 text-xs border border-[#BBF7D0]   bg-[#ECFDF5]   text-[#065F46]   placeholder:text-[#86EFAC]   focus:ring-2 focus:ring-[#43C17A] "
+                      />
+                    )}
+
+                    {searchQuery &&
+                      searchState.type === "new" &&
+                      !isInvalidUnit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTopic = searchQuery.trim();
+                            if (!newTopic) return;
+                            setSelectedTopics((prev) =>
+                              prev.includes(newTopic)
+                                ? prev
+                                : [...prev, newTopic],
+                            );
+                            setAvailableTopics((prev) =>
+                              prev.filter(
+                                (t) =>
+                                  t.toLowerCase() !== newTopic.toLowerCase(),
+                              ),
+                            );
+                            setSearchQuery("");
+                            setSelectAll(false);
+                          }}
+                          className=" mt-2 text-xs font-semibold text-[#43C17A  flex items-center gap-1"
+                        >
+                          + Add "{searchQuery}"
+                        </button>
+                      )}
+                    {selectedTopics.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {selectedTopics.map((topic) => (
                           <div
                             key={topic}
-                            className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs
-        ${isInvalidMessage
-                                ? "bg-yellow-50 border-yellow-300 text-yellow-700"
-                                : "bg-white border-[#D1FAE5] text-[#065F46]"
-                              }`}
+                            className="flex items-center gap-2 bg-white border border-[#D1FAE5]rounded-full px-3 py-1 text-xs  text-[#065F46]"
                           >
                             <span>{topic}</span>
-
-                            {!isInvalidMessage && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedTopics(prev => [...prev, topic]);
-                                  setAvailableTopics(prev =>
-                                    prev.filter(t => t !== topic)
-                                  );
-                                  setSelectAll(false);
-                                }}
-                                className="text-[#43C17A] font-bold"
-                              >
-                                +
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTopics((prev) =>
+                                  prev.filter((t) => t !== topic),
+                                );
+                                setAvailableTopics((prev) => [...prev, topic]);
+                                setSelectAll(false);
+                              }}
+                              className="text-red-500 font-bold"
+                            >
+                              ×
+                            </button>
                           </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {availableTopics
+                        .filter((t) =>
+                          t.toLowerCase().includes(searchQuery.toLowerCase()),
+                        )
+                        .map((topic) => {
+                          const isInvalidMessage =
+                            topic === INVALID_UNIT_MESSAGE;
 
+                          return (
+                            <div
+                              key={topic}
+                              className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs
+        ${
+          isInvalidMessage
+            ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+            : "bg-white border-[#D1FAE5] text-[#065F46]"
+        }`}
+                            >
+                              <span>{topic}</span>
+
+                              {!isInvalidMessage && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTopics((prev) => [
+                                      ...prev,
+                                      topic,
+                                    ]);
+                                    setAvailableTopics((prev) =>
+                                      prev.filter((t) => t !== topic),
+                                    );
+                                    setSelectAll(false);
+                                  }}
+                                  className="text-[#43C17A] font-bold"
+                                >
+                                  +
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
             </div>
             <div>
-              <label className="text-sm font-semibold text-[#282828]">Unit</label>
+              <label className="text-sm font-semibold text-[#282828]">
+                Unit
+              </label>
               <input
                 type="text"
                 inputMode="numeric"
                 min={1}
                 value={formData.unitNumber || ""}
                 onChange={(e) =>
-                  setFormData(prev => ({
+                  setFormData((prev) => ({
                     ...prev,
                     unitNumber: Number(e.target.value),
                   }))
@@ -976,10 +1014,11 @@ export default function AddNewCardModal({
               onClick={handleSave}
               disabled={isSaving}
               className={`flex-1 font-semibold py-1.5 rounded-sm transition
-    ${isSaving
-                  ? "bg-[#43C17A] opacity-60 cursor-not-allowed text-white"
-                  : "bg-[#43C17A] hover:bg-[#3bad6d] text-white cursor-pointer"
-                }`}
+    ${
+      isSaving
+        ? "bg-[#43C17A] opacity-60 cursor-not-allowed text-white"
+        : "bg-[#43C17A] hover:bg-[#3bad6d] text-white cursor-pointer"
+    }`}
             >
               {isSaving ? "Saving..." : "Save"}
             </button>
@@ -991,9 +1030,8 @@ export default function AddNewCardModal({
               Cancel
             </button>
           </div>
-
         </div>
       </div>
-    </div >
+    </div>
   );
 }

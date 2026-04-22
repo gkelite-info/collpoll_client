@@ -19,6 +19,9 @@ export type CalendarEventRow = {
   fromTime: string;
   toTime: string;
   meetingLink: string | null;
+  meetingTitle: string | null;
+  meetingId: string | null;
+  meetingPassword: string | null;
   is_deleted: boolean | null;
   createdAt: string;
   updatedAt: string;
@@ -35,35 +38,37 @@ export async function fetchCalendarEvents(
     .from("calendar_event")
     .select(
       `
-    calendarEventId,
-    facultyId,
-    subject,
-    eventTopic,
-    type,
-    date,
-    roomNo,
-    fromTime,
-    toTime,
-    meetingLink,
-    is_deleted,
-    createdAt,
-    updatedAt,
-    deletedAt,
+  calendarEventId,
+  facultyId,
+  subject,
+  eventTopic,
+  type,
+  date,
+  roomNo,
+  fromTime,
+  toTime,
+  meetingLink,
+  meetingTitle,
+  meetingId,
+  meetingPassword,
+  is_deleted,
+  createdAt,
+  updatedAt,
+  deletedAt,
 
-    college_subjects:subject (
-      collegeSubjectId,
-      subjectName,
-      subjectKey
-    ),
+  college_subjects:subject (
+    collegeSubjectId,
+    subjectName,
+    subjectKey
+  ),
 
-    college_subject_unit_topics:eventTopic (
-      collegeSubjectUnitTopicId,
-      topicTitle
+  college_subject_unit_topics (
+    collegeSubjectUnitTopicId,
+    topicTitle
+  )
+`,
     )
-  `,
-    )
-    .is("deletedAt", null)
-    .eq("is_deleted", false);
+    .is("deletedAt", null);
 
   if (filters.facultyId) {
     query = query.eq("facultyId", filters.facultyId);
@@ -88,15 +93,19 @@ export async function saveCalendarEvent(payload: {
   facultyId: number;
   subjectId: number | null;
   eventTopic: number | null;
+  eventTitle?: string | null;
   type: "class" | "meeting" | "exam" | "quiz";
   date: string;
   roomNo: string;
   fromTime: string;
   toTime: string;
   meetingLink?: string | null;
+  meetingId?: string | null;
+  meetingPassword?: string | null;
 }) {
   const now = new Date().toISOString();
 
+  // 🔁 EDIT
   if (payload.calendarEventId) {
     const { error } = await supabase
       .from("calendar_event")
@@ -108,7 +117,10 @@ export async function saveCalendarEvent(payload: {
         roomNo: payload.roomNo,
         fromTime: payload.fromTime,
         toTime: payload.toTime,
+        meetingTitle: payload.type === "meeting" ? payload.eventTitle : null,
         meetingLink: payload.meetingLink ?? null,
+        meetingId: payload.meetingId ?? null,
+        meetingPassword: payload.meetingPassword ?? null,
         updatedAt: now,
       })
       .eq("calendarEventId", payload.calendarEventId);
@@ -118,9 +130,13 @@ export async function saveCalendarEvent(payload: {
       return { success: false, error };
     }
 
-    return { success: true, calendarEventId: payload.calendarEventId };
+    return {
+      success: true,
+      calendarEventId: payload.calendarEventId,
+    };
   }
 
+  // ➕ CREATE
   const { data, error } = await supabase
     .from("calendar_event")
     .insert({
@@ -132,7 +148,10 @@ export async function saveCalendarEvent(payload: {
       roomNo: payload.roomNo,
       fromTime: payload.fromTime,
       toTime: payload.toTime,
+      meetingTitle: payload.type === "meeting" ? payload.eventTitle : null,
       meetingLink: payload.meetingLink ?? null,
+      meetingId: payload.meetingId ?? null,
+      meetingPassword: payload.meetingPassword ?? null,
       createdAt: now,
       updatedAt: now,
     })
@@ -155,7 +174,10 @@ export async function saveCalendarEvent(payload: {
     });
   }
 
-  return { success: true, calendarEventId: data.calendarEventId };
+  return {
+    success: true,
+    calendarEventId: data.calendarEventId,
+  };
 }
 
 export async function deleteCalendarEvent(calendarEventId: number) {

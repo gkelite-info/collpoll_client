@@ -8,7 +8,7 @@ import ResumeTemplate4 from "./templates/Template4";
 import ResumeTemplate5 from "./templates/Template5";
 import ResumeTemplate6 from "./templates/Template6";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchAllResumeData, ResumeData } from "@/lib/helpers/student/Resume/Resumedatafetcher";
+import { fetchAllResumeData, fmtDate, ResumeData } from "@/lib/helpers/student/Resume/Resumedatafetcher";
 import { generateResumePdf } from "@/lib/helpers/student/Resume/resumeDownloadAPI";
 import { calculateATSScore, ATSResult } from "@/lib/helpers/student/Resume/atsScoreCalculator";
 import { useRouter } from "next/navigation";
@@ -233,6 +233,8 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
     const edu = resumeData.education ?? [];
     const groups = resumeData.skillGroups ?? [];
     const internships = resumeData.internships ?? [];
+    const employment = resumeData.employment ?? [];
+    const projects = resumeData.projects ?? [];
     const awards = resumeData.awards ?? [];
     const clubs = resumeData.clubs ?? [];
     const certs = resumeData.certifications ?? [];
@@ -250,12 +252,23 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       `<p style="font-family:Arial;font-size:${size};color:${color};margin:1pt 0;
                ${bold ? "font-weight:bold;" : ""}">${content}</p>`;
 
+    const formatEducationLevel = (level: string) => {
+      const normalized = level.toLowerCase();
+      if (normalized === "phd") return "PhD";
+      if (normalized === "masters") return "Masters";
+      if (normalized === "undergraduate") return "Undergraduate";
+      if (normalized === "secondary") return "Secondary";
+      if (normalized === "primary") return "Primary";
+      return level;
+    };
+
     const bullet = (content: string) =>
       `<p style="font-family:Arial;font-size:9pt;color:#444444;margin:1pt 0 1pt 10pt;">• ${content}</p>`;
 
     const eduHtml = edu.map((e) => `
-    ${txt(e.board ?? e.educationLevel, false, "8pt", "#888888")}
-    ${txt(e.institutionName, true, "9pt")}
+    ${txt(`${formatEducationLevel(e.educationLevel)}:`, true, "9pt", "#16284F")}
+    ${txt(`Name: ${e.institutionName}`, false, "9pt", "#444444")}
+    ${e.courseName ? txt(`Course: ${e.courseName}${e.specialization ? ` - ${e.specialization}` : ""}`, false, "9pt", "#555555") : ""}
     ${txt(e.startYear && e.endYear
       ? `${String(e.startYear)} – ${String(e.endYear)}`
       : String(e.yearOfPassing ?? ""), false, "8pt", "#888888")}
@@ -278,6 +291,25 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
     ${i.domain ? txt(i.domain) : ""}
     ${txt(`${String(i.startDate ?? "")} – ${String(i.endDate ?? "")}`, false, "8pt", "#888888")}
     ${i.projectUrl ? `<p style="font-family:Arial;font-size:9pt;color:#2563eb;margin:1pt 0;">${i.projectUrl}</p>` : ""}
+    <p style="margin:4pt;"></p>
+  `).join("");
+
+    const employmentHtml = employment.map((e) => `
+    ${txt(e.companyName.trim(), true)}
+    ${txt(e.designation.trim())}
+    ${txt(`${fmtDate(e.startDate)} - ${fmtDate(e.endDate)}`, false, "8pt", "#888888")}
+    ${(e.experienceYears > 0 || e.experienceMonths > 0) ? txt(`Experience: ${e.experienceYears}y ${e.experienceMonths}m`, false, "8pt", "#888888") : ""}
+    ${e.description ? txt(e.description) : ""}
+    <p style="margin:4pt;"></p>
+  `).join("");
+
+    const projectHtml = projects.map((project) => `
+    ${txt(project.projectName.trim(), true)}
+    ${project.domain ? txt(project.domain) : ""}
+    ${project.toolsAndTechnologies?.length ? txt(project.toolsAndTechnologies.join(", ")) : ""}
+    ${txt(`${fmtDate(project.startDate)} - ${fmtDate(project.endDate)}`, false, "8pt", "#888888")}
+    ${project.description ? txt(project.description) : ""}
+    ${project.projectUrl ? `<p style="font-family:Arial;font-size:9pt;color:#2563eb;margin:1pt 0;">${project.projectUrl}</p>` : ""}
     <p style="margin:4pt;"></p>
   `).join("");
 
@@ -377,6 +409,8 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
               </td>
               <td style="width:62%;padding-left:14pt;vertical-align:top;">
                 ${internHtml ? sec("Internship", internHtml) : ""}
+                ${employmentHtml ? sec("Employment", employmentHtml) : ""}
+                ${projectHtml ? sec("Projects", projectHtml) : ""}
                 ${sec("Accomplishments", awardsHtml + clubsHtml + certsHtml + examsHtml)}
                 ${sec("Languages", langsHtml)}
               </td>

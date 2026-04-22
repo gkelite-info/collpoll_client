@@ -40,11 +40,8 @@ export default function LectureCard({
           </>
 
           {status && (
-            <p className="text-red-500 text-xs font-semibold">
-              {status}
-            </p>
+            <p className="text-red-500 text-xs font-semibold">{status}</p>
           )}
-
         </div>
       </div>
     </div>

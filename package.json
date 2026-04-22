@@ -48,6 +48,7 @@
     "react-loader-spinner": "^8.0.2",
     "recharts": "^3.6.0",
     "resend": "^6.9.4",
+    "sqids": "^0.3.0",
     "stripe": "^20.3.1",
     "uuid": "^13.0.0",
     "xml2js": "^0.6.2",

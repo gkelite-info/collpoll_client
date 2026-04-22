@@ -15,14 +15,17 @@ import { UpcomingClasses } from "./upcomingClasses";
 const MOCK_STATS = [
   {
     title: "Eligible Students",
-    value: "05",
+    value: "990/1000",
     bgColor: "bg-[#E5DEFF]",
     iconColor: "#8B5CF6",
     Icon: GraduationCap,
   },
   {
     title: "Students Placed",
-    value: "05",
+    value: "900", 
+    placed: "800",
+    unplaced: "100",
+    isSplitCard: true, 
     bgColor: "bg-[#FFEEDD]",
     iconColor: "#F97316",
     Icon: Briefcase,

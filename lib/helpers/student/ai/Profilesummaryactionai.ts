@@ -51,6 +51,7 @@ async function fetchStudentData(studentId: number) {
     { data: awards },
     { data: certifications },
     { data: achievements },
+    { data: profileSummary },
   ] = await Promise.all([
     supabase
       .from("resume_personal_details")
@@ -97,12 +98,20 @@ async function fetchStudentData(studentId: number) {
       .select("achievementName")
       .eq("studentId", studentId)
       .eq("is_deleted", false),
+    supabase
+      .from("resume_profile_summary")
+      .select("resumeSummaryId, summary")
+      .eq("studentId", studentId)
+      .eq("is_deleted", false)
+      .maybeSingle(),
   ]);
 
   return {
     name: personal?.fullName,
     city: personal?.currentCity,
     workStatus: personal?.workStatus,
+    profileSummary: profileSummary?.summary ?? "",
+    resumeSummaryId: profileSummary?.resumeSummaryId ?? null,
     education,
     skills: skills?.map((s: any) => s.resume_skills_master?.name).filter(Boolean),
     internships,

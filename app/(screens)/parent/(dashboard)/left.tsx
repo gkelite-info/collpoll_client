@@ -145,45 +145,6 @@ export default function ParentLeft() {
     subject: "Computer Networks",
   };
 
-  const subjects = [
-    {
-      title: "Data Structures and Algorithms",
-      professor: "Prof. Ramesh Kumar",
-      image: "dsa.jpg",
-      percentage: 85,
-      radialStart: "#10FD77",
-      radialEnd: "#1C6B3F",
-      remainingColor: "#A1FFCA",
-    },
-    {
-      title: "Object-Oriented Programming",
-      professor: "Prof. Anita Sharma",
-      image: "oops.jpg",
-      percentage: 85,
-      radialStart: "#EFEDFF",
-      radialEnd: "#705CFF",
-      remainingColor: "#E8E4FF",
-    },
-    {
-      title: "Computer Organization and Architecture",
-      professor: "Prof. Suresh Reddy",
-      image: "coa.jpg",
-      percentage: 85,
-      radialStart: "#FFFFFF",
-      radialEnd: "#FFBE48",
-      remainingColor: "#F7EBD5",
-    },
-    {
-      title: "Discrete Mathematics",
-      professor: "Prof. Rajesh Gupta",
-      image: "dm.jpg",
-      percentage: 85,
-      radialStart: "#FEFFFF",
-      radialEnd: "#008993",
-      remainingColor: "#C4FBFF",
-    },
-  ];
-
   const chats = [
     {
       image: "/Group 2992 (01).png",
@@ -216,7 +177,6 @@ export default function ParentLeft() {
           percentage={dashData?.attendancePercentage || 0}
           data={attendanceChartData}
         />
-        {/* REMOVED PROPS HERE */}
         <AssignMentCard />
         <NextExamCard date={nextExam.date} subject={nextExam.subject} />
       </div>
@@ -231,7 +191,11 @@ export default function ParentLeft() {
       </div>
 
       <div className="bg-blue-00 mt-4 flex justify-between">
-        <SubjectProgressCards props={subjects} />
+        {/* 🟢 Safely Passes Subjects from the Server Helper */}
+        <SubjectProgressCards
+          props={dashData?.subjects || []}
+          isLoading={false}
+        />
         <FacultyChat props={chats} />
       </div>
     </div>

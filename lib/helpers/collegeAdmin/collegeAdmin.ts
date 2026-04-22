@@ -78,18 +78,13 @@ export async function saveCollegeAdmin(
 
     const { data, error } = await supabase
         .from("college_admin")
-        .upsert(
-            {
-                userId: payload.userId,
-                collegeId: payload.collegeId,
-                isActive: payload.isActive ?? true,
-                updatedAt: now,
-                createdAt: now,
-            },
-            {
-                onConflict: "userId,collegeId,collegeAdminId",
-            },
-        )
+        .insert({                          // ← change upsert to insert
+            userId: payload.userId,
+            collegeId: payload.collegeId,
+            isActive: payload.isActive ?? true,
+            createdAt: now,
+            updatedAt: now,
+        })
         .select("collegeAdminId")
         .single();
 
@@ -103,6 +98,43 @@ export async function saveCollegeAdmin(
         collegeAdminId: data.collegeAdminId,
     };
 }
+
+// export async function saveCollegeAdmin(
+//     payload: {
+//         userId: number;
+//         collegeId: number;
+//         isActive?: boolean;
+//     },
+// ) {
+//     const now = new Date().toISOString();
+
+//     const { data, error } = await supabase
+//         .from("college_admin")
+//         .upsert(
+//             {
+//                 userId: payload.userId,
+//                 collegeId: payload.collegeId,
+//                 isActive: payload.isActive ?? true,
+//                 updatedAt: now,
+//                 createdAt: now,
+//             },
+//             {
+//                 onConflict: "userId,collegeId,collegeAdminId",
+//             },
+//         )
+//         .select("collegeAdminId")
+//         .single();
+
+//     if (error) {
+//         console.error("saveCollegeAdmin error:", error);
+//         return { success: false, error };
+//     }
+
+//     return {
+//         success: true,
+//         collegeAdminId: data.collegeAdminId,
+//     };
+// }
 
 
 export async function deactivateCollegeAdmin(collegeAdminId: number) {

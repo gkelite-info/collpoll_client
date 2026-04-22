@@ -78,7 +78,8 @@ export default function ResumePersonalDetails() {
   const [currentCity, setCurrentCity] = useState("");
   const [workStatus, setWorkStatus] = useState<"experienced" | "fresher">("fresher");
   // ── ui state ────────────────────────────────────────────────────────────────
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   // ── shared styles ───────────────────────────────────────────────────────────
@@ -143,12 +144,69 @@ export default function ResumePersonalDetails() {
     return clean.replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
+  // Full Name: allow letters, dot (.), and spaces only
+  const sanitizeFullName = (value: string) =>
+    value.replace(/[^A-Za-z. ]/g, "");
+
+  // Mobile: + only at position 0, then digits only
+  // Format: +<countrycode><10 digits> — max 13 chars total (+91 + 10 digits)
+  const sanitizeMobile = (value: string) => {
+    const hasPlus = value.startsWith("+");
+    // Extract digits only
+    const digitsOnly = value.replace(/\D/g, "");
+    // Max 12 digits when + present (+91xxxxxxxxxx = 13 chars), 10 digits without +
+    const digits = hasPlus ? digitsOnly.slice(0, 12) : digitsOnly.slice(0, 10);
+    return hasPlus ? "+" + digits : digits;
+  };
+
+  // Email: strict keystroke-level enforcement
+  // - only letters, digits, @, . allowed
+  // - only one @ allowed
+  // - no consecutive dots
+  // - after the last dot in domain, max 4 letters allowed (blocks typing beyond .com/.in etc.)
+  const sanitizeEmail = (value: string) => {
+    // Strip disallowed chars
+    let clean = value.replace(/[^A-Za-z0-9@.]/g, "");
+
+    // Only one @ — keep first, strip rest
+    const atIdx = clean.indexOf("@");
+    if (atIdx !== -1) {
+      const local = clean.slice(0, atIdx);
+      const afterAt = clean.slice(atIdx + 1).replace(/@/g, "");
+      clean = local + "@" + afterAt;
+    }
+
+    // No consecutive dots
+    clean = clean.replace(/\.{2,}/g, ".");
+
+    // After @: find the last dot in domain and cap extension at 4 letters
+    const atPos = clean.indexOf("@");
+    if (atPos !== -1) {
+      const local = clean.slice(0, atPos);
+      const domain = clean.slice(atPos + 1);
+      const lastDotIdx = domain.lastIndexOf(".");
+      if (lastDotIdx !== -1) {
+        const beforeLastDot = domain.slice(0, lastDotIdx);
+        const extension = domain.slice(lastDotIdx + 1);
+        // Only keep up to 4 letters in extension, no digits
+        const cleanExt = extension.replace(/[^A-Za-z]/g, "").slice(0, 3);
+        clean = local + "@" + beforeLastDot + "." + cleanExt;
+      }
+    }
+
+    return clean;
+  };
+
+  // LinkedIn: allow characters valid in a LinkedIn URL
   const sanitizeLinkedIn = (value: string) =>
     value.replace(/[^a-zA-Z0-9:/._-]/g, "");
 
   // ── validators ──────────────────────────────────────────────────────────────
-  const nameRegex = /^[A-Za-z]+(?: [A-Za-z]+){0,3}$/;
-  const linkedInRegex = /^https:\/\/(www\.)?linkedin\.com\/.+$/;
+  // Full Name: letters, dots, spaces; e.g. "K . Sai Saraswathi"
+  const nameRegex = /^[A-Za-z][A-Za-z. ]{0,}[A-Za-z.]$/;
+  // LinkedIn: accept www.linkedin.com/... or https://linkedin.com/...
+  const linkedInRegex = /^(https?:\/\/)?(www\.)?linkedin\.com\/.+$/;
+  // Mobile: optional leading +, then 10–15 digits
   const mobileRegex = /^\+?\d{10,15}$/;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -166,7 +224,7 @@ export default function ResumePersonalDetails() {
     }
 
     if (!nameRegex.test(trimmedName)) {
-      toast.error("Name should contain only letters and spaces");
+      toast.error("Name should contain only letters, dots and spaces");
       return { success: false };
     }
 
@@ -176,7 +234,7 @@ export default function ResumePersonalDetails() {
     }
 
     if (!mobileRegex.test(trimmedMobile)) {
-      toast.error("Enter a valid mobile number");
+      toast.error("Enter a valid mobile number, only + and digits allowed, min 10 digits");
       return { success: false };
     }
 
@@ -191,13 +249,12 @@ export default function ResumePersonalDetails() {
     }
 
     if (linkedIn && !linkedInRegex.test(linkedIn)) {
-      return {
-        success: false,
-        message: "Enter a valid LinkedIn URL (must start with https://linkedin.com/)",
-      };
+      toast.error("Enter a valid LinkedIn URL");
+      return { success: false };
     }
 
-    setIsLoading(true);
+    // Track whether this is an insert or update before saving
+    const isUpdate = !!resumePersonalDetailsId;
 
     const res = await saveResumePersonalDetails({
       resumePersonalDetailsId: resumePersonalDetailsId || undefined,
@@ -210,8 +267,6 @@ export default function ResumePersonalDetails() {
       currentCity,
       workStatus,
     });
-
-    setIsLoading(false);
 
     if (!res.success) {
       toast.error(
@@ -226,19 +281,37 @@ export default function ResumePersonalDetails() {
       setResumePersonalDetailsId(res.resumePersonalDetailsId);
     }
 
-    toast.success("Personal details saved successfully");
+    // Conditional toast: updated vs saved
+    if (isUpdate) {
+      toast.success("Personal details updated successfully");
+    } else {
+      toast.success("Personal details saved successfully");
+    }
+
     return { success: true };
   };
 
   // ── submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    await savePersonalDetails();
+    if (isSaving || isNavigating) return;
+    setIsSaving(true);
+    try {
+      await savePersonalDetails();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNext = async () => {
-    const res = await savePersonalDetails();
-    if (res.success) {
-      router.push("/profile?resume=education&Step=2");
+    if (isSaving || isNavigating) return;
+    setIsNavigating(true);
+    try {
+      const res = await savePersonalDetails();
+      if (res.success) {
+        router.push("/profile?resume=education&Step=2");
+      }
+    } finally {
+      setIsNavigating(false);
     }
   };
 
@@ -267,8 +340,9 @@ export default function ResumePersonalDetails() {
               type="text"
               placeholder="Enter Full Name"
               value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
+              onChange={(e) => setFullName(sanitizeFullName(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -281,8 +355,9 @@ export default function ResumePersonalDetails() {
               type="text"
               placeholder="Enter Mobile Number"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
+              onChange={(e) => setMobile(sanitizeMobile(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -295,8 +370,9 @@ export default function ResumePersonalDetails() {
               type="email"
               placeholder="Enter Email ID"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(sanitizeEmail(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -327,6 +403,7 @@ export default function ResumePersonalDetails() {
               value={linkedIn}
               onChange={(e) => setLinkedIn(sanitizeLinkedIn(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -341,6 +418,7 @@ export default function ResumePersonalDetails() {
               value={currentCity}
               onChange={(e) => setCurrentCity(sanitizeCity(e.target.value))}
               className={`${inputBase} ${enabled}`}
+              disabled={isSaving || isNavigating}
             />
           </div>
 
@@ -367,7 +445,10 @@ export default function ResumePersonalDetails() {
           </label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
-              onClick={() => setWorkStatus("experienced")}
+              onClick={() => {
+                if (isSaving || isNavigating) return;
+                setWorkStatus("experienced");
+              }}
               className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "experienced"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
@@ -387,7 +468,10 @@ export default function ResumePersonalDetails() {
             </div>
 
             <div
-              onClick={() => setWorkStatus("fresher")}
+              onClick={() => {
+                if (isSaving || isNavigating) return;
+                setWorkStatus("fresher");
+              }}
               className={`border rounded-md p-4 cursor-pointer transition-all ${workStatus === "fresher"
                   ? "border-[#43C17A] bg-green-50"
                   : "hover:border-[#43C17A] border-[#CCCCCC]"
@@ -412,21 +496,21 @@ export default function ResumePersonalDetails() {
         <div className="mt-6 flex justify-end gap-3">
 
           <button
-            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${(isSaving || isNavigating) ? "opacity-50 cursor-not-allowed" : ""
               }`}
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isSaving || isNavigating}
           >
-            {isLoading ? "Saving..." : "Save"}
+            {isSaving ? "Saving..." : "Save"}
           </button>
           
           <button
             onClick={handleNext}
-            disabled={isLoading}
-            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+            disabled={isSaving || isNavigating}
+            className={`bg-[#43C17A] cursor-pointer text-white px-4 py-1.5 rounded-md text-sm font-medium ${(isSaving || isNavigating) ? "opacity-50 cursor-not-allowed" : ""
               }`}
           >
-            {isLoading ? "Next..." : "Next"}
+            {isNavigating ? "Saving..." : "Next"}
           </button>
 
         </div>

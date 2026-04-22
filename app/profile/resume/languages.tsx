@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchResumeLanguages, upsertResumeLanguages } from "@/lib/helpers/student/Resume/resumeLanguagesAPI";
 import ResumeLanguagesShimmer from "./ResumeLanguagesShimmer";
-import { suggestLanguagesAction } from "@/lib/helpers/student/ai/Suggestlanguagesaction";
+import { suggestLanguagesAction, searchLanguagesAction } from "@/lib/helpers/student/ai/Suggestlanguagesaction";
 import SuggestedPill from "./KeySkills/SuggestedPill";
 
 const toPascalCase = (str: string) =>
@@ -18,8 +18,10 @@ const toPascalCase = (str: string) =>
 type LangSearch = { query: string; results: string[]; loading: boolean; open: boolean };
 
 export default function ResumeLanguages() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [initialSelected, setInitialSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { studentId, collegeEducationType, collegeBranchCode } = useUser();
@@ -50,7 +52,10 @@ export default function ResumeLanguages() {
     if (!studentId) return;
     setLoading(true);
     fetchResumeLanguages(studentId)
-      .then((langs) => setSelected(langs))
+      .then((langs) => {
+        setSelected(langs);
+        setInitialSelected(langs);
+      })
       .catch(() => toast.error("Failed to load languages"))
       .finally(() => setLoading(false));
   }, [studentId]);
@@ -76,11 +81,10 @@ export default function ResumeLanguages() {
     searchDebounceRef.current = setTimeout(async () => {
       setLangSearch((prev) => ({ ...prev, loading: true }));
       try {
-        const matched = suggestions.filter((s) =>
-          s.toLowerCase().includes(query.toLowerCase()) && !selected.includes(s)
-        );
+        const matched = await searchLanguagesAction(query);
+        const filtered = matched.filter((s) => !selected.includes(s));
         setLangSearch((prev) => ({
-          ...prev, results: matched, loading: false, open: true,
+          ...prev, results: filtered, loading: false, open: true,
         }));
       } catch {
         setLangSearch((prev) => ({ ...prev, loading: false }));
@@ -99,13 +103,6 @@ export default function ResumeLanguages() {
     setDismissed((prev) => prev.filter((s) => s !== name && s !== formatted));
   };
 
-  const handleAddKeyword = () => {
-    const query = langSearch.query.trim();
-    if (!query) return;
-    addLanguage(query);
-    setLangSearch({ query: "", results: [], loading: false, open: false });
-  };
-
   const handleAddFromSearch = (name: string) => {
     addLanguage(name);
     setLangSearch({ query: "", results: [], loading: false, open: false });
@@ -113,22 +110,42 @@ export default function ResumeLanguages() {
 
   const remove = (lang: string) => {
     setSelected((s) => s.filter((x) => x !== lang));
-    // Restore back to suggestions
     setSuggestions((prev) => prev.includes(lang) ? prev : [lang, ...prev]);
     setDismissed((prev) => prev.filter((s) => s !== lang));
   };
 
+  const getSuccessMessage = (nextSelected: string[]) => {
+    const hadExistingLanguages = initialSelected.length > 0;
+    const hasChanges =
+      nextSelected.length !== initialSelected.length ||
+      nextSelected.some((lang) => !initialSelected.includes(lang));
+
+    if (hadExistingLanguages && hasChanges) {
+      return "Languages updated successfully!";
+    }
+
+    return "Languages saved successfully!";
+  };
+
+  const persistLanguages = async (): Promise<boolean> => {
+    if (!studentId) return false;
+    if (selected.length === 0) { toast.error("Select at least one language"); return false; }
+
+    await upsertResumeLanguages(studentId, selected);
+    setInitialSelected(selected);
+    toast.success(getSuccessMessage(selected));
+    return true;
+  };
+
   const saveLanguages = async () => {
-    if (isSubmitting || !studentId) return;
-    if (selected.length === 0) { toast.error("Select at least one language"); return; }
+    if (isSaving || isNavigating || !studentId) return;
     try {
-      setIsSubmitting(true);
-      await upsertResumeLanguages(studentId, selected);
-      toast.success("Languages saved successfully!");
+      setIsSaving(true);
+      await persistLanguages();
     } catch {
       toast.error("Something went wrong!");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
   };
 
@@ -149,10 +166,6 @@ export default function ResumeLanguages() {
   };
 
   if (loading) return <ResumeLanguagesShimmer />;
-
-  const keywordNotAdded =
-    langSearch.query.trim() &&
-    !selected.some((s) => s.toLowerCase() === langSearch.query.trim().toLowerCase());
 
   const searchResults = langSearch.results.filter((s) => !selected.includes(s));
 
@@ -197,10 +210,6 @@ export default function ResumeLanguages() {
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onFocus={() => setLangSearch((prev) => ({ ...prev, open: true }))}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && langSearch.query.trim()) {
-                        e.preventDefault();
-                        handleAddKeyword();
-                      }
                       if (e.key === "Escape") {
                         setLangSearch({ query: "", results: [], loading: false, open: false });
                       }
@@ -223,22 +232,10 @@ export default function ResumeLanguages() {
                 </div>
                 {langSearch.open && langSearch.query.trim() && (
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[#E0E0E0] rounded-lg shadow-lg z-50 max-h-[5.5rem] overflow-y-auto">
-                    {keywordNotAdded && (
-                      <button
-                        type="button"
-                        onClick={handleAddKeyword}
-                        className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-[#F6FDF9] text-left border-b border-gray-100 transition-colors"
-                      >
-                        <Plus size={13} className="text-[#43C17A] shrink-0" weight="bold" />
-                        <span className="text-sm text-[#282828] font-medium">
-                          Add "<span className="text-[#43C17A]">{langSearch.query.trim()}</span>"
-                        </span>
-                      </button>
-                    )}
                     {langSearch.loading && searchResults.length === 0 && (
                       <div className="px-4 py-3 text-xs text-gray-400 animate-pulse">Finding suggestions...</div>
                     )}
-                    {!langSearch.loading && searchResults.length === 0 && !keywordNotAdded && (
+                    {!langSearch.loading && searchResults.length === 0 && (
                       <div className="px-4 py-3 text-xs text-gray-400">No results found</div>
                     )}
                     {searchResults.map((s) => (
@@ -297,33 +294,33 @@ export default function ResumeLanguages() {
           <div className="flex justify-end gap-3 mt-4">
             <button
               onClick={saveLanguages}
-              disabled={isSubmitting}
+              disabled={isSaving || isNavigating}
               className={`px-8 py-2 rounded-md text-sm font-semibold text-white cursor-pointer 
-      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
+      ${isSaving || isNavigating ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A] hover:bg-[#3ba869]"}`}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSaving ? "Saving..." : "Save"}
             </button>
 
             <button
               onClick={async () => {
-                if (isSubmitting || !studentId) return;
+                if (isSaving || isNavigating || !studentId) return;
                 if (selected.length === 0) { toast.error("Select at least one language"); return; }
                 try {
-                  setIsSubmitting(true);
-                  await upsertResumeLanguages(studentId, selected);
-                  toast.success("Languages saved successfully!");
+                  setIsNavigating(true);
+                  const success = await persistLanguages();
+                  if (!success) return;
                   router.push("/profile?resume=internships&Step=5");
                 } catch {
                   toast.error("Something went wrong!");
                 } finally {
-                  setIsSubmitting(false);
+                  setIsNavigating(false);
                 }
               }}
-              disabled={isSubmitting}
+              disabled={isSaving || isNavigating}
               className={`px-5 py-2 rounded-md text-sm font-medium text-white cursor-pointer
-      ${isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}`}
+      ${isSaving || isNavigating ? "bg-gray-400 cursor-not-allowed" : "bg-[#43C17A]"}`}
             >
-              {isSubmitting ? "Saving..." : "Next"}
+              {isNavigating ? "Saving..." : "Next"}
             </button>
           </div>
         </div>
