@@ -6,7 +6,7 @@ import Announcements from "./Announcements";
 
 export default function PlacementRightPanel() {
   return (
-    <aside className="sticky top-0 h-screen w-85 shrink-0">
+    <aside className="sticky top-0 min-h-screen pb-4 bg-red-00 shrink-0">
       <div className="flex h-full flex-col gap-3">
         <div className="w-80 justify-end">
           <CourseScheduleCard isVisibile={false}/>

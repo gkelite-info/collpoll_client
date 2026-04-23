@@ -58,6 +58,11 @@ export default function PlacementCompanyCard({
             <h2 className="text-[18px] font-semibold text-[#282828]">
               {company.name}
             </h2>
+            {company.isExpired && (
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600">
+                Completed
+              </span>
+            )}
             {company.subtitle && (
               <span className="text-[13px] text-[#282828]">
                 ({company.subtitle})
@@ -88,16 +93,16 @@ export default function PlacementCompanyCard({
             Click card to see more
           </p>
 
-          <div className="mt-3 flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-1 pr-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C9D3DE] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1">
+          <div className="mt-3 flex max-w-full flex-nowrap gap-2 overflow-x-auto pb-3 pr-4 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#C9D3DE] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:h-1">
             {timeTag && (
-              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1.5 text-[#16284F]">
                 <ClockCountdown weight="fill" className="h-3.5 w-3.5" />
                 <span className="whitespace-nowrap text-[14px]">{timeTag}</span>
               </div>
             )}
 
             {locationTag && (
-              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1.5 text-[#16284F]">
                 <MapPin weight="fill" className="h-3.5 w-3.5" />
                 <span className="whitespace-nowrap text-[14px]">
                   {locationTag}
@@ -106,7 +111,7 @@ export default function PlacementCompanyCard({
             )}
 
             {salaryTag && (
-              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1 text-[#16284F]">
+              <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#16284F1F] px-2.5 py-1.5 text-[#16284F]">
                 <CurrencyInr weight="fill" className="h-3.5 w-3.5" />
                 <span className="whitespace-nowrap text-[14px]">
                   {salaryTag}
@@ -117,26 +122,28 @@ export default function PlacementCompanyCard({
         </div>
       </div>
 
-      <div
-        className="absolute right-5 top-4 flex items-center gap-3"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={onEdit}
-          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#1B2E58] text-white"
+      {!company.isExpired && (
+        <div
+          className="absolute right-5 top-4 flex items-center gap-3"
+          onClick={(event) => event.stopPropagation()}
         >
-          <PencilSimple size={16} weight="bold" />
-        </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#FFE9E9] text-[#FF6B6B]"
-          aria-label={`Delete ${company.name}`}
-        >
-          <Trash size={16} weight="bold" />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#1B2E58] text-white"
+          >
+            <PencilSimple size={16} weight="bold" />
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[#FFE9E9] text-[#FF6B6B]"
+            aria-label={`Delete ${company.name}`}
+          >
+            <Trash size={16} weight="bold" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -25,25 +25,19 @@ export default function PlacementDrivesView({
   onDriveClick,
 }: PlacementDrivesViewProps) {
   const columns = [
-    { title: "Drive Name", key: "driveName" },
     { title: "Company Name", key: "companyName" },
     { title: "Drive Date", key: "date" },
     { title: "Branch", key: "branch" },
-    { title: "Eligible Students", key: "eligibleStudents" },
-    { title: "Applied", key: "applied" },
-    { title: "Placed", key: "placed" },
+    { title: "All Students", key: "allStudents" },
     { title: "Action", key: "actions" },
   ];
 
   const tableData = useMemo(() => {
     return drives.map((drive) => ({
-      driveName: drive.driveName,
       companyName: drive.companyName,
       date: drive.date,
       branch: drive.branch,
-      eligibleStudents: drive.eligibleStudents,
-      applied: drive.applied,
-      placed: drive.placed,
+      allStudents: drive.students.length,
       actions: (
         <button
           type="button"
@@ -75,7 +69,7 @@ export default function PlacementDrivesView({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 mb-5">
       {/* Create New Drive button and query-routing functionality are commented out for now. */}
       {/* <div className="flex justify-end">
         <button

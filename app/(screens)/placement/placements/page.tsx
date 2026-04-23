@@ -32,7 +32,8 @@ import {
 const validTabs = new Set<PlacementTabId>([
   "company-management",
   "placement-drives",
-  "student-applications",
+  // Hidden from UI for now. Path: app/(screens)/placement/placements/components/StudentApplicationsView.tsx
+  // "student-applications",
   "results-offers",
 ]);
 
@@ -140,6 +141,7 @@ function PlacementPageContent() {
       const fetchedCompanies = await getPlacementCompanies({
         collegeId,
         placementOfficerId: placementEmployeeId,
+        includeExpired: true,
       });
       setCompanies(fetchedCompanies);
     } catch {
@@ -314,7 +316,7 @@ function PlacementPageContent() {
 
   return (
     <>
-      <section className="flex h-screen gap-3 overflow-hidden">
+      <section className="flex min-h-screen gap-1 overflow-y-auto">
         <div className="flex min-w-11.25 flex-1 flex-col px-2">
           <div className="shrink-0">
             <h1 className="text-[32px] font-semibold text-[#282828]">
