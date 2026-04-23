@@ -2,15 +2,23 @@ import { supabase } from "@/lib/supabaseClient";
 
 export type QuizRow = {
   quizId: number;
-  facultyId: number;
+  facultyId?: number | null;
+  adminId?: number | null;
   collegeSubjectId: number;
+  collegeAcademicYearId: number;
   collegeSectionsId: number;
   collegeSubjectUnitId: number;
-  collegeSubjectUnitTopicId?: number | null;
+  collegeSubjectUnitTopicId: number;
   quizTitle: string;
   totalMarks: number;
+  questionsCount: number;
+  marksPerQuestion: number;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
   startDate: string;
   endDate: string;
+  maxAttempts: number;
   status: "Draft" | "Active" | "Completed";
   isActive: boolean;
   createdAt: string;
@@ -21,24 +29,31 @@ export type QuizRow = {
 export async function fetchQuizzesByFacultyId(facultyId: number) {
   const { data, error } = await supabase
     .from("quizzes")
-    .select(
-      `
+    .select(`
       quizId,
       facultyId,
+      adminId,
       collegeSubjectId,
+      collegeAcademicYearId,
       collegeSectionsId,
       collegeSubjectUnitId,
+      collegeSubjectUnitTopicId,
       quizTitle,
       totalMarks,
+      questionsCount,
+      marksPerQuestion,
+      startTime,
+      endTime,
+      durationMinutes,
       startDate,
       endDate,
+      maxAttempts,
       status,
       isActive,
       createdAt,
       updatedAt,
       deletedAt
-    `,
-    )
+    `)
     .eq("facultyId", facultyId)
     .eq("isActive", true)
     .is("deletedAt", null)
@@ -68,8 +83,12 @@ export async function fetchQuizzesByStatus(
             quizId,
             quizTitle,
             totalMarks,
+            questionsCount,
+            durationMinutes,
             startDate,
             endDate,
+            startTime,
+            endTime,
             status,
             college_subjects (
                 subjectName
@@ -100,47 +119,58 @@ export async function fetchQuizzesByStatus(
 
 export async function saveQuiz(payload: {
   quizId?: number;
-  facultyId: number;
+  facultyId?: number | null;
+  adminId?: number | null;
   collegeSubjectId: number;
+  collegeAcademicYearId: number;
   collegeSectionsId: number;
   collegeSubjectUnitId: number;
-  collegeSubjectUnitTopicId?: number;
+  collegeSubjectUnitTopicId: number;
   quizTitle: string;
   totalMarks: number;
+  questionsCount: number;
+  marksPerQuestion: number;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
   startDate: string;
   endDate: string;
+  maxAttempts?: number;
   status?: "Draft" | "Active" | "Completed";
 }) {
   const now = new Date().toISOString();
 
   const upsertPayload: any = {
     facultyId: payload.facultyId,
+    adminId: payload.adminId,
     collegeSubjectId: payload.collegeSubjectId,
+    collegeAcademicYearId: payload.collegeAcademicYearId,
     collegeSectionsId: payload.collegeSectionsId,
     collegeSubjectUnitId: payload.collegeSubjectUnitId,
     collegeSubjectUnitTopicId: payload.collegeSubjectUnitTopicId,
     quizTitle: payload.quizTitle.trim(),
     totalMarks: payload.totalMarks,
+    questionsCount: payload.questionsCount,
+    marksPerQuestion: payload.marksPerQuestion,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    durationMinutes: payload.durationMinutes,
     startDate: payload.startDate,
     endDate: payload.endDate,
+    maxAttempts: payload.maxAttempts ?? 1,
     status: payload.status ?? "Draft",
     updatedAt: now,
   };
 
   if (!payload.quizId) {
     upsertPayload.createdAt = now;
-
     const { data, error } = await supabase
       .from("quizzes")
       .insert([upsertPayload])
       .select("quizId")
       .single();
 
-    if (error) {
-      console.error("saveQuiz insert error:", error);
-      return { success: false, error };
-    }
-
+    if (error) return { success: false, error };
     return { success: true, quizId: data.quizId };
   }
 
@@ -149,11 +179,7 @@ export async function saveQuiz(payload: {
     .update(upsertPayload)
     .eq("quizId", payload.quizId);
 
-  if (error) {
-    console.error("saveQuiz update error:", error);
-    return { success: false, error };
-  }
-
+  if (error) return { success: false, error };
   return { success: true, quizId: payload.quizId };
 }
 
@@ -222,16 +248,16 @@ export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
 
   let query = supabase
     .from("quizzes")
-    .select(
-      `
+    .select(`
             quizId,
             quizTitle,
             totalMarks,
+            questionsCount,
+            durationMinutes,
             startDate,
             endDate,
             status
-        `,
-    )
+        `)
     .eq("facultyId", facultyId)
     .in("status", ["Draft", "Active"])
     .eq("isActive", true)
@@ -250,158 +276,6 @@ export async function fetchIncompleteQuizzesByFacultyId(facultyId: number) {
   }
 
   return data ?? [];
-}
-
-// export async function fetchActiveQuizzesForStudent(collegeSectionsId: number) {
-//   const today = new Date().toISOString().split("T")[0];
-
-//   const { data, error } = await supabase
-//     .from("quizzes")
-//     .select(
-//       `
-//             quizId,
-//             quizTitle,
-//             totalMarks,
-//             startDate,
-//             endDate,
-//             status,
-//             facultyId,
-//             college_subjects (
-//                 subjectName
-//             ),
-//             faculty (
-//                 fullName
-//             )
-//         `,
-//     )
-//     .eq("collegeSectionsId", collegeSectionsId)
-//     .eq("status", "Active")
-//     .eq("isActive", true)
-//     .is("deletedAt", null)
-//     .lte("startDate", today)
-//     .gte("endDate", today)
-//     .order("createdAt", { ascending: false });
-
-//   if (error) {
-//     console.error("fetchActiveQuizzesForStudent error:", error);
-//     throw error;
-//   }
-
-//   return data ?? [];
-// }
-
-// export async function fetchAttemptedQuizzesForStudent(studentId: number) {
-//   const { data, error } = await supabase
-//     .from("quiz_submissions")
-//     .select(
-//       `
-//             submissionId,
-//             totalMarksObtained,
-//             submittedAt,
-//             attemptNumber,
-//             quizId
-//         `,
-//     )
-//     .eq("studentId", studentId)
-//     .eq("isActive", true)
-//     .is("deletedAt", null)
-//     .order("submittedAt", { ascending: false });
-
-//   if (error) {
-//     console.error("fetchAttemptedQuizzesForStudent error:", error);
-//     throw error;
-//   }
-
-//   const enriched = await Promise.all(
-//     (data ?? []).map(async (submission: any) => {
-//       const { data: quizData } = await supabase
-//         .from("quizzes")
-//         .select(
-//           `
-//                     quizId,
-//                     quizTitle,
-//                     totalMarks,
-//                     startDate,
-//                     endDate,
-//                     college_subjects (
-//                         subjectName
-//                     ),
-//                     faculty (
-//                         fullName
-//                     )
-//                 `,
-//         )
-//         .eq("quizId", submission.quizId)
-//         .single();
-
-//       const { count: answersCount } = await supabase
-//         .from("quiz_submission_answers")
-//         .select("answerId", { count: "exact", head: true })
-//         .eq("submissionId", submission.submissionId);
-
-//       const { count: questionsCount } = await supabase
-//         .from("quiz_questions")
-//         .select("questionId", { count: "exact", head: true })
-//         .eq("quizId", submission.quizId)
-//         .eq("isActive", true)
-//         .is("deletedAt", null);
-
-//       return {
-//         ...submission,
-//         quizzes: quizData,
-//         answersCount: answersCount ?? 0,
-//         totalQuestionsCount: questionsCount ?? 0,
-//       };
-//     }),
-//   );
-
-//   return enriched;
-// }
-
-export async function fetchActiveQuizzesForStudent(
-  collegeSectionsId: number,
-  page: number = 1,
-  limit: number = 10,
-) {
-  const today = new Date().toISOString().split("T")[0];
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  const { data, error, count } = await supabase
-    .from("quizzes")
-    .select(
-      `
-            quizId,
-            quizTitle,
-            totalMarks,
-            startDate,
-            endDate,
-            status,
-            facultyId,
-            college_subjects (
-                subjectName
-            ),
-            faculty (
-                fullName
-            )
-        `,
-      { count: "exact" },
-    )
-    .eq("collegeSectionsId", collegeSectionsId)
-    .eq("status", "Active")
-    .eq("isActive", true)
-    .is("deletedAt", null)
-    .lte("startDate", today)
-    .gte("endDate", today)
-    .order("createdAt", { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error("fetchActiveQuizzesForStudent error:", error);
-    throw error;
-  }
-
-  return { data: data ?? [], totalCount: count ?? 0 };
 }
 
 export async function fetchAttemptedQuizzesForStudent(
@@ -481,28 +355,66 @@ export async function fetchAttemptedQuizzesForStudent(
   return { data: enriched, totalCount: count ?? 0 };
 }
 
-export async function fetchQuizById(quizId: number) {
-  const { data, error } = await supabase
+export async function fetchActiveQuizzesForStudent(
+  collegeSectionsId: number,
+  page: number = 1,
+  limit: number = 10,
+) {
+  const today = new Date().toISOString().split("T")[0];
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  const { data, error, count } = await supabase
     .from("quizzes")
     .select(
       `
-      quizId,
-      facultyId,
-      collegeSubjectId,
-      collegeSectionsId,
-      collegeSubjectUnitId,
-      collegeSubjectUnitTopicId, 
-      quizTitle,
-      totalMarks,
-      startDate,
-      endDate,
-      status,
-      isActive,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `,
+            quizId,
+            quizTitle,
+            totalMarks,
+            questionsCount,
+            durationMinutes,
+            startDate,
+            endDate,
+            startTime,
+            endTime,
+            maxAttempts,
+            status,
+            facultyId,
+            college_subjects (
+                subjectName
+            ),
+            faculty (
+                fullName
+            )
+        `,
+      { count: "exact" },
     )
+    .eq("collegeSectionsId", collegeSectionsId)
+    .eq("status", "Active")
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .lte("startDate", today)
+    .gte("endDate", today)
+    .order("createdAt", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("fetchActiveQuizzesForStudent error:", error);
+    throw error;
+  }
+
+  return { data: data ?? [], totalCount: count ?? 0 };
+}
+
+export async function fetchQuizById(quizId: number) {
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select(`
+      *,
+      college_subject_unit_topics (
+        topicTitle
+      )
+    `)
     .eq("quizId", quizId)
     .eq("isActive", true)
     .is("deletedAt", null)
@@ -515,72 +427,6 @@ export async function fetchQuizById(quizId: number) {
 
   return data;
 }
-
-// export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
-//   const { data, error } = await supabase
-//     .from("quiz_submissions")
-//     .select(
-//       `
-//         submissionId,
-//         quizId,
-//         studentId,
-//         totalMarksObtained,
-//         submittedAt,
-//         students!inner (
-//             users!inner (
-//                 fullName,
-//                 collegePublicId,
-//                 user_profile (
-//                     profileUrl
-//                 )
-//             ),
-//             student_academic_history (
-//                 isCurrent,
-//                 college_sections (
-//                     collegeSections
-//                 )
-//             )
-//         )
-//     `,
-//     )
-//     .eq("quizId", quizId)
-//     .eq("isActive", true)
-//     .is("deletedAt", null)
-//     .order("submittedAt", { ascending: false });
-
-//   if (error) {
-//     console.error("fetchSubmissionsWithStudentsByQuizId error:", error);
-//     throw error;
-//   }
-
-//   return (data ?? []).map((sub: any) => {
-//     const studentData = sub.students;
-
-//     // Safely extract current section
-//     const activeHistory = studentData?.student_academic_history?.find(
-//       (h: any) => h.isCurrent,
-//     );
-//     const section = activeHistory?.college_sections?.collegeSections || "-";
-
-//     const profileData = studentData?.users?.user_profile;
-//     const profileUrl = Array.isArray(profileData)
-//       ? profileData[0]?.profileUrl
-//       : profileData?.profileUrl;
-
-//     return {
-//       ...sub,
-//       students: {
-//         fullName: studentData?.users?.fullName,
-//         // Fallback to studentId if collegePublicId is missing
-//         rollNumber: sub.studentId,
-//         section: section,
-//         profileImage: profileUrl || null,
-//       },
-//     };
-//   });
-// }
-
-// ... (keep the rest of your quizAPI.ts functions exactly the same) ...
 
 export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
   const { data, error } = await supabase
@@ -620,13 +466,10 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
 
   return (data ?? []).map((sub: any) => {
     const studentData = sub.students;
-
-    // Filter for current academic history to get the section safely
     const activeHistory = studentData?.student_academic_history?.find(
       (h: any) => h.isCurrent,
     );
     const section = activeHistory?.college_sections?.collegeSections || "-";
-
     const profileData = studentData?.users?.user_profile;
     const profileUrl = Array.isArray(profileData)
       ? profileData[0]?.profileUrl

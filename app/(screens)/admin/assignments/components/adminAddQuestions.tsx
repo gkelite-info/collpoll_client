@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
 import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
-import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
+import { fetchQuizById, updateQuizStatus } from "@/lib/helpers/quiz/quizAPI";
 
 interface Option {
   id: number;
@@ -43,10 +43,10 @@ export default function AdminAddQuestions({
       type: "Multiple Choice",
       correctAnswer: "",
       options: [
-        { id: 1, text: "Option 1", isCorrect: false },
-        { id: 2, text: "Option 2", isCorrect: false },
-        { id: 3, text: "Option 3", isCorrect: false },
-        { id: 4, text: "Option 4", isCorrect: false },
+        { id: 1, text: "", isCorrect: false },
+        { id: 2, text: "", isCorrect: false },
+        { id: 3, text: "", isCorrect: false },
+        { id: 4, text: "", isCorrect: false },
       ],
     },
   ]);
@@ -57,17 +57,19 @@ export default function AdminAddQuestions({
   const [quizDetails, setQuizDetails] = useState<{
     quizTitle: string;
     topicTitle: string;
+    maxQuestions: number;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
 
   useEffect(() => {
     if (!quizId) return;
-    fetchQuizById(quizId)
+    fetchQuizById(Number(quizId))
       .then((data) => {
         setQuizDetails({
           quizTitle: data.quizTitle,
-          topicTitle: data.quizTitle,
+          topicTitle: data.college_subject_unit_topics?.topicTitle || "N/A",
+          maxQuestions: data.questionsCount || 0,
         });
       })
       .catch(() => toast.error("Failed to fetch quiz details"));
@@ -81,10 +83,10 @@ export default function AdminAddQuestions({
       type: lastType,
       correctAnswer: "",
       options: [
-        { id: 1, text: "Option 1", isCorrect: false },
-        { id: 2, text: "Option 2", isCorrect: false },
-        { id: 3, text: "Option 3", isCorrect: false },
-        { id: 4, text: "Option 4", isCorrect: false },
+        { id: 1, text: "", isCorrect: false },
+        { id: 2, text: "", isCorrect: false },
+        { id: 3, text: "", isCorrect: false },
+        { id: 4, text: "", isCorrect: false },
       ],
     };
     setQuestions((prev) => [...prev, newQuestion]);
@@ -109,11 +111,11 @@ export default function AdminAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: q.options.map((o) =>
-                o.id === optId ? { ...o, text } : o,
-              ),
-            }
+            ...q,
+            options: q.options.map((o) =>
+              o.id === optId ? { ...o, text } : o,
+            ),
+          }
           : q,
       ),
     );
@@ -124,12 +126,12 @@ export default function AdminAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: q.options.map((o) => ({
-                ...o,
-                isCorrect: o.id === optId,
-              })),
-            }
+            ...q,
+            options: q.options.map((o) => ({
+              ...o,
+              isCorrect: o.id === optId,
+            })),
+          }
           : q,
       ),
     );
@@ -140,16 +142,12 @@ export default function AdminAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: [
-                ...q.options,
-                {
-                  id: Date.now(),
-                  text: `Option ${q.options.length + 1}`,
-                  isCorrect: false,
-                },
-              ],
-            }
+            ...q,
+            options: [
+              ...q.options,
+              { id: Date.now(), text: "", isCorrect: false },
+            ],
+          }
           : q,
       ),
     );
@@ -210,6 +208,18 @@ export default function AdminAddQuestions({
           await saveBulkOptions(qResult.questionId, allOptions);
         }
       }
+
+      const { success: statusSuccess, error: statusError } = await updateQuizStatus(
+        quizId,
+        status
+      );
+
+      if (!statusSuccess) {
+        console.error("Status update failed:", statusError);
+        toast.error("Questions saved, but failed to update quiz status.");
+        return;
+      }
+
       toast.success(
         status === "Draft"
           ? "Quiz saved as draft!"
@@ -218,6 +228,8 @@ export default function AdminAddQuestions({
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", "quiz");
       params.set("quizView", status === "Draft" ? "drafts" : "active");
+      params.delete("action");
+      params.delete("quizId");
       router.push(`${pathname}?${params.toString()}`);
     } catch (err) {
       console.error("handleSave error:", err);
@@ -229,7 +241,6 @@ export default function AdminAddQuestions({
   };
 
   return (
-    // FIXED: Added h-[calc(100vh-120px)] to force the container to fit the viewport
     <div className="w-full flex flex-col h-[calc(100vh-120px)]">
       <div className="mb-4 shrink-0">
         <div className="bg-blue-00 flex items-center lg:mb-1">
@@ -246,13 +257,25 @@ export default function AdminAddQuestions({
         </p>
       </div>
 
-      <div className="bg-white rounded-md px-4 py-3 mb-3 shrink-0">
-        <p className="font-bold text-[#282828] text-sm">
-          {quizDetails?.quizTitle || quizTitle}
-        </p>
-        <p className="text-[#282828] text-xs mt-0.5">
-          {quizDetails?.topicTitle || quizTopic}
-        </p>
+      <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px] flex items-center justify-between">
+        <div className="bg-red-00 flex flex-col items-start">
+          <p className="font-bold text-[#282828] text-sm">
+            {quizDetails?.quizTitle || "Loading Quiz..."}
+          </p>
+          <p className="text-[#282828] text-xs mt-0.5">
+            {quizDetails?.topicTitle || "N/A"}
+          </p>
+        </div>
+        <div className="bg-blue-00">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Questions Added</p>
+          {quizDetails ? (
+            <p className={`text-xl font-bold ${questions.length === quizDetails.maxQuestions ? 'text-[#43C17A]' : 'text-[#16284F]'}`}>
+              {questions.length} <span className="text-gray-300 text-sm">/ {quizDetails.maxQuestions}</span>
+            </p>
+          ) : (
+            <p className="text-xl font-bold text-gray-200 animate-pulse">-- / --</p>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-end mb-3 shrink-0">
@@ -271,9 +294,8 @@ export default function AdminAddQuestions({
         {questions.map((question, index) => (
           <div
             key={question.id}
-            className={`bg-white rounded-md px-4 py-4 border-2 ${
-              index === 0 ? "border-[#43C17A]" : "border-transparent"
-            }`}
+            className={`bg-white rounded-md px-4 py-4 border-2 ${index === 0 ? "border-[#43C17A]" : "border-transparent"
+              }`}
           >
             <div className="flex items-center justify-between gap-4 mb-3">
               <input
@@ -314,10 +336,11 @@ export default function AdminAddQuestions({
                     <input
                       type="text"
                       value={option.text}
+                      placeholder={`Option ${question.options.findIndex((o) => o.id === option.id) + 1}`}
                       onChange={(e) =>
                         updateOptionText(question.id, option.id, e.target.value)
                       }
-                      className="text-sm text-[#282828] outline-none border-b border-transparent focus:border-gray-300 bg-transparent"
+                      className="text-sm text-[#282828] outline-none border-b border-transparent focus:border-gray-300 bg-transparent flex-1"
                     />
                   </div>
                 ))
@@ -415,7 +438,6 @@ export default function AdminAddQuestions({
         ))}
       </div>
 
-      {/* Buttons are firmly locked at the bottom */}
       <div className="flex justify-end gap-3 pt-3 shrink-0 mt-auto">
         <button
           onClick={() => handleSave("Draft")}
