@@ -18,6 +18,8 @@ export type JobInfoCardProps = {
   jobType: string;
   location: string;
   ctc: string;
+  startDate?: string;
+  endDate?: string;
   closingText?: string;
 
   showApplyButton?: boolean;
