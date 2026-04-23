@@ -99,13 +99,14 @@ export default function RequestsList({ clubId, currentFilter }: { clubId: any, c
             const processingItems = modalConfig.target === "single" ? [modalConfig.item] : requests.filter(req => selectedIds.includes(req.id));
             const numericIds = processingIds.map(id => parseInt(id, 10));
 
+            const studentsData = processingItems.map(req => ({
+                clubId: parseInt(clubId, 10),
+                studentId: req.studentId
+            }));
+
             if (modalConfig.type === "remove") {
-                await removeClubMembersAPI(numericIds, facultyId);
+                await removeClubMembersAPI(studentsData, facultyId);
             } else {
-                const studentsData = processingItems.map(req => ({
-                    clubId: parseInt(clubId, 10),
-                    studentId: req.studentId
-                }));
                 await processClubRequestsAPI(modalConfig.type as "accept" | "reject", numericIds, studentsData, facultyId);
             }
 

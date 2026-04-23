@@ -3,7 +3,7 @@
 import { PaperPlaneRightIcon } from "@phosphor-icons/react";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import {motion} from 'framer-motion'
+import { motion } from 'framer-motion'
 import { formatChatDateTime } from "@/app/utils/formatChatDateTime";
 
 const DEFAULT_ANNOUNCEMENTS = [
@@ -74,10 +74,12 @@ interface Announcement {
     avatar: string;
 }
 
-export default function StudentAnnouncements() {
+export default function StudentAnnouncements({ userRole }: { userRole?: string | null }) {
     const [messages, setMessages] = useState<Announcement[]>(DEFAULT_ANNOUNCEMENTS);
     const [inputValue, setInputValue] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const canPost = userRole === "President" || userRole === "Vice President";
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -94,7 +96,7 @@ export default function StudentAnnouncements() {
             author: "Rohith Sharma",
             role: "President",
             message: inputValue.trim(),
-            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 20}` 
+            avatar: `https://i.pravatar.cc/150?img=${Math.floor(Math.random() * 50) + 20}`
         };
         setMessages((prev) => [...prev, newMessage]);
         setInputValue("");
@@ -137,43 +139,44 @@ export default function StudentAnnouncements() {
                     <div ref={messagesEndRef} />
                 </div>
             </div>
+            {canPost && (
+                <form onSubmit={handleSend} className="mt-2 pb-4 px-1">
+                    <div className="flex items-center gap-4">
+                        <motion.div
+                            initial={false}
+                            animate={{ scale: inputValue.trim() ? 1.01 : 1 }}
+                            className="relative flex-1"
+                        >
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                placeholder="Type here........"
+                                className="w-full rounded-full bg-[#E5E5E5] py-3.5 pl-6 pr-14 text-sm font-medium text-[#282828] placeholder-[#6F6F6F] border-2 border-transparent focus:border-[#16284F]/20 focus:bg-white focus:shadow-lg outline-none transition-all duration-300"
+                            />
 
-            <form onSubmit={handleSend} className="mt-2 pb-4 px-1">
-                <div className="flex items-center gap-4">
-                    <motion.div 
-                        initial={false}
-                        animate={{ scale: inputValue.trim() ? 1.01 : 1 }}
-                        className="relative flex-1"
-                    >
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            placeholder="Type here........"
-                            className="w-full rounded-full bg-[#E5E5E5] py-3.5 pl-6 pr-14 text-sm font-medium text-[#282828] placeholder-[#6F6F6F] border-2 border-transparent focus:border-[#16284F]/20 focus:bg-white focus:shadow-lg outline-none transition-all duration-300"
-                        />
-                        
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 overflow-hidden rounded-full">
-                            <motion.button
-                                type="submit"
-                                disabled={!inputValue.trim()}
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9, rotate: -10 }}
-                                initial={{ x: 50, opacity: 0 }}
-                                animate={{ 
-                                    x: inputValue.trim() ? 0 : 50, 
-                                    opacity: inputValue.trim() ? 1 : 0 
-                                }}
-                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                                className="flex h-10 w-10 items-center justify-center bg-[#16284F] text-white shadow-lg disabled:bg-gray-400"
-                            >
-                                <PaperPlaneRightIcon size={22} weight="fill" className="ml-0.5" />
-                            </motion.button>
-                        </div>
-                    </motion.div>                    
-                    <div className="w-12 shrink-0" />
-                </div>
-            </form>
+                            <div className="absolute right-2 top-1/2 -translate-y-1/2 overflow-hidden rounded-full">
+                                <motion.button
+                                    type="submit"
+                                    disabled={!inputValue.trim()}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9, rotate: -10 }}
+                                    initial={{ x: 50, opacity: 0 }}
+                                    animate={{
+                                        x: inputValue.trim() ? 0 : 50,
+                                        opacity: inputValue.trim() ? 1 : 0
+                                    }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    className="flex h-10 w-10 items-center justify-center bg-[#16284F] text-white shadow-lg disabled:bg-gray-400"
+                                >
+                                    <PaperPlaneRightIcon size={22} weight="fill" className="ml-0.5" />
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                        <div className="w-12 shrink-0" />
+                    </div>
+                </form>
+            )}
         </div>
     );
 }
