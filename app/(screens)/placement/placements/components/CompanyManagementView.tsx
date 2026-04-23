@@ -57,7 +57,7 @@ export default function CompanyManagementView({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 pb-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto  pb-4">
           {companies.map((company) => (
             <PlacementCompanyCard
               key={company.id}

@@ -104,6 +104,15 @@ function getStorageUrl(bucket: "placement-logos" | "placement-certificates", pat
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
 
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function getCompanyGroupKey(row: PlacementCompanyRow) {
   return [
     row.companyName,
@@ -257,6 +266,7 @@ function mapRowsToCompanies(
       logo: companyLogoUrl,
       startDate: row.startDate,
       endDate: row.endDate,
+      isExpired: row.endDate < getTodayDateString(),
     });
   });
 
@@ -266,18 +276,47 @@ function mapRowsToCompanies(
 export async function getPlacementCompanies({
   collegeId,
   placementOfficerId,
+  includeExpired = false,
 }: {
   collegeId: number;
   placementOfficerId?: number | null;
+  includeExpired?: boolean;
 }) {
+  const today = getTodayDateString();
+  const now = new Date().toISOString();
+
+  let expireQuery = supabase
+    .from("placement_companies")
+    .update({
+      is_deleted: true,
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .eq("collegeId", collegeId)
+    .eq("is_deleted", false)
+    .lt("endDate", today);
+
+  if (placementOfficerId) {
+    expireQuery = expireQuery.eq("createdBy", placementOfficerId);
+  }
+
+  const { error: expireError } = await expireQuery;
+
+  if (expireError) {
+    console.error("Failed to auto delete expired placement companies:", expireError);
+  }
+
   let query = supabase
     .from("placement_companies")
     .select(
       "placementCompanyId,companyName,companyEmail,companyPhone,companyJobDescription,companyWebsite,jobRoleOffered,requiredSkills,jobType,workMode,location,annualPackage,driveType,companyLogo,companyCertificate,startDate,endDate,eligibilityCriteria,collegeId,collegeBranchId,collegeAcademicYearId,createdBy,is_deleted,createdAt",
     )
     .eq("collegeId", collegeId)
-    .eq("is_deleted", false)
     .order("createdAt", { ascending: false });
+
+  if (!includeExpired) {
+    query = query.eq("is_deleted", false);
+  }
 
   if (placementOfficerId) {
     query = query.eq("createdBy", placementOfficerId);
@@ -290,7 +329,9 @@ export async function getPlacementCompanies({
     throw error;
   }
 
-  const rows = (data ?? []) as PlacementCompanyRow[];
+  const rows = ((data ?? []) as PlacementCompanyRow[]).filter(
+    (row) => !row.is_deleted || row.endDate < today,
+  );
   const branchIds = Array.from(
     new Set(rows.map((row) => row.collegeBranchId).filter(Boolean)),
   );

@@ -44,6 +44,7 @@ export type PlacementCompany = {
   logo: string;
   startDate?: string;
   endDate?: string;
+  isExpired?: boolean;
 };
 
 export type PlacementDriveStat = {
@@ -97,12 +98,13 @@ export const placementTabs: PlacementTab[] = [
     description:
       "View, schedule, and manage all recruitment drives conducted in your institution.",
   },
-  {
-    id: "student-applications",
-    label: "Student Applications",
-    description:
-      "Track all student applications and shortlisting progress across placement drives.",
-  },
+  // Hidden from UI for now. Path: app/(screens)/placement/placements/components/StudentApplicationsView.tsx
+  // {
+  //   id: "student-applications",
+  //   label: "Student Applications",
+  //   description:
+  //     "Track all student applications and shortlisting progress across placement drives.",
+  // },
   {
     id: "results-offers",
     label: "Results & Offers",

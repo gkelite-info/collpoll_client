@@ -16,7 +16,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Full Time",
         location: "Hyderabad",
         ctc: "12 Lpa",
-        interviewStatus: "Interview Scheduled",
+        startDate: "20 Sep 2025",
+        endDate: "30 Sep 2025",
         logoUrl: "https://logo.clearbit.com/infosys.com",
     },
     {
@@ -29,7 +30,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Internship",
         location: "Bangalore",
         ctc: "80k / Month",
-        interviewStatus: "Technical Round Scheduled",
+        startDate: "12 Sep 2025",
+        endDate: "22 Sep 2025",
         logoUrl: "https://logo.clearbit.com/google.com",
     },
     {
@@ -43,7 +45,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Full Time",
         location: "Pune",
         ctc: "7 Lpa",
-        interviewStatus: "Pending Review",
+        startDate: "02 Nov 2025",
+        endDate: "12 Nov 2025",
         logoUrl: "https://logo.clearbit.com/tcs.com",
     },
     {
@@ -57,7 +60,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Full Time",
         location: "Gurgaon",
         ctc: "10.5 Lpa",
-        interviewStatus: "Aptitude Test Completed",
+        startDate: "27 Oct 2025",
+        endDate: "06 Nov 2025",
         logoUrl: "https://logo.clearbit.com/deloitte.com",
     },
     {
@@ -70,7 +74,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Full Time",
         location: "Chennai",
         ctc: "8.5 Lpa",
-        interviewStatus: "HR Round Scheduled",
+        startDate: "14 Oct 2025",
+        endDate: "24 Oct 2025",
         logoUrl: "https://logo.clearbit.com/accenture.com",
     },
     {
@@ -84,7 +89,8 @@ export const jobInfoCardData: JobInfoCardProps[] = [
         jobType: "Full Time",
         location: "Bangalore",
         ctc: "22 Lpa",
-        interviewStatus: "Online Assessment Sent",
+        startDate: "20 Oct 2025",
+        endDate: "30 Oct 2025",
         logoUrl: "https://logo.clearbit.com/amazon.com",
     },
 ];

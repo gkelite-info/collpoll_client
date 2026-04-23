@@ -2,16 +2,17 @@
 
 import { FaChevronDown } from "react-icons/fa6";
 
-const placementCycles = ["2024", "2025", "2026"];
 const eligibilityOptions = ["Eligible", "Not Eligible", "All"] as const;
 const sortOptions = [
   "Recently Uploaded",
   "Oldest First",
-  "Company Name",
+  "Company Name A-Z",
+  "Company Name Z-A",
 ] as const;
 
 export type PlacementFilterBarProps = {
   cycle: string;
+  cycles: string[];
   eligibility: (typeof eligibilityOptions)[number];
   sortBy: (typeof sortOptions)[number];
   onCycleChange: (v: string) => void;
@@ -21,6 +22,7 @@ export type PlacementFilterBarProps = {
 
 export function PlacementFilterBar({
   cycle,
+  cycles,
   eligibility,
   sortBy,
   onCycleChange,
@@ -37,7 +39,7 @@ export function PlacementFilterBar({
             value={cycle}
             onChange={(e) => onCycleChange(e.target.value)}
           >
-            {placementCycles.map((cy) => (
+            {cycles.map((cy) => (
               <option key={cy} value={cy}>
                 {cy}
               </option>
