@@ -28,7 +28,9 @@ export async function getFacultyClubRequestsAPI(
         .eq("clubId", Number(clubId))
         .eq("is_deleted", false);
 
-    if (filter !== "all") {
+    if (filter === "all") {
+        query = query.in("status", ["pending", "accepted"]);
+    } else {
         query = query.eq("status", filter);
     }
 
@@ -151,40 +153,85 @@ export async function processClubRequestsAPI(
         .update({
             status: action === "accept" ? "accepted" : "rejected",
             reviewedByFacultyId: facultyId,
-            reviewedAt: timestamp
+            reviewedAt: timestamp,
+            updatedAt: timestamp
         })
         .in("clubJoinRequestId", requestIds);
 
     if (updateError) throw new Error(`Failed to ${action} requests`);
 
     if (action === "accept" && studentsData.length > 0) {
-        const membersToInsert = studentsData.map(data => ({
-            clubId: data.clubId,
-            studentId: data.studentId,
-            joinedAt: timestamp,
-            createdAt: timestamp,
-            updatedAt: timestamp
-            // Note: If your DB strictly requires removedBy/removedAt as NOT NULL 
-            // you may need to adjust your Supabase schema to make them nullable.
-        }));
+        const clubId = studentsData[0].clubId;
+        const studentIds = studentsData.map(d => d.studentId);
 
-        const { error: insertError } = await supabase
+        const { data: existingMembers, error: fetchError } = await supabase
             .from("club_members")
-            .insert(membersToInsert);
+            .select("studentId, createdAt") 
+            .eq("clubId", clubId)
+            .in("studentId", studentIds);
 
-        if (insertError) throw new Error("Failed to add users to members table");
+        if (fetchError) throw new Error("Failed to verify existing members");
+
+        const upsertPayload = studentsData.map(data => {
+            const existing = existingMembers?.find(m => m.studentId === data.studentId);
+
+            return {
+                clubId: data.clubId,
+                studentId: data.studentId,
+                createdAt: existing ? existing.createdAt : timestamp,
+                joinedAt: timestamp,
+                updatedAt: timestamp,
+                is_deleted: false,
+                removedAt: null,
+                removedBy: null,
+                deletedAt: null
+            };
+        });
+
+        const { error: upsertError } = await supabase
+            .from("club_members")
+            .upsert(upsertPayload, { onConflict: "clubId,studentId" });
+
+        if (upsertError) throw new Error("Failed to add or update users.");
     }
 }
 
-export async function removeClubMembersAPI(memberIds: number[], facultyId: number) {
-    const { error } = await supabase
+
+
+
+export async function removeClubMembersAPI(
+    studentsData: { studentId: number; clubId: number }[],
+    facultyId: number
+) {
+    if (!studentsData || studentsData.length === 0) return;
+
+    const timestamp = new Date().toISOString();
+    const clubId = studentsData[0].clubId;
+    const studentIds = studentsData.map(data => data.studentId);
+
+    const { error: memberUpdateError } = await supabase
         .from("club_members")
         .update({
             is_deleted: true,
             removedBy: facultyId,
-            removedAt: new Date().toISOString()
+            removedAt: timestamp,
+            deletedAt: timestamp
         })
-        .in("clubMemberId", memberIds);
+        .eq("clubId", clubId)
+        .in("studentId", studentIds);
 
-    if (error) throw new Error("Failed to remove members");
+    if (memberUpdateError) throw new Error("Failed to remove members");
+
+    const { error: requestUpdateError } = await supabase
+        .from("club_join_requests")
+        .update({
+            status: "rejected",
+            reviewedByFacultyId: facultyId,
+            reviewedAt: timestamp,
+            updatedAt: timestamp
+        })
+        .eq("clubId", clubId)
+        .in("studentId", studentIds);
+
+    if (requestUpdateError) throw new Error("Failed to update club request status");
 }

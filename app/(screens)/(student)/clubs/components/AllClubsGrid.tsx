@@ -45,7 +45,7 @@ export default function AllClubsGrid() {
                     setActiveClubStatus(null);
                 }
             } catch (error) {
-                // toast.error("Failed to load clubs or status."); {toast two times coming when api failed}
+                toast.error("Failed to load clubs or status.", { id: "fetch-clubs-error" });
             } finally {
                 setIsLoading(false);
             }

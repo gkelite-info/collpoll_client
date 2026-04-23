@@ -48,6 +48,20 @@ export async function joinClubAPI(clubId: number, studentId: number) {
 }
 
 export async function getStudentClubStatusAPI(studentId: number) {
+    const { data: leadClub, error: leadError } = await supabase
+        .from("clubs")
+        .select("clubId")
+        .eq("is_deleted", false)
+        .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
+        .limit(1)
+        .maybeSingle();
+
+    if (leadError) console.error("Error checking leadership status:", leadError);
+
+    if (leadClub) {
+        return { requestedClubId: leadClub.clubId.toString(), status: "accepted" };
+    }
+
     const { data: memberData, error: memberError } = await supabase
         .from("club_members")
         .select("clubId")
@@ -74,5 +88,102 @@ export async function getStudentClubStatusAPI(studentId: number) {
     if (requestData) {
         return { requestedClubId: requestData.clubId.toString(), status: requestData.status };
     }
+
     return { requestedClubId: null, status: null };
+}
+
+
+export async function getStudentClubDetailsAPI(studentId: number) {
+    const { data: leadClub } = await supabase
+        .from("clubs")
+        .select("clubId, title, presidentStudentId, vicePresidentStudentId")
+        .eq("is_deleted", false)
+        .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
+        .limit(1)
+        .maybeSingle();
+
+    let targetClubId = null;
+    let role = "Member";
+    let status = "joined";
+    let clubName = "";
+
+    if (leadClub) {
+        targetClubId = leadClub.clubId;
+        clubName = leadClub.title;
+        role = leadClub.presidentStudentId === studentId ? "President" : "Vice President";
+    } else {
+        const { data: memberClub } = await supabase
+            .from("club_members")
+            .select("clubId, clubs(title)")
+            .eq("studentId", studentId)
+            .eq("is_deleted", false)
+            .limit(1)
+            .maybeSingle();
+
+        if (memberClub) {
+            targetClubId = memberClub.clubId;
+            const clubInfo = Array.isArray(memberClub.clubs) ? memberClub.clubs[0] : memberClub.clubs;
+            clubName = clubInfo?.title || "";
+        } else {
+            const { data: pendingReq } = await supabase
+                .from("club_join_requests")
+                .select("clubId, clubs(title)")
+                .eq("studentId", studentId)
+                .eq("status", "pending")
+                .eq("is_deleted", false)
+                .limit(1)
+                .maybeSingle();
+
+            if (pendingReq) {
+                targetClubId = pendingReq.clubId;
+                const clubInfo = Array.isArray(pendingReq.clubs) ? pendingReq.clubs[0] : pendingReq.clubs;
+                clubName = clubInfo?.title || "";
+                status = "pending";
+            }
+        }
+    }
+
+    if (!targetClubId) return { status: "none", clubInfo: null, role: null };
+    if (status === "pending") return { status: "pending", clubInfo: { name: clubName }, role: null };
+
+    const { data: clubData, error } = await supabase
+        .from("clubs")
+        .select(`
+            clubId,
+            title,
+            imageUrl,
+            president:students!clubs_presidentStudentId_fkey(users(fullName, user_profile(profileUrl))),
+            vicePresident:students!clubs_vicePresidentStudentId_fkey(users(fullName, user_profile(profileUrl))),
+            responsibleFaculty:faculty!clubs_responsibleFacultyId_fkey(users(fullName, user_profile(profileUrl))),
+            mentors:club_mentors(is_deleted, faculty(facultyId, users(fullName, user_profile(profileUrl))))
+        `)
+        .eq("clubId", targetClubId)
+        .maybeSingle();
+
+    if (error || !clubData) throw new Error("Failed to fetch club data");
+
+    const formatUser = (userNode: any, defaultRole: string, id?: string) => {
+        const profileData = userNode?.users?.user_profile;
+        const avatarUrl = Array.isArray(profileData) ? profileData[0]?.profileUrl : profileData?.profileUrl;
+        return {
+            id: id || "0",
+            name: userNode?.users?.fullName || "Not Assigned",
+            avatar: avatarUrl || null,
+            role: defaultRole
+        };
+    };
+
+    const formattedClubInfo = {
+        id: clubData.clubId.toString(),
+        name: clubData.title,
+        logo: clubData.imageUrl,
+        president: formatUser(clubData.president, "President"),
+        vicePresident: formatUser(clubData.vicePresident, "Vice President"),
+        responsibleFaculty: formatUser(clubData.responsibleFaculty, "Responsible Faculty"),
+        mentors: (clubData.mentors || [])
+            .filter((m: any) => !m.is_deleted && m.faculty)
+            .map((m: any) => formatUser(m.faculty, "Mentor", m.faculty.facultyId.toString()))
+    };
+
+    return { status: "joined", clubInfo: formattedClubInfo, role };
 }
