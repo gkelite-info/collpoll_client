@@ -7,8 +7,6 @@ import { CaretDown, CaretLeft, FilePdf, ImageSquare, Trash, UploadSimple, X } fr
 import { ReactNode, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type CreateCompanyScreenProps = {
   onCancel: () => void;
   initialData?: Partial<
@@ -82,8 +80,6 @@ const JOB_ROLE_OPTIONS = [
   "QA Engineer",
 ];
 
-// ─── Enum value maps (DB value → display label) ───────────────────────────────
-
 const JOB_TYPE_OPTIONS: { label: string; value: string }[] = [
   { label: "Full Time", value: "fulltime" },
   { label: "Internship", value: "internship" },
@@ -100,8 +96,6 @@ const DRIVE_TYPE_OPTIONS: { label: string; value: string }[] = [
   { label: "Virtual", value: "virtual" },
   { label: "In Person", value: "inperson" },
 ];
-
-// ─── Sanitizers ───────────────────────────────────────────────────────────────
 
 const sanitizeName = (v: string) => v.replace(/[^a-zA-Z0-9\s\-'()]/g, "");
 
@@ -121,8 +115,6 @@ const sanitizeEmail = (v: string): string => {
 const sanitizePhone = (v: string) => v.replace(/\D/g, "").slice(0, 10);
 const sanitizeLocation = (v: string) => v.replace(/[^a-zA-Z0-9\s\-']/g, "");
 const sanitizePackage = (v: string) => v.replace(/[^a-zA-Z0-9\s.]/g, "");
-
-// ─── Validators ───────────────────────────────────────────────────────────────
 
 type FormErrors = Partial<Record<keyof CompanyFormState | "jobRoleOther", string>>;
 
@@ -196,8 +188,6 @@ function validate(
   return errors;
 }
 
-// ─── UI Helpers ───────────────────────────────────────────────────────────────
-
 function SectionLabel({ children, required }: { children: ReactNode; required?: boolean }) {
   return (
     <label className="mb-1.5 block text-[15px] font-semibold text-[#282828]">
@@ -216,8 +206,6 @@ function inputCls(hasError?: boolean) {
   return `w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-[#525252] shadow-sm outline-none placeholder:text-gray-400 focus:border-[#49C77F] ${hasError ? "border-red-400" : "border-[#CCCCCC]"
     }`;
 }
-
-// ─── Enum Select Field (label/value pairs) ────────────────────────────────────
 
 function EnumSelectField({
   value,
@@ -247,7 +235,6 @@ function EnumSelectField({
   );
 }
 
-// ─── Cascade Single-Select Dropdown ──────────────────────────────────────────
 
 function CascadeSelect({
   label,
@@ -304,7 +291,7 @@ function CascadeSelect({
           <CaretDown
             size={15}
             weight="bold"
-            className={`ml-2 flex-shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`ml-2 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
 
@@ -346,7 +333,6 @@ function CascadeSelect({
   );
 }
 
-// ─── Job Role Dropdown ────────────────────────────────────────────────────────
 
 function JobRoleDropdown({
   value,
@@ -456,8 +442,6 @@ function JobRoleDropdown({
   );
 }
 
-// ─── Logo Upload ──────────────────────────────────────────────────────────────
-
 function LogoUpload({
   file,
   existingLogoName,
@@ -510,7 +494,6 @@ function LogoUpload({
   );
 }
 
-// ─── Certificates Upload ──────────────────────────────────────────────────────
 
 function CertificatesUpload({
   files,
@@ -582,7 +565,6 @@ function CertificatesUpload({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CreateCompanyScreen({ onCancel, initialData }: CreateCompanyScreenProps) {
   const { collegeId, placementEmployeeId } = useUser();
@@ -596,8 +578,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
-
-  // ── Cascade data ──────────────────────────────────────────────────────────
   const [educations, setEducations] = useState<CascadeOption[]>([]);
   const [branches, setBranches] = useState<CascadeOption[]>([]);
   const [academicYears, setAcademicYears] = useState<CascadeOption[]>([]);
@@ -607,7 +587,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
   const educationTypeId = form.educationType?.id;
   const branchId = form.branch?.id;
 
-  // 1️⃣ Fetch education types on mount
   useEffect(() => {
     if (!collegeId) return;
     setLoadingEdu(true);
@@ -617,7 +596,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
       .finally(() => setLoadingEdu(false));
   }, [collegeId]);
 
-  // 2️⃣ Fetch branches when education type changes
   useEffect(() => {
     if (!collegeId || !educationTypeId) { setBranches([]); return; }
     setLoadingBranch(true);
@@ -631,7 +609,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
       .finally(() => setLoadingBranch(false));
   }, [collegeId, educationTypeId]);
 
-  // 3️⃣ Fetch academic years when branch changes
   useEffect(() => {
     if (!collegeId || !educationTypeId || !branchId) { setAcademicYears([]); return; }
     setLoadingYear(true);
@@ -683,11 +660,11 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
         companyWebsite: form.website,
         jobRoleOffered,
         requiredSkills: skillsArray,
-        jobType: form.jobType,       // already the DB enum value e.g. "fulltime"
-        workMode: form.workMode,     // already the DB enum value e.g. "hybrid"
+        jobType: form.jobType,       
+        workMode: form.workMode,     
         location: form.locations,
         annualPackage: packageNum,
-        driveType: form.driveType,   // already the DB enum value e.g. "virtual"
+        driveType: form.driveType,  
         startDate: form.startDate,
         endDate: form.endDate,
         eligibilityCriteria: form.eligibilityCriteria,
@@ -726,7 +703,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
 
   return (
     <div className="m-2 rounded-2xl bg-white p-8 shadow-sm">
-      {/* Header */}
       <div className="mb-8 flex items-start gap-4">
         <button
           type="button"
@@ -746,7 +722,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
 
       <div className="space-y-6">
 
-        {/* Company Name */}
         <div>
           <SectionLabel required>Company Name</SectionLabel>
           <input
@@ -758,7 +733,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           <FieldError msg={errors.companyName} />
         </div>
 
-        {/* Email + Phone */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Email Address</SectionLabel>
@@ -793,7 +767,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Description */}
         <div>
           <SectionLabel required>Company Job Description</SectionLabel>
           <textarea
@@ -809,7 +782,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Website + Job Role */}
         <div className="-mt-2 grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Website</SectionLabel>
@@ -835,7 +807,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Required Skills + Job Type */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Required Skills</SectionLabel>
@@ -860,7 +831,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Work Mode + Locations */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Work Mode</SectionLabel>
@@ -885,7 +855,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Annual Package + Drive Type */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Annual Package</SectionLabel>
@@ -910,7 +879,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Start Date + End Date */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Start Date</SectionLabel>
@@ -936,7 +904,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Education Type + Branch */}
         <div className="grid gap-5 md:grid-cols-2">
           <CascadeSelect
             label="Education Type"
@@ -970,7 +937,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           />
         </div>
 
-        {/* Academic Year + Eligibility Criteria */}
         <div className="grid gap-5 md:grid-cols-2">
           <CascadeSelect
             label="Academic Year"
@@ -996,7 +962,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Upload Company Logo + Upload Certificate(s) */}
         <div className="grid gap-5 md:grid-cols-2">
           <div>
             <SectionLabel required>Upload Company Logo</SectionLabel>
@@ -1020,7 +985,6 @@ export default function CreateCompanyScreen({ onCancel, initialData }: CreateCom
           </div>
         </div>
 
-        {/* Action Buttons */}
         <div className="grid gap-4 pt-2 md:grid-cols-2">
           <button
             type="button"

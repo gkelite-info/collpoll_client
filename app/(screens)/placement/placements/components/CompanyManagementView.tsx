@@ -51,7 +51,7 @@ export default function CompanyManagementView({
             type="button"
             onClick={handleCreateCompany}
             disabled={isAddingCompany}
-            className="flex h-8 min-w-[112px] cursor-pointer items-center justify-center rounded-lg bg-[#16284F] px-3 text-[14px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex h-8 min-w-28 cursor-pointer items-center justify-center rounded-lg bg-[#16284F] px-3 text-[14px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isAddingCompany ? "Loading..." : "Add Company"}
           </button>
