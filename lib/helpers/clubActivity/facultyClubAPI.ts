@@ -72,11 +72,11 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
         id: clubData.clubId.toString(),
         name: clubData.title,
         logo: clubData.imageUrl,
-        president: formatUser(clubData.president, "President"),
-        vicePresident: formatUser(clubData.vicePresident, "Vice President"),
-        responsibleFaculty: formatUser(clubData.responsibleFaculty, "Responsible Faculty"),
+        president: formatUser(clubData.president, "president"),
+        vicePresident: formatUser(clubData.vicePresident, "vicepresident"),
+        responsibleFaculty: formatUser(clubData.responsibleFaculty, "responsiblefaculty"),
         mentors: (clubData.mentors || [])
             .filter((m: any) => !m.is_deleted && m.faculty)
-            .map((m: any) => formatUser(m.faculty, "Mentor", m.faculty.facultyId.toString()))
+            .map((m: any) => formatUser(m.faculty, "mentor", m.faculty.facultyId.toString()))
     };
 }

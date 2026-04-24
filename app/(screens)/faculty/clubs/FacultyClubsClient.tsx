@@ -38,6 +38,7 @@ export default function FacultyClubsClient() {
                 setIsLoading(true);
                 const data = await getFacultyClubDetailsAPI(parseInt(String(facultyId), 10));
                 setClubData(data);
+                console.log("club data check faculty side", data)
             } catch (error) {
                 toast.error("Failed to fetch club information.");
             } finally {
