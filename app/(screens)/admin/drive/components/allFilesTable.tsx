@@ -16,7 +16,6 @@ type Props = {
   onDownload: (file: DriveFileRow) => void;
 };
 
-// 🟢 NEW: Minimal Confirm Modal Component for individual files
 function ConfirmDeleteFileModal({ isOpen, onClose, onConfirm, fileName }: any) {
   if (!isOpen) return null;
   return (
@@ -53,7 +52,7 @@ function ConfirmDeleteFileModal({ isOpen, onClose, onConfirm, fileName }: any) {
 
 export default function FilesTable({ files, onDelete, onDownload }: Props) {
   const [search, setSearch] = useState("");
-  const [fileToDelete, setFileToDelete] = useState<DriveFileRow | null>(null); // 🟢 Control modal state
+  const [fileToDelete, setFileToDelete] = useState<DriveFileRow | null>(null);
 
   const filtered = search
     ? files.filter((f) =>
@@ -135,7 +134,7 @@ export default function FilesTable({ files, onDelete, onDownload }: Props) {
                       <DownloadSimple size={14} weight="bold" />
                     </button>
                     <button
-                      onClick={() => setFileToDelete(file)} // 🟢 Trigger Modal
+                      onClick={() => setFileToDelete(file)}
                       className="flex h-7 w-7 items-center justify-center rounded-full bg-[#FEE2E2] text-[#EF4444] cursor-pointer"
                     >
                       <TrashSimple size={14} weight="bold" />

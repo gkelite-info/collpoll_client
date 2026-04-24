@@ -47,7 +47,6 @@ export async function fetchStudentFaculties(studentId: number) {
         profileUrl = p?.profileUrl;
       }
 
-      // Use a compound key because a faculty might teach multiple subjects
       const key = `${a.facultyId}-${a.collegeSubjectId}`;
       if (!uniqueFaculties.has(key)) {
         uniqueFaculties.set(key, {
@@ -74,16 +73,15 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
   const { startDate, endDate, leaveType, faculty, description } = payload;
   const now = new Date().toISOString();
 
-  // Safely embed type and faculty context inside description for schema compatibility
-  const finalDescription = `[Type: ${leaveType}] [Faculty: ${faculty.name} - ${faculty.subject}]\n${description}`;
-
-  const { data, error } = await supabase
+  // 1. Insert into student_leaves
+  const { data: leaveData, error: leaveError } = await supabase
     .from("student_leaves")
     .insert({
       studentId,
+      leaveType,
       startDate,
       endDate,
-      description: finalDescription,
+      description: description.trim(),
       status: "Pending",
       createdAt: now,
       updatedAt: now,
@@ -91,39 +89,104 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (leaveError) throw leaveError;
+
+  // 2. Insert into student_leave_faculties
+  const { error: bridgeError } = await supabase
+    .from("student_leave_faculties")
+    .insert({
+      studentLeaveId: leaveData.studentLeaveId,
+      facultyId: faculty.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+  if (bridgeError) throw bridgeError;
+
+  return leaveData;
 }
 
-// Fetch all leave records
-export async function fetchStudentLeaves(studentId: number) {
+// 🟢 NEW: Fetch dynamic counts directly from DB
+export async function fetchStudentLeaveCounts(studentId: number) {
   const { data, error } = await supabase
     .from("student_leaves")
-    .select("*")
+    .select(`status`)
     .eq("studentId", studentId)
-    .is("deletedAt", null)
-    .order("createdAt", { ascending: false });
+    .is("deletedAt", null);
+
+  if (error) return { all: 0, approved: 0, pending: 0, rejected: 0 };
+
+  const counts = { all: data.length, approved: 0, pending: 0, rejected: 0 };
+  data.forEach((d) => {
+    const s = d.status?.toLowerCase();
+    if (s === "approved") counts.approved++;
+    if (s === "pending") counts.pending++;
+    if (s === "rejected") counts.rejected++;
+  });
+  return counts;
+}
+
+// 🟢 UPDATED: Fetch all leave records with DB-level pagination & search
+export async function fetchStudentLeaves(
+  studentId: number,
+  page: number,
+  limit: number,
+  statusFilter: string,
+  searchQuery: string,
+) {
+  let query = supabase
+    .from("student_leaves")
+    .select(
+      `
+      *,
+      student_leave_faculties (
+        faculty ( fullName )
+      )
+    `,
+      { count: "exact" },
+    )
+    .eq("studentId", studentId)
+    .is("deletedAt", null);
+
+  // DB-Level Status Filter
+  if (statusFilter !== "all") {
+    query = query.eq(
+      "status",
+      statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1),
+    );
+  }
+
+  // DB-Level Search Filter
+  if (searchQuery.trim() !== "") {
+    query = query.ilike("description", `%${searchQuery.trim()}%`);
+  }
+
+  // DB-Level Pagination
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  query = query.order("createdAt", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await query;
 
   if (error) throw error;
 
-  return (data || []).map((l: any) => {
-    let type = "General";
-    let facName = "Unknown";
+  const mappedData = (data || []).map((l: any) => {
+    const typeLabel =
+      l.leaveType === "attendanceregularization"
+        ? "Attendance Regularization"
+        : "Leave";
+
     let desc = l.description || "";
 
-    // Extract embedded data
-    const typeMatch = desc.match(/\[Type:\s*(.*?)\]/);
-    if (typeMatch) {
-      type = typeMatch[1];
-      desc = desc.replace(/\[Type:\s*.*?\]\s*/, "");
-    }
-    const facMatch = desc.match(/\[Faculty:\s*(.*?)\]/);
-    if (facMatch) {
-      facName = facMatch[1];
-      desc = desc.replace(/\[Faculty:\s*.*?\]\s*/, "");
+    let facName = "Unknown";
+    if (l.student_leave_faculties && l.student_leave_faculties.length > 0) {
+      const bridge = l.student_leave_faculties[0];
+      const facData = Array.isArray(bridge.faculty)
+        ? bridge.faculty[0]
+        : bridge.faculty;
+      facName = facData?.fullName || "Unknown Faculty";
     }
 
-    // Calculate days between dates
     const sDate = new Date(l.startDate);
     const eDate = new Date(l.endDate);
     const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
@@ -134,10 +197,12 @@ export async function fetchStudentLeaves(studentId: number) {
       fromDate: sDate.toLocaleDateString("en-GB"),
       toDate: eDate.toLocaleDateString("en-GB"),
       days: String(days).padStart(2, "0"),
-      leaveType: type,
+      leaveType: typeLabel,
       facultyName: facName,
       description: desc.trim(),
       status: l.status ? l.status.toLowerCase() : "pending",
     };
   });
+
+  return { data: mappedData, totalCount: count || 0 };
 }

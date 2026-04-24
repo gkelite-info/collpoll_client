@@ -13,11 +13,14 @@ import TableComponent from "@/app/utils/table/table";
 import RequestLeaveModal from "./modal/RequestLeaveModal";
 import toast from "react-hot-toast";
 
+import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import {
   fetchStudentLeaves,
   submitLeaveRequest,
+  fetchStudentLeaveCounts,
 } from "@/lib/helpers/student/leave request/studentLeaveAPI";
 
 const COLUMNS = [
@@ -26,6 +29,7 @@ const COLUMNS = [
   { title: "Days", key: "days" },
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
+  { title: "Status", key: "statusBadge" },
 ];
 
 function LeaveLeftContent() {
@@ -36,10 +40,29 @@ function LeaveLeftContent() {
     "all" | "approved" | "pending" | "rejected"
   >("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [dbLeaves, setDbLeaves] = useState<any[]>([]);
+  // Pagination & DB States
+  const [page, setPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [counts, setCounts] = useState({
+    all: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!userId) return;
@@ -53,12 +76,23 @@ function LeaveLeftContent() {
       });
   }, [userId]);
 
-  const loadLeaves = async () => {
+  const loadData = async () => {
     if (!studentId) return;
     setIsLoading(true);
     try {
-      const data = await fetchStudentLeaves(studentId);
-      setDbLeaves(data);
+      const [tableRes, countRes] = await Promise.all([
+        fetchStudentLeaves(
+          studentId,
+          page,
+          itemsPerPage,
+          activeTab,
+          debouncedSearch,
+        ),
+        fetchStudentLeaveCounts(studentId),
+      ]);
+      setTableData(tableRes.data);
+      setTotalItems(tableRes.totalCount);
+      setCounts(countRes);
     } catch (err) {
       toast.error("Failed to load leave history");
     } finally {
@@ -67,8 +101,13 @@ function LeaveLeftContent() {
   };
 
   useEffect(() => {
-    loadLeaves();
-  }, [studentId]);
+    loadData();
+  }, [studentId, activeTab, debouncedSearch, page]);
+
+  const handleTabChange = (tabId: any) => {
+    setActiveTab(tabId);
+    setPage(1);
+  };
 
   const handleLeaveSubmit = async (formData: any) => {
     if (!studentId) return;
@@ -76,50 +115,41 @@ function LeaveLeftContent() {
       await submitLeaveRequest(studentId, formData);
       toast.success("Leave request submitted successfully!");
       setIsModalOpen(false);
-      loadLeaves();
+      loadData();
     } catch (error) {
-      console.error(error);
       toast.error("Failed to submit request. Please try again.");
     }
   };
 
-  const counts = useMemo(() => {
-    return {
-      all: dbLeaves.length,
-      approved: dbLeaves.filter((l) => l.status === "approved").length,
-      pending: dbLeaves.filter((l) => l.status === "pending").length,
-      rejected: dbLeaves.filter((l) => l.status === "rejected").length,
-    };
-  }, [dbLeaves]);
-
-  const filteredData = useMemo(() => {
-    let data = dbLeaves;
-    if (activeTab !== "all") {
-      data = data.filter((item) => item.status === activeTab);
-    }
-    if (searchQuery.trim()) {
-      data = data.filter(
-        (item) =>
-          item.leaveType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.description.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-    }
-
-    return data.map((item, index) => ({
-      sNo: String(index + 1).padStart(2, "0"),
+  const finalTableData = useMemo(() => {
+    return tableData.map((item, index) => ({
+      sNo: String((page - 1) * itemsPerPage + index + 1).padStart(2, "0"),
       dateRange: `${item.fromDate} - ${item.toDate}`,
       days: item.days,
       leaveType: item.leaveType,
       description: (
         <span
-          className="truncate max-w-[200px] inline-block"
+          className="truncate max-w-[200px] md:max-w-[300px] inline-block text-sm"
           title={item.description}
         >
           {item.description}
         </span>
       ),
+      statusBadge: (
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-bold ${
+            item.status === "approved"
+              ? "bg-[#E7F8EE] text-[#43C17A]"
+              : item.status === "rejected"
+                ? "bg-[#FFE5E5] text-[#FF4B4B]"
+                : "bg-[#FFF4EB] text-[#FFB874]"
+          }`}
+        >
+          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+        </span>
+      ),
     }));
-  }, [dbLeaves, activeTab, searchQuery]);
+  }, [tableData, page]);
 
   const cards = [
     {
@@ -165,82 +195,121 @@ function LeaveLeftContent() {
   ] as const;
 
   return (
-    <div className="flex flex-col p-6 w-full max-w-[68%] mx-auto min-h-screen">
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[#282828] font-bold text-2xl">Leave Requests</h1>
-          <p className="text-[#525252] text-sm font-medium">
-            Submit leave applications and view approval updates from your
-            faculty.
-          </p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#16284F] text-white font-bold text-sm px-6 py-4 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer"
-        >
-          Request Leave
-        </button>
-      </div>
+    <>
+      <style>{`
+        .table-container-wrapper > div > div > div.overflow-auto {
+          overflow-x: auto !important;
+          overflow-y: auto !important;
+        }
+        .table-container-wrapper > div > div > div.overflow-auto::-webkit-scrollbar {
+          height: 10px !important;
+          width: 8px !important;
+          display: block !important;
+        }
+        .table-container-wrapper > div > div > div.overflow-auto::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 8px;
+        }
+        .table-container-wrapper > div > div > div.overflow-auto::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 8px;
+          border: 2px solid #f1f5f9;
+        }
+        .table-container-wrapper > div > div > div.overflow-auto::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {cards.map((card) => {
-          const isActive = activeTab === card.id;
-          return (
-            <CardComponent
-              key={card.id}
-              isActive={isActive}
-              style={`w-full transition-all duration-300 ${isActive ? card.activeColor : card.inactiveColor}`}
-              icon={card.icon}
-              value={card.value}
-              label={card.label}
-              iconBgColor={isActive ? card.iconBgActive : card.iconBgInactive}
-              iconColor="#FFFFFF"
-              textSize={isActive ? "text-white" : "text-[#282828]"}
-              onClick={() => setActiveTab(card.id as any)}
+      <div className="flex flex-col p-6 w-full max-w-[68%] mx-auto min-h-screen">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[#282828] font-bold text-2xl">
+              Leave Requests
+            </h1>
+            <p className="text-[#525252] text-sm font-medium">
+              Submit leave applications and view approval updates from your
+              faculty.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-[#16284F] text-white font-bold text-sm px-6 py-4 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer"
+          >
+            Request Leave
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {cards.map((card) => {
+            const isActive = activeTab === card.id;
+            return (
+              <CardComponent
+                key={card.id}
+                isActive={isActive}
+                style={`w-full cursor-pointer transition-all duration-300 ${isActive ? card.activeColor : card.inactiveColor}`}
+                icon={card.icon}
+                value={card.value}
+                label={card.label}
+                iconBgColor={isActive ? card.iconBgActive : card.iconBgInactive}
+                iconColor="#FFFFFF"
+                textSize={isActive ? "text-white" : "text-[#282828]"}
+                onClick={() => handleTabChange(card.id)}
+              />
+            );
+          })}
+        </div>
+
+        <div className="flex justify-between items-center rounded-xl px-4 py-3 ">
+          <div className="relative w-full max-w-[300px] flex items-center ">
+            <MagnifyingGlass
+              size={20}
+              className="absolute left-3 text-[#43C17A] pointer-events-none"
             />
-          );
-        })}
-      </div>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-gray-200 rounded-full pl-10 pr-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] placeholder-gray-500"
+            />
+          </div>
 
-      <div className="flex justify-between items-center  rounded-xl px-4 py-3 ">
-        <div className="relative w-full max-w-[300px] flex items-center  ">
-          <MagnifyingGlass
-            size={20}
-            className="absolute left-3 text-[#43C17A] pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-200 rounded-full pl-10 pr-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] placeholder-gray-400"
+          <div className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md ">
+            <CalendarIcon size={18} className="text-[#43C17A]" weight="fill" />
+            <span className="text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer">
+              {new Date().toLocaleDateString("en-GB")}
+            </span>
+          </div>
+        </div>
+
+        <div className="-mt-2 w-full table-container-wrapper">
+          <TableComponent
+            columns={COLUMNS}
+            tableData={finalTableData}
+            height="55vh"
+            isLoading={isLoading}
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md  ">
-          <CalendarIcon size={18} className="text-[#43C17A]" weight="fill" />
-          <span className="text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer">
-            {new Date().toLocaleDateString("en-GB")}
-          </span>
-        </div>
-      </div>
+        {!isLoading && totalItems > itemsPerPage && (
+          <div className="mt-4">
+            <Pagination
+              currentPage={page}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
 
-      <div className="-mt-2">
-        <TableComponent
-          columns={COLUMNS}
-          tableData={filteredData}
-          height="60vh"
-          isLoading={isLoading}
+        <RequestLeaveModal
+          isOpen={isModalOpen}
+          studentId={studentId}
+          onClose={() => setIsModalOpen(false)}
+          onSubmit={handleLeaveSubmit}
         />
       </div>
-
-      <RequestLeaveModal
-        isOpen={isModalOpen}
-        studentId={studentId}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleLeaveSubmit}
-      />
-    </div>
+    </>
   );
 }
 
