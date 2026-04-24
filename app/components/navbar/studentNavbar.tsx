@@ -98,7 +98,7 @@ export default function Navbar() {
       icon: (isActive) => (
         <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Clubs",
+      label: "Club",
       path: "/clubs",
     },
     {

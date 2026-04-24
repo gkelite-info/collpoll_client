@@ -101,7 +101,7 @@ export default function AdminNavbar() {
       icon: (isActive) => (
         <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Clubs",
+      label: "Club",
       path: "/admin/clubs",
     },
     {
