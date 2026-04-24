@@ -7,7 +7,7 @@ import CalendarHeader from "./calendarHeader";
 import CalendarToolbar from "./calenderToolbar";
 import AddEventModal from "./addEventModal";
 import { CalendarEvent } from "../types";
-import { combineDateAndTime, getWeekDays, hasTimeConflict } from "../utils";
+import { combineDateAndTime, getWeekDays } from "../utils";
 import ConfirmConflictModal from "./ConfirmConflictModal";
 import { CaretLeft } from "@phosphor-icons/react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
@@ -30,6 +30,11 @@ import {
 import EventDetailsModal from "@/app/(screens)/faculty/calendar/modal/EventDetailsModal";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
+import {
+  checkSectionConflict,
+  ConflictingSection,
+} from "@/lib/helpers/calendar/checkSectionConflict";
+
 interface Props {
   faculty: {
     name: string;
@@ -47,6 +52,11 @@ export default function CalendarView({ faculty, onBack }: Props) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [pendingEvent, setPendingEvent] = useState<any | null>(null);
   const [showConflictModal, setShowConflictModal] = useState(false);
+
+  const [conflictDetails, setConflictDetails] = useState<ConflictingSection[]>(
+    [],
+  );
+
   const [eventToDelete, setEventToDelete] = useState<CalendarEvent | null>(
     null,
   );
@@ -161,7 +171,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
         const sectionIds = sectionMap.get(row.calendarEventId) ?? [];
 
-        // 🟢 Safely extract topicTitle whether Supabase returned an Object or Array
         const safelyExtractedTopic =
           row.college_subject_unit_topics?.topicTitle ||
           (Array.isArray(row.college_subject_unit_topics)
@@ -198,7 +207,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             rawFormData: {
               subjectId: row.college_subjects?.collegeSubjectId ?? null,
               topicId: row.eventTopic,
-              topicTitle: safelyExtractedTopic, // 🟢 Passed perfectly down to Details Modal
+              topicTitle: safelyExtractedTopic,
               roomNo: row.roomNo,
               meetingLink: row.meetingLink,
               meetingId: row.meetingId,
@@ -218,34 +227,32 @@ export default function CalendarView({ faculty, onBack }: Props) {
   };
 
   const hasDbConflict = async (
-    date: string,
-    startTime: string,
-    endTime: string,
+    payload: any,
     ignoreEventId?: number,
   ): Promise<boolean> => {
+    if (!collegeId) return false;
+
     try {
-      const rows = await fetchCalendarEvents({
-        facultyId: Number(faculty.id),
+      const conflicts = await checkSectionConflict({
+        collegeId,
+        date: payload.date,
+        fromTime: payload.fromTime,
+        toTime: payload.toTime,
+        collegeEducationId: payload.educationId,
+        collegeBranchId: payload.branchId,
+        collegeAcademicYearId: payload.academicYearId,
+        collegeSemesterId: payload.semester,
+        sectionIds: payload.sections.map((s: any) => s.collegeSectionId),
+        ignoreEventId,
       });
 
-      if (!rows || rows.length === 0) return false;
+      if (conflicts.length > 0) {
+        setConflictDetails(conflicts);
+        return true;
+      }
 
-      return rows.some((e: any) => {
-        if (ignoreEventId && e.calendarEventId === ignoreEventId) {
-          return false;
-        }
-
-        if (e.date !== date) return false;
-
-        const dbStart = combineDateAndTime(e.date, e.fromTime);
-        const dbEnd = combineDateAndTime(e.date, e.toTime);
-
-        return hasTimeConflict(
-          [{ startTime: dbStart, endTime: dbEnd } as CalendarEvent],
-          combineDateAndTime(date, startTime),
-          combineDateAndTime(date, endTime),
-        );
-      });
+      setConflictDetails([]);
+      return false;
     } catch (err) {
       console.error("ADMIN CONFLICT CHECK FAILED", err);
       return false;
@@ -256,9 +263,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
     try {
       setIsSaving(true);
       const conflict = await hasDbConflict(
-        data.date,
-        data.fromTime,
-        data.toTime,
+        data,
         editingEventId ? Number(editingEventId) : undefined,
       );
 
@@ -274,7 +279,6 @@ export default function CalendarView({ faculty, onBack }: Props) {
 
         facultyId: Number(data.facultyId),
 
-        // 🟢 Subject and Topic are always sent now
         subjectId: data.subjectId ?? null,
         eventTopic: data.eventTopic ?? null,
         eventTitle: data.meetingTitle,
@@ -495,6 +499,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
     setShowConflictModal(false);
     setFormMode("create");
     setIsModalOpen(true);
+    setPendingEvent(null);
   };
 
   const closeAddEventModal = () => {
@@ -529,9 +534,13 @@ export default function CalendarView({ faculty, onBack }: Props) {
         />
       </section>
 
-      <div className="flex justify-between mb-2">
+      <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
         <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
         <CalendarHeader
+          currentDate={currentDate}
+          onMonthYearChange={(month, year) => {
+            setCurrentDate(new Date(year, month, 1));
+          }}
           onAddClick={() => {
             setEditingEventId(null);
             setEventForm(null);
@@ -575,6 +584,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
         open={showConflictModal}
         onConfirm={confirmAddEvent}
         onCancel={handleConflictCancel}
+        conflictDetails={conflictDetails}
       />
 
       <ConfirmDeleteModal
