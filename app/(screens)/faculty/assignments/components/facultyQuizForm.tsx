@@ -3,6 +3,7 @@ import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getFacultyAssignedSubjects } from "@/lib/helpers/faculty/getFacultyAssignedSubjects";
 import { getTopicsBySubjectId } from "@/lib/helpers/faculty/getFacultySubjects";
 import { fetchQuizById, saveQuiz } from "@/lib/helpers/quiz/quizAPI";
+import { fetchFacultyYears, fetchFacultySections } from "@/lib/helpers/faculty/facultyAPI";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -15,14 +16,7 @@ interface FacultyQuizFormProps {
 
 const todayStr = new Date().toISOString().split("T")[0];
 
-const isPastDate = (date: string) => new Date(date) < new Date(todayStr);
-const isEndBeforeStart = (start: string, end: string) =>
-  new Date(end) < new Date(start);
-
-export default function FacultyQuizForm({
-  onCancel,
-  onSaved,
-}: FacultyQuizFormProps) {
+export default function FacultyQuizForm({ onCancel, onSaved }: FacultyQuizFormProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -31,63 +25,51 @@ export default function FacultyQuizForm({
   const quizId = searchParams.get("quizId");
   const isEditMode = searchParams.get("action") === "editQuiz";
 
-  const [subjects, setSubjects] = useState<
-    { collegeSubjectId: number; subjectName: string }[]
-  >([]);
-  const [sections, setSections] = useState<
-    { collegeSectionsId: number; collegeSections: string }[]
-  >([]);
+  const [subjects, setSubjects] = useState<{ collegeSubjectId: number; subjectName: string }[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [topics, setTopics] = useState<{
+    topicTitle: string;
+    collegeSubjectUnitId: number;
+    collegeSubjectUnitTopicId: number;
+  }[]>([]);
 
-  const [topics, setTopics] = useState<
-    {
-      topicTitle: string;
-      collegeSubjectUnitId: number;
-      collegeSubjectUnitTopicId: number;
-    }[]
-  >([]);
+  const [academicYears, setAcademicYears] = useState<{ id: number; label: string }[]>([]);
+  const [availableSections, setAvailableSections] = useState<any[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState<number | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
 
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(
-    null,
-  );
   const [quizTitle, setQuizTitle] = useState("");
-  const [totalMarks, setTotalMarks] = useState("");
+  const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+  const [questionsCount, setQuestionsCount] = useState("");
+  const [marksPerQuestion, setMarksPerQuestion] = useState("");
+  const [totalMarks, setTotalMarks] = useState(0);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+  const [startTime, setStartTime] = useState("00:00");
+  const [endTime, setEndTime] = useState("00:00");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [maxAttempts, setMaxAttempts] = useState("1");
+
   const [isSaving, setIsSaving] = useState(false);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
+
+  useEffect(() => {
+    const total = Number(questionsCount) * Number(marksPerQuestion);
+    setTotalMarks(total || 0);
+  }, [questionsCount, marksPerQuestion]);
 
   useEffect(() => {
     if (!facultyId) return;
     getFacultyAssignedSubjects({ facultyId })
       .then((data) => {
         const uniqueSubjects = Array.from(
-          new Map(
-            data.map((item: any) => [
-              item.college_subjects?.collegeSubjectId,
-              item.college_subjects,
-            ]),
-          ).values(),
-        ).filter(Boolean) as {
-          collegeSubjectId: number;
-          subjectName: string;
-        }[];
+          new Map(data.map((item: any) => [
+            item.college_subjects?.collegeSubjectId,
+            item.college_subjects,
+          ])).values()
+        ).filter(Boolean) as { collegeSubjectId: number; subjectName: string }[];
         setSubjects(uniqueSubjects);
-        if (!isEditMode)
-          setSelectedSubjectId(uniqueSubjects[0]?.collegeSubjectId ?? null);
-
-        const uniqueSections = Array.from(
-          new Map(
-            data.map((item: any) => [
-              item.college_sections?.collegeSectionsId,
-              item.college_sections,
-            ]),
-          ).values(),
-        ).filter(Boolean) as {
-          collegeSectionsId: number;
-          collegeSections: string;
-        }[];
-        setSections(uniqueSections);
+        if (!isEditMode) setSelectedSubjectId(uniqueSubjects[0]?.collegeSubjectId ?? null);
       })
       .catch(() => toast.error("Failed to fetch subjects"));
   }, [facultyId, isEditMode]);
@@ -95,90 +77,107 @@ export default function FacultyQuizForm({
   useEffect(() => {
     if (!selectedSubjectId) return;
     getTopicsBySubjectId(selectedSubjectId)
-      .then((data) => setTopics(data))
+      .then(setTopics)
       .catch(() => toast.error("Failed to fetch topics"));
   }, [selectedSubjectId]);
 
   useEffect(() => {
-    if (isEditMode && quizId) {
-      fetchQuizById(Number(quizId))
-        .then((data) => {
-          if (data) {
-            setQuizTitle(data.quizTitle);
-            setTotalMarks(String(data.totalMarks));
-            setStartDate(data.startDate ? data.startDate.split("T")[0] : "");
-            setEndDate(data.endDate ? data.endDate.split("T")[0] : "");
-            setSelectedSubjectId(data.collegeSubjectId);
-            setSelectedTopicId(
-              data.collegeSubjectUnitTopicId || data.collegeSubjectUnitId,
-            );
-          }
-        })
-        .catch(() => toast.error("Failed to load quiz details"));
+    if (!facultyId) return;
+    fetchFacultyYears(facultyId)
+      .then(setAcademicYears)
+      .catch(() => toast.error("Failed to load academic years"));
+  }, [facultyId]);
+
+  useEffect(() => {
+    if (!facultyId || !selectedYearId || !selectedSubjectId) {
+      setAvailableSections([]);
+      setSelectedSectionId(null);
+      return;
     }
+    fetchFacultySections(facultyId, selectedYearId, selectedSubjectId)
+      .then(setAvailableSections)
+      .catch(() => toast.error("Failed to load sections"));
+    setSelectedSectionId(null);
+  }, [facultyId, selectedYearId, selectedSubjectId]);
+
+  useEffect(() => {
+    if (!isEditMode || !quizId) return;
+    fetchQuizById(Number(quizId))
+      .then((data) => {
+        if (!data) return;
+        setQuizTitle(data.quizTitle);
+        setQuestionsCount(String(data.questionsCount));
+        setMarksPerQuestion(String(data.marksPerQuestion));
+        setStartDate(data.startDate ? data.startDate.split("T")[0] : "");
+        setEndDate(data.endDate ? data.endDate.split("T")[0] : "");
+        setStartTime(data.startTime || "00:00");
+        setEndTime(data.endTime || "00:00");
+        setDurationMinutes(String(data.durationMinutes));
+        setMaxAttempts(String(data.maxAttempts));
+        setSelectedSubjectId(data.collegeSubjectId);
+        setSelectedTopicId(data.collegeSubjectUnitTopicId || data.collegeSubjectUnitId);
+        setSelectedYearId(data.collegeAcademicYearId ?? null);
+        setSelectedSectionId(data.collegeSectionsId ?? null);
+      })
+      .catch(() => toast.error("Failed to load quiz details"));
   }, [quizId, isEditMode]);
+
+  const formatTo12Hour = (time24: string) => {
+    if (!time24) return "";
+    const [hours] = time24.split(":");
+    return parseInt(hours) >= 12 ? "PM" : "AM";
+  };
 
   const handleSave = async (status: "Draft" | "Active") => {
     if (!quizTitle.trim()) return toast.error("Quiz title is required");
-    if (!totalMarks) return toast.error("Total marks is required");
-    if (!startDate) return toast.error("Start date is required");
-    if (!endDate) return toast.error("End date is required");
-    if (!isEditMode && isPastDate(startDate))
-      return toast.error("Start date cannot be in past");
-    if (isEndBeforeStart(startDate, endDate))
-      return toast.error("End date must be after start date");
     if (!selectedTopicId) return toast.error("Please select a topic");
-    if (!subjects[0]?.collegeSubjectId) return toast.error("Subject not found");
-    if (!sections[0]?.collegeSectionsId)
-      return toast.error("Section not found");
+    if (!selectedYearId || !selectedSectionId) return toast.error("Year and Section are required");
+    if (!questionsCount || !marksPerQuestion) return toast.error("Question details are required");
+    if (!durationMinutes) return toast.error("Duration is required");
+    if (startTime === "00:00" || endTime === "00:00") return toast.error("Please set valid Start and End times");
+    if (endTime <= startTime) return toast.error("End time must be later than start time");
+    if (!startDate || !endDate) return toast.error("Dates are required");
     if (!facultyId) return toast.error("Faculty not found");
 
     try {
-      setIsSaving(true);
-      setIsDraftSaving(true);
+      setIsSaving(status === "Active");
+      setIsDraftSaving(status === "Draft");
 
-      const selectedTopicObj = topics.find(
-        (t) => t.collegeSubjectUnitTopicId === selectedTopicId,
-      );
-
-      if (!selectedTopicObj) {
-        toast.error("Invalid topic selected.");
-        return;
-      }
+      const selectedTopicObj = topics.find((t) => t.collegeSubjectUnitTopicId === selectedTopicId);
+      if (!selectedTopicObj) return toast.error("Invalid topic selected.");
 
       const result = await saveQuiz({
         quizId: isEditMode && quizId ? Number(quizId) : undefined,
         facultyId,
-        collegeSubjectId: subjects[0].collegeSubjectId,
-        collegeSectionsId: sections[0].collegeSectionsId,
-        collegeSubjectUnitId: selectedTopicObj.collegeSubjectUnitId, // This will be 10
-        collegeSubjectUnitTopicId: selectedTopicObj.collegeSubjectUnitTopicId, // This will be 21
+        collegeSubjectId: selectedSubjectId!,
+        collegeAcademicYearId: selectedYearId,
+        collegeSectionsId: selectedSectionId,
+        collegeSubjectUnitId: selectedTopicObj.collegeSubjectUnitId,
+        collegeSubjectUnitTopicId: selectedTopicObj.collegeSubjectUnitTopicId,
         quizTitle: quizTitle.trim(),
-        totalMarks: Number(totalMarks),
+        totalMarks,
+        questionsCount: Number(questionsCount),
+        marksPerQuestion: Number(marksPerQuestion),
+        startTime,
+        endTime,
+        durationMinutes: Number(durationMinutes),
         startDate,
         endDate,
-        status,
+        maxAttempts: Number(maxAttempts),
+        status: "Draft",
       });
 
-      if (!result.success) {
-        toast.error("Failed to save quiz");
-        return;
-      }
+      if (!result.success) throw new Error();
 
-      toast.success(
-        status === "Draft"
-          ? "Quiz saved as draft!"
-          : "Quiz saved successfully!",
-      );
+      toast.success(status === "Active" ? "Details saved! Now add your questions." : "Quiz saved as draft!");
 
-      const params = new URLSearchParams();
+      const params = new URLSearchParams(searchParams.toString());
       params.set("tab", "quiz");
       params.set("quizView", "active");
       params.set("action", "addQuestions");
       params.set("quizId", String(result.quizId));
       router.push(`${pathname}?${params.toString()}`);
-    } catch (err) {
-      console.error("handleSave error:", err);
+    } catch {
       toast.error("Something went wrong");
     } finally {
       setIsSaving(false);
@@ -189,194 +188,123 @@ export default function FacultyQuizForm({
   return (
     <div className="w-full h-full flex flex-col">
       <div className="mb-6">
-        <div className="bg-blue-00 flex items-center lg:mb-1">
-          <CaretLeftIcon
-            size={22}
-            weight="bold"
-            className="text-[#282828] cursor-pointer active:scale-90"
-            onClick={onCancel}
-          />
-          <h1 className="font-bold text-2xl text-[#282828]">
-            {isEditMode ? "Edit Quiz" : "Create New Quiz"}
-          </h1>
+        <div className="flex items-center lg:mb-1">
+          <CaretLeftIcon size={22} weight="bold" className="text-[#282828] cursor-pointer active:scale-90" onClick={onCancel} />
+          <h1 className="font-bold text-2xl text-[#282828] ml-2">{isEditMode ? "Edit Quiz" : "Create New Quiz"}</h1>
         </div>
-        <p className="text-[#282828] text-sm lg:ml-6">
-          Enter details below to set up and publish your quiz for students.
-        </p>
+        <p className="text-[#282828] text-sm lg:ml-8">Set up the timing and scoring for your quiz.</p>
       </div>
 
-      <div className="bg-white rounded-md p-3 flex flex-col gap-4 flex-1">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-bold text-[#282828]">Quiz Title</label>
-          <input
-            type="text"
-            value={quizTitle}
-            onChange={(e) => setQuizTitle(e.target.value)}
-            placeholder="CPU Scheduling"
-            className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
-          />
+      <div className="bg-white rounded-md p-4 flex flex-col gap-4 flex-1 overflow-y-auto border border-gray-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Quiz Title <span className="text-red-500">*</span></label>
+            <input type="text" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} placeholder="e.g. Unit 1 Assessment" className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Topic <span className="text-red-500">*</span></label>
+            <select value={selectedTopicId || ""} onChange={(e) => setSelectedTopicId(parseInt(e.target.value, 10))} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white cursor-pointer text-[#282828]">
+              <option value="">Select Topic</option>
+              {topics.map((topic, index) => (
+                <option key={index} value={topic.collegeSubjectUnitTopicId}>{topic.topicTitle}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Academic Year <span className="text-red-500">*</span></label>
+            <select
+              value={selectedYearId || ""}
+              onChange={(e) => setSelectedYearId(Number(e.target.value))}
+              className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white text-[#282828] cursor-pointer"
+            >
+              <option value="">Select Year</option>
+              {academicYears.map((y) => (
+                <option key={y.id} value={y.id}>{y.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Section <span className="text-red-500">*</span></label>
+            <select
+              disabled={!selectedYearId}
+              value={selectedSectionId || ""}
+              onChange={(e) => setSelectedSectionId(Number(e.target.value))}
+              className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] bg-white disabled:bg-gray-50 text-[#282828] cursor-pointer"
+            >
+              <option value="">Select Section</option>
+              {availableSections.map((sec) => (
+                <option key={sec.collegeSectionsId} value={sec.collegeSectionsId}>
+                  {sec.college_sections?.collegeSections}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 bg-gray-50 p-3 rounded-lg">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-gray-500">No. of Questions <span className="text-red-500">*</span></label>
+            <input type="number" value={questionsCount} onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setQuestionsCount(e.target.value === "" || parseInt(e.target.value) < 1 ? "1" : e.target.value)} min="1" className="border border-gray-200 rounded-md p-2 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-gray-500">Marks per Qtn <span className="text-red-500">*</span></label>
+            <input type="number" value={marksPerQuestion} onWheel={(e) => e.currentTarget.blur()} onChange={(e) => setMarksPerQuestion(e.target.value === "" || parseInt(e.target.value) < 1 ? "1" : e.target.value)} min="1" className="border border-gray-200 rounded-md p-2 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-gray-500">Total Marks</label>
+            <div className="p-2 text-sm font-bold text-[#43C17A] bg-white border border-gray-100 rounded-md text-center">{totalMarks}</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Duration (Mins) <span className="text-red-500">*</span></label>
+            <input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value === "" || parseInt(e.target.value) < 1 ? "1" : e.target.value)} min="1" className="border border-gray-200 rounded-md p-2.5 text-sm outline-none text-[#282828]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Max Attempts</label>
+            <input type="number" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value === "" || parseInt(e.target.value) < 1 ? "1" : e.target.value)} min="1" className="border border-gray-200 rounded-md p-2.5 text-sm outline-none text-[#282828]" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">Start Time <span className="text-red-500">*</span></label>
+            <div className="flex items-center gap-2">
+              <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none text-[#282828] flex-1" />
+              <span className="text-[10px] font-bold text-[#43C17A] bg-[#43C17A]/10 px-2 py-1 rounded">{formatTo12Hour(startTime)}</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-bold text-[#282828]">End Time <span className="text-red-500">*</span></label>
+            <div className="flex items-center gap-2">
+              <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none text-[#282828] flex-1" />
+              <span className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">{formatTo12Hour(endTime)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dates */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Subject</label>
-            <input
-              type="text"
-              value={
-                subjects.find((s) => s.collegeSubjectId === selectedSubjectId)
-                  ?.subjectName ||
-                subjects[0]?.subjectName ||
-                ""
-              }
-              readOnly
-              placeholder="Loading..."
-              className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none bg-gray-50 cursor-not-allowed"
-            />
+            <label className="text-sm font-bold text-[#282828]">Start Date <span className="text-red-500">*</span></label>
+            <input type="date" value={startDate} min={isEditMode ? undefined : todayStr} onChange={(e) => setStartDate(e.target.value)} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">Topic</label>
-            <div className="relative">
-              <select
-                value={selectedTopicId || ""}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  setSelectedTopicId(isNaN(val) ? null : val);
-                }}
-                className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors appearance-none bg-white cursor-pointer w-full"
-              >
-                <option value="">Select Topic</option>
-                {topics.map((topic, index) => (
-                  <option key={index} value={topic.collegeSubjectUnitTopicId}>
-                    {topic.topicTitle}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-4 h-4 text-[#282828]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
+            <label className="text-sm font-bold text-[#282828]">End Date <span className="text-red-500">*</span></label>
+            <input type="date" value={endDate} min={startDate || todayStr} onChange={(e) => setEndDate(e.target.value)} className="border border-gray-200 rounded-md p-2.5 text-sm outline-none focus:border-[#43C17A] text-[#282828]" />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">
-              Section(s)
-            </label>
-            <input
-              type="text"
-              value={sections[0]?.collegeSections || ""}
-              readOnly
-              placeholder="Loading..."
-              className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none bg-gray-50 cursor-not-allowed"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-bold text-[#282828]">
-              Total Marks
-            </label>
-            <input
-              type="number"
-              value={totalMarks}
-              onChange={(e) => setTotalMarks(e.target.value)}
-              placeholder="Eg: 40"
-              onWheel={(e) => e.currentTarget.blur()}
-              className="border border-gray-200 rounded-md p-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-bold text-[#282828]">Duration</label>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[#282828]">Start Date</span>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (!isEditMode && isPastDate(value)) {
-                    toast.error("Start date cannot be in past");
-                    return;
-                  }
-                  if (endDate && isEndBeforeStart(value, endDate)) {
-                    setEndDate("");
-                  }
-                  setStartDate(value);
-                }}
-                min={isEditMode ? undefined : todayStr}
-                className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-[#282828]">End Date</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (!startDate) {
-                    toast.error("Select start date first");
-                    return;
-                  }
-                  if (isEndBeforeStart(startDate, value)) {
-                    toast.error("End date must be after start date");
-                    return;
-                  }
-                  setEndDate(value);
-                }}
-                min={startDate || todayStr}
-                className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#282828] outline-none focus:border-[#43C17A] transition-colors"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mt-2">
-          <button
-            onClick={onCancel}
-            disabled={isSaving}
-            className="px-6 py-2 rounded-md cursor-pointer border border-[#16284F] text-[#16284F] text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
+        {/* Buttons */}
+        <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
+          <button onClick={onCancel} disabled={isSaving} className="px-6 py-2 rounded-md border border-[#16284F] text-[#16284F] text-sm font-medium hover:bg-gray-50 transition-colors cursor-pointer">Cancel</button>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleSave("Draft")}
-              disabled={isDraftSaving}
-              className="px-6 py-2 rounded-md cursor-pointer bg-[#16284F] text-white text-sm font-medium hover:bg-[#102040] transition-colors disabled:opacity-50"
-            >
-              {isDraftSaving ? "Saving..." : "Save as Draft"}
+            <button onClick={() => handleSave("Draft")} disabled={isDraftSaving} className="px-6 py-2 rounded-md bg-[#16284F] text-white text-sm font-medium hover:bg-[#102040] transition-colors cursor-pointer">
+              {isDraftSaving ? "Saving..." : "Save Draft"}
             </button>
-
-            <button
-              onClick={() => handleSave("Active")}
-              disabled={isSaving}
-              className="flex items-center cursor-pointer gap-2 px-6 py-2 rounded-md bg-[#43C17A] text-white text-sm font-medium hover:bg-[#35a868] transition-colors disabled:opacity-50"
-            >
-              {isSaving ? (
-                "Saving..."
-              ) : (
-                <>
-                  {" "}
-                  Add Questions <span className="text-base">›</span>{" "}
-                </>
-              )}
+            <button onClick={() => handleSave("Active")} disabled={isSaving} className="px-6 py-2 rounded-md bg-[#43C17A] text-white text-sm font-medium hover:bg-[#35a868] transition-colors flex items-center gap-2 cursor-pointer">
+              {isSaving ? "Saving..." : <>Save & Add Questions <span className="text-lg">›</span></>}
             </button>
           </div>
         </div>

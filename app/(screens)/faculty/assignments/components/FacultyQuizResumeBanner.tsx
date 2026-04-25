@@ -11,6 +11,7 @@ interface IncompleteQuiz {
     totalMarks: number;
     startDate: string;
     endDate: string;
+    endTime?: string;
     status: "Draft" | "Active";
 }
 
@@ -37,11 +38,14 @@ export default function FacultyQuizResumeBanner({ margintop }: props) {
 
     useEffect(() => {
         if (!facultyId) return;
+
         async function load() {
-            if (!facultyId) return
             try {
-                await autoCompleteExpiredQuizzes(facultyId);
-                const data = await fetchIncompleteQuizzesByFacultyId(facultyId);
+                setIsLoading(true);
+                await autoCompleteExpiredQuizzes(facultyId!);
+
+                const data = await fetchIncompleteQuizzesByFacultyId(facultyId!);
+
                 setQuizzes(data as IncompleteQuiz[]);
             } catch (err) {
                 console.error("FacultyQuizResumeBanner error:", err);
@@ -70,38 +74,45 @@ export default function FacultyQuizResumeBanner({ margintop }: props) {
             </p>
 
             <div className="flex flex-col gap-2">
-                {quizzes.map((quiz) => (
-                    <div
-                        key={quiz.quizId}
-                        className="bg-white rounded-md px-4 py-3 flex items-center justify-between border border-gray-100"
-                    >
-                        <div className="flex flex-col gap-0.5">
-                            <p className="text-sm font-semibold text-[#282828]">
-                                {quiz.quizTitle}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {quiz.totalMarks} Marks • {formatDate(quiz.startDate)} → {formatDate(quiz.endDate)}
-                            </p>
-                        </div>
+                {quizzes.map((quiz) => {
+                    const timeStr = quiz.endTime || "23:59:59";
+                    const isPastDeadline = new Date(`${quiz.endDate}T${timeStr}`) < new Date();
 
-                        <div className="flex items-center gap-3">
-                            <span
-                                className={`text-xs font-medium px-2 py-1 rounded-full ${quiz.status === "Draft"
-                                    ? "bg-gray-100 text-gray-500"
-                                    : "bg-[#D5FFE7] text-[#43C17A]"
-                                    }`}
-                            >
-                                {quiz.status}
-                            </span>
-                            <button
-                                onClick={() => handleResume(quiz.quizId)}
-                                className="text-xs font-bold text-white bg-[#43C17A] px-4 py-1.5 rounded-md hover:bg-[#35a868] transition-colors cursor-pointer"
-                            >
-                                Resume
-                            </button>
+                    if (isPastDeadline && quiz.status === "Active") return null;
+
+                    return (
+                        <div
+                            key={quiz.quizId}
+                            className="bg-white rounded-md px-4 py-3 flex items-center justify-between border border-gray-100"
+                        >
+                            <div className="flex flex-col gap-0.5">
+                                <p className="text-sm font-semibold text-[#282828]">
+                                    {quiz.quizTitle}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {quiz.totalMarks} Marks • {formatDate(quiz.startDate)} → {formatDate(quiz.endDate)}
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <span
+                                    className={`text-xs font-medium px-2 py-1 rounded-full ${quiz.status === "Draft"
+                                        ? "bg-gray-100 text-gray-500"
+                                        : "bg-[#D5FFE7] text-[#43C17A]"
+                                        }`}
+                                >
+                                    {quiz.status}
+                                </span>
+                                <button
+                                    onClick={() => handleResume(quiz.quizId)}
+                                    className="text-xs font-bold text-white bg-[#43C17A] px-4 py-1.5 rounded-md hover:bg-[#35a868] transition-colors cursor-pointer"
+                                >
+                                    Resume
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
             </div>
         </div>
     );

@@ -22,7 +22,7 @@ export default function AdminQuizList({ subjectId }: { subjectId: string }) {
 
   const [quizzes, setQuizzes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0); // <-- Added refresh key
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!subjectId) return;
@@ -58,7 +58,6 @@ export default function AdminQuizList({ subjectId }: { subjectId: string }) {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  // <-- Added Publish Handler
   const handlePublish = async (quizId: number) => {
     try {
       await publishAdminQuiz(quizId);
@@ -71,11 +70,8 @@ export default function AdminQuizList({ subjectId }: { subjectId: string }) {
 
   return (
     <div className="w-full h-full flex flex-col mx-auto">
-      <div
-        className="flex items-center gap-2 mb-6 cursor-pointer hover:text-gray-600 transition-colors"
-        onClick={handleBack}
-      >
-        <CaretLeft size={24} weight="bold" className="text-[#282828]" />
+      <div className="flex items-center gap-2 mb-6 hover:text-gray-600 transition-colors"      >
+        <CaretLeft size={24} weight="bold" className="text-[#282828] cursor-pointer" onClick={handleBack} />
         <h1 className="font-bold text-2xl text-[#282828]">
           Quizzes for Subject
         </h1>

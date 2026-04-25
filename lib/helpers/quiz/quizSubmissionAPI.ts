@@ -69,28 +69,68 @@ export async function saveQuizSubmission(payload: {
 }) {
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("quiz_submissions")
-    .insert([
-      {
-        quizId: payload.quizId,
-        studentId: payload.studentId,
-        totalMarksObtained: payload.totalMarksObtained,
-        attemptNumber: payload.attemptNumber,
-        submittedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ])
-    .select("submissionId")
-    .single();
+  const MAX_RETRIES = 3;
+  const RETRY_DELAYS = [1000, 2000, 3000]; // 1s, 2s, 3s
 
-  if (error) {
-    console.error("saveQuizSubmission error:", error);
-    return { success: false, error };
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const { data, error } = await supabase
+        .from("quiz_submissions")
+        .upsert(
+          [
+            {
+              quizId: payload.quizId,
+              studentId: payload.studentId,
+              totalMarksObtained: payload.totalMarksObtained,
+              attemptNumber: payload.attemptNumber,
+              submittedAt: now,
+              createdAt: now,
+              updatedAt: now,
+              isActive: true,
+            },
+          ],
+          {
+            onConflict: "quizId,studentId,attemptNumber",
+          },
+        )
+        .select("submissionId")
+        .single();
+
+      if (error) {
+        console.error(`saveQuizSubmission attempt ${attempt + 1} error:`, error);
+
+        if (
+          attempt < MAX_RETRIES - 1 &&
+          (error.message?.includes("503") ||
+            error.message?.includes("Failed to fetch") ||
+            error.message?.includes("NetworkError") ||
+            (error as any)?.status === 503)
+        ) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, RETRY_DELAYS[attempt]),
+          );
+          continue;
+        }
+
+        return { success: false, error };
+      }
+
+      return { success: true, submissionId: data.submissionId };
+    } catch (err: any) {
+      console.error(`saveQuizSubmission catch attempt ${attempt + 1}:`, err);
+
+      if (attempt < MAX_RETRIES - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, RETRY_DELAYS[attempt]),
+        );
+        continue;
+      }
+
+      return { success: false, error: err };
+    }
   }
 
-  return { success: true, submissionId: data.submissionId };
+  return { success: false, error: new Error("Max retries exceeded") };
 }
 
 export async function deactivateQuizSubmission(submissionId: number) {

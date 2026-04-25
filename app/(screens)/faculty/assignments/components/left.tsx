@@ -109,7 +109,6 @@ function AssignmentsLeftContent() {
   const [completedQuizzes, setCompletedQuizzes] = useState<any[]>([]);
   const [quizzesLoading, setQuizzesLoading] = useState(false);
 
-  // 🟢 NEW STATES FOR QUIZ DELETE MODAL
   const [deleteQuizId, setDeleteQuizId] = useState<number | null>(null);
   const [isDeletingQuiz, setIsDeletingQuiz] = useState(false);
 
@@ -364,12 +363,10 @@ function AssignmentsLeftContent() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  // 🟢 FIXED: Now triggers the modal instead of window.confirm
   const confirmDeleteQuiz = (quizId: number) => {
     setDeleteQuizId(quizId);
   };
 
-  // 🟢 FIXED: Actual deletion logic called from modal
   const executeDeleteQuiz = async () => {
     if (!deleteQuizId) return;
     try {
@@ -399,7 +396,6 @@ function AssignmentsLeftContent() {
     }
   };
 
-  // View Routing Logic
   if (
     activeTab === "discussion" &&
     (action === "editDiscussion" || action === "createDiscussion")
@@ -540,7 +536,6 @@ function AssignmentsLeftContent() {
       <div className="w-full flex flex-col flex-1 min-h-[500px] h-full">
         <div className="flex flex-col gap-3 items-start h-full w-full">
           <div className="flex justify-between w-full h-full">
-            {/* ASSIGNMENTS SUB-TABS */}
             {activeTab === "assignments" && (
               <>
                 <div className="flex gap-4 pb-1">
@@ -566,7 +561,6 @@ function AssignmentsLeftContent() {
               </>
             )}
 
-            {/* QUIZ SUB-TABS */}
             {activeTab === "quiz" && (
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
                 <button
@@ -600,7 +594,6 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
-            {/* DISCUSSION SUB-TABS */}
             {activeTab === "discussion" && (
               <>
                 <div className="flex gap-4 pb-1">
@@ -632,7 +625,6 @@ function AssignmentsLeftContent() {
           </div>
 
           <div className="max-h-[115vh] overflow-y-auto w-full pr-1">
-            {/* ASSIGNMENTS LIST */}
             {activeTab === "assignments" &&
               (isLoading ? (
                 <div className="w-full">
@@ -673,7 +665,6 @@ function AssignmentsLeftContent() {
                 </>
               ))}
 
-            {/* QUIZ LIST */}
             {activeTab === "quiz" && (
               <div className="grid grid-cols-2 gap-4 pb-10 h-full">
                 <div className="col-span-2">
@@ -790,7 +781,6 @@ function AssignmentsLeftContent() {
               </div>
             )}
 
-            {/* DISCUSSION LIST */}
             {activeTab === "discussion" && (
               <div className="flex flex-col gap-4 pb-10">
                 {discussionView === "active" &&
@@ -832,7 +822,6 @@ function AssignmentsLeftContent() {
                     </>
                   ))}
 
-                {/* 🟢 DISCUSSION PAGINATION */}
                 {discussionTotalCount > ITEMS_PER_PAGE && (
                   <div className="mt-4 flex justify-center">
                     <Pagination

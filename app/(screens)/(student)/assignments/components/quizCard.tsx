@@ -425,10 +425,10 @@ export function QuizAttemptScreenOld({ quiz }: { quiz: any }) {
             onClick={handleBack}
           />
           <h2 className="text-xl font-bold text-[#282828]">
-            {quiz?.courseName || "Operating Systems"}
+            {quiz?.courseName || "N/A"}
           </h2>
           <p className="text-sm font-medium text-[#282828]">
-            {quiz?.topic || "Process Scheduling & Deadlocks"}
+            {quiz?.topic || "N/A"}
           </p>
         </div>
 
