@@ -103,14 +103,14 @@ export async function getStudentClubDetailsAPI(studentId: number) {
         .maybeSingle();
 
     let targetClubId = null;
-    let role = "Member";
+    let role = "member";
     let status = "joined";
     let clubName = "";
 
     if (leadClub) {
         targetClubId = leadClub.clubId;
         clubName = leadClub.title;
-        role = leadClub.presidentStudentId === studentId ? "President" : "Vice President";
+        role = leadClub.presidentStudentId === studentId ? "president" : "vicepresident";
     } else {
         const { data: memberClub } = await supabase
             .from("club_members")
@@ -177,12 +177,12 @@ export async function getStudentClubDetailsAPI(studentId: number) {
         id: clubData.clubId.toString(),
         name: clubData.title,
         logo: clubData.imageUrl,
-        president: formatUser(clubData.president, "President"),
-        vicePresident: formatUser(clubData.vicePresident, "Vice President"),
-        responsibleFaculty: formatUser(clubData.responsibleFaculty, "Responsible Faculty"),
+        president: formatUser(clubData.president, "president"),
+        vicePresident: formatUser(clubData.vicePresident, "vicepresident"),
+        responsibleFaculty: formatUser(clubData.responsibleFaculty, "responsiblefaculty"),
         mentors: (clubData.mentors || [])
             .filter((m: any) => !m.is_deleted && m.faculty)
-            .map((m: any) => formatUser(m.faculty, "Mentor", m.faculty.facultyId.toString()))
+            .map((m: any) => formatUser(m.faculty, "mentor", m.faculty.facultyId.toString()))
     };
 
     return { status: "joined", clubInfo: formattedClubInfo, role };
