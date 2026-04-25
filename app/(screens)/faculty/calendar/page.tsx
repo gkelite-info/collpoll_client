@@ -604,11 +604,12 @@ export default function Page() {
         </button>
       </div>
 
-      <div className="flex justify-between items-end mb-1">
+      {/* 🟢 Modified header area to correctly arrange toolbars and dropdowns */}
+      <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
         {mainTab === "Faculty" ? (
           <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
         ) : (
-          <div className="bg-[#5252521C] rounded-t-[20px] border-b border-gray-200 px-6 h-[45px] flex flex-col justify-center">
+          <div className="bg-[#5252521C] rounded-[20px] border border-gray-200 px-6 h-[45px] flex items-center">
             <span className="text-sm font-semibold text-gray-600">
               HR College Schedule
             </span>
@@ -617,6 +618,11 @@ export default function Page() {
 
         {mainTab === "Faculty" && (
           <CalendarHeader
+            currentDate={currentDate}
+            onMonthYearChange={(month, year) => {
+              // Smoothly jump to the 1st day of the newly selected month/year
+              setCurrentDate(new Date(year, month, 1));
+            }}
             onAddClick={() => {
               setEditingEventId(null);
               setFormMode("create");

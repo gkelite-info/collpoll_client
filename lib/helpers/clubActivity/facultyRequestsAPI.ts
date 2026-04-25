@@ -184,6 +184,7 @@ export async function processClubRequestsAPI(
                 is_deleted: false,
                 removedAt: null,
                 removedBy: null,
+                removedByAdminId: null,
                 deletedAt: null
             };
         });

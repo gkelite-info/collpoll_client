@@ -60,6 +60,15 @@ export type PlacementDrive = {
   companyName: string;
   date: string;
   branch: string;
+  collegeId?: number;
+  collegeEducationId?: number;
+  educationTypeName?: string;
+  collegeBranchId?: number;
+  collegeAcademicYearId?: number;
+  placementCompanyIds?: number[];
+  role?: string;
+  packageDetails?: string;
+  isCompleted?: boolean;
   eligibleStudents: number;
   applied: number;
   placed: number;
@@ -323,7 +332,7 @@ export const placementTabContent = {
       {
         label: "50",
         value: "50",
-        note: "Active Companies",
+        note: "Active Drives",
         cardClass: "bg-[#DFF7E7]",
       },
       {

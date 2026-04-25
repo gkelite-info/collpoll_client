@@ -1,6 +1,8 @@
 "use client";
 import { ArrowLeft, CalendarBlank, CheckCircleIcon, FilePdf, UserCircle } from "@phosphor-icons/react";
+import { useState } from "react";
 import { CardProps, UnitTopic } from "./subjectCard";
+import { TopicPdfViewModal } from "./TopicPdfViewModal";
 
 type Unit = {
   id: number;
@@ -73,9 +75,15 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
 
 type UnitCardProps = {
   unit: NonNullable<CardProps["unitsData"]>[number];
+  onOpenTopicPdf: (payload: {
+    unitLabel: string;
+    unitTitle: string;
+    topicId: number;
+    topicTitle: string;
+  }) => void;
 };
 
-function UnitCard({ unit }: UnitCardProps) {
+function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
   const colors = colorMap[unit.color] || colorMap.purple;
   const percentage = unit.percentage ?? 0;
 
@@ -121,7 +129,13 @@ function UnitCard({ unit }: UnitCardProps) {
           </div>
         </div>
 
-        <ul className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1">
+        <ul
+          className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: `${colors.solidEnd} #f1f5f9`,
+          }}
+        >
           {unit.topics.length > 0 ? (
             unit.topics.map((topic: UnitTopic) => (
               <li
@@ -140,11 +154,25 @@ function UnitCard({ unit }: UnitCardProps) {
                   </span>
                 </div>
 
-                <FilePdf
-                  size={16}
-                  className={`${colors.accent} flex-shrink-0 mt-[2px]`}
-                  weight="duotone"
-                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    onOpenTopicPdf({
+                      unitLabel: unit.unitLabel,
+                      unitTitle: unit.title,
+                      topicId: topic.topicId,
+                      topicTitle: topic.name,
+                    })
+                  }
+                  className="cursor-pointer"
+                  title="View PDFs"
+                >
+                  <FilePdf
+                    size={16}
+                    className={`${colors.accent} flex-shrink-0 mt-[2px]`}
+                    weight="duotone"
+                  />
+                </button>
               </li>
             ))
           ) : (
@@ -164,6 +192,12 @@ export function SubjectDetailsCard({
   onBack: () => void;
 }) {
   const dynamicUnits = details.unitsData || [];
+  const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
+    unitLabel: string;
+    unitTitle: string;
+    topicId: number;
+    topicTitle: string;
+  } | null>(null);
 
   return (
     <div className="w-full max-w-full overflow-x-hidden px-4 py-6 bg-[#F5F5F7] min-h-screen flex flex-col">
@@ -193,7 +227,7 @@ export function SubjectDetailsCard({
         <div className="flex gap-6 w-max px-1">
           {dynamicUnits.map((unit) => (
             <div key={unit.id} className="w-[320px] h-[450px] shrink-0">
-              <UnitCard unit={unit} />
+              <UnitCard unit={unit} onOpenTopicPdf={setSelectedTopicPdf} />
             </div>
           ))}
           {dynamicUnits.length === 0 && (
@@ -201,6 +235,15 @@ export function SubjectDetailsCard({
           )}
         </div>
       </div>
+
+      <TopicPdfViewModal
+        isOpen={!!selectedTopicPdf}
+        onClose={() => setSelectedTopicPdf(null)}
+        unitLabel={selectedTopicPdf?.unitLabel ?? ""}
+        unitTitle={selectedTopicPdf?.unitTitle ?? ""}
+        topicTitle={selectedTopicPdf?.topicTitle ?? ""}
+        topicId={selectedTopicPdf?.topicId ?? 0}
+      />
     </div>
   );
 }

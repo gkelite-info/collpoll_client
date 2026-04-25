@@ -26,6 +26,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import toast from "react-hot-toast";
 import { SubjectDetailsSkeleton } from "../../shimmer/subjectDetailsSkeleton";
 import AddNewClassModal from "../../modal/addNewClassModal";
+import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
 
 const colorMap = {
   purple: {
@@ -150,11 +151,18 @@ function UnitCard({
   onSave,
   onDeleteUnit,
   onDeleteTopic,
+  onOpenTopicPdf,
 }: {
   unit: UiUnit;
   onSave: any;
   onDeleteUnit: any;
   onDeleteTopic: any;
+  onOpenTopicPdf: (payload: {
+    unitLabel: string;
+    unitTitle: string;
+    topicId: number;
+    topicTitle: string;
+  }) => void;
 }) {
   const colors = colorMap[unit.color] || colorMap.purple;
   const [localTopics, setLocalTopics] = useState<UiTopic[]>(unit.topics);
@@ -263,7 +271,13 @@ function UnitCard({
             />
           </div>
 
-          <ul className="flex-1 space-y-1 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1 custom-scrollbar pb-12">
+          <ul
+            className="flex-1 space-y-1 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-12"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: `${colors.solidEnd} #f1f5f9`,
+            }}
+          >
             {localTopics.length > 0 ? (
               localTopics.map((topic) => (
                 <li
@@ -292,7 +306,7 @@ function UnitCard({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -303,15 +317,26 @@ function UnitCard({
                     >
                       <Trash size={15} weight="regular" />
                     </button>
-                    <div
-                      className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenTopicPdf({
+                          unitLabel: unit.unitLabel,
+                          unitTitle: unit.title,
+                          topicId: topic.id,
+                          topicTitle: topic.title,
+                        });
+                      }}
+                      className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center cursor-pointer hover:opacity-90 transition`}
+                      title="Manage topic PDFs"
                     >
                       <FilePdf
                         size={14}
                         className={colors.accent}
                         weight="duotone"
                       />
-                    </div>
+                    </button>
                   </div>
                 </li>
               ))
@@ -390,6 +415,12 @@ export default function ClientSubjectDetails({
   const [adminId, setAdminId] = useState<number | null>(null);
   const [context, setContext] = useState<SubjectContext | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
+    unitLabel: string;
+    unitTitle: string;
+    topicId: number;
+    topicTitle: string;
+  } | null>(null);
 
   const init = async () => {
     if (!userId || !subjectId) return;
@@ -532,6 +563,7 @@ export default function ClientSubjectDetails({
                 onSave={handleSaveUnit}
                 onDeleteUnit={handleDeleteUnit}
                 onDeleteTopic={handleDeleteTopic}
+                onOpenTopicPdf={setSelectedTopicPdf}
               />
             </div>
           ))
@@ -550,6 +582,15 @@ export default function ClientSubjectDetails({
         existingUnitNumbers={units.map((u) =>
           parseInt(u.unitLabel.replace(/\D/g, ""), 10),
         )}
+      />
+
+      <TopicPdfModal
+        isOpen={!!selectedTopicPdf}
+        onClose={() => setSelectedTopicPdf(null)}
+        unitLabel={selectedTopicPdf?.unitLabel ?? ""}
+        unitTitle={selectedTopicPdf?.unitTitle ?? ""}
+        topicTitle={selectedTopicPdf?.topicTitle ?? ""}
+        topicId={selectedTopicPdf?.topicId ?? 0}
       />
     </div>
   );

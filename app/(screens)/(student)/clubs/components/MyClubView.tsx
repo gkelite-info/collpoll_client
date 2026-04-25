@@ -9,12 +9,13 @@ import { StudentAnnouncementsShimmer } from "../shimmers/StudentAnnouncementsShi
 
 export default function MyClubView() {
 
-    const { studentId } = useUser();
+    const { studentId, collegeId } = useUser();
     const [clubState, setClubState] = useState<{
         status: "loading" | "none" | "pending" | "joined";
         info: any | null;
         role: string | null;
     }>({ status: "loading", info: null, role: null });
+    const [currentViewDate, setCurrentViewDate] = useState("Today");
 
     useEffect(() => {
         if (!studentId) return;
@@ -84,11 +85,18 @@ export default function MyClubView() {
             <ClubInfo info={clubState.info} />
             <div className="relative mb-8 flex items-center justify-center">
                 <div className="absolute w-full border-t border-[#959595]"></div>
-                <span className="relative bg-white px-6 text-xs font-bold text-[#3B3B3B]">Today</span>
+                <span className="relative bg-white px-6 text-xs font-bold text-[#3B3B3B]">{currentViewDate}</span>
             </div>
 
             <div className="flex flex-col mx-auto w-full">
-                <StudentAnnouncements userRole={clubState.role} />
+                {/* <StudentAnnouncements userRole={clubState.role} /> */}
+                <StudentAnnouncements
+                    userRole={clubState.role}
+                    clubId={parseInt(clubState.info?.id)}
+                    collegeId={collegeId!}
+                    studentId={parseInt(String(studentId), 10)}
+                    onDateChange={setCurrentViewDate}
+                />
             </div>
         </div>
     );

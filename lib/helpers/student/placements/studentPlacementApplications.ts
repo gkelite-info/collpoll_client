@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export type StudentPlacementApplicationStatus = "applied" | "withdrawn";
+export type StudentPlacementApplicationStatus =
+  | "applied"
+  | "withdrawn"
+  | "selected"
+  | "rejected";
 
 export type StudentPlacementApplication = {
   studentPlacementApplicationId: number;
@@ -10,6 +14,7 @@ export type StudentPlacementApplication = {
   appliedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  updatedBy: number | null;
 };
 
 type StudentPlacementApplicationParams = {
@@ -18,7 +23,7 @@ type StudentPlacementApplicationParams = {
 };
 
 const APPLICATION_SELECT =
-  "studentPlacementApplicationId,studentId,placementCompanyId,status,appliedAt,createdAt,updatedAt";
+  "studentPlacementApplicationId,studentId,placementCompanyId,status,appliedAt,createdAt,updatedAt,updatedBy";
 
 function formatAppliedDate(date?: string | null) {
   const parsedDate = date ? new Date(date) : new Date();
@@ -150,4 +155,39 @@ export async function withdrawStudentPlacementApplication({
   }
 
   return null;
+}
+
+export async function updateStudentPlacementApplicationStatus({
+  studentPlacementApplicationId,
+  status,
+  updatedBy,
+}: {
+  studentPlacementApplicationId: number;
+  status: Extract<StudentPlacementApplicationStatus, "selected" | "rejected">;
+  updatedBy: number;
+}) {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("student_placement_applications")
+    .update({
+      status,
+      updatedAt: now,
+      updatedBy,
+    })
+    .eq("studentPlacementApplicationId", studentPlacementApplicationId)
+    .select(APPLICATION_SELECT)
+    .single();
+
+  if (error) {
+    console.error("Failed to update student placement application status:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+    throw error;
+  }
+
+  return data as StudentPlacementApplication;
 }

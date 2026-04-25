@@ -149,16 +149,14 @@ export async function fetchQuizFilterOptions(
   return { branchOptions, yearOptions };
 }
 
-// 2. UPDATED: Accepts filters and pagination from the frontend
 export async function fetchAdminQuizDepartments(
   collegeId: number,
   collegeEducationId: number,
   branchFilter: string = "All",
   yearFilter: string = "All",
   page: number = 1,
-  limit: number = 9, // Fits perfectly in a 3-column grid
+  limit: number = 9,
 ) {
-  // DB-Level Filtering (Saves immense memory and processing)
   let branchQuery = supabase
     .from("college_branch")
     .select("*")
@@ -185,6 +183,7 @@ export async function fetchAdminQuizDepartments(
     { data: history },
     { data: subjects },
     { data: quizzes },
+    { data: facultyAssignments },
   ] = await Promise.all([
     branchQuery,
     yearQuery,
@@ -214,6 +213,11 @@ export async function fetchAdminQuizDepartments(
       .select("collegeSubjectId")
       .eq("status", "Active")
       .eq("isActive", true),
+
+    supabase
+      .from("faculty_sections")
+      .select("facultyId, collegeAcademicYearId")
+      .eq("isActive", true),
   ]);
 
   const activeSubjectIds = new Set(quizzes?.map((q) => q.collegeSubjectId));
@@ -233,9 +237,21 @@ export async function fetchAdminQuizDepartments(
       )
         continue;
 
+      const validFacultyIdsForYear = new Set(
+        facultyAssignments
+          ?.filter(
+            (fa) => fa.collegeAcademicYearId === year.collegeAcademicYearId,
+          )
+          .map((fa) => fa.facultyId),
+      );
+
       const branchFaculty =
-        faculty?.filter((f) => f.collegeBranchId === branch.collegeBranchId) ||
-        [];
+        faculty?.filter(
+          (f) =>
+            f.collegeBranchId === branch.collegeBranchId &&
+            validFacultyIdsForYear.has(f.facultyId),
+        ) || [];
+
       const studentCount =
         history?.filter(
           (h) =>
@@ -278,7 +294,6 @@ export async function fetchAdminQuizDepartments(
     }
   }
 
-  // 3. Server-side Pagination Slicing
   const totalCount = results.length;
   const startIndex = (page - 1) * limit;
   const paginatedResults = results.slice(startIndex, startIndex + limit);
@@ -288,89 +303,6 @@ export async function fetchAdminQuizDepartments(
     totalPages: Math.ceil(totalCount / limit) || 1,
   };
 }
-
-// export async function fetchAdminQuizSubjects(
-//   collegeId: number,
-//   branchId: number,
-//   yearId: number,
-// ) {
-//   const [
-//     { data: subjects },
-//     { data: history },
-//     { data: students },
-//     { data: facultyAssignments },
-//   ] = await Promise.all([
-//     supabase
-//       .from("college_subjects")
-//       .select(
-//         `
-//             collegeSubjectId, subjectName, subjectCode,
-//             quizzes ( quizId, status, facultyId, quiz_submissions ( submissionId ) )
-//         `,
-//       )
-//       .eq("collegeId", collegeId)
-//       .eq("collegeBranchId", branchId)
-//       .eq("collegeAcademicYearId", yearId)
-//       .eq("isActive", true),
-//     supabase
-//       .from("student_academic_history")
-//       .select("studentId")
-//       .eq("collegeAcademicYearId", yearId)
-//       .eq("isCurrent", true),
-//     supabase
-//       .from("students")
-//       .select("studentId")
-//       .eq("collegeBranchId", branchId)
-//       .eq("isActive", true),
-//     supabase
-//       .from("faculty_sections")
-//       .select(
-//         `
-//             collegeSubjectId, facultyId, faculty ( fullName )
-//         `,
-//       )
-//       .eq("collegeAcademicYearId", yearId)
-//       .eq("isActive", true),
-//   ]);
-
-//   const validStudentIds = new Set(students?.map((s) => s.studentId) || []);
-//   const totalStudents =
-//     history?.filter((h) => validStudentIds.has(h.studentId)).length || 0;
-
-//   const subjectFacultyMap = new Map();
-//   facultyAssignments?.forEach((fa: any) => {
-//     if (!subjectFacultyMap.has(fa.collegeSubjectId)) {
-//       const fac = Array.isArray(fa.faculty) ? fa.faculty[0] : fa.faculty;
-//       if (fac) {
-//         subjectFacultyMap.set(fa.collegeSubjectId, {
-//           id: fa.facultyId,
-//           name: fac.fullName,
-//         });
-//       }
-//     }
-//   });
-
-//   return (subjects || []).map((sub: any, index: number) => {
-//     const activeQuizzes =
-//       sub.quizzes?.filter((q: any) => q.status === "Active") || [];
-//     const pendingCount = activeQuizzes.reduce(
-//       (acc: number, q: any) => acc + (q.quiz_submissions?.length || 0),
-//       0,
-//     );
-
-//     const assignedFaculty = subjectFacultyMap.get(sub.collegeSubjectId);
-
-//     return {
-//       id: sub.collegeSubjectId,
-//       subject: sub.subjectName,
-//       facultyName: assignedFaculty ? assignedFaculty.name : "Unassigned",
-//       facultyId: assignedFaculty ? String(assignedFaculty.id) : "-",
-//       avatar: `https://i.pravatar.cc/100?img=${(index * 7 + 12) % 70}`,
-//       activeQuiz: activeQuizzes.length,
-//       pendingSubmissions: pendingCount,
-//     };
-//   });
-// }
 
 export async function fetchAdminQuizSubjects(
   collegeId: number,
@@ -425,7 +357,6 @@ export async function fetchAdminQuizSubjects(
     if (!subjectFacultyMap.has(fa.collegeSubjectId)) {
       const fac = Array.isArray(fa.faculty) ? fa.faculty[0] : fa.faculty;
       if (fac) {
-        // Extract the dynamic profile picture
         const profile = fac.users?.user_profile;
         const profileUrl = Array.isArray(profile)
           ? profile[0]?.profileUrl
@@ -434,7 +365,7 @@ export async function fetchAdminQuizSubjects(
         subjectFacultyMap.set(fa.collegeSubjectId, {
           id: fa.facultyId,
           name: fac.fullName,
-          avatar: profileUrl || null, // Store dynamic avatar
+          avatar: profileUrl || null,
         });
       }
     }
