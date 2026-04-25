@@ -21,7 +21,6 @@ export default function RequestLeaveModal({
   const [faculties, setFaculties] = useState<any[]>([]);
   const [loadingFaculties, setLoadingFaculties] = useState(false);
 
-  // Custom Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -33,7 +32,6 @@ export default function RequestLeaveModal({
     description: "",
   });
 
-  // Fetch contextual faculties when modal opens
   useEffect(() => {
     if (isOpen && studentId) {
       setLoadingFaculties(true);
@@ -43,7 +41,6 @@ export default function RequestLeaveModal({
     }
   }, [isOpen, studentId]);
 
-  // Handle clicking outside the custom dropdown to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -70,7 +67,6 @@ export default function RequestLeaveModal({
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
-      // Reset form on success
       setFormData({
         leaveType: "",
         startDate: "",
@@ -85,7 +81,6 @@ export default function RequestLeaveModal({
 
   return (
     <>
-      {/* Custom CSS for the auto-scrolling marquee effect */}
       <style>{`
         @keyframes scrollBackForth {
           0%, 15% { transform: translateX(0); }
@@ -110,7 +105,7 @@ export default function RequestLeaveModal({
           </div>
 
           <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
-            {/* <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5">
               <label className="text-[15px] font-semibold text-[#282828]">
                 Leave Type
               </label>
@@ -126,19 +121,17 @@ export default function RequestLeaveModal({
                   <option value="" disabled>
                     Select Leave Type
                   </option>
-                  <option value="Sick">Sick Leave</option>
-                  <option value="Personal">Personal Leave</option>
-                  <option value="Emergency">Emergency</option>
-                  <option value="Medical">Medical</option>
-                  <option value="Function">Function</option>
-                  <option value="Travel">Travel</option>
+                  <option value="leave">Leave</option>
+                  <option value="attendanceregularization">
+                    Attendance Regularization
+                  </option>
                 </select>
                 <CaretDown
                   size={16}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
                 />
               </div>
-            </div> */}
+            </div>
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[15px] font-semibold text-[#282828]">
@@ -181,7 +174,6 @@ export default function RequestLeaveModal({
               </div>
             </div>
 
-            {/* 🟢 CUSTOM FACULTY DROPDOWN WITH AVATARS */}
             <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
               <label className="text-[15px] font-semibold text-[#282828]">
                 Faculties
@@ -241,7 +233,6 @@ export default function RequestLeaveModal({
                         className="w-8 h-8 rounded-full shrink-0 object-cover border border-gray-100"
                       />
                       <div className="flex-1 overflow-hidden relative">
-                        {/* 🟢 The auto-scroll marquee text */}
                         <p className="whitespace-nowrap inline-block text-sm text-[#282828] hover-marquee">
                           <span className="font-semibold">{fac.name}</span> •{" "}
                           <span className="text-gray-500">{fac.subject}</span>
@@ -261,7 +252,6 @@ export default function RequestLeaveModal({
               )}
             </div>
 
-            {/* Description */}
             <div className="flex flex-col gap-1.5 mt-1">
               <label className="text-[15px] font-semibold text-[#282828]">
                 Description
@@ -278,7 +268,6 @@ export default function RequestLeaveModal({
               />
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3 mt-2">
               <button
                 type="button"
