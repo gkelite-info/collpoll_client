@@ -15,6 +15,9 @@ import { fetchFacultyContext } from "@/app/utils/context/faculty/facultyContextA
 import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
 import { CardProps } from "@/lib/types/faculty";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import { generateTopicNotesBatchAction } from "@/lib/helpers/faculty/ai/generateTopicNotes.server";
+import { buildTopicPdfFile } from "@/lib/helpers/faculty/ai/generateTopicPdf.client";
+import { uploadTopicResource } from "@/lib/helpers/faculty/topicResources";
 
 type AddNewCardModalProps = {
   isOpen: boolean;
@@ -456,7 +459,67 @@ export default function AddNewCardModal({
         });
       }
 
-      toast.success("Unit saved successfully");
+      const selectedEducationType =
+        educations.find((e) => e.collegeEducationId === formData.educationId)
+          ?.collegeEducationType ?? faculty_edu_type ?? "Education";
+      const selectedBranch =
+        branches.find((b) => b.collegeBranchId === formData.branchId)
+          ?.collegeBranchCode ?? "Branch";
+
+      let failedTopicPdfCount = 0;
+
+      if (unitResult.topics.length > 0) {
+        const notesResults = await generateTopicNotesBatchAction({
+          subjectName: formData.subjectName,
+          unitName: formData.unitName,
+          branch: selectedBranch,
+          educationType: selectedEducationType,
+          topics: unitResult.topics.map((topic) => ({
+            collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
+            topicTitle: topic.topicTitle,
+          })),
+        });
+
+        for (const result of notesResults) {
+          if (!result.success) {
+            failedTopicPdfCount += 1;
+            console.error("[AddNewCardModal] Topic notes generation failed", {
+              topicId: result.collegeSubjectUnitTopicId,
+              topicTitle: result.topicTitle,
+              error: result.error,
+            });
+            continue;
+          }
+
+          try {
+            const pdfFile = await buildTopicPdfFile({
+              notes: result.notes,
+              unitNumber: formData.unitNumber,
+            });
+
+            await uploadTopicResource({
+              file: pdfFile,
+              collegeSubjectUnitTopicId: result.collegeSubjectUnitTopicId,
+            });
+          } catch (pdfError: any) {
+            failedTopicPdfCount += 1;
+            console.error("[AddNewCardModal] Topic PDF upload failed", {
+              topicId: result.collegeSubjectUnitTopicId,
+              topicTitle: result.topicTitle,
+              error: pdfError?.message ?? pdfError,
+            });
+          }
+        }
+      }
+
+      if (failedTopicPdfCount > 0) {
+        toast.error(
+          `Unit saved successfully, but ${failedTopicPdfCount} topic PDF${failedTopicPdfCount > 1 ? "s were" : " was"} not generated.`,
+        );
+      } else {
+        toast.success("Unit and topic PDFs saved successfully");
+      }
+
       onClose();
       setFormData({
         educationId: undefined,
