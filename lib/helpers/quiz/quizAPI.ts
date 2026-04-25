@@ -318,6 +318,7 @@ export async function fetchAttemptedQuizzesForStudent(
                     quizId,
                     quizTitle,
                     totalMarks,
+                    maxAttempts,
                     startDate,
                     endDate,
                     college_subjects (
