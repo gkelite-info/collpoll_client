@@ -85,24 +85,94 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
         }
     };
 
+    // useEffect(() => {
+    //     if (!clubId) return;
+
+    //     const loadInitial = async () => {
+    //         try {
+    //             const data = await fetchAnnouncements(clubId, undefined, FETCH_LIMIT);
+    //             setMessages(data.reverse());
+    //             setHasMore(data.length === FETCH_LIMIT);
+
+    //             if (data.length > 0 && onDateChange) {
+    //                 onDateChange(getMessageDateHeader(data[data.length - 1].createdAt));
+    //             }
+
+    //             setTimeout(() => scrollToBottom('auto'), 100);
+    //         } catch (err) {
+    //             toast.error("Failed to load announcements", { id: "load-err" });
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     loadInitial();
+
+    //     const channel = supabase.channel(`club_${clubId}_announcements`)
+    //         .on('postgres_changes', { event: '*', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
+    //             if (payload.eventType === 'INSERT') {
+    //                 setTimeout(async () => {
+    //                     const { data, error } = await supabase
+    //                         .from("club_announcements")
+    //                         .select(`*, authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))), authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))`)
+    //                         .eq("announcementId", payload.new.announcementId)
+    //                         .single();
+
+    //                     if (data && !error) {
+    //                         setMessages(prev => {
+    //                             if (prev.some(m => m.announcementId === data.announcementId)) return prev;
+    //                             return [...prev, data];
+    //                         });
+    //                         setTimeout(() => scrollToBottom('smooth'), 100);
+    //                     }
+    //                 }, 300);
+    //             } else if (payload.eventType === 'UPDATE') {
+    //                 if (payload.new.is_deleted) {
+    //                     setMessages(prev => prev.filter(m => m.announcementId !== payload.new.announcementId));
+    //                 } else {
+    //                     setMessages(prev => prev.map(m => m.announcementId === payload.new.announcementId
+    //                         ? { ...m, ...payload.new }
+    //                         : m
+    //                     ));
+    //                 }
+    //             }
+    //         })
+    //         .subscribe();
+
+    //     return () => { supabase.removeChannel(channel); };
+    // }, [clubId]);
+
+
+    // CHANGED: Update this entire useEffect block in StudentAnnouncements.tsx
+
+
     useEffect(() => {
         if (!clubId) return;
 
+        const abortController = new AbortController();
+
         const loadInitial = async () => {
             try {
-                const data = await fetchAnnouncements(clubId, undefined, FETCH_LIMIT);
-                setMessages(data.reverse());
-                setHasMore(data.length === FETCH_LIMIT);
+                setLoading(true);
+                const data = await fetchAnnouncements(clubId, undefined, FETCH_LIMIT, abortController.signal);
 
-                if (data.length > 0 && onDateChange) {
-                    onDateChange(getMessageDateHeader(data[data.length - 1].createdAt));
+                if (!abortController.signal.aborted) {
+                    setMessages(data.reverse());
+                    setHasMore(data.length === FETCH_LIMIT);
+
+                    if (data.length > 0 && onDateChange) {
+                        onDateChange(getMessageDateHeader(data[data.length - 1].createdAt));
+                    }
+                    setTimeout(() => scrollToBottom('auto'), 100);
                 }
-
-                setTimeout(() => scrollToBottom('auto'), 100);
-            } catch (err) {
-                toast.error("Failed to load announcements", { id: "load-err" });
+            } catch (err: any) {
+                if (err.name !== 'AbortError' && err.code !== '57014' && !abortController.signal.aborted) {
+                    toast.error("Network is unstable, but we are trying to connect...", { id: "load-err" });
+                }
             } finally {
-                setLoading(false);
+                if (!abortController.signal.aborted) {
+                    setLoading(false);
+                }
             }
         };
 
@@ -110,22 +180,39 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
 
         const channel = supabase.channel(`club_${clubId}_announcements`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
-                if (payload.eventType === 'INSERT') {
-                    setTimeout(async () => {
-                        const { data, error } = await supabase
-                            .from("club_announcements")
-                            .select(`*, authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))), authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))`)
-                            .eq("announcementId", payload.new.announcementId)
-                            .single();
 
-                        if (data && !error) {
+                if (payload.eventType === 'INSERT') {
+                    const fetchNewMessage = async (retries = 3, delay = 500) => {
+                        try {
                             setMessages(prev => {
-                                if (prev.some(m => m.announcementId === data.announcementId)) return prev;
-                                return [...prev, data];
+                                if (prev.some(m => m.announcementId === payload.new.announcementId)) return prev;
+                                return prev;
                             });
-                            setTimeout(() => scrollToBottom('smooth'), 100);
+
+                            const { data, error } = await supabase
+                                .from("club_announcements")
+                                .select(`*, authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))), authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))`)
+                                .eq("announcementId", payload.new.announcementId)
+                                .single();
+
+                            if (error) throw error;
+
+                            if (data) {
+                                setMessages(prev => {
+                                    if (prev.some(m => m.announcementId === data.announcementId)) return prev;
+                                    return [...prev, data];
+                                });
+                                setTimeout(() => scrollToBottom('smooth'), 100);
+                            }
+                        } catch (err: any) {
+                            if (retries > 0) {
+                                setTimeout(() => fetchNewMessage(retries - 1, delay * 2), delay);
+                            }
                         }
-                    }, 300);
+                    };
+
+                    fetchNewMessage();
+
                 } else if (payload.eventType === 'UPDATE') {
                     if (payload.new.is_deleted) {
                         setMessages(prev => prev.filter(m => m.announcementId !== payload.new.announcementId));
@@ -139,7 +226,10 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        return () => {
+            abortController.abort();
+            supabase.removeChannel(channel);
+        };
     }, [clubId]);
 
     const fetchOlderMessages = async () => {
@@ -193,6 +283,33 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
         }
     };
 
+    // const handleSend = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!inputValue.trim() || inputValue.length > 1000 || !canPost || isPosting) return;
+    //     setIsPosting(true);
+    //     try {
+    //         if (editingId) {
+    //             await updateAnnouncement(editingId, inputValue.trim());
+    //             setEditingId(null);
+    //             toast.success("Announcement updated", { id: "upd-success" });
+    //         } else {
+    //             const newMessage = await postStudentAnnouncement(clubId, collegeId, studentId, userRole || "president", inputValue.trim());
+    //             setMessages(prev => {
+    //                 if (prev.some(m => m.announcementId === newMessage.announcementId)) return prev;
+    //                 return [...prev, newMessage];
+    //             });
+
+    //             if (onDateChange) onDateChange("Today");
+    //             setTimeout(() => scrollToBottom('smooth'), 50);
+    //         }
+    //         setInputValue("");
+    //     } catch (err) {
+    //         toast.error("Failed to post announcement", { id: "post-err" });
+    //     } finally {
+    //         setIsPosting(false);
+    //     }
+    // };
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputValue.trim() || inputValue.length > 1000 || !canPost || isPosting) return;
@@ -214,7 +331,7 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
             }
             setInputValue("");
         } catch (err) {
-            toast.error("Failed to post announcement", { id: "post-err" });
+            toast.error("Slow connection. Failed to post.", { id: "post-err" });
         } finally {
             setIsPosting(false);
         }

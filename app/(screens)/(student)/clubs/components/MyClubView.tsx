@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { getStudentClubDetailsAPI } from "@/lib/helpers/clubActivity/studentClubAPI";
 import { StudentAnnouncementsShimmer } from "../shimmers/StudentAnnouncementsShimmer";
+import Image from "next/image";
 
 export default function MyClubView() {
 
@@ -51,31 +52,31 @@ export default function MyClubView() {
             </div>
         );
     }
-
+     
     if (clubState.status === "none") {
         return (
-            <div className="flex flex-col items-center justify-center pt-22 pb-10 animate-in fade-in duration-500">
-                <div className="bg-[#16284F]/10 p-8 h-30 w-30 flex items-center justify-center rounded-full mb-4">
-                    <span className="text-4xl rounded-full">🔍</span>
+            <div className="flex flex-col gap-3 items-center justify-center pt-22 pb-10 animate-in fade-in duration-500">
+                <Image src="/s-no-club.png" alt="" height={150} width={150} className="object-cover"/>
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-[#16284F] mb-2">No Club Joined</h2>
+                    <p className="text-gray-500 font-medium text-center max-w-md">
+                        You are not currently a member of any club. Explore the available clubs and send a request to join one!
+                    </p>
                 </div>
-                <h2 className="text-xl font-bold text-[#16284F] mb-2">No Club Joined</h2>
-                <p className="text-gray-500 font-medium text-center max-w-md">
-                    You are not currently a member of any club. Explore the available clubs and send a request to join one!
-                </p>
             </div>
         );
     }
 
     if (clubState.status === "pending") {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[40vh] animate-in fade-in duration-500">
-                <div className="bg-[#FB8000]/10 p-8 h-30 w-30 flex items-center justify-center rounded-full mb-4">
-                    <span className="text-4xl rounded-full">⏳</span>
+            <div className="flex flex-col gap-3 items-center justify-center min-h-[40vh] animate-in fade-in duration-500">
+                <Image src="/club-pending.png" alt="" height={150} width={150} className="object-cover" />
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-[#16284F] mb-2">Request Pending</h2>
+                    <p className="text-gray-500 font-medium text-center max-w-md">
+                        Your request to join <span className="font-bold text-[#43C17A]">{clubState.info?.name}</span> is currently pending approval by the responsible faculty or mentors.
+                    </p>
                 </div>
-                <h2 className="text-xl font-bold text-[#16284F] mb-2">Request Pending</h2>
-                <p className="text-gray-500 font-medium text-center max-w-md">
-                    Your request to join <span className="font-bold text-[#282828]">{clubState.info?.name}</span> is currently pending approval by the responsible faculty or mentors.
-                </p>
             </div>
         );
     }
