@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function getFacultyClubDetailsAPI(facultyId: number) {
     let targetClubId = null;
+    let exactRole = "";
     
     const { data: respFacultyClub } = await supabase
         .from("clubs")
@@ -13,6 +14,7 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
 
     if (respFacultyClub) {
         targetClubId = respFacultyClub.clubId;
+        exactRole = "responsiblefaculty";
     } else {
         const { data: mentorClub } = await supabase
             .from("club_mentors")
@@ -22,7 +24,10 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
             .limit(1)
             .maybeSingle();
             
-        if (mentorClub) targetClubId = mentorClub.clubId;
+        if (mentorClub) {
+            targetClubId = mentorClub.clubId;
+            exactRole = "mentor";
+        }
     }
 
     if (!targetClubId) return null;
@@ -39,6 +44,7 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
                 users(fullName, user_profile(profileUrl))
             ),
             responsibleFaculty:faculty!clubs_responsibleFacultyId_fkey(
+                facultyId,
                 users(fullName, user_profile(profileUrl))
             ),
             mentors:club_mentors(
@@ -61,12 +67,14 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
         const avatarUrl = Array.isArray(profileData) ? profileData[0]?.profileUrl : profileData?.profileUrl;
 
         return {
-            id: id || "0",
+            id: id || userNode?.facultyId?.toString() || userNode?.studentId?.toString() || "0",
             name: userNode?.users?.fullName || "Not Assigned",
             avatar: avatarUrl || null,
             role: defaultRole
         };
     };
+
+    const respFac = Array.isArray(clubData.responsibleFaculty) ? clubData.responsibleFaculty[0] : clubData.responsibleFaculty;
 
     return {
         id: clubData.clubId.toString(),
@@ -74,9 +82,10 @@ export async function getFacultyClubDetailsAPI(facultyId: number) {
         logo: clubData.imageUrl,
         president: formatUser(clubData.president, "president"),
         vicePresident: formatUser(clubData.vicePresident, "vicepresident"),
-        responsibleFaculty: formatUser(clubData.responsibleFaculty, "responsiblefaculty"),
+        responsibleFaculty: formatUser(respFac, "responsiblefaculty", respFac?.facultyId?.toString()),
         mentors: (clubData.mentors || [])
             .filter((m: any) => !m.is_deleted && m.faculty)
-            .map((m: any) => formatUser(m.faculty, "mentor", m.faculty.facultyId.toString()))
+            .map((m: any) => formatUser(m.faculty, "mentor", m.faculty.facultyId.toString())),
+        role: exactRole
     };
 }
