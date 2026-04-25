@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, CheckCircleIcon, FilePdf } from "@phosphor-icons/react";
+import { ArrowLeft, CheckCircleIcon, FilePdf, Trash } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
+import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
 import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
@@ -103,6 +104,13 @@ export type UnitTopic = {
   isCompleted: boolean;
 };
 
+type TopicPdfSelection = {
+  topicId: number;
+  topicTitle: string;
+  unitLabel: string;
+  unitTitle: string;
+};
+
 export type Unit = {
   id: number;
   unitNumber: number;
@@ -151,13 +159,67 @@ type UnitCardProps = {
     topics: UnitTopic[],
     percentage: number,
   ) => void;
+  onDeleteUnit: (unitId: number) => Promise<void>;
+  onDeleteTopic: (unitId: number, topicId: number) => Promise<void>;
+  onOpenTopicPdf: (selection: TopicPdfSelection) => void;
   loadingUnitId: number | null;
   setHasChanges: (value: boolean) => void;
 };
 
+function ConfirmDeleteModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  isDeleting,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  isDeleting: boolean;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="bg-red-100 text-red-600 p-2.5 rounded-full">
+            <Trash size={22} weight="fill" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+        </div>
+        <p className="text-sm text-gray-600 mt-1 leading-relaxed">{message}</p>
+        <div className="flex gap-3 justify-end mt-4">
+          <button
+            onClick={onClose}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UnitCard({
   unit,
   onMarkComplete,
+  onDeleteUnit,
+  onDeleteTopic,
+  onOpenTopicPdf,
   setHasChanges,
   loadingUnitId,
 }: UnitCardProps) {
@@ -168,6 +230,11 @@ function UnitCard({
   // const [topics, setTopics] = useState<UnitTopic[]>(unit.topics);
   const [localTopics, setLocalTopics] = useState<UnitTopic[]>(unit.topics);
   const [isDirty, setIsDirty] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: "unit" | "topic";
+    topicId?: number;
+  } | null>(null);
 
   useEffect(() => {
     setLocalTopics(unit.topics);
@@ -198,7 +265,7 @@ function UnitCard({
     <div
       className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-[480px] flex flex-col`}
     >
-      <div className="bg-white rounded-2xl shadow-md p-4 flex-1 flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-md p-4 flex-1 flex flex-col min-h-[300px] relative overflow-hidden">
         <div className="flex items-center justify-between mb-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
@@ -206,6 +273,14 @@ function UnitCard({
               {unit.unitLabel}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setDeleteTarget({ type: "unit" })}
+            className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md cursor-pointer"
+            title="Delete Unit"
+          >
+            <Trash size={16} />
+          </button>
         </div>
 
         <h3
@@ -232,8 +307,14 @@ function UnitCard({
           />
         </div>
 
-        <div className="relative flex-1 min-h-0 mt-2 mb-2">
-          <ul className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-1">
+        <div className="relative flex-1 min-h-0 mt-2 mb-14 overflow-hidden">
+          <ul
+            className="h-full space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-10"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: `${colors.solidEnd} #f1f5f9`,
+            }}
+          >
             {localTopics.map((topic) => (
               <li
                 key={topic.id}
@@ -262,13 +343,35 @@ function UnitCard({
                   </span>
                 </div>
 
-                {/* PDF Icon */}
-                <div className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0`}>
-                  <FilePdf
-                    size={14}
-                    className={colors.accent}
-                    weight="duotone"
-                  />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget({ type: "topic", topicId: topic.id })}
+                    className="text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer"
+                    title="Delete Topic"
+                  >
+                    <Trash size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onOpenTopicPdf({
+                        topicId: topic.id,
+                        topicTitle: topic.title,
+                        unitLabel: unit.unitLabel,
+                        unitTitle: unit.title,
+                      })
+                    }
+                    className={`${colors.cardBg} rounded-full h-6 w-6 flex items-center justify-center flex-shrink-0 cursor-pointer`}
+                    aria-label={`Upload PDF for ${topic.title}`}
+                  >
+                    <FilePdf
+                      size={14}
+                      className={colors.accent}
+                      weight="duotone"
+                    />
+                  </button>
                 </div>
               </li>
             ))}
@@ -277,7 +380,7 @@ function UnitCard({
           <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-md" />
         </div>
 
-        <div className="mt-2 flex justify-end shrink-0">
+        <div className="absolute bottom-4 right-4 flex justify-end shrink-0">
           <button
             onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
             disabled={!isDirty || isSavingThisUnit}
@@ -291,6 +394,31 @@ function UnitCard({
           </button>
         </div>
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        isDeleting={isDeleting}
+        title={deleteTarget?.type === "unit" ? "Delete Unit" : "Delete Topic"}
+        message={
+          deleteTarget?.type === "unit"
+            ? "Are you sure you want to permanently delete this unit and all its topics?"
+            : "Are you sure you want to permanently delete this topic?"
+        }
+        onConfirm={async () => {
+          try {
+            setIsDeleting(true);
+            if (deleteTarget?.type === "unit") {
+              await onDeleteUnit(unit.id);
+            } else if (deleteTarget?.type === "topic" && deleteTarget.topicId) {
+              await onDeleteTopic(unit.id, deleteTarget.topicId);
+            }
+            setDeleteTarget(null);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+      />
     </div>
   );
 }
@@ -306,6 +434,8 @@ export function SubjectDetailsCard({
   const [loadingUnitId, setLoadingUnitId] = useState<number | null>(null);
   const { collegeId, facultyId } = useFaculty();
   const [cards, setCards] = useState<CardProps[]>([]);
+  const [selectedTopicPdf, setSelectedTopicPdf] =
+    useState<TopicPdfSelection | null>(null);
 
   useEffect(() => {
     if (!details.collegeId || !details.collegeSubjectId) {
@@ -406,6 +536,115 @@ export function SubjectDetailsCard({
       toast.error(err?.message || "Failed to save progress");
     } finally {
       setLoadingUnitId(null);
+    }
+  };
+
+  const handleDeleteUnit = async (unitId: number) => {
+    if (!facultyId) {
+      toast.error("Faculty not authenticated");
+      return;
+    }
+
+    const now = new Date().toISOString();
+
+    try {
+      const { error: unitError } = await supabase
+        .from("college_subject_units")
+        .update({
+          isActive: false,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .eq("collegeSubjectUnitId", unitId);
+
+      if (unitError) {
+        throw unitError;
+      }
+
+      const { error: topicError } = await supabase
+        .from("college_subject_unit_topics")
+        .update({
+          isActive: false,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .eq("collegeSubjectUnitId", unitId)
+        .eq("isActive", true);
+
+      if (topicError) {
+        throw topicError;
+      }
+
+      setUnits((prev) => prev.filter((unit) => unit.id !== unitId));
+      toast.success("Unit deleted successfully");
+    } catch (error: any) {
+      console.error("Failed to delete unit", error);
+      toast.error(error?.message || "Failed to delete unit");
+    }
+  };
+
+  const handleDeleteTopic = async (unitId: number, topicId: number) => {
+    const now = new Date().toISOString();
+
+    try {
+      const { error: deleteError } = await supabase
+        .from("college_subject_unit_topics")
+        .update({
+          isActive: false,
+          deletedAt: now,
+          updatedAt: now,
+        })
+        .eq("collegeSubjectUnitTopicId", topicId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      const { data: remainingTopics, error: fetchError } = await supabase
+        .from("college_subject_unit_topics")
+        .select("isCompleted")
+        .eq("collegeSubjectUnitId", unitId)
+        .eq("isActive", true);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      const total = remainingTopics.length;
+      const completed = remainingTopics.filter((topic) => topic.isCompleted).length;
+      const newPercentage =
+        total === 0 ? 0 : Math.round((completed / total) * 100);
+
+      const { error: unitError } = await supabase
+        .from("college_subject_units")
+        .update({
+          completionPercentage: newPercentage,
+          updatedAt: now,
+        })
+        .eq("collegeSubjectUnitId", unitId);
+
+      if (unitError) {
+        throw unitError;
+      }
+
+      setUnits((prev) =>
+        prev.map((unit) => {
+          if (unit.id !== unitId) return unit;
+
+          const topics = unit.topics.filter((topic) => topic.id !== topicId);
+
+          return {
+            ...unit,
+            topics,
+            percentage: newPercentage,
+          };
+        }),
+      );
+
+      toast.success("Topic deleted successfully");
+    } catch (error: any) {
+      console.error("Failed to delete topic", error);
+      toast.error(error?.message || "Failed to delete topic");
     }
   };
 
@@ -533,6 +772,9 @@ export function SubjectDetailsCard({
               <UnitCard
                 unit={unit}
                 onMarkComplete={handleMarkComplete}
+                onDeleteUnit={handleDeleteUnit}
+                onDeleteTopic={handleDeleteTopic}
+                onOpenTopicPdf={setSelectedTopicPdf}
                 setHasChanges={setHasChanges}
                 loadingUnitId={loadingUnitId}
               />
@@ -542,6 +784,15 @@ export function SubjectDetailsCard({
           <div className="text-black text-center">No units available.</div>
         )}
       </div>
+
+      <TopicPdfModal
+        isOpen={selectedTopicPdf !== null}
+        onClose={() => setSelectedTopicPdf(null)}
+        unitLabel={selectedTopicPdf?.unitLabel ?? ""}
+        unitTitle={selectedTopicPdf?.unitTitle ?? ""}
+        topicTitle={selectedTopicPdf?.topicTitle ?? ""}
+        topicId={selectedTopicPdf?.topicId ?? 0}
+      />
     </div>
   );
 }

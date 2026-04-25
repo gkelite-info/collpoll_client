@@ -15,6 +15,15 @@ type UpsertUnitPayload = {
   topics: string[];
 };
 
+type SavedTopic = {
+  collegeSubjectUnitTopicId: number;
+  topicTitle: string;
+  displayOrder: number;
+  collegeSubjectUnitId: number;
+  collegeSubjectId: number;
+  collegeId: number;
+};
+
 /* -------------------------------
  * 🔹 Helpers
  * ------------------------------- */
@@ -124,8 +133,32 @@ export async function upsertCollegeSubjectUnitWithTopics(
     }
   }
 
+  const { data: savedTopics, error: savedTopicsError } = await supabase
+    .from("college_subject_unit_topics")
+    .select(
+      `
+      collegeSubjectUnitTopicId,
+      topicTitle,
+      displayOrder,
+      collegeSubjectUnitId,
+      collegeSubjectId,
+      collegeId
+    `,
+    )
+    .eq("collegeSubjectUnitId", collegeSubjectUnitId)
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("displayOrder", { ascending: true });
+
+  if (savedTopicsError) {
+    console.error("âŒ Saved topics fetch failed:", savedTopicsError);
+    throw savedTopicsError;
+  }
+
   return {
     success: true,
     collegeSubjectUnitId,
+    topics: (savedTopics ?? []) as SavedTopic[],
   };
 }

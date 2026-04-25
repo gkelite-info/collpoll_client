@@ -15,19 +15,66 @@ const GROQ_MODELS = [
   "qwen/qwen3-32b",
 ];
 
-export async function generateWithGroqFallback(prompt: string): Promise<string> {
+type RawGroqParams = {
+  prompt: string;
+  systemPrompt: string;
+  maxTokens?: number;
+  temperature?: number;
+};
+
+export async function generateRawWithGroqFallback({
+  prompt,
+  systemPrompt,
+  maxTokens = 600,
+  temperature = 0,
+}: RawGroqParams): Promise<string> {
   let lastError: any = null;
 
   for (const model of GROQ_MODELS) {
     try {
       const response = await groq.chat.completions.create({
         model,
-        max_tokens: 600,
-        temperature: 0,
+        max_tokens: maxTokens,
+        temperature,
         messages: [
           {
             role: "system",
-            content: `You are a university syllabus topic generator for Indian engineering colleges.
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      });
+
+      const raw = response.choices[0]?.message?.content?.trim();
+
+      if (!raw) {
+        console.warn(`[groqClient] Empty response from ${model}, trying next`);
+        continue;
+      }
+
+      console.log(`[groqClient] Raw from ${model}:`, raw);
+      return raw;
+    } catch (error: any) {
+      lastError = error;
+
+      if (error?.status === 429 || error?.status === 503) {
+        console.warn(`[groqClient] Rate limited on ${model}, trying next`);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  console.error("[groqClient] All models exhausted");
+  throw lastError ?? new Error("All Groq models exhausted");
+}
+
+export async function generateWithGroqFallback(prompt: string): Promise<string> {
+  const systemPrompt = `You are a university syllabus topic generator for Indian engineering colleges.
 
 YOUR JOB:
 Given Education Type, Branch, Subject Name, and Unit Name:
@@ -49,7 +96,7 @@ STRICT OUTPUT RULES:
 
 TOPIC RULES:
 - Exactly 8 topics
-- Each topic must be 6–10 words
+- Each topic must be 6-10 words
 - Precise academic terminology
 - Strongly relevant to BOTH subject and unit
 - No vague labels like "Introduction" or "Overview"
@@ -58,73 +105,65 @@ EXAMPLE VALID OUTPUT:
 ["Asymptotic analysis of recursive algorithms", "Recurrence relations in divide and conquer", "Best case and worst case complexity bounds", "Amortized analysis for dynamic data structures", "Complexity classes for sorting algorithms", "Time space tradeoffs in algorithm design", "Mathematical proofs for asymptotic notation", "Growth rate comparison of common functions"]
 
 EXAMPLE INVALID OUTPUT:
-["${INVALID_UNIT_MESSAGE}"]`,
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
+["${INVALID_UNIT_MESSAGE}"]`;
+
+  let lastError: any = null;
+
+  for (const model of GROQ_MODELS) {
+    try {
+      const raw = await generateRawWithGroqFallback({
+        prompt,
+        systemPrompt,
+        maxTokens: 600,
+        temperature: 0,
       });
 
-      const raw = response.choices[0]?.message?.content?.trim();
+      const cleaned = raw.replace(/```json|```/gi, "").trim();
+      const parsed = JSON.parse(cleaned);
 
-      if (!raw) {
-        console.warn(`⚠️ [groqClient] Empty response from ${model}, trying next`);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        console.warn(`[groqClient] Not an array from ${model}, trying next`);
         continue;
       }
 
-      console.log(`🟢 [groqClient] Raw from ${model}:`, raw);
+      if (
+        parsed.length === 1 &&
+        typeof parsed[0] === "string" &&
+        parsed[0].trim() === INVALID_UNIT_MESSAGE
+      ) {
+        console.log(`[groqClient] Subject/unit mismatch from ${model}`);
+        return JSON.stringify([INVALID_UNIT_MESSAGE]);
+      }
 
-      try {
-        const cleaned = raw.replace(/```json|```/gi, "").trim();
-        const parsed = JSON.parse(cleaned);
+      const valid = parsed.filter(
+        (topic: unknown) =>
+          typeof topic === "string" &&
+          topic.trim().length > 5 &&
+          topic.trim() !== INVALID_UNIT_MESSAGE,
+      );
 
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          console.warn(`⚠️ [groqClient] Not an array from ${model}, trying next`);
-          continue;
-        }
-
-        // allow exact invalid message
-        if (
-          parsed.length === 1 &&
-          typeof parsed[0] === "string" &&
-          parsed[0].trim() === INVALID_UNIT_MESSAGE
-        ) {
-          console.log(`✅ [groqClient] Subject/unit mismatch from ${model}`);
-          return JSON.stringify([INVALID_UNIT_MESSAGE]);
-        }
-
-        const valid = parsed.filter(
-          (t: unknown) =>
-            typeof t === "string" &&
-            t.trim().length > 5 &&
-            t.trim() !== INVALID_UNIT_MESSAGE
-        );
-
-        if (valid.length === 0) {
-          console.warn(`⚠️ [groqClient] No valid topics from ${model}, trying next`);
-          continue;
-        }
-
-        console.log(`✅ [groqClient] Returning ${valid.length} topics from ${model}`);
-        return JSON.stringify(valid.slice(0, 8));
-      } catch (parseErr) {
-        console.warn(`⚠️ [groqClient] JSON parse failed for ${model}:`, parseErr);
+      if (valid.length === 0) {
+        console.warn(`[groqClient] No valid topics from ${model}, trying next`);
         continue;
       }
+
+      console.log(`[groqClient] Returning ${valid.length} topics from ${model}`);
+      return JSON.stringify(valid.slice(0, 8));
     } catch (error: any) {
       lastError = error;
 
-      if (error?.status === 429 || error?.status === 503) {
-        console.warn(`⚠️ [groqClient] Rate limited on ${model}, trying next`);
+      if (error instanceof SyntaxError) {
+        console.warn(`[groqClient] JSON parse failed for ${model}:`, error);
         continue;
       }
 
-      throw error;
+      if (error?.status === 429 || error?.status === 503) {
+        console.warn(`[groqClient] Rate limited on ${model}, trying next`);
+        continue;
+      }
     }
   }
 
-  console.error("❌ [groqClient] All models exhausted");
+  console.error("[groqClient] All models exhausted");
   throw lastError ?? new Error("All Groq models exhausted");
 }
