@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, UIEvent } from "react";
 import { motion } from 'framer-motion'
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
-import { fetchAnnouncements, postStudentAnnouncement, updateAnnouncement, deleteAnnouncement } from "@/lib/helpers/clubActivity/studentAnnouncementAPI";
+import { fetchAnnouncements, postStudentAnnouncement, updateAnnouncement, deleteAnnouncement, subscribeToClubAnnouncements, broadcastNewAnnouncement, fetchSingleAnnouncement } from "@/lib/helpers/clubActivity/studentAnnouncementAPI";
 import { StudentAnnouncementsShimmer } from "../shimmers/StudentAnnouncementsShimmer";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { Avatar } from "@/app/utils/Avatar";
@@ -73,6 +73,10 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
     const [isDeleting, setIsDeleting] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const isFetchingRef = useRef(false);
+    const channelRef = useRef<any>(null);
+    const onDateChangeRef = useRef(onDateChange);
+
+    const processedIds = useRef<Set<number>>(new Set());
 
     const canPost = userRole === "president" || userRole === "vicepresident";
 
@@ -84,6 +88,8 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
             });
         }
     };
+
+    useEffect(() => { onDateChangeRef.current = onDateChange; }, [onDateChange]);
 
     // useEffect(() => {
     //     if (!clubId) return;
@@ -145,10 +151,16 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
 
     // CHANGED: Update this entire useEffect block in StudentAnnouncements.tsx
 
+    const appendMessage = (msg: any) => {
+        setMessages(prev => {
+            if (prev.some(m => m.announcementId === msg.announcementId)) return prev;
+            return [...prev, msg];
+        });
+        setTimeout(() => scrollToBottom('smooth'), 100);
+    };
 
     useEffect(() => {
         if (!clubId) return;
-
         const abortController = new AbortController();
 
         const loadInitial = async () => {
@@ -159,9 +171,8 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
                 if (!abortController.signal.aborted) {
                     setMessages(data.reverse());
                     setHasMore(data.length === FETCH_LIMIT);
-
-                    if (data.length > 0 && onDateChange) {
-                        onDateChange(getMessageDateHeader(data[data.length - 1].createdAt));
+                    if (data.length > 0 && onDateChangeRef.current) {
+                        onDateChangeRef.current(getMessageDateHeader(data[data.length - 1].createdAt));
                     }
                     setTimeout(() => scrollToBottom('auto'), 100);
                 }
@@ -170,65 +181,68 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
                     toast.error("Network is unstable, but we are trying to connect...", { id: "load-err" });
                 }
             } finally {
-                if (!abortController.signal.aborted) {
-                    setLoading(false);
-                }
+                if (!abortController.signal.aborted) setLoading(false);
             }
         };
 
         loadInitial();
 
-        const channel = supabase.channel(`club_${clubId}_announcements`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+        }
 
-                if (payload.eventType === 'INSERT') {
-                    const fetchNewMessage = async (retries = 3, delay = 500) => {
-                        try {
-                            setMessages(prev => {
-                                if (prev.some(m => m.announcementId === payload.new.announcementId)) return prev;
-                                return prev;
-                            });
+        const channel = subscribeToClubAnnouncements(clubId, {
+            onInsertBroadcast: (payload) => {
+                if (abortController.signal.aborted) return;
 
-                            const { data, error } = await supabase
-                                .from("club_announcements")
-                                .select(`*, authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))), authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))`)
-                                .eq("announcementId", payload.new.announcementId)
-                                .single();
+                // 🔧 FIX 4: Instantly log that we received this via broadcast
+                processedIds.current.add(payload.announcementId);
 
-                            if (error) throw error;
+                appendMessage(payload);
+                if (onDateChangeRef.current) onDateChangeRef.current("Today");
+            },
+            onPostgresFallback: (payload) => {
+                if (abortController.signal.aborted) return;
 
-                            if (data) {
-                                setMessages(prev => {
-                                    if (prev.some(m => m.announcementId === data.announcementId)) return prev;
-                                    return [...prev, data];
-                                });
-                                setTimeout(() => scrollToBottom('smooth'), 100);
-                            }
-                        } catch (err: any) {
-                            if (retries > 0) {
-                                setTimeout(() => fetchNewMessage(retries - 1, delay * 2), delay);
-                            }
+                // 🔧 FIX 5: Fast synchronous check. If broadcast already got it, exit instantly.
+                if (processedIds.current.has(payload.new.announcementId)) return;
+
+                // 🔧 FIX 6: Debounce. Wait 2 seconds. If the broadcast was just lagging, 
+                // this gives it time to arrive without slamming the database.
+                setTimeout(() => {
+                    if (abortController.signal.aborted || processedIds.current.has(payload.new.announcementId)) return;
+
+                    // If it still hasn't arrived after 2 seconds, safely fetch it.
+                    fetchSingleAnnouncement(payload.new.announcementId).then(data => {
+                        if (data && !abortController.signal.aborted) {
+                            processedIds.current.add(data.announcementId);
+                            appendMessage(data);
+                            if (onDateChangeRef.current) onDateChangeRef.current("Today");
                         }
-                    };
-
-                    fetchNewMessage();
-
-                } else if (payload.eventType === 'UPDATE') {
-                    if (payload.new.is_deleted) {
-                        setMessages(prev => prev.filter(m => m.announcementId !== payload.new.announcementId));
-                    } else {
-                        setMessages(prev => prev.map(m => m.announcementId === payload.new.announcementId
-                            ? { ...m, ...payload.new }
-                            : m
-                        ));
-                    }
+                    }).catch(() => console.warn("Fallback fetch failed."));
+                }, 2000);
+            },
+            onUpdate: (updatedRow) => {
+                if (abortController.signal.aborted) return;
+                if (updatedRow.is_deleted) {
+                    setMessages(prev => prev.filter(m => m.announcementId !== updatedRow.announcementId));
+                } else {
+                    setMessages(prev => prev.map(m => m.announcementId === updatedRow.announcementId
+                        ? { ...m, message: updatedRow.message, updatedAt: updatedRow.updatedAt }
+                        : m
+                    ));
                 }
-            })
-            .subscribe();
+            }
+        });
+
+        channelRef.current = channel;
 
         return () => {
             abortController.abort();
-            supabase.removeChannel(channel);
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
         };
     }, [clubId]);
 
@@ -310,29 +324,88 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
     //     }
     // };
 
+    // const handleSend = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!inputValue.trim() || inputValue.length > 1000 || !canPost || isPosting) return;
+    //     setIsPosting(true);
+    //     try {
+    //         if (editingId) {
+    //             await updateAnnouncement(editingId, inputValue.trim());
+    //             setEditingId(null);
+    //             toast.success("Announcement updated", { id: "upd-success" });
+    //         } else {
+    //             const newMessage = await postStudentAnnouncement(clubId, collegeId, studentId, userRole || "president", inputValue.trim());
+    //             setMessages(prev => {
+    //                 if (prev.some(m => m.announcementId === newMessage.announcementId)) return prev;
+    //                 return [...prev, newMessage];
+    //             });
+
+    //             if (onDateChange) onDateChange("Today");
+    //             setTimeout(() => scrollToBottom('smooth'), 50);
+    //         }
+    //         setInputValue("");
+    //     } catch (err) {
+    //         toast.error("Slow connection. Failed to post.", { id: "post-err" });
+    //     } finally {
+    //         setIsPosting(false);
+    //     }
+    // };
+
+    // const confirmDelete = async () => {
+    //     if (!selectedDeleteId) return;
+    //     setIsDeleting(true);
+    //     try {
+    //         await deleteAnnouncement(selectedDeleteId);
+    //         setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
+    //         toast.success("Announcement deleted", { id: "del-success" });
+    //         setDeleteModalOpen(false);
+    //     } catch (err) {
+    //         toast.error("Failed to delete", { id: "del-err" });
+    //     } finally {
+    //         setIsDeleting(false);
+    //     }
+    // };
+
+
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputValue.trim() || inputValue.length > 1000 || !canPost || isPosting) return;
+
+        // 1. Capture text
+        const textToPost = inputValue.trim();
+        if (!textToPost || textToPost.length > 1000 || !canPost || isPosting) return;
+
+        // 2. 🔧 FIX 2: Start the spinner, but DO NOT clear the text yet!
         setIsPosting(true);
+
         try {
             if (editingId) {
-                await updateAnnouncement(editingId, inputValue.trim());
+                await updateAnnouncement(editingId, textToPost);
+                setMessages(prev => prev.map(m => m.announcementId === editingId
+                    ? { ...m, message: textToPost, updatedAt: new Date().toISOString() }
+                    : m
+                ));
                 setEditingId(null);
                 toast.success("Announcement updated", { id: "upd-success" });
-            } else {
-                const newMessage = await postStudentAnnouncement(clubId, collegeId, studentId, userRole || "president", inputValue.trim());
-                setMessages(prev => {
-                    if (prev.some(m => m.announcementId === newMessage.announcementId)) return prev;
-                    return [...prev, newMessage];
-                });
 
-                if (onDateChange) onDateChange("Today");
-                setTimeout(() => scrollToBottom('smooth'), 50);
+                // 3. 🔧 FIX 3: Clear input on success
+                setInputValue("");
+            } else {
+                const newMessage = await postStudentAnnouncement(clubId, collegeId, studentId, userRole || "president", textToPost);
+
+                processedIds.current.add(newMessage.announcementId);
+                appendMessage(newMessage);
+                if (onDateChangeRef.current) onDateChangeRef.current("Today");
+
+                broadcastNewAnnouncement(channelRef.current, newMessage);
+
+                // 3. 🔧 FIX 3: Clear input on success
+                setInputValue("");
             }
-            setInputValue("");
         } catch (err) {
             toast.error("Slow connection. Failed to post.", { id: "post-err" });
         } finally {
+            // 4. 🔧 FIX 4: Stop spinner
             setIsPosting(false);
         }
     };
@@ -342,6 +415,7 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
         setIsDeleting(true);
         try {
             await deleteAnnouncement(selectedDeleteId);
+            // 🔧 FIX: Optimistic UI for delete
             setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
             toast.success("Announcement deleted", { id: "del-success" });
             setDeleteModalOpen(false);
