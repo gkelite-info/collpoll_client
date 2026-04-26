@@ -79,7 +79,7 @@ export async function getFacultyClubRequestsAPI(
 export async function getFacultyClubMembersAPI(
     clubId: number,
     page: number = 1,
-    limit: number = 20,
+    limit: number = 10,
     searchQuery: string = ""
 ) {
     const offset = (page - 1) * limit;
@@ -200,6 +200,44 @@ export async function processClubRequestsAPI(
 
 
 
+// export async function removeClubMembersAPI(
+//     studentsData: { studentId: number; clubId: number }[],
+//     facultyId: number
+// ) {
+//     if (!studentsData || studentsData.length === 0) return;
+
+//     const timestamp = new Date().toISOString();
+//     const clubId = studentsData[0].clubId;
+//     const studentIds = studentsData.map(data => data.studentId);
+
+//     const { error: memberUpdateError } = await supabase
+//         .from("club_members")
+//         .update({
+//             is_deleted: true,
+//             removedBy: facultyId,
+//             removedAt: timestamp,
+//             deletedAt: timestamp
+//         })
+//         .eq("clubId", clubId)
+//         .in("studentId", studentIds);
+
+//     if (memberUpdateError) throw new Error("Failed to remove members");
+
+//     const { error: requestUpdateError } = await supabase
+//         .from("club_join_requests")
+//         .update({
+//             status: "rejected",
+//             reviewedByFacultyId: facultyId,
+//             reviewedAt: timestamp,
+//             updatedAt: timestamp
+//         })
+//         .eq("clubId", clubId)
+//         .in("studentId", studentIds);
+
+//     if (requestUpdateError) throw new Error("Failed to update club request status");
+// }
+
+
 export async function removeClubMembersAPI(
     studentsData: { studentId: number; clubId: number }[],
     facultyId: number
@@ -210,29 +248,22 @@ export async function removeClubMembersAPI(
     const clubId = studentsData[0].clubId;
     const studentIds = studentsData.map(data => data.studentId);
 
-    const { error: memberUpdateError } = await supabase
-        .from("club_members")
-        .update({
+    const [memberUpdate, requestUpdate] = await Promise.all([
+        supabase.from("club_members").update({
             is_deleted: true,
             removedBy: facultyId,
             removedAt: timestamp,
             deletedAt: timestamp
-        })
-        .eq("clubId", clubId)
-        .in("studentId", studentIds);
+        }).eq("clubId", clubId).in("studentId", studentIds),
 
-    if (memberUpdateError) throw new Error("Failed to remove members");
-
-    const { error: requestUpdateError } = await supabase
-        .from("club_join_requests")
-        .update({
+        supabase.from("club_join_requests").update({
             status: "rejected",
             reviewedByFacultyId: facultyId,
             reviewedAt: timestamp,
             updatedAt: timestamp
-        })
-        .eq("clubId", clubId)
-        .in("studentId", studentIds);
+        }).eq("clubId", clubId).in("studentId", studentIds)
+    ]);
 
-    if (requestUpdateError) throw new Error("Failed to update club request status");
+    if (memberUpdate.error) throw new Error("Failed to remove members");
+    if (requestUpdate.error) throw new Error("Failed to update club request status");
 }

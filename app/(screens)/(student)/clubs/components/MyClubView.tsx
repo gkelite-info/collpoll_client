@@ -12,7 +12,7 @@ export default function MyClubView() {
 
     const { studentId, collegeId } = useUser();
     const [clubState, setClubState] = useState<{
-        status: "loading" | "none" | "pending" | "joined";
+        status: "loading" | "none" | "pending" | "joined" | "error";
         info: any | null;
         role: string | null;
     }>({ status: "loading", info: null, role: null });
@@ -31,7 +31,7 @@ export default function MyClubView() {
                 });
             } catch (error) {
                 toast.error("Failed to load your club information.");
-                setClubState({ status: "none", info: null, role: null });
+                setClubState({ status: "error", info: null, role: null });
             }
         };
 
@@ -52,11 +52,20 @@ export default function MyClubView() {
             </div>
         );
     }
-     
+
+    if (clubState.status === "error") {
+        return (
+            <div className="flex flex-col items-center justify-center pt-22 pb-10 animate-in fade-in duration-500">
+                <h2 className="text-xl font-bold text-red-500 mb-2">Connection Error</h2>
+                <p className="text-gray-500 font-medium text-center">Please refresh the page to try loading your club again.</p>
+            </div>
+        );
+    }
+
     if (clubState.status === "none") {
         return (
             <div className="flex flex-col gap-3 items-center justify-center pt-22 pb-10 animate-in fade-in duration-500">
-                <Image src="/s-no-club.png" alt="" height={150} width={150} className="object-cover"/>
+                <Image src="/s-no-club.png" alt="" height={150} width={150} className="object-cover" />
                 <div className="text-center">
                     <h2 className="text-xl font-bold text-[#16284F] mb-2">No Club Joined</h2>
                     <p className="text-gray-500 font-medium text-center max-w-md">

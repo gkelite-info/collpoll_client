@@ -10,7 +10,7 @@ import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagi
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 
 export default function RequestsList({ clubId, currentFilter }: { clubId: any, currentFilter: string }) {
     const [requests, setRequests] = useState<any[]>([]);
