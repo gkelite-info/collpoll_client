@@ -1,15 +1,23 @@
 import { supabase } from "@/lib/supabaseClient";
 
-// CHANGED: Added fetch, update, and delete to make this API standalone, 
-// and applied the timestamp + refetch fix to postFacultyAnnouncement
+const ANNOUNCEMENT_SELECT_QUERY = `
+    announcementId,
+    clubId,
+    message,
+    authorRole,
+    authorStudentId,
+    authorFacultyId,
+    createdAt,
+    updatedAt,
+    is_deleted,
+    authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))),
+    authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))
+`;
+
 export async function fetchAnnouncements(clubId: number, cursor?: string, limit: number = 20) {
     let query = supabase
         .from("club_announcements")
-        .select(`
-            *,
-            authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))),
-            authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))
-        `)
+        .select(ANNOUNCEMENT_SELECT_QUERY)
         .eq("clubId", clubId)
         .eq("is_deleted", false)
         .order("createdAt", { ascending: false })
@@ -37,11 +45,7 @@ export async function postFacultyAnnouncement(clubId: number, collegeId: number,
             createdAt: now,
             updatedAt: now
         })
-        .select(`
-            *,
-            authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))),
-            authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))
-        `)
+        .select(ANNOUNCEMENT_SELECT_QUERY)
         .single();
 
     if (error) {
@@ -64,4 +68,54 @@ export async function deleteAnnouncement(announcementId: number) {
         .update({ is_deleted: true, deletedAt: new Date().toISOString() })
         .eq("announcementId", announcementId);
     if (error) throw error;
+}
+
+export async function fetchSingleAnnouncement(announcementId: number) {
+    const { data, error } = await supabase
+        .from("club_announcements")
+        .select(ANNOUNCEMENT_SELECT_QUERY)
+        .eq("announcementId", announcementId)
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+// 🟢 CHANGED CODE ONLY - studentAnnouncementAPI.ts AND facultyAnnouncementAPI.ts
+
+export function subscribeToClubAnnouncements(
+    clubId: number,
+    callbacks: {
+        onInsertBroadcast: (payload: any) => void;
+        onPostgresFallback: (payload: any) => void; 
+        onUpdate: (payload: any) => void;
+    }
+) {
+    const channel = supabase.channel(`club_${clubId}_announcements_sync`, {
+        // 🔧 FIX 1: This MUST be completely identical in both student and faculty files 
+        // for the broadcast to jump between roles instantly.
+        config: { broadcast: { self: false, ack: false } } 
+    })
+    .on('broadcast', { event: 'new_announcement' }, ({ payload }) => {
+        callbacks.onInsertBroadcast(payload);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
+        callbacks.onPostgresFallback(payload);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
+        callbacks.onUpdate(payload.new);
+    });
+
+    channel.subscribe();
+    return channel;
+}
+
+export function broadcastNewAnnouncement(channel: any, messagePayload: any) {
+    if (channel) {
+        channel.send({
+            type: 'broadcast',
+            event: 'new_announcement',
+            payload: messagePayload,
+        });
+    }
 }

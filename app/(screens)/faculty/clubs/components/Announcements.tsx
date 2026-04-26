@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, UIEvent } from "react";
 import { motion } from 'framer-motion';
 import { supabase } from "@/lib/supabaseClient";
 import toast from "react-hot-toast";
-import { fetchAnnouncements, postFacultyAnnouncement, updateAnnouncement, deleteAnnouncement } from "@/lib/helpers/clubActivity/facultyAnnouncementAPI";
+import { fetchAnnouncements, postFacultyAnnouncement, updateAnnouncement, deleteAnnouncement, subscribeToClubAnnouncements, broadcastNewAnnouncement, fetchSingleAnnouncement } from "@/lib/helpers/clubActivity/facultyAnnouncementAPI";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import { Avatar } from "@/app/utils/Avatar";
 import { StudentAnnouncementsShimmer } from "@/app/(screens)/(student)/clubs/shimmers/StudentAnnouncementsShimmer";
@@ -69,6 +69,11 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
 
     const scrollRef = useRef<HTMLDivElement>(null);
     const isFetchingRef = useRef(false);
+
+    const channelRef = useRef<any>(null);
+    const onDateChangeRef = useRef(onDateChange);
+    const processedIds = useRef<Set<number>>(new Set());
+    useEffect(() => { onDateChangeRef.current = onDateChange; }, [onDateChange]);
 
     const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
         if (scrollRef.current) {
@@ -140,83 +145,96 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
     // CHANGED: Applied the 1200ms delay and fallback fetch to the Faculty component to prevent DB locks
 
 
+    const appendMessage = (msg: any) => {
+        setMessages(prev => {
+            if (prev.some(m => m.announcementId === msg.announcementId)) return prev;
+            return [...prev, msg];
+        });
+        setTimeout(() => scrollToBottom('smooth'), 100);
+    };
+
     useEffect(() => {
         if (!clubId) return;
+        const abortController = new AbortController();
 
         const loadInitial = async () => {
             try {
+                setLoading(true);
                 const data = await fetchAnnouncements(clubId, undefined, FETCH_LIMIT);
-                setMessages(data.reverse());
-                setHasMore(data.length === FETCH_LIMIT);
-
-                if (data.length > 0 && onDateChange) {
-                    onDateChange(getMessageDateHeader(data[data.length - 1].createdAt));
+                if (!abortController.signal.aborted) {
+                    setMessages(data.reverse());
+                    setHasMore(data.length === FETCH_LIMIT);
+                    if (data.length > 0 && onDateChangeRef.current) {
+                        onDateChangeRef.current(getMessageDateHeader(data[data.length - 1].createdAt));
+                    }
+                    setTimeout(() => scrollToBottom('auto'), 100);
                 }
-
-                setTimeout(() => scrollToBottom('auto'), 100);
             } catch (err) {
-                toast.error("Failed to load announcements", { id: "load-err-fac" });
+                if (!abortController.signal.aborted) {
+                    toast.error("Failed to load announcements", { id: "load-err-fac" });
+                }
             } finally {
-                setLoading(false);
+                if (!abortController.signal.aborted) setLoading(false);
             }
         };
 
         loadInitial();
 
-        const channel = supabase.channel(`club_${clubId}_announcements_fac`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'club_announcements', filter: `clubId=eq.${clubId}` }, (payload) => {
-                if (payload.eventType === 'INSERT') {
+        if (channelRef.current) {
+            supabase.removeChannel(channelRef.current);
+        }
 
-                    // CHANGED: Increased to 1200ms and added the robust try/catch fallback
-                    setTimeout(async () => {
-                        try {
-                            const { data, error } = await supabase
-                                .from("club_announcements")
-                                .select(`*, authorStudent:students!club_announcements_authorStudentId_fkey(users(fullName, user_profile(profileUrl))), authorFaculty:faculty!club_announcements_authorFacultyId_fkey(users(fullName, user_profile(profileUrl)))`)
-                                .eq("announcementId", payload.new.announcementId)
-                                .single();
+        const channel = subscribeToClubAnnouncements(clubId, {
+            onInsertBroadcast: (payload) => {
+                if (abortController.signal.aborted) return;
+                
+                // 🔧 FIX 4: Instantly log received broadcast
+                processedIds.current.add(payload.announcementId);
+                
+                appendMessage(payload);
+                if (onDateChangeRef.current) onDateChangeRef.current("Today");
+            },
+            onPostgresFallback: (payload) => {
+                if (abortController.signal.aborted) return;
 
-                            if (error) throw error; // Throws to the catch block if DB lock timeout (57014) occurs
+                // 🔧 FIX 5: Fast synchronous check
+                if (processedIds.current.has(payload.new.announcementId)) return;
 
-                            if (data) {
-                                setMessages(prev => {
-                                    if (prev.some(m => m.announcementId === data.announcementId)) return prev;
-                                    return [...prev, data];
-                                });
-                                setTimeout(() => scrollToBottom('smooth'), 100);
-                            }
-                        } catch (err) {
-                            console.warn("Real-time single fetch timed out. Using indexed fallback fetch.");
+                // 🔧 FIX 6: Debounce Database recovery fetch
+                setTimeout(() => {
+                    if (abortController.signal.aborted || processedIds.current.has(payload.new.announcementId)) return;
 
-                            // CHANGED: Fallback to the highly-indexed fetchAnnouncements API
-                            try {
-                                const fallbackData = await fetchAnnouncements(clubId, undefined, FETCH_LIMIT);
-                                const foundMsg = fallbackData.find((m: any) => m.announcementId === payload.new.announcementId);
-
-                                if (foundMsg) {
-                                    setMessages(prev => {
-                                        if (prev.some(m => m.announcementId === foundMsg.announcementId)) return prev;
-                                        return [...prev, foundMsg];
-                                    });
-                                    setTimeout(() => scrollToBottom('smooth'), 100);
-                                }
-                            } catch (fallbackErr) {
-                                console.error("Fallback sync also failed:", fallbackErr);
-                            }
+                    fetchSingleAnnouncement(payload.new.announcementId).then(data => {
+                        if (data && !abortController.signal.aborted) {
+                            processedIds.current.add(data.announcementId);
+                            appendMessage(data);
+                            if (onDateChangeRef.current) onDateChangeRef.current("Today");
                         }
-                    }, 1200);
-
-                } else if (payload.eventType === 'UPDATE') {
-                    if (payload.new.is_deleted) {
-                        setMessages(prev => prev.filter(m => m.announcementId !== payload.new.announcementId));
-                    } else {
-                        setMessages(prev => prev.map(m => m.announcementId === payload.new.announcementId ? { ...m, ...payload.new } : m));
-                    }
+                    }).catch(() => console.warn("Fallback fetch failed."));
+                }, 2000);
+            },
+            onUpdate: (updatedRow) => {
+                if (abortController.signal.aborted) return;
+                if (updatedRow.is_deleted) {
+                    setMessages(prev => prev.filter(m => m.announcementId !== updatedRow.announcementId));
+                } else {
+                    setMessages(prev => prev.map(m => m.announcementId === updatedRow.announcementId
+                        ? { ...m, message: updatedRow.message, updatedAt: updatedRow.updatedAt }
+                        : m
+                    ));
                 }
-            })
-            .subscribe();
+            }
+        });
 
-        return () => { supabase.removeChannel(channel); };
+        channelRef.current = channel;
+
+        return () => {
+            abortController.abort();
+            if (channelRef.current) {
+                supabase.removeChannel(channelRef.current);
+                channelRef.current = null;
+            }
+        };
     }, [clubId]);
 
     const fetchOlderMessages = async () => {
@@ -270,31 +288,89 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
         }
     };
 
+    // const handleSend = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     if (!inputValue.trim() || inputValue.length > 1000 || isPosting) return;
+
+    //     setIsPosting(true);
+
+    //     try {
+    //         if (editingId) {
+    //             await updateAnnouncement(editingId, inputValue.trim());
+    //             setEditingId(null);
+    //             toast.success("Announcement updated", { id: "upd-success-fac" });
+    //         } else {
+    //             const newMessage = await postFacultyAnnouncement(clubId, collegeId, facultyId, userRole, inputValue.trim());
+    //             setMessages(prev => {
+    //                 if (prev.some(m => m.announcementId === newMessage.announcementId)) return prev;
+    //                 return [...prev, newMessage];
+    //             });
+
+    //             if (onDateChange) onDateChange("Today");
+    //             setTimeout(() => scrollToBottom('smooth'), 50);
+    //         }
+    //         setInputValue("");
+    //     } catch (err) {
+    //         toast.error("Failed to post announcement", { id: "post-err-fac" });
+    //     } finally {
+    //         setIsPosting(false);
+    //     }
+    // };
+
+    // const confirmDelete = async () => {
+    //     if (!selectedDeleteId) return;
+    //     setIsDeleting(true);
+    //     try {
+    //         await deleteAnnouncement(selectedDeleteId);
+    //         setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
+    //         toast.success("Announcement deleted", { id: "del-success-fac" });
+    //         setDeleteModalOpen(false);
+    //     } catch (err) {
+    //         toast.error("Failed to delete", { id: "del-err-fac" });
+    //     } finally {
+    //         setIsDeleting(false);
+    //     }
+    // };
+
+
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputValue.trim() || inputValue.length > 1000 || isPosting) return;
-
+        
+        // 1. Capture text
+        const textToPost = inputValue.trim();
+        if (!textToPost || textToPost.length > 1000 || isPosting) return;
+        
+        // 2. 🔧 FIX 2: Start the spinner, but DO NOT clear the text yet!
         setIsPosting(true);
-
+        
         try {
             if (editingId) {
-                await updateAnnouncement(editingId, inputValue.trim());
+                await updateAnnouncement(editingId, textToPost);
+                setMessages(prev => prev.map(m => m.announcementId === editingId
+                    ? { ...m, message: textToPost, updatedAt: new Date().toISOString() }
+                    : m
+                ));
                 setEditingId(null);
                 toast.success("Announcement updated", { id: "upd-success-fac" });
+                
+                // 3. 🔧 FIX 3: Clear input on success
+                setInputValue("");
             } else {
-                const newMessage = await postFacultyAnnouncement(clubId, collegeId, facultyId, userRole, inputValue.trim());
-                setMessages(prev => {
-                    if (prev.some(m => m.announcementId === newMessage.announcementId)) return prev;
-                    return [...prev, newMessage];
-                });
+                const newMessage = await postFacultyAnnouncement(clubId, collegeId, facultyId, userRole, textToPost);
 
-                if (onDateChange) onDateChange("Today");
-                setTimeout(() => scrollToBottom('smooth'), 50);
+                processedIds.current.add(newMessage.announcementId);
+                appendMessage(newMessage);
+                if (onDateChangeRef.current) onDateChangeRef.current("Today");
+
+                broadcastNewAnnouncement(channelRef.current, newMessage);
+                
+                // 3. 🔧 FIX 3: Clear input on success
+                setInputValue("");
             }
-            setInputValue("");
         } catch (err) {
             toast.error("Failed to post announcement", { id: "post-err-fac" });
         } finally {
+            // 4. 🔧 FIX 4: Stop spinner
             setIsPosting(false);
         }
     };
@@ -304,6 +380,7 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
         setIsDeleting(true);
         try {
             await deleteAnnouncement(selectedDeleteId);
+            // 🔧 FIX: Optimistic UI for delete
             setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
             toast.success("Announcement deleted", { id: "del-success-fac" });
             setDeleteModalOpen(false);

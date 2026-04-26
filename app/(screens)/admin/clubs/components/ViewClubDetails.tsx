@@ -25,7 +25,7 @@ interface ViewClubDetailsProps {
     clubId: string;
 }
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 10;
 
 export default function ViewClubDetails({ clubId }: ViewClubDetailsProps) {
     const searchParams = useSearchParams();

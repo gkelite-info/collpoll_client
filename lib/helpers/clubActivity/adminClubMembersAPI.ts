@@ -16,7 +16,7 @@ export async function getAdminClubMembersAPI(
     clubId: number,
     status: string,
     page: number = 1,
-    limit: number = 20,
+    limit: number = 10,
     searchQuery: string = "",
     filters: { eduId?: number; branchId?: number; yearId?: number }
 ) {
@@ -110,6 +110,42 @@ export async function getAdminClubMembersAPI(
     return { members: formattedData, totalCount: count || 0 };
 }
 
+// export async function removeAdminClubMembersAPI(
+//     studentsData: { studentId: number; clubId: number }[],
+//     adminId: number
+// ) {
+//     if (!studentsData || studentsData.length === 0) return;
+
+//     const timestamp = new Date().toISOString();
+//     const clubId = studentsData[0].clubId;
+//     const studentIds = studentsData.map(data => data.studentId);
+
+//     const { error: memberUpdateError } = await supabase
+//         .from("club_members")
+//         .update({
+//             is_deleted: true,
+//             removedByAdminId: adminId,
+//             removedAt: timestamp,
+//             deletedAt: timestamp
+//         })
+//         .eq("clubId", clubId)
+//         .in("studentId", studentIds);
+
+//     if (memberUpdateError) throw new Error("Failed to remove members");
+
+//     const { error: requestUpdateError } = await supabase
+//         .from("club_join_requests")
+//         .update({
+//             status: "rejected",
+//             updatedAt: timestamp
+//         })
+//         .eq("clubId", clubId)
+//         .in("studentId", studentIds);
+
+//     if (requestUpdateError) console.error("Failed to sync request status to rejected.");
+// }
+
+
 export async function removeAdminClubMembersAPI(
     studentsData: { studentId: number; clubId: number }[],
     adminId: number
@@ -120,27 +156,31 @@ export async function removeAdminClubMembersAPI(
     const clubId = studentsData[0].clubId;
     const studentIds = studentsData.map(data => data.studentId);
 
-    const { error: memberUpdateError } = await supabase
-        .from("club_members")
-        .update({
-            is_deleted: true,
-            removedByAdminId: adminId,
-            removedAt: timestamp,
-            deletedAt: timestamp
-        })
-        .eq("clubId", clubId)
-        .in("studentId", studentIds);
+    const [memberUpdate, requestUpdate] = await Promise.all([
+        supabase
+            .from("club_members")
+            .update({
+                is_deleted: true,
+                removedByAdminId: adminId,
+                removedAt: timestamp,
+                deletedAt: timestamp
+            })
+            .eq("clubId", clubId)
+            .in("studentId", studentIds),
+            
+        supabase
+            .from("club_join_requests")
+            .update({
+                status: "rejected",
+                updatedAt: timestamp
+            })
+            .eq("clubId", clubId)
+            .in("studentId", studentIds)
+    ]);
 
-    if (memberUpdateError) throw new Error("Failed to remove members");
-
-    const { error: requestUpdateError } = await supabase
-        .from("club_join_requests")
-        .update({
-            status: "rejected",
-            updatedAt: timestamp
-        })
-        .eq("clubId", clubId)
-        .in("studentId", studentIds);
-
-    if (requestUpdateError) console.error("Failed to sync request status to rejected.");
+    if (memberUpdate.error) throw new Error("Failed to remove members");
+    
+    if (requestUpdate.error) {
+        console.error("Failed to sync request status to rejected.", requestUpdate.error);
+    }
 }
