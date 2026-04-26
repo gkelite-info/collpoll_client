@@ -47,100 +47,162 @@ export async function joinClubAPI(clubId: number, studentId: number) {
     }
 }
 
+// export async function getStudentClubStatusAPI(studentId: number) {
+//     const { data: leadClub, error: leadError } = await supabase
+//         .from("clubs")
+//         .select("clubId")
+//         .eq("is_deleted", false)
+//         .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
+//         .limit(1)
+//         .maybeSingle();
+
+//     if (leadError) console.error("Error checking leadership status:", leadError);
+
+//     if (leadClub) {
+//         return { requestedClubId: leadClub.clubId.toString(), status: "accepted" };
+//     }
+
+//     const { data: memberData, error: memberError } = await supabase
+//         .from("club_members")
+//         .select("clubId")
+//         .eq("studentId", studentId)
+//         .eq("is_deleted", false)
+//         .maybeSingle();
+
+//     if (memberError) console.error("Error checking membership status:", memberError);
+
+//     if (memberData) {
+//         return { requestedClubId: memberData.clubId.toString(), status: "accepted" };
+//     }
+
+//     const { data: requestData, error: requestError } = await supabase
+//         .from("club_join_requests")
+//         .select("clubId, status")
+//         .eq("studentId", studentId)
+//         .in("status", ["pending", "accepted"])
+//         .eq("is_deleted", false)
+//         .maybeSingle();
+
+//     if (requestError) console.error("Error checking request status:", requestError);
+
+//     if (requestData) {
+//         return { requestedClubId: requestData.clubId.toString(), status: requestData.status };
+//     }
+
+//     return { requestedClubId: null, status: null };
+// }
+
 export async function getStudentClubStatusAPI(studentId: number) {
-    const { data: leadClub, error: leadError } = await supabase
-        .from("clubs")
-        .select("clubId")
-        .eq("is_deleted", false)
-        .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
-        .limit(1)
-        .maybeSingle();
+    const [leadRes, memberRes, requestRes] = await Promise.all([
+        supabase.from("clubs").select("clubId").eq("is_deleted", false).or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`).limit(1).maybeSingle(),
+        supabase.from("club_members").select("clubId").eq("studentId", studentId).eq("is_deleted", false).maybeSingle(),
+        supabase.from("club_join_requests").select("clubId, status").eq("studentId", studentId).in("status", ["pending", "accepted"]).eq("is_deleted", false).maybeSingle()
+    ]);
 
-    if (leadError) console.error("Error checking leadership status:", leadError);
+    if (leadRes.error) console.error("Lead Error:", leadRes.error);
+    if (memberRes.error) console.error("Member Error:", memberRes.error);
+    if (requestRes.error) console.error("Request Error:", requestRes.error);
 
-    if (leadClub) {
-        return { requestedClubId: leadClub.clubId.toString(), status: "accepted" };
-    }
-
-    const { data: memberData, error: memberError } = await supabase
-        .from("club_members")
-        .select("clubId")
-        .eq("studentId", studentId)
-        .eq("is_deleted", false)
-        .maybeSingle();
-
-    if (memberError) console.error("Error checking membership status:", memberError);
-
-    if (memberData) {
-        return { requestedClubId: memberData.clubId.toString(), status: "accepted" };
-    }
-
-    const { data: requestData, error: requestError } = await supabase
-        .from("club_join_requests")
-        .select("clubId, status")
-        .eq("studentId", studentId)
-        .in("status", ["pending", "accepted"])
-        .eq("is_deleted", false)
-        .maybeSingle();
-
-    if (requestError) console.error("Error checking request status:", requestError);
-
-    if (requestData) {
-        return { requestedClubId: requestData.clubId.toString(), status: requestData.status };
-    }
+    if (leadRes.data) return { requestedClubId: leadRes.data.clubId.toString(), status: "accepted" };
+    if (memberRes.data) return { requestedClubId: memberRes.data.clubId.toString(), status: "accepted" };
+    if (requestRes.data) return { requestedClubId: requestRes.data.clubId.toString(), status: requestRes.data.status };
 
     return { requestedClubId: null, status: null };
 }
 
 
 export async function getStudentClubDetailsAPI(studentId: number) {
-    const { data: leadClub } = await supabase
-        .from("clubs")
-        .select("clubId, title, presidentStudentId, vicePresidentStudentId")
-        .eq("is_deleted", false)
-        .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
-        .limit(1)
-        .maybeSingle();
+    // const { data: leadClub } = await supabase
+    //     .from("clubs")
+    //     .select("clubId, title, presidentStudentId, vicePresidentStudentId")
+    //     .eq("is_deleted", false)
+    //     .or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`)
+    //     .limit(1)
+    //     .maybeSingle();
+
+    // let targetClubId = null;
+    // let role = "member";
+    // let status = "joined";
+    // let clubName = "";
+
+    // if (leadClub) {
+    //     targetClubId = leadClub.clubId;
+    //     clubName = leadClub.title;
+    //     role = leadClub.presidentStudentId === studentId ? "president" : "vicepresident";
+    // } else {
+    //     const { data: memberClub } = await supabase
+    //         .from("club_members")
+    //         .select("clubId, clubs(title)")
+    //         .eq("studentId", studentId)
+    //         .eq("is_deleted", false)
+    //         .limit(1)
+    //         .maybeSingle();
+
+    //     if (memberClub) {
+    //         targetClubId = memberClub.clubId;
+    //         const clubInfo = Array.isArray(memberClub.clubs) ? memberClub.clubs[0] : memberClub.clubs;
+    //         clubName = clubInfo?.title || "";
+    //     } else {
+    //         const { data: pendingReq } = await supabase
+    //             .from("club_join_requests")
+    //             .select("clubId, clubs(title)")
+    //             .eq("studentId", studentId)
+    //             .eq("status", "pending")
+    //             .eq("is_deleted", false)
+    //             .limit(1)
+    //             .maybeSingle();
+
+    //         if (pendingReq) {
+    //             targetClubId = pendingReq.clubId;
+    //             const clubInfo = Array.isArray(pendingReq.clubs) ? pendingReq.clubs[0] : pendingReq.clubs;
+    //             clubName = clubInfo?.title || "";
+    //             status = "pending";
+    //         }
+    //     }
+    // }
+
+    // if (!targetClubId) return { status: "none", clubInfo: null, role: null };
+    // if (status === "pending") return { status: "pending", clubInfo: { name: clubName }, role: null };
+
+    // const { data: clubData, error } = await supabase
+    //     .from("clubs")
+    //     .select(`
+    //         clubId,
+    //         title,
+    //         imageUrl,
+    //         president:students!clubs_presidentStudentId_fkey(users(fullName, user_profile(profileUrl))),
+    //         vicePresident:students!clubs_vicePresidentStudentId_fkey(users(fullName, user_profile(profileUrl))),
+    //         responsibleFaculty:faculty!clubs_responsibleFacultyId_fkey(users(fullName, user_profile(profileUrl))),
+    //         mentors:club_mentors(is_deleted, faculty(facultyId, users(fullName, user_profile(profileUrl))))
+    //     `)
+    //     .eq("clubId", targetClubId)
+    //     .maybeSingle();
+
+
+    const [leadRes, memberRes, pendingRes] = await Promise.all([
+        supabase.from("clubs").select("clubId, title, presidentStudentId, vicePresidentStudentId").eq("is_deleted", false).or(`presidentStudentId.eq.${studentId},vicePresidentStudentId.eq.${studentId}`).limit(1).maybeSingle(),
+        supabase.from("club_members").select("clubId, clubs!inner(title)").eq("studentId", studentId).eq("is_deleted", false).limit(1).maybeSingle(),
+        supabase.from("club_join_requests").select("clubId, clubs!inner(title)").eq("studentId", studentId).eq("status", "pending").eq("is_deleted", false).limit(1).maybeSingle()
+    ]);
 
     let targetClubId = null;
     let role = "member";
     let status = "joined";
     let clubName = "";
 
-    if (leadClub) {
-        targetClubId = leadClub.clubId;
-        clubName = leadClub.title;
-        role = leadClub.presidentStudentId === studentId ? "president" : "vicepresident";
-    } else {
-        const { data: memberClub } = await supabase
-            .from("club_members")
-            .select("clubId, clubs(title)")
-            .eq("studentId", studentId)
-            .eq("is_deleted", false)
-            .limit(1)
-            .maybeSingle();
-
-        if (memberClub) {
-            targetClubId = memberClub.clubId;
-            const clubInfo = Array.isArray(memberClub.clubs) ? memberClub.clubs[0] : memberClub.clubs;
-            clubName = clubInfo?.title || "";
-        } else {
-            const { data: pendingReq } = await supabase
-                .from("club_join_requests")
-                .select("clubId, clubs(title)")
-                .eq("studentId", studentId)
-                .eq("status", "pending")
-                .eq("is_deleted", false)
-                .limit(1)
-                .maybeSingle();
-
-            if (pendingReq) {
-                targetClubId = pendingReq.clubId;
-                const clubInfo = Array.isArray(pendingReq.clubs) ? pendingReq.clubs[0] : pendingReq.clubs;
-                clubName = clubInfo?.title || "";
-                status = "pending";
-            }
-        }
+    if (leadRes.data) {
+        targetClubId = leadRes.data.clubId;
+        clubName = leadRes.data.title;
+        role = leadRes.data.presidentStudentId === studentId ? "president" : "vicepresident";
+    } else if (memberRes.data) {
+        targetClubId = memberRes.data.clubId;
+        const clubInfo = Array.isArray(memberRes.data.clubs) ? memberRes.data.clubs[0] : memberRes.data.clubs;
+        clubName = clubInfo?.title || "";
+    } else if (pendingRes.data) {
+        targetClubId = pendingRes.data.clubId;
+        const clubInfo = Array.isArray(pendingRes.data.clubs) ? pendingRes.data.clubs[0] : pendingRes.data.clubs;
+        clubName = clubInfo?.title || "";
+        status = "pending";
     }
 
     if (!targetClubId) return { status: "none", clubInfo: null, role: null };

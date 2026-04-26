@@ -22,6 +22,7 @@ export default function FacultyClubsClient() {
     const { facultyId, collegeId } = useUser();
     const [clubData, setClubData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [hasError, setHasError] = useState(false);
     const [currentViewDate, setCurrentViewDate] = useState("Today");
 
     useEffect(() => {
@@ -29,11 +30,13 @@ export default function FacultyClubsClient() {
         const loadClubData = async () => {
             try {
                 setIsLoading(true);
+                setHasError(false);
                 const data = await getFacultyClubDetailsAPI(parseInt(String(facultyId), 10));
                 setClubData(data);
                 console.log("club data check faculty side", data)
             } catch (error) {
                 toast.error("Failed to fetch club information.");
+                setHasError(true);
             } finally {
                 setIsLoading(false);
             }
@@ -41,6 +44,15 @@ export default function FacultyClubsClient() {
 
         loadClubData();
     }, [facultyId]);
+
+    if (hasError) {
+        return (
+            <div className="flex flex-col items-center justify-center pt-32 pb-10 animate-in fade-in duration-500">
+                <h2 className="text-xl font-bold text-red-500 mb-2">Connection Error</h2>
+                <p className="text-gray-500 font-medium text-center">Please refresh the page to try loading your club data again.</p>
+            </div>
+        );
+    }
 
     if (!isLoading && !clubData) {
         return (

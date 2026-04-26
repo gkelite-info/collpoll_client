@@ -3,31 +3,44 @@ import { supabase } from "@/lib/supabaseClient";
 export async function getFacultyClubDetailsAPI(facultyId: number) {
     let targetClubId = null;
     let exactRole = "";
-    
-    const { data: respFacultyClub } = await supabase
-        .from("clubs")
-        .select("clubId")
-        .eq("responsibleFacultyId", facultyId)
-        .eq("is_deleted", false)
-        .limit(1)
-        .maybeSingle();
 
-    if (respFacultyClub) {
-        targetClubId = respFacultyClub.clubId;
+    // const { data: respFacultyClub } = await supabase
+    //     .from("clubs")
+    //     .select("clubId")
+    //     .eq("responsibleFacultyId", facultyId)
+    //     .eq("is_deleted", false)
+    //     .limit(1)
+    //     .maybeSingle();
+
+    // if (respFacultyClub) {
+    //     targetClubId = respFacultyClub.clubId;
+    //     exactRole = "responsiblefaculty";
+    // } else {
+    //     const { data: mentorClub } = await supabase
+    //         .from("club_mentors")
+    //         .select("clubId")
+    //         .eq("facultyId", facultyId)
+    //         .eq("is_deleted", false)
+    //         .limit(1)
+    //         .maybeSingle();
+
+    //     if (mentorClub) {
+    //         targetClubId = mentorClub.clubId;
+    //         exactRole = "mentor";
+    //     }
+    // }
+
+    const [respFacRes, mentorRes] = await Promise.all([
+        supabase.from("clubs").select("clubId").eq("responsibleFacultyId", facultyId).eq("is_deleted", false).limit(1).maybeSingle(),
+        supabase.from("club_mentors").select("clubId").eq("facultyId", facultyId).eq("is_deleted", false).limit(1).maybeSingle()
+    ]);
+
+    if (respFacRes.data) {
+        targetClubId = respFacRes.data.clubId;
         exactRole = "responsiblefaculty";
-    } else {
-        const { data: mentorClub } = await supabase
-            .from("club_mentors")
-            .select("clubId")
-            .eq("facultyId", facultyId)
-            .eq("is_deleted", false)
-            .limit(1)
-            .maybeSingle();
-            
-        if (mentorClub) {
-            targetClubId = mentorClub.clubId;
-            exactRole = "mentor";
-        }
+    } else if (mentorRes.data) {
+        targetClubId = mentorRes.data.clubId;
+        exactRole = "mentor";
     }
 
     if (!targetClubId) return null;
