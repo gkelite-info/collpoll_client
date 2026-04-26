@@ -82,6 +82,13 @@ export default function AdminNavbar() {
     },
     {
       icon: (isActive) => (
+        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Academic Setup",
+      path: "/admin/academic-setup",
+    },
+    {
+      icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
@@ -118,13 +125,7 @@ export default function AdminNavbar() {
       label: "Meetings",
       path: "/admin/meetings",
     },
-    {
-      icon: (isActive) => (
-        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Academic Setup",
-      path: "/admin/academic-setup",
-    },
+    
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />

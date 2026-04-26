@@ -33,20 +33,6 @@ export default function FinanceNavbar() {
     },
     {
       icon: (isActive) => (
-        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Meetings",
-      path: "/finance/meetings",
-    },
-    {
-      icon: (isActive) => (
-        <CalendarIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Calendar",
-      path: "/finance/calendar",
-    },
-    {
-      icon: (isActive) => (
         <CurrencyCircleDollar
           size={18}
           weight={isActive ? "fill" : "regular"}
@@ -57,10 +43,24 @@ export default function FinanceNavbar() {
     },
     {
       icon: (isActive) => (
+        <CalendarIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Calendar",
+      path: "/finance/calendar",
+    },
+     {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
       path: "/finance/drive",
+    },
+    {
+      icon: (isActive) => (
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Meetings",
+      path: "/finance/meetings",
     },
     {
       icon: (isActive) => (

@@ -94,6 +94,16 @@ export default function Navbar() {
       label: "Leave Requests",
       path: `/leaveRequests`,
     },
+     {
+      icon: (isActive) => (
+        <CurrencyCircleDollar
+          size={18}
+          weight={isActive ? "fill" : "regular"}
+        />
+      ),
+      label: "Payments",
+      path: "/payments",
+    },
     {
       icon: (isActive) => (
         <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
@@ -114,16 +124,6 @@ export default function Navbar() {
       ),
       label: "Meetings",
       path: "/meetings",
-    },
-    {
-      icon: (isActive) => (
-        <CurrencyCircleDollar
-          size={18}
-          weight={isActive ? "fill" : "regular"}
-        />
-      ),
-      label: "Payments",
-      path: "/payments",
     },
 
     {

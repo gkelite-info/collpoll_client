@@ -94,7 +94,7 @@ const ParentDashboardShimmer = () => {
 // ------------------------------
 
 export default function ParentLeft() {
-  const { userId, fullName, gender, loading: userLoading } = useUser();
+  const { userId, fullName, gender, loading: userLoading, identifierId } = useUser();
 
   const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +123,8 @@ export default function ParentLeft() {
   const card: UserInfoCardProps[] = [
     {
       show: true,
-      studentId: dashData?.studentId || 0,
+      // studentId: dashData?.studentId || 0,
+      studentId : dashData?.studentPin || 0,
       studentBranch: dashData?.branchName || "Loading...",
       studentAcademicYear: dashData?.academicYear || "Loading...",
       user: fullName ?? "User",

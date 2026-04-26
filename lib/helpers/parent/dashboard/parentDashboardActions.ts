@@ -26,13 +26,18 @@ export async function getParentDashboardWidgets(userId: number) {
         collegeEducationId,
         collegeBranchId,
         user:userId(fullName),
-        college_branch(collegeBranchCode, collegeBranchType)
+        college_branch(collegeBranchCode, collegeBranchType),
+        student_pins(
+          pinNumber
+        )
       `,
     )
     .eq("studentId", studentId)
     .single();
 
   if (!studentInfo) throw new Error("Student data not found");
+
+  const pinNumber = getFirst(studentInfo.student_pins)?.pinNumber || "N/A";
 
   const branchName =
     getFirst(studentInfo.college_branch)?.collegeBranchCode || "Unknown Branch";
@@ -190,9 +195,9 @@ export async function getParentDashboardWidgets(userId: number) {
       monthlyStats[month].conducted === 0
         ? 0
         : Math.round(
-            (monthlyStats[month].attended / monthlyStats[month].conducted) *
-              100,
-          ),
+          (monthlyStats[month].attended / monthlyStats[month].conducted) *
+          100,
+        ),
   }));
 
   // 🟢 FETCH SUBJECTS SAFELY ON THE SERVER FOR THE PARENT
@@ -272,12 +277,12 @@ export async function getParentDashboardWidgets(userId: number) {
         const avgPercentage =
           totalUnits > 0
             ? Math.round(
-                units.reduce(
-                  (acc: number, curr: any) =>
-                    acc + (curr.completionPercentage || 0),
-                  0,
-                ) / totalUnits,
-              )
+              units.reduce(
+                (acc: number, curr: any) =>
+                  acc + (curr.completionPercentage || 0),
+                0,
+              ) / totalUnits,
+            )
             : 0;
 
         const firstUnit = units[0];
@@ -305,6 +310,7 @@ export async function getParentDashboardWidgets(userId: number) {
   return {
     studentId,
     childUserId: studentInfo.userId,
+    studentPin: pinNumber,
     studentName,
     branchName,
     feeTotal: formatInr(totalFee),
