@@ -10,7 +10,7 @@ import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/Confir
 import { Avatar } from "@/app/utils/Avatar";
 import { StudentAnnouncementsShimmer } from "@/app/(screens)/(student)/clubs/shimmers/StudentAnnouncementsShimmer";
 
-const FETCH_LIMIT = 20;
+const FETCH_LIMIT = 5;
 
 export const formatChatDateTime = (dateString: string) => {
     const date = new Date(dateString);

@@ -53,17 +53,17 @@ export default function HrNavbar() {
     },
     {
       icon: (isActive) => (
-        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Meetings",
-      path: "/hr/meetings",
-    },
-    {
-      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
       path: "/hr/drive",
+    },
+    {
+      icon: (isActive) => (
+        <Laptop size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Meetings",
+      path: "/hr/meetings",
     },
     {
       icon: (isActive) => (
