@@ -481,11 +481,22 @@ function LogoUpload({
           )}
         </div>
       ) : (
-        <div className="flex items-center gap-3 px-4 py-3">
-          <span className="text-[#49C77F]"><ImageSquare size={20} /></span>
-          <span className="flex-1 text-sm text-gray-400">Upload company logo (PNG, JPG, SVG)</span>
-          <button type="button" onClick={() => inputRef.current?.click()} className="flex flex-shrink-0 items-center gap-1.5 rounded-md bg-[#49C77F] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer">
-            <UploadSimple size={13} weight="bold" />Upload
+        <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#D9F1E4] bg-white text-[#49C77F]">
+              <ImageSquare size={18} />
+            </span>
+            <span className="flex-1 truncate text-sm text-gray-400">
+              Company logo (PNG, JPG, SVG)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-[#49C77F] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#3ab36e] cursor-pointer"
+          >
+            <UploadSimple size={14} weight="bold" />
+            Upload
           </button>
         </div>
       )}

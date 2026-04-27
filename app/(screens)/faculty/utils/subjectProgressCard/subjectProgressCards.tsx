@@ -18,6 +18,15 @@ type SubjectProgressCardProps = {
   isLoading?: boolean;
 };
 
+const getSubjectInitials = (title: string) => {
+  const parts = title.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) return "SU";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+};
+
 export default function SubjectProgressCards({
   props,
   onViewMore,
@@ -63,8 +72,25 @@ export default function SubjectProgressCards({
                 key={index}
                 className="h-20 flex items-center rounded-lg p-2 gap-1 bg-[#E8F8EF]"
               >
-                <div className="h-full w-[22%] rounded-md flex items-center justify-center">
-                  <img src={subject.image} className="rounded-md" />
+                <div className="h-full w-[22%] rounded-md flex items-center justify-center overflow-hidden">
+                  {subject.image ? (
+                    <img
+                      src={subject.image}
+                      alt={subject.title}
+                      className="h-12 w-12 rounded-md object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                        const fallback = e.currentTarget.nextElementSibling as HTMLDivElement | null;
+                        if (fallback) fallback.style.display = "flex";
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="h-12 w-12 items-center justify-center rounded-md bg-[#BFEFCD] text-[16px] font-semibold text-[#16284F]"
+                    style={{ display: subject.image ? "none" : "flex" }}
+                  >
+                    {getSubjectInitials(subject.title)}
+                  </div>
                 </div>
                 <div className="h-full w-[78%] rounded-md p-2 flex justify-between">
                   <div className="flex flex-col gap-2 w-auto">

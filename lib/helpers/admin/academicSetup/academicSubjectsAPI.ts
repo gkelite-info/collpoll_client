@@ -1,11 +1,15 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Something went wrong";
+
 export type SubjectDBPayload = {
   collegeSubjectId?: number;
   subjectName: string;
   subjectCode: string;
   subjectKey?: string | null;
   credits: number;
+  image?: string | null;
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
@@ -136,7 +140,7 @@ export const getAcademicSubjects = async (
     .from("college_subjects")
     .select(
       `
-      collegeSubjectId, subjectName, subjectCode, subjectKey, credits,
+      collegeSubjectId, subjectName, subjectCode, subjectKey, credits, image,
       collegeEducation:college_education (collegeEducationType),
       collegeBranch:college_branch (collegeBranchCode),
       collegeAcademicYear:college_academic_year (collegeAcademicYear),
@@ -162,8 +166,11 @@ export const getAcademicSubjectById = async (collegeSubjectId: number) => {
       .single();
     if (error) throw error;
     return { success: true, data };
-  } catch (err: any) {
-    return { success: false, error: err.message || "Failed to fetch subject" };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to fetch subject",
+    };
   }
 };
 
@@ -177,6 +184,7 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
       subjectCode: payload.subjectCode.toUpperCase(),
       subjectKey: payload.subjectKey ? payload.subjectKey.toUpperCase() : null,
       credits: Number(payload.credits),
+      image: payload.image?.trim() || null,
       updatedAt: now,
     };
 
@@ -221,9 +229,12 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
     }
 
     return { success: true, data: result.data };
-  } catch (err: any) {
-    console.error("upsertAcademicSubject error:", err);
-    return { success: false, error: err.message || "Failed to save subject" };
+  } catch (error: unknown) {
+    console.error("upsertAcademicSubject error:", error);
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to save subject",
+    };
   }
 };
 
@@ -237,8 +248,11 @@ export const deleteAcademicSubject = async (collegeSubjectId: number) => {
 
     if (error) throw error;
     return { success: true };
-  } catch (err: any) {
-    console.error("deleteAcademicSubject error:", err);
-    return { success: false, error: err.message || "Failed to delete subject" };
+  } catch (error: unknown) {
+    console.error("deleteAcademicSubject error:", error);
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to delete subject",
+    };
   }
 };
