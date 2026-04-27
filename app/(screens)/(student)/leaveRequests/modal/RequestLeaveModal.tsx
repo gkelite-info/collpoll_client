@@ -60,7 +60,6 @@ export default function RequestLeaveModal({
 
   if (!isOpen) return null;
 
-  // 🟢 NEW: File Handlers
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
@@ -86,7 +85,6 @@ export default function RequestLeaveModal({
 
     setIsSubmitting(true);
     try {
-      // 🟢 Pass files along with formData
       await onSubmit({ ...formData, files });
       setFormData({
         leaveType: "",
@@ -95,7 +93,7 @@ export default function RequestLeaveModal({
         faculty: null,
         description: "",
       });
-      setFiles([]); // Reset files on success
+      setFiles([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -318,11 +316,10 @@ export default function RequestLeaveModal({
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 <span className="text-sm font-medium text-[#525252]">
-                  Click or drag files to upload
+                  Click to upload files
                 </span>
               </div>
 
-              {/* 🟢 File Previews with Horizontal Scroll */}
               {files.length > 0 && (
                 <div className="flex overflow-x-auto gap-3 py-2 hide-scrollbar">
                   {files.map((f, i) => {

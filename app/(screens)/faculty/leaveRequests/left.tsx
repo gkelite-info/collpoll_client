@@ -28,6 +28,7 @@ import {
 import FacultyRequestLeaveModal from "./modal/RequestLeaveModal";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { ConfirmStatusModal } from "./modal/ConfirmStatusModal";
+import FacultyLeaveDetailsModal from "./modal/facultyLeaveStatusModal";
 
 const STUDENT_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -41,6 +42,7 @@ const STUDENT_COLUMNS = [
   { title: "Description", key: "description" },
   { title: "Attachments", key: "attachments" },
   { title: "Action", key: "action" },
+  { title: "Details", key: "details" },
 ];
 
 const MY_LEAVES_COLUMNS = [
@@ -83,6 +85,8 @@ function FacultyLeavesContent() {
     action: "Approved" | "Rejected" | null;
   }>({ isOpen: false, leaveId: null, action: null });
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
+  const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -249,6 +253,7 @@ function FacultyLeavesContent() {
             <span className="font-medium whitespace-nowrap">{item.name}</span>
           ),
           branch: item.branch,
+
           action:
             item.status === "pending" || isEditing ? (
               <div className="flex items-center justify-center gap-2">
@@ -295,6 +300,17 @@ function FacultyLeavesContent() {
                 </button>
               </div>
             ),
+          details: (
+            <button
+              onClick={() => {
+                setSelectedLeaveData(item);
+                setIsDetailsModalOpen(true);
+              }}
+              className="text-blue-600 font-bold text-xs hover:underline cursor-pointer"
+            >
+              View Details
+            </button>
+          ),
         };
       } else {
         return {
@@ -504,6 +520,12 @@ function FacultyLeavesContent() {
           onConfirm={executeStatusChange}
         />
       </div>
+      <FacultyLeaveDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        leaveData={selectedLeaveData}
+        currentFacultyId={facultyId!}
+      />
     </>
   );
 }

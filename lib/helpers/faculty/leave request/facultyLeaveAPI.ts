@@ -1,8 +1,13 @@
 import { supabase } from "@/lib/supabaseClient";
 
-// ---------------------------------------------------------
-// STUDENT LEAVES MANAGEMENT (For Faculty to Approve/Reject)
-// ---------------------------------------------------------
+function getOrdinalSuffix(i: number) {
+  const j = i % 10,
+    k = i % 100;
+  if (j == 1 && k != 11) return "st";
+  if (j == 2 && k != 12) return "nd";
+  if (j == 3 && k != 13) return "rd";
+  return "th";
+}
 
 export async function fetchStudentLeaveCounts(facultyId: number) {
   const { data, error } = await supabase
@@ -41,6 +46,10 @@ export async function fetchStudentLeavesForFaculty(
           studentId,
           collegeBranchId,
           college_branch ( collegeBranchCode ),
+         student_academic_history (
+            isCurrent,
+            college_semester ( collegeSemester )
+          ),
           users:userId (
             fullName,
             user_profile ( profileUrl )
@@ -82,6 +91,17 @@ export async function fetchStudentLeavesForFaculty(
         ? userObj?.user_profile[0]
         : userObj?.user_profile;
 
+      const historyArr = Array.isArray(student?.student_academic_history)
+        ? student.student_academic_history
+        : [student?.student_academic_history];
+
+      const currentHistory = historyArr.find((h: any) => h?.isCurrent === true);
+      const semNumber = currentHistory?.college_semester?.collegeSemester;
+
+      const semString = semNumber
+        ? `${semNumber}${getOrdinalSuffix(semNumber)} Semester`
+        : "N/A";
+
       const typeLabel =
         l.leaveType === "attendanceregularization"
           ? "Attendance Regularization"
@@ -92,7 +112,6 @@ export async function fetchStudentLeavesForFaculty(
       const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
       const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-      // 🟢 Fetch Public URLs for attachments
       const attachmentPaths = l.attachment ? l.attachment.split(",") : [];
       const attachments = attachmentPaths.map((path: string) => {
         const { data: urlData } = supabase.storage
@@ -111,12 +130,13 @@ export async function fetchStudentLeavesForFaculty(
           )}&background=random&color=fff`,
         name: userObj?.fullName || "Unknown Student",
         branch: branch?.collegeBranchCode || "N/A",
+        semester: semString,
         fromDate: sDate.toLocaleDateString("en-GB"),
         toDate: eDate.toLocaleDateString("en-GB"),
         days: String(days).padStart(2, "0"),
         leaveType: typeLabel,
         description: l.description?.trim() || "",
-        attachments, // 🟢 Passed to UI
+        attachments,
         status: l.status ? l.status.toLowerCase() : "pending",
       };
     });
@@ -140,10 +160,6 @@ export async function updateStudentLeaveStatus(
   if (error) throw error;
   return { success: true };
 }
-
-// ---------------------------------------------------------
-// FACULTY'S OWN LEAVES (For HR to Approve/Reject)
-// ---------------------------------------------------------
 
 export async function fetchFacultyLeaveCounts(facultyId: number) {
   const { data, error } = await supabase
