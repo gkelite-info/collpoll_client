@@ -3,107 +3,86 @@
 import AcademicPerformance from "@/app/utils/AcademicPerformance";
 import { AttendanceSummaryCard } from "./attendanceSummaryCard";
 import { ProfileCard } from "./profileCard";
-import { Assignment, AssignmentsSummaryTable } from "./assignmentsSummaryTable";
+import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
 import { AttendanceList } from "./attendanceBySubjectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { List, X } from "@phosphor-icons/react";
-import { useState } from "react";
-import WipOverlay from "@/app/utils/WipOverlay";
+import { useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useStudent } from "@/app/utils/context/student/useStudent";
+import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
+import { StudentProgressSkeleton } from "./shimmer/studentProgressSkeleton";
 
-const assignmentsData: Assignment[] = [
-  {
-    subject: "Data Structures",
-    title: "Array Operations & Complex..",
-    dueDate: "3 Feb 2026",
-    marks: "18 / 20",
-    feedback: "Excellent coding and examples",
-  },
-  {
-    subject: "OOPs using C++",
-    title: "Class Inheritance & Polymo..",
-    dueDate: "29 Jan 2026",
-    marks: "17 / 20",
-    feedback: "Good attempt; improve proofs",
-  },
-  {
-    subject: "Discreate Mathematics",
-    title: "Graph Theory Problem Set",
-    dueDate: "27 Jan 2026",
-    marks: "-",
-    feedback: "-",
-  },
-  {
-    subject: "Computer Organization",
-    title: "CPU Architecture & Pipelini..",
-    dueDate: "1 Feb 2026",
-    marks: "19 / 20",
-    feedback: "Very neat and accurate",
-  },
-  {
-    subject: "Digital Logical Design",
-    title: "Logic Gates Simplificatio...",
-    dueDate: "26 Jan 2026",
-    marks: "20 / 20",
-    feedback: "Excellent insight and clarity",
-  },
-  {
-    subject: "Environmental Science",
-    title: "Report on Sustainable Co..",
-    dueDate: "25 Jan 2026",
-    marks: "-",
-    feedback: "-",
-  },
-  {
-    subject: "Data Structure Lab",
-    title: "Stack, Queue, and Linke...",
-    dueDate: "30 Jan 2026",
-    marks: "18 / 20",
-    feedback: "Good wiring and output validation",
-  },
-  {
-    subject: "OOPs Lab",
-    title: "C++ Mini Project – Student",
-    dueDate: "2 Feb 2026",
-    marks: "18 / 20",
-    feedback: "Good attempt; improve proofs",
-  },
-  {
-    subject: "Digital Logic Lab",
-    title: "Logic Circuit Design (Multis..",
-    dueDate: "24 Jan 2026",
-    marks: "18 / 20",
-    feedback: "Good wiring and output validation",
-  },
-];
+function toRomanSemester(semester: number | null) {
+  if (!semester) return "N/A";
 
-const AttendanceData = [
-  { subject: "Java Programming", attended: 90, total: 100, status: "Present" },
-  { subject: "OOPs using C++", attended: 95, total: 100, status: "Present" },
-  { subject: "Data Structures", attended: 90, total: 100, status: "Present" },
-  { subject: "Computer Networks", attended: 45, total: 50, status: "Present" },
-  { subject: "Operating Systems", attended: 85, total: 100, status: "Present" },
-  { subject: "Web Development", attended: 28, total: 30, status: "Present" },
-  {
-    subject: "Software Engineering",
-    attended: 55,
-    total: 60,
-    status: "Present",
-  },
-  {
-    subject: "Database Management",
-    attended: 92,
-    total: 100,
-    status: "Present",
-  },
-];
+  const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+  return numerals[semester - 1] ?? String(semester);
+}
 
 const Page = () => {
   const [open, setOpen] = useState(false);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressData, setProgressData] = useState<Awaited<
+    ReturnType<typeof getStudentProgressData>
+  > | null>(null);
+  const { userId, fullName, profilePhoto, identifierId, loading: userLoading } =
+    useUser();
+  const {
+    loading: studentLoading,
+    collegeEducationType,
+    collegeBranchCode,
+    collegeAcademicYear,
+    college_sections,
+    collegeSemesterId,
+  } = useStudent();
+
+  const semesterLabel =
+    collegeSemesterId !== null
+      ? `Semester ${toRomanSemester(collegeSemesterId)}`
+      : "Semester N/A";
+  const assignmentsTitle = `Assignments Summary - ${collegeEducationType ?? ""} ${collegeBranchCode ?? "N/A"} ${collegeAcademicYear ?? "N/A"} ( ${semesterLabel} )`;
+  const isLoading = userLoading || studentLoading || progressLoading;
+
+  useEffect(() => {
+    if (userLoading || studentLoading) return;
+    if (!userId) {
+      setProgressLoading(false);
+      return;
+    }
+
+    const safeUserId = userId;
+    let mounted = true;
+
+    async function loadProgressData() {
+      setProgressLoading(true);
+
+      try {
+        const data = await getStudentProgressData(safeUserId);
+        if (mounted) {
+          setProgressData(data);
+        }
+      } finally {
+        if (mounted) {
+          setProgressLoading(false);
+        }
+      }
+    }
+
+    loadProgressData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId, userLoading, studentLoading]);
+
+  if (isLoading) {
+    return <StudentProgressSkeleton />;
+  }
 
   return (
     <>
       <main className="p-3 relative overflow-hidden">
-        <WipOverlay fullHeight={true}/>
         <section className="mb-3">
           <div className="flex p-2 gap-3 justify-between items-center">
             <div className="w-full max-w-5xl rounded-xl">
@@ -113,7 +92,7 @@ const Page = () => {
                     Department:{" "}
                   </span>
                   <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    CSE
+                    {collegeBranchCode ?? "N/A"}
                   </span>
                 </div>
 
@@ -122,7 +101,7 @@ const Page = () => {
                     Year:
                   </span>
                   <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    2nd Year
+                    {collegeAcademicYear ?? "N/A"}
                   </span>
                 </div>
 
@@ -131,7 +110,7 @@ const Page = () => {
                     Section:
                   </span>
                   <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    A
+                    {college_sections ?? "N/A"}
                   </span>
                 </div>
 
@@ -140,7 +119,7 @@ const Page = () => {
                     Semester:
                   </span>
                   <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    III
+                    {toRomanSemester(collegeSemesterId)}
                   </span>
                 </div>
               </div>
@@ -163,31 +142,42 @@ const Page = () => {
           <article className="grid grid-cols-1 lg:grid-cols-10 gap-6 ">
             <section className="bg-white rounded-2xl shadow-sm lg:col-span-6">
               <ProfileCard
-                name="Ananya Sharma"
-                department="CSE"
-                studentId="21CSE006"
-                avatarUrl="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
-                attendanceDays={25}
-                absentDays={5}
-                leaveDays={1}
+                name={fullName ?? "Student"}
+                department={collegeBranchCode ?? "N/A"}
+                studentId={identifierId ?? "N/A"}
+                avatarUrl={
+                  profilePhoto ||
+                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+                }
+                attendancePercentage={
+                  progressData?.overallAttendancePercentage ?? 0
+                }
+                absentPercentage={progressData?.absentPercentage ?? 0}
+                leavePercentage={progressData?.leavePercentage ?? 0}
               />
             </section>
 
             <section className="bg-white rounded-2xl shadow-sm p-4 lg:col-span-4 ">
-              <AttendanceSummaryCard percentage={85} />
+              <AttendanceSummaryCard
+                percentage={progressData?.overallAttendancePercentage ?? 0}
+              />
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-6">
-              <AcademicPerformance overlayVisible={false}/>
+              <AcademicPerformance overlayVisible={false} />
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-4">
-              <AttendanceList data={AttendanceData} />
+              <AttendanceList data={progressData?.subjectAttendance || []} />
             </section>
           </article>
 
           <section className="bg-white rounded-2xl">
-            <AssignmentsSummaryTable assignments={assignmentsData} />
+            <AssignmentsSummaryTable
+              assignments={progressData?.assignmentsSummary ?? []}
+              title={assignmentsTitle}
+              semesterLabel={semesterLabel}
+            />
           </section>
         </section>
 
