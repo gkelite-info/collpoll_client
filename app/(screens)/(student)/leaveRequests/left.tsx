@@ -23,8 +23,9 @@ import {
   submitLeaveRequest,
   fetchStudentLeaveCounts,
 } from "@/lib/helpers/student/leave request/studentLeaveAPI";
+import LeaveRequestDetailsModal from "./modal/LeaveRequestDetailsModal";
+import StudentLeaveDetailsModal from "./modal/LeaveRequestDetailsModal";
 
-// 🟢 NEW: Added Attachments column
 const COLUMNS = [
   { title: "S.No", key: "sNo" },
   { title: "From - To", key: "dateRange" },
@@ -33,6 +34,7 @@ const COLUMNS = [
   { title: "Description", key: "description" },
   { title: "Attachments", key: "attachments" },
   { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
 ];
 
 function LeaveLeftContent() {
@@ -56,6 +58,9 @@ function LeaveLeftContent() {
     rejected: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -137,7 +142,7 @@ function LeaveLeftContent() {
           {item.description}
         </span>
       ),
-      // 🟢 NEW: Attachments UI Mapping
+
       attachments:
         item.attachments && item.attachments.length > 0 ? (
           <div className="flex items-center justify-center gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[120px]">
@@ -169,6 +174,17 @@ function LeaveLeftContent() {
         >
           {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
         </span>
+      ),
+      details: (
+        <button
+          onClick={() => {
+            setSelectedLeaveData(item);
+            setIsDetailsModalOpen(true);
+          }}
+          className="text-blue-600 font-bold text-xs hover:underline cursor-pointer"
+        >
+          View Details
+        </button>
       ),
     }));
   }, [tableData, page]);
@@ -334,6 +350,13 @@ function LeaveLeftContent() {
           onSubmit={handleLeaveSubmit}
         />
       </div>
+
+      <StudentLeaveDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        leaveData={selectedLeaveData}
+        currentStudentId={studentId!}
+      />
     </>
   );
 }
