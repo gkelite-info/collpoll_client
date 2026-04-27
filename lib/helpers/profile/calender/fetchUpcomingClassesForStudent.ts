@@ -37,7 +37,7 @@ export async function fetchUpcomingClassesForStudent(filters: {
     )
     .eq("is_deleted", false)
     .in("type", ["class", "meeting", "exam"])
-    .gte("date", today)
+    .eq("date", today)
     .order("date", { ascending: true })
     .order("fromTime", { ascending: true });
 

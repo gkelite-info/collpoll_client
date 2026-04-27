@@ -7,6 +7,7 @@ import {
   User,
   MagnifyingGlass,
   CalendarIcon,
+  Paperclip,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -23,12 +24,14 @@ import {
   fetchStudentLeaveCounts,
 } from "@/lib/helpers/student/leave request/studentLeaveAPI";
 
+// 🟢 NEW: Added Attachments column
 const COLUMNS = [
   { title: "S.No", key: "sNo" },
   { title: "From - To", key: "dateRange" },
   { title: "Days", key: "days" },
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
+  { title: "Attachments", key: "attachments" },
   { title: "Status", key: "statusBadge" },
 ];
 
@@ -43,7 +46,6 @@ function LeaveLeftContent() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Pagination & DB States
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [tableData, setTableData] = useState<any[]>([]);
@@ -135,6 +137,26 @@ function LeaveLeftContent() {
           {item.description}
         </span>
       ),
+      // 🟢 NEW: Attachments UI Mapping
+      attachments:
+        item.attachments && item.attachments.length > 0 ? (
+          <div className="flex items-center justify-center gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[120px]">
+            {item.attachments.map((url: string, idx: number) => (
+              <a
+                key={idx}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 flex-shrink-0 text-blue-600 hover:bg-blue-100 bg-blue-50 px-2 py-0.5 rounded text-xs font-medium border border-blue-100 transition-colors"
+                title="View Attachment"
+              >
+                <Paperclip size={12} /> {idx + 1}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <span className="text-gray-400 text-sm">-</span>
+        ),
       statusBadge: (
         <span
           className={`px-3 py-1 rounded-full text-xs font-bold ${
@@ -217,6 +239,9 @@ function LeaveLeftContent() {
         }
         .table-container-wrapper > div > div > div.overflow-auto::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
+        }
+        .table-container-wrapper table {
+          min-width: 1100px !important;
         }
       `}</style>
 

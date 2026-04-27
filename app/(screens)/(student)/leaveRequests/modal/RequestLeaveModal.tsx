@@ -1,7 +1,7 @@
 "use client";
 
 import { fetchStudentFaculties } from "@/lib/helpers/student/leave request/studentLeaveAPI";
-import { X, CaretDown, Check } from "@phosphor-icons/react";
+import { X, CaretDown, Check, File as FileIcon } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 
 interface RequestLeaveModalProps {
@@ -32,6 +32,9 @@ export default function RequestLeaveModal({
     description: "",
   });
 
+  // 🟢 NEW: State for uploaded files
+  const [files, setFiles] = useState<File[]>([]);
+
   useEffect(() => {
     if (isOpen && studentId) {
       setLoadingFaculties(true);
@@ -57,6 +60,23 @@ export default function RequestLeaveModal({
 
   if (!isOpen) return null;
 
+  // 🟢 NEW: File Handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      // Optional: Limit to 5 files to protect varchar(255) length
+      if (files.length + newFiles.length > 5) {
+        alert("You can only upload a maximum of 5 files.");
+        return;
+      }
+      setFiles((prev) => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (indexToRemove: number) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.faculty) {
@@ -66,7 +86,8 @@ export default function RequestLeaveModal({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // 🟢 Pass files along with formData
+      await onSubmit({ ...formData, files });
       setFormData({
         leaveType: "",
         startDate: "",
@@ -74,6 +95,7 @@ export default function RequestLeaveModal({
         faculty: null,
         description: "",
       });
+      setFiles([]); // Reset files on success
     } finally {
       setIsSubmitting(false);
     }
@@ -89,10 +111,18 @@ export default function RequestLeaveModal({
         .hover-marquee:hover {
           animation: scrollBackForth 4s ease-in-out infinite alternate;
         }
+        /* Hide scrollbar for file previews but allow scroll */
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
       `}</style>
 
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] flex flex-col overflow-hidden max-h-[90vh]">
           <div className="flex items-center justify-between p-5 pb-2">
             <h2 className="text-2xl font-bold text-[#282828]">Request Leave</h2>
             <button
@@ -104,10 +134,13 @@ export default function RequestLeaveModal({
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit}
+            className="p-5 flex flex-col gap-4 overflow-y-auto"
+          >
             <div className="flex flex-col gap-1.5">
               <label className="text-[15px] font-semibold text-[#282828]">
-                Leave Type
+                Leave Type <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
@@ -135,7 +168,7 @@ export default function RequestLeaveModal({
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[15px] font-semibold text-[#282828]">
-                Leave Date
+                Leave Date <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-4">
                 <div className="flex-1 flex flex-col gap-1">
@@ -176,7 +209,7 @@ export default function RequestLeaveModal({
 
             <div className="flex flex-col gap-1.5 relative" ref={dropdownRef}>
               <label className="text-[15px] font-semibold text-[#282828]">
-                Faculties
+                Faculties <span className="text-red-500">*</span>
               </label>
               <div
                 onClick={() => {
@@ -254,11 +287,11 @@ export default function RequestLeaveModal({
 
             <div className="flex flex-col gap-1.5 mt-1">
               <label className="text-[15px] font-semibold text-[#282828]">
-                Description
+                Description <span className="text-red-500">*</span>
               </label>
               <textarea
                 required
-                rows={4}
+                rows={3}
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
@@ -266,6 +299,69 @@ export default function RequestLeaveModal({
                 placeholder="Provide a short explanation for your leave request.........."
                 className="w-full resize-none border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm text-[#525252] outline-none focus:border-[#43C17A]"
               />
+            </div>
+
+            {/* 🟢 NEW: File Attachments Section */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[15px] font-semibold text-[#282828] flex justify-between">
+                Attachments{" "}
+                <span className="text-gray-400 text-xs font-normal mr-1">
+                  Optional (Max 5)
+                </span>
+              </label>
+
+              <div className="relative border-2 border-dashed border-[#E0E0E0] rounded-md p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer bg-[#F8F9FA]">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <span className="text-sm font-medium text-[#525252]">
+                  Click or drag files to upload
+                </span>
+              </div>
+
+              {/* 🟢 File Previews with Horizontal Scroll */}
+              {files.length > 0 && (
+                <div className="flex overflow-x-auto gap-3 py-2 hide-scrollbar">
+                  {files.map((f, i) => {
+                    const isImage = f.type.startsWith("image/");
+                    return (
+                      <div
+                        key={i}
+                        className="relative shrink-0 w-16 h-16 border border-gray-200 rounded-md overflow-hidden bg-white shadow-sm flex flex-col items-center justify-center group"
+                      >
+                        {isImage ? (
+                          <img
+                            src={URL.createObjectURL(f)}
+                            className="w-full h-full object-cover"
+                            alt="preview"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-1">
+                            <FileIcon
+                              size={20}
+                              weight="fill"
+                              className="text-gray-400"
+                            />
+                            <span className="text-[10px] text-gray-500 truncate w-14 text-center mt-1">
+                              {f.name}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 text-red-500 shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                        >
+                          <X size={12} weight="bold" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 mt-2">
