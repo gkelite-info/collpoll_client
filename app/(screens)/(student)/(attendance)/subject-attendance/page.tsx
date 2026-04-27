@@ -28,7 +28,6 @@ type DashboardData = Awaited<ReturnType<typeof getStudentDashboardData>>;
 export default function SubjectAttendance() {
   const router = useRouter();
 
-  // 🟢 Extract loading state
   const { userId, loading: userLoading } = useUser();
 
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(

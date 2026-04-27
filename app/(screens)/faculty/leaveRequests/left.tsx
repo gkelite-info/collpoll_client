@@ -7,6 +7,7 @@ import {
   MagnifyingGlass,
   CalendarIcon,
   PencilSimple,
+  Paperclip,
 } from "@phosphor-icons/react";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
@@ -38,6 +39,7 @@ const STUDENT_COLUMNS = [
   { title: "Days", key: "days" },
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
+  { title: "Attachments", key: "attachments" },
   { title: "Action", key: "action" },
 ];
 
@@ -224,6 +226,25 @@ function FacultyLeavesContent() {
               className="w-8 h-8 rounded-full object-cover border border-gray-200"
             />
           ),
+          attachments:
+            item.attachments && item.attachments.length > 0 ? (
+              <div className="flex items-center justify-center gap-1 overflow-x-auto custom-scrollbar pb-1 max-w-[120px]">
+                {item.attachments.map((url: string, idx: number) => (
+                  <a
+                    key={idx}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 flex-shrink-0 text-blue-600 hover:bg-blue-100 bg-blue-50 px-2 py-0.5 rounded text-xs font-medium border border-blue-100 transition-colors"
+                    title="View Attachment"
+                  >
+                    <Paperclip size={12} /> {idx + 1}
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <span className="text-gray-400 text-sm">-</span>
+            ),
           name: (
             <span className="font-medium whitespace-nowrap">{item.name}</span>
           ),

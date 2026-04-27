@@ -52,7 +52,6 @@ export async function fetchStudentLeavesForFaculty(
       .eq("student_leave_faculties.facultyId", facultyId)
       .is("deletedAt", null);
 
-    // DB-Level Status Filter
     if (statusFilter !== "all") {
       query = query.eq(
         "status",
@@ -60,12 +59,10 @@ export async function fetchStudentLeavesForFaculty(
       );
     }
 
-    // DB-Level Search Filter
     if (searchQuery.trim() !== "") {
       query = query.ilike("description", `%${searchQuery.trim()}%`);
     }
 
-    // DB-Level Pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     query = query.order("createdAt", { ascending: false }).range(from, to);
@@ -95,9 +92,17 @@ export async function fetchStudentLeavesForFaculty(
       const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
       const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
+      // 🟢 Fetch Public URLs for attachments
+      const attachmentPaths = l.attachment ? l.attachment.split(",") : [];
+      const attachments = attachmentPaths.map((path: string) => {
+        const { data: urlData } = supabase.storage
+          .from("leave-request-attachments")
+          .getPublicUrl(path.trim());
+        return urlData.publicUrl;
+      });
+
       return {
         id: l.studentLeaveId,
-        // 🟢 FIXED: Strictly mapping to the studentId from the students table
         rollNo: String(student?.studentId || "N/A"),
         photo:
           profile?.profileUrl ||
@@ -111,6 +116,7 @@ export async function fetchStudentLeavesForFaculty(
         days: String(days).padStart(2, "0"),
         leaveType: typeLabel,
         description: l.description?.trim() || "",
+        attachments, // 🟢 Passed to UI
         status: l.status ? l.status.toLowerCase() : "pending",
       };
     });
