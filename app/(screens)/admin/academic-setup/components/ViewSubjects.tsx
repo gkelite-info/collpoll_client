@@ -119,7 +119,7 @@ export default function ViewSubjects({
         toast.success("Subject deleted successfully!");
         loadSubjects(); // Reload the list
       } else {
-        toast.error(res.error);
+        toast.error(res.error || "Failed to delete subject.");
         setIsLoading(false);
       }
     } catch {
