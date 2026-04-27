@@ -10,8 +10,32 @@ import toast from "react-hot-toast";
 import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
+import {
+  deleteSubjectImageByUrl,
+  uploadSubjectImage,
+} from "@/lib/helpers/admin/academicSetup/subjectImageStorageAPI";
 
 type Tab = "view" | "add" | "view-subject" | "add-subject";
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Something went wrong";
+
+const extractSingleValue = (value: unknown): string => {
+  if (!value) return "";
+  if (typeof value === "string" || typeof value === "number")
+    return String(value);
+  if (Array.isArray(value)) {
+    const firstValid = value.find(Boolean);
+    return extractSingleValue(firstValid);
+  }
+  if (typeof value === "object") {
+    const item = value as Record<string, unknown>;
+    return String(
+      item.name ?? item.code ?? item.label ?? item.value ?? "",
+    );
+  }
+  return "";
+};
 
 export default function AcademicSetup() {
   const [activeTab, setActiveTab] = useState<Tab>("view");
@@ -33,18 +57,6 @@ export default function AcademicSetup() {
   ];
 
   const handleEdit = (row: AcademicViewData) => {
-    const extractSingleValue = (value: any): string => {
-      if (!value) return "";
-      if (typeof value === "string" || typeof value === "number")
-        return String(value);
-      if (Array.isArray(value)) {
-        const firstValid = value.find(Boolean);
-        return extractSingleValue(firstValid);
-      }
-      if (typeof value === "object")
-        return value.name || value.code || value.label || value.value || "";
-      return "";
-    };
     const sanitizedData: AcademicData = {
       id: row.id,
       degree: row.degree,
@@ -53,10 +65,10 @@ export default function AcademicSetup() {
       year: extractSingleValue(row.year),
       sections: Array.isArray(row.sections)
         ? row.sections
-          .map((s: any) =>
+          .map((s: unknown) =>
             typeof s === "string"
               ? s
-              : s?.name || s?.code || s?.label || s?.value || "",
+              : extractSingleValue(s),
           )
           .filter(Boolean)
         : [],
@@ -90,6 +102,7 @@ export default function AcademicSetup() {
         subjectCode: res.data.subjectCode,
         subjectKey: res.data.subjectKey ?? "",
         credits: res.data.credits,
+        image: res.data.image ?? "",
       };
 
       const uiValues = await resolveSubjectUIFromIds({
@@ -104,8 +117,8 @@ export default function AcademicSetup() {
       setActiveTab("add-subject");
 
       toast.success("Subject loaded", { id: "subject-edit" });
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong", {
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Something went wrong", {
         id: "subject-edit",
       });
     } finally {
@@ -116,6 +129,7 @@ export default function AcademicSetup() {
   const handleSubjectSave = async (
     form: SubjectFormData,
     ui: SubjectUIState,
+    imageFile: File | null,
   ) => {
     try {
       if (!userId) {
@@ -133,12 +147,19 @@ export default function AcademicSetup() {
         collegeId,
       });
 
+      let finalImageUrl = form.image || null;
+
+      if (imageFile) {
+        finalImageUrl = await uploadSubjectImage(imageFile, collegeId, adminId);
+      }
+
       const payload = {
         ...(form.id && { collegeSubjectId: form.id }),
         subjectName: form.subjectName,
         subjectCode: form.subjectCode,
         subjectKey: form.subjectKey,
         credits: form.credits,
+        image: finalImageUrl,
         ...resolvedIds,
         collegeId,
         createdBy: adminId,
@@ -147,6 +168,9 @@ export default function AcademicSetup() {
       const res = await upsertAcademicSubject(payload);
 
       if (!res.success) {
+        if (imageFile && finalImageUrl) {
+          await deleteSubjectImageByUrl(finalImageUrl);
+        }
         throw new Error(res.error);
       }
 
@@ -156,9 +180,9 @@ export default function AcademicSetup() {
       toast.success(
         form.id ? "Subject updated successfully" : "Subject added successfully",
       );
-    } catch (err: any) {
-      toast.error(err.message || "Subject save failed");
-      throw err;
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "Subject save failed");
+      throw error;
     }
   };
 

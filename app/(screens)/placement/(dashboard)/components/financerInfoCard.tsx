@@ -74,10 +74,10 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
       ))}
 
       <div className="absolute top-4 right-4 z-20">
-        <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
+        {/* <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
           {today ? today : "Loading..."}
-        </div>
-      </div>
+        </div> */}
+      </div>    
 
       <svg
         className="absolute right-0 bottom-0 z-0 h-full w-auto"

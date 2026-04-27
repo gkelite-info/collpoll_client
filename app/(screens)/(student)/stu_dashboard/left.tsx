@@ -82,6 +82,7 @@ export default function StuDashLeft() {
           `
           collegeSubjectId,
           subjectName,
+          image,
           college_subject_units (
             completionPercentage,
             createdBy
@@ -176,7 +177,7 @@ export default function StuDashLeft() {
         return {
           title: sub.subjectName,
           professor: professor,
-          image: "/subject-default.png",
+          image: sub.image || "",
           percentage: avgPercentage,
           radialStart: colors.radialStart,
           radialEnd: colors.radialEnd,
