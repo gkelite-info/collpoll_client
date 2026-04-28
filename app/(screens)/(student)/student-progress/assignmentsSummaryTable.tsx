@@ -3,6 +3,7 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
 
 export type Assignment = {
+  assignmentId?: number;
   subject: string;
   title: string;
   dueDate: string;
@@ -12,19 +13,23 @@ export type Assignment = {
 
 type AssignmentsSummaryTableProps = {
   assignments: Assignment[];
+  title: string;
+  semesterLabel: string;
 };
 
 export function AssignmentsSummaryTable({
   assignments,
+  title,
+  semesterLabel,
 }: AssignmentsSummaryTableProps) {
   return (
     <div className="bg-white p-6 rounded-3xl shadow-sm w-full">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-gray-900 font-bold text-lg">
-          Assignments Summary - CSE 2nd Year ( Semester III )
+          {title}
         </h2>
         <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-          Semester III
+          {semesterLabel}
           <CaretDownIcon size={16} weight="bold" />
         </button>
       </div>
@@ -51,8 +56,21 @@ export function AssignmentsSummaryTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {assignments.map((item, index) => (
-              <tr key={index} className="hover:bg-gray-50 transition-colors">
+            {assignments.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="py-8 px-6 text-center text-gray-500 text-sm"
+                >
+                  No assignments found for this semester.
+                </td>
+              </tr>
+            ) : (
+              assignments.map((item, index) => (
+                <tr
+                  key={item.assignmentId ?? `${item.subject}-${index}`}
+                  className="hover:bg-gray-50 transition-colors"
+                >
                 <td className="py-4 px-6 text-gray-600 text-sm font-medium">
                   {item.subject}
                 </td>
@@ -68,8 +86,9 @@ export function AssignmentsSummaryTable({
                 <td className="py-4 px-6 text-gray-500 text-sm">
                   {item.feedback}
                 </td>
-              </tr>
-            ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

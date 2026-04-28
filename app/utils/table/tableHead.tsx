@@ -5,11 +5,19 @@ type Column = {
 
 type TableHeadProps = {
   columns: Column[];
+  stickyHeader?: boolean;
 };
 
-export default function TableHead({ columns }: TableHeadProps) {
+export default function TableHead({
+  columns,
+  stickyHeader = true,
+}: TableHeadProps) {
   return (
-    <thead className="bg-[#ECECEC] text-[#282828] text-regular sticky top-0 z-10">
+    <thead
+      className={`bg-[#ECECEC] text-[#282828] text-regular ${
+        stickyHeader ? "sticky top-0 z-[1]" : ""
+      }`}
+    >
       <tr>
         {columns.map((col) => (
           <th

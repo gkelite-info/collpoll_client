@@ -26,6 +26,7 @@ import StuAttendanceTable from "../tables/stuAttendanceTable";
 import StudentAttendanceDetailsPage from "../components/stuSubjectWise";
 import CardComponent from "../components/cards";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 interface SubjectWiseAttendanceProps {
   onBack: () => void;
@@ -42,7 +43,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // --- URL PARAMS ---
   const branch = searchParams.get("branch");
   const section = searchParams.get("section");
   const year = searchParams.get("year");
@@ -53,7 +53,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const collegeSectionsId = Number(searchParams.get("collegeSectionsId"));
   const selectedStudentId = searchParams.get("studentId");
 
-  // --- STATE ---
   const [loading, setLoading] = useState(true);
   const [classOptions, setClassOptions] = useState<
     { id: string; label: string }[]
@@ -61,7 +60,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [studentsList, setStudentsList] = useState<UIStudent[]>([]);
 
-  // --- ACTION STATE ---
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isCancellingMode, setIsCancellingMode] = useState(false);
@@ -69,7 +67,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
 
   const { adminId } = useAdmin();
 
-  // --- 1. LOAD CLASSES FOR SECTION ---
   useEffect(() => {
     if (!collegeSectionsId) return;
 
@@ -83,7 +80,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
           const firstClass = classes[0];
           setSelectedClassId(firstClass.id);
 
-          // ✅ FIXED: Pass collegeSectionsId to filter students by section
           const students = await getStudentsForClass(
             firstClass.id,
             String(collegeSectionsId),
@@ -109,7 +105,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
     init();
   }, [collegeSectionsId]);
 
-  // --- 2. HANDLE CLASS CHANGE ---
   const handleClassChange = async (newClassId: string) => {
     setSelectedClassId(newClassId);
     setLoading(true);
@@ -121,7 +116,6 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
       );
       setStudentsList(students);
     } catch (err) {
-      // toast.error("Failed to load students");
       toast.error("Failed to load students", {
         id: TOAST_IDS.STUDENT_LOAD_ERROR,
       });
@@ -347,7 +341,7 @@ const SubjectWiseAttendance = ({ onBack }: SubjectWiseAttendanceProps) => {
 
         {loading ? (
           <div className="text-center py-20 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-            <p className="text-gray-400 font-medium">Loading...</p>
+            <Loader />
           </div>
         ) : studentsList.length > 0 ? (
           <StuAttendanceTable

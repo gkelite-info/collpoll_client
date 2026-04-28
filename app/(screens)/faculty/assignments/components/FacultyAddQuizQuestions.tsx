@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { saveQuizQuestion } from "@/lib/helpers/quiz/quizQuestionAPI";
 import { saveBulkOptions } from "@/lib/helpers/quiz/quizQuestionOptionAPI";
-import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
+import { fetchQuizById, updateQuizStatus } from "@/lib/helpers/quiz/quizAPI";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 
 interface Option {
@@ -59,6 +59,7 @@ export default function FacultyAddQuestions({
   const [quizDetails, setQuizDetails] = useState<{
     quizTitle: string;
     topicTitle: string;
+    maxQuestions: number;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDrafting, setIsDrafting] = useState(false);
@@ -69,13 +70,19 @@ export default function FacultyAddQuestions({
       .then((data) => {
         setQuizDetails({
           quizTitle: data.quizTitle,
-          topicTitle: data.quizId,
+          topicTitle: data.college_subject_unit_topics?.topicTitle || "General Topic",
+          maxQuestions: data.questionsCount || 0,
         });
       })
       .catch(() => toast.error("Failed to fetch quiz details"));
   }, [quizId]);
 
   const addQuestion = () => {
+    if (quizDetails && questions.length >= quizDetails.maxQuestions) {
+      toast.error(`You can only add up to ${quizDetails.maxQuestions} questions for this quiz.`);
+      return;
+    }
+
     const lastType = questions[questions.length - 1]?.type || "Multiple Choice";
     const newQuestion: Question = {
       id: Date.now(),
@@ -123,11 +130,11 @@ export default function FacultyAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: q.options.map((o) =>
-                o.id === optId ? { ...o, text } : o,
-              ),
-            }
+            ...q,
+            options: q.options.map((o) =>
+              o.id === optId ? { ...o, text } : o,
+            ),
+          }
           : q,
       ),
     );
@@ -138,12 +145,12 @@ export default function FacultyAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: q.options.map((o) => ({
-                ...o,
-                isCorrect: o.id === optId,
-              })),
-            }
+            ...q,
+            options: q.options.map((o) => ({
+              ...o,
+              isCorrect: o.id === optId,
+            })),
+          }
           : q,
       ),
     );
@@ -154,12 +161,12 @@ export default function FacultyAddQuestions({
       prev.map((q) =>
         q.id === qId
           ? {
-              ...q,
-              options: [
-                ...q.options,
-                { id: Date.now(), text: "", isCorrect: false },
-              ],
-            }
+            ...q,
+            options: [
+              ...q.options,
+              { id: Date.now(), text: "", isCorrect: false },
+            ],
+          }
           : q,
       ),
     );
@@ -167,6 +174,7 @@ export default function FacultyAddQuestions({
 
   const handleSave = async (status: "Draft" | "Active") => {
     if (!quizId) return toast.error("Quiz ID not found");
+
     for (const q of questions) {
       if (!q.title.trim())
         return toast.error("All questions must have a title");
@@ -179,9 +187,18 @@ export default function FacultyAddQuestions({
         return toast.error(`Please enter correct answer for: "${q.title}"`);
       }
     }
+
+    const isComplete = quizDetails && questions.length === quizDetails.maxQuestions;
+    const finalStatus = (status === "Active" && isComplete) ? "Active" : "Draft";
+
+    if (status === "Active" && !isComplete) {
+      toast.error(`You need ${quizDetails?.maxQuestions} questions to publish. Saving as Draft.`);
+    }
+
     try {
-      setIsSaving(true);
-      setIsDrafting(true);
+      setIsSaving(status === "Active");
+      setIsDrafting(status === "Draft");
+
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
         const qResult = await saveQuizQuestion({
@@ -191,10 +208,11 @@ export default function FacultyAddQuestions({
           marks: 1,
           displayOrder: i,
         });
+
         if (!qResult.success || !qResult.questionId) {
-          toast.error("Failed to save question");
-          return;
+          throw new Error(`Failed to save question: ${q.title}`);
         }
+
         if (q.type === "Multiple Choice") {
           await saveBulkOptions(
             qResult.questionId,
@@ -205,34 +223,34 @@ export default function FacultyAddQuestions({
             })),
           );
         } else {
-          const allOptions = [
-            ...q.options.map((o, idx) => ({
-              optionText: o.text,
-              isCorrect: false,
-              displayOrder: idx,
-            })),
+          await saveBulkOptions(qResult.questionId, [
             {
               optionText: q.correctAnswer.trim(),
               isCorrect: true,
-              displayOrder: q.options.length,
+              displayOrder: 0,
             },
-          ];
-          await saveBulkOptions(qResult.questionId, allOptions);
+          ]);
         }
       }
+
+      const statusResult = await updateQuizStatus(quizId, finalStatus);
+      if (!statusResult.success) throw new Error("Failed to update status");
+
       toast.success(
-        status === "Draft"
-          ? "Quiz saved as draft!"
-          : "Quiz saved successfully!",
+        finalStatus === "Active"
+          ? "Quiz published successfully!"
+          : "Quiz saved as draft!"
       );
+
       const params = new URLSearchParams();
       params.set("tab", "quiz");
-      params.set("quizView", status === "Draft" ? "drafts" : "active");
+      params.set("quizView", finalStatus === "Active" ? "active" : "drafts");
       params.set("refreshQuiz", "1");
       router.push(`${pathname}?${params.toString()}`);
+
     } catch (err) {
       console.error("handleSave error:", err);
-      toast.error("Something went wrong");
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsSaving(false);
       setIsDrafting(false);
@@ -265,13 +283,25 @@ export default function FacultyAddQuestions({
         </p>
       </div>
 
-      <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px]">
-        <p className="font-bold text-[#282828] text-sm">
-          {quizDetails?.quizTitle || ""}
-        </p>
-        <p className="text-[#282828] text-xs mt-0.5">
-          {quizDetails?.quizTitle || ""}
-        </p>
+      <div className="bg-white rounded-md px-4 py-3 mb-3 min-h-[60px] flex items-center justify-between">
+        <div className="bg-red-00 flex flex-col items-start">
+          <p className="font-bold text-[#282828] text-sm">
+            {quizDetails?.quizTitle || "Loading Quiz..."}
+          </p>
+          <p className="text-[#282828] text-xs mt-0.5">
+            {quizDetails?.topicTitle || "N/A"}
+          </p>
+        </div>
+        <div className="bg-blue-00">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Questions Added</p>
+          {quizDetails ? (
+            <p className={`text-xl font-bold ${questions.length === quizDetails.maxQuestions ? 'text-[#43C17A]' : 'text-[#16284F]'}`}>
+              {questions.length} <span className="text-gray-300 text-sm">/ {quizDetails.maxQuestions}</span>
+            </p>
+          ) : (
+            <p className="text-xl font-bold text-gray-200 animate-pulse">-- / --</p>
+          )}
+        </div>
       </div>
 
       <div className="flex justify-between items-center mb-3 gap-4">
@@ -287,11 +317,13 @@ export default function FacultyAddQuestions({
         </div>
         <button
           onClick={addQuestion}
-          className="flex items-center gap-2 bg-[#43C17A] text-white text-sm font-medium p-2 rounded-md hover:bg-[#35a868] transition-colors cursor-pointer shrink-0 whitespace-nowrap"
+          disabled={!!(quizDetails && questions.length >= quizDetails.maxQuestions)}
+          className={`flex items-center gap-2 text-white text-sm font-medium p-2 rounded-md transition-colors shrink-0 whitespace-nowrap ${(quizDetails && questions.length >= quizDetails.maxQuestions)
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-[#43C17A] hover:bg-[#35a868] cursor-pointer"
+            }`}
         >
-          <span className="text-lg leading-none">
-            <PlusCircleIcon size={20} weight="fill" color="white" />
-          </span>{" "}
+          <PlusCircleIcon size={20} weight="fill" color="white" />
           Add Question
         </button>
       </div>
@@ -300,9 +332,8 @@ export default function FacultyAddQuestions({
         {questions.map((question, index) => (
           <div
             key={question.id}
-            className={`bg-white rounded-md px-4 py-4 border-2 ${
-              index === 0 ? "border-[#43C17A]" : "border-transparent"
-            }`}
+            className={`bg-white rounded-md px-4 py-4 border-2 ${index === 0 ? "border-[#43C17A]" : "border-transparent"
+              }`}
           >
             <div className="flex items-center justify-between gap-4 mb-3">
               <input
@@ -352,11 +383,7 @@ export default function FacultyAddQuestions({
                   </div>
                 ))
               ) : (
-                /* =========================================
-                   NEW PRODUCTION-GRADE FILL-IN-THE-BLANKS UI
-                   ========================================= */
                 <div className="flex flex-col gap-4 mt-2">
-                  {/* Visual hint for teacher */}
                   <div className="bg-blue-50/50 border border-blue-100 rounded-md px-3 py-2.5 flex items-start gap-2">
                     <span className="text-blue-500 mt-0.5 text-sm">💡</span>
                     <p className="text-xs text-blue-700 leading-relaxed">
@@ -369,7 +396,6 @@ export default function FacultyAddQuestions({
                     </p>
                   </div>
 
-                  {/* Correct Answer Section */}
                   <div className="bg-[#43C17A]/5 border border-[#43C17A]/20 rounded-lg p-4 relative overflow-hidden">
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#43C17A]"></div>
                     <label className="block text-sm font-semibold text-[#205B3A] mb-2 flex items-center gap-2">
@@ -410,7 +436,7 @@ export default function FacultyAddQuestions({
               <div className="flex justify-end gap-3 w-full">
                 <button
                   onClick={() => deleteQuestion(question.id)}
-                  className="text-gray-400 hover:text-red-500 cursor-pointer transition-colors p-1"
+                  className="text-gray-400 text-red-500 cursor-pointer transition-colors p-1"
                   title="Delete Question"
                 >
                   <svg

@@ -3,7 +3,10 @@
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
-import { getAcademicSubjects } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
+import {
+  getAcademicSubjects,
+  deleteAcademicSubject,
+} from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
@@ -15,6 +18,7 @@ export type SubjectViewData = {
   subjectCode: string;
   subjectKey: string;
   credits: number;
+  image: string | null;
 
   education: string;
   branch: string;
@@ -23,6 +27,31 @@ export type SubjectViewData = {
 };
 
 const ITEMS_PER_PAGE = 10;
+
+type SubjectRowResponse = {
+  collegeSubjectId: number;
+  subjectName: string;
+  subjectCode: string;
+  subjectKey: string | null;
+  credits: number;
+  image: string | null;
+  collegeEducation?: { collegeEducationType?: string | null } | null;
+  collegeBranch?: { collegeBranchCode?: string | null } | null;
+  collegeAcademicYear?: { collegeAcademicYear?: string | null } | null;
+  collegeSemester?: { collegeSemester?: string | number | null } | null;
+};
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Something went wrong";
+
+const getSubjectInitials = (subjectName: string) => {
+  const parts = subjectName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) return "SU";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+};
 
 export default function ViewSubjects({
   onEdit,
@@ -54,12 +83,13 @@ export default function ViewSubjects({
         return;
       }
 
-      const mapped = res.data.map((s: any) => ({
+      const mapped = res.data.map((s: SubjectRowResponse) => ({
         id: s.collegeSubjectId,
         subjectName: s.subjectName,
         subjectCode: s.subjectCode,
         subjectKey: s.subjectKey ?? "-",
         credits: s.credits,
+        image: s.image ?? null,
         education: s.collegeEducation?.collegeEducationType ?? "-",
         branch: s.collegeBranch?.collegeBranchCode ?? "-",
         year: s.collegeAcademicYear?.collegeAcademicYear ?? "-",
@@ -68,11 +98,32 @@ export default function ViewSubjects({
 
       setSubjects(mapped);
       setCurrentPage(1);
-    } catch (err: any) {
+    } catch (error: unknown) {
       toast.error(
-        err.message || "Something went wrong while loading subjects.",
+        getErrorMessage(error) || "Something went wrong while loading subjects.",
       );
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🟢 NEW: Handle Delete
+  const handleDelete = async (subjectId: number) => {
+    if (!window.confirm("Are you sure you want to delete this subject?"))
+      return;
+
+    try {
+      setIsLoading(true);
+      const res = await deleteAcademicSubject(subjectId);
+      if (res.success) {
+        toast.success("Subject deleted successfully!");
+        loadSubjects(); // Reload the list
+      } else {
+        toast.error(res.error || "Failed to delete subject.");
+        setIsLoading(false);
+      }
+    } catch {
+      toast.error("Failed to delete subject.");
       setIsLoading(false);
     }
   };
@@ -82,6 +133,7 @@ export default function ViewSubjects({
     startIndex,
     startIndex + ITEMS_PER_PAGE,
   );
+  const tableColumnCount = collegeEducationType === "Inter" ? 9 : 10;
 
   return (
     <div className="w-[95%] mx-auto bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
@@ -89,12 +141,15 @@ export default function ViewSubjects({
         <table className="w-full text-sm text-[#2D3748]">
           <thead className="bg-gray-100">
             <tr>
+              <th className="p-3 text-left text-[#2D3748]">Subject Image</th>
               <th className="p-3 text-left text-[#2D3748]">Subject</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Code</th>
               <th className="p-3 text-left text-[#2D3748]">Subject Key</th>
               <th className="p-3 text-left text-[#2D3748]">Credits</th>
               <th className="p-3 text-left text-[#2D3748]">Education</th>
-              <th className="p-3 text-left text-[#2D3748]">{collegeEducationType === "Inter" ? "Group" : "Branch"}</th>
+              <th className="p-3 text-left text-[#2D3748]">
+                {collegeEducationType === "Inter" ? "Group" : "Branch"}
+              </th>
               <th className="p-3 text-left text-[#2D3748]">Year</th>
               {!(collegeEducationType === "Inter") && (
                 <th className="p-3 text-left text-[#2D3748]">Sem</th>
@@ -106,7 +161,7 @@ export default function ViewSubjects({
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={9} className="text-center p-3 h-[30vh]">
+                <td colSpan={tableColumnCount} className="text-center p-3 h-[30vh]">
                   <Loader />
                 </td>
               </tr>
@@ -116,6 +171,28 @@ export default function ViewSubjects({
                   key={row.id}
                   className="hover:bg-gray-50 border-b border-gray-50 last:border-b-0"
                 >
+                  <td className="p-3">
+                    <div className="flex items-center">
+                      {row.image ? (
+                        <img
+                          src={row.image}
+                          alt={row.subjectName}
+                          className="h-10 w-10 rounded-lg border border-[#DCE7E2] object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const fallback = e.currentTarget.nextElementSibling as HTMLDivElement | null;
+                            if (fallback) fallback.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className="h-10 w-10 rounded-lg border border-[#CBEBD8] bg-gradient-to-br from-[#DFF7E8] to-[#BCEFD1] text-xs font-semibold text-[#16284F] items-center justify-center"
+                        style={{ display: row.image ? "none" : "flex" }}
+                      >
+                        {getSubjectInitials(row.subjectName)}
+                      </div>
+                    </div>
+                  </td>
                   <td className="p-3 text-[#2D3748]">{row.subjectName}</td>
                   <td className="p-3 text-[#2D3748]">{row.subjectCode}</td>
                   <td className="p-3 text-[#2D3748]">{row.subjectKey}</td>
@@ -123,18 +200,28 @@ export default function ViewSubjects({
                   <td className="p-3 text-[#2D3748]">{row.education}</td>
                   <td className="p-3 text-[#2D3748]">{row.branch}</td>
                   <td className="p-3 text-[#2D3748]">{row.year}</td>
-                  <td className="p-3 text-[#2D3748]">{row.semester}</td>
-                  <td
-                    className="p-3 underline cursor-pointer text-[#16284F] hover:text-[#43C17A] transition-colors"
-                    onClick={() => onEdit(row)}
-                  >
-                    Edit
+                  {!(collegeEducationType === "Inter") && (
+                    <td className="p-3 text-[#2D3748]">{row.semester}</td>
+                  )}
+                  <td className="p-3">
+                    <span
+                      className="underline cursor-pointer text-[#16284F] hover:text-[#43C17A] transition-colors mr-3"
+                      onClick={() => onEdit(row)}
+                    >
+                      Edit
+                    </span>
+                    <span
+                      className="underline cursor-pointer text-red-500 hover:text-red-700 transition-colors"
+                      onClick={() => handleDelete(row.id)}
+                    >
+                      Delete
+                    </span>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="text-center p-3 h-[30vh]">
+                <td colSpan={tableColumnCount} className="text-center p-3 h-[30vh]">
                   No subjects available.
                 </td>
               </tr>

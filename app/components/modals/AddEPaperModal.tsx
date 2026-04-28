@@ -20,6 +20,13 @@ export default function AddEPaperModal({ isOpen, onClose, onSuccess }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const handleCancel = () => {
+    setName("");
+    setDate("");
+    setFile(null);
+    onClose();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -65,7 +72,7 @@ export default function AddEPaperModal({ isOpen, onClose, onSuccess }: Props) {
               Add New E-Paper
             </h3>
             <button
-              onClick={onClose}
+              onClick={handleCancel}
               className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
             >
               <X size={18} />
@@ -94,7 +101,7 @@ export default function AddEPaperModal({ isOpen, onClose, onSuccess }: Props) {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#43C17A]/50"
+                className="w-full px-3 py-2 border border-gray-300 text-[#282828] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#43C17A]/50"
                 required
               />
             </div>

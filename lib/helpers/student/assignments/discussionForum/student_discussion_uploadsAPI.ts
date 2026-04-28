@@ -14,6 +14,68 @@ export type StudentDiscussionUploadRow = {
   deletedAt: string | null;
 };
 
+// export async function fetchDiscussionUploads(
+//   discussionId: number,
+//   discussionSectionId?: number,
+// ) {
+//   let query = supabase
+//     .from("student_discussion_uploads")
+//     .select(
+//       `
+//       studentDiscussionUploadId,
+//       studentId,
+//       fileUrl,
+//       submittedAt,
+//       students:studentId (
+//         user:userId (
+//           fullName,
+//           profile:user_profile (
+//             profileUrl
+//           )
+//         ),
+//         student_academic_history (
+//           isCurrent,
+//           college_sections (
+//             collegeSections
+//           )
+//         )
+//       )
+//     `,
+//     )
+//     .eq("discussionId", discussionId)
+//     .eq("isActive", true)
+//     .eq("is_deleted", false);
+
+//   if (discussionSectionId !== undefined) {
+//     query = query.eq("discussionSectionId", discussionSectionId);
+//   }
+
+//   const { data, error } = await query;
+
+//   if (error) {
+//     throw error;
+//   }
+
+//   return (data ?? []).map((row: any) => {
+//     const currentHistory = row.students?.student_academic_history?.find(
+//       (h: any) => h.isCurrent === true,
+//     );
+
+//     return {
+//       studentDiscussionUploadId: row.studentDiscussionUploadId,
+//       studentId: row.studentId,
+//       fileUrl: row.fileUrl,
+//       submittedAt: row.submittedAt,
+//       marksObtained: null,
+//       profiles: {
+//         full_name: row.students?.user?.fullName ?? "Unknown Student",
+//         avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,
+//         section: currentHistory?.college_sections?.collegeSections ?? "N/A",
+//       },
+//     };
+//   });
+// }
+
 export async function fetchDiscussionUploads(
   discussionId: number,
   discussionSectionId?: number,
@@ -26,6 +88,7 @@ export async function fetchDiscussionUploads(
       studentId,
       fileUrl,
       submittedAt,
+      marksObtained,
       students:studentId (
         user:userId (
           fullName,
@@ -39,6 +102,9 @@ export async function fetchDiscussionUploads(
             collegeSections
           )
         )
+      ),
+      discussion_forum_sections!inner (
+        marks
       )
     `,
     )
@@ -66,7 +132,8 @@ export async function fetchDiscussionUploads(
       studentId: row.studentId,
       fileUrl: row.fileUrl,
       submittedAt: row.submittedAt,
-      marksObtained: null,
+      marksObtained: row.marksObtained,
+      totalMarks: row.discussion_forum_sections?.marks ?? 25,
       profiles: {
         full_name: row.students?.user?.fullName ?? "Unknown Student",
         avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,

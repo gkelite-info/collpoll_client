@@ -82,6 +82,13 @@ export default function AdminNavbar() {
     },
     {
       icon: (isActive) => (
+        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Academic Setup",
+      path: "/admin/academic-setup",
+    },
+    {
+      icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Placements",
@@ -99,6 +106,13 @@ export default function AdminNavbar() {
     // },
     {
       icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: "Club",
+      path: "/admin/clubs",
+    },
+    {
+      icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: "Drive",
@@ -111,13 +125,7 @@ export default function AdminNavbar() {
       label: "Meetings",
       path: "/admin/meetings",
     },
-    {
-      icon: (isActive) => (
-        <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Academic Setup",
-      path: "/admin/academic-setup",
-    },
+    
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
@@ -125,13 +133,7 @@ export default function AdminNavbar() {
       label: "My Attendance",
       path: "/admin/my-attendance",
     },
-    {
-      icon: (isActive) => (
-        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Clubs",
-      path: "/admin/clubs",
-    },
+
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />

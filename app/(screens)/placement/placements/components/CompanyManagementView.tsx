@@ -51,13 +51,13 @@ export default function CompanyManagementView({
             type="button"
             onClick={handleCreateCompany}
             disabled={isAddingCompany}
-            className="flex h-8 min-w-[112px] cursor-pointer items-center justify-center rounded-lg bg-[#16284F] px-3 text-[14px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex h-8 min-w-28 cursor-pointer items-center justify-center rounded-lg bg-[#16284F] px-3 text-[14px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isAddingCompany ? "Loading..." : "Add Company"}
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-2 pb-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto  pb-4">
           {companies.map((company) => (
             <PlacementCompanyCard
               key={company.id}

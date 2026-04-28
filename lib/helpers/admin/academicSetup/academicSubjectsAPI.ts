@@ -1,11 +1,15 @@
 import { supabase } from "@/lib/supabaseClient";
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Something went wrong";
+
 export type SubjectDBPayload = {
   collegeSubjectId?: number;
   subjectName: string;
   subjectCode: string;
   subjectKey?: string | null;
   credits: number;
+  image?: string | null;
   collegeEducationId: number;
   collegeBranchId: number;
   collegeAcademicYearId: number;
@@ -56,63 +60,6 @@ export const resolveSubjectUIFromIds = async ({
     semester: String(sem?.collegeSemester ?? ""),
   };
 };
-
-// export const resolveSubjectIds = async ({
-//   education,
-//   branch,
-//   year,
-//   semester,
-//   collegeId,
-// }: {
-//   education: string;
-//   branch: string;
-//   year: string;
-//   semester: string;
-//   collegeId: number;
-// }) => {
-//   const { data: edu, error: eduErr } = await supabase
-//     .from("college_education")
-//     .select("collegeEducationId")
-//     .eq("collegeEducationType", education)
-//     .eq("collegeId", collegeId)
-//     .is("deletedAt", null)
-//     .single();
-//   if (eduErr || !edu) throw new Error("Education not found");
-
-//   const { data: br, error: brErr } = await supabase
-//     .from("college_branch")
-//     .select("collegeBranchId")
-//     .eq("collegeBranchCode", branch)
-//     .eq("collegeEducationId", edu.collegeEducationId)
-//     .is("deletedAt", null)
-//     .single();
-//   if (brErr || !br) throw new Error("Branch not found");
-
-//   const { data: yr, error: yrErr } = await supabase
-//     .from("college_academic_year")
-//     .select("collegeAcademicYearId")
-//     .eq("collegeAcademicYear", year)
-//     .eq("collegeBranchId", br.collegeBranchId)
-//     .is("deletedAt", null)
-//     .single();
-//   if (yrErr || !yr) throw new Error("Academic year not found");
-
-//   const { data: sem, error: semErr } = await supabase
-//     .from("college_semester")
-//     .select("collegeSemesterId")
-//     .eq("collegeSemester", Number(semester))
-//     .eq("collegeAcademicYearId", yr.collegeAcademicYearId)
-//     .is("deletedAt", null)
-//     .single();
-//   if (semErr || !sem) throw new Error("Semester not found");
-
-//   return {
-//     collegeEducationId: edu.collegeEducationId,
-//     collegeBranchId: br.collegeBranchId,
-//     collegeAcademicYearId: yr.collegeAcademicYearId,
-//     collegeSemesterId: sem.collegeSemesterId,
-//   };
-// };
 
 export const resolveSubjectIds = async ({
   education,
@@ -185,12 +132,15 @@ export const resolveSubjectIds = async ({
   };
 };
 
-export const getAcademicSubjects = async (collegeId: number, collegeEducationId: number) => {
+export const getAcademicSubjects = async (
+  collegeId: number,
+  collegeEducationId: number,
+) => {
   const { data, error } = await supabase
     .from("college_subjects")
     .select(
       `
-      collegeSubjectId, subjectName, subjectCode, subjectKey, credits,
+      collegeSubjectId, subjectName, subjectCode, subjectKey, credits, image,
       collegeEducation:college_education (collegeEducationType),
       collegeBranch:college_branch (collegeBranchCode),
       collegeAcademicYear:college_academic_year (collegeAcademicYear),
@@ -216,8 +166,11 @@ export const getAcademicSubjectById = async (collegeSubjectId: number) => {
       .single();
     if (error) throw error;
     return { success: true, data };
-  } catch (err: any) {
-    return { success: false, error: err.message || "Failed to fetch subject" };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to fetch subject",
+    };
   }
 };
 
@@ -231,6 +184,7 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
       subjectCode: payload.subjectCode.toUpperCase(),
       subjectKey: payload.subjectKey ? payload.subjectKey.toUpperCase() : null,
       credits: Number(payload.credits),
+      image: payload.image?.trim() || null,
       updatedAt: now,
     };
 
@@ -260,12 +214,45 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
 
     if (result.error) {
       console.error("Supabase operation error:", result.error);
-      return { success: false, error: result.error.message };
+
+      // 🟢 Catch Postgres unique constraint violation for duplicate subject code
+      let errorMessage = result.error.message;
+      if (
+        result.error.code === "23505" ||
+        result.error.message.includes("uniq_subject_per_college_context")
+      ) {
+        errorMessage =
+          "A subject with this Subject Code already exists in this context. Please use a unique Subject Code.";
+      }
+
+      return { success: false, error: errorMessage };
     }
 
     return { success: true, data: result.data };
-  } catch (err: any) {
-    console.error("upsertAcademicSubject error:", err);
-    return { success: false, error: err.message || "Failed to save subject" };
+  } catch (error: unknown) {
+    console.error("upsertAcademicSubject error:", error);
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to save subject",
+    };
+  }
+};
+
+// 🟢 NEW: Function to delete subject
+export const deleteAcademicSubject = async (collegeSubjectId: number) => {
+  try {
+    const { error } = await supabase
+      .from("college_subjects")
+      .update({ deletedAt: new Date().toISOString() }) // Soft delete
+      .eq("collegeSubjectId", collegeSubjectId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("deleteAcademicSubject error:", error);
+    return {
+      success: false,
+      error: getErrorMessage(error) || "Failed to delete subject",
+    };
   }
 };

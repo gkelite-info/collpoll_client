@@ -11,8 +11,20 @@ import {
   LabelList,
 } from "recharts";
 
-export default function AcademicPerformance() {
-  const data = [
+type AcademicPerformanceItem = {
+  subject: string;
+  value: number;
+  full: number;
+};
+
+interface AcademicPerformanceProps {
+  data?: AcademicPerformanceItem[];
+}
+
+export default function AcademicPerformance({
+  data,
+}: AcademicPerformanceProps) {
+  const defaultData: AcademicPerformanceItem[] = [
     { subject: "Java Programming", value: 70, full: 100 },
     { subject: "Data Structures", value: 50, full: 100 },
     { subject: "Database Management Systems", value: 80, full: 100 },
@@ -20,6 +32,12 @@ export default function AcademicPerformance() {
     { subject: "Software Engineering", value: 80, full: 100 },
     { subject: "Web Development", value: 60, full: 100 },
   ];
+
+  const chartData = (data && data.length ? data : defaultData).length
+    ? data && data.length
+      ? data
+      : defaultData
+    : [{ subject: "No Data", value: 0, full: 100 }];
 
   return (
     <div className="bg-white rounded-lg shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
@@ -30,7 +48,7 @@ export default function AcademicPerformance() {
       <div className="w-full h-70 bg-green-00">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={chartData}
             margin={{ top: 40, right: 30, left: 0, bottom: 0 }}
             barGap={-50}
             barCategoryGap={0}
@@ -112,7 +130,7 @@ export default function AcademicPerformance() {
                 }}
               />
 
-              {data.map((_, i) => (
+              {chartData.map((_, i) => (
                 <Cell key={i} fill="url(#barGradient)" />
               ))}
             </Bar>

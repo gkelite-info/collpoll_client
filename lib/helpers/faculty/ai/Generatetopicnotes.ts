@@ -1,4 +1,4 @@
-import { generateWithGroqFallback } from "./groqClient";
+import { generateRawWithGroqFallback } from "./groqClient";
 
 
 export type TopicNotesSection = {
@@ -115,7 +115,22 @@ RULES:
 - Return PURE JSON ONLY. No markdown. No backticks.
 `;
 
-  const raw = await generateWithGroqFallback(prompt);
+  const raw = await generateRawWithGroqFallback({
+    prompt,
+    maxTokens: 2200,
+    temperature: 0.2,
+    systemPrompt: `You are an academic content writer for Indian college students.
+
+Return only one valid JSON object that exactly matches the user's requested schema.
+
+STRICT RULES:
+- No markdown
+- No backticks
+- No explanations outside JSON
+- No truncation
+- Keep code examples plain ASCII only
+- Keep content educational, structured, and topic-specific`,
+  });
   const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
   return JSON.parse(cleaned) as TopicNotes;
 }

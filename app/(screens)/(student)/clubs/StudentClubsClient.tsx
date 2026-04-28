@@ -10,7 +10,7 @@ export default function StudentClubsClient() {
   const currentTab = searchParams.get("tab") || "all";
 
   return (
-    <main className="mt-8 rounded-3xl bg-white p-6 shadow-sm min-h-[80vh]">
+    <main className="mt-4 rounded-3xl bg-white p-6 shadow-sm min-h-[80vh]">
       <div className="flex justify-center mb-12">
         <StudentTabNavigation currentTab={currentTab} />
       </div>

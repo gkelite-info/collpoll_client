@@ -44,6 +44,7 @@ export type PlacementCompany = {
   logo: string;
   startDate?: string;
   endDate?: string;
+  isExpired?: boolean;
 };
 
 export type PlacementDriveStat = {
@@ -59,6 +60,15 @@ export type PlacementDrive = {
   companyName: string;
   date: string;
   branch: string;
+  collegeId?: number;
+  collegeEducationId?: number;
+  educationTypeName?: string;
+  collegeBranchId?: number;
+  collegeAcademicYearId?: number;
+  placementCompanyIds?: number[];
+  role?: string;
+  packageDetails?: string;
+  isCompleted?: boolean;
   eligibleStudents: number;
   applied: number;
   placed: number;
@@ -97,12 +107,13 @@ export const placementTabs: PlacementTab[] = [
     description:
       "View, schedule, and manage all recruitment drives conducted in your institution.",
   },
-  {
-    id: "student-applications",
-    label: "Student Applications",
-    description:
-      "Track all student applications and shortlisting progress across placement drives.",
-  },
+  // Hidden from UI for now. Path: app/(screens)/placement/placements/components/StudentApplicationsView.tsx
+  // {
+  //   id: "student-applications",
+  //   label: "Student Applications",
+  //   description:
+  //     "Track all student applications and shortlisting progress across placement drives.",
+  // },
   {
     id: "results-offers",
     label: "Results & Offers",
@@ -321,7 +332,7 @@ export const placementTabContent = {
       {
         label: "50",
         value: "50",
-        note: "Active Companies",
+        note: "Active Drives",
         cardClass: "bg-[#DFF7E7]",
       },
       {

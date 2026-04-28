@@ -94,7 +94,6 @@ function AssignmentsLeftContent() {
   const [quizTotalRecords, setQuizTotalRecords] = useState(0);
 
   const DISCUSSION_PER_PAGE = 8;
-  const MAX_ATTEMPTS = 3;
 
   const [performanceData, setPerformanceData] = useState<any>(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
@@ -130,6 +129,8 @@ function AssignmentsLeftContent() {
       const percentage =
         totalMarks > 0 ? Math.round((marksObtained / totalMarks) * 100) : 0;
 
+      const quizMaxAttempts = quiz?.maxAttempts ?? 3;
+
       setPerformanceData({
         id: quiz?.quizId,
         courseName: quiz?.college_subjects?.subjectName || "-",
@@ -137,7 +138,7 @@ function AssignmentsLeftContent() {
         facultyName: quiz?.faculty?.fullName || "-",
         attemptedOn: formatDate(submission?.submittedAt),
         questionsAttempted: `${submission?.answersCount ?? 0} / ${submission?.totalQuestionsCount ?? 0}`,
-        attemptsUsed: `${submission?.attemptNumber} of ${MAX_ATTEMPTS}`,
+        attemptsUsed: `${submission?.attemptNumber} of ${quizMaxAttempts}`,
         score: `${marksObtained} / ${totalMarks}`,
         bgColor: "bg-[#481451]",
         percentage,
@@ -145,7 +146,7 @@ function AssignmentsLeftContent() {
         wrong,
         unanswered,
         total,
-        allAttemptsUsed: (submission?.attemptNumber ?? 0) >= MAX_ATTEMPTS,
+        allAttemptsUsed: (submission?.attemptNumber ?? 0) >= quizMaxAttempts,
       });
     } catch (err) {
       console.error("loadPerformanceData error:", err);
@@ -168,17 +169,11 @@ function AssignmentsLeftContent() {
 
         const ongoingWithAttempts = await Promise.all(
           data.map(async (quiz: any) => {
-            const count = await getStudentAttemptCount(
-              quiz.quizId,
-              studentId as number,
-            );
-            return { ...quiz, attemptsLeft: MAX_ATTEMPTS - count };
+            const count = await getStudentAttemptCount(quiz.quizId, studentId as number);
+            return { ...quiz, attemptsLeft: quiz.maxAttempts - count };
           }),
         );
-
-        const filteredOngoing = ongoingWithAttempts.filter(
-          (q: any) => q.attemptsLeft > 0,
-        );
+        const filteredOngoing = ongoingWithAttempts.filter((q) => q.attemptsLeft > 0);
 
         setOngoingQuizzes(filteredOngoing);
         setQuizTotalRecords(totalCount);
@@ -421,7 +416,6 @@ function AssignmentsLeftContent() {
     }
   }
 
-  // Helper functions
   function convertIntToShow(intVal: number) {
     if (!intVal) return "";
     const s = intVal.toString();
@@ -446,6 +440,7 @@ function AssignmentsLeftContent() {
             id: activeQuizData?.quizId,
             courseName: activeQuizData?.college_subjects?.subjectName || "-",
             topic: activeQuizData?.quizTitle || "-",
+            durationMinutes: activeQuizData?.durationMinutes ?? 30,
           }}
           onSubmitSuccess={async () => {
             await loadQuizzes();
@@ -713,7 +708,7 @@ function AssignmentsLeftContent() {
                             facultyName: quiz?.faculty?.fullName || "-",
                             attemptedOn: formatDate(submission.submittedAt),
                             questionsAttempted: `${submission.answersCount ?? 0} / ${submission.totalQuestionsCount ?? 0}`,
-                            attemptsUsed: `${submission.attemptNumber} of ${MAX_ATTEMPTS}`,
+                            attemptsUsed: `${submission.attemptNumber} of ${quiz?.maxAttempts ?? 3}`,
                             score: `${submission.totalMarksObtained} / ${quiz?.totalMarks ?? "-"}`,
                             bgColor: bgColors[index % bgColors.length],
                             totalMarksObtained: submission.totalMarksObtained,

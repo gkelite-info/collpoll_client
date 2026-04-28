@@ -12,21 +12,33 @@ import AdminDiscussionSubmissions from "./adminDiscussionSubmissions";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import TaskPanel, { Task } from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
-import { fetchBranchOptionsForAdmin, fetchCollegeBranchesForLoggedInAdmin } from "@/lib/helpers/admin/collegeBranchAPI";
+import {
+  fetchBranchOptionsForAdmin,
+  fetchCollegeBranchesForLoggedInAdmin,
+} from "@/lib/helpers/admin/collegeBranchAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { fetchAcademicYearOptionsForAdmin } from "@/lib/helpers/admin/collegeAcademicYearAPI";
 import { DiscussionDeptCardSkeleton } from "./shimmers/DiscussionDeptCardSkeleton";
 import { getBranchTheme } from "../utils/palette";
-import { fetchActiveStudentCount, fetchPendingSubmissionsCount } from "@/lib/helpers/admin/studentsCountAPI";
-import { fetchActiveFacultyData, fetchFacultySubjectDiscussionCount, fetchSubjectFacultyList } from "@/lib/helpers/admin/facultyCountAPI";
+import {
+  fetchActiveStudentCount,
+  fetchPendingSubmissionsCount,
+} from "@/lib/helpers/admin/studentsCountAPI";
+import {
+  fetchActiveFacultyData,
+  fetchFacultySubjectDiscussionCount,
+  fetchSubjectFacultyList,
+} from "@/lib/helpers/admin/facultyCountAPI";
 import { fetchActiveDiscussionCount } from "@/lib/helpers/discussionForum/activeDiscussionForumAPI";
 import { DiscussionCourseCardSkeleton } from "./shimmers/courseCardSkeleton";
 import TaskCardShimmer from "@/app/(screens)/faculty/shimmers/TaskCardShimmer";
-import { fetchFacultyTasksByFacultyId, saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
+import {
+  fetchFacultyTasksByFacultyId,
+  saveFacultyTask,
+} from "@/lib/helpers/faculty/facultyTasks";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { useUser } from "@/app/utils/context/UserContext";
 import toast from "react-hot-toast";
-
 
 interface props {
   facultyId?: number;
@@ -66,7 +78,10 @@ const typeIcons: Record<string, string> = {
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function DiscussionForumBasic({ facultyId: propFacultyId, collegeSubjectId }: props) {
+export default function DiscussionForumBasic({
+  facultyId: propFacultyId,
+  collegeSubjectId,
+}: props) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const dept = searchParams.get("dept");
@@ -77,15 +92,18 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
   const { userId, collegeEducationId, collegeEducationType } = useAdmin();
 
   const facultyIdFromUrl = searchParams.get("facultyId");
-  const facultyId = propFacultyId || (facultyIdFromUrl ? Number(facultyIdFromUrl) : undefined);
+  const facultyId =
+    propFacultyId || (facultyIdFromUrl ? Number(facultyIdFromUrl) : undefined);
 
   const [branchOptions, setBranchOptions] = useState<
-    { id: number; name: string, code: string }[]
+    { id: number; name: string; code: string }[]
   >([]);
 
   const [yearOptions, setYearOptions] = useState<
-    { id: number; label: string }[]
+    { id: number | string; label: string }[]
   >([]);
+
+  const [allBranchYears, setAllBranchYears] = useState<any[]>([]);
 
   const [branchFilter, setBranchFilter] = useState<string>("All");
   const [yearFilter, setYearFilter] = useState<string>("All");
@@ -105,14 +123,13 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
   const [view, setView] = useState<"my" | "others">("my");
   const [announcements, setAnnouncements] = useState<any[]>([]);
 
-
   useEffect(() => {
     if (!facultyId) return;
     fetchTasks();
   }, [facultyId]);
 
   const fetchTasks = async () => {
-    if (!facultyId) return
+    if (!facultyId) return;
 
     try {
       setLoadingTasks(true);
@@ -179,7 +196,7 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ) => {
     try {
       const res = await saveFacultyTask(
@@ -191,7 +208,7 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
           date: payload.dueDate,
           time: payload.dueTime,
         },
-        facultyId!
+        facultyId!,
       );
 
       if (!res.success) throw new Error("Save failed");
@@ -215,24 +232,36 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
 
       if (dept && yearIdFromParams) {
         setCourseLoading(true);
-        const data = await fetchSubjectFacultyList(Number(yearIdFromParams), Number(branchIdFromParams));
+        const data = await fetchSubjectFacultyList(
+          Number(yearIdFromParams),
+          Number(branchIdFromParams),
+        );
+
+        const uniqueCoursesMap = new Map();
+        data.forEach((course: any) => {
+          const key = `${course.subjectId}-${course.facultyId}`;
+          if (!uniqueCoursesMap.has(key)) {
+            uniqueCoursesMap.set(key, course);
+          }
+        });
+        const uniqueData = Array.from(uniqueCoursesMap.values());
 
         const courseListWithCounts = await Promise.all(
-          data.map(async (course: any) => {
+          uniqueData.map(async (course: any) => {
             const fId = Number(course.facultyId);
             const sId = Number(course.subjectId);
 
             const [activeCount, pendingCount] = await Promise.all([
               fetchFacultySubjectDiscussionCount(fId, sId),
-              fetchPendingSubmissionsCount(fId, sId)
+              fetchPendingSubmissionsCount(fId, sId),
             ]);
 
             return {
               ...course,
               activeQuiz: activeCount,
-              pendingSubmissions: pendingCount
+              pendingSubmissions: pendingCount,
             };
-          })
+          }),
         );
 
         setCourseList(courseListWithCounts);
@@ -251,15 +280,15 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
 
         const branches = await fetchBranchOptionsForAdmin(
           userId,
-          collegeEducationId
+          collegeEducationId,
         );
 
         setBranchOptions(
           branches.map((b) => ({
             id: b.collegeBranchId,
             name: b.name,
-            code: b.code
-          }))
+            code: b.code,
+          })),
         );
       } catch (err) {
         console.error("Failed to load branches", err);
@@ -278,7 +307,7 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
       try {
         const data = await fetchCollegeBranchesForLoggedInAdmin(
           userId,
-          collegeEducationId
+          collegeEducationId,
         );
 
         setBranches(data);
@@ -296,19 +325,39 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
 
       try {
         setYearLoading(true);
-        if (branchFilter !== "All") {
-          const years = await fetchAcademicYearOptionsForAdmin(userId, Number(branchFilter));
-          setYearOptions(years.map(y => ({ id: y.value, label: y.label })));
-        }
-        else {
-          const allYearsRequests = branches.map(b =>
-            fetchAcademicYearOptionsForAdmin(userId, b.collegeBranchId)
+        const allYearsRequests = branches.map(async (b) => {
+          const years = await fetchAcademicYearOptionsForAdmin(
+            userId,
+            b.collegeBranchId,
           );
+          return years.map((y) => ({
+            branchId: b.collegeBranchId,
+            name: b.collegeBranchCode,
+            yearId: y.value,
+            year: y.label,
+          }));
+        });
 
-          const results = await Promise.all(allYearsRequests);
-          const flatYears = results.flat().map(y => ({ id: y.value, label: y.label }));
-          const uniqueYears = Array.from(new Map(flatYears.map(item => [item.label, item])).values());
-          setYearOptions(uniqueYears);
+        const results = await Promise.all(allYearsRequests);
+        const flatCombinations = results.flat();
+
+        // 🟢 Fixed: Explicitly store valid cross-matched combinations
+        setAllBranchYears(flatCombinations);
+
+        if (branchFilter !== "All") {
+          const branchYears = flatCombinations.filter(
+            (c) => String(c.branchId) === branchFilter,
+          );
+          setYearOptions(
+            branchYears.map((y) => ({ id: y.yearId, label: y.year })),
+          );
+        } else {
+          const uniqueLabels = Array.from(
+            new Set(flatCombinations.map((c) => c.year)),
+          );
+          setYearOptions(
+            uniqueLabels.map((label: any) => ({ id: label, label })),
+          );
         }
       } catch (e) {
         console.error("Failed to load years", e);
@@ -360,40 +409,41 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
     return null;
   };
 
+  // 🟢 Fixed: Rebuilt filtering to strictly rely on explicit branch/year combinations
   const filteredCards = useMemo(() => {
-    const cards = branches.flatMap((branch) => {
-      const yearsToDisplay = yearFilter === "All"
-        ? yearOptions
-        : yearOptions.filter(y => String(y.id) === yearFilter);
-
-      return yearsToDisplay.map((year) => ({
-        branchId: branch.collegeBranchId,
-        name: branch.collegeBranchCode,
-        year: year.label,
-        yearId: year.id
-      }));
+    return allBranchYears.filter((card) => {
+      const matchesBranch =
+        branchFilter === "All" || String(card.branchId) === branchFilter;
+      const matchesYear =
+        yearFilter === "All" ||
+        (branchFilter === "All"
+          ? card.year === yearFilter
+          : String(card.yearId) === yearFilter);
+      return matchesBranch && matchesYear;
     });
-
-    return cards.filter((card) =>
-      branchFilter === "All"
-        ? true
-        : String(card.branchId) === branchFilter
-    );
-  }, [branches, yearOptions, branchFilter, yearFilter]);
+  }, [allBranchYears, branchFilter, yearFilter]);
 
   useEffect(() => {
     const getCounts = async () => {
       if (!collegeEducationId || filteredCards.length === 0) return;
-      setCountsData(prev => {
+      setCountsData((prev) => {
         return prev;
       });
 
       try {
         const promises = filteredCards.map(async (card) => {
           const [sCount, fData, dCount] = await Promise.all([
-            fetchActiveStudentCount(collegeEducationId, card.branchId, card.yearId),
-            fetchActiveFacultyData(collegeEducationId, card.branchId, card.yearId),
-            fetchActiveDiscussionCount(card.branchId, card.yearId)
+            fetchActiveStudentCount(
+              collegeEducationId,
+              card.branchId,
+              card.yearId,
+            ),
+            fetchActiveFacultyData(
+              collegeEducationId,
+              card.branchId,
+              card.yearId,
+            ),
+            fetchActiveDiscussionCount(card.branchId, card.yearId),
           ]);
 
           return {
@@ -402,7 +452,7 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
             studentCount: sCount,
             facultyCount: fData.count,
             facultyPhotos: fData.photos,
-            discussionCount: dCount
+            discussionCount: dCount,
           };
         });
 
@@ -453,12 +503,12 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
                   yearLoading
                     ? [{ label: "Loading...", value: "loading" }]
                     : [
-                      { label: "All", value: "All" },
-                      ...yearOptions.map((y) => ({
-                        label: y.label,
-                        value: String(y.id),
-                      })),
-                    ]
+                        { label: "All", value: "All" },
+                        ...yearOptions.map((y) => ({
+                          label: y.label,
+                          value: String(y.id),
+                        })),
+                      ]
                 }
                 onChange={(val) => {
                   if (val !== "loading") setYearFilter(val);
@@ -468,42 +518,45 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
 
             <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col ">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto ">
-                {branchLoading || yearLoading ? (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <DiscussionDeptCardSkeleton key={i} />
-                  ))
-                ) : filteredCards.length > 0 ? (
-                  filteredCards.map((card, idx) => {
+                {branchLoading || yearLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <DiscussionDeptCardSkeleton key={i} />
+                    ))
+                  : filteredCards.length > 0
+                    ? filteredCards.map((card, idx) => {
+                        const branchTheme = getBranchTheme(card.name);
 
-                    const branchTheme = getBranchTheme(card.name);
+                        const cardData = countsData.find(
+                          (c) =>
+                            c.branchId === card.branchId &&
+                            c.yearId === card.yearId,
+                        );
 
-                    const cardData = countsData.find(
-                      (c) => c.branchId === card.branchId && c.yearId === card.yearId
-                    );
-
-                    return (
-                      <DiscussionDeptCard
-                        key={`${card.branchId}-${card.year}-${idx}`}
-                        name={card.name}
-                        year={card.year}
-                        branchId={card.branchId}
-                        yearId={card.yearId}
-                        text={branchTheme.text}
-                        color={branchTheme.color}
-                        bgColor={branchTheme.bgColor}
-                        activeText="Active discussions forums"
-                        activeCount={cardData ? String(cardData.discussionCount) : "0"}
-                        students={cardData ? cardData.studentCount : 0}
-                        facultyCount={cardData ? cardData.facultyCount : 0}
-                        facultyPhotos={cardData ? cardData.facultyPhotos : []}
-                      />
-                    )
-                  })
-                ) : (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <DiscussionDeptCardSkeleton key={i} />
-                  ))
-                )}
+                        return (
+                          <DiscussionDeptCard
+                            key={`${card.branchId}-${card.year}-${idx}`}
+                            name={card.name}
+                            year={card.year}
+                            branchId={card.branchId}
+                            yearId={card.yearId}
+                            text={branchTheme.text}
+                            color={branchTheme.color}
+                            bgColor={branchTheme.bgColor}
+                            activeText="Active discussions forums"
+                            activeCount={
+                              cardData ? String(cardData.discussionCount) : "0"
+                            }
+                            students={cardData ? cardData.studentCount : 0}
+                            facultyCount={cardData ? cardData.facultyCount : 0}
+                            facultyPhotos={
+                              cardData ? cardData.facultyPhotos : []
+                            }
+                          />
+                        );
+                      })
+                    : Array.from({ length: 6 }).map((_, i) => (
+                        <DiscussionDeptCardSkeleton key={i} />
+                      ))}
               </div>
             </div>
           </>
@@ -515,7 +568,11 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
                   onClick={handleBackToDepartments}
                   className="flex cursor-pointer items-center justify-center p-2 pl-0 hover:text-gray-600 transition-colors"
                 >
-                  <CaretLeft size={20} weight="bold" className="text-[#282828] active:scale-90" />
+                  <CaretLeft
+                    size={20}
+                    weight="bold"
+                    className="text-[#282828] active:scale-90"
+                  />
                 </button>
                 <h2 className="text-xl font-bold text-gray-800">
                   {collegeEducationType} {dept} - {year}
@@ -533,7 +590,7 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full mx-auto">
                     {courseList.map((course) => (
                       <DiscussionCourseCard
-                        key={course.id}
+                        key={`${course.id}-${course.facultyId}`}
                         {...course}
                         subject={course.subject}
                         facultyName={course.facultyName}
@@ -544,7 +601,9 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
                   </div>
                 ) : (
                   <div className="col-span-full py-20 text-center">
-                    <p className="text-gray-400 italic">No subjects or faculty assigned to this branch yet.</p>
+                    <p className="text-gray-400 italic">
+                      No subjects or faculty assigned to this branch yet.
+                    </p>
                   </div>
                 )}
               </div>
@@ -611,6 +670,6 @@ export default function DiscussionForumBasic({ facultyId: propFacultyId, college
           </div>
         </div>
       )}
-    </div >
+    </div>
   );
 }

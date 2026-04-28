@@ -5,6 +5,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getPlacementCompanies } from "@/lib/helpers/placements/getPlacementCompanies";
+import { mapCompaniesToPlacementDrives } from "@/lib/helpers/placements/getPlacementDrives";
+import {
+  getPlacementResultsOffers,
+  PlacementResultsOffersData,
+} from "@/lib/helpers/placements/getPlacementResultsOffers";
 import { deletePlacementCompany } from "@/lib/helpers/placements/createPlacementCompany";
 import PlacementTabs from "./components/PlacementTabs";
 import PlacementRightPanel from "./components/PlacementRightPanel";
@@ -20,6 +25,7 @@ import {
   placementTabs,
   PlacementTabId,
   PlacementCompany,
+  PlacementDrive,
   placementTabContent,
 } from "./components/mockData";
 import CompanyDetailsModal from "./modal/CompanyDetailsModal";
@@ -32,7 +38,8 @@ import {
 const validTabs = new Set<PlacementTabId>([
   "company-management",
   "placement-drives",
-  "student-applications",
+  // Hidden from UI for now. Path: app/(screens)/placement/placements/components/StudentApplicationsView.tsx
+  // "student-applications",
   "results-offers",
 ]);
 
@@ -70,21 +77,21 @@ function mapCompanyToInitialForm(company: PlacementCompany) {
     endDate: company.endDate || "",
     educationType: company.collegeEducationId
       ? {
-          id: company.collegeEducationId,
-          label: company.educationTypeName || "Selected Education",
-        }
+        id: company.collegeEducationId,
+        label: company.educationTypeName || "Selected Education",
+      }
       : null,
     branch: company.collegeBranchId
       ? {
-          id: company.collegeBranchId,
-          label: company.branchName || String(company.collegeBranchId),
-        }
+        id: company.collegeBranchId,
+        label: company.branchName || String(company.collegeBranchId),
+      }
       : null,
     academicYear: company.collegeAcademicYearId
       ? {
-          id: company.collegeAcademicYearId,
-          label: company.academicYear || String(company.collegeAcademicYearId),
-        }
+        id: company.collegeAcademicYearId,
+        label: company.academicYear || String(company.collegeAcademicYearId),
+      }
       : null,
     eligibilityCriteria: company.eligibilityCriteria || "",
     existingLogoName: getFileNameFromUrl(company.logo),
@@ -119,7 +126,16 @@ function PlacementPageContent() {
   const { collegeId, placementEmployeeId, loading: userLoading } = useUser();
   const [isPlacementLoading, setIsPlacementLoading] = useState(true);
   const [companies, setCompanies] = useState<PlacementCompany[]>([]);
+  const [placementDrives, setPlacementDrives] = useState<PlacementDrive[]>([]);
+  const [resultsOffers, setResultsOffers] =
+    useState<PlacementResultsOffersData>({
+      companyStats: [],
+      branchStats: [],
+      placedStudents: [],
+    });
   const [isCompaniesLoading, setIsCompaniesLoading] = useState(true);
+  const [isDrivesLoading, setIsDrivesLoading] = useState(true);
+  const [isResultsOffersLoading, setIsResultsOffersLoading] = useState(true);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setIsPlacementLoading(false), 350);
@@ -131,27 +147,73 @@ function PlacementPageContent() {
 
     if (!collegeId) {
       setCompanies([]);
+      setPlacementDrives([]);
+      setResultsOffers({
+        companyStats: [],
+        branchStats: [],
+        placedStudents: [],
+      });
       setIsCompaniesLoading(false);
+      setIsDrivesLoading(false);
+      setIsResultsOffersLoading(false);
       return;
     }
 
     setIsCompaniesLoading(true);
+    setIsDrivesLoading(true);
+    setIsResultsOffersLoading(true);
     try {
-      const fetchedCompanies = await getPlacementCompanies({
+      const [fetchedCompanies, fetchedResultsOffers] = await Promise.all([
+        getPlacementCompanies({
+          collegeId,
+          placementOfficerId: placementEmployeeId,
+          includeExpired: true,
+        }),
+        getPlacementResultsOffers({
+          collegeId,
+          placementOfficerId: placementEmployeeId,
+        }),
+      ]);
+      const fetchedDrives = await mapCompaniesToPlacementDrives(
+        fetchedCompanies,
         collegeId,
-        placementOfficerId: placementEmployeeId,
-      });
+      );
+
       setCompanies(fetchedCompanies);
+      setPlacementDrives(fetchedDrives);
+      setResultsOffers(fetchedResultsOffers);
     } catch {
       setCompanies([]);
+      setPlacementDrives([]);
+      setResultsOffers({
+        companyStats: [],
+        branchStats: [],
+        placedStudents: [],
+      });
     } finally {
       setIsCompaniesLoading(false);
+      setIsDrivesLoading(false);
+      setIsResultsOffersLoading(false);
     }
   }, [collegeId, placementEmployeeId, userLoading]);
 
   useEffect(() => {
     void loadCompanies();
   }, [loadCompanies]);
+
+  const handleResultsOfferStatusSaved = (
+    studentPlacementApplicationId: number,
+    status: string,
+  ) => {
+    setResultsOffers((prev) => ({
+      ...prev,
+      placedStudents: prev.placedStudents.map((student) =>
+        student.id === studentPlacementApplicationId
+          ? { ...student, status }
+          : student,
+      ),
+    }));
+  };
 
   const activeTabParam = searchParams.get("tab");
   const activeTab: PlacementTabId =
@@ -255,8 +317,8 @@ function PlacementPageContent() {
     Number.isNaN(selectedCompanyId)
       ? null
       : companies.find(
-          (company) => company.id === selectedCompanyId,
-        ) ?? null;
+        (company) => company.id === selectedCompanyId,
+      ) ?? null;
 
   const editingCompany =
     Number.isNaN(editCompanyId)
@@ -266,9 +328,9 @@ function PlacementPageContent() {
   const selectedDrive =
     Number.isNaN(selectedDriveId)
       ? null
-      : placementTabContent.placementDrives.drives.find(
-          (drive) => drive.id === selectedDriveId,
-        ) ?? null;
+      : placementDrives.find(
+        (drive) => drive.id === selectedDriveId,
+      ) ?? null;
 
   if (isPlacementLoading) {
     return <PlacementPageFallback />;
@@ -314,8 +376,8 @@ function PlacementPageContent() {
 
   return (
     <>
-      <section className="flex h-screen gap-3 overflow-hidden">
-        <div className="flex min-w-11.25 flex-1 flex-col px-2">
+      <section className="flex h-[88vh] gap-1 overflow-hidden">
+        <div className="flex w-[68%] flex-1 flex-col px-2 h-full overflow-y-auto">
           <div className="shrink-0">
             <h1 className="text-[32px] font-semibold text-[#282828]">
               Placements
@@ -350,8 +412,9 @@ function PlacementPageContent() {
 
             {activeTab === "placement-drives" && (
               <PlacementDrivesView
-                stats={placementTabContent.placementDrives.stats}
-                drives={placementTabContent.placementDrives.drives}
+                drives={placementDrives}
+                collegeId={collegeId}
+                isLoading={isDrivesLoading}
                 onCreateDrive={modalActions.openCreateDrive}
                 onDriveClick={modalActions.openDrive}
               />
@@ -365,15 +428,19 @@ function PlacementPageContent() {
 
             {activeTab === "results-offers" && (
               <ResultsOffersView
-                companyStats={placementTabContent.resultsOffers.companyStats}
-                branchStats={placementTabContent.resultsOffers.branchStats}
-                placedStudents={placementTabContent.resultsOffers.placedStudents}
+                companyStats={resultsOffers.companyStats}
+                branchStats={resultsOffers.branchStats}
+                placedStudents={resultsOffers.placedStudents}
+                isLoading={isResultsOffersLoading}
+                placementEmployeeId={placementEmployeeId}
+                onStatusSaved={handleResultsOfferStatusSaved}
               />
             )}
           </div>
         </div>
-
-        <PlacementRightPanel />
+        <div className="w-[32%] h-full flex flex-col">
+          <PlacementRightPanel />
+        </div>
       </section>
 
       {selectedCompany && (

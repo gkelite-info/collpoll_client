@@ -122,3 +122,37 @@ export async function fetchFacultySections(
 
     return (data ?? []) as unknown as FacultySectionRow[];
 }
+
+export async function fetchSectionsByYear(facultyId: number, yearId: number) {
+    const { data, error } = await supabase
+        .from("faculty_sections")
+        .select(`
+            collegeSectionsId,
+            college_sections (
+                collegeSectionsId,
+                collegeSections
+            )
+        `)
+        .eq("facultyId", facultyId)
+        .eq("collegeAcademicYearId", yearId)
+        .eq("isActive", true)
+        .is("deletedAt", null);
+
+    if (error) throw error;
+
+    const uniqueSections = Array.from(
+        new Map(
+            data
+                .filter((item: any) => item.college_sections)
+                .map((item: any) => [
+                    item.collegeSectionsId,
+                    {
+                        id: item.collegeSectionsId,
+                        label: item.college_sections.collegeSections
+                    }
+                ])
+        ).values()
+    );
+
+    return uniqueSections;
+}

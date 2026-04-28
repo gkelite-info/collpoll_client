@@ -6,8 +6,20 @@ import { updateAdminAssignment } from "@/lib/helpers/admin/assignments/updateAdm
 import { useRouter } from "next/navigation";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 
+function toHtmlDate(dateStr: string | number | undefined) {
+  if (!dateStr) return "";
+  const str = dateStr.toString();
+  if (/^\d{8}$/.test(str)) {
+    return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return str;
+}
+
 export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
-  const [deadline, setDeadline] = useState(initialData.toDate || "");
+  const [deadline, setDeadline] = useState(
+    toHtmlDate(initialData.toDate) || "",
+  );
   const [status, setStatus] = useState(initialData.status || "Active");
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
@@ -33,7 +45,11 @@ export default function AssignmentForm({ initialData, onSave, onCancel }: any) {
   return (
     <div className="w-[68%] mx-1 max-w-3xl">
       <div className="flex items-center gap-1 mb-6">
-        <CaretLeftIcon size={20} className="text-[#282828] cursor-pointer -ml-1" onClick={()=>router.back()}/>
+        <CaretLeftIcon
+          size={20}
+          className="text-[#282828] cursor-pointer -ml-1"
+          onClick={() => router.back()}
+        />
         <h2 className="text-xl font-semibold text-gray-900 ">
           Edit Assignment (Admin)
         </h2>

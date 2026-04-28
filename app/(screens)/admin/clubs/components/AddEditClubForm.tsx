@@ -299,6 +299,17 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
 
                 <div className="grid grid-cols-2 gap-6 items-start pt-2 strict-heights">
                     <SearchableUserDropdown
+                        label="Responsible Faculty"
+                        value={formData.faculty}
+                        isOpen={activeDropdown === "faculty"}
+                        onToggle={() => setActiveDropdown(activeDropdown === "faculty" ? null : "faculty")}
+                        onSelect={(user) => setFormData({ ...formData, faculty: user })}
+                        direction="up"
+                        collegeId={collegeId}
+                        roleGroup="faculty"
+                    />
+
+                    <SearchableUserDropdown
                         label="Mentors"
                         isMulti={true}
                         value={formData.mentors}
@@ -319,17 +330,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         collegeId={collegeId}
                         roleGroup="faculty"
                     />
-
-                    <SearchableUserDropdown
-                        label="Responsible Faculty"
-                        value={formData.faculty}
-                        isOpen={activeDropdown === "faculty"}
-                        onToggle={() => setActiveDropdown(activeDropdown === "faculty" ? null : "faculty")}
-                        onSelect={(user) => setFormData({ ...formData, faculty: user })}
-                        direction="up"
-                        collegeId={collegeId}
-                        roleGroup="faculty"
-                    />
+                    
                 </div>
 
                 <div className="flex justify-center mt-6 pt-4">

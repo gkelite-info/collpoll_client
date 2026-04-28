@@ -3,9 +3,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { revalidatePath } from "next/cache";
 
-/* =========================================
-   TYPES
-   ========================================= */
 export type UnitColor = "purple" | "orange" | "blue";
 
 export type UiTopic = {
@@ -39,33 +36,24 @@ export type SubjectContext = {
   semester: string;
 };
 
-/* =========================================
-   HELPERS
-   ========================================= */
-
 const colorByUnitNumber = (n: number): UnitColor => {
   const mod = n % 3;
   if (mod === 1) return "purple";
   if (mod === 2) return "orange";
-  return "blue"; // covers 0 (unit 3, 6, 9)
+  return "blue";
 };
 
-// 🟢 FIX: Better Date Formatting
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "TBD";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "TBD";
 
   const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+  const month = String(date.getMonth() + 1).padStart(2, "0");
   const year = date.getFullYear();
 
   return `${day}-${month}-${year}`;
 };
-
-/* =========================================
-   FETCH LOGIC
-   ========================================= */
 
 export async function getAdminSubjectDetails(
   collegeId: number,
@@ -73,7 +61,6 @@ export async function getAdminSubjectDetails(
   sectionId: number,
 ) {
   try {
-    // 1. Fetch Subject & Hierarchy
     const { data: rawSubject, error: subError } = await supabase
       .from("college_subjects")
       .select(
@@ -118,7 +105,6 @@ export async function getAdminSubjectDetails(
     // @ts-ignore
     const facultyName = assignment?.faculty?.fullName ?? "Not Assigned";
 
-    // 3. Build Context
     const context: SubjectContext = {
       collegeId,
       educationId: subject.collegeEducationId,
@@ -152,7 +138,6 @@ export async function getAdminSubjectDetails(
 
     if (unitError) throw unitError;
 
-    // 5. Fetch Topics...
     const unitIds = units.map((u) => u.collegeSubjectUnitId);
     let allTopics: any[] = [];
 
@@ -176,13 +161,10 @@ export async function getAdminSubjectDetails(
       allTopics = topics;
     }
 
-    // 6. Transform to UI Model
     const uiUnits: UiUnit[] = units.map((u) => {
-      // ... (Same mapping logic as before) ...
       const unitTopics = allTopics.filter(
         (t) => t.collegeSubjectUnitId === u.collegeSubjectUnitId,
       );
-      // Reusing the formatting logic from previous step
       const sDate = formatDate(u.startDate);
       const eDate = formatDate(u.endDate);
       const dateRangeDisplay =
@@ -210,8 +192,8 @@ export async function getAdminSubjectDetails(
       details: {
         subjectName: subject.subjectName,
         credits: subject.credits,
-        semester: semesterName, // ✅ Now strictly typed string
-        year: yearName, // ✅ Now strictly typed string
+        semester: semesterName,
+        year: yearName,
       },
       context,
     };
@@ -265,4 +247,86 @@ export async function updateUnitProgress(
 
   revalidatePath("/admin/academics");
   return { success: true, newPercentage };
+}
+
+export async function deleteUnit(unitId: number, adminId: number) {
+  const now = new Date().toISOString();
+  try {
+    const { error: unitError } = await supabase
+      .from("college_subject_units")
+      .update({
+        isActive: false,
+        deletedAt: now,
+        isAdmin: adminId,
+      })
+      .eq("collegeSubjectUnitId", unitId);
+
+    if (unitError) throw unitError;
+
+    const { error: topicError } = await supabase
+      .from("college_subject_unit_topics")
+      .update({
+        isActive: false,
+        deletedAt: now,
+      })
+      .eq("collegeSubjectUnitId", unitId)
+      .eq("isActive", true);
+
+    if (topicError) throw topicError;
+
+    revalidatePath("/admin/academics");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Failed to delete unit and associated topics:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteTopic(
+  unitId: number,
+  topicId: number,
+  adminId: number,
+) {
+  const now = new Date().toISOString();
+  try {
+    const { error: deleteErr } = await supabase
+      .from("college_subject_unit_topics")
+      .update({
+        isActive: false,
+        deletedAt: now,
+      })
+      .eq("collegeSubjectUnitTopicId", topicId);
+
+    if (deleteErr) throw deleteErr;
+
+    const { data: topics, error: fetchError } = await supabase
+      .from("college_subject_unit_topics")
+      .select("isCompleted")
+      .eq("collegeSubjectUnitId", unitId)
+      .eq("isActive", true);
+
+    if (fetchError) throw fetchError;
+
+    const total = topics.length;
+    const completed = topics.filter((t) => t.isCompleted).length;
+    const newPercentage =
+      total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    const { error: unitError } = await supabase
+      .from("college_subject_units")
+      .update({
+        completionPercentage: newPercentage,
+        isAdmin: adminId,
+        updatedAt: now,
+      })
+      .eq("collegeSubjectUnitId", unitId);
+
+    if (unitError) throw unitError;
+
+    revalidatePath("/admin/academics");
+    return { success: true, newPercentage };
+  } catch (error: any) {
+    console.error("Failed to delete topic:", error);
+    return { success: false, error: error.message };
+  }
 }

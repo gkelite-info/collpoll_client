@@ -32,6 +32,8 @@ export async function fetchCalendarEvents(
   filters: {
     facultyId?: number;
     date?: string;
+    startDate?: string;
+    endDate?: string;
   } = {},
 ) {
   let query = supabase
@@ -76,6 +78,13 @@ export async function fetchCalendarEvents(
 
   if (filters.date) {
     query = query.eq("date", filters.date);
+  }
+
+  if (filters.startDate) {
+    query = query.gte("date", filters.startDate);
+  }
+  if (filters.endDate) {
+    query = query.lte("date", filters.endDate);
   }
 
   const { data, error } = await query.order("fromTime", { ascending: true });

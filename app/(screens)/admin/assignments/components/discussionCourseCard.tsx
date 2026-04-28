@@ -1,7 +1,7 @@
 "use client";
 
 import { Avatar } from "@/app/utils/Avatar";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 interface Props {
   id: number;
@@ -34,22 +34,19 @@ export default function DiscussionCourseCard({
   yearId,
   role,
   dept,
-  year
+  year,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname(); // 🟢 Fixed: Grab current pathname dynamically
 
   const handleViewDiscussion = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("subjectId", String(id));
     params.set("facultyId", String(facultyId));
-    const baseRoute =
-      role === "admin"
-        ? "/admin/projects"
-        : "/faculty/projects/create";
-    router.push(
-      `${baseRoute}?dept=${dept}&year=${year}&branchId=${branchId}&yearId=${yearId}&subjectId=${id}&facultyId=${facultyId}&subjectName=${encodeURIComponent(subject)}`
-    );
+
+    // 🟢 Fixed: Instead of redirecting away, stay on the same path with updated params
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   return (
@@ -62,11 +59,7 @@ export default function DiscussionCourseCard({
       </div>
 
       <div className="flex items-center gap-3 mb-5 px-1">
-        <Avatar
-          src={avatar}
-          alt={facultyName}
-          size={48}
-        />
+        <Avatar src={avatar} alt={facultyName} size={48} />
 
         <div className="flex flex-col text-left">
           <span className="text-[#282828] font-bold text-sm">

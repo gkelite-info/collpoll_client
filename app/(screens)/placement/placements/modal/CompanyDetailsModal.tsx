@@ -136,6 +136,9 @@ export default function CompanyDetailsModal({
           <DetailRow label="End Date">
             {formatDisplayDate(company.endDate)}
           </DetailRow>
+          <DetailRow label="Status">
+            {company.isExpired ? "Completed" : "Open"}
+          </DetailRow>
           <DetailRow label="Eligibility Criteria">
             {company.eligibilityCriteria || "-"}
           </DetailRow>

@@ -26,6 +26,13 @@ export default function CollegeAdminNavbar() {
         },
         {
             icon: (isActive) => (
+                <BuildingApartmentIcon size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Institution Management",
+            path: "/college-admin/institution-management",
+        },
+        {
+            icon: (isActive) => (
                 <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
             ),
             label: "Add Admin",
@@ -38,13 +45,7 @@ export default function CollegeAdminNavbar() {
             label: "Calendar",
             path: "/college-admin/calendar",
         },
-        {
-            icon: (isActive) => (
-                <BuildingApartmentIcon size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Institution Management",
-            path: "/college-admin/institution-management",
-        },
+        
         // {
         //     icon: (isActive) => (
         //         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
