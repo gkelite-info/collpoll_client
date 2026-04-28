@@ -77,21 +77,21 @@ function mapCompanyToInitialForm(company: PlacementCompany) {
     endDate: company.endDate || "",
     educationType: company.collegeEducationId
       ? {
-          id: company.collegeEducationId,
-          label: company.educationTypeName || "Selected Education",
-        }
+        id: company.collegeEducationId,
+        label: company.educationTypeName || "Selected Education",
+      }
       : null,
     branch: company.collegeBranchId
       ? {
-          id: company.collegeBranchId,
-          label: company.branchName || String(company.collegeBranchId),
-        }
+        id: company.collegeBranchId,
+        label: company.branchName || String(company.collegeBranchId),
+      }
       : null,
     academicYear: company.collegeAcademicYearId
       ? {
-          id: company.collegeAcademicYearId,
-          label: company.academicYear || String(company.collegeAcademicYearId),
-        }
+        id: company.collegeAcademicYearId,
+        label: company.academicYear || String(company.collegeAcademicYearId),
+      }
       : null,
     eligibilityCriteria: company.eligibilityCriteria || "",
     existingLogoName: getFileNameFromUrl(company.logo),
@@ -317,8 +317,8 @@ function PlacementPageContent() {
     Number.isNaN(selectedCompanyId)
       ? null
       : companies.find(
-          (company) => company.id === selectedCompanyId,
-        ) ?? null;
+        (company) => company.id === selectedCompanyId,
+      ) ?? null;
 
   const editingCompany =
     Number.isNaN(editCompanyId)
@@ -329,8 +329,8 @@ function PlacementPageContent() {
     Number.isNaN(selectedDriveId)
       ? null
       : placementDrives.find(
-          (drive) => drive.id === selectedDriveId,
-        ) ?? null;
+        (drive) => drive.id === selectedDriveId,
+      ) ?? null;
 
   if (isPlacementLoading) {
     return <PlacementPageFallback />;
@@ -376,8 +376,8 @@ function PlacementPageContent() {
 
   return (
     <>
-      <section className="flex min-h-screen gap-1 overflow-y-auto">
-        <div className="flex min-w-11.25 flex-1 flex-col px-2">
+      <section className="flex h-[88vh] gap-1 overflow-hidden">
+        <div className="flex w-[68%] flex-1 flex-col px-2 h-full overflow-y-auto">
           <div className="shrink-0">
             <h1 className="text-[32px] font-semibold text-[#282828]">
               Placements
@@ -438,8 +438,9 @@ function PlacementPageContent() {
             )}
           </div>
         </div>
-
-        <PlacementRightPanel />
+        <div className="w-[32%] h-full flex flex-col">
+          <PlacementRightPanel />
+        </div>
       </section>
 
       {selectedCompany && (

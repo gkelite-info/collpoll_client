@@ -113,7 +113,7 @@ export default function ProfileInfo() {
   const [isPhotoChanged, setIsPhotoChanged] = useState(false);
 
   const isStudentOrFaculty = ["Student", "Faculty"].includes(role!)
-  const isSuperAdminOrOther = ["SuperAdmin", "CollegeHr"].includes(role!)
+  const isSuperAdminOrOther = ["SuperAdmin", "CollegeHr", "CollegeAdmin", "Parent"].includes(role!)
 
   useEffect(() => {
     const registrationId = getRegistrationIdByRole({
@@ -130,7 +130,7 @@ export default function ProfileInfo() {
 
     setProfileData({
       // registrationId: String(registrationId ?? ""),
-      registrationId: String(identifierId ?? ""),
+      registrationId: role === "Parent" ? String(parentId) : role === "SuperAdmin" ? String(userId) : String(identifierId ?? ""),
       email: email || "",
       phone: mobile || "",
       educationType: collegeEducationType || "",
@@ -158,7 +158,9 @@ export default function ProfileInfo() {
     collegeBranchCode,
     collegeAcademicYear,
     collegeSection,
-    profilePhoto
+    profilePhoto,
+    identifierId,
+    userId
   ]);
 
   useEffect(() => {

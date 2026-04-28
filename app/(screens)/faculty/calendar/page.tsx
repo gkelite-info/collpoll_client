@@ -1,7 +1,7 @@
 "use client";
 
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import ConfirmConflictModal from "../../admin/calendar/components/ConfirmConflictModal";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
@@ -73,6 +73,9 @@ export default function Page() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+  const fetchIdRef = useRef(0);
   const [pendingEvent, setPendingEvent] = useState<CalendarEventPayload | null>(
     null,
   );
@@ -146,13 +149,24 @@ export default function Page() {
     }
   };
 
-  const loadCalendarEvents = async () => {
+  const loadCalendarEvents = async (month: number, year: number) => {
     if (!facultyId) return;
+    const currentFetchId = ++fetchIdRef.current;
 
     try {
       setLoading(true);
 
-      const rows = await fetchCalendarEvents({ facultyId });
+      const startStr = new Date(year, month, -7).toISOString().split('T')[0];
+      const endStr = new Date(year, month + 1, 7).toISOString().split('T')[0];
+
+      const rows = await fetchCalendarEvents({
+        facultyId,
+        startDate: startStr,
+        endDate: endStr
+      });
+
+      if (currentFetchId !== fetchIdRef.current) return;
+
       if (!rows || rows.length === 0) {
         setEvents([]);
         return;
@@ -286,10 +300,10 @@ export default function Page() {
 
   useEffect(() => {
     if (!facultyId) return;
-    loadCalendarEvents();
+    loadCalendarEvents(currentMonth, currentYear);
     loadHrEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facultyId, collegeId]);
+  }, [facultyId, collegeId, currentMonth, currentYear]);
 
   const handleNextWeek = () => {
     const next = new Date(currentDate);
@@ -403,7 +417,7 @@ export default function Page() {
       setEventForm(null);
       setFormMode("create");
 
-      await loadCalendarEvents();
+      await loadCalendarEvents(currentMonth, currentYear);
 
       return { success: true };
     } catch (err) {
@@ -476,7 +490,7 @@ export default function Page() {
       setEventForm(null);
       setFormMode("create");
 
-      await loadCalendarEvents();
+      await loadCalendarEvents(currentMonth, currentYear);
     } catch (err) {
       console.error("confirmAddEvent error", err);
       toast.error("Failed to save event");
@@ -499,7 +513,7 @@ export default function Page() {
         await deleteCalendarEvent(calendarEventId);
       }
 
-      await loadCalendarEvents();
+      await loadCalendarEvents(currentMonth, currentYear);
       toast.success("Section deleted successfully");
     } catch (err) {
       toast.error("Failed to delete section");

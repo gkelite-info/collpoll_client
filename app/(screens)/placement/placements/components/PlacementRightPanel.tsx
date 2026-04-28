@@ -6,16 +6,18 @@ import Announcements from "./Announcements";
 
 export default function PlacementRightPanel() {
   return (
-    <aside className="sticky top-0 min-h-screen pb-4 bg-red-00 shrink-0">
+    <aside className="h-full pb-4 bg-red-00 shrink-0">
       <div className="flex h-full flex-col gap-3">
-        <div className="w-80 justify-end">
+        <div className="flex items-end justify-end">
+          <div className="w-80 flex self-end flex-col">
           <CourseScheduleCard isVisibile={false}/>
+          </div>
         </div>
 
         <WorkWeekCalendar style="mt-0" />
 
         <div className="min-h-0 flex-1 overflow-hidden rounded-xl bg-white shadow-sm">
-          <div className="h-full overflow-y-auto">
+          <div className="h-full">
             <Announcements />
           </div>
         </div>
