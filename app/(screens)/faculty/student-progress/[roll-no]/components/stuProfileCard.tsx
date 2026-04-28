@@ -10,9 +10,9 @@ interface Props {
   email: string;
   address: string;
   photo: string;
-  attendanceDays: number;
-  absentDays: number;
-  leaveDays: number;
+  attendancePercentage: number;
+  absentPercentage: number;
+  leavePercentage: number;
 }
 
 export default function StudentProfileCard({
@@ -23,9 +23,9 @@ export default function StudentProfileCard({
   email,
   address,
   photo,
-  attendanceDays,
-  absentDays,
-  leaveDays,
+  attendancePercentage,
+  absentPercentage,
+  leavePercentage,
 }: Props) {
   return (
     <div className="rounded-[20px] bg-white p-6 shadow-sm h-full font-sans">
@@ -56,13 +56,19 @@ export default function StudentProfileCard({
         </div>
         <div>
           <p className="text-sm text-[#666666]">Email</p>
-          <p className="mt-1 text-base font-semibold text-[#333333]">{email}</p>
+          <div className="mt-1 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            <p className="inline-block text-base font-semibold text-[#333333]">
+              {email}
+            </p>
+          </div>
         </div>
         <div>
           <p className="text-sm text-[#666666]">Address</p>
-          <p className="mt-1 text-base font-semibold text-[#333333]">
-            {address}
-          </p>
+          <div className="mt-1 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+            <p className="inline-block text-base font-semibold text-[#333333]">
+              {address}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -71,19 +77,19 @@ export default function StudentProfileCard({
           bg="bg-[#E8F5E9]"
           iconBg="bg-[#4CAF50]"
           title="Total Attendance"
-          value={`${attendanceDays} Days`}
+          value={`${attendancePercentage}%`}
         />
         <StatCard
           bg="bg-[#FFEBEE]"
           iconBg="bg-[#F44336]"
           title="Total Absent"
-          value={`${absentDays} Days`}
+          value={`${absentPercentage}%`}
         />
         <StatCard
           bg="bg-[#E3F2FD]"
           iconBg="bg-[#42A5F5]"
           title="Total Leave"
-          value={leaveDays}
+          value={`${leavePercentage}%`}
         />
       </div>
     </div>

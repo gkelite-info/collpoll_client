@@ -32,8 +32,9 @@ export interface DetailedStudent {
   avatarSeed: number;
   dept: string;
   attendancePercent: number;
-  internalMarks: string;
   assignmentsDone: string;
+  quizScore: string;
+  discussionForum: string;
   progressPercent: number;
   contact: {
     number: string;
@@ -59,8 +60,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 5,
     dept: "CSE",
     attendancePercent: 92,
-    internalMarks: "45/50",
     assignmentsDone: "5/5",
+    quizScore: "4/5",
+    discussionForum: "8/10",
     progressPercent: 97,
     contact: {
       number: "+91 9012345678",
@@ -139,8 +141,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 2,
     dept: "CSE",
     attendancePercent: 67,
-    internalMarks: "45/50",
     assignmentsDone: "4/5",
+    quizScore: "3/5",
+    discussionForum: "7/10",
     progressPercent: 95,
     contact: {
       number: "+91 9012345678",
@@ -219,8 +222,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 3,
     dept: "CSE",
     attendancePercent: 55,
-    internalMarks: "45/50",
     assignmentsDone: "3/5",
+    quizScore: "2/5",
+    discussionForum: "5/10",
     progressPercent: 60,
     contact: {
       number: "+91 9012345678",
@@ -299,8 +303,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 4,
     dept: "CSE",
     attendancePercent: 76,
-    internalMarks: "45/50",
     assignmentsDone: "4/5",
+    quizScore: "4/5",
+    discussionForum: "6/10",
     progressPercent: 90,
     contact: {
       number: "+91 9012345678",
@@ -379,8 +384,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 5,
     dept: "CSE",
     attendancePercent: 87,
-    internalMarks: "45/50",
     assignmentsDone: "5/5",
+    quizScore: "5/5",
+    discussionForum: "9/10",
     progressPercent: 90,
     contact: {
       number: "+91 9012345678",
@@ -459,8 +465,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 6,
     dept: "CSE",
     attendancePercent: 45,
-    internalMarks: "45/50",
     assignmentsDone: "3/5",
+    quizScore: "2/5",
+    discussionForum: "4/10",
     progressPercent: 60,
     contact: {
       number: "+91 9012345678",
@@ -539,8 +546,9 @@ export const detailedStudentsData: DetailedStudent[] = [
     avatarSeed: 7,
     dept: "CSE",
     attendancePercent: 50,
-    internalMarks: "10/50",
     assignmentsDone: "1/5",
+    quizScore: "1/5",
+    discussionForum: "2/10",
     progressPercent: 20,
     contact: {
       number: "+91 9012345678",
