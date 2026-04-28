@@ -1,7 +1,6 @@
 "use client";
 
 import { Plus, CaretDown } from "@phosphor-icons/react";
-import React from "react";
 
 type CalendarHeaderProps = {
   onAddClick: () => void;
@@ -32,9 +31,15 @@ const CalendarHeader = ({
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Generate a dynamic list of years (e.g., current year - 5 to current year + 5)
+  const BASE_YEAR = 2026;
   const currentRealYear = new Date().getFullYear();
-  const years = Array.from({ length: 11 }, (_, i) => currentRealYear - 5 + i);
+
+  const endYear = currentRealYear + 3;
+
+  const years = Array.from(
+    { length: endYear - BASE_YEAR + 1 },
+    (_, i) => BASE_YEAR + i
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-4 mb-2">

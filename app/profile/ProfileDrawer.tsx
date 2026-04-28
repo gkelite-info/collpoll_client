@@ -47,7 +47,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     collegeAcademicYear,
     profilePhoto,
     identifierId,
-    userId
+    parentId
   } = useUser();
   const { college_branch, faculty_edu_type } = useFaculty();
   const [loading, setLoading] = useState(false);
@@ -188,7 +188,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                 )}
                 {role === "Parent" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {userId}
+                    ID - {parentId}
                   </span>
                 )}
                 {/* {role === "Student" && (
