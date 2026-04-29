@@ -100,7 +100,8 @@ const AttendanceData = [
 
 const Page = () => {
   const [open, setOpen] = useState(false);
-  const { studentId } = useParent();
+  const { studentId, collegeEducationType } = useParent();
+
 
   return (
     <>
@@ -112,9 +113,9 @@ const Page = () => {
               <div className="flex gap-3">
                 <div>
                   <span className="text-gray-600 text-lg font-medium">
-                    Department:{" "}
+                    {collegeEducationType === "Inter" ? "Group" : "Branch"}:
                   </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
+                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide lg:ml-1">
                     CSE
                   </span>
                 </div>

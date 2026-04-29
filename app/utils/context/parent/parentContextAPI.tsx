@@ -17,6 +17,11 @@ export type ParentJoin = {
         collegeName: string;
         collegeCode: string;
     };
+    student: {
+        college_education: {
+            collegeEducationType: string;
+        };
+    } | null;
 };
 
 export async function fetchParentContext(userId: number) {
@@ -37,9 +42,14 @@ export async function fetchParentContext(userId: number) {
             ),
             college:collegeId (
                 collegeCode
+            ),
+            student:studentId (
+                college_education:collegeEducationId (
+                    collegeEducationType
+                )
             )
         `)
-        .eq("userId", userId) 
+        .eq("userId", userId)
         .is("deletedAt", null)
         .maybeSingle();
 
