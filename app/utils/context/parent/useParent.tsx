@@ -19,6 +19,7 @@ export type ParentContextType = {
   collegeCode: string | null;
   isActive: boolean | null;
   isDeleted: boolean | null;
+  collegeEducationType: string | null;
 };
 
 const ParentContext = createContext<ParentContextType | null>(null);
@@ -40,6 +41,7 @@ export const ParentProvider = ({ children }: { children: React.ReactNode }) => {
     collegeCode: null,
     isActive: null,
     isDeleted: null,
+    collegeEducationType: null
   });
 
   useEffect(() => {
@@ -74,6 +76,7 @@ export const ParentProvider = ({ children }: { children: React.ReactNode }) => {
             collegeCode: parent.college?.collegeCode || null,
             isActive: parent.isActive,
             isDeleted: parent.is_deleted,
+            collegeEducationType: parent.student?.college_education?.collegeEducationType || null,
           });
         } else {
           setState((s) => ({ ...s, loading: false }));
