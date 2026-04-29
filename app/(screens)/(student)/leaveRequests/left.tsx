@@ -13,9 +13,7 @@ import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import RequestLeaveModal from "./modal/RequestLeaveModal";
 import toast from "react-hot-toast";
-
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
-
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -164,13 +162,12 @@ function LeaveLeftContent() {
         ),
       statusBadge: (
         <span
-          className={`px-3 py-1 rounded-full text-xs font-bold ${
-            item.status === "approved"
-              ? "bg-[#E7F8EE] text-[#43C17A]"
-              : item.status === "rejected"
-                ? "bg-[#FFE5E5] text-[#FF4B4B]"
-                : "bg-[#FFF4EB] text-[#FFB874]"
-          }`}
+          className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === "approved"
+            ? "bg-[#E7F8EE] text-[#43C17A]"
+            : item.status === "rejected"
+              ? "bg-[#FFE5E5] text-[#FF4B4B]"
+              : "bg-[#FFF4EB] text-[#FFB874]"
+            }`}
         >
           {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
         </span>

@@ -195,7 +195,6 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
             onInsertBroadcast: (payload) => {
                 if (abortController.signal.aborted) return;
 
-                // 🔧 FIX 4: Instantly log that we received this via broadcast
                 processedIds.current.add(payload.announcementId);
 
                 appendMessage(payload);
@@ -204,15 +203,11 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
             onPostgresFallback: (payload) => {
                 if (abortController.signal.aborted) return;
 
-                // 🔧 FIX 5: Fast synchronous check. If broadcast already got it, exit instantly.
                 if (processedIds.current.has(payload.new.announcementId)) return;
 
-                // 🔧 FIX 6: Debounce. Wait 2 seconds. If the broadcast was just lagging, 
-                // this gives it time to arrive without slamming the database.
                 setTimeout(() => {
                     if (abortController.signal.aborted || processedIds.current.has(payload.new.announcementId)) return;
 
-                    // If it still hasn't arrived after 2 seconds, safely fetch it.
                     fetchSingleAnnouncement(payload.new.announcementId).then(data => {
                         if (data && !abortController.signal.aborted) {
                             processedIds.current.add(data.announcementId);
@@ -371,11 +366,9 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // 1. Capture text
         const textToPost = inputValue.trim();
         if (!textToPost || textToPost.length > 1000 || !canPost || isPosting) return;
 
-        // 2. 🔧 FIX 2: Start the spinner, but DO NOT clear the text yet!
         setIsPosting(true);
 
         try {
@@ -388,7 +381,6 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
                 setEditingId(null);
                 toast.success("Announcement updated", { id: "upd-success" });
 
-                // 3. 🔧 FIX 3: Clear input on success
                 setInputValue("");
             } else {
                 const newMessage = await postStudentAnnouncement(clubId, collegeId, studentId, userRole || "president", textToPost);
@@ -399,13 +391,11 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
 
                 broadcastNewAnnouncement(channelRef.current, newMessage);
 
-                // 3. 🔧 FIX 3: Clear input on success
                 setInputValue("");
             }
         } catch (err) {
             toast.error("Slow connection. Failed to post.", { id: "post-err" });
         } finally {
-            // 4. 🔧 FIX 4: Stop spinner
             setIsPosting(false);
         }
     };
@@ -415,7 +405,6 @@ export default function StudentAnnouncements({ userRole, clubId, collegeId, stud
         setIsDeleting(true);
         try {
             await deleteAnnouncement(selectedDeleteId);
-            // 🔧 FIX: Optimistic UI for delete
             setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
             toast.success("Announcement deleted", { id: "del-success" });
             setDeleteModalOpen(false);

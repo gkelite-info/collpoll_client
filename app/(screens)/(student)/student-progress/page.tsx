@@ -23,6 +23,7 @@ function toRomanSemester(semester: number | null) {
 const Page = () => {
   const [open, setOpen] = useState(false);
   const [progressLoading, setProgressLoading] = useState(true);
+  const { studentId } = useStudent();
   const [progressData, setProgressData] = useState<Awaited<
     ReturnType<typeof getStudentProgressData>
   > | null>(null);
@@ -89,9 +90,9 @@ const Page = () => {
               <div className="flex gap-3">
                 <div>
                   <span className="text-gray-600 text-lg font-medium">
-                    Department:{" "}
+                    {!(collegeEducationType === "Inter") ? "Group" : "Branch"}:
                   </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
+                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide lg:ml-1">
                     {collegeBranchCode ?? "N/A"}
                   </span>
                 </div>
@@ -164,13 +165,13 @@ const Page = () => {
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-6">
-              <AcademicPerformance overlayVisible={false} />
-            </section>
+              <AcademicPerformance studentId={studentId} />
+            </section >
 
             <section className="bg-white rounded-2xl lg:col-span-4">
               <AttendanceList data={progressData?.subjectAttendance || []} />
             </section>
-          </article>
+          </article >
 
           <section className="bg-white rounded-2xl">
             <AssignmentsSummaryTable
@@ -179,7 +180,7 @@ const Page = () => {
               semesterLabel={semesterLabel}
             />
           </section>
-        </section>
+        </section >
 
         {open && (
           <div className="fixed inset-0 z-50">
@@ -210,7 +211,7 @@ const Page = () => {
             </div>
           </div>
         )}
-      </main>
+      </main >
     </>
   );
 };

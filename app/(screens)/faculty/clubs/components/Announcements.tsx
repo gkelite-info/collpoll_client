@@ -187,20 +187,17 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
         const channel = subscribeToClubAnnouncements(clubId, {
             onInsertBroadcast: (payload) => {
                 if (abortController.signal.aborted) return;
-                
-                // 🔧 FIX 4: Instantly log received broadcast
+
                 processedIds.current.add(payload.announcementId);
-                
+
                 appendMessage(payload);
                 if (onDateChangeRef.current) onDateChangeRef.current("Today");
             },
             onPostgresFallback: (payload) => {
                 if (abortController.signal.aborted) return;
 
-                // 🔧 FIX 5: Fast synchronous check
                 if (processedIds.current.has(payload.new.announcementId)) return;
 
-                // 🔧 FIX 6: Debounce Database recovery fetch
                 setTimeout(() => {
                     if (abortController.signal.aborted || processedIds.current.has(payload.new.announcementId)) return;
 
@@ -335,14 +332,12 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // 1. Capture text
+
         const textToPost = inputValue.trim();
         if (!textToPost || textToPost.length > 1000 || isPosting) return;
-        
-        // 2. 🔧 FIX 2: Start the spinner, but DO NOT clear the text yet!
+
         setIsPosting(true);
-        
+
         try {
             if (editingId) {
                 await updateAnnouncement(editingId, textToPost);
@@ -352,8 +347,7 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
                 ));
                 setEditingId(null);
                 toast.success("Announcement updated", { id: "upd-success-fac" });
-                
-                // 3. 🔧 FIX 3: Clear input on success
+
                 setInputValue("");
             } else {
                 const newMessage = await postFacultyAnnouncement(clubId, collegeId, facultyId, userRole, textToPost);
@@ -363,14 +357,12 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
                 if (onDateChangeRef.current) onDateChangeRef.current("Today");
 
                 broadcastNewAnnouncement(channelRef.current, newMessage);
-                
-                // 3. 🔧 FIX 3: Clear input on success
+
                 setInputValue("");
             }
         } catch (err) {
             toast.error("Failed to post announcement", { id: "post-err-fac" });
         } finally {
-            // 4. 🔧 FIX 4: Stop spinner
             setIsPosting(false);
         }
     };
@@ -380,7 +372,6 @@ export default function Announcements({ userRole, clubId, collegeId, facultyId, 
         setIsDeleting(true);
         try {
             await deleteAnnouncement(selectedDeleteId);
-            // 🔧 FIX: Optimistic UI for delete
             setMessages(prev => prev.filter(m => m.announcementId !== selectedDeleteId));
             toast.success("Announcement deleted", { id: "del-success-fac" });
             setDeleteModalOpen(false);

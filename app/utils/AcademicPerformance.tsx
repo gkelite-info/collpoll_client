@@ -2,25 +2,21 @@
 
 import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPerformance/calculations";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 
 export default function AcademicPerformance({ studentId }: { studentId: number | null }) {
-    console.log("Do we got studentId here", studentId);
-    
     const [data, setData] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log("Step 1");
-
         async function loadData() {
             try {
                 const performance = await getStudentAcademicPerformance(studentId);
-                console.log("What is performance", performance);
 
                 setData(performance);
             } catch (error) {
-                console.error("Failed to load performance:", error);
+                toast.error("Failed to load performance");
             } finally {
                 setLoading(false);
             }
@@ -130,7 +126,6 @@ export default function AcademicPerformance({ studentId }: { studentId: number |
                             <LabelList
                                 dataKey="value"
                                 content={({ x, y, width, height, value }: any) => {
-                                    // If value is 0, place label slightly above baseline to avoid overlap with X-axis labels
                                     const adjustedY = value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
 
                                     return (

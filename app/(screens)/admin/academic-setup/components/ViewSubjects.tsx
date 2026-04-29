@@ -107,7 +107,6 @@ export default function ViewSubjects({
     }
   };
 
-  // 🟢 NEW: Handle Delete
   const handleDelete = async (subjectId: number) => {
     if (!window.confirm("Are you sure you want to delete this subject?"))
       return;
@@ -117,9 +116,9 @@ export default function ViewSubjects({
       const res = await deleteAcademicSubject(subjectId);
       if (res.success) {
         toast.success("Subject deleted successfully!");
-        loadSubjects(); // Reload the list
+        loadSubjects();
       } else {
-        toast.error(res.error || "Failed to delete subject.");
+        toast.error("Failed to delete subject.");
         setIsLoading(false);
       }
     } catch {

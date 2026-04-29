@@ -117,8 +117,6 @@ export async function fetchSingleAnnouncement(announcementId: number) {
     return data;
 }
 
-// 🟢 CHANGED CODE ONLY - studentAnnouncementAPI.ts AND facultyAnnouncementAPI.ts
-
 export function subscribeToClubAnnouncements(
     clubId: number,
     callbacks: {
@@ -128,8 +126,6 @@ export function subscribeToClubAnnouncements(
     }
 ) {
     const channel = supabase.channel(`club_${clubId}_announcements_sync`, {
-        // 🔧 FIX 1: This MUST be completely identical in both student and faculty files 
-        // for the broadcast to jump between roles instantly.
         config: { broadcast: { self: false, ack: false } } 
     })
     .on('broadcast', { event: 'new_announcement' }, ({ payload }) => {

@@ -256,3 +256,19 @@ export const deleteAcademicSubject = async (collegeSubjectId: number) => {
     };
   }
 };
+
+// 🟢 NEW: Function to delete subject
+export const deleteAcademicSubject = async (collegeSubjectId: number) => {
+  try {
+    const { error } = await supabase
+      .from("college_subjects")
+      .update({ deletedAt: new Date().toISOString() }) // Soft delete
+      .eq("collegeSubjectId", collegeSubjectId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (err: any) {
+    console.error("deleteAcademicSubject error:", err);
+    return { success: false, error: err.message || "Failed to delete subject" };
+  }
+};

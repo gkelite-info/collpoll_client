@@ -73,21 +73,6 @@ function AttendanceContent() {
     toast("Marked as Cancelled. Click Save.", { icon: "⚠️" });
   };
 
-  // const loadStudents = async (cId: string, sId?: string) => {
-  //   setLoading(true);
-  //   try {
-  //     const students = await getStudentsForClass(cId, sId);
-  //     setStudentsList(students);
-  //     const cData = await getClassDetails(cId);
-  //     setClassData(cData);
-  //   } catch (e) {
-  //     console.error(e);
-  //     toast.error("Failed to load students");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const loadStudents = async (cId: string, sId?: string) => {
     setTableLoading(true);
 
@@ -259,13 +244,13 @@ function AttendanceContent() {
       <Toaster position="top-right" />
 
       <section className="mb-4 flex items-center justify-between">
-        <div className="flex group w-fit ">
+        <div className="flex w-fit">
           {urlClassId && (
             <CaretLeft
               size={20}
               weight="bold"
               onClick={handleCancel}
-              className="text-[#2D3748] cursor-pointer mt-1.5 group-hover:-translate-x-1 transition-transform"
+              className="text-[#2D3748] cursor-pointer mt-1.5 hover:-translate-x-1 transition-transform"
             />
           )}
           <div>
@@ -378,9 +363,9 @@ function AttendanceContent() {
 
       <section>
         {tableLoading ||
-        urlClassId ||
-        classOptions.length > 0 ||
-        sectionOptions.length > 0 ? (
+          urlClassId ||
+          classOptions.length > 0 ||
+          sectionOptions.length > 0 ? (
           <StuAttendanceTable
             students={studentsList}
             setStudents={setStudentsList}
