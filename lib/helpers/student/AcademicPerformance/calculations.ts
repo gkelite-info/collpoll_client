@@ -25,7 +25,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
 
     const { data: subjects } = await supabase
         .from("college_subjects")
-        .select("collegeSubjectId, subjectName")
+        .select("collegeSubjectId, subjectName, subjectKey")
         .eq("collegeSemesterId", history.collegeSemesterId)
         .eq("collegeBranchId", student.collegeBranchId)
         .is("deletedAt", null);
@@ -51,7 +51,7 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                 const rawTotal = rawQuizzes?.reduce((acc, curr: any) => acc + (curr.quizzes?.totalMarks || 0), 0) || 0;
 
                 return {
-                    subject: subject.subjectName,
+                    subject: subject.subjectKey || subject.subjectName,
                     value: rawTotal > 0 ? Math.round((rawEarned / rawTotal) * 100) : 0,
                     full: 100,
                 };
@@ -63,7 +63,8 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                 .eq("facultyWeightageConfigId", config.facultyWeightageConfigId);
 
             if (!weights || weights.length === 0) {
-                return { subject: subject.subjectName, value: 0, full: 100 };
+                // return { subject: subject.subjectName, value: 0, full: 100 };
+                return { subject: subject.subjectKey || subject.subjectName, value: 0, full: 100 };
             }
 
             let totalWeightedScore = 0;
@@ -172,7 +173,8 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                     totalWeightedScore += contribution;
                 }
             }
-            return { subject: subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
+            // return { subject: subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
+            return { subject: subject.subjectKey || subject.subjectName, value: Math.round(totalWeightedScore), full: 100 };
         })
     );
     return performanceData;
