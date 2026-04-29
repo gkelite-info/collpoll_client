@@ -68,7 +68,6 @@ export async function fetchStudentFaculties(studentId: number) {
   }
 }
 
-// 🟢 UPDATED: Strict error handling and explicit upload options
 export async function submitLeaveRequest(studentId: number, payload: any) {
   const { startDate, endDate, leaveType, faculty, description, files } =
     payload;
@@ -76,7 +75,6 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
 
   let attachmentPaths: string[] = [];
 
-  // Upload files to Supabase Storage if present
   if (files && files.length > 0) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -88,10 +86,9 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
         .from("leave-request-attachments")
         .upload(fileName, file, {
           cacheControl: "3600",
-          upsert: true, // 🟢 Bypasses strict pre-flight SELECT existence checks
+          upsert: true,
         });
 
-      // 🟢 STRICT ERROR CATCHING: Now you will see why it fails if it does
       if (error) {
         console.error("Supabase Storage Upload Error:", error);
         throw new Error(`File upload failed: ${error.message}`);
@@ -103,7 +100,6 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
     }
   }
 
-  // Convert array of paths to comma-separated string
   const attachmentString =
     attachmentPaths.length > 0 ? attachmentPaths.join(",") : null;
 
@@ -115,7 +111,7 @@ export async function submitLeaveRequest(studentId: number, payload: any) {
       startDate,
       endDate,
       description: description.trim(),
-      attachment: attachmentString, // 🟢 Saved to DB column
+      attachment: attachmentString,
       status: "Pending",
       createdAt: now,
       updatedAt: now,
@@ -158,7 +154,6 @@ export async function fetchStudentLeaveCounts(studentId: number) {
   return counts;
 }
 
-// 🟢 UPDATED: Mapping attachments to Public URLs
 export async function fetchStudentLeaves(
   studentId: number,
   page: number,
@@ -221,7 +216,6 @@ export async function fetchStudentLeaves(
     const diffTime = Math.abs(eDate.getTime() - sDate.getTime());
     const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-    // 🟢 Generate public URLs for attachments
     const attachmentPaths = l.attachment ? l.attachment.split(",") : [];
     const attachments = attachmentPaths.map((path: string) => {
       const { data: urlData } = supabase.storage
@@ -238,7 +232,7 @@ export async function fetchStudentLeaves(
       leaveType: typeLabel,
       facultyName: facName,
       description: desc.trim(),
-      attachments, // 🟢 Passed to UI
+      attachments,
       status: l.status ? l.status.toLowerCase() : "pending",
     };
   });

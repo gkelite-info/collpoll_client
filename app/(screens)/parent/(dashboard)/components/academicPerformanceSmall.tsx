@@ -1,20 +1,39 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList, } from "recharts";
+import { useState, useEffect } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import { FaChevronRight } from "react-icons/fa6";
 import WipOverlay from "@/app/utils/WipOverlay";
 import { useRouter } from "next/navigation";
+import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPerformance/calculations";
+import toast from "react-hot-toast";
 
-export default function AcademicPerformanceSmall() {
-    const router = useRouter()
-    const data = [
-        { subject: "Sub 1", value: 0, full: 100 },
-        { subject: "Sub 2", value: 0, full: 100 },
-        { subject: "Sub 3", value: 0, full: 100 },
-        { subject: "Sub 4", value: 0, full: 100 },
-        { subject: "Sub 5", value: 0, full: 100 },
-        { subject: "Sub 6", value: 0, full: 100 },
-    ];
+export default function AcademicPerformanceSmall({ studentId }: { studentId: number | null }) {
+    const router = useRouter();
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const performance = await getStudentAcademicPerformance(studentId);
+                setData(performance);
+            } catch (error) {
+                toast.error("Failed to load performance");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, [studentId]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md flex items-center justify-center">
+                <p className="text-gray-500 animate-pulse text-xs">Calculating performance...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
@@ -76,7 +95,6 @@ export default function AcademicPerformanceSmall() {
                             }}
                         />
 
-
                         <Bar
                             dataKey="full"
                             barSize={25}
@@ -85,35 +103,10 @@ export default function AcademicPerformanceSmall() {
                         />
 
                         <Bar dataKey="value" barSize={25} radius={[6, 6, 6, 6]}>
-                            {/* <LabelList
-                                dataKey="value"
-                                content={({ x, y, width, value }: any) => (
-                                    <g>
-                                        <circle
-                                            cx={x + width / 2}
-                                            cy={y + 14}
-                                            r={10}
-                                            fill="#E8F6E2"
-                                        />
-                                        <text
-                                            x={x + width / 2}
-                                            y={y + 18}
-                                            textAnchor="middle"
-                                            fill="#7CD24C"
-                                            fontSize={8}
-                                            fontWeight="bold"
-                                        >
-                                            {value}%
-                                        </text>
-                                    </g>
-                                )}
-                            /> */}
                             <LabelList
                                 dataKey="value"
                                 content={({ x, y, width, height, value }: any) => {
-                                    // If value is 0, place label slightly above baseline to avoid overlap with X-axis labels
                                     const adjustedY = value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
-
                                     return (
                                         <g>
                                             <circle
@@ -136,7 +129,6 @@ export default function AcademicPerformanceSmall() {
                                     );
                                 }}
                             />
-
                             {data.map((_, i) => (
                                 <Cell key={i} fill="url(#smallBarGradient)" />
                             ))}

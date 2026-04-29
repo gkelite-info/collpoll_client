@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   X,
   CloudArrowUp,
@@ -14,6 +14,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import toast from "react-hot-toast";
 import {
+  fetchStudentDiscussionMarks,
   saveStudentDiscussionUpload,
   uploadStudentDiscussionFiles,
 } from "@/lib/helpers/student/assignments/discussionForum/student_discussion_uploadsAPI";
@@ -36,6 +37,7 @@ export function StudentDiscussionUploadModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { studentId } = useStudent();
   const [loading, setLoading] = useState(false);
+
 
   const handleClose = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -110,6 +112,7 @@ export function StudentDiscussionUploadModal({
     if (e.dataTransfer.files?.length)
       setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files!)]);
   }, []);
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -241,6 +244,22 @@ export function StudentDiscussionDetailsModal({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const { studentId } = useStudent();
+
+  const [marks, setMarks] = useState<{
+    marksObtained: number | null;
+    totalMarks: number | null;
+  } | null>(null);
+
+
+  useEffect(() => {
+    if (!studentId || !discussion?.discussionId) return;
+
+    fetchStudentDiscussionMarks(discussion.discussionId, studentId)
+      .then(setMarks)
+      .catch(() => setMarks(null));
+  }, [studentId, discussion?.discussionId]);
+
   const handleClose = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("modal");
@@ -287,43 +306,53 @@ export function StudentDiscussionDetailsModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (discussion.attachments?.length > 0) {
-                  discussion.attachments.forEach((file: any) => {
-                    if (file.fileUrl) {
-                      window.open(file.fileUrl, "_blank");
-                    }
-                  });
-                } else {
-                  toast.error("No attachments available to download");
+          <div className="bg-red-00 flex flex-col items-start gap-6">
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  if (discussion.attachments?.length > 0) {
+                    discussion.attachments.forEach((file: any) => {
+                      if (file.fileUrl) {
+                        window.open(file.fileUrl, "_blank");
+                      }
+                    });
+                  } else {
+                    toast.error("No attachments available to download");
+                  }
+                }}
+                className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm"
+              >
+                Download{" "}
+                <span className="bg-white rounded-full text-[#43C17A] p-1">
+                  <DownloadSimple size={12} weight="bold" />
+                </span>
+              </button>
+              <button
+                onClick={handleClose}
+                className="text-gray-500 p-1 cursor-pointer rounded-md"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="bg-yellow-00 flex items-center gap-1">
+              <p className="text-[#282828] text-base font-medium">Marks Scored :</p>
+              <p className="text-orange-600 font-medium">
+                {marks?.marksObtained !== null
+                  ? `${marks?.marksObtained}` : "-"
                 }
-              }}
-              className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm"
-            >
-              Download{" "}
-              <span className="bg-white rounded-full text-[#43C17A] p-1">
-                <DownloadSimple size={12} weight="bold" />
-              </span>
-            </button>
-            <button
-              onClick={handleClose}
-              className="text-gray-500 p-1 cursor-pointer rounded-md"
-            >
-              <X size={24} />
-            </button>
+              </p>
+            </div>
           </div>
         </div>
 
         <div className="bg-pink-00 flex flex-col lg:px-5 lg:py-4">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col">
             <h3 className="text-base font-bold text-[#282828]">Description</h3>
             <p className="text-sm text-[#282828] leading-relaxed whitespace-pre-line">
               {discussion.description ?? "No description provided."}
             </p>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col lg:mt-2">
             <h3 className="text-base font-bold text-[#282828]">Deadline</h3>
             <p className="text-sm text-[#282828]">
               {discussion.deadline
@@ -331,12 +360,12 @@ export function StudentDiscussionDetailsModal({
                 : "—"}
             </p>
           </div>
-          <div className="flex flex-col gap-2">
-            <h3 className="text-base font-bold text-[#282828]">Marks</h3>
+          <div className="flex flex-col lg:mt-2">
+            <h3 className="text-base font-bold text-[#282828]">Total Marks</h3>
             <p className="text-sm text-[#282828]">{discussion.marks ?? "—"}</p>
           </div>
           {discussion.attachments?.length > 0 && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col lg:mt-2">
               <h3 className="text-base font-bold text-[#282828]">
                 Attachments
               </h3>

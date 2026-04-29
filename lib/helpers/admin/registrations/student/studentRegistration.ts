@@ -62,7 +62,7 @@ export async function createStudentAcademicHistory(payload: {
 export async function createStudentFeeObligation(
   payload: {
     studentId: number;
-    collegeSessionId: number;
+    collegeSessionId: number | null;
     collegeAcademicYearId: number;
     collegeEducationId: number;
     collegeBranchId: number;
@@ -75,6 +75,9 @@ export async function createStudentFeeObligation(
     .select("totalFeeAmount")
     .eq("collegeSessionId", payload.collegeSessionId)
     .single();
+
+  console.log("What is sessionData", sessionData);
+  console.log("Is this here", sessionError);
 
   if (sessionError) {
     console.error("Failed to fetch session total fee amount", sessionError);

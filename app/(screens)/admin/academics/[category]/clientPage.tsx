@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import SubjectCard, { CardProps } from "../components/subjectCards";
 import { SubjectCardSkeleton } from "../shimmer/subjectCardSkeleton";
+import toast from "react-hot-toast";
 
 export function ClientAcademicsWrapper({
   category,
@@ -41,8 +42,9 @@ export function ClientAcademicsWrapper({
       const response = await getAdminSubjectsList(collegeId, sectionId);
       setSubjectData(response.subjects);
       setMeta(response.meta);
+      sessionStorage.setItem("subjectsList", JSON.stringify(response.subjects));
     } catch (err) {
-      console.error("Failed to load subject data", err);
+      toast.error("Failed to load subject data");
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export function ClientAcademicsWrapper({
             </h1>
           </div>
           <p className="text-[#282828] text-s ml-5">
-            {meta.year} • Track syllabus Progress
+            {meta.year} • Track syllabus progress
           </p>
         </div>
 

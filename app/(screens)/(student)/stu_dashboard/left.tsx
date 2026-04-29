@@ -2,12 +2,7 @@
 
 import AcademicPerformance from "@/app/utils/AcademicPerformance";
 import CardComponent from "@/app/utils/card";
-import {
-  BookOpen,
-  Chalkboard,
-  ClockAfternoon,
-  UsersThree,
-} from "@phosphor-icons/react";
+import { BookOpen, Chalkboard, ClockAfternoon, UsersThree } from "@phosphor-icons/react";
 import { FaChevronRight } from "react-icons/fa6";
 import { useState, useEffect } from "react";
 import MidExams from "./midExams";
@@ -22,7 +17,8 @@ import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/as
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
-import { Loader } from "../calendar/right/timetable";
+import { useStudent } from "@/app/utils/context/student/useStudent";
+import toast from "react-hot-toast";
 
 const formatTimeToAMPM = (time24: string) => {
   const [h, m] = time24.split(":");
@@ -48,6 +44,7 @@ export default function StuDashLeft() {
   const [feeLoading, setFeeLoading] = useState(true);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(true);
+  const { studentId } = useStudent();
 
   useEffect(() => {
     loadUpcomingClasses();
@@ -75,7 +72,6 @@ export default function StuDashLeft() {
 
       const studentContext = await fetchStudentContext(userRow.userId);
 
-      // 🟢 Fetch active subjects and their units to calculate correct completion %
       let query = supabase
         .from("college_subjects")
         .select(
@@ -108,7 +104,6 @@ export default function StuDashLeft() {
         return;
       }
 
-      // Fetch faculty names for professors
       const facultyIds = new Set<number>();
       subjectData.forEach((sub: any) => {
         sub.college_subject_units?.forEach((unit: any) => {
@@ -127,7 +122,6 @@ export default function StuDashLeft() {
         });
       }
 
-      // Maintain dynamic colors
       const colorPalettes = [
         {
           radialStart: "#10FD77",
@@ -155,16 +149,15 @@ export default function StuDashLeft() {
         const units = sub.college_subject_units || [];
         const totalUnits = units.length;
 
-        // Calculate average completion percentage of all units
         const avgPercentage =
           totalUnits > 0
             ? Math.round(
-                units.reduce(
-                  (acc: number, curr: any) =>
-                    acc + (curr.completionPercentage || 0),
-                  0,
-                ) / totalUnits,
-              )
+              units.reduce(
+                (acc: number, curr: any) =>
+                  acc + (curr.completionPercentage || 0),
+                0,
+              ) / totalUnits,
+            )
             : 0;
 
         const firstUnit = units[0];
@@ -187,7 +180,7 @@ export default function StuDashLeft() {
 
       setSubjects(mappedSubjects);
     } catch (err) {
-      console.error("Failed to load subjects", err);
+      toast.error("Failed to load subjects");
     } finally {
       setSubjectsLoading(false);
     }
@@ -267,12 +260,11 @@ export default function StuDashLeft() {
 
       const studentContext = await fetchStudentContext(userRow.userId);
 
-      const res = await fetchAssignmentsForStudent(
-        {
-          collegeBranchId: studentContext.collegeBranchId,
-          collegeAcademicYearId: studentContext.collegeAcademicYearId,
-          collegeSectionsId: studentContext.collegeSectionsId,
-        },
+      const res = await fetchAssignmentsForStudent({
+        collegeBranchId: studentContext.collegeBranchId,
+        collegeAcademicYearId: studentContext.collegeAcademicYearId,
+        collegeSectionsId: studentContext.collegeSectionsId,
+      },
         1,
         1,
         "active",
@@ -345,7 +337,7 @@ export default function StuDashLeft() {
       value: assignmentsLoading ? (
         <ValueShimmer />
       ) : (
-        `${dueAssignmentsCount} Due`
+        `${dueAssignmentsCount} Active`
       ),
       label: "Assignments",
       to: "/assignments",
@@ -409,7 +401,7 @@ export default function StuDashLeft() {
               ))}
             </div>
             <div className="mt-5">
-              <AcademicPerformance />
+              <AcademicPerformance studentId={studentId} />
             </div>
             <div className="mt-5 flex items-center justify-between rounded-lg">
               <SubjectProgressCards

@@ -828,7 +828,6 @@ function AssignmentsLeftContent() {
           </div>
         )}
 
-        {/* 🟢 REUSABLE PAGINATION FOR QUIZZES */}
         {activeTab === "quiz" &&
           (() => {
             const quizTotalPages = Math.ceil(quizTotalRecords / QUIZ_PER_PAGE);

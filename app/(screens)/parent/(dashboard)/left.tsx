@@ -13,6 +13,7 @@ import SubjectProgressCards from "../../faculty/utils/subjectProgressCard/subjec
 import FacultyChat from "./cards/facultyChat";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getParentDashboardWidgets } from "@/lib/helpers/parent/dashboard/parentDashboardActions";
+import { useParent } from "@/app/utils/context/parent/useParent";
 
 const ParentDashboardShimmer = () => {
   return (
@@ -91,13 +92,13 @@ const ParentDashboardShimmer = () => {
     </div>
   );
 };
-// ------------------------------
 
 export default function ParentLeft() {
   const { userId, fullName, gender, loading: userLoading, identifierId } = useUser();
 
   const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { studentId } = useParent();
 
   const parentImage =
     gender && (gender === "Male" ? "/parent-male.png" : "/parent-female.png");
@@ -124,7 +125,7 @@ export default function ParentLeft() {
     {
       show: true,
       // studentId: dashData?.studentId || 0,
-      studentId : dashData?.studentPin || 0,
+      studentId: dashData?.studentPin || 0,
       studentBranch: dashData?.branchName || "Loading...",
       studentAcademicYear: dashData?.academicYear || "Loading...",
       user: fullName ?? "User",
@@ -183,7 +184,7 @@ export default function ParentLeft() {
       </div>
 
       <div className="bg-blue-00 w-full lg:h-fit flex items-start justify-between mt-4">
-        <AcademicPerformanceSmall />
+        <AcademicPerformanceSmall studentId={studentId} />
 
         <FeeDueCard
           totalFee={dashData?.feeTotal || "0"}
@@ -192,7 +193,6 @@ export default function ParentLeft() {
       </div>
 
       <div className="bg-blue-00 mt-4 flex justify-between">
-        {/* 🟢 Safely Passes Subjects from the Server Helper */}
         <SubjectProgressCards
           props={dashData?.subjects || []}
           isLoading={false}

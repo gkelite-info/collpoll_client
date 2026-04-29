@@ -26,6 +26,7 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import toast from "react-hot-toast";
 import { SubjectDetailsSkeleton } from "../../shimmer/subjectDetailsSkeleton";
 import AddNewClassModal from "../../modal/addNewClassModal";
+import AddWeightageModal from "@/app/(screens)/faculty/academics/components/weightageModal";
 import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
 
 const colorMap = {
@@ -63,6 +64,8 @@ type FilterBannerProps = {
   semester: string;
   year: string;
   onAddUnit: () => void;
+  onAddWeightage: () => void;
+  onManageWeightage: () => void;
 };
 
 function FilterBanner({
@@ -70,37 +73,50 @@ function FilterBanner({
   semester,
   year,
   onAddUnit,
+  onAddWeightage,
+  onManageWeightage,
 }: FilterBannerProps) {
   return (
     <div className="bg-blue-00 mb-4 flex flex-col gap-4 w-full">
-      <div className="w-full flex flex-wrap items-center gap-8">
-        <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-sm">Subject :</p>
-          <p className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-            {subjectName}
-          </p>
-        </div>
+      <div className="bg-blue-00 w-full flex flex-wrap items-center justify-between gap-8">
+        <div className="flex items-start space-x-6 bg-red-00">
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Subject :</p>
+            <p className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+              {subjectName}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-sm">Semester :</p>
-          <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-            Sem {semester}
-          </p>
-        </div>
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Semester :</p>
+            <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+              Sem {semester}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <p className="text-[#525252] text-sm">Year :</p>
-          <div className="flex items-center justify-center px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-            <p>{year}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[#525252] text-sm">Year :</p>
+            <div className="flex items-center justify-center px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
+              <p>{year}</p>
+            </div>
           </div>
         </div>
 
-        <button
-          onClick={onAddUnit}
-          className="ml-auto cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-[#3bad6d] shadow-sm transition-colors flex items-center gap-2"
-        >
-          <span>+</span> Add Unit
-        </button>
+        <div className="flex items-center bg-red-00 space-x-3">
+          <button
+            onClick={onAddWeightage}
+            className="ml-auto cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-[#3bad6d] shadow-sm transition-colors flex items-center gap-2"
+          >
+            + Add weightage
+          </button>
+
+          <button
+            onClick={onAddUnit}
+            className="ml-auto cursor-pointer bg-[#43C17A] text-white text-sm font-medium px-4 py-1.5 rounded-lg hover:bg-[#3bad6d] shadow-sm transition-colors flex items-center gap-2"
+          >
+            <span>+</span> Add Unit
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -306,7 +322,7 @@ function UnitCard({
                     </span>
                   </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -407,7 +423,7 @@ export default function ClientSubjectDetails({
   const router = useRouter();
   const { category } = useParams();
   const sectionId = parseInt(category as string, 10);
-  const { userId } = useUser();
+  const { userId, role } = useUser();
 
   const [loading, setLoading] = useState(true);
   const [units, setUnits] = useState<UiUnit[]>([]);
@@ -415,6 +431,11 @@ export default function ClientSubjectDetails({
   const [adminId, setAdminId] = useState<number | null>(null);
   const [context, setContext] = useState<SubjectContext | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isWeightageOpen, setIsWeightageOpen] = useState(false);
+  const [facultyCtx, setFacultyCtx] = useState<any>(null);
+  const [isWeightageModalOpen, setIsWeightageModalOpen] = useState(false);
+  const [preselectedSubject, setPreselectedSubject] = useState<any>(null);
+  const [cardFaculties, setCardFaculties] = useState<any[]>([]);
   const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
     unitLabel: string;
     unitTitle: string;
@@ -427,7 +448,9 @@ export default function ClientSubjectDetails({
     try {
       setLoading(true);
       const ctx = await fetchAdminContext(userId);
+
       setAdminId(ctx.adminId);
+      setFacultyCtx(ctx);
 
       const data = await getAdminSubjectDetails(
         ctx.collegeId,
@@ -441,7 +464,6 @@ export default function ClientSubjectDetails({
         setContext(data.context);
       }
     } catch (error) {
-      console.error(error);
       toast.error("Failed to load subject details");
     } finally {
       setLoading(false);
@@ -451,6 +473,14 @@ export default function ClientSubjectDetails({
   useEffect(() => {
     init();
   }, [userId, subjectId]);
+
+  useEffect(() => {
+    const storedSubject = sessionStorage.getItem("selectedSubject");
+    const storedFaculties = sessionStorage.getItem("cardFaculties");
+
+    if (storedSubject) setPreselectedSubject(JSON.parse(storedSubject));
+    if (storedFaculties) setCardFaculties(JSON.parse(storedFaculties));
+  }, []);
 
   const handleSaveUnit = async (
     unitId: number,
@@ -517,6 +547,7 @@ export default function ClientSubjectDetails({
   };
 
   const handleBack = () => router.back();
+
   const handleRefresh = () => {
     init();
   };
@@ -550,6 +581,8 @@ export default function ClientSubjectDetails({
         semester={headerInfo.semester}
         year={headerInfo.year}
         onAddUnit={() => setIsModalOpen(true)}
+        onManageWeightage={() => setIsWeightageModalOpen(true)}
+        onAddWeightage={() => setIsWeightageModalOpen(true)}
       />
       <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8">
         {units.length > 0 ? (
@@ -583,6 +616,18 @@ export default function ClientSubjectDetails({
           parseInt(u.unitLabel.replace(/\D/g, ""), 10),
         )}
       />
+      {facultyCtx && headerInfo && (
+        <AddWeightageModal
+          isOpen={isWeightageModalOpen}
+          onClose={() => setIsWeightageModalOpen(false)}
+          facultyCtx={facultyCtx}
+          role={role}
+          initialSubjectId={subjectId}
+          initialSectionId={sectionId}
+          preselectedSubject={preselectedSubject}
+          cardFaculties={cardFaculties}
+        />
+      )}
 
       <TopicPdfModal
         isOpen={!!selectedTopicPdf}

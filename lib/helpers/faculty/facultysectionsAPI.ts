@@ -17,8 +17,8 @@ export type FacultySectionRow = {
     } | null;
 };
 
-export async function fetchFacultySections(facultyId: number) {
-    const { data, error } = await supabase
+export async function fetchFacultySections(facultyId: number, subjectId?: number) {
+    let query = supabase
         .from("faculty_sections")
         .select(`
       facultySectionId,
@@ -39,6 +39,12 @@ export async function fetchFacultySections(facultyId: number) {
         .eq("facultyId", facultyId)
         .eq("isActive", true)
         .is("deletedAt", null);
+
+    if (subjectId) {
+        query = query.eq("collegeSubjectId", subjectId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
         console.error("fetchFacultySections error:", error);

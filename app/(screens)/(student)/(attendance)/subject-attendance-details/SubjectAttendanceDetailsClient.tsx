@@ -288,7 +288,6 @@ Missed: ${data?.headerStats.absent ?? 0} |
       <div className="mt-4 flex flex-col items-center">
         <div className="w-full flex flex-col items-start">
           <h4 className="text-[#282828] font-medium">Subject Detail View</h4>
-
           <div className="bg-blue-00 w-full mt-2 flex items-center">
             <div className="flex items-center gap-1">
               <h5 className="text-[#525252] text-sm">Subject :</h5>

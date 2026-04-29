@@ -1,25 +1,36 @@
 "use client";
 
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    Cell,
-    LabelList,
-} from "recharts";
+import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPerformance/calculations";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 
-export default function AcademicPerformance({ overlayVisible = true }: { overlayVisible?: boolean }) {
-    const data = [
-        { subject: "Sub 1", value: 0, full: 100 },
-        { subject: "Sub 2", value: 0, full: 100 },
-        { subject: "Sub 3", value: 0, full: 100 },
-        { subject: "Sub 4", value: 0, full: 100 },
-        { subject: "Sub 5", value: 0, full: 100 },
-        { subject: "Sub 6", value: 0, full: 100 },
-    ];
+export default function AcademicPerformance({ studentId }: { studentId: number | null }) {
+    const [data, setData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadData() {
+            try {
+                const performance = await getStudentAcademicPerformance(studentId);
+
+                setData(performance);
+            } catch (error) {
+                toast.error("Failed to load performance");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, [studentId]);
+
+    if (loading) {
+        return (
+            <div className="bg-white rounded-lg h-80 flex items-center justify-center shadow-md">
+                <p className="text-gray-500 animate-pulse">Calculating performance...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white relative overflow-hidden rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
@@ -115,7 +126,6 @@ export default function AcademicPerformance({ overlayVisible = true }: { overlay
                             <LabelList
                                 dataKey="value"
                                 content={({ x, y, width, height, value }: any) => {
-                                    // If value is 0, place label slightly above baseline to avoid overlap with X-axis labels
                                     const adjustedY = value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
 
                                     return (
@@ -123,7 +133,7 @@ export default function AcademicPerformance({ overlayVisible = true }: { overlay
                                             <circle
                                                 cx={x + width / 2}
                                                 cy={adjustedY}
-                                                r={10}
+                                                r={11.5}
                                                 fill="#E8F6E2"
                                             />
                                             <text

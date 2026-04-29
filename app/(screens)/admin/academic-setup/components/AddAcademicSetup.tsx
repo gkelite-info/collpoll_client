@@ -258,7 +258,7 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            Education Type
+            Education Type <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -270,7 +270,7 @@ export default function AddAcademicSetup({
         </div>
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"}
+            {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -291,7 +291,7 @@ export default function AddAcademicSetup({
       <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
-            {collegeEducationType === "Inter" ? "Group Type" : "Branch Code"}
+            {collegeEducationType === "Inter" ? "Group Type" : "Branch Code"} <span className="text-red-500">*</span>
           </label>
           {customMode.dept ? (
             renderCustomInput("dept", "Enter Branch Code")
@@ -328,6 +328,7 @@ export default function AddAcademicSetup({
             selectedValues={form.year ? [form.year] : []}
             onChange={(val) => setForm({ ...form, year: val })}
             onRemove={(_val) => setForm({ ...form, year: "" })}
+            mandatory={true}
           />
         </div>
       </div>
@@ -337,7 +338,7 @@ export default function AddAcademicSetup({
           {customMode.sections ? (
             <div className="space-y-1">
               <label className="text-sm text-[#16284F] font-medium mb-1">
-                Sections
+                Sections <span className="text-red-500">*</span>
               </label>
               {renderCustomInput("sections", "Enter Custom Section")}
             </div>
@@ -368,6 +369,7 @@ export default function AddAcademicSetup({
                     sections: form.sections.filter((s) => s !== val),
                   });
                 }}
+                mandatory={true}
               />
             </div>
           )}
@@ -449,6 +451,7 @@ interface MultiSelectProps {
   disabled?: boolean;
   isGrouped?: boolean;
   direction?: "up" | "down";
+  mandatory?: boolean;
 }
 
 const CustomMultiSelect: React.FC<MultiSelectProps> = ({
@@ -461,6 +464,7 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
   disabled = false,
   isGrouped = false,
   direction = "down",
+  mandatory = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -479,7 +483,7 @@ const CustomMultiSelect: React.FC<MultiSelectProps> = ({
 
   return (
     <div className="space-y-1 w-full" ref={wrapperRef}>
-      <label className="text-sm text-[#16284F] font-medium mb-1">{label}</label>
+      <label className="text-sm text-[#16284F] font-medium mb-1">{label} {mandatory && <span className="text-red-500">*</span>}</label>
       <div className="relative">
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}

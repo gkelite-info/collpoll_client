@@ -253,7 +253,6 @@ function FacultyLeavesContent() {
             <span className="font-medium whitespace-nowrap">{item.name}</span>
           ),
           branch: item.branch,
-
           action:
             item.status === "pending" || isEditing ? (
               <div className="flex items-center justify-center gap-2">
@@ -317,13 +316,12 @@ function FacultyLeavesContent() {
           ...baseObj,
           statusBadge: (
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold ${
-                item.status === "approved"
-                  ? "bg-[#E7F8EE] text-[#43C17A]"
-                  : item.status === "rejected"
-                    ? "bg-[#FFE5E5] text-[#FF4B4B]"
-                    : "bg-[#FFF4EB] text-[#FFB874]"
-              }`}
+              className={`px-3 py-1 rounded-full text-xs font-bold ${item.status === "approved"
+                ? "bg-[#E7F8EE] text-[#43C17A]"
+                : item.status === "rejected"
+                  ? "bg-[#FFE5E5] text-[#FF4B4B]"
+                  : "bg-[#FFF4EB] text-[#FFB874]"
+                }`}
             >
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>

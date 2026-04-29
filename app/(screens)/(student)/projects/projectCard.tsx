@@ -74,9 +74,9 @@ export const ProjectCard = ({ data, onViewDetails, role }: ProjectCardListProps)
               <p className="truncate md:max-w-sm text-[#374151]">{project.techStack}</p>
             </div>
 
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center w-full">
               <span className="w-28 font-semibold text-[#111827]">Team Members</span>
-              <div className="flex">
+              <div className="flex items-center gap-2 bg-indigo-00 w-[60%] lg:w-[70%] overflow-x-scroll">
                 {project.teamMembers.length > 0 ? (
                   project.teamMembers.slice(0, 4).map((member, i) => (
                     <MemberAvatar key={i} image={member.image} name={member.name} index={i} />
@@ -87,11 +87,11 @@ export const ProjectCard = ({ data, onViewDetails, role }: ProjectCardListProps)
               </div>
             </div>
 
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 bg-green-00 w-full items-center">
               <span className="w-28 font-semibold text-[#111827]">Mentor</span>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap bg-indigo-00 w-[60%] lg:w-[70%]">
                 {project.mentors.length > 0 ? (
-                  <div className="flex">
+                  <div className="flex overflow-x-scroll">
                     {project.mentors.map((mentor, i) => (
                       <MemberAvatar key={i} image={mentor.image} name={mentor.name} index={i} />
                     ))}
@@ -107,9 +107,9 @@ export const ProjectCard = ({ data, onViewDetails, role }: ProjectCardListProps)
               <p className="text-[#374151]">{project.marks}</p>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 w-full">
               <span className="w-28 font-semibold text-[#111827]">Attachments</span>
-              <div className="flex flex-col gap-1">
+              <div className="flex gap-1 overflow-x-scroll bg-yellow-00">
                 {project.fileUrls.length > 0 ? (
                   project.fileUrls.map((url, i) => (
                     <a key={i} href={url} target="_blank" rel="noreferrer"

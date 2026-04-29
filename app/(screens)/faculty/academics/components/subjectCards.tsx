@@ -5,6 +5,7 @@ import { SubjectDetailsCard } from "./subjectDetails";
 import AddNewCardModal from "./addNewCardModal";
 import { CardProps } from "@/lib/types/faculty";
 import { useRouter, useSearchParams } from "next/navigation";
+import AddWeightageModal from "./weightageModal";
 
 type FacultySubject = {
   collegeSubjectId: number;
@@ -22,9 +23,10 @@ type FacultySection = {
 type SubjectCardProps = {
   subjectProps: CardProps[];
   facultyCtx: any;
+  role: string | null;
 };
 
-export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardProps) {
+export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectCardProps) {
   const [cards, setCards] = useState<CardProps[]>(subjectProps);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedCard, setSelectedCard] = useState<CardProps | null>(null);
@@ -34,6 +36,7 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
   const [defaultSubjectId, setDefaultSubjectId] = useState<number | null>(null);
   const facultySubjects = facultyCtx?.faculty_subject ?? [];
   const facultySections = facultyCtx?.sections ?? [];
+  const [isWeightageOpen, setIsWeightageOpen] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -156,6 +159,7 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
         <div className="bg-blue-00 flex items-center gap-3">
           <button
             className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium"
+            onClick={() => setIsWeightageOpen(true)}
           >
             Add Weightage
           </button>
@@ -202,7 +206,12 @@ export default function SubjectCard({ subjectProps, facultyCtx }: SubjectCardPro
         facultySections={facultySections}
         defaultSubjectId={defaultSubjectId}
       />
-
+      <AddWeightageModal
+        isOpen={isWeightageOpen}
+        onClose={() => setIsWeightageOpen(false)}
+        facultyCtx={facultyCtx}
+        role={role}
+      />
     </>
   );
 }
