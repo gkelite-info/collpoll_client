@@ -13,13 +13,6 @@ import { useStudent } from "@/app/utils/context/student/useStudent";
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import { StudentProgressSkeleton } from "./shimmer/studentProgressSkeleton";
 
-function toRomanSemester(semester: number | null) {
-  if (!semester) return "N/A";
-
-  const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-  return numerals[semester - 1] ?? String(semester);
-}
-
 const Page = () => {
   const [open, setOpen] = useState(false);
   const [progressLoading, setProgressLoading] = useState(true);
@@ -35,15 +28,17 @@ const Page = () => {
     collegeBranchCode,
     collegeAcademicYear,
     college_sections,
-    collegeSemesterId,
+    collegeSemester,
   } = useStudent();
 
-  const semesterLabel =
-    collegeSemesterId !== null
-      ? `Semester ${toRomanSemester(collegeSemesterId)}`
-      : "Semester N/A";
-  const assignmentsTitle = `Assignments Summary - ${collegeEducationType ?? ""} ${collegeBranchCode ?? "N/A"} ${collegeAcademicYear ?? "N/A"} ( ${semesterLabel} )`;
+  const semesterLabel = collegeSemester ? `Semester ${collegeSemester}` : "Semester N/A";
   const isLoading = userLoading || studentLoading || progressLoading;
+  const academicPerformanceData =
+    progressData?.subjectProgressRows.map((row) => ({
+      subject: row.subjectKey,
+      value: row.progressPercent,
+      full: 100,
+    })) ?? [];
 
   useEffect(() => {
     if (userLoading || studentLoading) return;
@@ -120,7 +115,7 @@ const Page = () => {
                     Semester:
                   </span>
                   <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    {toRomanSemester(collegeSemesterId)}
+                    {collegeSemester ?? "N/A"}
                   </span>
                 </div>
               </div>
@@ -165,7 +160,10 @@ const Page = () => {
             </section>
 
             <section className="bg-white rounded-2xl lg:col-span-6">
-              <AcademicPerformance studentId={studentId} />
+              <AcademicPerformance
+                studentId={studentId}
+                data={academicPerformanceData}
+              />
             </section >
 
             <section className="bg-white rounded-2xl lg:col-span-4">
@@ -175,8 +173,7 @@ const Page = () => {
 
           <section className="bg-white rounded-2xl">
             <AssignmentsSummaryTable
-              assignments={progressData?.assignmentsSummary ?? []}
-              title={assignmentsTitle}
+              rows={progressData?.subjectProgressRows ?? []}
               semesterLabel={semesterLabel}
             />
           </section>

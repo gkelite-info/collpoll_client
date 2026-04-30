@@ -16,6 +16,7 @@ type StudentContextType = {
     collegeAcademicYearId: number | null;
     collegeAcademicYear: string | null;
     collegeSemesterId: number | null;
+    collegeSemester: string | number | null;
     collegeSectionsId: number | null;
     college_sections: string | null;
     entryType: string | null;
@@ -35,6 +36,7 @@ const StudentContext = createContext<StudentContextType>({
     collegeAcademicYearId: null,
     collegeAcademicYear: null,
     collegeSemesterId: null,
+    collegeSemester: null,
     collegeSectionsId: null,
     college_sections: null,
     entryType: null,
@@ -103,6 +105,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
                     collegeAcademicYearId: student.collegeAcademicYearId,
                     collegeAcademicYear: student.collegeAcademicYear,
                     collegeSemesterId: student.collegeSemesterId,
+                    collegeSemester: student.collegeSemester,
                     collegeSectionsId: student.collegeSectionsId,
                     college_sections: student.collegeSections,
                     entryType: student.entryType,

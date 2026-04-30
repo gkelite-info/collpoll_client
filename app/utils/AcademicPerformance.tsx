@@ -15,6 +15,7 @@ import {
   LabelList,
 } from "recharts";
 
+<<<<<<< Updated upstream
 export default function AcademicPerformance({
   studentId,
 }: {
@@ -29,6 +30,44 @@ export default function AcademicPerformance({
     async function loadData() {
       try {
         const performance = await getStudentAcademicPerformance(studentId);
+=======
+type AcademicPerformanceDatum = {
+    subject: string;
+    value: number;
+    full: number;
+};
+
+export default function AcademicPerformance({
+    studentId,
+    data: externalData,
+}: {
+    studentId: number | null;
+    data?: AcademicPerformanceDatum[];
+}) {
+    const [data, setData] = useState<any[]>(externalData ?? []);
+    const [loading, setLoading] = useState(!externalData);
+
+    useEffect(() => {
+        if (externalData) {
+            setData(externalData);
+            setLoading(false);
+            return;
+        }
+
+        async function loadData() {
+            try {
+                const performance = await getStudentAcademicPerformance(studentId);
+
+                setData(performance);
+            } catch (error) {
+                toast.error("Failed to load performance");
+            } finally {
+                setLoading(false);
+            }
+        }
+        loadData();
+    }, [studentId, externalData]);
+>>>>>>> Stashed changes
 
         setData(performance);
       } catch (error) {

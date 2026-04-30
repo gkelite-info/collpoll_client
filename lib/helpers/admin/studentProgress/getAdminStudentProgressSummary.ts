@@ -4,12 +4,12 @@ const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS", "CANCELLED"] as const;
 
-type FacultyStudentProgressScope = {
-  facultyId: number;
+type AdminStudentProgressScope = {
   collegeId: number;
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchIds: number[];
   academicYearIds: number[];
+  semesterIds: number[];
   sectionIds: number[];
   subjectIds: number[];
   departmentLabel?: string | null;
@@ -17,6 +17,10 @@ type FacultyStudentProgressScope = {
   page?: number;
   pageSize?: number;
   searchQuery?: string;
+};
+
+type FacultySectionRow = {
+  facultyId: number;
 };
 
 type StudentAcademicHistoryRow = {
@@ -92,7 +96,9 @@ type AssignmentRow = {
   assignmentId: number;
   collegeSectionsId: number;
   collegeAcademicYearId: number;
+  dateAssignedInt: number | null;
   submissionDeadlineInt: number | null;
+  createdAt?: string | null;
 };
 
 type AssignmentSubmissionRow = {
@@ -107,6 +113,7 @@ type QuizRow = {
   collegeSectionsId: number;
   collegeAcademicYearId: number;
   totalMarks: number;
+  createdAt?: string | null;
   endDate?: string | null;
 };
 
@@ -120,6 +127,7 @@ type QuizSubmissionRow = {
 
 type DiscussionForumRow = {
   discussionId: number;
+  createdAt?: string | null;
   deadline: string | null;
 };
 
@@ -154,7 +162,7 @@ type FacultyWeightageConfigRow = {
     | null;
 };
 
-export type FacultyStudentProgressRow = {
+export type AdminStudentProgressRow = {
   studentId: number;
   userId: number;
   profileUrl: string | null;
@@ -172,7 +180,7 @@ export type FacultyStudentProgressRow = {
   progressPercent: number;
 };
 
-export type FacultyStudentProgressTrendPoint = {
+export type AdminStudentProgressTrendPoint = {
   month: string;
   value: number;
 };
@@ -409,7 +417,7 @@ const computeProgressPercent = (
 };
 
 const buildEmptySummary = (
-  scope: FacultyStudentProgressScope,
+  scope: AdminStudentProgressScope,
   overrides?: Partial<{
     yearLabel: string;
     sectionLabel: string;
@@ -421,9 +429,9 @@ const buildEmptySummary = (
   presentToday: 0,
   lowAttendance: 0,
   markedStudents: [] as MarkedStudentSummary[],
-  studentRows: [] as FacultyStudentProgressRow[],
-  topPerformerRows: [] as FacultyStudentProgressRow[],
-  trendData: [] as FacultyStudentProgressTrendPoint[],
+  studentRows: [] as AdminStudentProgressRow[],
+  topPerformerRows: [] as AdminStudentProgressRow[],
+  trendData: [] as AdminStudentProgressTrendPoint[],
   departmentLabel: scope.departmentLabel ?? "N/A",
   subjectLabel: scope.subjectLabel ?? "N/A",
   yearLabel: overrides?.yearLabel ?? "N/A",
@@ -431,8 +439,8 @@ const buildEmptySummary = (
   semesterLabel: overrides?.semesterLabel ?? "N/A",
 });
 
-export async function getFacultyStudentProgressSummary(
-  scope: FacultyStudentProgressScope,
+export async function getAdminStudentProgressSummary(
+  scope: AdminStudentProgressScope,
 ) {
   const page = Math.max(1, scope.page ?? 1);
   const pageSize = Math.max(1, scope.pageSize ?? 10);
@@ -440,8 +448,10 @@ export async function getFacultyStudentProgressSummary(
 
   if (
     !scope.academicYearIds.length ||
+    !scope.semesterIds.length ||
     !scope.sectionIds.length ||
-    !scope.subjectIds.length
+    !scope.subjectIds.length ||
+    !scope.collegeBranchIds.length
   ) {
     return buildEmptySummary(scope);
   }
@@ -468,6 +478,7 @@ export async function getFacultyStudentProgressSummary(
     .eq("isCurrent", true)
     .is("deletedAt", null)
     .in("collegeAcademicYearId", scope.academicYearIds)
+    .in("collegeSemesterId", scope.semesterIds)
     .in("collegeSectionsId", scope.sectionIds);
 
   if (historyError) throw historyError;
@@ -515,7 +526,7 @@ export async function getFacultyStudentProgressSummary(
     .in("studentId", candidateStudentIds)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
+    .in("collegeBranchId", scope.collegeBranchIds)
     .eq("isActive", true)
     .is("deletedAt", null);
 
@@ -534,6 +545,22 @@ export async function getFacultyStudentProgressSummary(
   const studentIds = Array.from(new Set(filteredHistory.map((row) => row.studentId)));
   const userIds = Array.from(new Set(validStudents.map((row) => row.userId)));
   const today = formatDate(new Date());
+
+  const { data: facultySectionRows, error: facultySectionError } = await supabase
+    .from("faculty_sections")
+    .select("facultyId")
+    .in("collegeAcademicYearId", scope.academicYearIds)
+    .in("collegeSectionsId", scope.sectionIds)
+    .in("collegeSubjectId", scope.subjectIds)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .returns<FacultySectionRow[]>();
+
+  if (facultySectionError) throw facultySectionError;
+
+  const facultyIds = Array.from(
+    new Set((facultySectionRows ?? []).map((row) => row.facultyId)),
+  );
 
   const { data: todayRows, error: todayError } = await supabase
     .from("attendance_record")
@@ -560,12 +587,14 @@ export async function getFacultyStudentProgressSummary(
         const event = Array.isArray(row.calendar_event)
           ? row.calendar_event[0]
           : row.calendar_event;
+        const facultyId = event?.facultyId ?? null;
+        const subjectId = event?.subject ?? null;
 
         return (
           isAttendedStatus(row.status) &&
-          event?.facultyId === scope.facultyId &&
-          !!event.subject &&
-          scope.subjectIds.includes(event.subject)
+          (!!facultyId ? facultyIds.includes(facultyId) : false) &&
+          !!subjectId &&
+          scope.subjectIds.includes(subjectId)
         );
       })
       .map((row) => row.studentId),
@@ -619,24 +648,28 @@ export async function getFacultyStudentProgressSummary(
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from("assignments")
-      .select("assignmentId, collegeSectionsId, collegeAcademicYearId, submissionDeadlineInt")
-      .eq("createdBy", scope.facultyId)
-      .eq("collegeBranchId", scope.collegeBranchId)
+      .select(
+        "assignmentId, collegeSectionsId, collegeAcademicYearId, dateAssignedInt, submissionDeadlineInt, createdAt",
+      )
+      .in("collegeBranchId", scope.collegeBranchIds)
       .in("subjectId", scope.subjectIds)
       .in("collegeAcademicYearId", scope.academicYearIds)
       .in("collegeSectionsId", scope.sectionIds)
       .eq("is_deleted", false)
       .neq("status", "Cancelled"),
-    supabase
-      .from("discussion_forum")
-      .select("discussionId, deadline")
-      .eq("createdBy", scope.facultyId)
-      .eq("is_deleted", false)
-      .is("deletedAt", null),
+    facultyIds.length
+      ? supabase
+          .from("discussion_forum")
+          .select("discussionId, createdAt, deadline")
+          .in("createdBy", facultyIds)
+          .eq("is_deleted", false)
+          .is("deletedAt", null)
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("quizzes")
-      .select("quizId, collegeSectionsId, collegeAcademicYearId, totalMarks, endDate")
-      .eq("facultyId", scope.facultyId)
+      .select(
+        "quizId, collegeSectionsId, collegeAcademicYearId, totalMarks, createdAt, endDate",
+      )
       .in("collegeSubjectId", scope.subjectIds)
       .in("collegeAcademicYearId", scope.academicYearIds)
       .in("collegeSectionsId", scope.sectionIds)
@@ -657,10 +690,9 @@ export async function getFacultyStudentProgressSummary(
         )
       `,
       )
-      .eq("facultyId", scope.facultyId)
       .eq("collegeId", scope.collegeId)
       .eq("collegeEducationId", scope.collegeEducationId)
-      .eq("collegeBranchId", scope.collegeBranchId)
+      .in("collegeBranchId", scope.collegeBranchIds)
       .in("collegeSubjectId", scope.subjectIds)
       .in("collegeSectionsId", scope.sectionIds)
       .is("deletedAt", null),
@@ -742,7 +774,8 @@ export async function getFacultyStudentProgressSummary(
       : row.calendar_event;
 
     if (
-      event?.facultyId !== scope.facultyId ||
+      !event?.facultyId ||
+      !facultyIds.includes(event.facultyId) ||
       !event.subject ||
       !scope.subjectIds.includes(event.subject)
     ) {
@@ -930,7 +963,7 @@ export async function getFacultyStudentProgressSummary(
     ]),
   );
 
-  const studentProgressRows: FacultyStudentProgressRow[] = studentIds
+  const studentProgressRows: AdminStudentProgressRow[] = studentIds
     .map((studentId) => {
       const student = studentById.get(studentId);
       const history = historyByStudentId.get(studentId);
@@ -1021,11 +1054,15 @@ export async function getFacultyStudentProgressSummary(
         progressPercent,
       };
     })
-    .filter((row): row is FacultyStudentProgressRow => row !== null)
+    .filter((row): row is AdminStudentProgressRow => row !== null)
     .sort((a, b) => a.rollNo.localeCompare(b.rollNo));
 
   const visibleStudentProgressRows = studentProgressRows.filter(
     (student) => student.progressPercent > 0,
+  );
+
+  const visibleStudentIds = new Set(
+    visibleStudentProgressRows.map((student) => student.studentId),
   );
 
   const filteredStudentProgressRows = searchQuery
@@ -1056,26 +1093,29 @@ export async function getFacultyStudentProgressSummary(
   }
 
   for (const assignment of assignments) {
-    const deadline = parseIntDate(assignment.submissionDeadlineInt);
-    if (deadline) {
-      trendSourceDates.push(deadline);
-      activeTrendMonths.add(getMonthKey(deadline));
+    const assignedDate =
+      parseIntDate(assignment.dateAssignedInt) ?? parseIsoDate(assignment.createdAt);
+    if (assignedDate) {
+      trendSourceDates.push(assignedDate);
+      activeTrendMonths.add(getMonthKey(assignedDate));
     }
   }
 
   for (const quiz of quizzes) {
-    const endDate = parseIsoDate(quiz.endDate);
-    if (endDate) {
-      trendSourceDates.push(endDate);
-      activeTrendMonths.add(getMonthKey(endDate));
+    const quizActivityDate =
+      parseIsoDate(quiz.createdAt) ?? parseIsoDate(quiz.endDate);
+    if (quizActivityDate) {
+      trendSourceDates.push(quizActivityDate);
+      activeTrendMonths.add(getMonthKey(quizActivityDate));
     }
   }
 
   for (const discussion of (discussionsResult.data ?? []) as DiscussionForumRow[]) {
-    const deadline = parseIsoDate(discussion.deadline);
-    if (deadline) {
-      trendSourceDates.push(deadline);
-      activeTrendMonths.add(getMonthKey(deadline));
+    const discussionActivityDate =
+      parseIsoDate(discussion.createdAt) ?? parseIsoDate(discussion.deadline);
+    if (discussionActivityDate) {
+      trendSourceDates.push(discussionActivityDate);
+      activeTrendMonths.add(getMonthKey(discussionActivityDate));
     }
   }
 
@@ -1083,7 +1123,7 @@ export async function getFacultyStudentProgressSummary(
     ? new Date(Math.max(...trendSourceDates.map((date) => date.getTime()))).getUTCFullYear()
     : new Date().getUTCFullYear();
 
-  const trendData: FacultyStudentProgressTrendPoint[] = buildYearMonthRange(trendYear).map(
+  const trendData: AdminStudentProgressTrendPoint[] = buildYearMonthRange(trendYear).map(
     (monthKey) => {
         if (!activeTrendMonths.has(monthKey)) {
           return {
@@ -1135,9 +1175,13 @@ export async function getFacultyStudentProgressSummary(
                       const assignment = assignments.find(
                         (item) => item.assignmentId === assignmentId,
                       );
-                      const deadline = parseIntDate(assignment?.submissionDeadlineInt);
+                      const activityDate =
+                        parseIntDate(assignment?.dateAssignedInt) ??
+                        parseIsoDate(assignment?.createdAt);
 
-                      return !!deadline && deadline.getTime() <= monthEnd.getTime();
+                      return (
+                        !!activityDate && activityDate.getTime() <= monthEnd.getTime()
+                      );
                     },
                   );
                   const assignmentDates =
@@ -1149,8 +1193,11 @@ export async function getFacultyStudentProgressSummary(
 
                   const applicableQuizzes = (quizzesByContext.get(contextKey) ?? []).filter(
                     (quiz) => {
-                      const endDate = parseIsoDate(quiz.endDate);
-                      return !!endDate && endDate.getTime() <= monthEnd.getTime();
+                      const activityDate =
+                        parseIsoDate(quiz.createdAt) ?? parseIsoDate(quiz.endDate);
+                      return (
+                        !!activityDate && activityDate.getTime() <= monthEnd.getTime()
+                      );
                     },
                   );
                   const quizMarksMap =
@@ -1173,8 +1220,12 @@ export async function getFacultyStudentProgressSummary(
                     discussionsBySection.get(history.collegeSectionsId) ?? []
                   ).filter((discussion) => {
                     const discussionRow = discussionById.get(discussion.discussionId);
-                    const deadline = parseIsoDate(discussionRow?.deadline);
-                    return !!deadline && deadline.getTime() <= monthEnd.getTime();
+                    const activityDate =
+                      parseIsoDate(discussionRow?.createdAt) ??
+                      parseIsoDate(discussionRow?.deadline);
+                    return (
+                      !!activityDate && activityDate.getTime() <= monthEnd.getTime()
+                    );
                   });
                   const discussionMarksMap =
                     discussionMarksByStudent.get(studentId) ?? new Map<number, number>();
@@ -1226,10 +1277,6 @@ export async function getFacultyStudentProgressSummary(
       },
   );
 
-  const visibleStudentIds = new Set(
-    visibleStudentProgressRows.map((student) => student.studentId),
-  );
-
   const lowAttendance = visibleStudentProgressRows.filter(
     (student) => student.conductedClasses > 0 && student.attendancePercentage < 70,
   ).length;
@@ -1248,8 +1295,8 @@ export async function getFacultyStudentProgressSummary(
             return (
               visibleStudentIds.has(row.studentId) &&
               isAttendedStatus(row.status) &&
-              event?.facultyId === scope.facultyId &&
-              !!event.subject &&
+              (!!event?.facultyId ? facultyIds.includes(event.facultyId) : false) &&
+              !!event?.subject &&
               scope.subjectIds.includes(event.subject)
             );
           })
