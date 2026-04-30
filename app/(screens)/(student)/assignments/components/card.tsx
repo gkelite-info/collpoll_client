@@ -1,224 +1,537 @@
+// "use client";
+
+// import { useEffect, useState } from "react";
+// import {
+//     CalendarDots,
+//     LinkSimpleHorizontal,
+//     UserCircle,
+//     FilePdf,
+// } from "@phosphor-icons/react";
+// import { FiDownload } from "react-icons/fi";
+// import { TfiPencil } from "react-icons/tfi";
+// import { FaPlus } from "react-icons/fa6";
+// import ViewDetailModal from "../modal/viewDetail";
+// import UploadModal from "../modal/uploadModal";
+// import { supabase } from "@/lib/supabaseClient";
+// import { downloadAssignmentFile } from "@/app/utils/storageActions";
+// import toast from "react-hot-toast";
+
+// async function downloadFile(filePath: string) {
+//     try {
+//         const { data, error } = await supabase.storage
+//             .from("student_submissions")
+//             .download(filePath);
+
+//         if (error) {
+//             return;
+//         }
+
+//         const url = URL.createObjectURL(data);
+//         const a = document.createElement("a");
+//         a.href = url;
+//         a.download = filePath.split("/").pop() || "file";
+//         document.body.appendChild(a);
+//         a.click();
+//         a.remove();
+//         URL.revokeObjectURL(url);
+//     } catch (err) {
+//     }
+// }
+
+// async function updateFile(oldPath: string, newFile: File) {
+//     try {
+//         await supabase.storage.from("student_submissions").remove([oldPath]);
+
+//         const { error: uploadErr } = await supabase.storage
+//             .from("student_submissions")
+//             .upload(oldPath, newFile, { upsert: true });
+
+//         if (uploadErr) {
+//             return false;
+//         }
+
+//         return true;
+//     } catch (err) {
+//         return false;
+//     }
+// }
+
+// export type CardProp = {
+//     assignmentId: number | string;
+//     image: string;
+//     title: string;
+//     studentId: number;
+//     subjectName?: string;
+//     topicName: string;
+//     description: string;
+//     fromDate: string;
+//     toDate: string;
+//     professor: string;
+//     videoLink: string;
+//     marksScored?: number;
+//     marksTotal?: number;
+//     assignmentTitle?: string;
+//     existingFilePath?: string | null;
+// };
+
+// type AssignmentCardProps = {
+//     cardProp: CardProp[];
+//     activeView: "active" | "previous";
+// };
+
+// export default function AssignmentCard({
+//     cardProp,
+//     activeView,
+// }: AssignmentCardProps) {
+//     const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>(
+//         {}
+//     );
+
+//     useEffect(() => {
+//         const map: { [key: number]: string } = {};
+//         cardProp.forEach((item, idx) => {
+//             if (item.existingFilePath) map[idx] = item.existingFilePath;
+//         });
+//         setUploadedFiles((prev) => ({ ...prev, ...map }));
+//     }, [cardProp]);
+
+//     const [showModal, setShowModal] = useState(false);
+//     const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);
+//     const [showUploadModal, setShowUploadModal] = useState(false);
+//     const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+//     const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+//     const openModal = (item: CardProp) => {
+//         setSelectedCard(item);
+//         setShowModal(true);
+//     };
+
+//     const closeModal = () => {
+//         setShowModal(false);
+//         setSelectedCard(null);
+//     };
+
+//     const openUploadModal = (index: number) => {
+//         setUploadingIndex(index);
+//         setShowUploadModal(true);
+//     };
+
+//     const handleEdit = (index: number) => {
+//         setEditingIndex(index);
+//         setUploadingIndex(index);
+//         setShowUploadModal(true);
+//     };
+
+//     const handleDownload = async (index: number, item: CardProp) => {
+//         try {
+//             const storedPath = item.existingFilePath ?? uploadedFiles[index];
+
+//             if (!storedPath) {
+//                 toast.error("No uploaded file found!");
+//                 return;
+//             }
+
+//             const fileName = storedPath.split("/").pop();
+
+//             if (!fileName) {
+//                 toast.error("Invalid file path!");
+//                 return;
+//             }
+
+//             toast.loading("Downloading file...", { id: "download" });
+
+//             await downloadAssignmentFile(Number(item.assignmentId), fileName);
+
+//             toast.success("File downloaded successfully!", { id: "download" });
+
+//         } catch (error) {
+//             toast.error("Download failed!");
+//         }
+//     };
+//     return (
+//         <>
+//             {cardProp.map((item, index) => (
+//                 <div
+//                     className="bg-white w-full h-[170px] rounded-xl flex items-center p-3 gap-3 mb-3"
+//                     key={index}
+//                 >
+//                     <div className="h-[139px] w-[145px] rounded-lg overflow-hidden">
+//                         <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+//                     </div>
+
+//                     <div className="h-[139px] w-[520px] flex flex-col justify-between">
+//                         <div className="w-full h-[75%] flex">
+//                             <div className="w-[60%] flex flex-col pt-1 gap-1">
+//                                 <h5 className="text-[#111827] font-semibold text-lg">
+//                                     {item.title}
+//                                 </h5>
+//                                 <p className="text-[#111827] font-medium text-sm">
+//                                     {item.description}
+//                                 </p>
+
+//                                 <div className="flex items-center gap-2 mt-auto pb-2">
+//                                     <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
+//                                         <CalendarDots className="text-md text-[#57C788]" />
+//                                     </div>
+//                                     <p className="text-[#474747] text-sm">
+//                                         {item.fromDate} - {item.toDate}
+//                                     </p>
+//                                 </div>
+//                             </div>
+
+//                             <div className="w-[40%] flex flex-col justify-between">
+//                                 <div className="flex items-center justify-center gap-5">
+//                                     <div className="flex items-center gap-3">
+//                                         <div
+//                                             className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+//                                             onClick={() => handleDownload(index, item)}
+//                                         >
+//                                             <FiDownload className="text-md text-[#57C788]" />
+//                                         </div>
+
+//                                         {activeView === "active" && (
+//                                             <div
+//                                                 className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+//                                                 onClick={() => handleEdit(index)}
+//                                             >
+//                                                 <TfiPencil className="text-md text-[#57C788]" />
+//                                             </div>
+//                                         )}
+//                                     </div>
+
+//                                     <h4
+//                                         className="text-[#43C17A] font-medium cursor-pointer"
+//                                         onClick={() => openModal(item)}
+//                                     >
+//                                         View Details
+//                                     </h4>
+//                                 </div>
+
+//                                 {activeView === "previous" && (
+//                                     <div className="flex flex-col items-center justify-center">
+//                                         <div className="rounded-full w-[55px] h-[55px] bg-[#16284F] flex flex-col items-center justify-center relative">
+//                                             <p style={{ fontSize: 14, color: "white" }}>
+//                                                 {item.marksScored}
+//                                             </p>
+//                                             <p style={{ fontSize: 14, color: "white" }}>
+//                                                 {item.marksTotal}
+//                                             </p>
+
+//                                             <style jsx>{`
+//                         div::before {
+//                           content: "";
+//                           position: absolute;
+//                           width: 70%;
+//                           height: 1px;
+//                           background: white;
+//                           top: 50%;
+//                           left: 50%;
+//                           transform: translate(-50%, -50%);
+//                           opacity: 0.7;
+//                         }
+//                       `}</style>
+//                                         </div>
+//                                         <p className="text-xs text-[#282828] font-regular mt-0.5">
+//                                             Marks
+//                                         </p>
+//                                     </div>
+//                                 )}
+//                             </div>
+//                         </div>
+
+//                         <div className="flex items-center gap-5">
+//                             <div className="flex items-center gap-2">
+//                                 <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+//                                     <UserCircle className="text-md text-[#57C788]" />
+//                                 </div>
+//                                 <p className="text-[#474747] text-xs">{item.professor}</p>
+//                             </div>
+
+//                             <div className="flex items-center gap-2">
+//                                 <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+//                                     <LinkSimpleHorizontal className="text-md text-[#57C788]" />
+//                                 </div>
+//                                 <p className="text-[#474747] text-xs">{item.videoLink}</p>
+//                             </div>
+
+//                             {activeView === "active" && (
+//                                 <div className="flex items-center gap-1 -ml-4">
+//                                     {uploadedFiles[index] ? (
+//                                         <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
+//                                             <span
+//                                                 onClick={() => downloadFile(uploadedFiles[index])}
+//                                                 className="text-[#43C17A] text-xs underline truncate cursor-pointer"
+//                                                 title={uploadedFiles[index]}
+//                                             >
+//                                                 {uploadedFiles[index].split("/").pop()}
+//                                             </span>
+//                                         </div>
+//                                     ) : (
+//                                         <div
+//                                             className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
+//                                             onClick={() => openUploadModal(index)}
+//                                         >
+//                                             <p className="text-[#43C17A] text-xs">Upload</p>
+//                                         </div>
+//                                     )}
+//                                 </div>
+//                             )}
+//                         </div>
+//                     </div>
+//                 </div>
+//             ))}
+
+//             <ViewDetailModal
+//                 isOpen={showModal}
+//                 onClose={closeModal}
+//                 card={selectedCard}
+//                 submissionFileName={
+//                     selectedCard
+//                         ? uploadedFiles[cardProp.findIndex((c) => c.assignmentId === selectedCard.assignmentId)]
+//                         ?? selectedCard.existingFilePath
+//                         ?? undefined
+//                         : undefined
+//                 }
+//             />
+
+//             <UploadModal
+//                 isOpen={showUploadModal}
+//                 onClose={() => {
+//                     setShowUploadModal(false);
+//                     setEditingIndex(null);
+//                 }}
+//                 onUpload={(filePath, idx) => {
+//                     // ✅ keep your old behavior + close modal
+//                     setUploadedFiles((prev) => ({ ...prev, [idx]: filePath }));
+//                     setShowUploadModal(false);
+//                 }}
+//                 card={uploadingIndex !== null ? cardProp[uploadingIndex] : undefined}
+//                 index={uploadingIndex ?? undefined}
+//                 existingFilePath={
+//                     uploadingIndex !== null
+//                         ? uploadedFiles[uploadingIndex] ??
+//                         cardProp[uploadingIndex]?.existingFilePath ??
+//                         undefined
+//                         : undefined
+//                 }
+//             />
+//         </>
+//     );
+// }
+
 "use client";
 
 import { useEffect, useState } from "react";
 import {
-    CalendarDots,
-    LinkSimpleHorizontal,
-    UserCircle,
-    FilePdf,
+  CalendarDots,
+  LinkSimpleHorizontal,
+  UserCircle,
+  FilePdf,
 } from "@phosphor-icons/react";
 import { FiDownload } from "react-icons/fi";
 import { TfiPencil } from "react-icons/tfi";
-import { FaPlus } from "react-icons/fa6";
 import ViewDetailModal from "../modal/viewDetail";
 import UploadModal from "../modal/uploadModal";
 import { supabase } from "@/lib/supabaseClient";
 import { downloadAssignmentFile } from "@/app/utils/storageActions";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl"; // Added import
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  Alarm,
+  ArrowLeft,
+  CalendarDotsIcon,
+  Question,
+  RepeatIcon,
+} from "@phosphor-icons/react";
 
 async function downloadFile(filePath: string) {
-    try {
-        const { data, error } = await supabase.storage
-            .from("student_submissions")
-            .download(filePath);
+  try {
+    const { data, error } = await supabase.storage
+      .from("student_submissions")
+      .download(filePath);
 
-        if (error) {
-            return;
-        }
-
-        const url = URL.createObjectURL(data);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filePath.split("/").pop() || "file";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-    } catch (err) {
+    if (error) {
+      return;
     }
-}
 
-async function updateFile(oldPath: string, newFile: File) {
-    try {
-        await supabase.storage.from("student_submissions").remove([oldPath]);
-
-        const { error: uploadErr } = await supabase.storage
-            .from("student_submissions")
-            .upload(oldPath, newFile, { upsert: true });
-
-        if (uploadErr) {
-            return false;
-        }
-
-        return true;
-    } catch (err) {
-        return false;
-    }
+    const url = URL.createObjectURL(data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filePath.split("/").pop() || "file";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {}
 }
 
 export type CardProp = {
-    assignmentId: number | string;
-    image: string;
-    title: string;
-    studentId: number;
-    subjectName?: string;
-    topicName: string;
-    description: string;
-    fromDate: string;
-    toDate: string;
-    professor: string;
-    videoLink: string;
-    marksScored?: number;
-    marksTotal?: number;
-    assignmentTitle?: string;
-    existingFilePath?: string | null;
+  assignmentId: number | string;
+  image: string;
+  title: string;
+  studentId: number;
+  subjectName?: string;
+  topicName: string;
+  description: string;
+  fromDate: string;
+  toDate: string;
+  professor: string;
+  videoLink: string;
+  marksScored?: number;
+  marksTotal?: number;
+  assignmentTitle?: string;
+  existingFilePath?: string | null;
 };
 
 type AssignmentCardProps = {
-    cardProp: CardProp[];
-    activeView: "active" | "previous";
+  cardProp: CardProp[];
+  activeView: "active" | "previous";
 };
 
 export default function AssignmentCard({
-    cardProp,
-    activeView,
+  cardProp,
+  activeView,
 }: AssignmentCardProps) {
-    const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>(
-        {}
-    );
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: number]: string }>(
+    {},
+  );
+  const t = useTranslations("Assignment.student"); // Hook
 
-    useEffect(() => {
-        const map: { [key: number]: string } = {};
-        cardProp.forEach((item, idx) => {
-            if (item.existingFilePath) map[idx] = item.existingFilePath;
-        });
-        setUploadedFiles((prev) => ({ ...prev, ...map }));
-    }, [cardProp]);
+  useEffect(() => {
+    const map: { [key: number]: string } = {};
+    cardProp.forEach((item, idx) => {
+      if (item.existingFilePath) map[idx] = item.existingFilePath;
+    });
+    setUploadedFiles((prev) => ({ ...prev, ...map }));
+  }, [cardProp]);
 
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-    const [showModal, setShowModal] = useState(false);
-    const [selectedCard, setSelectedCard] = useState<CardProp | null>(null);
-    const [showUploadModal, setShowUploadModal] = useState(false);
-    const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const openModal = (item: CardProp) => {
+    setSelectedCard(item);
+    setShowModal(true);
+  };
 
-    const openModal = (item: CardProp) => {
-        setSelectedCard(item);
-        setShowModal(true);
-    };
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedCard(null);
+  };
 
-    const closeModal = () => {
-        setShowModal(false);
-        setSelectedCard(null);
-    };
+  const openUploadModal = (index: number) => {
+    setUploadingIndex(index);
+    setShowUploadModal(true);
+  };
 
-    const openUploadModal = (index: number) => {
-        setUploadingIndex(index);
-        setShowUploadModal(true);
-    };
+  const handleEdit = (index: number) => {
+    setEditingIndex(index);
+    setUploadingIndex(index);
+    setShowUploadModal(true);
+  };
 
-    const handleEdit = (index: number) => {
-        setEditingIndex(index);
-        setUploadingIndex(index);
-        setShowUploadModal(true);
-    };
+  const handleDownload = async (index: number, item: CardProp) => {
+    try {
+      const storedPath = item.existingFilePath ?? uploadedFiles[index];
 
-    const handleDownload = async (index: number, item: CardProp) => {
-        try {
-            const storedPath = item.existingFilePath ?? uploadedFiles[index];
+      if (!storedPath) {
+        toast.error(t("No uploaded file found!"));
+        return;
+      }
 
-            if (!storedPath) {
-                toast.error("No uploaded file found!");
-                return;
-            }
+      const fileName = storedPath.split("/").pop();
 
-            const fileName = storedPath.split("/").pop();
+      if (!fileName) {
+        toast.error(t("Invalid file path!"));
+        return;
+      }
 
-            if (!fileName) {
-                toast.error("Invalid file path!");
-                return;
-            }
+      toast.loading(t("Downloading file..."), { id: "download" });
 
-            toast.loading("Downloading file...", { id: "download" });
+      await downloadAssignmentFile(Number(item.assignmentId), fileName);
 
-            await downloadAssignmentFile(Number(item.assignmentId), fileName);
+      toast.success(t("File downloaded successfully!"), { id: "download" });
+    } catch (error) {
+      toast.error(t("Download failed!"));
+    }
+  };
+  return (
+    <>
+      {cardProp.map((item, index) => (
+        <div
+          className="bg-white w-full h-[170px] rounded-xl flex items-center p-3 gap-3 mb-3"
+          key={index}
+        >
+          <div className="h-[139px] w-[145px] rounded-lg overflow-hidden">
+            <img
+              src={item.image}
+              alt={item.title}
+              className="h-full w-full object-cover"
+            />
+          </div>
 
-            toast.success("File downloaded successfully!", { id: "download" });
+          <div className="h-[139px] w-[520px] flex flex-col justify-between">
+            <div className="w-full h-[75%] flex">
+              <div className="w-[60%] flex flex-col pt-1 gap-1">
+                <h5 className="text-[#111827] font-semibold text-lg">
+                  {item.title}
+                </h5>
+                <p className="text-[#111827] font-medium text-sm">
+                  {item.description}
+                </p>
 
-        } catch (error) {
-            toast.error("Download failed!");
-        }
-    };
-    return (
-        <>
-            {cardProp.map((item, index) => (
-                <div
-                    className="bg-white w-full h-[170px] rounded-xl flex items-center p-3 gap-3 mb-3"
-                    key={index}
-                >
-                    <div className="h-[139px] w-[145px] rounded-lg overflow-hidden">
-                        <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                <div className="flex items-center gap-2 mt-auto pb-2">
+                  <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
+                    <CalendarDots className="text-md text-[#57C788]" />
+                  </div>
+                  <p className="text-[#474747] text-sm">
+                    {item.fromDate} - {item.toDate}
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-[40%] flex flex-col justify-between">
+                <div className="flex items-center justify-center gap-5">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                      onClick={() => handleDownload(index, item)}
+                    >
+                      <FiDownload className="text-md text-[#57C788]" />
                     </div>
 
-                    <div className="h-[139px] w-[520px] flex flex-col justify-between">
-                        <div className="w-full h-[75%] flex">
-                            <div className="w-[60%] flex flex-col pt-1 gap-1">
-                                <h5 className="text-[#111827] font-semibold text-lg">
-                                    {item.title}
-                                </h5>
-                                <p className="text-[#111827] font-medium text-sm">
-                                    {item.description}
-                                </p>
+                    {activeView === "active" && (
+                      <div
+                        className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
+                        onClick={() => handleEdit(index)}
+                      >
+                        <TfiPencil className="text-md text-[#57C788]" />
+                      </div>
+                    )}
+                  </div>
 
-                                <div className="flex items-center gap-2 mt-auto pb-2">
-                                    <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center">
-                                        <CalendarDots className="text-md text-[#57C788]" />
-                                    </div>
-                                    <p className="text-[#474747] text-sm">
-                                        {item.fromDate} - {item.toDate}
-                                    </p>
-                                </div>
-                            </div>
+                  <h4
+                    className="text-[#43C17A] font-medium cursor-pointer"
+                    onClick={() => openModal(item)}
+                  >
+                    {t("View Details")}
+                  </h4>
+                </div>
 
-                            <div className="w-[40%] flex flex-col justify-between">
-                                <div className="flex items-center justify-center gap-5">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
-                                            onClick={() => handleDownload(index, item)}
-                                        >
-                                            <FiDownload className="text-md text-[#57C788]" />
-                                        </div>
+                {activeView === "previous" && (
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="rounded-full w-[55px] h-[55px] bg-[#16284F] flex flex-col items-center justify-center relative">
+                      <p style={{ fontSize: 14, color: "white" }}>
+                        {item.marksScored}
+                      </p>
+                      <p style={{ fontSize: 14, color: "white" }}>
+                        {item.marksTotal}
+                      </p>
 
-                                        {activeView === "active" && (
-                                            <div
-                                                className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer"
-                                                onClick={() => handleEdit(index)}
-                                            >
-                                                <TfiPencil className="text-md text-[#57C788]" />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <h4
-                                        className="text-[#43C17A] font-medium cursor-pointer"
-                                        onClick={() => openModal(item)}
-                                    >
-                                        View Details
-                                    </h4>
-                                </div>
-
-                                {activeView === "previous" && (
-                                    <div className="flex flex-col items-center justify-center">
-                                        <div className="rounded-full w-[55px] h-[55px] bg-[#16284F] flex flex-col items-center justify-center relative">
-                                            <p style={{ fontSize: 14, color: "white" }}>
-                                                {item.marksScored}
-                                            </p>
-                                            <p style={{ fontSize: 14, color: "white" }}>
-                                                {item.marksTotal}
-                                            </p>
-
-                                            <style jsx>{`
+                      <style jsx>{`
                         div::before {
                           content: "";
                           position: absolute;
@@ -231,91 +544,94 @@ export default function AssignmentCard({
                           opacity: 0.7;
                         }
                       `}</style>
-                                        </div>
-                                        <p className="text-xs text-[#282828] font-regular mt-0.5">
-                                            Marks
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-5">
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
-                                    <UserCircle className="text-md text-[#57C788]" />
-                                </div>
-                                <p className="text-[#474747] text-xs">{item.professor}</p>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
-                                    <LinkSimpleHorizontal className="text-md text-[#57C788]" />
-                                </div>
-                                <p className="text-[#474747] text-xs">{item.videoLink}</p>
-                            </div>
-
-                            {activeView === "active" && (
-                                <div className="flex items-center gap-1 -ml-4">
-                                    {uploadedFiles[index] ? (
-                                        <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
-                                            <span
-                                                onClick={() => downloadFile(uploadedFiles[index])}
-                                                className="text-[#43C17A] text-xs underline truncate cursor-pointer"
-                                                title={uploadedFiles[index]}
-                                            >
-                                                {uploadedFiles[index].split("/").pop()}
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
-                                            onClick={() => openUploadModal(index)}
-                                        >
-                                            <p className="text-[#43C17A] text-xs">Upload</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
                     </div>
+                    <p className="text-xs text-[#282828] font-regular mt-0.5">
+                      {t("Marks")}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-5">
+              <div className="flex items-center gap-2">
+                <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+                  <UserCircle className="text-md text-[#57C788]" />
                 </div>
-            ))}
+                <p className="text-[#474747] text-xs">{item.professor}</p>
+              </div>
 
-            <ViewDetailModal
-                isOpen={showModal}
-                onClose={closeModal}
-                card={selectedCard}
-                submissionFileName={
-                    selectedCard
-                        ? uploadedFiles[cardProp.findIndex((c) => c.assignmentId === selectedCard.assignmentId)]
-                        ?? selectedCard.existingFilePath
-                        ?? undefined
-                        : undefined
-                }
-            />
+              <div className="flex items-center gap-2">
+                <div className="rounded-full bg-[#E2F3E9] p-1.5 flex items-center justify-center cursor-pointer">
+                  <LinkSimpleHorizontal className="text-md text-[#57C788]" />
+                </div>
+                <p className="text-[#474747] text-xs">{item.videoLink}</p>
+              </div>
 
-            <UploadModal
-                isOpen={showUploadModal}
-                onClose={() => {
-                    setShowUploadModal(false);
-                    setEditingIndex(null);
-                }}
-                onUpload={(filePath, idx) => {
-                    // ✅ keep your old behavior + close modal
-                    setUploadedFiles((prev) => ({ ...prev, [idx]: filePath }));
-                    setShowUploadModal(false);
-                }}
-                card={uploadingIndex !== null ? cardProp[uploadingIndex] : undefined}
-                index={uploadingIndex ?? undefined}
-                existingFilePath={
-                    uploadingIndex !== null
-                        ? uploadedFiles[uploadingIndex] ??
-                        cardProp[uploadingIndex]?.existingFilePath ??
-                        undefined
-                        : undefined
-                }
-            />
-        </>
-    );
+              {activeView === "active" && (
+                <div className="flex items-center gap-1 -ml-4">
+                  {uploadedFiles[index] ? (
+                    <div className="flex items-center bg-[#E2F3E9] rounded-full px-3 py-1 max-w-[210px]">
+                      <span
+                        onClick={() => downloadFile(uploadedFiles[index])}
+                        className="text-[#43C17A] text-xs underline truncate cursor-pointer"
+                        title={uploadedFiles[index]}
+                      >
+                        {uploadedFiles[index].split("/").pop()}
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center rounded-full px-2 py-1 bg-[#E2F3E9] cursor-pointer"
+                      onClick={() => openUploadModal(index)}
+                    >
+                      <p className="text-[#43C17A] text-xs">{t("Upload")}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <ViewDetailModal
+        isOpen={showModal}
+        onClose={closeModal}
+        card={selectedCard}
+        submissionFileName={
+          selectedCard
+            ? (uploadedFiles[
+                cardProp.findIndex(
+                  (c) => c.assignmentId === selectedCard.assignmentId,
+                )
+              ] ??
+              selectedCard.existingFilePath ??
+              undefined)
+            : undefined
+        }
+      />
+
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => {
+          setShowUploadModal(false);
+          setEditingIndex(null);
+        }}
+        onUpload={(filePath, idx) => {
+          setUploadedFiles((prev) => ({ ...prev, [idx]: filePath }));
+          setShowUploadModal(false);
+        }}
+        card={uploadingIndex !== null ? cardProp[uploadingIndex] : undefined}
+        index={uploadingIndex ?? undefined}
+        existingFilePath={
+          uploadingIndex !== null
+            ? (uploadedFiles[uploadingIndex] ??
+              cardProp[uploadingIndex]?.existingFilePath ??
+              undefined)
+            : undefined
+        }
+      />
+    </>
+  );
 }
