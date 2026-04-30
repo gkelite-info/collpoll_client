@@ -8,7 +8,7 @@ export default function CollegeAdminClubHeader() {
                 <p className="text-[#282828] mt-1">Manage and view all clubs in your college</p>
             </div>
             <div className="w-[320px]">
-                <CourseScheduleCard />
+                <CourseScheduleCard isVisibile={false}/>
             </div>
         </div>
     );

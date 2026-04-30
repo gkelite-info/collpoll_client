@@ -529,8 +529,8 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
     // Check if the user has an uploaded profile picture
     const customImage = profileMap.get(f.userId);
     // If not, assign a default based on their gender (matching your dashboard logic)
-    const fallbackImage =
-      f.gender === "Female" ? "/faculty-f.png" : "/faculty-male.png";
+    // const fallbackImage =
+    //   f.gender === "Female" ? "/faculty-f.png" : "/faculty-male.png";
 
     return {
       id: String(f.facultyId),
@@ -545,7 +545,7 @@ export async function fetchFilteredFaculties(filters: FacultyFilterParams) {
         year: "numeric",
       }),
       // ---> USE CUSTOM IMAGE OR FALLBACK <---
-      image: customImage || fallbackImage,
+      image: customImage || "", // || fallbackImage
     };
   });
 

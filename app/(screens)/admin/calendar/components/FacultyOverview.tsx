@@ -39,7 +39,7 @@ export default function FacultyOverview({ onSelect }: Props) {
     const [semesters, setSemesters] = useState<any[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const itemsPerPage = 15;
+    const itemsPerPage = 9;
 
     const { collegeId } = useUser();
     const { collegeEducationId, collegeEducationType } = useAdmin()

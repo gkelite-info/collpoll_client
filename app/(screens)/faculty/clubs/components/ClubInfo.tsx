@@ -11,20 +11,13 @@ interface ClubInfoProps {
         mentors: { name: string; id: string; avatar: string }[];
     } | null;
     isLoading?: boolean;
+    isCollegeAdmin?: boolean;
+    stats?: { active: string | number; inactive: string | number };
 }
 
-// const USERS = [
-//     { id: "1", name: "Rohith Sharma", avatar: "https://i.pravatar.cc/150?u=1" },
-//     { id: "2", name: "Ayaan Reddy", avatar: "https://i.pravatar.cc/150?u=2" },
-//     { id: "3", name: "Ananya Sharma", avatar: "https://i.pravatar.cc/150?u=3" },
-//     { id: "4", name: "Sharmila Reddy", avatar: "https://i.pravatar.cc/150?u=4" },
-//     { id: "5", name: "Aarav Rathod", avatar: "https://i.pravatar.cc/150?u=5" },
-//     { id: "6", name: "Poojith Goud", avatar: "https://i.pravatar.cc/150?u=6" },
-// ];
-
-export default function ClubInfo({ info, isLoading = false }: ClubInfoProps) {
+export default function ClubInfo({ info, isLoading = false, isCollegeAdmin = false, stats }: ClubInfoProps) {
     if (isLoading || !info) {
-        return <FacultyClubInfoShimmer />;
+        return <FacultyClubInfoShimmer isCollegeAdmin={isCollegeAdmin}/>;
     }
 
     const ROLE_DISPLAY_NAMES: Record<string, string> = {
@@ -43,6 +36,18 @@ export default function ClubInfo({ info, isLoading = false }: ClubInfoProps) {
                 />
             </div>
             <h2 className="mb-8 text-xl font-bold text-[#282828]">{info.name}</h2>
+            {isCollegeAdmin && stats && (
+                <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-10 px-2 md:px-4">
+                    <div className="bg-gradient-to-br from-[#43C17A]/10 to-[#43C17A]/5 border border-[#43C17A]/20 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
+                        <span className="text-[#43C17A] text-[10px] uppercase tracking-wider font-bold mb-1">Active Members</span>
+                        <span className="text-2xl font-black text-[#16284F]">{stats.active}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-[#FF2A2A]/10 to-[#FF2A2A]/5 border border-[#FF2A2A]/20 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
+                        <span className="text-[#FF2A2A] text-[10px] uppercase tracking-wider font-bold mb-1">Inactive Members</span>
+                        <span className="text-2xl font-black text-[#16284F]">{stats.inactive}</span>
+                    </div>
+                </div>
+            )}
             <div className="flex w-full max-w-2xl bg-red-00 flex-col justify-between gap-8 px-2 md:flex-row md:px-4">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">

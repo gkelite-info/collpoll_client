@@ -7,6 +7,8 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { Avatar } from "@/app/utils/Avatar";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useRouter } from "next/navigation";
+import { encryptId } from "@/app/utils/encryption";
+
 
 export default function AllClubsGrid() {
     const { collegeId } = useUser();
@@ -15,6 +17,7 @@ export default function AllClubsGrid() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const ITEMS_PER_PAGE = 15;
+    const router = useRouter();
 
     useEffect(() => {
         if (!collegeId) return
@@ -69,14 +72,24 @@ export default function AllClubsGrid() {
                             <h3 className="text-[#282828] font-bold text-lg mb-4 text-center mt-8">{club.name}</h3>
 
                             <div className="flex gap-3 w-full mb-6 mx-auto">
-                                <div className="flex-1 bg-[#43C17A]/20 text-[#43C17A] text-[12px] py-3 rounded-md text-center font-bold">
+                                <div className="flex-1 bg-[#43C17A]/20 text-[#43C17A] text-[12px] py-2 rounded-md text-center font-bold">
                                     Active Users: {club.active || 0}
                                 </div>
-                                <div className="flex-1 bg-[#FF2A2A]/20 text-[#FF2A2A] text-[12px] py-3 rounded-md text-center font-bold">
+                                <div className="flex-1 bg-[#FF2A2A]/20 text-[#FF2A2A] text-[12px] py-2 rounded-md text-center font-bold">
                                     Inactive Users: {club.inactive || 0}
                                 </div>
                             </div>
-
+                            <button
+                                onClick={() => {
+                                    const encryptedId = encryptId(club.id);
+                                    const encryptedActive = encryptId(club.active || 0);
+                                    const encryptedInactive = encryptId(club.inactive || 0);
+                                    router.push(`?clubId=${encryptedId}&act=${encryptedActive}&inact=${encryptedInactive}`);
+                                }}
+                                className="w-full cursor-pointer text-[#ffffff] bg-[#43C17A] py-3 rounded-xl text-base font-bold transition-all shadow-lg"
+                            >
+                                View Club
+                            </button>
                         </div>
                     );
                 })}
