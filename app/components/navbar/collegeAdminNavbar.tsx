@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { BuildingApartmentIcon, Calendar, CheckCircle, FolderOpen, Gear, House,  PlusCircle } from "@phosphor-icons/react";
+import { BuildingApartmentIcon, Calendar, CheckCircle, FolderOpen, Gear, House, PlusCircle, UsersThreeIcon } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -45,7 +45,7 @@ export default function CollegeAdminNavbar() {
             label: "Calendar",
             path: "/college-admin/calendar",
         },
-        
+
         // {
         //     icon: (isActive) => (
         //         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
@@ -53,6 +53,13 @@ export default function CollegeAdminNavbar() {
         //     label: "Meetings",
         //     path: "/college-admin/meetings",
         // },
+        {
+            icon: (isActive) => (
+                <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+            ),
+            label: "Club",
+            path: "/college-admin/clubs",
+        },
         {
             icon: (isActive) => (
                 <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />

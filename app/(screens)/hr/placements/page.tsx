@@ -8,9 +8,15 @@ import PlacementList from "./components/PlacementList";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import Announcements from "./components/Announcements";
 import WipOverlay from "@/app/utils/WipOverlay";
+import { notFound } from "next/navigation";
 
 
 export default function PlacementsPage() {
+    const isValid = true;
+
+    if (isValid) {
+        notFound();
+    }
     return (
         <section className="h-screen flex gap-3 overflow-hidden">
             <div className="relative overflow-hidden flex-1 flex flex-col px-2 min-w-0">

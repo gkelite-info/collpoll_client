@@ -26,6 +26,13 @@ export default function ClubInfo({ info, isLoading = false }: ClubInfoProps) {
     if (isLoading || !info) {
         return <FacultyClubInfoShimmer />;
     }
+
+    const ROLE_DISPLAY_NAMES: Record<string, string> = {
+        responsibleFaculty: "Responsible Faculty",
+        president: "President",
+        vicePresident: "Vice President",
+    };
+
     return (
         <div className="mb-8 flex flex-col items-center">
             <div className="mb-4 flex h-[150px] w-[150px] items-center justify-center overflow-hidden rounded-full shadow-sm border border-gray-100">
@@ -39,24 +46,27 @@ export default function ClubInfo({ info, isLoading = false }: ClubInfoProps) {
             <div className="flex w-full max-w-2xl bg-red-00 flex-col justify-between gap-8 px-2 md:flex-row md:px-4">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">
+                        <Avatar src={info.responsibleFaculty?.avatar} alt={info.responsibleFaculty?.name} size={40} />
+                        <span className="text-sm font-bold text-[#16284F]">{info.responsibleFaculty?.name}</span>
+                        <span className="rounded bg-[#E0E5FA] px-2 py-1 text-xs font-semibold text-[#16284F] border border-[#465FAC]">
+                            {/* {info.responsibleFaculty?.role} */}
+                            {ROLE_DISPLAY_NAMES["responsibleFaculty"] || info.responsibleFaculty?.role}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-3">
                         <Avatar src={info.president.avatar} alt={info.president.name} size={40} />
                         <span className="text-sm font-bold text-[#16284F]">{info.president.name}</span>
                         <span className="rounded bg-[#E0E5FA] px-2 py-1 text-xs font-semibold text-[#16284F] border border-[#465FAC]">
-                            {info.president.role} 👑
+                            {/* {info.president.role} 👑 */}
+                            {ROLE_DISPLAY_NAMES["president"] || info.president.role} 👑
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
                         <Avatar src={info.vicePresident.avatar} alt={info.vicePresident.name} size={40} />
                         <span className="text-sm font-bold text-[#16284F]">{info.vicePresident.name}</span>
                         <span className="rounded bg-[#E0E5FA] px-2 py-1 text-xs font-semibold text-[#16284F] border border-[#465FAC]">
-                            {info.vicePresident.role}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Avatar src={info.responsibleFaculty?.avatar} alt={info.responsibleFaculty?.name} size={40} />
-                        <span className="text-sm font-bold text-[#16284F]">{info.responsibleFaculty?.name}</span>
-                        <span className="rounded bg-[#E0E5FA] px-2 py-1 text-xs font-semibold text-[#16284F] border border-[#465FAC]">
-                            {info.responsibleFaculty?.role}
+                            {/* {info.vicePresident.role} */}
+                            {ROLE_DISPLAY_NAMES["vicePresident"] || info.vicePresident.role}
                         </span>
                     </div>
                 </div>

@@ -7,7 +7,7 @@ import MyClubView from "./components/MyClubView";
 
 export default function StudentClubsClient() {
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "all";
+  const currentTab = searchParams.get("tab") || "myclub";
 
   return (
     <main className="mt-4 rounded-3xl bg-white p-6 shadow-sm min-h-[80vh]">

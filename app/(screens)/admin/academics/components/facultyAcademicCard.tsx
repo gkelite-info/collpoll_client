@@ -65,12 +65,13 @@ const FacultyAcademicCard = ({
         <span className="text-[#282828] text-[13px] font-medium">
           Faculty -
         </span>
-        <div className="flex -space-x-2.5">
+        <div className="flex -space-x-2.5 items-center">
           {faculties && faculties.length > 0 ? (
             <>
-              {faculties.slice(0, 5).map((f, i) => (
+              {faculties.slice(0, 5).map((f, index) => (
                 <div
-                  key={i}
+                  // key={f.facultyId}
+                  key={index}
                   title={f.fullName}
                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >
@@ -82,7 +83,7 @@ const FacultyAcademicCard = ({
                 </div>
               ))}
               {faculties.length > 5 && (
-                <span className="text-gray-700 font-semibold text-sm ml-1">
+                <span className="text-gray-700 font-semibold text-sm ml-4">
                   +{faculties.length - 5}
                 </span>
               )}

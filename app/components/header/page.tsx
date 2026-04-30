@@ -39,6 +39,7 @@ function HeaderContent() {
   const [unreadEmailCount, setUnreadEmailCount] = useState<number>(0);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [emailInitialView, setEmailInitialView] = useState<{ tab?: "all" | "inbox" | "sent"; compose?: boolean }>({});
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -124,13 +125,52 @@ function HeaderContent() {
       e.preventDefault();
       const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
       handleSuggestionClick(filteredSuggestions[targetIndex].path);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
     }
   };
 
+  // const handleSuggestionClick = (path: string) => {
+  //   router.push(path);
+  //   setSearchValue("");
+  //   // setIsSearchFocused(false);
+  //   setSelectedIndex(-1);
+  // };
+
   const handleSuggestionClick = (path: string) => {
-    router.push(path);
+    if (path.startsWith("action:")) {
+      // const actionType = path.split(":")[1];
+      const [_, actionType, subAction] = path.split(":");
+      switch (actionType) {
+        case "notifications":
+          setIsNotificationsOpen(true);
+          break;
+        case "news":
+          setIsNewsOpen(true);
+          break;
+        // case "email":
+        //   setIsEmailOpen(true);
+        //   break;
+        case "email":
+          if (subAction === "compose") {
+            setEmailInitialView({ compose: true, tab: "all" });
+          } else if (subAction === "inbox" || subAction === "sent") {
+            setEmailInitialView({ compose: false, tab: subAction as "inbox" | "sent" });
+          } else {
+            setEmailInitialView({ compose: false, tab: "all" });
+          }
+          setIsEmailOpen(true);
+          break;
+        case "announcement":
+          setIsAnnouncementOpen(true);
+          break;
+      }
+    } else {
+      router.push(path);
+    }
+
     setSearchValue("");
-    setIsSearchFocused(false);
     setSelectedIndex(-1);
   };
 
@@ -149,6 +189,7 @@ function HeaderContent() {
       value = value.charAt(0).toUpperCase() + value.slice(1);
     }
     setSearchValue(value);
+    setIsSearchFocused(true);
   };
 
   useEffect(() => {
@@ -348,7 +389,13 @@ function HeaderContent() {
               <Newspaper size={21} color="#282828" className="cursor-pointer" />
             </button>
 
-            <button onClick={() => setIsEmailOpen(true)} className="relative">
+            <button
+              //  onClick={() => setIsEmailOpen(true)}
+              onClick={() => {
+                setEmailInitialView({ compose: false, tab: "all" });
+                setIsEmailOpen(true);
+              }}
+              className="relative">
               <EnvelopeSimple
                 size={21}
                 color="#282828"
@@ -628,7 +675,11 @@ function HeaderContent() {
         onClose={() => setIsNewsOpen(false)}
         onOpenPDF={openPDFModal}
       />
-      <EmailModal isOpen={isEmailOpen} onClose={() => setIsEmailOpen(false)} />
+      <EmailModal
+        initialView={emailInitialView}
+        isOpen={isEmailOpen}
+        onClose={() => setIsEmailOpen(false)}
+      />
 
       <AnnouncementModal
         isOpen={isAnnouncementOpen}

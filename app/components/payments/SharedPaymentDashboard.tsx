@@ -205,6 +205,7 @@ import ProfileCard from "@/app/(screens)/(student)/payments/components/profileCa
 import AcademicFees from "@/app/(screens)/(student)/payments/components/academicFees";
 import AdditionalDues from "@/app/(screens)/(student)/payments/components/additionalDues";
 import History from "@/app/(screens)/(student)/payments/components/history";
+import { useUser } from "@/app/utils/context/UserContext";
 
 export default function SharedPaymentDashboard({
   targetUserId,
@@ -223,6 +224,7 @@ export default function SharedPaymentDashboard({
   const [paymentSummary, setPaymentSummary] = useState<FeeSummaryItem[]>([]);
 
   const [feePlan, setFeePlan] = useState<ExtendedFeePlan | null>(null);
+  const {identifierId} = useUser()
 
   const tabs = [
     { id: "academic", label: "Academic Fees" },
@@ -314,7 +316,8 @@ export default function SharedPaymentDashboard({
           name={profile.name}
           course={profile.course}
           year={profile.year}
-          rollNo={profile.rollNo}
+          // rollNo={profile.rollNo}
+          rollNo={identifierId!}
           email={profile.email}
           mobile={profile.mobile}
           image={profilePhoto ? profilePhoto : "/rahul.png"}

@@ -44,13 +44,13 @@ export default function HrNavbar() {
       label: "Attendance",
       path: "/hr/attendance",
     },
-    {
-      icon: (isActive) => (
-        <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
-      ),
-      label: "Placements",
-      path: "/hr/placements",
-    },
+    // {
+    //   icon: (isActive) => (
+    //     <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
+    //   ),
+    //   label: "Placements",
+    //   path: "/hr/placements",
+    // }, no need placements for hr portal
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
