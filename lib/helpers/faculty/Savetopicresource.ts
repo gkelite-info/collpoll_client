@@ -15,11 +15,29 @@ export type SavedResource = {
   resourceName: string;
 };
 
-/**
- * 1. Uploads the PDF Buffer to Supabase Storage (bucket: "topic-resources")
- * 2. Returns the public URL
- * 3. Inserts a row into college_subject_unit_topic_resources
- */
+export type TopicResourceRow = {
+  collegeSubjectUnitTopicResourceId: number;
+  resourceType: string | null;
+  resourceName: string;
+  resourceUrl: string;
+  collegeSubjectUnitTopicId: number;
+  collegeId: number;
+  createdBy: number | null;
+  isAdmin: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TopicResourcePreview = {
+  collegeSubjectUnitTopicResourceId: number;
+  resourceName: string;
+  resourceUrl: string;
+  createdAt: string;
+};
+
+
+
 export async function saveTopicResource(
   params: SaveTopicResourceParams
 ): Promise<SavedResource> {
@@ -32,7 +50,6 @@ export async function saveTopicResource(
     isAdmin,
   } = params;
 
-  // Build a clean, unique storage path
   const slug = topicTitle
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -41,9 +58,8 @@ export async function saveTopicResource(
   const fileName = `${slug}-${timestamp}.pdf`;
   const storagePath = `college-${collegeId}/topic-${collegeSubjectUnitTopicId}/${fileName}`;
 
-  // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
-    .from("topic-resources")        // ← change bucket name if needed
+    .from("topic-resources")
     .upload(storagePath, pdfBuffer, {
       contentType: "application/pdf",
       upsert: false,
@@ -51,7 +67,6 @@ export async function saveTopicResource(
 
   if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-  // Get public URL
   const { data: urlData } = supabase.storage
     .from("topic-resources")
     .getPublicUrl(storagePath);
@@ -60,7 +75,6 @@ export async function saveTopicResource(
   const resourceName = `${topicTitle}.pdf`;
   const now = new Date().toISOString();
 
-  // Insert DB record
   const { data, error: dbError } = await supabase
     .from("college_subject_unit_topic_resources")
     .insert({
@@ -81,4 +95,81 @@ export async function saveTopicResource(
   if (dbError) throw new Error(`DB insert failed: ${dbError.message}`);
 
   return data as SavedResource;
+}
+
+
+export async function fetchTopicResources(
+  collegeSubjectUnitTopicId: number
+): Promise<TopicResourceRow[]> {
+  const { data, error } = await supabase
+    .from("college_subject_unit_topic_resources")
+    .select(`
+      collegeSubjectUnitTopicResourceId,
+      resourceType,
+      resourceName,
+      resourceUrl,
+      collegeSubjectUnitTopicId,
+      collegeId,
+      createdBy,
+      isAdmin,
+      isActive,
+      createdAt,
+      updatedAt
+    `)
+    .eq("collegeSubjectUnitTopicId", collegeSubjectUnitTopicId)
+    .eq("isActive", true)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchTopicResources error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+
+export async function fetchTopicResourcesByFaculty(
+  facultyId: number,
+  collegeSubjectUnitTopicId: number
+): Promise<TopicResourcePreview[]> {
+  const { data, error } = await supabase
+    .from("college_subject_unit_topic_resources")
+    .select(`
+      collegeSubjectUnitTopicResourceId,
+      resourceName,
+      resourceUrl,
+      createdAt
+    `)
+    .eq("createdBy", facultyId)
+    .eq("collegeSubjectUnitTopicId", collegeSubjectUnitTopicId)
+    .eq("isActive", true)
+    .order("createdAt", { ascending: false });
+
+  if (error) {
+    console.error("fetchTopicResourcesByFaculty error:", error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+
+export async function deactivateTopicResource(
+  resourceId: number
+) {
+  const { error } = await supabase
+    .from("college_subject_unit_topic_resources")
+    .update({
+      isActive: false,
+      updatedAt: new Date().toISOString(),
+    })
+    .eq("collegeSubjectUnitTopicResourceId", resourceId);
+
+  if (error) {
+    console.error("deactivateTopicResource error:", error);
+    return { success: false };
+  }
+
+  return { success: true };
 }

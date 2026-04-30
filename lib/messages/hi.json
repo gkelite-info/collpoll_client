@@ -198,7 +198,13 @@
       "Topic:": "विषय:",
       "Room:": "कक्ष:",
       "Faculty:": "शिक्षक:",
-      "Class Cancel": "कक्षा रद्द"
+      "Class Cancel": "कक्षा रद्द",
+      "Quizzes": "{count, plural, =0 {कोई क्विज़ नहीं} =1 {1 क्विज़} other {# क्विज़}}",
+      "Tasks": "{count, plural, =0 {कोई कार्य नहीं} =1 {1 कार्य} other {# कार्य}}",
+      "Discussions": "{count, plural, =0 {कोई चर्चा नहीं} =1 {1 चर्चा} other {# चर्चाएँ}}",
+      "General Revision": "सामान्य पुनरावलोकन",
+      "Organize your study desk": "अपनी अध्ययन डेस्क व्यवस्थित करें",
+      "Check the deadlines for": "समय सीमाएँ जाँचें"
     }
   },
   "WipOverlay": {

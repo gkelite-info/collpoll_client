@@ -73,11 +73,11 @@ export default function Page() {
 
   return (
     <main className="relative overflow-hidden p-4 bg-[#f3f4f6] min-h-screen">
-      <WipOverlay fullHeight={true}/>
+      <WipOverlay fullHeight={true} />
       <section className="flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">Calendar & Events</h1>
-          <p className="text-black text-sm">Stay Organized And On Track With Your Personalised Calendar</p>
+          <p className="text-black text-sm">Stay organized and on track with your personalised calendar</p>
         </div>
         <CourseScheduleCard style="w-[320px]" isVisibile={false} />
       </section>

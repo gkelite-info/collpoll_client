@@ -127,7 +127,7 @@ export default function FinanceCalendarPage() {
             Calendar & Events
           </h1>
           <p className="text-black text-sm">
-            Stay Organized And On Track With Your Personalised Calendar
+            Stay organized and on track with your personalised calendar
           </p>
         </div>
         <CourseScheduleCard style="w-[320px]" isVisibile={false} />

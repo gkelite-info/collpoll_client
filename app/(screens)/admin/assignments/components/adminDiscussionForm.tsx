@@ -286,7 +286,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-6">
                 <div className="flex flex-col gap-2">
-                    <label className="font-bold text-[#282828] text-sm">Discussion Title</label>
+                    <label className="font-bold text-[#282828] text-sm">Discussion Title <span className="text-red-500">*</span></label>
                     <input
                         type="text"
                         value={form.title}
@@ -297,7 +297,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                 </div>
 
                 <div className="flex flex-col gap-2">
-                    <label className="font-bold text-[#282828] text-sm">Description</label>
+                    <label className="font-bold text-[#282828] text-sm">Description <span className="text-red-500">*</span></label>
                     <textarea
                         placeholder="Enter Description here"
                         rows={6}
@@ -309,7 +309,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
 
                 <div className="grid grid-cols-3 gap-6">
                     <div className="flex flex-col gap-2">
-                        <label className="font-bold text-[#282828] text-sm">Deadline</label>
+                        <label className="font-bold text-[#282828] text-sm">Deadline <span className="text-red-500">*</span></label>
                         <input
                             type="date"
                             value={form.deadline}
@@ -319,12 +319,21 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="font-bold text-[#282828] text-sm">Marks</label>
+                        <label className="font-bold text-[#282828] text-sm">Marks <span className="text-red-500">*</span></label>
                         <input
                             type="number"
                             min={0}
                             value={form.marks}
-                            onChange={(e) => setForm({ ...form, marks: e.target.value })}
+                            // onChange={(e) => setForm({ ...form, marks: e.target.value })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+
+                                if (val.startsWith("0")) {
+                                    return;
+                                }
+
+                                setForm({ ...form, marks: val });
+                            }}
                             placeholder="Enter total marks"
                             onWheel={(e) => e.currentTarget.blur()}
                             className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
@@ -332,7 +341,7 @@ export default function AdminDiscussionForm({ discussionId }: { discussionId?: n
                     </div>
 
                     <div className="flex flex-col gap-2" ref={sectionRef}>
-                        <label className="font-bold text-[#282828] text-sm">Section(s)</label>
+                        <label className="font-bold text-[#282828] text-sm">Section(s) <span className="text-red-500">*</span></label>
                         <div className="relative">
                             <button
                                 type="button"

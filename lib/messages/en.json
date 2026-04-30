@@ -22,7 +22,6 @@
     "Add Fee Structure": "Add Fee Structure",
     "Registration": "Registration"
   },
-
   "Settings": {
     "Settings": "Settings",
     "Manage your account and preferences": "Manage your account and preferences",
@@ -205,10 +204,16 @@
       "Weekly Calendar Overview": "Weekly Calendar Overview",
       "Focus Area": "Focus Area",
       "Tip": "Tip",
-      "Classes": "Classes",
+      "Classes": "{count, plural, =0 {No Classes} =1 {1 Class} other {# Classes}}",
+      "Quizzes": "{count, plural, =0 {No Quizzes} =1 {1 Quiz} other {# Quizzes}}",
+      "Tasks": "{count, plural, =0 {No Tasks} =1 {1 Task} other {# Tasks}}",
+      "Assignments": "{count, plural, =0 {No Assignments} =1 {1 Assignment} other {# Assignments}}",
+      "Discussions": "{count, plural, =0 {No Discussions} =1 {1 Discussion} other {# Discussions}}",
+      "General Revision": "General Revision",
+      "Organize your study desk": "Organize your study desk",
+      "Check the deadlines for": "Check the deadlines for",
       "Club Activity": "Club Activity",
       "Workshop": "Workshop",
-      "Assignments": "Assignments",
       "Submission": "Submission",
       "Event": "Event",
       "Sunday Reset": "Sunday Reset",
@@ -234,13 +239,11 @@
       "Class Cancel": "Class Cancel"
     }
   },
-
   "WipOverlay": {
     "Integration in Progress": "Integration in Progress",
     "This module is currently undergoing active development to connect with live dynamic data streams": "This module is currently undergoing active development to connect with live dynamic data streams.",
     "Preview Layout": "Preview Layout"
   },
-
   "Attendance": {
     "student": {
       "Subject": "Subject",
@@ -282,7 +285,6 @@
       "Attendance :": "Attendance :"
     }
   },
-
   "Assignment": {
     "student": {
       "Assignments": "Assignments",
