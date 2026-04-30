@@ -28,7 +28,7 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
       </h2>
 
       <div className="relative flex flex-col bg items-center">
-        <div className="w-full max-w-[300px] aspect-2/1 relative">
+        <div className="w-full max-w-75 aspect-2/1 relative">
           <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
             <defs>
               <linearGradient id="gaugeGradient" x1="1" y1="0" x2="0" y2="0">
