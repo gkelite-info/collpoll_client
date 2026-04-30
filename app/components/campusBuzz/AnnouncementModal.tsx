@@ -172,9 +172,9 @@ export default function AnnouncementModal({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="fixed z-[1000] top-[80px] left-[745px] w-[500px] h-[80vh] bg-white translate-x-6 rounded-xl shadow-xl flex flex-col"
+              className="fixed z-[1000] top-[80px] right-10 w-[500px] h-[80vh] bg-white translate-x-6 rounded-xl shadow-xl flex flex-col"
             >
-              <div className="px-[20px] pt-[20px] shrink-0">
+              <div className="px-[20px] pt-[20px] shrink-0 ">
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-3 cursor-default">
                     <MegaphoneIcon size={32} weight="fill" color="#43C17A" />

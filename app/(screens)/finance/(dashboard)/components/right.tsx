@@ -80,7 +80,7 @@ export default function SemwiseDetailsRight() {
   }, [collegeId, userId, view, role]);
 
   return (
-    <div className="w-[32%] p-2 flex flex-col">
+    <div className="w-[32%] p-2 flex flex-col bg-red-00">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
       <AnnouncementsCard

@@ -34,7 +34,7 @@ export function DashboardContent() {
   }
 
   return (
-    <main className="flex w-full min-h-screen pb-4">
+    <main className="flex w-full h-screen pb-4">
       <FinanceDashLeft />
       <FinanceDashRight />
     </main>

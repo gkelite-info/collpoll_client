@@ -99,9 +99,10 @@ const FacultyAttendanceCard = ({
         <div className="flex -space-x-2.5 items-center">
           {faculties && faculties.length > 0 ? (
             <>
-              {faculties.slice(0, 5).map((f) => (
+              {faculties.slice(0, 5).map((f, index) => (
                 <div
-                  key={f.facultyId}
+                  // key={f.facultyId} same key passed, faculty id 24
+                  key={index}
                   title={f.fullName}
                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >

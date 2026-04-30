@@ -744,7 +744,7 @@ export default function DashboardPage() {
   if (!collegeEducationId) return;
 
   return (
-    <div className="min-h-screen flex justify-center text-gray-900">
+    <div className=" flex justify-center text-gray-900">
       {/* Inject shimmer keyframes once */}
       <ShimmerStyle />
 

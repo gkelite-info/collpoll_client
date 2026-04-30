@@ -13,7 +13,11 @@ import {
   markEmailRead,
 } from "@/lib/helpers/notifications/emailsAPI";
 
-type Props = { isOpen: boolean; onClose: () => void };
+type Props = {
+  isOpen: boolean;
+  onClose: () => void;
+  initialView?: { tab?: "all" | "inbox" | "sent"; compose?: boolean };
+};
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -39,7 +43,7 @@ function EmailShimmer() {
   );
 }
 
-export default function EmailModal({ isOpen, onClose }: Props) {
+export default function EmailModal({ isOpen, onClose, initialView }: Props) {
   const { userId, collegeId, email: currentUserEmail } = useUser();
 
   const [activeTab, setActiveTab] = useState<"all" | "inbox" | "sent">("all");
@@ -67,6 +71,14 @@ export default function EmailModal({ isOpen, onClose }: Props) {
     setSelectedEmail(null);
     setIsComposeOpen(true);
   };
+
+  useEffect(() => {
+    if (isOpen && initialView) {
+      if (initialView.tab) setActiveTab(initialView.tab);
+      if (initialView.compose) setIsComposeOpen(true);
+      else setIsComposeOpen(false);
+    }
+  }, [isOpen, initialView]);
 
   const loadInitialEmails = useCallback(async () => {
     if (!userId || !currentUserEmail) return;
@@ -173,11 +185,10 @@ export default function EmailModal({ isOpen, onClose }: Props) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${
-                activeTab === tab
+              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${activeTab === tab
                   ? "border-[#43C17A] text-[#43C17A]"
                   : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+                }`}
             >
               {tab}
             </button>
@@ -199,11 +210,10 @@ export default function EmailModal({ isOpen, onClose }: Props) {
               {displayedEmails.map((mail) => (
                 <div
                   key={mail.id}
-                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${
-                    mail.isRead
+                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${mail.isRead
                       ? "bg-white hover:bg-gray-50"
                       : "bg-blue-50 hover:bg-blue-100 border border-blue-100"
-                  }`}
+                    }`}
                   onClick={() => handleEmailClick(mail)}
                 >
                   <div
