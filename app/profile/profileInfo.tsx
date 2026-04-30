@@ -8,6 +8,7 @@ import { Image as ImageIcon } from "@phosphor-icons/react";
 import { deleteUserProfilePhoto, getUserProfilePhoto, upsertUserProfilePhoto } from "@/lib/helpers/profile/profileInfo";
 import { ProfileShimmer } from "./shimmers/ProfileShimmer";
 import { DeletePhotoModal } from "./DeletePhotoModal";
+import imageCompression from 'browser-image-compression';
 interface ProfileInfoData {
   registrationId: string;
   email: string;
@@ -111,6 +112,8 @@ export default function ProfileInfo() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPhotoChanged, setIsPhotoChanged] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null);
 
   const isStudentOrFaculty = ["Student", "Faculty"].includes(role!)
   const isSuperAdminOrOther = ["SuperAdmin", "CollegeHr", "CollegeAdmin", "Parent"].includes(role!)
@@ -172,15 +175,61 @@ export default function ProfileInfo() {
         if (data?.profileUrl) {
           setProfileData(prev => ({ ...prev, profilePhoto: data.profileUrl }));
           setProfilePhoto(data.profileUrl);
+          setOriginalPhotoUrl(data.profileUrl);
         }
       } catch (error) {
-        console.error("Failed to load profile photo:", error);
+        // console.error("Failed to load profile photo:", error);
+        toast.error("Failed to load profile photo", { id: "profile-photo-error" })
       } finally {
         setIsInitialLoading(false);
       }
     }
     loadProfilePhoto();
   }, [userId]);
+
+  useEffect(() => {
+    return () => {
+      if (profileData.profilePhoto && profileData.profilePhoto.startsWith('blob:')) {
+        URL.revokeObjectURL(profileData.profilePhoto);
+      }
+    };
+  }, [profileData.profilePhoto]);
+
+  // const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  //   const file = event.target.files?.[0];
+  //   if (!file) return;
+
+  //   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+  //     toast.error("Only JPG, PNG, WEBP images allowed");
+  //     event.target.value = "";
+  //     return;
+  //   }
+
+  //   if (file.size > MAX_FILE_SIZE) {
+  //     toast.error("Image must be less than 5MB");
+  //     event.target.value = "";
+  //     return;
+  //   }
+
+  //   setPhotoLoading(true);
+  //   try {
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       const base64String = reader.result as string;
+  //       setProfileData((prev) => ({ ...prev, profilePhoto: base64String }));
+  //       setIsPhotoChanged(true);
+  //       if (fileInputRef.current) {
+  //         fileInputRef.current.value = "";
+  //       }
+  //     };
+  //     reader.readAsDataURL(file);
+  //   } catch (error) {
+  //     toast.error("Failed to preview photo");
+  //     event.target.value = "";
+  //   } finally {
+  //     setPhotoLoading(false);
+  //   }
+  // };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -200,16 +249,41 @@ export default function ProfileInfo() {
 
     setPhotoLoading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setProfileData((prev) => ({ ...prev, profilePhoto: base64String }));
-        setIsPhotoChanged(true);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
+      let fileToUpload = file;
+      const compressionThreshold = 500 * 1024; // 500KB
+
+      // [ADDED] Only compress if file is larger than 500KB
+      if (file.size > compressionThreshold) {
+        try {
+          const options = {
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1080,
+            useWebWorker: true,
+            fileType: file.type,
+            initialQuality: 0.85
+          };
+          const compressedBlob = await imageCompression(file, options);
+          fileToUpload = new File([compressedBlob], file.name, {
+            type: file.type,
+            lastModified: Date.now(),
+          });
+        } catch (error) {
+          console.error("Compression failed, using original.");
         }
-      };
-      reader.readAsDataURL(file);
+      }
+
+      if (fileToUpload.size > 1 * 1024 * 1024) {
+        toast.error("Image could not be compressed enough. Please use a smaller file.");
+        event.target.value = '';
+        return;
+      }
+
+      const imageUrl = URL.createObjectURL(fileToUpload);
+      setProfileData((prev) => ({ ...prev, profilePhoto: imageUrl }));
+      setSelectedFile(fileToUpload);
+      setIsPhotoChanged(true);
+
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error) {
       toast.error("Failed to preview photo");
       event.target.value = "";
@@ -222,7 +296,8 @@ export default function ProfileInfo() {
     if (!userId) return;
     setPhotoLoading(true);
     try {
-      await deleteUserProfilePhoto(Number(userId));
+      // await deleteUserProfilePhoto(Number(userId));
+      await deleteUserProfilePhoto(Number(userId), originalPhotoUrl);
       setProfileData((prev) => ({ ...prev, profilePhoto: null }));
       setIsPhotoChanged(false);
       setProfilePhoto(null);
@@ -251,10 +326,21 @@ export default function ProfileInfo() {
         return;
       }
 
-      if (isPhotoChanged && profileData.profilePhoto && userId) {
-        await upsertUserProfilePhoto(Number(userId), profileData.profilePhoto);
-        setProfilePhoto(profileData.profilePhoto);
+      // if (isPhotoChanged && profileData.profilePhoto && userId) {
+      //   await upsertUserProfilePhoto(Number(userId), profileData.profilePhoto);
+      //   setProfilePhoto(profileData.profilePhoto);
+      //   setIsPhotoChanged(false);
+      // }
+
+      if (isPhotoChanged && userId) {
+        const fileOrString = selectedFile ? selectedFile : profileData.profilePhoto;
+
+        const { publicUrl } = await upsertUserProfilePhoto(Number(userId), fileOrString, originalPhotoUrl);
+
+        setProfilePhoto(publicUrl);
+        setOriginalPhotoUrl(publicUrl);
         setIsPhotoChanged(false);
+        setSelectedFile(null);
       }
 
       toast.success("Profile information saved successfully");
