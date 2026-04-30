@@ -126,19 +126,58 @@ export async function getSearchableUsers(
     }
 }
 
-async function uploadClubLogo(file: File, collegeId: number): Promise<string> {
-    const fileExt = file.name.split('.').pop();
+// async function uploadClubLogo(file: File, collegeId: number): Promise<string> {
+//     const fileExt = file.name.split('.').pop();
+//     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+//     const filePath = `clubs/${collegeId}/${fileName}`;
+
+//     const { data, error: uploadError } = await supabase.storage
+//         .from("club_profile")
+//         .upload(filePath, file);
+
+//     if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`);
+
+//     const { data: urlData } = supabase.storage.from("club_profile").getPublicUrl(filePath);
+//     return urlData.publicUrl;
+// }
+
+async function uploadClubLogo(file: File, collegeId: number, clubId?: number): Promise<string> {
+    let fileExt = file.type.split('/')[1] || 'webp';
+    if (fileExt === 'svg+xml') fileExt = 'svg'; 
+    
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${collegeId}/${fileName}`;
+    
+    const folder = clubId ? clubId.toString() : 'new';
+    const filePath = `clubs/${collegeId}/${folder}/${fileName}`;
 
-    const { data, error: uploadError } = await supabase.storage
-        .from("club_profile")
-        .upload(filePath, file);
+    let attempt = 0;
+    const maxAttempts = 2;
+    let lastError: any = null;
 
-    if (uploadError) throw new Error(`Storage Error: ${uploadError.message}`);
+    while (attempt < maxAttempts) {
+        try {
+            const { data, error: uploadError } = await supabase.storage
+                .from("club_profile")
+                .upload(filePath, file, {
+                    contentType: file.type,
+                    upsert: false
+                });
 
-    const { data: urlData } = supabase.storage.from("club_profile").getPublicUrl(filePath);
-    return urlData.publicUrl;
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage.from("club_profile").getPublicUrl(filePath);
+            return urlData.publicUrl;
+            
+        } catch (error) {
+            lastError = error;
+            attempt++;
+            if (attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+    }
+
+    throw new Error("Failed to upload image. Please try again.");
 }
 
 async function deleteImageByUrl(url: string) {
@@ -213,7 +252,7 @@ export async function updateClub(
 
     try {
         if (imageFile) {
-            finalImageUrl = await uploadClubLogo(imageFile, payload.collegeId);
+            finalImageUrl = await uploadClubLogo(imageFile, payload.collegeId, clubId);
         }
 
         const { error: clubError } = await supabase

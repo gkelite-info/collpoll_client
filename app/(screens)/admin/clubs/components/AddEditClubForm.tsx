@@ -12,6 +12,7 @@ import Image from "next/image";
 import { DeletePhotoModal } from "@/app/profile/DeletePhotoModal";
 import { decryptId } from "@/app/utils/encryption";
 import AddEditClubFormShimmer from "../shimmers/AddEditClubFormShimmer";
+import imageCompression from 'browser-image-compression';
 
 export default function AddEditClubForm({ editId }: { editId: string | null }) {
     const router = useRouter();
@@ -24,6 +25,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
     const [isImageDeleteModalOpen, setIsImageDeleteModalOpen] = useState(false);
     const [isRemovingImage, setIsRemovingImage] = useState(false);
     const [isFetching, setIsFetching] = useState(!!editId);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -40,7 +42,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         return editId ? decryptId(editId) : null;
     }, [editId]);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml', 'image/webp'];
@@ -55,8 +57,32 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                 e.target.value = '';
                 return;
             }
-            const imageUrl = URL.createObjectURL(file);
+            let fileToUpload = file;
+            const compressionThreshold = 500 * 1024; // 500KB
+            const needsCompression = file.size > compressionThreshold;
+            if (file.type !== 'image/svg+xml' && needsCompression) {
+                try {
+                    const options = {
+                        maxSizeMB: 0.5,
+                        maxWidthOrHeight: 1080,
+                        useWebWorker: true,
+                        fileType: file.type,
+                        initialQuality: 0.85
+                    };
+
+                    const compressedBlob = await imageCompression(file, options);
+
+                    fileToUpload = new File([compressedBlob], file.name, {
+                        type: file.type,
+                        lastModified: Date.now(),
+                    });
+                } catch (error) {
+                    // toast.error("Failed to optimize image. Using original file.");
+                }
+            }
+            const imageUrl = URL.createObjectURL(fileToUpload);
             setLogoPreview(imageUrl);
+            setSelectedFile(fileToUpload);
         }
     };
 
@@ -69,7 +95,8 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         if (!formData.faculty) { toast.error("Please select Responsible Faculty."); return; }
         setIsSubmitting(true);
         try {
-            const isNewFile = fileInputRef.current?.files?.[0];
+            // const isNewFile = fileInputRef.current?.files?.[0];
+            const isNewFile = selectedFile || undefined
             const retainedUrl = isNewFile ? null : logoPreview;
             const payload = {
                 title: formData.title.trim(),
@@ -107,7 +134,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
 
             router.push("/admin/clubs?tab=view");
         } catch (error: any) {
-            toast.error(error.message || "Failed to save club");
+            toast.error("Failed to save club");
         } finally {
             setIsSubmitting(false);
         }
@@ -116,6 +143,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
     const handleRemoveImage = (e: React.MouseEvent) => {
         e.stopPropagation();
         setLogoPreview(null);
+        setSelectedFile(null);
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
@@ -168,6 +196,14 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    useEffect(() => {
+        return () => {
+            if (logoPreview && logoPreview.startsWith('blob:')) {
+                URL.revokeObjectURL(logoPreview);
+            }
+        };
+    }, [logoPreview]);
+
     const handleDeleteConfirm = async () => {
         if (!rawEditId) return;
         setIsDeleting(true);
@@ -187,6 +223,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
         setIsRemovingImage(true);
         try {
             setLogoPreview(null);
+            setSelectedFile(null);
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
             }
@@ -330,7 +367,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         collegeId={collegeId}
                         roleGroup="faculty"
                     />
-                    
+
                 </div>
 
                 <div className="flex justify-center mt-6 pt-4">
