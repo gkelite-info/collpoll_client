@@ -233,13 +233,12 @@ export default function FacultyDiscussionForm({
 
       setLoading(true);
 
-      const payload = await saveDiscussionForum(
-        {
-          discussionId: discussionId,
-          title: form.title,
-          description: form.description,
-          deadline: form.deadline,
-        },
+      const payload = await saveDiscussionForum({
+        discussionId: discussionId,
+        title: form.title,
+        description: form.description,
+        deadline: form.deadline,
+      },
         { facultyId: facultyId ?? undefined },
       );
 
@@ -438,7 +437,7 @@ export default function FacultyDiscussionForm({
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col gap-5 mb-6">
         <div className="flex flex-col gap-2">
           <label className="font-bold text-[#282828] text-sm">
-            Discussion Title
+            Discussion Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -451,7 +450,7 @@ export default function FacultyDiscussionForm({
 
         <div className="flex flex-col gap-2">
           <label className="font-bold text-[#282828] text-sm">
-            Description
+            Description <span className="text-red-500">*</span>
           </label>
           <textarea
             placeholder="Enter Description here"
@@ -464,7 +463,7 @@ export default function FacultyDiscussionForm({
 
         <div className="grid grid-cols-3 gap-6">
           <div className="flex flex-col gap-2">
-            <label className="font-bold text-[#282828] text-sm">Deadline</label>
+            <label className="font-bold text-[#282828] text-sm">Deadline <span className="text-red-500">*</span></label>
             <input
               type="date"
               value={form.deadline}
@@ -474,12 +473,21 @@ export default function FacultyDiscussionForm({
           </div>
 
           <div className="flex flex-col gap-2">
-            <label className="font-bold text-[#282828] text-sm">Marks</label>
+            <label className="font-bold text-[#282828] text-sm">Marks <span className="text-red-500">*</span></label>
             <input
               type="number"
               min={0}
               value={form.marks}
-              onChange={(e) => setForm({ ...form, marks: e.target.value })}
+              // onChange={(e) => setForm({ ...form, marks: e.target.value })}
+              onChange={(e) => {
+                const val = e.target.value;
+
+                if (val.startsWith("0")) {
+                  return;
+                }
+
+                setForm({ ...form, marks: val });
+              }}
               placeholder="Enter total marks"
               onWheel={(e) => e.currentTarget.blur()}
               className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-[#807F7F] outline-none focus:border-[#43C17A]"
@@ -488,7 +496,7 @@ export default function FacultyDiscussionForm({
 
           <div className="flex flex-col gap-2" ref={sectionRef}>
             <label className="font-bold text-[#282828] text-sm">
-              Section(s)
+              Section(s) <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <button
@@ -506,13 +514,13 @@ export default function FacultyDiscussionForm({
                   {form.sections.length === 0
                     ? "Select Section(s)"
                     : form.sections
-                        .map(
-                          (id: string) =>
-                            sections.find(
-                              (s) => String(s.collegeSectionsId) === id,
-                            )?.college_sections?.collegeSections ?? id,
-                        )
-                        .join(", ")}
+                      .map(
+                        (id: string) =>
+                          sections.find(
+                            (s) => String(s.collegeSectionsId) === id,
+                          )?.college_sections?.collegeSections ?? id,
+                      )
+                      .join(", ")}
                 </span>
                 <svg
                   className={`w-4 h-4 text-gray-400 transition-transform ${sectionOpen ? "rotate-180" : ""}`}
@@ -573,11 +581,10 @@ export default function FacultyDiscussionForm({
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
-            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors ${
-              isDragging
-                ? "border-[#43C17A] bg-[#e2f6ea]"
-                : "border-gray-300 bg-gray-50/50"
-            } ${files.length === 0 && existingFiles.length === 0 ? "py-16" : ""}`}
+            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 transition-colors ${isDragging
+              ? "border-[#43C17A] bg-[#e2f6ea]"
+              : "border-gray-300 bg-gray-50/50"
+              } ${files.length === 0 && existingFiles.length === 0 ? "py-16" : ""}`}
           >
             <CloudArrowUp
               size={40}

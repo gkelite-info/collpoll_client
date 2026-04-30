@@ -226,3 +226,40 @@ export const fetchFacultyTasksByFacultyId = async (facultyId: number) => {
 
   return data ?? [];
 };
+
+
+export async function fetchFacultyTasksForStudent(params: {
+  date: string;
+  collegeId: number;
+  collegeBranchId: number;
+  collegeAcademicYearId: number;
+  collegeSemesterId?: number | null;
+}) {
+  const { data, error } = await supabase
+    .from("faculty_tasks")
+    .select(`
+      *,
+      college_subjects!inner (
+        subjectName,
+        subjectCode,
+        collegeId,
+        collegeBranchId,
+        collegeAcademicYearId,
+        collegeSemesterId
+      )
+    `)
+    .eq("date", params.date)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .eq("college_subjects.collegeId", params.collegeId)
+    .eq("college_subjects.collegeBranchId", params.collegeBranchId)
+    .eq("college_subjects.collegeAcademicYearId", params.collegeAcademicYearId)
+    .eq("college_subjects.collegeSemesterId", params.collegeSemesterId ?? null);
+
+  if (error) {
+    console.error("fetchFacultyTasksForStudent error:", error);
+    return [];
+  }
+
+  return data ?? [];
+}

@@ -198,7 +198,13 @@
       "Topic:": "విషయం:",
       "Room:": "గది:",
       "Faculty:": "ఫ్యాకల్టీ:",
-      "Class Cancel": "తరగతి రద్దు"
+      "Class Cancel": "తరగతి రద్దు",
+      "Quizzes": "{count, plural, =0 {క్విజ్‌లు లేవు} =1 {1 క్విజ్} other {# క్విజ్‌లు}}",
+      "Tasks": "{count, plural, =0 {టాస్కులు లేవు} =1 {1 టాస్క్} other {# టాస్కులు}}",
+      "Discussions": "{count, plural, =0 {చర్చలు లేవు} =1 {1 చర్చ} other {# చర్చలు}}",
+      "General Revision": "సాధారణ పునశ్చరణ",
+      "Organize your study desk": "మీ అధ్యయన డెస్క్‌ను ఏర్పాటు చేయండి",
+      "Check the deadlines for": "డెడ్‌లైన్‌లను తనిఖీ చేయండి"
     }
   },
   "WipOverlay": {

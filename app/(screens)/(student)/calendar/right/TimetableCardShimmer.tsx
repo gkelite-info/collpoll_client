@@ -14,7 +14,7 @@ export default function TimetableCardShimmer({ count = 6 }: { count?: number }) 
                         <div className="h-3 w-14 bg-gray-200 rounded-sm"></div>
                     </div>
 
-                    <div className="bg-[#16284F]/40 w-[527px] rounded-xl flex justify-end">
+                    <div className="bg-[#16284F]/40 w-[450px] rounded-xl flex justify-end">
                         <div className="w-[98%] h-full bg-[#E8E9ED] gap-3 rounded-r-lg flex items-center px-2">
                             <div className="h-[84px] w-[84px] rounded-lg bg-gray-300 shrink-0"></div>
                             <div className="h-[84px] w-[408px] gap-2 flex items-center justify-between">

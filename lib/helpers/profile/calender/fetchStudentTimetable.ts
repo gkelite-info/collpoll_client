@@ -19,7 +19,7 @@ export async function fetchStudentTimetableByDate(params: {
   collegeSemesterId?: number | null;
   collegeSectionId: number;
   isInter?: boolean;
-}): Promise<StudentTimetableRow[]> {
+}): Promise<any[]> {
 
   let query = supabase
     .from("calendar_event")
@@ -29,6 +29,7 @@ export async function fetchStudentTimetableByDate(params: {
       fromTime,
       toTime,
       roomNo,
+      eventTopic,
       faculty:facultyId (
         fullName
       ),
@@ -64,12 +65,12 @@ export async function fetchStudentTimetableByDate(params: {
   const { data, error } = await query.order("fromTime", { ascending: true });
 
   if (error) {
+    console.error("Helper Error:", error);
     return [];
   }
 
 
   const mapped = (data ?? []).map((item: any) => {
-
     const isCancelled = item.attendance_record?.some(
       (a: any) => a.status === "CLASS_CANCEL"
     );
@@ -80,6 +81,7 @@ export async function fetchStudentTimetableByDate(params: {
       toTime: item.toTime?.slice(0, 5),
       eventTitle: item.subject?.subjectName ?? "Class",
       eventTopic: item.topic?.topicTitle ?? "",
+      topicId: item.eventTopic,
       facultyName: item.faculty?.fullName ?? "Faculty",
       roomNo: item.roomNo ?? "",
       isCancelled,

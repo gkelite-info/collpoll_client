@@ -356,7 +356,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
           setSubjectId(subjects[0].collegeSubjectId);
           setSubject(subjects[0].subjectName);
         }
-      } catch (err) {}
+      } catch (err) { }
     };
 
     loadAcademics();
@@ -438,10 +438,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       }
     }
 
-    if (!roomNo.trim()) {
-      toast.error("Please enter Room No.");
-      return;
-    }
+    // if (!roomNo.trim()) {
+    //   toast.error("Please enter Room No.");
+    //   return;
+    // }
     if (!sectionIds.length) {
       toast.error("Please select at least one section.");
       return;
@@ -457,7 +457,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    // 🟢 Topic is now REQUIRED for ALL event types including meetings
     if (!topicId) {
       toast.error("Please select a topic");
       return;
@@ -501,8 +500,8 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
     const payload: CalendarEventPayload = {
       facultyId: userId!,
-      subjectId: subjectId!, // 🟢 Always passed
-      eventTopic: topicId, // 🟢 Always passed
+      subjectId: subjectId!,
+      eventTopic: topicId,
 
       eventTitle:
         selectedType === "meeting" ? title.trim() || "Meeting" : subject,
@@ -670,11 +669,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
-                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${
-                    selectedType === type
-                      ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                  }`}
+                  className={`flex-1 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all border ${selectedType === type
+                    ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
                 >
                   {formatLabel(type)}
                 </button>
@@ -682,8 +680,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
 
-          {/* 🟢 Subject is unconditionally rendered here so it's always available */}
-          <div className="flex-1">
+          {/* <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Subject <span className="text-red-500">*</span>
             </label>
@@ -706,9 +703,54 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     outline-none
   `}
             />
+          </div> */}
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subject <span className="text-red-500">*</span>
+            </label>
+
+            {subjects.length <= 1 ? (
+              <input
+                type="text"
+                readOnly
+                value={
+                  subjects.find((s) => s.collegeSubjectId === subjectId)
+                    ?.subjectName || subject || ""
+                }
+                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
+        rounded-lg px-3 bg-gray-50 text-gray-900 cursor-not-allowed outline-none`}
+              />
+            ) : (
+              <select
+                value={subjectId ?? ""}
+                onChange={(e) => {
+                  const selected = subjects.find(
+                    (s) => s.collegeSubjectId === Number(e.target.value)
+                  );
+                  if (selected) {
+                    setSubjectId(selected.collegeSubjectId);
+                    setSubject(selected.subjectName);
+                    setTopicId(null);
+                  }
+                }}
+                className={`w-full ${INPUT_HEIGHT} border border-[#C9C9C9]
+        rounded-lg px-3 text-sm bg-white cursor-pointer
+        focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
+        outline-none transition-all
+        ${!subjectId ? "text-gray-400" : "text-gray-900"}`}
+              >
+                <option value="" disabled>Select Subject</option>
+                {subjects.map((s) => (
+                  <option key={s.collegeSubjectId} value={s.collegeSubjectId} className="text-[#282828] cursor-pointer">
+                    {s.subjectName}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* 🟢 Topic is unconditionally rendered here so it's always available */}
+
           <div className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
               Topic <span className="text-red-500">*</span>
@@ -853,7 +895,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
 
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  Room No. <span className="text-red-500">*</span>
+                  Room No.
                 </label>
                 <input
                   value={roomNo}
@@ -1105,9 +1147,9 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
                 {sectionIds.length === 0
                   ? "Select sections"
                   : sections
-                      .filter((s) => sectionIds.includes(s.collegeSectionsId))
-                      .map((s) => s.collegeSections)
-                      .join(", ")}
+                    .filter((s) => sectionIds.includes(s.collegeSectionsId))
+                    .map((s) => s.collegeSections)
+                    .join(", ")}
               </span>
 
               <span className="text-gray-400">▾</span>
@@ -1149,11 +1191,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             <button
               onClick={handleSave}
               disabled={isSubmitting}
-              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${
-                isSubmitting
-                  ? "bg-emerald-400 cursor-not-allowed"
-                  : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
-              }`}
+              className={`w-full text-white font-semibold py-3 rounded-lg shadow-md transition-colors text-base ${isSubmitting
+                ? "bg-emerald-400 cursor-not-allowed"
+                : "bg-emerald-500 hover:bg-emerald-600 cursor-pointer"
+                }`}
             >
               {isSubmitting
                 ? isEditMode

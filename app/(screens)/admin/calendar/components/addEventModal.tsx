@@ -410,10 +410,10 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
       return;
     }
 
-    if (!roomNo.trim()) {
-      toast.error("Please enter a Room No. (Enter 'Online' if virtual).");
-      return;
-    }
+    // if (!roomNo.trim()) {
+    //   toast.error("Please enter a Room No. (Enter 'Online' if virtual).");
+    //   return;
+    // }
 
     if (!date) {
       toast.error("Please select a Date.");
@@ -740,7 +740,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Room No. <span className="text-red-600">*</span>
+                  Room No.
                 </label>
                 <input
                   value={roomNo}

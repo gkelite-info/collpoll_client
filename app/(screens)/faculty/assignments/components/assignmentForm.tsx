@@ -153,14 +153,16 @@ export default function AssignmentForm({
   }, [availableBranches, form.branchId]);
 
   const availableSections = useMemo(() => {
-    if (!form.subjectId || !form.branchId) return [];
+    if (!form.subjectId || !form.branchId || !form.yearId) return [];
     const map = new Map();
+
     facultySections
       .filter((s) => {
         const sectionObj = getSafe(s.college_sections);
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
-          sectionObj?.collegeBranchId === Number(form.branchId)
+          sectionObj?.collegeBranchId === Number(form.branchId) &&
+          s.collegeAcademicYearId === Number(form.yearId) // Filter by the selected year
         );
       })
       .forEach((s) => {
@@ -172,19 +174,18 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId]);
+  }, [facultySections, form.subjectId, form.branchId, form.yearId]);
 
   const availableYears = useMemo(() => {
-    if (!form.subjectId || !form.branchId || form.sectionIds.length === 0)
-      return [];
+    if (!form.subjectId || !form.branchId) return [];
     const map = new Map();
+
     facultySections
       .filter((s) => {
         const sectionObj = getSafe(s.college_sections);
         return (
           s.collegeSubjectId === Number(form.subjectId) &&
-          sectionObj?.collegeBranchId === Number(form.branchId) &&
-          form.sectionIds.includes(String(s.collegeSectionsId))
+          sectionObj?.collegeBranchId === Number(form.branchId)
         );
       })
       .forEach((s) => {
@@ -196,7 +197,7 @@ export default function AssignmentForm({
         }
       });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [facultySections, form.subjectId, form.branchId, form.sectionIds]);
+  }, [facultySections, form.subjectId, form.branchId]);
 
   // ==========================================
   // FIX: ROBUST PRE-SUBMISSION VALIDATION
@@ -340,7 +341,7 @@ export default function AssignmentForm({
         <div className="bg-white p-4 rounded-xl text-[#282828]">
           <div className="mb-4">
             <label className="mb-1 block text-sm font-medium text-gray-700">
-              Subject
+              Subject <span className="text-red-500">*</span>
             </label>
             {uniqueSubjects.length === 1 ? (
               <div className="w-full cursor-not-allowed rounded-md border border-gray-300 px-3 py-2 text-sm bg-gray-50 text-gray-700">
@@ -374,7 +375,7 @@ export default function AssignmentForm({
           <div className="mb-4 flex gap-4">
             <div className="flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Topic Name
+                Topic Name <span className="text-red-500">*</span>
               </label>
               <textarea
                 value={form.topicName}
@@ -398,7 +399,7 @@ export default function AssignmentForm({
             </div>
             <div className="flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Total Marks
+                Total Marks <span className="text-red-500">*</span>
               </label>
               <input
                 value={form.totalMarks}
@@ -412,9 +413,20 @@ export default function AssignmentForm({
                     e.preventDefault();
                   }
                 }}
+                // onChange={(e) => {
+                //   const value = e.target.value.replace(/\D/g, "").slice(0, 3);
+                //   setForm({ ...form, totalMarks: value });
+                // }}
                 onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "").slice(0, 3);
-                  setForm({ ...form, totalMarks: value });
+                  let value = e.target.value;
+
+                  if (value.startsWith("0")) {
+                    return;
+                  }
+
+                  const cleanedValue = value.replace(/\D/g, "").slice(0, 3);
+
+                  setForm({ ...form, totalMarks: cleanedValue });
                 }}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none"
               />
@@ -457,7 +469,33 @@ export default function AssignmentForm({
 
             <div className="mb-4 flex-1">
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Section
+                Year <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.yearId}
+                required
+                disabled={!form.branchId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    yearId: e.target.value,
+                    sectionIds: []
+                  })
+                }
+                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
+              >
+                <option value="">Select Year</option>
+                {availableYears.map((y) => (
+                  <option key={y.id} value={y.id}>
+                    {y.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-4 flex-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Section <span className="text-red-500">*</span>
               </label>
 
               <div className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white min-h-[40px] flex flex-wrap gap-2">
@@ -483,7 +521,7 @@ export default function AssignmentForm({
                             ),
                           }))
                         }
-                        className="text-red-500 font-bold"
+                        className="text-red-500 font-bold cursor-pointer"
                       >
                         ×
                       </button>
@@ -493,6 +531,7 @@ export default function AssignmentForm({
 
                 <select
                   value={sectionSelect}
+                  disabled={!form.yearId}
                   onChange={(e) => {
                     const value = e.target.value;
                     if (!value) return;
@@ -508,7 +547,8 @@ export default function AssignmentForm({
                   }}
                   className="text-sm outline-none flex-1 cursor-pointer text-black"
                 >
-                  <option value="">Select section</option>
+                  {/* <option value="">Select section</option> */}
+                  <option value="">{form.yearId ? "Select section" : "Select year first"}</option>
 
                   {availableSections
                     .filter((s) => !form.sectionIds.includes(String(s.id)))
@@ -520,32 +560,12 @@ export default function AssignmentForm({
                 </select>
               </div>
             </div>
-
-            <div className="mb-4 flex-1">
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Year
-              </label>
-              <select
-                value={form.yearId}
-                required
-                disabled={form.sectionIds.length === 0}
-                onChange={(e) => setForm({ ...form, yearId: e.target.value })}
-                className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100 outline-none"
-              >
-                <option value="">Select Year</option>
-                {availableYears.map((y) => (
-                  <option key={y.id} value={y.id}>
-                    {y.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="mb-1 block text-xs text-gray-500">
-                Date Assigned
+                Date Assigned <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -570,7 +590,7 @@ export default function AssignmentForm({
 
             <div>
               <label className="mb-1 block text-xs text-gray-500">
-                Submission Deadline
+                Submission Deadline <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"

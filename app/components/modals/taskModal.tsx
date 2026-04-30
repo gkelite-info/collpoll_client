@@ -148,7 +148,7 @@ export default function TaskModal({
 
         <div className="flex flex-col mb-3 text-left">
           <label className="text-sm font-medium mb-1 text-[#282828]">
-            Task Title
+            Task Title <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -166,7 +166,7 @@ export default function TaskModal({
 
         <div className="flex flex-col mb-5 text-left">
           <label className="text-sm font-medium mb-1 text-[#282828]">
-            Description / Notes
+            Description / Notes <span className="text-red-500">*</span>
           </label>
           <textarea
             placeholder="Enter task description"
@@ -181,7 +181,7 @@ export default function TaskModal({
         <div className="flex gap-3 mb-5">
           <div className="flex flex-col w-1/2 text-left">
             <label className="text-sm font-medium mb-1 text-[#282828]">
-              Date
+              Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -194,7 +194,7 @@ export default function TaskModal({
 
           <div className="flex flex-col w-1/2 text-left">
             <label className="text-sm font-medium mb-1 text-[#282828]">
-              Time
+              Time <span className="text-red-500">*</span>
             </label>
             <input
               type="time"
