@@ -28,7 +28,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "app/(screens)/super-admin/registration/department"  ],
+    "**/*.mts",
+    "app/(screens)/super-admin/registration/department"
+  ],
   "exclude": ["node_modules"]
 }
