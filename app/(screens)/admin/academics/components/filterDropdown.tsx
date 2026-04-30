@@ -8,6 +8,7 @@ interface FilterProps {
   disabled?: boolean;
   displayModifier?: (opt: string) => string;
   placeholder?: string;
+  widthClassName?: string;
 }
 
 export const FilterDropdown = ({
@@ -18,6 +19,7 @@ export const FilterDropdown = ({
   disabled = false,
   displayModifier,
   placeholder = "Select...",
+  widthClassName = "w-[120px]",
 }: FilterProps) => {
   const realOptions = options.filter((opt) => opt !== "All");
   const hasData = options.length > 0;
@@ -31,8 +33,9 @@ export const FilterDropdown = ({
       </label>
 
       <div
-        className={`relative border border-gray-300 rounded-md hover:border-gray-400 transition-colors bg-white w-[120px] overflow-visible ${disabled ? "bg-gray-100 cursor-not-allowed" : ""
-          }`}
+        className={`relative ${widthClassName} overflow-visible rounded-md border border-gray-300 bg-white transition-colors hover:border-gray-400 ${
+          disabled ? "cursor-not-allowed bg-gray-100" : ""
+        }`}
       >
         {/* <select
           value={selectedValue}

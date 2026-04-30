@@ -11,26 +11,31 @@ import {
   LabelList,
 } from "recharts";
 
-export default function AcademicPerformance() {
-  const data = [
-    { subject: "Java Programming", value: 70, full: 100 },
-    { subject: "Data Structures", value: 50, full: 100 },
-    { subject: "Database Management Systems", value: 80, full: 100 },
-    { subject: "Operating Systems", value: 35, full: 100 },
-    { subject: "Software Engineering", value: 80, full: 100 },
-    { subject: "Web Development", value: 60, full: 100 },
-  ];
+type SubjectMetric = {
+  subject: string;
+  value: number;
+  full: number;
+};
+
+interface AcademicPerformanceProps {
+  data?: SubjectMetric[];
+}
+
+export default function AcademicPerformance({
+  data = [],
+}: AcademicPerformanceProps) {
+  const chartData = data.length ? data : [{ subject: "N/A", value: 0, full: 100 }];
 
   return (
-    <div className="bg-white rounded-lg shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
-      <h2 className="text-xl font-semibold ml-3 text-[#282828]">
+    <div className="mx-auto w-full max-w-6xl rounded-lg bg-white px-2 pt-5 shadow-md">
+      <h2 className="ml-3 text-xl font-semibold text-[#282828]">
         Academic Performance
       </h2>
 
-      <div className="w-full h-70 bg-green-00">
+      <div className="h-70 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={chartData}
             margin={{ top: 40, right: 30, left: 0, bottom: 0 }}
             barGap={-50}
             barCategoryGap={0}
@@ -86,33 +91,37 @@ export default function AcademicPerformance() {
             <Bar dataKey="value" barSize={50} radius={[10, 10, 10, 10]}>
               <LabelList
                 dataKey="value"
-                position="insideTop"
                 content={(props: any) => {
                   const { x, y, width, value } = props;
+                  const numericValue =
+                    typeof value === "number" ? value : Number(value ?? 0);
+                  const centerX = x + width / 2;
+                  const centerY =
+                    numericValue === 0 ? y - 12 : numericValue < 15 ? y + 2 : y + 12;
                   return (
                     <g>
                       <circle
-                        cx={x + width / 2}
-                        cy={y + 25}
-                        r={18}
+                        cx={centerX}
+                        cy={centerY}
+                        r={11.5}
                         fill="#E8F6E2"
                       />
                       <text
-                        x={x + width / 2}
-                        y={y + 30}
+                        x={centerX}
+                        y={centerY + 4}
                         textAnchor="middle"
                         fill="#7CD24C"
-                        fontSize={12}
+                        fontSize={8}
                         fontWeight="bold"
                       >
-                        {`${value}%`}
+                        {`${numericValue}%`}
                       </text>
                     </g>
                   );
                 }}
               />
 
-              {data.map((_, i) => (
+              {chartData.map((_, i) => (
                 <Cell key={i} fill="url(#barGradient)" />
               ))}
             </Bar>
@@ -122,3 +131,7 @@ export default function AcademicPerformance() {
     </div>
   );
 }
+
+
+
+

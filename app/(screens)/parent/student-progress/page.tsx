@@ -3,228 +3,267 @@
 import AcademicPerformance from "@/app/utils/AcademicPerformance";
 import { AttendanceSummaryCard } from "./attendanceSummaryCard";
 import { ProfileCard } from "./profileCard";
-import { Assignment, AssignmentsSummaryTable } from "./assignmentsSummaryTable";
+import { AssignmentsSummaryTable } from "./assignmentsSummaryTable";
 import { AttendanceList } from "./attendanceBySubjectCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { List, X } from "@phosphor-icons/react";
-import { useState } from "react";
-import WipOverlay from "@/app/utils/WipOverlay";
+import { useEffect, useState } from "react";
 import { useParent } from "@/app/utils/context/parent/useParent";
-
-const assignmentsData: Assignment[] = [
-  {
-    subject: "Data Structures",
-    title: "Array Operations & Complex..",
-    dueDate: "3 Feb 2026",
-    marks: "18 / 20",
-    feedback: "Excellent coding and examples",
-  },
-  {
-    subject: "OOPs using C++",
-    title: "Class Inheritance & Polymo..",
-    dueDate: "29 Jan 2026",
-    marks: "17 / 20",
-    feedback: "Good attempt; improve proofs",
-  },
-  {
-    subject: "Discreate Mathematics",
-    title: "Graph Theory Problem Set",
-    dueDate: "27 Jan 2026",
-    marks: "-",
-    feedback: "-",
-  },
-  {
-    subject: "Computer Organization",
-    title: "CPU Architecture & Pipelini..",
-    dueDate: "1 Feb 2026",
-    marks: "19 / 20",
-    feedback: "Very neat and accurate",
-  },
-  {
-    subject: "Digital Logical Design",
-    title: "Logic Gates Simplificatio...",
-    dueDate: "26 Jan 2026",
-    marks: "20 / 20",
-    feedback: "Excellent insight and clarity",
-  },
-  {
-    subject: "Environmental Science",
-    title: "Report on Sustainable Co..",
-    dueDate: "25 Jan 2026",
-    marks: "-",
-    feedback: "-",
-  },
-  {
-    subject: "Data Structure Lab",
-    title: "Stack, Queue, and Linke...",
-    dueDate: "30 Jan 2026",
-    marks: "18 / 20",
-    feedback: "Good wiring and output validation",
-  },
-  {
-    subject: "OOPs Lab",
-    title: "C++ Mini Project – Student",
-    dueDate: "2 Feb 2026",
-    marks: "18 / 20",
-    feedback: "Good attempt; improve proofs",
-  },
-  {
-    subject: "Digital Logic Lab",
-    title: "Logic Circuit Design (Multis..",
-    dueDate: "24 Jan 2026",
-    marks: "18 / 20",
-    feedback: "Good wiring and output validation",
-  },
-];
-
-const AttendanceData = [
-  { subject: "Java Programming", attended: 90, total: 100, status: "Present" },
-  { subject: "OOPs using C++", attended: 95, total: 100, status: "Present" },
-  { subject: "Data Structures", attended: 90, total: 100, status: "Present" },
-  { subject: "Computer Networks", attended: 45, total: 50, status: "Present" },
-  { subject: "Operating Systems", attended: 85, total: 100, status: "Present" },
-  { subject: "Web Development", attended: 28, total: 30, status: "Present" },
-  {
-    subject: "Software Engineering",
-    attended: 55,
-    total: 60,
-    status: "Present",
-  },
-  {
-    subject: "Database Management",
-    attended: 92,
-    total: 100,
-    status: "Present",
-  },
-];
+import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
+import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
+import { StudentProgressSkeleton } from "@/app/(screens)/(student)/student-progress/shimmer/studentProgressSkeleton";
+import { supabase } from "@/lib/supabaseClient";
 
 const Page = () => {
   const [open, setOpen] = useState(false);
-  const { studentId, collegeEducationType } = useParent();
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressData, setProgressData] = useState<Awaited<
+    ReturnType<typeof getStudentProgressData>
+  > | null>(null);
+  const [childMeta, setChildMeta] = useState<{
+    fullName: string;
+    profilePhoto: string | null;
+    identifierId: string;
+  } | null>(null);
+  const [studentContext, setStudentContext] = useState<Awaited<
+    ReturnType<typeof fetchStudentContext>
+  > | null>(null);
 
+  const {
+    loading: parentLoading,
+    childUserId,
+    studentId,
+    collegeEducationType,
+  } = useParent();
+
+  const semesterLabel = studentContext?.collegeSemester
+    ? `Semester ${studentContext.collegeSemester}`
+    : "Semester N/A";
+  const isLoading = parentLoading || progressLoading;
+  const totalAttendanceEvents =
+    (progressData?.attendedCount ?? 0) +
+    (progressData?.absentCount ?? 0) +
+    (progressData?.leaveCount ?? 0);
+  const attendancePercentage =
+    totalAttendanceEvents > 0
+      ? Math.round(((progressData?.attendedCount ?? 0) / totalAttendanceEvents) * 100)
+      : progressData?.overallAttendancePercentage ?? 0;
+  const absentPercentage =
+    totalAttendanceEvents > 0
+      ? Math.round(((progressData?.absentCount ?? 0) / totalAttendanceEvents) * 100)
+      : progressData?.absentPercentage ?? 0;
+  const leavePercentage =
+    totalAttendanceEvents > 0
+      ? Math.round(((progressData?.leaveCount ?? 0) / totalAttendanceEvents) * 100)
+      : progressData?.leavePercentage ?? 0;
+  const academicPerformanceData =
+    progressData?.subjectProgressRows.map((row) => ({
+      subject: row.subjectKey,
+      value: row.progressPercent,
+      full: 100,
+    })) ?? [];
+
+  useEffect(() => {
+    if (parentLoading) return;
+    if (!childUserId || !studentId) {
+      setProgressLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadParentStudentProgress() {
+      setProgressLoading(true);
+
+      try {
+        const safeChildUserId = childUserId;
+        const safeStudentId = studentId;
+        if (safeChildUserId === null || safeStudentId === null) {
+          return;
+        }
+        const [
+          progress,
+          context,
+          childUserResult,
+          childPinResult,
+          childProfileResult,
+        ] = await Promise.all([
+          getStudentProgressData(safeChildUserId),
+          fetchStudentContext(safeChildUserId),
+          supabase
+            .from("users")
+            .select("fullName")
+            .eq("userId", safeChildUserId)
+            .maybeSingle(),
+          supabase
+            .from("student_pins")
+            .select("pinNumber")
+            .eq("studentId", safeStudentId)
+            .eq("isActive", true)
+            .is("deletedAt", null)
+            .maybeSingle(),
+          supabase
+            .from("user_profile")
+            .select("profileUrl")
+            .eq("userId", safeChildUserId)
+            .eq("is_deleted", false)
+            .is("deletedAt", null)
+            .maybeSingle(),
+        ]);
+
+        if (!mounted) return;
+
+        setProgressData(progress);
+        setStudentContext(context);
+        setChildMeta({
+          fullName: childUserResult.data?.fullName ?? "Student",
+          profilePhoto: childProfileResult.data?.profileUrl ?? null,
+          identifierId: childPinResult.data?.pinNumber ?? "N/A",
+        });
+      } finally {
+        if (mounted) {
+          setProgressLoading(false);
+        }
+      }
+    }
+
+    loadParentStudentProgress();
+
+    return () => {
+      mounted = false;
+    };
+  }, [childUserId, parentLoading, studentId]);
+
+  if (isLoading) {
+    return <StudentProgressSkeleton />;
+  }
 
   return (
-    <>
-      <main className="p-3 relative overflow-hidden">
-        {/* <WipOverlay fullHeight={true} /> */}
-        <section className="mb-3">
-          <div className="flex p-2 gap-3 justify-between items-center">
-            <div className="w-full max-w-5xl rounded-xl">
-              <div className="flex gap-3">
-                <div>
-                  <span className="text-gray-600 text-lg font-medium">
-                    {collegeEducationType === "Inter" ? "Group" : "Branch"}:
-                  </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide lg:ml-1">
-                    CSE
-                  </span>
-                </div>
+    <main className="relative overflow-hidden p-3">
+      <section className="mb-3">
+        <div className="flex items-center justify-between gap-3 p-2">
+          <div className="w-full max-w-5xl rounded-xl">
+            <div className="flex gap-3">
+              <div>
+                <span className="text-lg font-medium text-gray-600">
+                  {collegeEducationType === "Inter" ? "Group" : "Branch"}:
+                </span>
+                <span className="lg:ml-1 rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                  {studentContext?.collegeBranchCode ?? "N/A"}
+                </span>
+              </div>
 
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 text-lg font-medium">
-                    Year:
-                  </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    2nd Year
-                  </span>
-                </div>
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-medium text-gray-600">Year:</span>
+                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                  {studentContext?.collegeAcademicYear ?? "N/A"}
+                </span>
+              </div>
 
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 text-lg font-medium">
-                    Section:
-                  </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    A
-                  </span>
-                </div>
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-medium text-gray-600">
+                  Section:
+                </span>
+                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                  {studentContext?.collegeSections ?? "N/A"}
+                </span>
+              </div>
 
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-600 text-lg font-medium">
-                    Semester:
-                  </span>
-                  <span className="bg-[#43C17A1C] text-[#43C17A] px-4 py-0.5 rounded-full font-semibold text-sm tracking-wide">
-                    III
-                  </span>
-                </div>
+              <div className="flex items-center gap-1">
+                <span className="text-lg font-medium text-gray-600">
+                  Semester:
+                </span>
+                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                  {studentContext?.collegeSemester ?? "N/A"}
+                </span>
               </div>
             </div>
-
-            <div className="flex justify-end w-[32%]">
-              <CourseScheduleCard style="w-[320px]" />
-            </div>
-
-            <div
-              className="w-12 h-12 aspect-square rounded-full bg-[#43C17A1A] flex items-center justify-center cursor-pointer"
-              onClick={() => setOpen(true)}
-            >
-              <List size={26} weight="bold" className="text-gray-700 " />
-            </div>
           </div>
-        </section>
 
-        <section className="min-h-screen bg-gray-100 grid-rows-[300px_300px] flex flex-col gap-6 ">
-          <article className="grid grid-cols-1 lg:grid-cols-10 gap-6 ">
-            <section className="bg-white rounded-2xl shadow-sm lg:col-span-6">
-              <ProfileCard
-                name="Ananya Sharma"
-                department="CSE"
-                studentId="21CSE006"
-                avatarUrl="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
-                attendanceDays={25}
-                absentDays={5}
-                leaveDays={1}
-              />
-            </section>
+          <div className="flex w-[32%] justify-end">
+            <CourseScheduleCard style="w-[320px]" />
+          </div>
 
-            <section className="bg-white rounded-2xl shadow-sm p-4 lg:col-span-4 ">
-              <AttendanceSummaryCard percentage={85} />
-            </section>
+          <div
+            className="flex aspect-square h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[#43C17A1A]"
+            onClick={() => setOpen(true)}
+          >
+            <List size={26} weight="bold" className="text-gray-700 " />
+          </div>
+        </div>
+      </section>
 
-            <section className="bg-white rounded-2xl lg:col-span-6">
-              <AcademicPerformance studentId={studentId} />
-            </section>
-
-            <section className="bg-white rounded-2xl lg:col-span-4">
-              <AttendanceList data={AttendanceData} />
-            </section>
-          </article>
-
-          <section className="bg-white rounded-2xl">
-            <AssignmentsSummaryTable assignments={assignmentsData} />
-          </section>
-        </section>
-
-        {open && (
-          <div className="fixed inset-0 z-50">
-            <div
-              className="absolute inset-0 bg-black/10"
-              onClick={() => setOpen(false)}
+      <section className="min-h-screen grid-rows-[300px_300px] bg-gray-100 flex flex-col gap-6">
+        <article className="grid grid-cols-1 gap-6 lg:grid-cols-10 ">
+          <section className="rounded-2xl bg-white shadow-sm lg:col-span-6">
+            <ProfileCard
+              name={childMeta?.fullName ?? "Student"}
+              department={studentContext?.collegeBranchCode ?? "N/A"}
+              studentId={childMeta?.identifierId ?? "N/A"}
+              avatarUrl={
+                childMeta?.profilePhoto ||
+                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+              }
+              attendancePercentage={attendancePercentage}
+              absentPercentage={absentPercentage}
+              leavePercentage={leavePercentage}
             />
+          </section>
 
-            <div className="absolute top-35 right-9">
-              <div className="bg-white rounded-xl shadow-lg min-w-[220px] border border-gray-200">
-                <div className="flex items-center justify-between px-4 py-2 border-b">
-                  <span className="text-sm font-semibold text-gray-800">
-                    Previous Sem Marks
-                  </span>
-                  <button onClick={() => setOpen(false)}>
-                    <X
-                      size={18}
-                      weight="bold"
-                      className="text-gray-600 cursor-pointer"
-                    />
-                  </button>
-                </div>
+          <section className="rounded-2xl bg-white p-4 shadow-sm lg:col-span-4 ">
+            <AttendanceSummaryCard percentage={attendancePercentage} />
+          </section>
 
-                <button className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  Enrollment
+          <section className="rounded-2xl bg-white lg:col-span-6">
+            <AcademicPerformance
+              studentId={childUserId}
+              data={academicPerformanceData}
+            />
+          </section>
+
+          <section className="rounded-2xl bg-white lg:col-span-4">
+            <AttendanceList data={progressData?.subjectAttendance || []} />
+          </section>
+        </article>
+
+        <section className="rounded-2xl bg-white">
+          <AssignmentsSummaryTable
+            rows={progressData?.subjectProgressRows ?? []}
+            semesterLabel={semesterLabel}
+          />
+        </section>
+      </section>
+
+      {open && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/10"
+            onClick={() => setOpen(false)}
+          />
+
+          <div className="absolute right-9 top-35">
+            <div className="min-w-[220px] rounded-xl border border-gray-200 bg-white shadow-lg">
+              <div className="flex items-center justify-between border-b px-4 py-2">
+                <span className="text-sm font-semibold text-gray-800">
+                  Previous Sem Marks
+                </span>
+                <button onClick={() => setOpen(false)}>
+                  <X
+                    size={18}
+                    weight="bold"
+                    className="cursor-pointer text-gray-600"
+                  />
                 </button>
               </div>
+
+              <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+                Enrollment
+              </button>
             </div>
           </div>
-        )}
-      </main>
-    </>
+        </div>
+      )}
+    </main>
   );
 };
 

@@ -7,9 +7,9 @@ export type ProfileCardProps = {
   department: string;
   studentId: string;
   avatarUrl: string;
-  attendanceDays: number;
-  absentDays: number;
-  leaveDays: number;
+  attendancePercentage: number;
+  absentPercentage: number;
+  leavePercentage: number;
 };
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -17,9 +17,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   department,
   studentId,
   avatarUrl,
-  attendanceDays,
-  absentDays,
-  leaveDays,
+  attendancePercentage,
+  absentPercentage,
+  leavePercentage,
 }) => {
   return (
     <div className="bg-white w-full max-w-5xl rounded-3xl p-5 ">
@@ -49,9 +49,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">
-              {attendanceDays} Days
-            </p>
+            <p className="text-xl font-bold text-gray-800">{attendancePercentage}%</p>
             <p className="text-gray-600 text-sm font-medium">
               Total Attendance
             </p>
@@ -63,7 +61,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">{absentDays} Day</p>
+            <p className="text-xl font-bold text-gray-800">{absentPercentage}%</p>
             <p className="text-gray-600 text-sm font-medium">Total Absent</p>
           </div>
         </div>
@@ -73,7 +71,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">{leaveDays}</p>
+            <p className="text-xl font-bold text-gray-800">{leavePercentage}%</p>
             <p className="text-gray-600 text-sm font-medium">Total Leave</p>
           </div>
         </div>

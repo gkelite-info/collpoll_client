@@ -24,20 +24,8 @@ interface AcademicPerformanceProps {
 export default function AcademicPerformance({
   data,
 }: AcademicPerformanceProps) {
-  const defaultData: AcademicPerformanceItem[] = [
-    { subject: "Java Programming", value: 70, full: 100 },
-    { subject: "Data Structures", value: 50, full: 100 },
-    { subject: "Database Management Systems", value: 80, full: 100 },
-    { subject: "Operating Systems", value: 35, full: 100 },
-    { subject: "Software Engineering", value: 80, full: 100 },
-    { subject: "Web Development", value: 60, full: 100 },
-  ];
-
-  const chartData = (data && data.length ? data : defaultData).length
-    ? data && data.length
-      ? data
-      : defaultData
-    : [{ subject: "No Data", value: 0, full: 100 }];
+  const chartData =
+    data && data.length ? data : [{ subject: "N/A", value: 0, full: 100 }];
 
   return (
     <div className="bg-white rounded-lg shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
@@ -104,26 +92,30 @@ export default function AcademicPerformance({
             <Bar dataKey="value" barSize={50} radius={[10, 10, 10, 10]}>
               <LabelList
                 dataKey="value"
-                position="insideTop"
                 content={(props: any) => {
                   const { x, y, width, value } = props;
+                  const numericValue =
+                    typeof value === "number" ? value : Number(value ?? 0);
+                  const centerX = x + width / 2;
+                  const centerY =
+                    numericValue === 0 ? y - 12 : numericValue < 15 ? y + 2 : y + 12;
                   return (
                     <g>
                       <circle
-                        cx={x + width / 2}
-                        cy={y + 25}
-                        r={18}
+                        cx={centerX}
+                        cy={centerY}
+                        r={11.5}
                         fill="#E8F6E2"
                       />
                       <text
-                        x={x + width / 2}
-                        y={y + 30}
+                        x={centerX}
+                        y={centerY + 4}
                         textAnchor="middle"
                         fill="#7CD24C"
-                        fontSize={12}
+                        fontSize={8}
                         fontWeight="bold"
                       >
-                        {`${value}%`}
+                        {`${numericValue}%`}
                       </text>
                     </g>
                   );

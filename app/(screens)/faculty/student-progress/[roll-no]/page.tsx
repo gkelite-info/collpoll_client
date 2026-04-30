@@ -40,7 +40,31 @@ const emptyDetails: NonNullable<StudentProgressDetails> = {
   parents: [],
   attendancePercentage: 0,
   academicPerformance: [],
+  taskWeightages: {
+    assignments: 0,
+    quizzes: 0,
+    discussions: 0,
+  },
+  taskInsights: {
+    assignments: {
+      obtained: 0,
+      total: 0,
+      weightedScore: 0,
+    },
+    quizzes: {
+      obtained: 0,
+      total: 0,
+      weightedScore: 0,
+    },
+    discussions: {
+      obtained: 0,
+      total: 0,
+      weightedScore: 0,
+    },
+  },
   assignments: [],
+  quizzes: [],
+  discussions: [],
   grades: [],
 };
 
@@ -414,8 +438,14 @@ export default function StudentProgressDetailsPage() {
                 absentPercentage={absentPercentage}
                 leavePercentage={leavePercentage}
               />
-              <AcademicPerformance />
-              <AssignmentsTable assignments={details.assignments} />
+              <AcademicPerformance data={details.academicPerformance} />
+              <AssignmentsTable
+                assignments={details.assignments}
+                quizzes={details.quizzes}
+                discussions={details.discussions}
+                weightages={details.taskWeightages}
+                insights={details.taskInsights}
+              />
             </div>
 
             <div className="sticky top-0 h-full w-full rounded-[30px] bg-white lg:w-[40%]">
@@ -446,7 +476,7 @@ export default function StudentProgressDetailsPage() {
 
             <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3">
-                <AcademicPerformance />
+                <AcademicPerformance data={details.academicPerformance} />
               </div>
               <div className="h-full lg:col-span-2">
                 <AttendanceSummaryCard percentage={attendancePercentage} />
@@ -455,7 +485,13 @@ export default function StudentProgressDetailsPage() {
 
             <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-5">
               <div className="h-full lg:col-span-3">
-                <AssignmentsTable assignments={details.assignments} />
+                <AssignmentsTable
+                  assignments={details.assignments}
+                  quizzes={details.quizzes}
+                  discussions={details.discussions}
+                  weightages={details.taskWeightages}
+                  insights={details.taskInsights}
+                />
               </div>
               <div className="h-full lg:col-span-2">
                 <GradesTable />

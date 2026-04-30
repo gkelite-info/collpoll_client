@@ -2,8 +2,32 @@
 
 import { createClient } from "@/lib/supabaseServer";
 
+const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
+const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
+const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS"] as const;
+
+function formatDate(date: Date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function isAttendedStatus(status: string) {
+    return (ATTENDED_STATUSES as readonly string[]).includes(status);
+}
+
+function isConductedStatus(status: string) {
+    return (CONDUCTED_STATUSES as readonly string[]).includes(status);
+}
+
+function isCancelledStatus(status: string) {
+    return (CANCELLED_STATUSES as readonly string[]).includes(status);
+}
+
 export async function getStudentAcademicPerformance(studentId: number | null) {
     const supabase = await createClient();
+    const today = formatDate(new Date());
 
     if (!studentId) return [];
 
@@ -145,26 +169,50 @@ export async function getStudentAcademicPerformance(studentId: number | null) {
                 }
 
                 else if (label.includes("attendance")) {
-                    const { data: events } = await supabase
-                        .from("calendar_event")
-                        .select("calendarEventId")
-                        .eq("subject", subject.collegeSubjectId)
-                        .in("type", ["class", "meeting"])
-                        .eq("is_deleted", false);
+                    const { data: attendanceRecords } = await supabase
+                        .from("attendance_record")
+                        .select(`
+                            status,
+                            calendar_event:calendarEventId (
+                                subject,
+                                type,
+                                date,
+                                is_deleted
+                            )
+                        `)
+                        .eq("studentId", studentId)
+                        .is("deletedAt", null)
+                        .lte("markedAt", today)
+                        .returns<Array<{
+                            status: string;
+                            calendar_event: {
+                                subject: number | null;
+                                type: string;
+                                date: string;
+                                is_deleted: boolean | null;
+                            } | null;
+                        }>>();
 
-                    if (events && events.length > 0) {
-                        const ids = events.map(e => e.calendarEventId);
-                        const { data: att } = await supabase
-                            .from("attendance_record")
-                            .select("status")
-                            .eq("studentId", studentId)
-                            .in("calendarEventId", ids);
+                    const validAttendance = (attendanceRecords ?? []).filter((record) => {
+                        const event = record.calendar_event;
 
-                        const present = att?.filter(a =>
-                            a.status?.toString().toUpperCase() === 'PRESENT'
-                        ).length || 0;
-                        earned = present;
-                        possible = events.length;
+                        return (
+                            !!event &&
+                            event.subject === subject.collegeSubjectId &&
+                            event.type === "class" &&
+                            event.is_deleted === false &&
+                            event.date <= today &&
+                            !isCancelledStatus(record.status)
+                        );
+                    });
+
+                    if (validAttendance.length > 0) {
+                        earned = validAttendance.filter((record) =>
+                            isAttendedStatus(record.status),
+                        ).length;
+                        possible = validAttendance.filter((record) =>
+                            isConductedStatus(record.status),
+                        ).length;
                     }
                 }
 

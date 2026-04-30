@@ -11,16 +11,21 @@ function formatDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-type FacultyStudentProgressDetailsScope = {
+type AdminStudentProgressDetailsScope = {
   rollNo: string;
-  facultyId: number;
   collegeId: number;
   collegeEducationId: number;
-  collegeBranchId: number;
+  collegeBranchIds: number[];
   academicYearIds: number[];
+  semesterIds: number[];
   sectionIds: number[];
   subjectIds: number[];
   departmentLabel?: string | null;
+};
+
+type FacultySectionRow = {
+  facultyId: number;
+  collegeSubjectId: number;
 };
 
 type StudentPinLookupRow = {
@@ -31,6 +36,7 @@ type StudentPinLookupRow = {
 type StudentProfileLookupRow = {
   studentId: number;
   userId: number;
+  collegeBranchId: number;
   user: {
     fullName: string;
     email: string;
@@ -104,6 +110,11 @@ type SubjectRow = {
   collegeSubjectId: number;
   subjectName: string;
   subjectKey: string | null;
+};
+
+type CollegeBranchRow = {
+  collegeBranchId: number;
+  collegeBranchCode: string;
 };
 
 type AssignmentRow = {
@@ -360,7 +371,7 @@ const getParentRelation = (gender: string | null | undefined, index: number) => 
   return `Parent ${index + 1}`;
 };
 
-export type FacultyStudentProgressDetails = {
+export type AdminStudentProgressDetails = {
   departmentLabel: string;
   yearLabel: string;
   sectionLabel: string;
@@ -373,9 +384,9 @@ export type FacultyStudentProgressDetails = {
     email: string;
     address: string;
     photo: string;
-    attendanceDays: number;
-    absentDays: number;
-    leaveDays: number;
+    attendancePercentage: number;
+    absentPercentage: number;
+    leavePercentage: number;
   };
   parents: ParentInfo[];
   attendancePercentage: number;
@@ -396,9 +407,9 @@ export type FacultyStudentProgressDetails = {
   grades: GradeEntry[];
 };
 
-export async function getFacultyStudentProgressDetails(
-  scope: FacultyStudentProgressDetailsScope,
-): Promise<FacultyStudentProgressDetails | null> {
+export async function getAdminStudentProgressDetails(
+  scope: AdminStudentProgressDetailsScope,
+): Promise<AdminStudentProgressDetails | null> {
   const today = formatDate(new Date());
   const { data: pinRow, error: pinError } = await supabase
     .from("student_pins")
@@ -417,6 +428,7 @@ export async function getFacultyStudentProgressDetails(
       `
       studentId,
       userId,
+      collegeBranchId,
       user:users (
         fullName,
         email,
@@ -428,7 +440,7 @@ export async function getFacultyStudentProgressDetails(
     .eq("studentId", pinRow.studentId)
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
+    .in("collegeBranchId", scope.collegeBranchIds)
     .eq("isActive", true)
     .is("deletedAt", null)
     .maybeSingle<StudentProfileLookupRow>();
@@ -465,12 +477,44 @@ export async function getFacultyStudentProgressDetails(
 
   if (
     !scope.academicYearIds.includes(historyRow.collegeAcademicYearId) ||
+    (historyRow.collegeSemesterId !== null &&
+      !scope.semesterIds.includes(historyRow.collegeSemesterId)) ||
     !scope.sectionIds.includes(historyRow.collegeSectionsId)
   ) {
     return null;
   }
 
   const user = getFirst(studentRow.user);
+
+  const { data: branchRow, error: branchError } = await supabase
+    .from("college_branch")
+    .select("collegeBranchId, collegeBranchCode")
+    .eq("collegeBranchId", studentRow.collegeBranchId)
+    .eq("collegeId", scope.collegeId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .maybeSingle<CollegeBranchRow>();
+
+  if (branchError) throw branchError;
+  const resolvedDepartmentLabel =
+    branchRow?.collegeBranchCode ?? scope.departmentLabel ?? "N/A";
+
+  const { data: facultySectionRows, error: facultySectionError } = await supabase
+    .from("faculty_sections")
+    .select("facultyId, collegeSubjectId")
+    .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
+    .eq("collegeSectionsId", historyRow.collegeSectionsId)
+    .in("collegeSubjectId", scope.subjectIds)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .returns<FacultySectionRow[]>();
+
+  if (facultySectionError) throw facultySectionError;
+
+  const facultyIds = Array.from(
+    new Set((facultySectionRows ?? []).map((row) => row.facultyId)),
+  );
 
   let weightageQuery = supabase
     .from("faculty_weightage_configs")
@@ -484,11 +528,10 @@ export async function getFacultyStudentProgressDetails(
         percentage
       )
     `,
-    )
-    .eq("facultyId", scope.facultyId)
+      )
     .eq("collegeId", scope.collegeId)
     .eq("collegeEducationId", scope.collegeEducationId)
-    .eq("collegeBranchId", scope.collegeBranchId)
+    .in("collegeBranchId", scope.collegeBranchIds)
     .eq("collegeSectionsId", historyRow.collegeSectionsId)
     .in("collegeSubjectId", scope.subjectIds)
     .is("deletedAt", null);
@@ -558,33 +601,34 @@ export async function getFacultyStudentProgressDetails(
         .select("collegeSubjectId, subjectName, subjectKey")
         .in("collegeSubjectId", scope.subjectIds)
         .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
-        .eq("collegeBranchId", scope.collegeBranchId)
+        .eq("collegeBranchId", studentRow.collegeBranchId)
       .eq("collegeEducationId", scope.collegeEducationId)
+      .eq("collegeSemesterId", historyRow.collegeSemesterId)
       .eq("isActive", true)
       .is("deletedAt", null)
       .returns<SubjectRow[]>(),
     supabase
       .from("assignments")
       .select("assignmentId, subjectId, topicName, submissionDeadlineInt, marks, status")
-      .eq("createdBy", scope.facultyId)
-      .eq("collegeBranchId", scope.collegeBranchId)
+      .in("collegeBranchId", scope.collegeBranchIds)
       .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
       .eq("collegeSectionsId", historyRow.collegeSectionsId)
       .in("subjectId", scope.subjectIds)
       .eq("is_deleted", false)
       .neq("status", "Cancelled")
       .returns<AssignmentRow[]>(),
-    supabase
-      .from("discussion_forum")
-      .select("discussionId, title, deadline, createdAt, createdBy")
-      .eq("createdBy", scope.facultyId)
-      .eq("is_deleted", false)
-      .is("deletedAt", null)
-      .returns<DiscussionForumRow[]>(),
+    facultyIds.length
+      ? supabase
+          .from("discussion_forum")
+          .select("discussionId, title, deadline, createdAt, createdBy")
+          .in("createdBy", facultyIds)
+          .eq("is_deleted", false)
+          .is("deletedAt", null)
+          .returns<DiscussionForumRow[]>()
+      : Promise.resolve({ data: [], error: null }),
     supabase
       .from("quizzes")
       .select("quizId, collegeSubjectId, totalMarks, quizTitle, endDate, status")
-      .eq("facultyId", scope.facultyId)
       .eq("collegeAcademicYearId", historyRow.collegeAcademicYearId)
       .eq("collegeSectionsId", historyRow.collegeSectionsId)
       .in("collegeSubjectId", scope.subjectIds)
@@ -693,6 +737,24 @@ export async function getFacultyStudentProgressDetails(
       subject.subjectKey?.trim() || subject.subjectName,
     ]),
   );
+  const subjectNamesByFacultyId = new Map<number, string[]>();
+  const subjectIdsByFacultyId = new Map<number, number[]>();
+  for (const row of (facultySectionRows ?? []) as FacultySectionRow[]) {
+    const subjectName = subjectNameById.get(row.collegeSubjectId);
+    if (!subjectName) continue;
+
+    const existing = subjectNamesByFacultyId.get(row.facultyId) ?? [];
+    if (!existing.includes(subjectName)) {
+      existing.push(subjectName);
+      subjectNamesByFacultyId.set(row.facultyId, existing);
+    }
+
+    const existingSubjectIds = subjectIdsByFacultyId.get(row.facultyId) ?? [];
+    if (!existingSubjectIds.includes(row.collegeSubjectId)) {
+      existingSubjectIds.push(row.collegeSubjectId);
+      subjectIdsByFacultyId.set(row.facultyId, existingSubjectIds);
+    }
+  }
 
   const relevantAttendance = ((attendanceResult.data ?? []) as AttendanceRecordRow[]).filter(
     (record) => {
@@ -700,7 +762,8 @@ export async function getFacultyStudentProgressDetails(
 
       return (
         !!event &&
-        event.facultyId === scope.facultyId &&
+        !!event.facultyId &&
+        facultyIds.includes(event.facultyId) &&
         !!event.subject &&
         scope.subjectIds.includes(event.subject) &&
         event.type === "class" &&
@@ -747,6 +810,18 @@ export async function getFacultyStudentProgressDetails(
       ? 0
       : Math.round(
           (attendanceDays / (attendanceDays + absentDays + leaveDays)) * 100,
+        );
+  const absentPercentage =
+    attendanceDays + absentDays + leaveDays === 0
+      ? 0
+      : Math.round(
+          (absentDays / (attendanceDays + absentDays + leaveDays)) * 100,
+        );
+  const leavePercentage =
+    attendanceDays + absentDays + leaveDays === 0
+      ? 0
+      : Math.round(
+          (leaveDays / (attendanceDays + absentDays + leaveDays)) * 100,
         );
 
   const assignmentSubmissionById = new Map(
@@ -821,19 +896,53 @@ export async function getFacultyStudentProgressDetails(
       upload,
     ]),
   );
-  const discussionSubjectLabel =
-    subjectNameById.size > 1
-      ? "Multiple Subjects"
-      : Array.from(subjectNameById.values())[0] ?? "Unknown";
+
+  const discussionScoresBySubject = new Map<number, { obtained: number; total: number }>();
+  for (const discussion of (discussionsResult.data ?? []) as DiscussionForumRow[]) {
+    const section = discussionSectionById.get(discussion.discussionId);
+    if (!section) continue;
+
+    const mappedSubjectIds = (
+      subjectIdsByFacultyId.get(discussion.createdBy ?? -1) ?? []
+    ).filter((subjectId) => scope.subjectIds.includes(subjectId));
+
+    const effectiveSubjectIds =
+      mappedSubjectIds.length === 1
+        ? mappedSubjectIds
+        : scope.subjectIds.length === 1
+          ? [scope.subjectIds[0]]
+          : [];
+
+    if (!effectiveSubjectIds.length) continue;
+
+    const upload = discussionUploadById.get(discussion.discussionId);
+    const obtainedMarks = upload?.marksObtained ?? 0;
+    const totalMarks = section.marks ?? 0;
+
+    for (const subjectId of effectiveSubjectIds) {
+      const stats = discussionScoresBySubject.get(subjectId) ?? {
+        obtained: 0,
+        total: 0,
+      };
+
+      stats.obtained += obtainedMarks;
+      stats.total += totalMarks;
+      discussionScoresBySubject.set(subjectId, stats);
+    }
+  }
 
   const discussions: DiscussionListItem[] = ((discussionsResult.data ?? []) as DiscussionForumRow[])
     .filter((discussion) => discussionSectionById.has(discussion.discussionId))
     .map((discussion) => {
       const section = discussionSectionById.get(discussion.discussionId);
+      const subjectNames = subjectNamesByFacultyId.get(discussion.createdBy ?? -1) ?? [];
       const upload = discussionUploadById.get(discussion.discussionId);
 
       return {
-        subject: discussionSubjectLabel,
+        subject:
+          subjectNames.length > 1
+            ? "Multiple Subjects"
+            : subjectNames[0] ?? "Unknown",
         task: discussion.title,
         dueDate: formatIsoDate(discussion.deadline),
         dueDateSortKey: discussion.deadline ?? discussion.createdAt ?? "",
@@ -851,32 +960,6 @@ export async function getFacultyStudentProgressDetails(
       };
     })
     .sort((a, b) => a.dueDateSortKey.localeCompare(b.dueDateSortKey));
-
-  const discussionScoresBySubject = new Map<number, { obtained: number; total: number }>();
-  const effectiveDiscussionSubjectIds =
-    scope.subjectIds.length === 1 ? [scope.subjectIds[0]] : [];
-
-  if (effectiveDiscussionSubjectIds.length) {
-    for (const discussion of (discussionsResult.data ?? []) as DiscussionForumRow[]) {
-      const section = discussionSectionById.get(discussion.discussionId);
-      if (!section) continue;
-
-      const upload = discussionUploadById.get(discussion.discussionId);
-      const obtainedMarks = upload?.marksObtained ?? 0;
-      const totalMarks = section.marks ?? 0;
-
-      for (const subjectId of effectiveDiscussionSubjectIds) {
-        const stats = discussionScoresBySubject.get(subjectId) ?? {
-          obtained: 0,
-          total: 0,
-        };
-
-        stats.obtained += obtainedMarks;
-        stats.total += totalMarks;
-        discussionScoresBySubject.set(subjectId, stats);
-      }
-    }
-  }
 
   const bestQuizById = new Map<number, number>();
   for (const submission of (quizSubmissionsResult.data ?? []) as QuizSubmissionRow[]) {
@@ -1030,7 +1113,7 @@ export async function getFacultyStudentProgressDetails(
   );
 
   return {
-    departmentLabel: scope.departmentLabel ?? "N/A",
+    departmentLabel: resolvedDepartmentLabel,
     yearLabel: getFirst(historyRow.college_academic_year)?.collegeAcademicYear ?? "N/A",
     sectionLabel: getFirst(historyRow.college_sections)?.collegeSections ?? "N/A",
     semesterLabel:
@@ -1040,7 +1123,7 @@ export async function getFacultyStudentProgressDetails(
         : "N/A",
     studentProfile: {
       name: user?.fullName ?? "Unknown Student",
-      department: scope.departmentLabel ?? "N/A",
+      department: resolvedDepartmentLabel,
       studentId: pinRow.pinNumber,
       phone: user?.mobile ?? "N/A",
       email: user?.email ?? "N/A",
@@ -1048,9 +1131,9 @@ export async function getFacultyStudentProgressDetails(
       photo:
         studentProfileUrl ||
         (user?.gender?.toLowerCase() === "female" ? "/student-f.png" : "/maleuser.png"),
-      attendanceDays,
-      absentDays,
-      leaveDays,
+      attendancePercentage,
+      absentPercentage,
+      leavePercentage,
     },
     parents,
     attendancePercentage,

@@ -227,6 +227,7 @@ export default function Page() {
   } = useFaculty();
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summary, setSummary] = useState<StudentProgressSummary>(defaultSummary);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -282,6 +283,7 @@ export default function Page() {
 
         if (mounted) {
           setSummary(data);
+          setHasLoadedOnce(true);
         }
       } catch (error) {
         console.error("Failed to load faculty student progress summary", error);
@@ -353,6 +355,7 @@ export default function Page() {
   const topPerformers = useMemo(
     () =>
       [...summary.topPerformerRows]
+        .filter((student) => student.progressPercent > 0)
         .sort((a, b) => {
           if (b.progressPercent !== a.progressPercent) {
             return b.progressPercent - a.progressPercent;
@@ -375,7 +378,16 @@ export default function Page() {
     Math.ceil(summary.tableTotalCount / rowsPerPage),
   );
 
-  if (summaryLoading) {
+  const shouldShowSkeleton =
+    (facultyLoading && !hasLoadedOnce) ||
+    (summaryLoading &&
+      !hasLoadedOnce &&
+      summary.totalStudents === 0 &&
+      summary.tableTotalCount === 0 &&
+      summary.studentRows.length === 0 &&
+      summary.topPerformerRows.length === 0);
+
+  if (shouldShowSkeleton) {
     return <StudentProgressPageSkeleton />;
   }
 
@@ -440,28 +452,21 @@ export default function Page() {
           </div>
       </div>
 
-      <article className="grid lg:grid-cols-4 mb-4 gap-4 justify-center items-center">
-        {cardData.map((item, index) => (
-          // <CardComponent
-          //   key={index}
-          //   value={item.value}
-          //   label={item.label}
-          //   bgColor={item.bgColor}
-          //   icon={item.icon}
-          //   iconBgColor={item.iconBgColor}
-          //   iconColor={item.iconColor}
-          // />
-
-          <CardComponent
-            key={index}
-            value={item.value}
-            label={item.label}
-            icon={item.icon}
-            style={item.style}
-            iconBgColor={item.iconBgColor}
-            iconColor={item.iconColor}
-          />
-        ))}
+      <article className="mb-4 grid items-start gap-2 lg:grid-cols-[68%_32%]">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {cardData.map((item, index) => (
+            <div key={index} className="flex">
+              <CardComponent
+                value={item.value}
+                label={item.label}
+                icon={item.icon}
+                style={item.style}
+                iconBgColor={item.iconBgColor}
+                iconColor={item.iconColor}
+              />
+            </div>
+          ))}
+        </div>
         <div className="-mt-5">
           <WorkWeekCalendar />
         </div>

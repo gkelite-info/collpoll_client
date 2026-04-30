@@ -27,7 +27,10 @@ type AcademicJoin = {
     };
     college_sections: {
         collegeSections: string;
-    }
+    };
+    college_semester: {
+        collegeSemester: string | number;
+    } | null;
 };
 
 
@@ -59,7 +62,7 @@ export async function fetchStudentContext(userId: number) {
 
     const { data: academic, error: academicErr } = await supabase
         .from("student_academic_history")
-        .select(`
+    .select(`
     studentAcademicHistoryId,
     collegeAcademicYearId,
     collegeSemesterId,
@@ -71,6 +74,10 @@ export async function fetchStudentContext(userId: number) {
 
     college_sections:collegeSectionsId (
     collegeSections
+    ),
+
+    college_semester:collegeSemesterId (
+      collegeSemester
     )
 
   `)
@@ -95,6 +102,7 @@ export async function fetchStudentContext(userId: number) {
 
         collegeAcademicYearId: academic.collegeAcademicYearId,
         collegeSemesterId: academic.collegeSemesterId ?? null,
+        collegeSemester: academic.college_semester?.collegeSemester ?? null,
         collegeSectionsId: academic.collegeSectionsId ?? null,
 
         collegeSections: academic.college_sections?.collegeSections ?? null,

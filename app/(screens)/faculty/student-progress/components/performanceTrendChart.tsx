@@ -29,12 +29,12 @@ export default function PerformanceTrendChart({
   const chartData = data.length ? data : [{ month: "N/A", value: 0 }];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 w-full font-sans">
-      <h2 className="text-lg font-bold mb-4 text-[#282828]">
+    <div className="w-full rounded-xl bg-white p-4 font-sans shadow-sm">
+      <h2 className="mb-4 text-lg font-bold text-[#282828]">
         Performance Trend
       </h2>
 
-      <div className="w-full h-[300px]">
+      <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
@@ -95,24 +95,13 @@ export default function PerformanceTrendChart({
                     typeof value === "number" ? value : Number(value ?? 0);
 
                   if (!numericValue) {
-                    return (
-                      <text
-                        x={x + width / 2}
-                        y={286}
-                        textAnchor="middle"
-                        fill="#6DB951"
-                        fontSize={11}
-                        fontWeight="800"
-                      >
-                        0%
-                      </text>
-                    );
+                    return null;
                   }
 
                   const r = width > 30 ? 16 : 12;
                   const fontSize = width > 30 ? 11 : 9;
-                  const centerY = y + r * 1.5;
                   const centerX = x + width / 2;
+                  const centerY = Math.max(y - r - 6, 18);
 
                   return (
                     <g>

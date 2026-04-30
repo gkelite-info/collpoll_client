@@ -15,21 +15,36 @@ import {
   LabelList,
 } from "recharts";
 
+type AcademicPerformanceDatum = {
+  subject: string;
+  value: number;
+  full: number;
+};
+
 export default function AcademicPerformance({
   studentId,
+  data: externalData,
 }: {
   studentId: number | null;
+  data?: AcademicPerformanceDatum[];
 }) {
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<AcademicPerformanceDatum[]>(
+    externalData ?? [],
+  );
+  const [loading, setLoading] = useState(!externalData);
 
   const t = useTranslations("Dashboard.student");
 
   useEffect(() => {
+    if (externalData) {
+      setData(externalData);
+      setLoading(false);
+      return;
+    }
+
     async function loadData() {
       try {
         const performance = await getStudentAcademicPerformance(studentId);
-
         setData(performance);
       } catch (error) {
         toast.error("Failed to load performance");
@@ -37,8 +52,9 @@ export default function AcademicPerformance({
         setLoading(false);
       }
     }
+
     loadData();
-  }, [studentId]);
+  }, [studentId, externalData]);
 
   if (loading) {
     return (
