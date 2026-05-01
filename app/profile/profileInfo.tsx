@@ -178,7 +178,6 @@ export default function ProfileInfo() {
           setOriginalPhotoUrl(data.profileUrl);
         }
       } catch (error) {
-        // console.error("Failed to load profile photo:", error);
         toast.error("Failed to load profile photo", { id: "profile-photo-error" })
       } finally {
         setIsInitialLoading(false);
@@ -194,42 +193,6 @@ export default function ProfileInfo() {
       }
     };
   }, [profileData.profilePhoto]);
-
-  // const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-  //   const file = event.target.files?.[0];
-  //   if (!file) return;
-
-  //   if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-  //     toast.error("Only JPG, PNG, WEBP images allowed");
-  //     event.target.value = "";
-  //     return;
-  //   }
-
-  //   if (file.size > MAX_FILE_SIZE) {
-  //     toast.error("Image must be less than 5MB");
-  //     event.target.value = "";
-  //     return;
-  //   }
-
-  //   setPhotoLoading(true);
-  //   try {
-  //     const reader = new FileReader();
-  //     reader.onloadend = () => {
-  //       const base64String = reader.result as string;
-  //       setProfileData((prev) => ({ ...prev, profilePhoto: base64String }));
-  //       setIsPhotoChanged(true);
-  //       if (fileInputRef.current) {
-  //         fileInputRef.current.value = "";
-  //       }
-  //     };
-  //     reader.readAsDataURL(file);
-  //   } catch (error) {
-  //     toast.error("Failed to preview photo");
-  //     event.target.value = "";
-  //   } finally {
-  //     setPhotoLoading(false);
-  //   }
-  // };
 
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -250,27 +213,23 @@ export default function ProfileInfo() {
     setPhotoLoading(true);
     try {
       let fileToUpload = file;
-      const compressionThreshold = 500 * 1024; // 500KB
-
-      // [ADDED] Only compress if file is larger than 500KB
-      if (file.size > compressionThreshold) {
         try {
           const options = {
-            maxSizeMB: 0.5,
+            maxSizeMB: 0.3,
             maxWidthOrHeight: 1080,
             useWebWorker: true,
-            fileType: file.type,
+            fileType: "image/webp",
             initialQuality: 0.85
           };
           const compressedBlob = await imageCompression(file, options);
-          fileToUpload = new File([compressedBlob], file.name, {
-            type: file.type,
+          const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
+          fileToUpload = new File([compressedBlob], newFileName, {
+            type: "image/webp",
             lastModified: Date.now(),
           });
         } catch (error) {
           console.error("Compression failed, using original.");
         }
-      }
 
       if (fileToUpload.size > 1 * 1024 * 1024) {
         toast.error("Image could not be compressed enough. Please use a smaller file.");
@@ -296,7 +255,6 @@ export default function ProfileInfo() {
     if (!userId) return;
     setPhotoLoading(true);
     try {
-      // await deleteUserProfilePhoto(Number(userId));
       await deleteUserProfilePhoto(Number(userId), originalPhotoUrl);
       setProfileData((prev) => ({ ...prev, profilePhoto: null }));
       setIsPhotoChanged(false);
@@ -325,12 +283,6 @@ export default function ProfileInfo() {
         toast.error("Please upload a profile photo before saving");
         return;
       }
-
-      // if (isPhotoChanged && profileData.profilePhoto && userId) {
-      //   await upsertUserProfilePhoto(Number(userId), profileData.profilePhoto);
-      //   setProfilePhoto(profileData.profilePhoto);
-      //   setIsPhotoChanged(false);
-      // }
 
       if (isPhotoChanged && userId) {
         const fileOrString = selectedFile ? selectedFile : profileData.profilePhoto;

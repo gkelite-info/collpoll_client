@@ -58,22 +58,21 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                 return;
             }
             let fileToUpload = file;
-            const compressionThreshold = 500 * 1024; // 500KB
-            const needsCompression = file.size > compressionThreshold;
-            if (file.type !== 'image/svg+xml' && needsCompression) {
+            if (file.type !== 'image/svg+xml') {
                 try {
                     const options = {
                         maxSizeMB: 0.5,
                         maxWidthOrHeight: 1080,
                         useWebWorker: true,
-                        fileType: file.type,
+                        fileType: "image/webp",
                         initialQuality: 0.85
                     };
 
                     const compressedBlob = await imageCompression(file, options);
+                    const newFileName = file.name.replace(/\.[^/.]+$/, "") + ".webp";
 
-                    fileToUpload = new File([compressedBlob], file.name, {
-                        type: file.type,
+                    fileToUpload = new File([compressedBlob], newFileName, {
+                        type: "image/webp",
                         lastModified: Date.now(),
                     });
                 } catch (error) {

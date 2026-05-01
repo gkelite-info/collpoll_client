@@ -14,16 +14,32 @@ export async function getUserProfilePhoto(userId: number) {
   return data;
 }
 
-async function deleteImageByUrl(url: string) {
-  if (!url || !url.includes('/storage/v1/object/public/user_profiles/')) return;
+async function deleteImageByUrl(url: string, userId: number) {
+  if (!url) return;
   
   try {
-      const path = url.split('/public/user_profiles/')[1];
-      if (path) {
-          await supabase.storage.from("user_profiles").remove([path]);
+    const bucketName = "user_profiles";
+    const searchPath = `/public/${bucketName}/`;
+    
+    if (!url.includes(searchPath)) return;
+
+    let extractedPath = url.split(searchPath)[1]?.split('?')[0];
+    
+    if (extractedPath) {
+      const decodedPath = decodeURIComponent(extractedPath); 
+      if (!decodedPath.startsWith(`${userId}/`)) {
+        console.error("Security Violation: Attempted to delete another user's file.");
+        return;
       }
+      
+      const { error } = await supabase.storage.from(bucketName).remove([decodedPath]);
+      
+      if (error) {
+        console.error("Failed to delete old image from Supabase:", error.message);
+      }
+    }
   } catch (e) {
-      console.error("Cleanup failed", e);
+    console.error("Cleanup function error:", e);
   }
 }
 
@@ -76,23 +92,20 @@ export async function upsertUserProfilePhoto(userId: number, file: File | string
 
     if (error) throw error;
 
-    // SaaS Cleanup: Delete old bucket image if a new physical file was uploaded
     if (file instanceof File && oldProfileUrl && oldProfileUrl !== finalUrl) {
-      await deleteImageByUrl(oldProfileUrl);
+      await deleteImageByUrl(oldProfileUrl, userId);
     }
 
     return { data, publicUrl: finalUrl };
     
   } catch (error) {
-    // SaaS Rollback: If DB insert fails, wipe the newly uploaded file to prevent orphan files
     if (file instanceof File && finalUrl && finalUrl !== oldProfileUrl) {
-      await deleteImageByUrl(finalUrl);
+      await deleteImageByUrl(finalUrl, userId);
     }
     throw error;
   }
 }
 
-// [CHANGED] Replaces your existing deleteUserProfilePhoto
 export async function deleteUserProfilePhoto(userId: number, currentProfileUrl: string | null) {
   const { error } = await supabase
     .from("user_profile")
@@ -102,44 +115,7 @@ export async function deleteUserProfilePhoto(userId: number, currentProfileUrl: 
 
   if (error) throw error;
 
-  // Cleanup storage bucket to save space
   if (currentProfileUrl) {
-     await deleteImageByUrl(currentProfileUrl);
+     await deleteImageByUrl(currentProfileUrl, userId);
   }
 }
-
-// export async function upsertUserProfilePhoto(userId: number, profileUrl: string) {
-//   const { data, error } = await supabase
-//     .from("user_profile")
-//     .upsert(
-//       {
-//         userId,
-//         profileUrl,
-//         updatedAt: now(),
-//         createdAt: now(),
-//         is_deleted: false,
-//       },
-//       {
-//         onConflict: "userId",
-//       }
-//     )
-//     .select("userProfileId")
-//     .single();
-
-//   if (error) throw error;
-//   return data;
-// }
-
-// export async function deleteUserProfilePhoto(userId: number) {
-//   const { error } = await supabase
-//     .from("user_profile")
-//     .update({
-//       is_deleted: true,
-//       deletedAt: now(),
-//     })
-//     .eq("userId", userId)
-//     .eq("is_deleted", false);
-
-//   if (error) throw error;
-// }
-
