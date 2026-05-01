@@ -44,6 +44,7 @@ export const Avatar = ({ src, alt, size = 56 }: AvatarProps) => {
         className="w-full h-full object-cover"
         loading="lazy"
         onError={() => setError(true)}
+        unoptimized={true}
       />
     </div>
   );
