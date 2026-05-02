@@ -43,9 +43,11 @@ export default function CreateFee() {
 
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
 
+  // For Academic Tab
   const [sessionStart, setSessionStart] = useState("");
   const [sessionEnd, setSessionEnd] = useState("");
 
+  // For Additional Tab
   const [availableSessions, setAvailableSessions] = useState<any[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
 
@@ -242,9 +244,7 @@ export default function CreateFee() {
             }
           });
 
-          if (!gstCalculated) {
-            setGstValue("0");
-          }
+          if (!gstCalculated) setGstValue("0");
 
           setFeeValues(newFeeValues);
           setCustomFees(newCustomFees);
@@ -362,7 +362,6 @@ export default function CreateFee() {
       return toast.error("Please enter valid 4-digit years for the session.");
     if (Number(sessionStart) > Number(sessionEnd))
       return toast.error("Start year cannot be greater than end year.");
-
     if (!gstValue || gstValue.trim() === "")
       return toast.error(
         "GST percentage is mandatory. Enter 0 if not applicable.",
@@ -393,7 +392,6 @@ export default function CreateFee() {
     setIsSaving(true);
 
     try {
-      // 🟢 PASS totalFee TO THE HELPER HERE
       const {
         success: sessionSuccess,
         collegeSessionId,
@@ -603,6 +601,7 @@ export default function CreateFee() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           >
+            {/* Modal Content - Unchanged */}
             <motion.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
@@ -694,11 +693,7 @@ export default function CreateFee() {
                   <motion.div
                     layoutId="active-tab-pill"
                     className={`absolute inset-0 rounded-full -z-10 ${tab === "academic" ? "bg-[#58AE77]" : "bg-[#58AE77]"}`}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 30,
-                    }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
               </button>
@@ -769,8 +764,7 @@ export default function CreateFee() {
                         e.target.value.replace(/\D/g, "").slice(0, 4),
                       )
                     }
-                    className={`w-1/2 border border-[#C4C4C4] p-2 rounded-md text-[#898989] focus:outline-none 
-                           ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                    className={`w-1/2 border border-[#C4C4C4] p-2 rounded-md text-[#898989] focus:outline-none ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
                     disabled={!selectedBranch}
                   />
                   <span className="text-gray-400 font-bold">-</span>
@@ -783,8 +777,7 @@ export default function CreateFee() {
                         e.target.value.replace(/\D/g, "").slice(0, 4),
                       )
                     }
-                    className={`w-1/2 border border-[#C4C4C4] p-2 rounded-md text-[#898989] focus:outline-none 
-                           ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                    className={`w-1/2 border border-[#C4C4C4] p-2 rounded-md text-[#898989] focus:outline-none ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
                     disabled={!selectedBranch}
                   />
                 </div>
@@ -792,8 +785,7 @@ export default function CreateFee() {
                 <select
                   value={selectedSessionId}
                   onChange={(e) => setSelectedSessionId(e.target.value)}
-                  className={`border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989] 
-                      ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                  className={`border border-[#C4C4C4] focus:outline-none mt-2 rounded-md p-2 text-[#898989] ${!selectedBranch ? "bg-gray-100 cursor-not-allowed" : ""}`}
                   disabled={!selectedBranch}
                 >
                   <option value="">Select Academic Session</option>
@@ -810,13 +802,15 @@ export default function CreateFee() {
             </div>
           </div>
 
+          {/* TAB 1: ACADEMIC FEES */}
           <div
             className={`w-full transition-opacity duration-300 ${activeTab === "academic" ? "block" : "hidden"}`}
           >
             <div className="flex flex-col w-full mt-4">
               <div className="bg-blue-00 flex justify-between items-center w-full">
                 <h4 className="text-[#282828] font-medium text-lg">
-                  Fee Components <span className="text-red-500 text-sm">*</span>
+                  Standard Semester Fee Components{" "}
+                  <span className="text-red-500 text-sm">*</span>
                 </h4>
                 <div className="bg-blue-00 flex items-center justify-end gap-2 w-1/2">
                   {!showCreateBox ? (
@@ -864,7 +858,7 @@ export default function CreateFee() {
                         >
                           {showMiscFee ? "✓ " : ""} Miscellaneous Fee
                         </option>
-                        {(createdFeeOptions || []).map((fee) => {
+                        {createdFeeOptions.map((fee) => {
                           const isActive = customFees.find(
                             (f) => f.id === fee.id,
                           );
@@ -1142,7 +1136,10 @@ export default function CreateFee() {
                 </div>
                 <div className="bg-red-00 w-full mt-5">
                   <div className="flex items-center gap-3">
-                    <h4 className="text-[#16284F] font-bold">Total Fee:</h4>
+                    {/* 🔥 UPDATED LABEL */}
+                    <h4 className="text-[#16284F] font-bold">
+                      Total Per-Semester Fee:
+                    </h4>
                     <div className="p-1 px-4 border border-[#919191] rounded-md">
                       <p className="text-[#23B362] font-bold text-md">
                         ₹ {totalFee.toLocaleString("en-IN")}
@@ -1154,11 +1151,7 @@ export default function CreateFee() {
                   <button
                     onClick={handleSaveFeeStructure}
                     disabled={isSaving}
-                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${
-                      isSaving
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-[#58AE77] hover:bg-[#469160]"
-                    }`}
+                    className={`px-5 py-2 font-medium text-[#EFEFEF] rounded-md cursor-pointer transition-colors ${isSaving ? "bg-gray-400 cursor-not-allowed" : "bg-[#58AE77] hover:bg-[#469160]"}`}
                   >
                     {isSaving ? "Saving..." : "Save fee structure"}
                   </button>
@@ -1301,13 +1294,8 @@ export default function CreateFee() {
                   <div className="w-full flex items-center justify-center mt-8 pb-4">
                     <button
                       onClick={handleSaveAdditionalDues}
-                      disabled={isSaving}
-                      className={`px-8 py-3 text-lg font-medium cursor-pointer text-white rounded-md transition-colors shadow-sm
-                        ${
-                          isSaving
-                            ? "bg-gray-300 cursor-not-allowed"
-                            : "bg-[#58AE77] hover:bg-[#469160]"
-                        }`}
+                      disabled={additionalDuesList.length === 0 || isSaving}
+                      className={`px-8 py-3 text-lg font-medium cursor-pointer text-white rounded-md transition-colors shadow-sm ${additionalDuesList.length === 0 || isSaving ? "bg-gray-300 cursor-not-allowed" : "bg-[#58AE77] hover:bg-[#469160]"}`}
                     >
                       {isSaving ? "Saving..." : "Save additional due"}
                     </button>

@@ -15,7 +15,6 @@ export type CollegeFeeStructureRow = {
 
 export async function fetchAllFeeStructures(collegeId: number) {
   try {
-    // 1. Fetch structures
     const { data: structures, error: structError } = await supabase
       .from("college_fee_structure")
       .select(
@@ -32,7 +31,6 @@ export async function fetchAllFeeStructures(collegeId: number) {
     if (structError) throw structError;
     if (!structures || structures.length === 0) return [];
 
-    // 2. Fetch components
     const structureIds = structures.map((s) => s.feeStructureId);
     const { data: components, error: compError } = await supabase
       .from("college_fee_components")
@@ -42,7 +40,6 @@ export async function fetchAllFeeStructures(collegeId: number) {
 
     if (compError) throw compError;
 
-    // 3. Merge
     return structures.map((struct) => {
       const myComps =
         components?.filter((c) => c.feeStructureId === struct.feeStructureId) ||
@@ -53,7 +50,6 @@ export async function fetchAllFeeStructures(collegeId: number) {
         0,
       );
 
-      // 🔥 FIX: Helper to safely get object from Array or Object
       const getJoinedData = (data: any) =>
         Array.isArray(data) ? data[0] : data;
 
@@ -65,12 +61,10 @@ export async function fetchAllFeeStructures(collegeId: number) {
         branchName: branchData?.collegeBranchCode || "Unknown Branch",
         branchId: branchData?.collegeBranchId,
 
-        // 🔥 FIX: Use the extracted object to get sessionName
         sessionName: sessionData?.sessionName || "Unknown Session",
         sessionId: sessionData?.collegeSessionId,
 
         components: myComps.map((c) => {
-          // Handle joined fee type master safely too
           const typeData = getJoinedData(c.fee_type_master);
           return {
             label: typeData?.feeTypeName,
@@ -92,7 +86,7 @@ export async function saveCollegeFeeStructure(
     collegeId: number;
     collegeEducationId: number;
     collegeBranchId: number;
-    collegeSessionId: number; // Changed from AcademicYearId
+    collegeSessionId: number;
     dueDate: string;
     lateFeePerDay: number;
     remarks?: string;
@@ -101,7 +95,6 @@ export async function saveCollegeFeeStructure(
 ) {
   const now = new Date().toISOString();
 
-  // Check existing using Session Match
   const { data: existing } = await supabase
     .from("college_fee_structure")
     .select("createdAt")
@@ -121,18 +114,15 @@ export async function saveCollegeFeeStructure(
         collegeEducationId: payload.collegeEducationId,
         collegeBranchId: payload.collegeBranchId,
         collegeSessionId: payload.collegeSessionId,
-
         dueDate: payload.dueDate,
         lateFeePerDay: payload.lateFeePerDay,
         remarks: payload.remarks || null,
-
         createdBy: financeManagerId,
         isActive: true,
         updatedAt: now,
         createdAt: existing?.createdAt || now,
       },
       {
-        // Ensure your DB unique index covers these 4 columns
         onConflict:
           "collegeId,collegeEducationId,collegeBranchId,collegeSessionId",
       },
