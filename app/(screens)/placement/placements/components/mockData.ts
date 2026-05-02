@@ -37,6 +37,7 @@ export type PlacementCompany = {
   collegeAcademicYearId?: number;
   academicYear?: string;
   createdBy?: number;
+  createdAt?: string;
   placementCompanyIds?: number[];
   studentsPlaced: number;
   locations: string[];

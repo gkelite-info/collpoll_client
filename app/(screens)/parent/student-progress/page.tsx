@@ -181,7 +181,7 @@ const Page = () => {
           </div>
 
           <div className="flex w-[32%] justify-end">
-            <CourseScheduleCard style="w-[320px]" />
+            <CourseScheduleCard style="w-[320px]" isVisibile={false} />
           </div>
 
           <div

@@ -50,6 +50,44 @@ type AcademicYearRow = {
   collegeAcademicYear: string | null;
 };
 
+type PlacementSortOption =
+  | "Recently Uploaded"
+  | "Oldest First"
+  | "Company Name A-Z"
+  | "Company Name Z-A"
+  | "CTC (High to Low)"
+  | "CTC (Low to High)";
+
+type PlacementStatusOption = "All" | "Open" | "Completed";
+
+type PlacementCompanyFilters = {
+  cycle?: string;
+  branchName?: string;
+  status?: PlacementStatusOption;
+  sortBy?: PlacementSortOption;
+};
+
+type PlacementCompanyBaseParams = PlacementCompanyFilters & {
+  collegeId: number;
+  placementOfficerId?: number | null;
+  includeExpired?: boolean;
+};
+
+type PlacementCompanyPaginatedParams = PlacementCompanyBaseParams & {
+  page: number;
+  pageSize: number;
+};
+
+type PlacementCompanyUnpaginatedParams = PlacementCompanyBaseParams & {
+  page?: undefined;
+  pageSize?: undefined;
+};
+
+type PlacementCompanyPaginatedResult = {
+  data: PlacementCompany[];
+  totalCount: number;
+};
+
 function formatEnumLabel(value: string) {
   return value
     .replace(/([a-z])([A-Z])/g, "$1 $2")
@@ -259,6 +297,7 @@ function mapRowsToCompanies(
       collegeAcademicYearId: row.collegeAcademicYearId,
       academicYear: academicYearMap.get(row.collegeAcademicYearId) || undefined,
       createdBy: row.createdBy,
+      createdAt: row.createdAt,
       placementCompanyIds: [row.placementCompanyId],
       studentsPlaced: 0,
       locations,
@@ -273,15 +312,23 @@ function mapRowsToCompanies(
   return Array.from(groupedCompanies.values());
 }
 
+export async function getPlacementCompanies(
+  params: PlacementCompanyPaginatedParams,
+): Promise<PlacementCompanyPaginatedResult>;
+export async function getPlacementCompanies(
+  params: PlacementCompanyUnpaginatedParams,
+): Promise<PlacementCompany[]>;
 export async function getPlacementCompanies({
   collegeId,
   placementOfficerId,
   includeExpired = false,
-}: {
-  collegeId: number;
-  placementOfficerId?: number | null;
-  includeExpired?: boolean;
-}) {
+  page,
+  pageSize,
+  cycle,
+  branchName,
+  status,
+  sortBy,
+}: PlacementCompanyPaginatedParams | PlacementCompanyUnpaginatedParams) {
   const today = getTodayDateString();
   const now = new Date().toISOString();
 
@@ -306,23 +353,88 @@ export async function getPlacementCompanies({
     console.error("Failed to auto delete expired placement companies:", expireError);
   }
 
+  let branchIdsForFilter: number[] = [];
+
+  if (branchName && branchName !== "All") {
+    const { data: branchRows, error: branchError } = await supabase
+      .from("college_branch")
+      .select("collegeBranchId")
+      .or(`collegeBranchCode.eq.${branchName},collegeBranchType.eq.${branchName}`);
+
+    if (branchError) {
+      console.error("Failed to fetch placement branch filter:", branchError);
+      throw branchError;
+    }
+
+    branchIdsForFilter = ((branchRows ?? []) as Pick<BranchRow, "collegeBranchId">[]).map(
+      (branch) => branch.collegeBranchId,
+    );
+  }
+
   let query = supabase
     .from("placement_companies")
     .select(
       "placementCompanyId,companyName,companyEmail,companyPhone,companyJobDescription,companyWebsite,jobRoleOffered,requiredSkills,jobType,workMode,location,annualPackage,driveType,companyLogo,companyCertificate,startDate,endDate,eligibilityCriteria,collegeId,collegeBranchId,collegeAcademicYearId,createdBy,is_deleted,createdAt",
+      { count: "exact" },
     )
-    .eq("collegeId", collegeId)
-    .order("createdAt", { ascending: false });
+    .eq("collegeId", collegeId);
 
   if (!includeExpired) {
     query = query.eq("is_deleted", false);
+  } else if (!status || status === "All") {
+    query = query.or(`is_deleted.eq.false,endDate.lt.${today}`);
+  }
+
+  if (status === "Open") {
+    query = query.eq("is_deleted", false).gte("endDate", today);
+  } else if (status === "Completed") {
+    query = query.lt("endDate", today);
+  }
+
+  if (cycle) {
+    query = query.gte("startDate", `${cycle}-01-01`).lte("startDate", `${cycle}-12-31`);
+  }
+
+  if (branchName && branchName !== "All") {
+    if (branchIdsForFilter.length === 0) {
+      return page && pageSize ? { data: [], totalCount: 0 } : [];
+    }
+
+    query = query.in("collegeBranchId", branchIdsForFilter);
   }
 
   if (placementOfficerId) {
     query = query.eq("createdBy", placementOfficerId);
   }
 
-  const { data, error } = await query;
+  switch (sortBy) {
+    case "Oldest First":
+      query = query.order("createdAt", { ascending: true });
+      break;
+    case "Company Name A-Z":
+      query = query.order("companyName", { ascending: true });
+      break;
+    case "Company Name Z-A":
+      query = query.order("companyName", { ascending: false });
+      break;
+    case "CTC (High to Low)":
+      query = query.order("annualPackage", { ascending: false });
+      break;
+    case "CTC (Low to High)":
+      query = query.order("annualPackage", { ascending: true });
+      break;
+    case "Recently Uploaded":
+    default:
+      query = query.order("createdAt", { ascending: false });
+      break;
+  }
+
+  if (page && pageSize) {
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error("Failed to fetch placement companies:", error);
@@ -353,5 +465,14 @@ export async function getPlacementCompanies({
     getAcademicYearMap(academicYearIds),
   ]);
 
-  return mapRowsToCompanies(rows, branchInfoMap, educationMap, academicYearMap);
+  const companies = mapRowsToCompanies(rows, branchInfoMap, educationMap, academicYearMap);
+
+  if (page && pageSize) {
+    return {
+      data: companies,
+      totalCount: count ?? companies.length,
+    };
+  }
+
+  return companies;
 }
