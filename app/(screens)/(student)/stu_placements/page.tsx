@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { X } from "@phosphor-icons/react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
@@ -11,6 +11,7 @@ import { PlacementFilterBar, PlacementFilterBarProps } from "./filterBar";
 import AssignmentsRight from "./aside";
 import { fetchStudentPlacementCompanies, StudentPlacementCompany } from "@/lib/helpers/student/placements/getStudentPlacementCompanies";
 import { applyForStudentPlacement, fetchStudentPlacementApplications, mapApplicationToAppliedPlacement, withdrawStudentPlacementApplication } from "@/lib/helpers/student/placements/studentPlacementApplications";
+import { fetchStudentPlacementFilterOptions } from "@/lib/helpers/placements/getPlacementFilterOptions";
 
 type TabType = "opportunities" | "applications";
 
@@ -54,6 +55,19 @@ function getClosingText(endDate?: string) {
 
 function getPlacementCycle(company: StudentPlacementCompany) {
   return company.startDate ? new Date(`${company.startDate}T00:00:00`).getFullYear().toString() : "";
+}
+
+function getPackageValue(packageDetails: string) {
+  const normalizedPackage = packageDetails.replace(/,/g, "").toLowerCase();
+  const rawAmount = Number(normalizedPackage.match(/[\d.]+/)?.[0] ?? 0);
+
+  if (Number.isNaN(rawAmount)) return 0;
+
+  const amount = normalizedPackage.includes("k") ? rawAmount * 1000 : rawAmount;
+
+  if (normalizedPackage.includes("month")) return (amount * 12) / 100000;
+
+  return amount;
 }
 
 function getAttachmentName(attachment: string) {
@@ -255,6 +269,96 @@ function ConfirmActionModal({
   );
 }
 
+function StudentPlacementCardShimmer() {
+  return (
+    <div className="grid w-full grid-cols-[15%_85%] items-start gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm md:px-6 md:py-4">
+      <div className="shrink-0">
+        <div className="h-16 w-28 animate-pulse rounded-lg bg-gray-200" />
+      </div>
+      <div className="min-w-0 flex-1 pr-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <div className="h-5 w-44 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-32 animate-pulse rounded bg-gray-100" />
+          </div>
+          <div className="h-7 w-20 animate-pulse rounded-md bg-gray-100" />
+        </div>
+        <div className="mt-3 h-3 w-16 animate-pulse rounded bg-gray-100" />
+        <div className="mt-3 flex gap-2 overflow-hidden">
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="h-7 w-24 shrink-0 animate-pulse rounded-full bg-gray-100"
+            />
+          ))}
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
+          <div className="h-3 w-5/6 animate-pulse rounded bg-gray-100" />
+        </div>
+        <div className="mt-4 flex gap-2 overflow-hidden">
+          {[0, 1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="h-7 w-28 shrink-0 animate-pulse rounded-full bg-gray-100"
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StudentPlacementListShimmer() {
+  return (
+    <>
+      {[0, 1, 2].map((item) => (
+        <StudentPlacementCardShimmer key={item} />
+      ))}
+    </>
+  );
+}
+
+function StudentPlacementHeaderShimmer() {
+  return (
+    <section className="mb-4 flex items-center justify-between">
+      <div className="space-y-2">
+        <div className="h-7 w-36 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-64 animate-pulse rounded bg-gray-100" />
+      </div>
+      <article className="flex w-[32%] shrink-0 justify-end">
+        <div className="h-[86px] w-[320px] animate-pulse rounded-xl bg-gray-200" />
+      </article>
+    </section>
+  );
+}
+
+function StudentPlacementControlsShimmer() {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-4">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="flex items-center gap-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
+            <div className="h-9 w-36 animate-pulse rounded-md bg-gray-200" />
+          </div>
+        ))}
+      </div>
+      <div className="h-4 w-48 animate-pulse rounded bg-gray-100" />
+    </div>
+  );
+}
+
+function StudentPlacementRightShimmer() {
+  return (
+    <div className="w-[32%] shrink-0 p-2 pt-0 pr-0">
+      <div className="mb-3 h-55 animate-pulse rounded-xl bg-gray-200" />
+      <div className="mb-3 h-55 animate-pulse rounded-xl bg-gray-200" />
+      <div className="h-90 animate-pulse rounded-xl bg-gray-200" />
+    </div>
+  );
+}
+
 export default function Page() {
   const {
     loading: studentLoading,
@@ -266,6 +370,10 @@ export default function Page() {
   } = useStudent();
   const [activeTab, setActiveTab] = useState<TabType>("opportunities");
   const [placements, setPlacements] = useState<StudentPlacementCompany[]>([]);
+  const [filterLoadingKey, setFilterLoadingKey] = useState<
+    "cycle" | "eligibility" | "sort" | null
+  >(null);
+  const [serverCycles, setServerCycles] = useState<string[]>([]);
   const [appliedPlacements, setAppliedPlacements] = useState<AppliedPlacement[]>([]);
   const [selectedPlacement, setSelectedPlacement] =
     useState<StudentPlacementCompany | null>(null);
@@ -326,6 +434,47 @@ export default function Page() {
     collegeAcademicYearId,
   ]);
 
+  const loadFilterOptions = useCallback(async (
+    loadingKey: "cycle" | "eligibility" | "sort",
+  ) => {
+    if (!collegeId || !collegeEducationId) return;
+
+    const startedAt = Date.now();
+    setFilterLoadingKey(loadingKey);
+    try {
+      const options = await fetchStudentPlacementFilterOptions({
+        collegeId,
+        collegeEducationId,
+      });
+      setServerCycles(options.cycles);
+    } catch (error) {
+      console.error("Failed to refresh student placement filter options:", error);
+    } finally {
+      const remainingDelay = 350 - (Date.now() - startedAt);
+      if (remainingDelay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remainingDelay));
+      }
+      setFilterLoadingKey(null);
+    }
+  }, [collegeEducationId, collegeId]);
+
+  const handleCycleChange = (value: string) => {
+    setCycle(value);
+    void loadFilterOptions("cycle");
+  };
+
+  const handleEligibilityChange = (
+    value: PlacementFilterBarProps["eligibility"],
+  ) => {
+    setEligibility(value);
+    void loadFilterOptions("eligibility");
+  };
+
+  const handleSortChange = (value: PlacementFilterBarProps["sortBy"]) => {
+    setSortBy(value);
+    void loadFilterOptions("sort");
+  };
+
   useEffect(() => {
     if (studentLoading) return;
 
@@ -368,18 +517,22 @@ export default function Page() {
         String(currentYear + 2),
       ]),
     );
-    const uniqueYears = Array.from(new Set([...defaultYears, ...startYears])).sort(
+    const uniqueYears = Array.from(new Set([...defaultYears, ...startYears, ...serverCycles])).sort(
       (a, b) => Number(b) - Number(a),
     );
 
     return uniqueYears;
-  }, [placements]);
+  }, [placements, serverCycles]);
 
   useEffect(() => {
+    const currentYear = String(new Date().getFullYear());
+
     if (!cycle && cycles.length > 0) {
-      setCycle(cycles[0]);
+      setCycle(cycles.includes(currentYear) ? currentYear : cycles[0]);
+    } else if (Number(cycle) > Number(currentYear)) {
+      setCycle(currentYear);
     } else if (cycle && !cycles.includes(cycle)) {
-      setCycle(cycles[0]);
+      setCycle(cycles.includes(currentYear) ? currentYear : cycles[0]);
     }
   }, [cycle, cycles]);
 
@@ -484,6 +637,10 @@ export default function Page() {
           return a.companyName.localeCompare(b.companyName);
         case "Company Name Z-A":
           return b.companyName.localeCompare(a.companyName);
+        case "CTC (High to Low)":
+          return getPackageValue(b.packageDetails) - getPackageValue(a.packageDetails);
+        case "CTC (Low to High)":
+          return getPackageValue(a.packageDetails) - getPackageValue(b.packageDetails);
         default:
           return 0;
       }
@@ -492,63 +649,79 @@ export default function Page() {
     return list;
   }, [activeTab, appliedByPlacementId, cycle, eligibility, placements, sortBy]);
 
+  const pageLoading = studentLoading || isLoading;
+  const filterRefreshing = filterLoadingKey !== null;
+
   return (
-    <main className="p-2 bg-red-00">
-      <section className="flex justify-between items-center mb-4">
-        <div>
-          <h1 className="text-black text-2xl font-semibold">Placements</h1>
-          <p className="text-black text-sm">
-            Track, Manage, and Maintain Student Placement Status
-          </p>
-        </div>
-
-        <article className="flex justify-end w-[32%]">
-          <CourseScheduleCard style="w-[320px]" />
-        </article>
-      </section>
-
-      <section className="bg-blue-00 flex justify-between gap-4">
-        <section className="bg-yellow-00 relative min-w-0 flex-1">
-          <PlacementFilterBar
-            cycle={cycle}
-            cycles={cycles}
-            eligibility={eligibility}
-            sortBy={sortBy}
-            onCycleChange={setCycle}
-            onEligibilityChange={setEligibility}
-            onSortChange={setSortBy}
-          />
-
-          <div className="mt-2 flex items-center gap-1 text-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab("opportunities")}
-              className={
-                activeTab === "opportunities"
-                  ? "text-[#43C17A] font-medium"
-                  : "text-black cursor-pointer"
-              }
-            >
-              Opportunities /
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("applications")}
-              className={
-                activeTab === "applications"
-                  ? "text-[#43C17A] font-medium"
-                  : "text-black cursor-pointer"
-              }
-            >
-              My Applications
-            </button>
+    <main className="flex h-screen flex-col overflow-hidden p-2 bg-red-00">
+      {pageLoading ? (
+        <StudentPlacementHeaderShimmer />
+      ) : (
+        <section className="mb-4 flex shrink-0 items-center justify-between">
+          <div>
+            <h1 className="text-black text-2xl font-semibold">Placements</h1>
+            <p className="text-black text-sm">
+              Track, Manage, and Maintain Student Placement Status
+            </p>
           </div>
 
-          <section className="mt-4 grid gap-4 bg-blue-00">
-            {isLoading ? (
-              <p className="py-16 text-center text-sm text-gray-500">
-                Loading placements...
-              </p>
+          <article className="flex w-[32%] shrink-0 justify-end">
+            <CourseScheduleCard style="w-[320px]" />
+          </article>
+        </section>
+      )}
+
+      <section className="bg-blue-00 flex min-h-0 flex-1 justify-between gap-1 overflow-hidden">
+        <section className="bg-yellow-00 relative flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0">
+            {pageLoading ? (
+              <StudentPlacementControlsShimmer />
+            ) : (
+              <>
+                <PlacementFilterBar
+                  cycle={cycle}
+                  cycles={cycles}
+                  eligibility={eligibility}
+                  sortBy={sortBy}
+                  isCycleLoading={filterLoadingKey === "cycle"}
+                  isEligibilityLoading={filterLoadingKey === "eligibility"}
+                  isSortLoading={filterLoadingKey === "sort"}
+                  onCycleChange={handleCycleChange}
+                  onEligibilityChange={handleEligibilityChange}
+                  onSortChange={handleSortChange}
+                />
+
+                <div className="mt-2 flex items-center gap-1 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("opportunities")}
+                    className={
+                      activeTab === "opportunities"
+                        ? "text-[#43C17A] font-medium"
+                        : "text-black cursor-pointer"
+                    }
+                  >
+                    Opportunities /
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("applications")}
+                    className={
+                      activeTab === "applications"
+                        ? "text-[#43C17A] font-medium"
+                        : "text-black cursor-pointer"
+                    }
+                  >
+                    My Applications
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <section className="mt-4 grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 pb-4 bg-blue-00">
+            {isLoading || filterRefreshing ? (
+              <StudentPlacementListShimmer />
             ) : visiblePlacements.length === 0 ? (
               <p className="py-16 text-center text-sm text-gray-500">
                 {activeTab === "applications"
@@ -589,7 +762,7 @@ export default function Page() {
           </section>
         </section>
 
-        <AssignmentsRight />
+        {pageLoading ? <StudentPlacementRightShimmer /> : <AssignmentsRight />}
       </section>
 
       {selectedPlacement && (

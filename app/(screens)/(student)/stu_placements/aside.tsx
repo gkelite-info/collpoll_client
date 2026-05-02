@@ -191,7 +191,7 @@ export default function AssignmentsRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 pt-0 pr-0 flex flex-col">
+      <div className="w-[32%] shrink-0 p-1 pt-0 pr-0 flex flex-col">
         <WorkWeekCalendar />
         <TaskPanel
           role="student"
