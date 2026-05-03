@@ -12,7 +12,7 @@ export function DashboardContent() {
 
   return (
     <main className="relative overflow-hidden flex w-full min-h-screen pb-4">
-      <WipOverlay fullHeight={true}/>
+      {/* <WipOverlay fullHeight={true}/> */}
       <DashLeft />
       <DashRight />
     </main>

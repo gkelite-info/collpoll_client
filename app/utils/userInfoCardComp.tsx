@@ -65,13 +65,12 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useUser } from "./context/UserContext";
 import { useStudent } from "./context/student/useStudent";
 import { useTranslations } from "next-intl";
 
 export default function UserInfoCard() {
-  const [today, setToday] = useState("");
   const {
     fullName,
     gender,
@@ -82,52 +81,62 @@ export default function UserInfoCard() {
   const { collegeAcademicYear } = useStudent();
   const t = useTranslations("Dashboard.student");
 
-  useEffect(() => {
-    const currentDate = new Date();
-    const day = String(currentDate.getDate()).padStart(2, "0");
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const year = currentDate.getFullYear();
-
-    setToday(`${day}/${month}/${year}`);
-  }, []);
+  const bgBanner = '/dashboard-banner-bg.png'
 
   return (
     <>
-      <div className="grid grid-cols-[50%_50%] justify-between items-center rounded-lg h-[170px] bg-[#DAEEE3]">
+      <div
+        //  className="grid grid-cols-[50%_50%] justify-between items-center rounded-lg h-[170px] bg-[#DAEEE3]"
+        className="w-full relative rounded-2xl h-[170px] shadow-sm"
+        style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
+      >
         <div className="flex flex-col justify-start p-3 gap-5 bg-yellow-00 rounded-l-lg h-[100%]">
-          <div className="flex items-center gap-3">
-            <p className="text-[#714EF2] text-sm font-medium">
-              {collegeEducationType && collegeBranchCode
-                ? `${collegeEducationType} ${collegeBranchCode}`
-                : "—"}{" "}
-              - {collegeAcademicYear ? `${collegeAcademicYear}` : "—"}
-            </p>
-            <p className="text-[#089144] text-sm font-medium">
-              {t("Student Id - ")}{" "}
-              <span className="text-[#282828] text-sm">{identifierId}</span>
-            </p>
+          <div className="flex flex-col gap-3 max-w-[65%] my-auto lg:pl-5">
+            <div className="flex items-center gap-3">
+              <p className="text-[#714EF2] text-sm font-medium">
+                {collegeEducationType && collegeBranchCode
+                  ? `${collegeEducationType} ${collegeBranchCode}`
+                  : "—"}{" "}
+                - {collegeAcademicYear ? `${collegeAcademicYear}` : "—"}
+              </p>
+              <p className="text-[#089144] text-sm font-medium">
+                {t("Student Id - ")}{" "}
+                <span className="text-[#282828] text-sm">{identifierId}</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <p className="text-md text-[#282828]">
+                {t("Welcome Back, ")}{" "}
+                <span className="text-[#089144] text-md font-medium">
+                  {fullName}
+                </span>
+              </p>
+            </div>
+            <div className="flex flex-col">
+              <p className="text-sm text-[#454545]">
+                {t("You’ve completed ")}{" "}
+                <span className="text-[#089144] font-semibold">0</span>{" "}
+                {t(" of your tasks")}
+              </p>
+              <p className="text-sm text-[#454545]">
+                {t("Keep up the great progress!")}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <p className="text-md text-[#282828]">
-              {t("Welcome Back, ")}{" "}
-              <span className="text-[#089144] text-md font-medium">
-                {fullName}
-              </span>
-            </p>
-          </div>
-          <div className="flex flex-col">
-            <p className="text-sm text-[#454545]">
-              {t("You’ve completed ")}{" "}
-              <span className="text-[#089144] font-semibold">0</span>{" "}
-              {t(" of your tasks")}
-            </p>
-            <p className="text-sm text-[#454545]">
-              {t("Keep up the great progress!")}
-            </p>
-          </div>
+          {gender &&
+            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+              <Image
+                src={gender === "Female" ? "/female-student.png" : "/male-student.png"}
+                alt="Avatar"
+                fill
+                className="object-contain object-bottom pointer-events-none"
+                priority
+              />
+            </div>
+          }
         </div>
 
-        <div className="bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
+        {/* <div className="bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center">
           {gender && (
             <img
               src={gender === "Female" ? "/student-f.png" : "/student-m.png"}
@@ -135,7 +144,7 @@ export default function UserInfoCard() {
               alt="Student"
             />
           )}
-        </div>
+        </div> */}
       </div>
     </>
   );

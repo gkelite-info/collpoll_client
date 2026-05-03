@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useUser } from "@/app/utils/context/UserContext";
+import Image from "next/image";
 
 type UserInfoCardProps = {
   show?: boolean;
@@ -21,19 +22,15 @@ type UserInfoProps = {
 };
 
 export function AdminInfoCard({ cardProps }: UserInfoProps) {
-  const [today, setToday] = useState("");
-
-  useEffect(() => {
-    const currentDate = new Date();
-    const day = String(currentDate.getDate()).padStart(2, "0");
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const year = currentDate.getFullYear();
-
-    setToday(`${day}/${month}/${year}`);
-  }, []);
+  const { gender } = useUser()
+  const bgBanner = '/dashboard-banner-bg.png'
+  const adminImage = gender && (gender === "Female" ? "/female-admin.png" : "/male-admin2.png");
 
   return (
-    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
+    <div
+      style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
+      className="w-full relative rounded-2xl h-[170px] shadow-sm"
+    >
       {cardProps.map((item, index) => (
         <div
           className=" z-10 flex h-full items-center justify-between px-8"
@@ -60,26 +57,28 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
               {!item.show && `${item.pendingApprovals} pending approvals`} */}
               Everything is clear at the moment.
             </p>
-            {/* <div className="bg-[#A3FFCB] text-[#007533] mb-3 px-2 py-1 rounded-lg w-25 font-semibold text-sm">
-              {today ? today : "Loading..."}
-            </div> */}
           </div>
 
-          <div className="w-[35%] h-full"></div>
+          {cardProps[0].image &&
+            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+              <Image
+                src={adminImage!}
+                alt="Avatar"
+                fill
+                className="object-contain object-bottom pointer-events-none"
+                priority
+              />
+            </div>
+          }
         </div>
       ))}
 
-      {cardProps.map((item, index) => (
+      {/* {cardProps.map((item, index) => (
         <div
           className="w-[40%] bg-pink-00 rounded-r-lg h-[100%] flex items-center justify-center"
           key={index}
         >
-          {/* <img
-            src={item.image}
-            alt="Admin"
-            //  style={{ height: `${item.imageHeight ?? 110}px` }}
-            className={`lg:relative left-95 ${item.top} z-10 h-[175px]`}
-          /> */}
+         
           {item.image && (
             <img
               src={item.image}
@@ -89,7 +88,9 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
           )}
 
         </div>
-      ))}
+      ))} */}
+
+
     </div>
   );
 }
