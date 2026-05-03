@@ -1,16 +1,19 @@
 "use client";
 
+import { useUser } from "@/app/utils/context/UserContext";
 import { UserInfoCard } from "./financerInfoCard";
 import DashboardPage from "./gridDashMain";
 
 export default function FinanceDashLeft() {
+  const {gender, fullName} = useUser();
+  const avatarImage = gender && gender === "Male" ? "/male-placement.png" : "/female-placement.png"
   const card = [
     {
       show: false,
-      user: "Placement Officer",
+      user: fullName!,
       partnerCompanies: 24,
       drives: 3,
-      image: "/placement-m.png",
+      image: avatarImage,
       top: "lg:top-[-173px]",
       imageHeight: "h-45",
       right: "right-30",

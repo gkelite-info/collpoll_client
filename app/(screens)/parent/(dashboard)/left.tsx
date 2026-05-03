@@ -94,14 +94,13 @@ const ParentDashboardShimmer = () => {
 };
 
 export default function ParentLeft() {
-  const { userId, fullName, gender, loading: userLoading, identifierId } = useUser();
+  const { userId, fullName, gender, loading: userLoading } = useUser();
 
   const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { studentId } = useParent();
 
-  const parentImage =
-    gender && (gender === "Male" ? "/parent-male.png" : "/parent-female.png");
+  const parentImage = gender && (gender === "Male" ? "/male-parent1.png" : "/female-parent.png");
 
   useEffect(() => {
     if (userLoading || !userId) return;

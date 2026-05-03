@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+
 
 export type UserInfoCardProps = {
   show?: boolean;
-  // user: string;
+  user: string;
   partnerCompanies: number;
   drives: number;
   image?: string;
@@ -19,21 +20,13 @@ type UserInfoProps = {
 };
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
-  const [today, setToday] = useState("");
-  const [dynamicTodayCollection, setDynamicTodayCollection] = useState(0);
 
-  useEffect(() => {
-    const currentDate = new Date();
-
-    const day = String(currentDate.getDate()).padStart(2, "0");
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const year = currentDate.getFullYear();
-
-    setToday(`${day}/${month}/${year}`);
-  }, []);
-
+  const bgBanner = '/dashboard-banner-bg.png'
   return (
-    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
+    <div
+      className="w-full relative rounded-2xl h-[170px] shadow-sm"
+      style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
+    >
       {cardProps.map((item, index) => (
         <div
           className="relative z-10 flex h-full items-center px-8"
@@ -43,7 +36,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             <p className="text-lg text-[#282828] leading-tight mt-3">
               Welcome Back, {""}
               <span className="text-lg font-semibold text-[#089144] leading-tight">
-                Placement Officer
+                {item.user}
               </span>
             </p>
 
@@ -62,14 +55,26 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             </p>
           </div>
 
-          {item.image && (
+          {/* {item.image && (
             <img
               src={item.image}
               alt="User"
               //   style={{ height: `${item.imageHeight ?? 150}px` }}
               className={`absolute ${item.right} ${item.imageHeight} bottom-0 z-10`}
             />
-          )}
+          )} */}
+
+          {item.image &&
+            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+              <Image
+                src={item.image}
+                alt="Avatar"
+                fill
+                className="object-contain object-bottom pointer-events-none"
+                priority
+              />
+            </div>
+          }
         </div>
       ))}
 
@@ -77,7 +82,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
         {/* <div className="bg-gradient-to-b from-[#C1FFDC] to-[#028039] text-white px-2 py-1 rounded-lg font-semibold text-sm tracking-wide">
           {today ? today : "Loading..."}
         </div> */}
-      </div>    
+      </div>
 
       <svg
         className="absolute right-0 bottom-0 z-0 h-full w-auto"

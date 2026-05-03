@@ -1,7 +1,7 @@
 "use client";
 
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export type UserInfoCardProps = {
   show?: boolean;
@@ -25,28 +25,21 @@ type UserInfoProps = {
 };
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
-  const [today, setToday] = useState("");
 
   const { faculty_subject } = useFaculty();
-
-  useEffect(() => {
-    const currentDate = new Date();
-
-    const day = String(currentDate.getDate()).padStart(2, "0");
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const year = currentDate.getFullYear();
-
-    setToday(`${day}/${month}/${year}`);
-  }, []);
+  const bgBanner = '/dashboard-banner-bg.png'
 
   return (
-    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px]  shadow-sm">
+    <div
+     className="w-full relative rounded-2xl h-[170px] shadow-sm"
+     style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
+     >
       {cardProps.map((item, index) => (
         <div
           className="relative z-10 grid grid-cols-[70%_30%] h-full items-center justify-between px-8"
           key={index}
         >
-          <div className="bg-blue-00 flex flex-col max-w-[90%] gap-2">
+          <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
               {item.show && "StudentID:"} {item.studentId}
               {item.show && ", "} {item.studentBranch}
@@ -93,13 +86,24 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             </p>
           </div>
 
-          {item.image && (
+          {/* {item.image && (
             <img
               src={item.image}
               alt="User"
               className="lg:relative lg:top-[-10] bg-green-00 z-50 h-[180px]"
             />
-          )}
+          )} */}
+          {cardProps[0].image &&
+            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+              <Image
+                src={cardProps[0].image}
+                alt="Avatar"
+                fill
+                className="object-contain object-bottom pointer-events-none"
+                priority
+              />
+            </div>
+          }
         </div>
       ))}
 

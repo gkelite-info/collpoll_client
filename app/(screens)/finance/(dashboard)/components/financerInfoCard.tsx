@@ -3,6 +3,7 @@
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getTodayCollectionSummary } from "@/lib/helpers/finance/dashboard/getTodayCollectionSummary";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export type UserInfoCardProps = {
@@ -21,21 +22,12 @@ type UserInfoProps = {
 };
 
 export function UserInfoCard({ cardProps }: UserInfoProps) {
-  const [today, setToday] = useState("");
+
   const [dynamicTodayCollection, setDynamicTodayCollection] = useState(0);
   const { collegeId, collegeEducationId, loading } = useFinanceManager();
+  const bgBanner = '/dashboard-banner-bg.png'
 
   const { fullName } = useUser();
-
-  useEffect(() => {
-    const currentDate = new Date();
-
-    const day = String(currentDate.getDate()).padStart(2, "0");
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const year = currentDate.getFullYear();
-
-    setToday(`${day}/${month}/${year}`);
-  }, []);
 
   useEffect(() => {
     const fetchTodayCollection = async () => {
@@ -57,7 +49,10 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   }, [loading, collegeId, collegeEducationId]);
 
   return (
-    <div className="w-full relative bg-[#DAEEE3] rounded-2xl h-[170px] shadow-sm">
+    <div
+      className="w-full relative rounded-2xl h-[170px] shadow-sm"
+      style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
+    >
       {cardProps.map((item, index) => (
         <div
           className="relative z-10 flex h-full items-center px-8"
@@ -84,14 +79,25 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             </p>
           </div>
 
-          {item.image && (
+          {/* {item.image && (
             <img
               src={item.image}
               alt="User"
               //   style={{ height: `${item.imageHeight ?? 150}px` }}
               className={`absolute ${item.right} ${item.imageHeight} bottom-0 z-10`}
             />
-          )}
+          )} */}
+          {item.image &&
+            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+              <Image
+                src={item.image}
+                alt="Avatar"
+                fill
+                className="object-contain object-bottom pointer-events-none"
+                priority
+              />
+            </div>
+          }
         </div>
       ))}
 

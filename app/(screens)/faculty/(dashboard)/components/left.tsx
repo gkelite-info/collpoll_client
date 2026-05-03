@@ -55,8 +55,7 @@ export default function FacultyDashLeft() {
     loadData();
   }, [userId, facultyId, userLoading, facultyLoading]);
 
-  const facultyImage =
-    gender && (gender === "Female" ? "/faculty-female.png" : "/faculty-male.png");
+  const facultyImage = gender && (gender === "Female" ? "/female-faculty.png" : "/male-faculty.png");
 
   const pad = (num: number) => num.toString().padStart(2, "0");
 

@@ -18,7 +18,6 @@ import PolicyManagement from "./policyManagement";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAdminDashboard } from "../../hooks/useAdminDashboard";
 import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
-import WipOverlay from "@/app/utils/WipOverlay";
 
 export default function AdminDashLeft({
   onPendingFull,
@@ -72,10 +71,6 @@ export default function AdminDashLeft({
     );
   }
 
-  // 3. Main Dashboard Rendering
-  const adminImage =
-    gender && (gender === "Female" ? "/admin-f.png" : "/admin-male.png");
-
   const cardData = [
     {
       id: "TOTAL_USERS",
@@ -106,6 +101,8 @@ export default function AdminDashLeft({
       label: "Automations",
     },
   ];
+
+  const adminImage = gender && (gender === "Female" ? "/admin-f.png" : "/male-admin1.png");
 
   const card = [
     {

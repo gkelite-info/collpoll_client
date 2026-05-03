@@ -13,8 +13,7 @@ export default function FinanceDashLeft() {
 
   const { gender } = useUser();
 
-  const financerImage =
-    gender && (gender === "Female" ? "/finance-fe.png" : "/financer-m.png");
+  const financerImage = gender && (gender === "Female" ? "/female-fe.png" : "/male-fe.png");
 
   const card = [
     {
