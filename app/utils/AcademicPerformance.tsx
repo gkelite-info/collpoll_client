@@ -21,6 +21,16 @@ type AcademicPerformanceDatum = {
   full: number;
 };
 
+type LabelContentProps = {
+  x?: number | string | null;
+  y?: number | string | null;
+  width?: number | string | null;
+  value?: number | string | null;
+};
+
+const toNumber = (value: number | string | null | undefined) =>
+  typeof value === "number" ? value : Number(value ?? 0);
+
 export default function AcademicPerformance({
   studentId,
   data: externalData,
@@ -46,7 +56,7 @@ export default function AcademicPerformance({
       try {
         const performance = await getStudentAcademicPerformance(studentId);
         setData(performance);
-      } catch (error) {
+      } catch {
         toast.error("Failed to load performance");
       } finally {
         setLoading(false);
@@ -58,8 +68,8 @@ export default function AcademicPerformance({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg h-80 flex items-center justify-center shadow-md">
-        <p className="text-gray-500 animate-pulse">
+      <div className="flex h-80 items-center justify-center rounded-lg bg-white shadow-md">
+        <p className="animate-pulse text-gray-500">
           {t("Calculating performance")}
         </p>
       </div>
@@ -67,12 +77,12 @@ export default function AcademicPerformance({
   }
 
   return (
-    <div className="bg-white relative overflow-hidden rounded-lg h-full shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
-      <h2 className="text-xl font-semibold mb-6 ml-3 text-[#282828]">
+    <div className="relative mx-auto h-full w-full max-w-6xl overflow-hidden rounded-lg bg-white px-2 pt-5 shadow-md">
+      <h2 className="mb-6 ml-3 text-xl font-semibold text-[#282828]">
         {t("Academic Performance")}
       </h2>
 
-      <div className="w-full h-80 bg-green-00">
+      <div className="h-80 w-full bg-green-00">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -90,7 +100,7 @@ export default function AcademicPerformance({
             <YAxis
               domain={[0, 100]}
               tick={{ fontSize: 12, fill: "#888" }}
-              tickFormatter={(v) => `${v}%`}
+              tickFormatter={(value) => `${value}%`}
             />
 
             <XAxis
@@ -129,65 +139,46 @@ export default function AcademicPerformance({
             />
 
             <Bar dataKey="value" barSize={50} radius={[10, 10, 10, 10]}>
-              {/* <LabelList
-                                dataKey="value"
-                                position="insideTop"
-                                content={(props: any) => {
-                                    const { x, y, width, value } = props;
-                                    return (
-                                        <g>
-                                            <circle
-                                                cx={x + width / 2}
-                                                cy={y + 25}
-                                                r={18}
-                                                fill="#E8F6E2"
-                                            />
-                                            <text
-                                                x={x + width / 2}
-                                                y={y + 30}
-                                                textAnchor="middle"
-                                                fill="#7CD24C"
-                                                fontSize={12}
-                                                fontWeight="bold"
-                                            >
-                                                {`${value}%`}
-                                            </text>
-                                        </g>
-                                    );
-                                }}
-                            /> */}
-
               <LabelList
                 dataKey="value"
-                content={({ x, y, width, height, value }: any) => {
+                content={(props) => {
+                  const { x, y, width, value } = props as LabelContentProps;
+                  const labelX = toNumber(x);
+                  const labelY = toNumber(y);
+                  const labelWidth = toNumber(width);
+                  const labelValue = toNumber(value);
                   const adjustedY =
-                    value === 0 ? y - 12 : value < 15 ? y + 2 : y + 12;
+                    labelValue === 0
+                      ? labelY - 12
+                      : labelValue < 15
+                        ? labelY + 2
+                        : labelY + 12;
 
                   return (
                     <g>
                       <circle
-                        cx={x + width / 2}
+                        cx={labelX + labelWidth / 2}
                         cy={adjustedY}
                         r={11.5}
                         fill="#E8F6E2"
                       />
                       <text
-                        x={x + width / 2}
+                        x={labelX + labelWidth / 2}
                         y={adjustedY + 4}
                         textAnchor="middle"
                         fill="#7CD24C"
                         fontSize={8}
                         fontWeight="bold"
                       >
-                        {value}%
+                        {labelValue}%
                       </text>
                     </g>
                   );
                 }}
               />
 
-              {data.map((_, i) => (
-                <Cell key={i} fill="url(#barGradient)" />
+              {data.map((_, index) => (
+                <Cell key={index} fill="url(#barGradient)" />
               ))}
             </Bar>
           </BarChart>

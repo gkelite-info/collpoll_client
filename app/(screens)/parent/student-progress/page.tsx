@@ -181,7 +181,7 @@ const Page = () => {
           </div>
 
           <div className="flex w-[32%] justify-end">
-            <CourseScheduleCard style="w-[320px]" isVisibile={false} />
+            <CourseScheduleCard style="w-[320px]" />
           </div>
 
           <div
@@ -242,7 +242,7 @@ const Page = () => {
           />
 
           <div className="absolute right-9 top-35">
-            <div className="min-w-[220px] rounded-xl border border-gray-200 bg-white shadow-lg">
+            <div className="min-w-55 rounded-xl border border-gray-200 bg-white shadow-lg">
               <div className="flex items-center justify-between border-b px-4 py-2">
                 <span className="text-sm font-semibold text-gray-800">
                   Previous Sem Marks

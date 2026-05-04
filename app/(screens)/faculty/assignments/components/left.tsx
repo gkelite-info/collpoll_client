@@ -12,6 +12,7 @@ import { Pagination } from "./pagination";
 import FacultyQuizCard from "./facultyQuizCard";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { CaretLeftIcon, CaretRight } from "@phosphor-icons/react";
 import FacultyDiscussionCard from "./facultyDiscussionCard";
 import FacultyDiscussionForm from "./facultyDiscussionForm";
 import FacultyDiscussionSubmissions from "./facultyDiscussionSubmissions";
@@ -227,10 +228,14 @@ function AssignmentsLeftContent() {
     if (!facultyId) return;
     try {
       setLabsLoading(true);
-      const data = await fetchLabManualsForStaff({ facultyId });
+      const response = await fetchLabManualsForStaff({
+        facultyId,
+        page: labCurrentPage,
+        pageSize: ITEMS_PER_PAGE,
+      });
 
       const formatted = await Promise.all(
-        data.map(async (lab: any) => {
+        response.data.map(async (lab: any) => {
           const fileUrl = await getLabManualPublicUrl(lab.pdfUrl);
           return {
             labId: lab.labManualId,
@@ -240,7 +245,9 @@ function AssignmentsLeftContent() {
             collegeSectionsId: lab.collegeSectionsId,
             pdfUrl: lab.pdfUrl,
             subjectName: lab.college_subjects?.subjectName,
-            sectionName: lab.college_sections?.sectionName,
+            sectionName:
+              lab.college_sections?.sectionName ||
+              lab.college_sections?.collegeSections,
             description: lab.description,
             fileName: lab.pdfUrl.split("/").pop(),
             fileSize: lab.fileSize,
@@ -251,7 +258,7 @@ function AssignmentsLeftContent() {
       );
 
       setLabs(formatted);
-      setLabTotalCount(formatted.length);
+      setLabTotalCount(response.totalCount || 0);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch labs");
@@ -975,13 +982,50 @@ function AssignmentsLeftContent() {
                       />
                     ))}
                     {labTotalCount > ITEMS_PER_PAGE && (
-                      <div className="mt-4 flex justify-center">
-                        <Pagination
-                          currentPage={labCurrentPage}
-                          totalItems={labTotalCount}
-                          itemsPerPage={ITEMS_PER_PAGE}
-                          onPageChange={setLabCurrentPage}
-                        />
+                      <div className="flex justify-end items-center gap-3 mt-6 mb-4">
+                        <button
+                          onClick={() =>
+                            setLabCurrentPage((p) => Math.max(1, p - 1))
+                          }
+                          disabled={labCurrentPage === 1}
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border ${labCurrentPage === 1
+                            ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                            : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
+                            }`}
+                        >
+                          <CaretLeftIcon size={18} weight="bold" />
+                        </button>
+
+                        {[...Array(Math.ceil(labTotalCount / ITEMS_PER_PAGE))].map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setLabCurrentPage(i + 1)}
+                            className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${labCurrentPage === i + 1
+                              ? "bg-[#16284F] text-white"
+                              : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                              }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+
+                        <button
+                          onClick={() =>
+                            setLabCurrentPage((p) =>
+                              Math.min(Math.ceil(labTotalCount / ITEMS_PER_PAGE), p + 1),
+                            )
+                          }
+                          disabled={
+                            labCurrentPage ===
+                            Math.ceil(labTotalCount / ITEMS_PER_PAGE)
+                          }
+                          className={`w-10 h-10 flex items-center justify-center rounded-lg border ${labCurrentPage === Math.ceil(labTotalCount / ITEMS_PER_PAGE)
+                            ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                            : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
+                            }`}
+                        >
+                          <CaretRight size={18} weight="bold" />
+                        </button>
                       </div>
                     )}
                   </>
