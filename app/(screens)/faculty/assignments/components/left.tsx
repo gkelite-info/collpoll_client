@@ -34,6 +34,9 @@ import {
 } from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizShimmer from "../shimmer/FacultyQuizShimmer";
 import FacultyQuizSubmissions from "./quizSubmissions";
+import FacultyLabForm from "./facultyLabForm";
+import { deleteLabManual, fetchLabManualsForStaff, getLabManualPublicUrl } from "@/lib/helpers/faculty/facultyLabManualHelper";
+import FacultyLabCard from "./FacultyLabCard";
 
 export interface Assignment {
   sectionId: string | number | readonly string[] | undefined;
@@ -111,6 +114,15 @@ function AssignmentsLeftContent() {
 
   const [deleteQuizId, setDeleteQuizId] = useState<number | null>(null);
   const [isDeletingQuiz, setIsDeletingQuiz] = useState(false);
+
+  const [deleteLabId, setDeleteLabId] = useState<number | null>(null);
+  const [isDeletingLab, setIsDeletingLab] = useState(false);
+  const [editingLab, setEditingLab] = useState<any | null>(null);
+
+  const [labs, setLabs] = useState<any[]>([]);
+  const [labsLoading, setLabsLoading] = useState(false);
+  const [labCurrentPage, setLabCurrentPage] = useState(1);
+  const [labTotalCount, setLabTotalCount] = useState(0);
 
   async function fetchQuizzes() {
     if (!facultyId) return;
@@ -211,7 +223,49 @@ function AssignmentsLeftContent() {
     }
   }, [activeTab, discussionView, facultyId, refreshKey, discussionCurrentPage]);
 
-  const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion") => {
+  async function fetchLabs() {
+    if (!facultyId) return;
+    try {
+      setLabsLoading(true);
+      const data = await fetchLabManualsForStaff({ facultyId });
+
+      const formatted = await Promise.all(
+        data.map(async (lab: any) => {
+          const fileUrl = await getLabManualPublicUrl(lab.pdfUrl);
+          return {
+            labId: lab.labManualId,
+            labTitle: lab.labTitle,
+            collegeSubjectId: lab.collegeSubjectId,
+            collegeAcademicYearId: lab.collegeAcademicYearId,
+            collegeSectionsId: lab.collegeSectionsId,
+            pdfUrl: lab.pdfUrl,
+            subjectName: lab.college_subjects?.subjectName,
+            sectionName: lab.college_sections?.sectionName,
+            description: lab.description,
+            fileName: lab.pdfUrl.split("/").pop(),
+            fileSize: lab.fileSize,
+            fileUrl: fileUrl,
+            uploadedAt: lab.createdAt,
+          };
+        })
+      );
+
+      setLabs(formatted);
+      setLabTotalCount(formatted.length);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to fetch labs");
+    } finally {
+      setLabsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab !== "lab") return;
+    fetchLabs();
+  }, [activeTab, facultyId, labCurrentPage]);
+
+  const handleMainTabChange = (tab: "assignments" | "quiz" | "discussion" | "lab") => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     params.delete("action");
@@ -224,6 +278,7 @@ function AssignmentsLeftContent() {
     setCurrentPage(1);
     setQuizCurrentPage(1);
     setDiscussionCurrentPage(1);
+    setLabCurrentPage(1);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -251,6 +306,7 @@ function AssignmentsLeftContent() {
   };
 
   useEffect(() => {
+    if (activeTab !== "assignments") return;
     fetchAssignments();
   }, [activeView, currentPage, activeTab]);
 
@@ -396,6 +452,38 @@ function AssignmentsLeftContent() {
     }
   };
 
+  const executeDeleteLab = async () => {
+    if (!deleteLabId) return;
+
+    try {
+      setIsDeletingLab(true);
+
+      const res = await deleteLabManual(deleteLabId);
+
+      if (res.success) {
+        toast.success("Lab manual deleted successfully");
+
+        await fetchLabs();
+      } else {
+        toast.error("Failed to delete lab manual");
+      }
+    } catch (error) {
+      console.error("Delete lab error:", error);
+      toast.error("Failed to delete lab manual");
+    } finally {
+      setIsDeletingLab(false);
+      setDeleteLabId(null);
+    }
+  };
+
+  const handleEditLab = (lab: any) => {
+    setEditingLab(lab);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("action", "editLab");
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   if (
     activeTab === "discussion" &&
     (action === "editDiscussion" || action === "createDiscussion")
@@ -419,6 +507,15 @@ function AssignmentsLeftContent() {
       <div className="w-[68%] h-full p-2 flex flex-col">
         <FacultyDiscussionSubmissions discussionId={discussionId} />
       </div>
+    );
+  }
+
+  if (activeTab === "lab" && (action === "createLab" || action === "editLab")) {
+    return (
+      <FacultyLabForm
+        initialData={action === "editLab" ? editingLab : undefined}
+        onSaved={() => fetchLabs()}
+      />
     );
   }
 
@@ -522,6 +619,13 @@ function AssignmentsLeftContent() {
           >
             Discussion forum
           </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleMainTabChange("lab")}
+            className={`cursor-pointer transition-colors ${activeTab === "lab" ? "text-[#43C17A]" : "text-[#282828]"}`}
+          >
+            Lab
+          </span>
         </h1>
         <p className="text-[#282828] text-sm">
           {activeTab === "assignments" &&
@@ -530,6 +634,8 @@ function AssignmentsLeftContent() {
             "Design, organize, and publish quizzes to assess your students effectively."}
           {activeTab === "discussion" &&
             "Create and manage project discussions for students."}
+          {activeTab === "lab" &&
+            "Upload and manage lab manuals for your students."}
         </p>
       </div>
 
@@ -621,6 +727,21 @@ function AssignmentsLeftContent() {
                   Create Discussion
                 </button>
               </>
+            )}
+
+            {activeTab === "lab" && (
+              <div className="flex justify-end w-full">
+                <button
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  onClick={() => {
+                    const params = new URLSearchParams(searchParams.toString());
+                    params.set("action", "createLab");
+                    router.push(`${pathname}?${params.toString()}`);
+                  }}
+                >
+                  Upload Lab Manual
+                </button>
+              </div>
             )}
           </div>
 
@@ -834,9 +955,43 @@ function AssignmentsLeftContent() {
                 )}
               </div>
             )}
+
+            {activeTab === "lab" && (
+              <div className="flex flex-col gap-4 pb-10">
+                {labsLoading ? (
+                  [1, 2, 3].map((i) => <FacultyDiscussionShimmer key={i} />)
+                ) : labs.length === 0 ? (
+                  <div className="w-full py-10 text-center text-gray-500">
+                    No lab manuals uploaded yet.
+                  </div>
+                ) : (
+                  <>
+                    {labs.map((lab) => (
+                      <FacultyLabCard
+                        key={lab.labId}
+                        data={lab}
+                        onDelete={(labId) => setDeleteLabId(labId)}
+                        onEdit={handleEditLab}
+                      />
+                    ))}
+                    {labTotalCount > ITEMS_PER_PAGE && (
+                      <div className="mt-4 flex justify-center">
+                        <Pagination
+                          currentPage={labCurrentPage}
+                          totalItems={labTotalCount}
+                          itemsPerPage={ITEMS_PER_PAGE}
+                          onPageChange={setLabCurrentPage}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
       <ConfirmDeleteModal
         open={!!deleteDiscussionId}
         onConfirm={handleDeleteDiscussion}
@@ -851,6 +1006,14 @@ function AssignmentsLeftContent() {
         onCancel={() => setDeleteQuizId(null)}
         isDeleting={isDeletingQuiz}
         name="quiz"
+      />
+
+      <ConfirmDeleteModal
+        open={!!deleteLabId}
+        onConfirm={executeDeleteLab}
+        onCancel={() => setDeleteLabId(null)}
+        isDeleting={isDeletingLab}
+        name="lab manual"
       />
     </div>
   );
