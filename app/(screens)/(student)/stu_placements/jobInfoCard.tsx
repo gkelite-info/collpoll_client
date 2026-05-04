@@ -6,6 +6,7 @@ import {
   ClockCountdown,
   CurrencyInr,
 } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 
 export type JobInfoCardProps = {
   logoUrl?: string;
@@ -53,6 +54,8 @@ export const JobInfoCard = ({
   onWithdraw,
   onClick,
 }: JobInfoCardProps) => {
+  const t = useTranslations("Placements.student"); // Hook
+
   const handleApplyClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     if (isApplying) return;
@@ -97,16 +100,18 @@ export const JobInfoCard = ({
             {isApplied && (
               <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full font-medium bg-[#16284F1F] text-[#16284F] whitespace-nowrap">
                 <CalendarBlank size={14} className="text-gray-500" />
-                <span>Applied on {appliedOn || "-"}</span>
+                <span>
+                  {t("Applied on {date}", { date: appliedOn || "-" })}
+                </span>
               </div>
             )}
             {isExpired ? (
               <span className="inline-flex items-center px-4 py-1 rounded-md bg-gray-100 text-gray-600 text-xs font-semibold">
-                Completed
+                {t("Completed")}
               </span>
             ) : !isEligible ? (
               <span className="inline-flex items-center px-4 py-1 rounded-md bg-amber-50 text-amber-600 text-xs font-semibold">
-                Not Eligible
+                {t("Not Eligible")}
               </span>
             ) : showApplyButton ? (
               <button
@@ -118,15 +123,19 @@ export const JobInfoCard = ({
                     isApplying
                       ? "cursor-not-allowed border border-emerald-300 bg-emerald-50 text-emerald-500"
                       : isApplied
-                      ? "border border-red-400 bg-white text-red-500 hover:bg-red-50"
-                      : "bg-white text-emerald-600 border border-emerald-500 hover:bg-emerald-50"
+                        ? "border border-red-400 bg-white text-red-500 hover:bg-red-50"
+                        : "bg-white text-emerald-600 border border-emerald-500 hover:bg-emerald-50"
                   }`}
               >
-                {isApplying ? "Applying..." : isApplied ? "Withdraw" : "Apply"}
+                {isApplying
+                  ? t("Applying")
+                  : isApplied
+                    ? t("Withdraw")
+                    : t("Apply")}
               </button>
             ) : (
               <span className="inline-flex items-center px-4 py-1 rounded-md bg-emerald-500 text-white text-xs font-semibold">
-                {statusLabel || "Applied"}
+                {t(statusLabel || "Applied")}
               </span>
             )}
           </div>
@@ -134,9 +143,9 @@ export const JobInfoCard = ({
 
         <div className="mt-2 text-xs font-medium">
           {isEligible ? (
-            <span className="text-[#43C17A]">Eligible</span>
+            <span className="text-[#43C17A]">{t("Eligible")}</span>
           ) : (
-            <span className="text-[#F0A500]">Not eligible</span>
+            <span className="text-[#F0A500]">{t("Not Eligible")}</span>
           )}
         </div>
 
@@ -156,7 +165,7 @@ export const JobInfoCard = ({
         </p>
 
         <p className="mt-2 text-[12px] font-medium text-[#43C17A]">
-          Click card to see more
+          {t("Click card to see more")}
         </p>
 
         <div className="mt-3 min-w-0 text-xs md:text-sm">

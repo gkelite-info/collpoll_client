@@ -4,6 +4,7 @@ import { useState, ReactNode, useEffect } from "react";
 import { Calendar, House } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -14,28 +15,29 @@ type NavItem = {
 export default function SuperAdminNavbar() {
   const pathname = usePathname();
   const [active, setActive] = useState("");
+  const t = useTranslations("Navbars");
 
   const items: NavItem[] = [
     {
       icon: (isActive) => (
         <House size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Home",
+      label: t("Home"),
       path: "/super-admin",
     },
     {
       icon: (isActive) => (
         <Calendar size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Registration",
+      label: t("Registration"),
       path: "/super-admin/registration",
-    }
+    },
   ];
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);
     if (current) setActive(current.label);
-  }, [pathname]);
+  }, [pathname, items]);
 
   return (
     <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
@@ -44,26 +46,20 @@ export default function SuperAdminNavbar() {
       </div>
 
       <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
-        {items.map((item, index) => {
+        {items.map((item) => {
           const isActive = active === item.label;
 
           return (
-            // <div
-            //   key={index}
-            //   onClick={() => {
-            //     setActive(item.label);
-            //     if (item.path) router.push(item.path);
-            //   }}
             <Link
               key={item.path}
               href={item.path}
-              // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${isActive
-                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                  : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                ${
+                  isActive
+                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                 }
               `}
             >
@@ -72,12 +68,12 @@ export default function SuperAdminNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
-                  }`}
+                className={`text-sm font-medium ${
+                  isActive ? "text-[#43C17A]" : "text-white"
+                }`}
               >
                 {item.label}
               </p>
-              {/* </div> */} 
             </Link>
           );
         })}

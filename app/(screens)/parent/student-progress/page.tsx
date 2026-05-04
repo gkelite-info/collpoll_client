@@ -13,8 +13,10 @@ import { fetchStudentContext } from "@/app/utils/context/student/studentContextA
 import { getStudentProgressData } from "@/lib/helpers/student/studentProgress/getStudentProgressData";
 import { StudentProgressSkeleton } from "@/app/(screens)/(student)/student-progress/shimmer/studentProgressSkeleton";
 import { supabase } from "@/lib/supabaseClient";
+import { useTranslations } from "next-intl";
 
 const Page = () => {
+  const t = useTranslations("Progress.parent"); // Hook
   const [open, setOpen] = useState(false);
   const [progressLoading, setProgressLoading] = useState(true);
   const [progressData, setProgressData] = useState<Awaited<
@@ -37,8 +39,8 @@ const Page = () => {
   } = useParent();
 
   const semesterLabel = studentContext?.collegeSemester
-    ? `Semester ${studentContext.collegeSemester}`
-    : "Semester N/A";
+    ? `${t("Semester")} ${studentContext.collegeSemester}`
+    : t("Semester N/A");
   const isLoading = parentLoading || progressLoading;
   const totalAttendanceEvents =
     (progressData?.attendedCount ?? 0) +
@@ -46,16 +48,22 @@ const Page = () => {
     (progressData?.leaveCount ?? 0);
   const attendancePercentage =
     totalAttendanceEvents > 0
-      ? Math.round(((progressData?.attendedCount ?? 0) / totalAttendanceEvents) * 100)
-      : progressData?.overallAttendancePercentage ?? 0;
+      ? Math.round(
+          ((progressData?.attendedCount ?? 0) / totalAttendanceEvents) * 100,
+        )
+      : (progressData?.overallAttendancePercentage ?? 0);
   const absentPercentage =
     totalAttendanceEvents > 0
-      ? Math.round(((progressData?.absentCount ?? 0) / totalAttendanceEvents) * 100)
-      : progressData?.absentPercentage ?? 0;
+      ? Math.round(
+          ((progressData?.absentCount ?? 0) / totalAttendanceEvents) * 100,
+        )
+      : (progressData?.absentPercentage ?? 0);
   const leavePercentage =
     totalAttendanceEvents > 0
-      ? Math.round(((progressData?.leaveCount ?? 0) / totalAttendanceEvents) * 100)
-      : progressData?.leavePercentage ?? 0;
+      ? Math.round(
+          ((progressData?.leaveCount ?? 0) / totalAttendanceEvents) * 100,
+        )
+      : (progressData?.leavePercentage ?? 0);
   const academicPerformanceData =
     progressData?.subjectProgressRows.map((row) => ({
       subject: row.subjectKey,
@@ -146,7 +154,9 @@ const Page = () => {
             <div className="flex gap-3">
               <div>
                 <span className="text-lg font-medium text-gray-600">
-                  {collegeEducationType === "Inter" ? "Group" : "Branch"}:
+                  {collegeEducationType === "Inter"
+                    ? t("Group:")
+                    : t("Branch:")}
                 </span>
                 <span className="lg:ml-1 rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
                   {studentContext?.collegeBranchCode ?? "N/A"}
@@ -154,7 +164,9 @@ const Page = () => {
               </div>
 
               <div className="flex items-center gap-1">
-                <span className="text-lg font-medium text-gray-600">Year:</span>
+                <span className="text-lg font-medium text-gray-600">
+                  {t("Year:")}
+                </span>
                 <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
                   {studentContext?.collegeAcademicYear ?? "N/A"}
                 </span>
@@ -162,7 +174,7 @@ const Page = () => {
 
               <div className="flex items-center gap-1">
                 <span className="text-lg font-medium text-gray-600">
-                  Section:
+                  {t("Section:")}
                 </span>
                 <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
                   {studentContext?.collegeSections ?? "N/A"}
@@ -171,7 +183,7 @@ const Page = () => {
 
               <div className="flex items-center gap-1">
                 <span className="text-lg font-medium text-gray-600">
-                  Semester:
+                  {t("Semester:")}
                 </span>
                 <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
                   {studentContext?.collegeSemester ?? "N/A"}
@@ -245,7 +257,7 @@ const Page = () => {
             <div className="min-w-55 rounded-xl border border-gray-200 bg-white shadow-lg">
               <div className="flex items-center justify-between border-b px-4 py-2">
                 <span className="text-sm font-semibold text-gray-800">
-                  Previous Sem Marks
+                  {t("Previous Sem Marks")}
                 </span>
                 <button onClick={() => setOpen(false)}>
                   <X
@@ -257,7 +269,7 @@ const Page = () => {
               </div>
 
               <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
-                Enrollment
+                {t("Enrollment")}
               </button>
             </div>
           </div>

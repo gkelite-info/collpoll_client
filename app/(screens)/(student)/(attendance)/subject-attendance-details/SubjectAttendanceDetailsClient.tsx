@@ -390,7 +390,7 @@ import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl"; // Added import
+import { useTranslations } from "next-intl";
 
 interface CardItem {
   id: number;

@@ -3,22 +3,27 @@
 import { Suspense } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import SubjectCard from "./components/subjectCard";
-import { StudentProvider, useStudent } from "@/lib/helpers/student/academics/studentFetchAcademics";
+import {
+  StudentProvider,
+  useStudent,
+} from "@/lib/helpers/student/academics/studentFetchAcademics";
 import SubjectSkeleton from "./shimmer/subjectSkeleton";
 import { Loader } from "../calendar/right/timetable";
+import { useTranslations } from "next-intl";
 
 function AcademicsContent() {
   const { studentProfile, subjects, loading } = useStudent();
+  const t = useTranslations("Academics.student");
 
   return (
     <div className="p-2 flex flex-col lg:pb-5">
       <div className="flex justify-between items-center mb-5">
         <div className="flex flex-col w-[68%]">
           <h1 className="text-[#282828] font-bold text-[28px] mb-1">
-            Academics
+            {t("Academics")}
           </h1>
           <p className="text-[#282828] text-sm">
-            Track syllabus progress and manage notes by semester
+            {t("Track syllabus progress and manage notes by semester")}
           </p>
         </div>
         <div className="flex justify-end w-[32%]">

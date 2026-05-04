@@ -11,6 +11,7 @@ import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useParent } from "@/app/utils/context/parent/useParent";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
+import { useTranslations } from "next-intl";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Parent";
@@ -19,7 +20,7 @@ export interface Meeting {
   id: string;
   financeMeetingId: number;
   financeMeetingSectionsId: number;
-  category: MeetingCategory | "Student"; // Added Student to the category type
+  category: MeetingCategory | "Student";
   title: string;
   timeRange: string;
   educationType: string;
@@ -41,6 +42,8 @@ export default function ParentMeetingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const t = useTranslations("Meetings.parent"); // Hook
+
   const [totalPages, setTotalPages] = useState(1);
   const currentType = (searchParams.get("type") as MeetingType) || "upcoming";
   const currentCategory = "Parent";
@@ -78,8 +81,8 @@ export default function ParentMeetingsPage() {
   };
 
   const typeTabs = [
-    { id: "upcoming", label: "Upcoming Meetings" },
-    { id: "previous", label: "Previous Meetings" },
+    { id: "upcoming", label: t("Upcoming Meetings") },
+    { id: "previous", label: t("Previous Meetings") },
   ];
 
   useEffect(() => {
@@ -110,7 +113,7 @@ export default function ParentMeetingsPage() {
       setMeetings([]);
 
       const res = await fetchParentFinanceMeetings({
-        roles: ["Parent", "Student"], // 🟢 FIXED: Fetching BOTH roles!
+        roles: ["Parent", "Student"],
         type: currentType,
         page,
         limit: 10,
@@ -128,7 +131,7 @@ export default function ParentMeetingsPage() {
       setMeetings(finalMeetings);
       setTotalPages(res.totalPages || 1);
     } catch (err) {
-      toast.error(`Failed to fetch ${currentType} meetings`);
+      toast.error(t("Failed to fetch type meetings", { type: t(currentType) }));
     } finally {
       setIsLoading(false);
     }
@@ -139,9 +142,11 @@ export default function ParentMeetingsPage() {
       <div className="bg-red-00 h-screen p-2 flex flex-col">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#282828]">Meetings</h1>
+            <h1 className="text-2xl font-bold text-[#282828]">
+              {t("Meetings")}
+            </h1>
             <p className="text-[#282828] text-sm mt-1">
-              View and join scheduled meetings.
+              {t("View and join scheduled meetings")}
             </p>
           </div>
           <div className="w-[320px]">
@@ -197,7 +202,9 @@ export default function ParentMeetingsPage() {
                 ))
               ) : (
                 <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
-                  <p className="text-lg">No {currentType} meetings found.</p>
+                  <p className="text-lg">
+                    {t("No type meetings found", { type: t(currentType) })}
+                  </p>
                 </div>
               )}
             </div>

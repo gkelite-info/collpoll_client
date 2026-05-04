@@ -3,6 +3,7 @@ import { CurrencyInr, Money } from "@phosphor-icons/react";
 import { Bank } from "@phosphor-icons/react/dist/ssr";
 import { FaChevronRight } from "react-icons/fa";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 type FeeDueCardProps = {
   totalFee: string;
@@ -11,6 +12,7 @@ type FeeDueCardProps = {
 
 export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
   const router = useRouter();
+  const t = useTranslations("Dashboard.parent"); // Hook
 
   return (
     <div className="relative overflow-hidden bg-white w-[32%] lg:h-[220px] shadow-md rounded-lg p-2.5 flex flex-col justify-between pb-4">
@@ -18,7 +20,7 @@ export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
         <div className="bg-[#E1F4E8] lg:p-2 rounded-lg">
           <Bank size={22} weight="fill" color="#47CE68" />
         </div>
-        <h5 className="text-[#282828] font-semibold">Fee Due</h5>
+        <h5 className="text-[#282828] font-semibold">{t("Fee Due")}</h5>
       </div>
       <div className="bg-green-00 mt-2 flex flex-col h-auto">
         <div className="flex justify-between gap-2">
@@ -26,7 +28,7 @@ export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
             <div className="bg-white rounded-lg lg:h-8 lg:w-8 flex items-center justify-center">
               <Money size={22} weight="fill" color="#FFBB70" />
             </div>
-            <p className="text-xs text-white">Total Fee</p>
+            <p className="text-xs text-white">{t("Total Fee")}</p>
             <div className="flex items-center">
               <CurrencyInr size={15} color="white" />
               <span className="text-white font-extrabold text-sm">
@@ -38,7 +40,7 @@ export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
             <div className="bg-white rounded-lg lg:h-8 lg:w-8 flex items-center justify-center">
               <Money size={22} weight="fill" color="#61AEFF" />
             </div>
-            <p className="text-xs text-white">Fee Paid</p>
+            <p className="text-xs text-white">{t("Fee Paid")}</p>
             <div className="flex items-center">
               <CurrencyInr size={15} color="white" />
               <span className="text-white font-extrabold text-sm">
@@ -48,13 +50,12 @@ export default function FeeDueCard({ totalFee, feePaid }: FeeDueCardProps) {
           </div>
         </div>
 
-        {/* Simplified onClick handler - No parameters needed! */}
         <div
           onClick={() => router.push(`/parent/payments`)}
           className="bg-[#A2D784] mt-2 lg:h-[42px] rounded-full flex items-center justify-between p-2 cursor-pointer hover:scale-[1.02] transition-transform"
         >
           <div className="bg-red-00 w-[65%] h-full rounded-full flex items-center justify-end">
-            <h5 className="text-white font-semibold text-md">Pay Now</h5>
+            <h5 className="text-white font-semibold text-md">{t("Pay Now")}</h5>
           </div>
           <div className="bg-white rounded-full lg:h-8 lg:w-8 flex items-center justify-center">
             <FaChevronRight size={14} className="text-[#A2D784]" />

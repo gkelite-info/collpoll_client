@@ -309,8 +309,7 @@ import {
   saveStudentTask,
 } from "@/lib/helpers/student/studentTaskAPI";
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl"; // Added import
-
+import { useTranslations } from "next-intl";
 const typeIcons: Record<string, string> = {
   class: "/class.png",
   exam: "/exam.png",

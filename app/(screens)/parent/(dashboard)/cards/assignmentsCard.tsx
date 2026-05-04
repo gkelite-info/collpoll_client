@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import WipOverlay from "@/app/utils/WipOverlay";
 import { Clipboard } from "@phosphor-icons/react";
 import { useParent } from "@/app/utils/context/parent/useParent";
 import { fetchChildAssignmentStats } from "@/lib/helpers/parent/dashboard/fetchChildAssignments";
+import { useTranslations } from "next-intl";
 
 type AssignmentProps = {
   completed: number;
@@ -14,6 +14,7 @@ type AssignmentProps = {
 
 export default function AssignMentCard() {
   const { childUserId, loading: parentLoading } = useParent();
+  const t = useTranslations("Dashboard.parent"); // Hook
   const [stats, setStats] = useState<AssignmentProps>({
     completed: 0,
     total: 0,
@@ -62,7 +63,9 @@ export default function AssignMentCard() {
         <div className="bg-[#E1F4E8] rounded-lg p-1">
           <Clipboard size={22} weight="fill" color="#6ECC90" />
         </div>
-        <h4 className="text-lg font-medium text-[#282828]">Assignments</h4>
+        <h4 className="text-lg font-medium text-[#282828]">
+          {t("Assignments")}
+        </h4>
       </div>
 
       <div className="w-full h-[70%]">
@@ -75,7 +78,7 @@ export default function AssignMentCard() {
         </div>
         <div className="h-[30%] flex flex-col justify-start gap-1">
           <h5 className="text-[#16284F] text-xs font-medium">
-            Next Date:
+            {t("Next Date:")}
             <span className="text-[#604DDC] ml-1">{stats.nextDate}</span>
           </h5>
           <div className="bg-[#DDDDDD] rounded-full w-full h-4 overflow-hidden">

@@ -1,6 +1,7 @@
 "use client";
 
 import { User } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 
 export type ProfileCardProps = {
   name: string;
@@ -21,6 +22,8 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   absentPercentage,
   leavePercentage,
 }) => {
+  const t = useTranslations("Progress.student"); // Hook
+
   return (
     <div className="bg-white w-full max-w-5xl rounded-3xl p-5 ">
       <div className="flex flex-col md:flex-row md:items-center mb-8 gap-4">
@@ -49,9 +52,11 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">{attendancePercentage}%</p>
+            <p className="text-xl font-bold text-gray-800">
+              {attendancePercentage}%
+            </p>
             <p className="text-gray-600 text-sm font-medium">
-              Total Attendance
+              {t("Total Attendance")}
             </p>
           </div>
         </div>
@@ -61,8 +66,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">{absentPercentage}%</p>
-            <p className="text-gray-600 text-sm font-medium">Total Absent</p>
+            <p className="text-xl font-bold text-gray-800">
+              {absentPercentage}%
+            </p>
+            <p className="text-gray-600 text-sm font-medium">
+              {t("Total Absent")}
+            </p>
           </div>
         </div>
 
@@ -71,8 +80,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             <User size={32} weight="fill" color="white" />
           </div>
           <div>
-            <p className="text-xl font-bold text-gray-800">{leavePercentage}%</p>
-            <p className="text-gray-600 text-sm font-medium">Total Leave</p>
+            <p className="text-xl font-bold text-gray-800">
+              {leavePercentage}%
+            </p>
+            <p className="text-gray-600 text-sm font-medium">
+              {t("Total Leave")}
+            </p>
           </div>
         </div>
       </div>

@@ -1,138 +1,137 @@
 "use client";
 
 import { useState, ReactNode, useEffect } from "react";
-import { BuildingApartmentIcon, Calendar, CheckCircle, FolderOpen, Gear, House, PlusCircle, UsersThreeIcon } from "@phosphor-icons/react";
+import {
+  BuildingApartmentIcon,
+  Calendar,
+  CheckCircle,
+  FolderOpen,
+  Gear,
+  House,
+  PlusCircle,
+  UsersThreeIcon,
+} from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type NavItem = {
-    icon: (isActive: boolean) => ReactNode;
-    label: string;
-    path: string;
+  icon: (isActive: boolean) => ReactNode;
+  label: string;
+  path: string;
 };
 
 export default function CollegeAdminNavbar() {
+  const pathname = usePathname();
+  const [active, setActive] = useState("");
+  const t = useTranslations("Navbars");
 
-    const pathname = usePathname();
-    const [active, setActive] = useState("");
+  const items: NavItem[] = [
+    {
+      icon: (isActive) => (
+        <House size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Home"),
+      path: "/college-admin",
+    },
+    {
+      icon: (isActive) => (
+        <BuildingApartmentIcon
+          size={18}
+          weight={isActive ? "fill" : "regular"}
+        />
+      ),
+      label: t("Institution Management"),
+      path: "/college-admin/institution-management",
+    },
+    {
+      icon: (isActive) => (
+        <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Add Admin"),
+      path: "/college-admin/add-admin",
+    },
+    {
+      icon: (isActive) => (
+        <Calendar size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Calendar"),
+      path: "/college-admin/calendar",
+    },
+    {
+      icon: (isActive) => (
+        <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Club"),
+      path: "/college-admin/clubs",
+    },
+    {
+      icon: (isActive) => (
+        <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Drive"),
+      path: "/college-admin/drive",
+    },
+    {
+      icon: (isActive) => (
+        <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("My Attendance"),
+      path: "/college-admin/my-attendance",
+    },
+    {
+      icon: (isActive) => (
+        <Gear size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Settings"),
+      path: "/college-admin/settings",
+    },
+  ];
 
-    const items: NavItem[] = [
-        {
-            icon: (isActive) => (
-                <House size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Home",
-            path: "/college-admin",
-        },
-        {
-            icon: (isActive) => (
-                <BuildingApartmentIcon size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Institution Management",
-            path: "/college-admin/institution-management",
-        },
-        {
-            icon: (isActive) => (
-                <PlusCircle size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Add Admin",
-            path: "/college-admin/add-admin",
-        },
-        {
-            icon: (isActive) => (
-                <Calendar size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Calendar",
-            path: "/college-admin/calendar",
-        },
+  useEffect(() => {
+    const current = items.find((item) => item.path === pathname);
+    if (current) setActive(current.label);
+  }, [pathname, items]);
 
-        // {
-        //     icon: (isActive) => (
-        //         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
-        //     ),
-        //     label: "Meetings",
-        //     path: "/college-admin/meetings",
-        // },
-        {
-            icon: (isActive) => (
-                <UsersThreeIcon size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Club",
-            path: "/college-admin/clubs",
-        },
-        {
-            icon: (isActive) => (
-                <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Drive",
-            path: "/college-admin/drive",
-        },
-        {
-            icon: (isActive) => (
-                <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "My Attendance",
-            path: "/college-admin/my-attendance",
-        },
-        {
-            icon: (isActive) => (
-                <Gear size={18} weight={isActive ? "fill" : "regular"} />
-            ),
-            label: "Settings",
-            path: "/college-admin/settings",
-        }
-    ];
+  return (
+    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
+      <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
+        Logo
+      </div>
 
-    useEffect(() => {
-        const current = items.find((item) => item.path === pathname);
-        if (current) setActive(current.label);
-    }, [pathname]);
+      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
+        {items.map((item) => {
+          const isActive = active === item.label;
 
-    return (
-        <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md">
-            <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
-                Logo
-            </div>
-
-            <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4">
-                {items.map((item, index) => {
-                    const isActive = active === item.label;
-
-                    return (
-                        // <div
-                        //     key={index}
-                        //     onClick={() => {
-                        //         setActive(item.label);
-                        //         if (item.path) router.push(item.path);
-                        //     }}
-                        <Link
-                            key={item.path}
-                            href={item.path}
-                            // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
-                            className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
+          return (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${isActive
-                                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-                                }
+                ${
+                  isActive
+                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                }
               `}
-                        >
-                            <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
-                                {item.icon(isActive)}
-                            </div>
+            >
+              <div className={`${isActive ? "text-[#43C17A]" : "text-white"}`}>
+                {item.icon(isActive)}
+              </div>
 
-                            <p
-                                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
-                                    }`}
-                            >
-                                {item.label}
-                            </p>
-                            {/* </div> */}
-                        </Link>
-                    );
-                })}
-            </div>
-        </div>
-    );
+              <p
+                className={`text-sm font-medium ${
+                  isActive ? "text-[#43C17A]" : "text-white"
+                }`}
+              >
+                {item.label}
+              </p>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

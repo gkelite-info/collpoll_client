@@ -335,7 +335,7 @@ import UploadModal from "../modal/uploadModal";
 import { supabase } from "@/lib/supabaseClient";
 import { downloadAssignmentFile } from "@/app/utils/storageActions";
 import toast from "react-hot-toast";
-import { useTranslations } from "next-intl"; // Added import
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Alarm,

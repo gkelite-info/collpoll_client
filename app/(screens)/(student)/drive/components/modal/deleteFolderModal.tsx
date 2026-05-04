@@ -1,4 +1,63 @@
+// "use client";
+
+// type DeleteFolderModalProps = {
+//   open: boolean;
+//   folderName: string;
+//   onCancel: () => void;
+//   onConfirm: () => void;
+//   loading?: boolean;
+// };
+
+// const DeleteFolderModal = ({
+//   open,
+//   folderName,
+//   onCancel,
+//   onConfirm,
+//   loading = false,
+// }: DeleteFolderModalProps) => {
+//   if (!open) return null;
+
+//   return (
+//     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+//       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
+//         <h3 className="mb-2 text-base font-semibold text-[#111827]">
+//           Delete folder
+//         </h3>
+//         <p className="text-xs text-[#6B7280]">
+//           Are you sure you want to delete{" "}
+//           <span className="font-semibold text-[#111827]">
+//             {folderName || "this folder"}
+//           </span>
+//           ? This action cannot be undone.
+//         </p>
+
+//         <div className="mt-4 flex justify-end gap-2 text-sm">
+//           <button
+//             type="button"
+//             onClick={onCancel}
+//             disabled={loading}
+//             className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563] disabled:opacity-50 cursor-pointer"
+//           >
+//             Cancel
+//           </button>
+//           <button
+//             type="button"
+//             onClick={onConfirm}
+//             disabled={loading}
+//             className="rounded-lg bg-red-500 px-4 py-1.5 font-medium text-white disabled:opacity-60 cursor-pointer"
+//           >
+//             {loading ? "Deleting..." : "Delete"}
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default DeleteFolderModal;
+
 "use client";
+import { useTranslations } from "next-intl";
 
 type DeleteFolderModalProps = {
   open: boolean;
@@ -15,22 +74,23 @@ const DeleteFolderModal = ({
   onConfirm,
   loading = false,
 }: DeleteFolderModalProps) => {
+  const t = useTranslations("Drive.student");
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
         <h3 className="mb-2 text-base font-semibold text-[#111827]">
-          Delete folder
+          {t("Delete folder")}
         </h3>
         <p className="text-xs text-[#6B7280]">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold text-[#111827]">
-            {folderName || "this folder"}
-          </span>
-          ? This action cannot be undone.
+          {t(
+            "Are you sure you want to delete {folderName}? This action cannot be undone",
+            {
+              folderName: folderName || t("this folder"),
+            },
+          )}
         </p>
-
         <div className="mt-4 flex justify-end gap-2 text-sm">
           <button
             type="button"
@@ -38,7 +98,7 @@ const DeleteFolderModal = ({
             disabled={loading}
             className="rounded-lg border border-gray-200 px-4 py-1.5 text-[#4B5563] disabled:opacity-50 cursor-pointer"
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             type="button"
@@ -46,12 +106,11 @@ const DeleteFolderModal = ({
             disabled={loading}
             className="rounded-lg bg-red-500 px-4 py-1.5 font-medium text-white disabled:opacity-60 cursor-pointer"
           >
-            {loading ? "Deleting..." : "Delete"}
+            {loading ? t("Deleting") : t("Delete")}
           </button>
         </div>
       </div>
     </div>
   );
 };
-
 export default DeleteFolderModal;

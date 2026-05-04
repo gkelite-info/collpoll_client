@@ -1,6 +1,7 @@
 "use client";
 
 import { CaretDownIcon } from "@phosphor-icons/react";
+import { useTranslations } from "next-intl";
 
 export type SubjectProgressRow = {
   subject: string;
@@ -40,10 +41,14 @@ export function AssignmentsSummaryTable({
   rows,
   semesterLabel,
 }: AssignmentsSummaryTableProps) {
+  const t = useTranslations("Progress.parent");
+
   return (
     <div className="w-full rounded-3xl bg-white p-6 shadow-sm">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-[#282828]">Class Progress Overview</h2>
+        <h2 className="text-lg font-bold text-[#282828]">
+          {t("Class Progress Overview")}
+        </h2>
         <button
           type="button"
           className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white"
@@ -57,31 +62,57 @@ export function AssignmentsSummaryTable({
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="bg-gray-100">
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Subject</th>
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Attendance</th>
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Assignments Done</th>
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Quiz</th>
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Discussion Forum</th>
-              <th className="px-4 py-4 text-sm font-medium text-[#282828]">Progress %</th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Subject")}
+              </th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Attendance")}
+              </th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Assignments Done")}
+              </th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Quiz")}
+              </th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Discussion Forum")}
+              </th>
+              <th className="px-4 py-4 text-sm font-medium text-[#282828]">
+                {t("Progress %")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
-                  No subject progress data available for this semester.
+                <td
+                  colSpan={6}
+                  className="px-6 py-10 text-center text-sm text-gray-500"
+                >
+                  {t("No subject progress data available for this semester")}
                 </td>
               </tr>
             ) : (
               rows.map((row, index) => (
-                <tr key={`${row.subject}-${index}`} className="transition-colors hover:bg-gray-50">
+                <tr
+                  key={`${row.subject}-${index}`}
+                  className="transition-colors hover:bg-gray-50"
+                >
                   <td className="px-4 py-5 text-sm font-medium text-[#282828]">
                     {row.subject}
                   </td>
-                  <td className="px-4 py-5 text-sm text-[#525252]">{row.attendance}</td>
-                  <td className="px-4 py-5 text-sm text-[#525252]">{row.assignmentsDone}</td>
-                  <td className="px-4 py-5 text-sm text-[#525252]">{row.quiz}</td>
-                  <td className="px-4 py-5 text-sm text-[#525252]">{row.discussionForum}</td>
+                  <td className="px-4 py-5 text-sm text-[#525252]">
+                    {row.attendance}
+                  </td>
+                  <td className="px-4 py-5 text-sm text-[#525252]">
+                    {row.assignmentsDone}
+                  </td>
+                  <td className="px-4 py-5 text-sm text-[#525252]">
+                    {row.quiz}
+                  </td>
+                  <td className="px-4 py-5 text-sm text-[#525252]">
+                    {row.discussionForum}
+                  </td>
                   <td className="px-4 py-5">
                     <ProgressRing value={row.progressPercent} />
                   </td>

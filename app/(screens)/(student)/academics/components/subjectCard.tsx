@@ -4,6 +4,7 @@ import { useCallback, useState, useMemo } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
+import { useTranslations } from "next-intl";
 
 export type UnitTopic = {
   topicId: number;
@@ -46,6 +47,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { collegeEducationType } = useStudent();
+  const t = useTranslations("Academics.student");
 
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
   const ballSize = "10px";
@@ -77,7 +79,6 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
     return subjectProps.filter((s) => s.subjectTitle === selectedSubject);
   }, [subjectProps, selectedSubject]);
 
-
   const uniqueSubjects = useMemo(() => {
     const titles = new Set(subjectProps.map((s) => s.subjectTitle));
     return Array.from(titles);
@@ -96,14 +97,14 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
       <div className="mb-4 flex flex-col gap-3">
         <div className="w-full flex flex-wrap gap-6">
           <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">Subject :</p>
+            <p className="text-[#525252] text-sm">{t("Subject :")}</p>
             <div className="relative flex items-center">
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
                 className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-8 cursor-pointer focus:outline-none max-w-[200px] truncate"
               >
-                <option value="All">All</option>
+                <option value="All">{t("All")}</option>
                 {uniqueSubjects.map((title) => (
                   <option key={title} value={title}>
                     {title}
@@ -117,7 +118,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           </div>
           {!(collegeEducationType === "Inter") && (
             <div className="flex items-center gap-2">
-              <p className="text-[#525252] text-sm">Semester :</p>
+              <p className="text-[#525252] text-sm">{t("Semester :")}</p>
               <div className="relative flex items-center">
                 <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
                   {subjectProps[0]?.semester || "N/A"}
@@ -126,7 +127,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">Year :</p>
+            <p className="text-[#525252] text-sm">{t("Year :")}</p>
             <div className="relative flex items-center">
               <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
                 {subjectProps[0]?.academicYear || "N/A"}
@@ -153,21 +154,21 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                         {item.subjectTitle}
                       </h5>
                       <p className="flex-shrink-0 px-2 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium">
-                        Credits: {item.subjectCredits}
+                        {t("Credits:")} {item.subjectCredits}
                       </p>
                     </div>
                     <p
                       className="bg-[#7051E1] px-2.5 text-white font-medium py-1 rounded-md text-xs cursor-pointer"
                       onClick={() => handleViewDetails(item.subjectTitle)}
                     >
-                      View Details
+                      {t("View Details")}
                     </p>
                   </div>
 
                   <div className="flex flex-col gap-2 mt-1">
                     <div className="flex items-center gap-2">
                       <h4 className="text-[#282828] font-medium text-[15px]">
-                        Faculty -{" "}
+                        {t("Faculty -")}{" "}
                       </h4>
                       <div className="h-[30px] w-[30px] rounded-full overflow-hidden">
                         <img
@@ -183,20 +184,20 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                     <div className="flex items-center gap-5">
                       <h5 className="text-[#525252] text-[15px]">
                         <strong className="text-[#282828] font-medium mr-1.5">
-                          Units:
+                          {t("Units:")}
                         </strong>
                         {item.units}
                       </h5>
                       <h5 className="text-[#525252] text-[15px]">
                         <strong className="text-[#282828] font-medium mr-1.5">
-                          Topics Covered :
+                          {t("Topics Covered :")}
                         </strong>
                         {item.topicsCovered}/{item.topicsTotal}
                       </h5>
                     </div>
                     <h5 className="text-[#525252] text-[15px] truncate">
                       <strong className="text-[#282828] font-medium mr-1.5">
-                        Next lesson :
+                        {t("Next lesson :")}
                       </strong>
                       {item.nextLesson}
                     </h5>
@@ -235,7 +236,9 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                               : "translateX(-50%)",
                       }}
                     >
-                      {item.percentage === null ? "No data" : `${percentage}%`}
+                      {item.percentage === null
+                        ? t("No data")
+                        : `${percentage}%`}
                     </span>
                   </div>
                 </div>
@@ -244,7 +247,7 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
           })
         ) : (
           <div className="col-span-1 sm:col-span-2 py-10 flex justify-center text-gray-400">
-            No subjects found for "{selectedSubject}"
+            {t("No subjects found for {subject}", { subject: selectedSubject })}
           </div>
         )}
       </div>

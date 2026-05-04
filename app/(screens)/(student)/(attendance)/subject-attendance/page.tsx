@@ -253,7 +253,7 @@ import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
-import { useTranslations } from "next-intl"; // Added import
+import { useTranslations } from "next-intl";
 
 interface CardItem {
   id: number;

@@ -14,6 +14,7 @@ import FacultyChat from "./cards/facultyChat";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getParentDashboardWidgets } from "@/lib/helpers/parent/dashboard/parentDashboardActions";
 import { useParent } from "@/app/utils/context/parent/useParent";
+import { useTranslations } from "next-intl";
 
 const ParentDashboardShimmer = () => {
   return (
@@ -95,12 +96,14 @@ const ParentDashboardShimmer = () => {
 
 export default function ParentLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
+  const t = useTranslations("Dashboard.parent");
 
   const [dashData, setDashData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { studentId } = useParent();
 
-  const parentImage = gender && (gender === "Male" ? "/male-parent1.png" : "/female-parent.png");
+  const parentImage =
+    gender && (gender === "Male" ? "/male-parent1.png" : "/female-parent.png");
 
   useEffect(() => {
     if (userLoading || !userId) return;
@@ -123,14 +126,14 @@ export default function ParentLeft() {
   const card: UserInfoCardProps[] = [
     {
       show: true,
-      // studentId: dashData?.studentId || 0,
       studentId: dashData?.studentPin || 0,
-      studentBranch: dashData?.branchName || "Loading...",
-      studentAcademicYear: dashData?.academicYear || "Loading...",
-      user: fullName ?? "User",
-      studentName: dashData?.studentName || "Loading...",
-      childPerformance:
-        "Your child’s academic performance and attendance summary are available below.",
+      studentBranch: dashData?.branchName || t("Loading"),
+      studentAcademicYear: dashData?.academicYear || t("Loading"),
+      user: fullName ?? t("User"),
+      studentName: dashData?.studentName || t("Loading"),
+      childPerformance: t(
+        "Your childs academic performance and attendance summary are available below",
+      ),
       image: parentImage ?? undefined,
       imageHeight: "lg:h-[175px]",
       imageAlign: "center",

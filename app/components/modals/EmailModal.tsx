@@ -12,6 +12,7 @@ import {
   groupAndFormatEmails,
   markEmailRead,
 } from "@/lib/helpers/notifications/emailsAPI";
+import { useTranslations } from "next-intl";
 
 type Props = {
   isOpen: boolean;
@@ -59,6 +60,7 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
 
   const [replyData, setReplyData] = useState<any>(null);
 
+  const t = useTranslations("Email");
   const handleReplyClick = (mail: any) => {
     setReplyData({
       to: mail.email,
@@ -159,7 +161,9 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
         <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <EnvelopeSimpleIcon size={25} weight="fill" color="#43C17A" />
-            <h2 className="text-[16px] font-semibold text-[#282828]">Email</h2>
+            <h2 className="text-[16px] font-semibold text-[#282828]">
+              {t("Email")}
+            </h2>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -169,7 +173,7 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
               }}
               className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 text-[#282828] px-2 py-1 rounded-md text-sm font-medium transition-colors"
             >
-              <Plus size={16} className="text-[#43C17A]" /> Compose
+              <Plus size={16} className="text-[#43C17A]" /> {t("Compose")}
             </button>
             <button
               onClick={onClose}
@@ -185,10 +189,11 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${activeTab === tab
+              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${
+                activeTab === tab
                   ? "border-[#43C17A] text-[#43C17A]"
                   : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
+              }`}
             >
               {tab}
             </button>
@@ -210,10 +215,11 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
               {displayedEmails.map((mail) => (
                 <div
                   key={mail.id}
-                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${mail.isRead
+                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${
+                    mail.isRead
                       ? "bg-white hover:bg-gray-50"
                       : "bg-blue-50 hover:bg-blue-100 border border-blue-100"
-                    }`}
+                  }`}
                   onClick={() => handleEmailClick(mail)}
                 >
                   <div
