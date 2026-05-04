@@ -253,7 +253,7 @@ export default function AddSubject({
               Education Type <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && options.educations.length === 0 ? (
-              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
                 Loading options...
               </div>
             ) : (
@@ -261,7 +261,7 @@ export default function AddSubject({
                 name="education"
                 value={ui.education}
                 onChange={handleChange}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
               >
                 <option value="">Select Education</option>
                 {options.educations.map((e) => (
@@ -275,7 +275,7 @@ export default function AddSubject({
               {collegeEducationType === "Inter" ? "Group Type" : "Branch Type"} <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && ui.education && !ui.branch ? (
-              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
                 Loading options...
               </div>
             ) : (
@@ -284,7 +284,7 @@ export default function AddSubject({
                 value={ui.branch}
                 onChange={handleChange}
                 disabled={!ui.education}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full disabled:bg-gray-50 disabled:cursor-not-allowed"
               >
                 <option value="">{collegeEducationType === "Inter" ? "Select Group" : "Select Branch"}</option>
                 {ui.education &&
@@ -301,7 +301,7 @@ export default function AddSubject({
               Year <span className="text-red-500">*</span>
             </label>
             {isLoadingOptions && ui.branch && !ui.year ? (
-              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+              <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
                 Loading options...
               </div>
             ) : (
@@ -309,7 +309,7 @@ export default function AddSubject({
                 name="year"
                 value={ui.year}
                 onChange={handleChange}
-                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+                className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
               >
                 <option value="">Select Year</option>
                 {options.years.map((y) => (
@@ -324,7 +324,7 @@ export default function AddSubject({
                 Semester <span className="text-red-500">*</span>
               </label>
               {isLoadingOptions && ui.year && !ui.semester ? (
-                <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse px-4 py-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
+                <div className="border border-[#CCCCCC] bg-gray-50 animate-pulse p-2 rounded-lg w-full h-[42px] flex items-center text-gray-400 text-sm">
                   Loading options...
                 </div>
               ) : (
@@ -332,7 +332,7 @@ export default function AddSubject({
                   name="semester"
                   value={ui.semester}
                   onChange={handleChange}
-                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer px-4 py-2 rounded-lg w-full"
+                  className="text-[#16284F] border border-[#CCCCCC] outline-none cursor-pointer p-2 rounded-lg w-full"
                 >
                   <option value="">Select Semester</option>
                   {options.semesters.map((s) => (
@@ -351,7 +351,7 @@ export default function AddSubject({
               value={form.subjectName}
               onChange={handleChange}
               placeholder="e.g. Data Structures"
-              className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
+              className="text-[#16284F] border border-[#CCCCCC] outline-none px-3 py-2 rounded-lg w-full"
             />
           </div>
           <div>
@@ -363,7 +363,7 @@ export default function AddSubject({
               value={form.subjectCode}
               onChange={handleChange}
               placeholder="e.g. CS201"
-              className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
+              className="text-[#16284F] border border-[#CCCCCC] outline-none px-3 py-2 rounded-lg w-full"
             />
           </div>
           <div>
@@ -375,7 +375,7 @@ export default function AddSubject({
               value={form.subjectKey}
               onChange={handleChange}
               placeholder="e.g. DS"
-              className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
+              className="text-[#16284F] border border-[#CCCCCC] outline-none px-3 py-2 rounded-lg w-full"
             />
           </div>
 
@@ -408,19 +408,7 @@ export default function AddSubject({
                 }
               }}
               onWheel={(e) => e.currentTarget.blur()}
-              className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Key
-            </label>
-            <input
-              name="subjectKey"
-              value={form.subjectKey}
-              onChange={handleChange}
-              placeholder="e.g. DS"
-              className="text-[#16284F] border border-[#CCCCCC] outline-none px-4 py-2 rounded-lg w-full"
+              className="text-[#16284F] border border-[#CCCCCC] outline-none px-3 py-2 rounded-lg w-full"
             />
           </div>
           <div>
