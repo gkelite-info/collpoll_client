@@ -17,33 +17,100 @@ export type LabManualRow = {
 };
 
 
-export async function fetchLabManualsForStudent(collegeSectionsId: number) {
-    const { data, error } = await supabase
+export async function fetchLabManualsForStudent(
+    params: {
+        collegeId: number;
+        collegeEducationId: number;
+        collegeBranchId: number;
+        collegeAcademicYearId: number;
+        collegeSectionsId: number;
+    },
+    page = 1,
+    pageSize = 8,
+) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, error, count } = await supabase
         .from("faculty_lab_manuals")
         .select(`
       *,
-      college_subjects (subjectName, subjectCode)
-    `)
-        .eq("collegeSectionsId", collegeSectionsId)
+      college_subjects!inner (
+        subjectName,
+        subjectCode,
+        collegeId,
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId
+      ),
+      college_sections (collegeSections)
+    `, { count: "exact" })
+        .eq("collegeSectionsId", params.collegeSectionsId)
+        .eq("collegeAcademicYearId", params.collegeAcademicYearId)
+        .eq("college_subjects.collegeId", params.collegeId)
+        .eq("college_subjects.collegeEducationId", params.collegeEducationId)
+        .eq("college_subjects.collegeBranchId", params.collegeBranchId)
+        .eq("college_subjects.collegeAcademicYearId", params.collegeAcademicYearId)
         .eq("isActive", true)
         .is("deletedAt", null)
-        .order("createdAt", { ascending: false });
+        .order("createdAt", { ascending: false })
+        .range(from, to);
 
     if (error) {
         console.error("fetchLabManualsForStudent error:", error);
-        return [];
+        return { data: [], totalCount: 0 };
     }
-    return data ?? [];
+
+    if (!data) return { data: [], totalCount: 0 };
+
+    const BUCKET = "faculty_lab_manuals";
+
+    const withSizes = await Promise.all(
+        data.map(async (lab) => {
+            let fileSize = 0;
+
+            try {
+                const parts = lab.pdfUrl.split("/");
+                const fileName = parts.pop();
+                const folderPath = parts.join("/");
+
+                const { data: files, error } = await supabase.storage
+                    .from(BUCKET)
+                    .list(folderPath);
+
+                if (!error && files) {
+                    const match = files.find((f) => f.name === fileName);
+                    fileSize = match?.metadata?.size ?? 0;
+                }
+            } catch (e) {
+                console.error("student lab fileSize fetch failed:", e);
+            }
+
+            return { ...lab, fileSize };
+        })
+    );
+
+    return {
+        data: withSizes,
+        totalCount: count ?? 0,
+    };
 }
 
 
 export async function fetchLabManualsForStaff(params: {
     facultyId?: number;
     adminId?: number;
+    page?: number;
+    pageSize?: number;
 }) {
+    const page = params.page ?? 1;
+    const pageSize = params.pageSize ?? 10;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     let query = supabase
         .from("faculty_lab_manuals")
-        .select(`*, college_subjects(subjectName), college_sections(collegeSections)`)
+        .select(`*, college_subjects(subjectName), college_sections(collegeSections)`, { count: "exact" })
         .is("deletedAt", null);
 
     if (params.adminId) {
@@ -52,14 +119,16 @@ export async function fetchLabManualsForStaff(params: {
         query = query.eq("facultyId", params.facultyId);
     }
 
-    const { data: facultyLabManual, error: faculty_lab_manualsError } = await query.order("createdAt", { ascending: false });
+    const { data: facultyLabManual, error: faculty_lab_manualsError, count } = await query
+        .order("createdAt", { ascending: false })
+        .range(from, to);
 
     if (faculty_lab_manualsError) {
         console.error("fetchLabManualsForStaff error:", faculty_lab_manualsError);
         throw faculty_lab_manualsError;
     }
 
-    if (!facultyLabManual) return [];
+    if (!facultyLabManual) return { data: [], totalCount: 0 };
 
     const BUCKET = "faculty_lab_manuals";
 
@@ -88,7 +157,10 @@ export async function fetchLabManualsForStaff(params: {
         })
     );
 
-    return withSizes;
+    return {
+        data: withSizes,
+        totalCount: count ?? 0,
+    };
 }
 
 export async function saveLabManual(

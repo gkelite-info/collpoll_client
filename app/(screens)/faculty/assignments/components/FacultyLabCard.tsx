@@ -66,7 +66,7 @@ export default function FacultyLabCard({ data, onDelete, onEdit }: FacultyLabCar
                 </div>
 
                 {data.description && (
-                    <p className="text-xs text-gray-400 mt-1 truncate max-w-[360px]">
+                    <p className="text-xs text-gray-400 mt-1 max-w-[360px] max-h-10 overflow-auto leading-5 whitespace-nowrap">
                         {data.description}
                     </p>
                 )}

@@ -956,6 +956,13 @@ import { QuizCardSkeletonGroup } from "./components/QuizCardShimmer";
 import { StudentDiscussionCardSkeletonGroup } from "./components/StudentDiscussionCardShimmer";
 import { Pagination } from "../../admin/academic-setup/components/pagination";
 import { useTranslations } from "next-intl";
+import FacultyLabCard, {
+  type LabManual,
+} from "../../faculty/assignments/components/FacultyLabCard";
+import {
+  fetchLabManualsForStudent,
+  getLabManualPublicUrl,
+} from "@/lib/helpers/faculty/facultyLabManualHelper";
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "-";
@@ -966,11 +973,30 @@ function formatDate(dateStr: string) {
   return `${day}-${month}-${year}`;
 }
 
+type StudentLabManualRow = {
+  labManualId: number;
+  labTitle: string;
+  collegeSubjectId: number;
+  collegeAcademicYearId: number;
+  collegeSectionsId: number;
+  pdfUrl: string;
+  description?: string | null;
+  fileSize?: number;
+  createdAt: string;
+  college_subjects?: {
+    subjectName?: string | null;
+  } | null;
+  college_sections?: {
+    sectionName?: string | null;
+    collegeSections?: string | null;
+  } | null;
+};
+
 function AssignmentsLeftContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useTranslations("Assignment.student"); // Initialize Translations
+  const t = useTranslations("Assignment.student"); 
 
   const action = searchParams.get("action");
   const activeQuizId = searchParams.get("quizId");
@@ -989,13 +1015,19 @@ function AssignmentsLeftContent() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const rowsPerPage = 8;
+  const rowsPerPage = 1;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const [discussionUploads, setDiscussionUploads] = useState<
     Record<string, any[]>
   >({});
-  const { collegeSectionsId, collegeId } = useStudent();
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeBranchId,
+    collegeAcademicYearId,
+    collegeSectionsId,
+  } = useStudent();
   const [activeDiscussions, setActiveDiscussions] = useState<any[]>([]);
   const [completedDiscussions, setCompletedDiscussions] = useState<any[]>([]);
   const [discussionsLoading, setDiscussionsLoading] = useState(true);
@@ -1012,11 +1044,16 @@ function AssignmentsLeftContent() {
   const [quizRefreshKey, setQuizRefreshKey] = useState(0);
   const [quizCurrentPage, setQuizCurrentPage] = useState(1);
   const [discussionCurrentPage, setDiscussionCurrentPage] = useState(1);
+  const [labCurrentPage, setLabCurrentPage] = useState(1);
 
   const QUIZ_PER_PAGE = 8;
   const [quizTotalRecords, setQuizTotalRecords] = useState(0);
 
   const DISCUSSION_PER_PAGE = 8;
+  const LAB_PER_PAGE = 8;
+  const [labs, setLabs] = useState<LabManual[]>([]);
+  const [labsLoading, setLabsLoading] = useState(false);
+  const [labTotalRecords, setLabTotalRecords] = useState(0);
 
   const [performanceData, setPerformanceData] = useState<any>(null);
   const [performanceLoading, setPerformanceLoading] = useState(false);
@@ -1168,6 +1205,77 @@ function AssignmentsLeftContent() {
     }
   }, [activeTab, collegeSectionsId]);
 
+  async function loadLabs() {
+    if (
+      !collegeId ||
+      !collegeEducationId ||
+      !collegeBranchId ||
+      !collegeAcademicYearId ||
+      !collegeSectionsId
+    ) {
+      return;
+    }
+
+    try {
+      setLabsLoading(true);
+      const response = await fetchLabManualsForStudent(
+        {
+          collegeId,
+          collegeEducationId,
+          collegeBranchId,
+          collegeAcademicYearId,
+          collegeSectionsId,
+        },
+        labCurrentPage,
+        LAB_PER_PAGE,
+      );
+      const formatted = await Promise.all(
+        response.data.map(async (lab: StudentLabManualRow) => {
+          const fileUrl = await getLabManualPublicUrl(lab.pdfUrl);
+          return {
+            labId: lab.labManualId,
+            labTitle: lab.labTitle,
+            collegeSubjectId: lab.collegeSubjectId,
+            collegeAcademicYearId: lab.collegeAcademicYearId,
+            collegeSectionsId: lab.collegeSectionsId,
+            pdfUrl: lab.pdfUrl,
+            subjectName: lab.college_subjects?.subjectName || undefined,
+            sectionName:
+              lab.college_sections?.sectionName ||
+              lab.college_sections?.collegeSections ||
+              undefined,
+            description: lab.description || undefined,
+            fileName: lab.pdfUrl?.split("/").pop() || "Lab manual.pdf",
+            fileSize: lab.fileSize ?? 0,
+            fileUrl: fileUrl || undefined,
+            uploadedAt: lab.createdAt,
+          };
+        }),
+      );
+
+      setLabs(formatted);
+      setLabTotalRecords(response.totalCount || 0);
+    } catch (err) {
+      console.error("loadLabs error:", err);
+    } finally {
+      setLabsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === "lab" && collegeSectionsId) {
+      loadLabs();
+    }
+  }, [
+    activeTab,
+    collegeId,
+    collegeEducationId,
+    collegeBranchId,
+    collegeAcademicYearId,
+    collegeSectionsId,
+    labCurrentPage,
+  ]);
+
   useEffect(() => {
     if (activeTab === "quiz") {
       setQuizSubTabLoading(true);
@@ -1206,7 +1314,9 @@ function AssignmentsLeftContent() {
     return () => clearTimeout(timer);
   }, [activeTab]);
 
-  const handleTabChange = (tab: "assignments" | "quiz" | "discussion") => {
+  const handleTabChange = (
+    tab: "assignments" | "quiz" | "discussion" | "lab",
+  ) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("tab", tab);
     params.delete("action");
@@ -1218,6 +1328,7 @@ function AssignmentsLeftContent() {
     if (tab === "quiz") params.set("quizView", "ongoing");
     if (tab === "discussion") params.set("discussionView", "active");
 
+    setLabCurrentPage(1);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -1465,6 +1576,13 @@ function AssignmentsLeftContent() {
           >
             {t("Discussion forum")}
           </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleTabChange("lab")}
+            className={`cursor-pointer transition-colors ${activeTab === "lab" ? "text-[#43C17A]" : "text-[#282828]"}`}
+          >
+            Lab
+          </span>
         </h1>
 
         <p className="text-[#282828] text-sm">
@@ -1476,6 +1594,7 @@ function AssignmentsLeftContent() {
             t(
               "Explore project discussions, guides, and resources shared by faculty",
             )}
+          {activeTab === "lab" && "View lab manuals shared by your faculty."}
         </p>
       </div>
 
@@ -1727,6 +1846,24 @@ function AssignmentsLeftContent() {
               )}
             </div>
           )}
+
+          {activeTab === "lab" && (
+            <div className="flex flex-col gap-4 pb-10 h-full">
+              {labsLoading || tabSwitchLoading ? (
+                <StudentDiscussionCardSkeletonGroup count={3} />
+              ) : labs.length === 0 ? (
+                <div className="flex items-center justify-center h-1/3">
+                  <p className="text-sm text-gray-500">
+                    No lab manuals available
+                  </p>
+                </div>
+              ) : (
+                labs.map((lab) => (
+                  <FacultyLabCard key={lab.labId} data={lab} />
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {activeTab === "assignments" && totalPages > 1 && (
@@ -1817,6 +1954,54 @@ function AssignmentsLeftContent() {
                   className="p-2 rounded-lg border bg-white disabled:opacity-30 hover:bg-gray-50 transition-all cursor-pointer"
                 >
                   <CaretRight size={18} weight="bold" color="black" />
+                </button>
+              </div>
+            ) : null;
+          })()}
+
+        {activeTab === "lab" &&
+          (() => {
+            const labTotalPages = Math.ceil(labTotalRecords / LAB_PER_PAGE);
+            return labTotalPages > 1 && !labsLoading ? (
+              <div className="flex justify-end items-center gap-3 mt-6 mb-4">
+                <button
+                  onClick={() => setLabCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={labCurrentPage === 1}
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
+                    labCurrentPage === 1
+                      ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  }`}
+                >
+                  <CaretLeft size={18} weight="bold" />
+                </button>
+
+                {[...Array(labTotalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setLabCurrentPage(i + 1)}
+                    className={`w-10 h-10 rounded-lg font-semibold cursor-pointer ${
+                      labCurrentPage === i + 1
+                        ? "bg-[#16284F] text-white"
+                        : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() =>
+                    setLabCurrentPage((p) => Math.min(labTotalPages, p + 1))
+                  }
+                  disabled={labCurrentPage === labTotalPages}
+                  className={`w-10 h-10 flex items-center justify-center rounded-lg border ${
+                    labCurrentPage === labTotalPages
+                      ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-100 cursor-pointer"
+                  }`}
+                >
+                  <CaretRight size={18} weight="bold" />
                 </button>
               </div>
             ) : null;
