@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 type AttendanceItem = {
   subject: string;
   attended: number;
@@ -9,10 +13,12 @@ type AttendanceListProps = {
   data?: AttendanceItem[];
 };
 export function AttendanceList({ data }: AttendanceListProps) {
+  const t = useTranslations("Progress.student"); // Hook
+
   return (
     <div className="w-full h-[400px] flex flex-col font-sans overflow-hidden ">
       <h2 className="p-5 pb-2 text-lg font-bold text-gray-800">
-        Attendance by Subject
+        {t("Attendance by Subject")}
       </h2>
 
       <div className="flex-1 overflow-y-auto px-5 pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -26,7 +32,7 @@ export function AttendanceList({ data }: AttendanceListProps) {
               <div className="flex justify-between font-semibold text-gray-800">
                 <h3>{item.subject}</h3>
                 <span className="bg-green-100 text-green-500 px-3 py-1 rounded-md text-sm">
-                  {item.status}
+                  {t(item.status)}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm font-medium text-green-500">

@@ -14,6 +14,7 @@ import {
   getStudentTopicResources,
   type StudentTopicResource,
 } from "@/lib/helpers/student/academics/topicResources";
+import { useTranslations } from "next-intl";
 
 type TopicPdfViewModalProps = {
   isOpen: boolean;
@@ -68,12 +69,11 @@ export function TopicPdfViewModal({
   topicTitle,
   topicId,
 }: TopicPdfViewModalProps) {
+  const t = useTranslations("Academics.student");
   const [resources, setResources] = useState<StudentTopicResource[]>([]);
   const [loadingResources, setLoadingResources] = useState(false);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>(
-    [],
-  );
+  const [selectedResourceIds, setSelectedResourceIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!isOpen || !topicId) return;
@@ -86,14 +86,12 @@ export function TopicPdfViewModal({
         if (!cancelled) {
           setResources(data);
           setSelectedResourceIds(
-            data.length > 0
-              ? [data[0].collegeSubjectUnitTopicResourceId]
-              : [],
+            data.length > 0 ? [data[0].collegeSubjectUnitTopicResourceId] : [],
           );
         }
       } catch (err: any) {
         if (!cancelled) {
-          toast.error(err?.message ?? "Failed to load PDFs");
+          toast.error(err?.message ?? t("Failed to load PDFs"));
         }
       } finally {
         if (!cancelled) {
@@ -137,7 +135,7 @@ export function TopicPdfViewModal({
       );
 
       if (!response.ok) {
-        throw new Error("Failed to download file");
+        throw new Error(t("Failed to download file"));
       }
 
       const blob = await response.blob();
@@ -150,7 +148,7 @@ export function TopicPdfViewModal({
       link.remove();
       URL.revokeObjectURL(objectUrl);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to download file");
+      toast.error(error?.message || t("Failed to download file"));
     } finally {
       setDownloadingId(null);
     }
@@ -189,13 +187,16 @@ export function TopicPdfViewModal({
               </h2>
 
               <div className="flex flex-col gap-2">
-                <p className="text-sm font-semibold text-gray-700">Uploaded PDFs</p>
+                <p className="text-sm font-semibold text-gray-700">
+                  {t("Uploaded PDFs")}
+                </p>
 
                 {resources.length > 0 ? (
                   <ul className="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
                     {resources.map((resource) => {
                       const isDownloading =
-                        downloadingId === resource.collegeSubjectUnitTopicResourceId;
+                        downloadingId ===
+                        resource.collegeSubjectUnitTopicResourceId;
                       const isSelected = selectedResourceIds.includes(
                         resource.collegeSubjectUnitTopicResourceId,
                       );
@@ -242,7 +243,7 @@ export function TopicPdfViewModal({
                           {isDownloading && isSelected ? (
                             <div className="shrink-0 inline-flex items-center gap-2 text-xs font-semibold text-[#43C17A]">
                               <SpinnerGap size={14} className="animate-spin" />
-                              Downloading
+                              {t("Downloading")}
                             </div>
                           ) : null}
                         </li>
@@ -251,7 +252,7 @@ export function TopicPdfViewModal({
                   </ul>
                 ) : (
                   <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-8 text-center text-sm text-gray-400">
-                    No PDFs uploaded for this topic yet.
+                    {t("No PDFs uploaded for this topic yet")}
                   </div>
                 )}
               </div>
@@ -262,7 +263,7 @@ export function TopicPdfViewModal({
                 onClick={onClose}
                 className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition cursor-pointer"
               >
-                Close
+                {t("Close")}
               </button>
               <button
                 type="button"
@@ -271,7 +272,9 @@ export function TopicPdfViewModal({
                     await handleDownload(resource);
                   }
                 }}
-                disabled={selectedResources.length === 0 || downloadingId !== null}
+                disabled={
+                  selectedResources.length === 0 || downloadingId !== null
+                }
                 className={`flex-1 py-2.5 rounded-lg text-sm font-semibold text-white transition flex items-center justify-center gap-2 cursor-pointer ${
                   selectedResources.length === 0 || downloadingId !== null
                     ? "bg-[#43C17A]/50 cursor-not-allowed"
@@ -281,14 +284,14 @@ export function TopicPdfViewModal({
                 {downloadingId !== null ? (
                   <>
                     <SpinnerGap size={16} className="animate-spin" />
-                    Downloading...
+                    {t("Downloading")}...
                   </>
                 ) : (
                   <>
                     <ArrowSquareDown size={16} />
                     {selectedResources.length > 0
-                      ? `Download File${selectedResources.length > 1 ? "s" : ""}`
-                      : "Select File(s)"}
+                      ? `${t("Download File")}${selectedResources.length > 1 ? "s" : ""}`
+                      : t("Select File(s)")}
                   </>
                 )}
               </button>

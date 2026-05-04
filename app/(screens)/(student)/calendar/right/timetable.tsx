@@ -209,7 +209,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { FilePdf } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import TimetableCardShimmer from "./TimetableCardShimmer";
-import { useTranslations } from "next-intl"; // Added import
+import { useTranslations } from "next-intl";
 import { fetchTopicResources } from "@/lib/helpers/faculty/Savetopicresource";
 
 const formatTimeToAMPM = (time24: string) => {
@@ -227,7 +227,13 @@ export const Loader = () => (
   </div>
 );
 
-export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[784px]" }: { selectedDate: string, height?: string }) {
+export default function CalendarTimeTable({
+  selectedDate,
+  height = "lg:min-h-[784px]",
+}: {
+  selectedDate: string;
+  height?: string;
+}) {
   const [todayDate, setTodayDate] = useState("");
   const [todayDay, setTodayDay] = useState("");
   const [timetable, setTimetable] = useState<any[]>([]);
@@ -238,14 +244,18 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
   useEffect(() => {
     const now = new Date();
     setTodayDate(String(now.getDate()).padStart(2, "0"));
-    setTodayDay(now.toLocaleString("en-US", { weekday: "short" }).replace(".", ""));
+    setTodayDay(
+      now.toLocaleString("en-US", { weekday: "short" }).replace(".", ""),
+    );
   }, []);
 
   useEffect(() => {
     const loadTimetable = async () => {
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) throw new Error("No auth user");
 
         const { data: userRow } = await supabase
@@ -270,7 +280,6 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
         });
 
         console.log("Am i getting rawData", rawData);
-
 
         // const timetableWithResources = await Promise.all(
         //   rawData.map(async (item: any) => {
@@ -304,7 +313,10 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
             if (item.topicId) {
               const resources = await fetchTopicResources(item.topicId);
               // DEBUG: Let's see what the database says about this topic
-              console.log(`Topic ${item.topicId} (${item.eventTitle}) resources:`, resources);
+              console.log(
+                `Topic ${item.topicId} (${item.eventTitle}) resources:`,
+                resources,
+              );
 
               if (resources && resources.length > 0) {
                 pdfUrl = resources[0].resourceUrl;
@@ -322,7 +334,7 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
               isCancelled: item.isCancelled,
               pdfUrl: pdfUrl,
             };
-          })
+          }),
         );
 
         setTimetable(timetableWithResources);
@@ -338,7 +350,9 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
   }, [selectedDate, collegeEducationType]);
 
   return (
-    <div className={`bg-white ${height} lg:w-[100%] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto`}>
+    <div
+      className={`bg-white ${height} lg:w-[100%] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto`}
+    >
       <div className="w-full">
         <div className="flex bg-[#E8EAED] w-[35%] h-[54px] rounded-md shadow-md">
           <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
@@ -359,7 +373,10 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
             </div>
           ) : (
             timetable.map((item, index) => (
-              <div key={index} className="h-[102px] w-[100%] flex justify-between">
+              <div
+                key={index}
+                className="h-[102px] w-[100%] flex justify-between"
+              >
                 <div className="w-[88px] flex flex-col items-center justify-center">
                   <p className="text-[#282828] text-xs">{item.start}</p>
                   <span className="text-[#282828]">-</span>
@@ -374,25 +391,50 @@ export default function CalendarTimeTable({ selectedDate, height = "lg:min-h-[78
 
                     <div className="h-[84px] w-[408px] gap-2 flex items-center justify-between">
                       <div className="flex flex-col justify-center gap-1 h-full w-[80%] overflow-x-auto">
-                        <p className="text-[#282828] font-medium leading-tight">{item.title}</p>
+                        <p className="text-[#282828] font-medium leading-tight">
+                          {item.title}
+                        </p>
                         <p className="text-[#282828] font-medium text-sm">
-                          Topic: <span className="text-[#282828] font-normal text-xs ml-1">{item.topic}</span>
+                          Topic:{" "}
+                          <span className="text-[#282828] font-normal text-xs ml-1">
+                            {item.topic}
+                          </span>
                         </p>
                         <div className="flex gap-2">
-                          <p className="text-[#282828] font-medium text-xs">Room: <span className="font-normal">{item.room || "-"}</span></p>
-                          <p className="text-[#282828] font-medium text-xs">Faculty: <span className="font-normal">{item.faculty}</span></p>
-                          {item.isCancelled && <p className="text-red-500 text-xs font-semibold">CANCELLED</p>}
+                          <p className="text-[#282828] font-medium text-xs">
+                            Room:{" "}
+                            <span className="font-normal">
+                              {item.room || "-"}
+                            </span>
+                          </p>
+                          <p className="text-[#282828] font-medium text-xs">
+                            Faculty:{" "}
+                            <span className="font-normal">{item.faculty}</span>
+                          </p>
+                          {item.isCancelled && (
+                            <p className="text-red-500 text-xs font-semibold">
+                              CANCELLED
+                            </p>
+                          )}
                         </div>
                       </div>
 
                       <div
-                        className={`rounded-full h-[40px] min-w-[40px] flex items-center justify-center transition-all ${item.pdfUrl
-                          ? "bg-[#16284F] cursor-pointer"
-                          : "bg-gray-300"
-                          }`}
-                        onClick={() => item.pdfUrl && window.open(item.pdfUrl, "_blank")}
+                        className={`rounded-full h-[40px] min-w-[40px] flex items-center justify-center transition-all ${
+                          item.pdfUrl
+                            ? "bg-[#16284F] cursor-pointer"
+                            : "bg-gray-300"
+                        }`}
+                        onClick={() =>
+                          item.pdfUrl && window.open(item.pdfUrl, "_blank")
+                        }
                       >
-                        <FilePdf size={23} className={item.pdfUrl ? "text-white" : "text-gray-500"} />
+                        <FilePdf
+                          size={23}
+                          className={
+                            item.pdfUrl ? "text-white" : "text-gray-500"
+                          }
+                        />
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type NewFolderModalProps = {
   open: boolean;
@@ -17,6 +18,7 @@ export default function NewFolderModal({
   onSave,
   loading = false,
 }: NewFolderModalProps) {
+  const t = useTranslations("Drive.student"); // Hook
   const [name, setName] = useState("");
   const [color, setColor] = useState(FOLDER_COLORS[0]);
   const [error, setError] = useState("");
@@ -34,49 +36,42 @@ export default function NewFolderModal({
   const handleSave = () => {
     const trimmedName = name.trim();
 
-    // 1. Required
     if (!trimmedName) {
-      setError("Folder name is required");
+      setError(t("Folder name is required"));
       return;
     }
 
-    // 2. Length validation
     if (trimmedName.length < 3) {
-      setError("Folder name must be at least 3 characters");
+      setError(t("Folder name must be at least 3 characters"));
       return;
     }
 
     if (trimmedName.length > 50) {
-      setError("Folder name cannot exceed 50 characters");
+      setError(t("Folder name cannot exceed 50 characters"));
       return;
     }
 
-    // 3. Allowed characters (letters, numbers, space, underscore, hyphen)
     if (!/^[a-zA-Z0-9 _-]+$/.test(trimmedName)) {
-      setError("Only letters, numbers, spaces, - and _ are allowed");
+      setError(t("Only letters, numbers, spaces, - and _ are allowed"));
       return;
     }
 
-    // 4. No multiple spaces
     if (/\s{2,}/.test(trimmedName)) {
-      setError("Folder name cannot contain multiple spaces");
+      setError(t("Folder name cannot contain multiple spaces"));
       return;
     }
 
-    // 5. Cannot start or end with space, hyphen, underscore
     if (/^[\s_-]|[\s_-]$/.test(trimmedName)) {
-      setError("Folder name cannot start or end with space, - or _");
+      setError(t("Folder name cannot start or end with space, - or _"));
       return;
     }
 
-    // 6. Reserved names (optional)
     const reservedNames = ["admin", "root", "system"];
     if (reservedNames.includes(trimmedName.toLowerCase())) {
-      setError("This folder name is not allowed");
+      setError(t("This folder name is not allowed"));
       return;
     }
 
-    // ✅ Passed all validations
     onSave({ name: trimmedName, color });
   };
 
@@ -84,39 +79,39 @@ export default function NewFolderModal({
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
       <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
         <h3 className="mb-4 text-lg font-semibold text-[#111827]">
-          New Folder
+          {t("New Folder")}
         </h3>
 
         <div className="mb-4">
           <label className="mb-1 block text-sm font-medium text-[#111827]">
-            Folder Name
+            {t("Folder Name")}
           </label>
           <input
             value={name}
             onChange={(e) => {
               const value = e.target.value;
-
-              // Allow only valid characters while typing
               if (/^[a-zA-Z0-9 _-]*$/.test(value)) {
                 setName(value);
                 setError("");
               } else {
-                setError("Only letters, numbers, spaces, - and _ are allowed");
+                setError(
+                  t("Only letters, numbers, spaces, - and _ are allowed"),
+                );
               }
             }}
-            placeholder="Enter folder name"
+            placeholder={t("Enter folder name")}
             disabled={loading}
             className="w-full rounded border border-[#D1D5DB] px-3 py-2 text-sm outline-none text-black focus:border-[#43C17A] disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <p className="mt-1 text-xs text-[#6B7280]">
-            Only letters, numbers, spaces, - and _
+            {t("Only letters, numbers, spaces, - and _")}
           </p>
           {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
 
         <div className="mb-5">
           <p className="mb-2 text-sm font-medium text-[#111827]">
-            Choose Folder Color
+            {t("Choose Folder Color")}
           </p>
           <div className="flex gap-2 rounded border border-[#E5E7EB] bg-white p-2">
             {FOLDER_COLORS.map((c) => (
@@ -125,8 +120,7 @@ export default function NewFolderModal({
                 type="button"
                 onClick={() => setColor(c)}
                 disabled={loading}
-                className={`h-9 w-9 rounded disabled:cursor-not-allowed ${color === c ? "ring-2 ring-offset-2 ring-[#43C17A]" : ""
-                  }`}
+                className={`h-9 w-9 rounded disabled:cursor-not-allowed ${color === c ? "ring-2 ring-offset-2 ring-[#43C17A]" : ""}`}
                 style={{ backgroundColor: c }}
               />
             ))}
@@ -142,14 +136,30 @@ export default function NewFolderModal({
           >
             {loading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8z"
+                  />
                 </svg>
-                Saving...
+                {t("Saving")}
               </>
             ) : (
-              "Save Folder"
+              t("Save Folder")
             )}
           </button>
           <button
@@ -158,7 +168,7 @@ export default function NewFolderModal({
             disabled={loading}
             className="flex-1 rounded border border-[#D1D5DB] py-2 text-sm font-semibold text-[#111827] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            Cancel
+            {t("Cancel")}
           </button>
         </div>
       </div>

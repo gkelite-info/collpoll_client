@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 type NavItem = {
   icon: (isActive: boolean) => ReactNode;
@@ -22,62 +23,63 @@ type NavItem = {
 export default function PlacementNavbar() {
   const pathname = usePathname();
   const BASE = "/placement";
+  const t = useTranslations("Navbars");
 
   const items: NavItem[] = [
     {
       icon: (isActive) => (
         <House size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Home",
+      label: t("Home"),
       path: `${BASE}`,
     },
     {
       icon: (isActive) => (
         <Calendar size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Calendar",
+      label: t("Calendar"),
       path: `${BASE}/calendar`,
     },
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Attendance",
+      label: t("Attendance"),
       path: `${BASE}/attendance`,
     },
     {
       icon: (isActive) => (
         <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Placements",
+      label: t("Placements"),
       path: `${BASE}/placements`,
     },
     {
       icon: (isActive) => (
         <Laptop size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Meetings",
+      label: t("Meetings"),
       path: `${BASE}/meetings`,
     },
     {
       icon: (isActive) => (
         <FolderOpen size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Drive",
+      label: t("Drive"),
       path: `${BASE}/drive`,
     },
     {
       icon: (isActive) => (
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "My Attendance",
+      label: t("My Attendance"),
       path: `${BASE}/my-attendance`,
     },
     {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
-      label: "Settings",
+      label: t("Settings"),
       path: `${BASE}/settings`,
     },
   ];
@@ -98,13 +100,9 @@ export default function PlacementNavbar() {
           const active = isActivePath(item.path);
 
           return (
-            // <div
-            //     key={item.path}
-            //     onClick={() => router.push(item.path)}
             <Link
               key={item.path}
               href={item.path}
-              // if want to remove Link and use useRouter above 3 lins remove and top commented 6 lines uncomment.
               className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
                                     ${
                                       active
@@ -121,7 +119,6 @@ export default function PlacementNavbar() {
               >
                 {item.label}
               </p>
-              {/* </div> */}
             </Link>
           );
         })}

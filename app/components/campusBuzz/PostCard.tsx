@@ -16,7 +16,6 @@ import {
   Loader2,
 } from "lucide-react";
 
-// --- API IMPORTS ---
 import {
   checkCampusBuzzPostLiked,
   fetchCampusBuzzPostLikeCount,
@@ -34,8 +33,8 @@ import {
   shareCampusBuzzPost,
 } from "@/lib/helpers/campusBuzz/campusBuzzPostSharesAPI";
 import { sendUniversalNotifications } from "@/lib/helpers/notifications/notificationAPI";
+import { useTranslations } from "next-intl";
 
-// --- UX HELPERS ---
 const getAvatarStyle = (userId: number) => ({
   backgroundColor: `hsl(${(userId * 137.508) % 360}, 65%, 45%)`,
   color: "white",
@@ -51,17 +50,17 @@ const getInitials = (name?: string) =>
         .toUpperCase()
     : "U";
 
-const formatTimeAgo = (dateString: string) => {
+const formatTimeAgo = (dateString: string, t: any) => {
   const seconds = Math.floor(
     (new Date().getTime() - new Date(dateString).getTime()) / 1000,
   );
-  if (seconds < 60) return "Just now";
+  if (seconds < 60) return t("Just now");
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return t("{count}m ago", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("{count}h ago", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return t("{count}d ago", { count: days });
   return new Date(dateString).toLocaleDateString();
 };
 
@@ -90,7 +89,6 @@ const extractProfileUrl = (userObj: any) => {
     : userObj.user_profile.profileUrl;
 };
 
-// Universal Avatar Component
 const UserAvatar = ({
   userId,
   name,
@@ -121,7 +119,6 @@ const UserAvatar = ({
   );
 };
 
-// --- SHIMMER FOR COMMENTS ---
 const CommentSkeleton = () => (
   <div className="flex gap-2.5 animate-pulse mt-1">
     <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 mt-0.5"></div>
@@ -149,8 +146,8 @@ export default function PostCard({
       ? post.tags.split(",").map((t: string) => t.trim())
       : [];
   const postAuthorPhoto = extractProfileUrl(post.users);
+  const t = useTranslations("CampusBuzz"); // Hook
 
-  // Post State
   const [state, setState] = useState({
     liked: false,
     likeCount: 0,
@@ -161,7 +158,7 @@ export default function PostCard({
     menuOpen: false,
   });
   const [comments, setComments] = useState<any[]>([]);
-  const [isLoadingComments, setIsLoadingComments] = useState(false); // <-- NEW STATE
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [newCommentText, setNewCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<{
     commentId: number;
@@ -195,7 +192,6 @@ export default function PostCard({
     if (isHighlighted) loadComments();
   }, [pId, userId, isHighlighted]);
 
-  // --- REFINED LOAD COMMENTS LOGIC ---
   const loadComments = async () => {
     setIsLoadingComments(true);
     try {
@@ -245,7 +241,6 @@ export default function PostCard({
   const handleToggleComments = async () => {
     const willBeActive = !state.commentsActive;
     setState((s) => ({ ...s, commentsActive: willBeActive }));
-    // Fetch comments only if opening and we haven't fetched them yet
     if (willBeActive && comments.length === 0) {
       loadComments();
     }
@@ -344,7 +339,6 @@ export default function PostCard({
     <div
       className={`relative bg-white rounded-xl border p-4 shadow-sm transition-colors ${isHighlighted && !debouncedSearch ? "border-[#43C17A] bg-[#fafffb]" : "border-gray-100"}`}
     >
-      {/* AUTHOR HEADER & POST 3-DOT MENU */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <UserAvatar
@@ -356,12 +350,12 @@ export default function PostCard({
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
               <span className="text-[15px] font-semibold text-[#282828] leading-tight">
-                {post.users?.fullName || "Campus Member"}
+                {post.users?.fullName || t("Campus Member")}
               </span>
               <RoleFlair role={post.users?.role} />
             </div>
             <span className="text-[12px] text-gray-400">
-              {formatTimeAgo(post.createdAt)}
+              {formatTimeAgo(post.createdAt, t)}
             </span>
           </div>
         </div>
@@ -397,7 +391,7 @@ export default function PostCard({
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer font-medium"
                     >
-                      <Pencil size={16} /> Edit Post
+                      <Pencil size={16} /> {t("Edit Post")}
                     </button>
                     <button
                       onClick={() => {
@@ -406,7 +400,7 @@ export default function PostCard({
                       }}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
                     >
-                      <Trash2 size={16} /> Delete Post
+                      <Trash2 size={16} /> {t("Delete Post")}
                     </button>
                   </motion.div>
                 </>
@@ -452,7 +446,6 @@ export default function PostCard({
         </div>
       )}
 
-      {/* ACTION BAR */}
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-50 select-none">
         <div className="flex items-center gap-6">
           <button
@@ -504,7 +497,9 @@ export default function PostCard({
           >
             <Share2 size={18} className="text-gray-500" />
             <span className="text-[14px] font-medium text-gray-600">
-              {state.shareCount > 0 ? `${state.shareCount} Shares` : "Share"}
+              {state.shareCount > 0
+                ? t("{count} Shares", { count: state.shareCount })
+                : t("Share")}
             </span>
           </button>
           <AnimatePresence>
@@ -530,7 +525,7 @@ export default function PostCard({
                       className="cursor-pointer w-full flex items-center justify-between p-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors font-medium"
                     >
                       <span className="flex items-center gap-2">
-                        <Link size={16} /> Copy Link
+                        <Link size={16} /> {t("Copy Link")}
                       </span>
                       {copiedLink && (
                         <Check size={16} className="text-[#43C17A]" />
@@ -540,7 +535,7 @@ export default function PostCard({
                       onClick={() => handleShareAction("whatsapp")}
                       className="cursor-pointer w-full flex items-center gap-2 p-3 text-sm text-gray-700 hover:bg-[#EAF7F1] hover:text-[#43C17A] rounded-lg transition-colors font-medium mt-1"
                     >
-                      <Share2 size={16} /> Share to WhatsApp
+                      <Share2 size={16} /> {t("Share to WhatsApp")}
                     </button>
                   </div>
                 </motion.div>
@@ -550,7 +545,6 @@ export default function PostCard({
         </div>
       </div>
 
-      {/* COMMENTS UI */}
       <AnimatePresence>
         {state.commentsActive && (
           <motion.div
@@ -563,7 +557,7 @@ export default function PostCard({
               {replyingTo && (
                 <div className="flex items-center justify-between bg-gray-100 text-gray-600 text-[12px] px-3 py-1.5 rounded-md mx-1">
                   <span>
-                    Replying to{" "}
+                    {t("Replying to")}{" "}
                     <strong className="text-gray-800">
                       {replyingTo.userName}
                     </strong>
@@ -587,7 +581,7 @@ export default function PostCard({
                 <input
                   type="text"
                   placeholder={
-                    replyingTo ? "Write a reply..." : "Write a comment..."
+                    replyingTo ? t("Write a reply") : t("Write a comment")
                   }
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
@@ -611,7 +605,7 @@ export default function PostCard({
                   </>
                 ) : parentComments.length === 0 ? (
                   <div className="text-center text-xs text-gray-400 py-2">
-                    No comments yet.
+                    {t("No comments yet")}
                   </div>
                 ) : (
                   parentComments.map((comment: any) => {
@@ -664,7 +658,7 @@ export default function PostCard({
                                       onClick={() => setEditingCommentId(null)}
                                       className="text-[11px] text-gray-500 hover:text-gray-700 cursor-pointer font-medium"
                                     >
-                                      Cancel
+                                      {t("Cancel")}
                                     </button>
                                     <button
                                       onClick={() =>
@@ -674,7 +668,7 @@ export default function PostCard({
                                       }
                                       className="text-[11px] bg-[#43C17A] text-white px-2.5 py-1 rounded cursor-pointer hover:bg-[#3ba869] font-medium"
                                     >
-                                      Save
+                                      {t("Save")}
                                     </button>
                                   </div>
                                 </div>
@@ -684,7 +678,7 @@ export default function PostCard({
                                     <span
                                       className={`font-semibold text-[#282828] leading-tight ${isReply ? "text-[12px]" : "text-[13px]"}`}
                                     >
-                                      {c.users?.fullName || "Campus Member"}
+                                      {c.users?.fullName || t("Campus Member")}
                                     </span>
                                     <RoleFlair role={c.users?.role} />
                                   </div>
@@ -731,7 +725,7 @@ export default function PostCard({
                                                 }}
                                                 className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer font-medium"
                                               >
-                                                <Pencil size={12} /> Edit
+                                                <Pencil size={12} /> {t("Edit")}
                                               </button>
                                               <button
                                                 onClick={() => {
@@ -742,7 +736,8 @@ export default function PostCard({
                                                 }}
                                                 className="w-full text-left px-3 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer font-medium"
                                               >
-                                                <Trash2 size={12} /> Delete
+                                                <Trash2 size={12} />{" "}
+                                                {t("Delete")}
                                               </button>
                                             </div>
                                           </>
@@ -755,19 +750,20 @@ export default function PostCard({
 
                             {editingCommentId !== c.campusBuzzPostCommentId && (
                               <div className="flex items-center gap-3 px-2 mt-1 text-[11px] text-gray-500 font-medium">
-                                <span>{formatTimeAgo(c.createdAt)}</span>
+                                <span>{formatTimeAgo(c.createdAt, t)}</span>
                                 {!isReply && (
                                   <button
                                     onClick={() =>
                                       setReplyingTo({
                                         commentId: c.campusBuzzPostCommentId,
                                         userName:
-                                          c.users?.fullName || "Campus Member",
+                                          c.users?.fullName ||
+                                          t("Campus Member"),
                                       })
                                     }
                                     className="hover:text-gray-800 transition-colors cursor-pointer font-semibold"
                                   >
-                                    Reply
+                                    {t("Reply")}
                                   </button>
                                 )}
                               </div>

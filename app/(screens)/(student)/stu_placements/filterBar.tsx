@@ -1,6 +1,7 @@
 "use client";
 
 import { FaChevronDown } from "react-icons/fa6";
+import { useTranslations } from "next-intl";
 
 const eligibilityOptions = ["Eligible", "Not Eligible", "All"] as const;
 const sortOptions = [
@@ -44,11 +45,12 @@ export function PlacementFilterBar({
   onSortOpen,
 }: PlacementFilterBarProps) {
   const currentYear = new Date().getFullYear();
+  const t = useTranslations("Placements.student"); // Hook
 
   return (
     <div className="flex flex-wrap items-center gap-4 text-sm text-[#4B4B4B]">
       <div className="flex items-center gap-2">
-        <span>Placement Cycle :</span>
+        <span>{t("Placement Cycle :")}</span>
         <div className="relative">
           <select
             className="h-9 cursor-pointer rounded-md border border-gray-300 bg-[#F5F5F5] bg-none appearance-none px-3 pr-8 text-sm font-medium text-[#2B2B2B] focus:outline-none [&::-ms-expand]:hidden"
@@ -73,7 +75,7 @@ export function PlacementFilterBar({
       </div>
 
       <div className="flex items-center gap-2">
-        <span>Eligibility :</span>
+        <span>{t("Eligibility :")}</span>
         <div className="relative">
           <select
             className="h-9 cursor-pointer rounded-md border border-gray-300 bg-[#F5F5F5] bg-none appearance-none px-3 pr-8 text-sm font-medium text-[#2B2B2B] focus:outline-none [&::-ms-expand]:hidden"
@@ -81,13 +83,13 @@ export function PlacementFilterBar({
             onPointerDown={onEligibilityOpen}
             onChange={(e) =>
               onEligibilityChange(
-                e.target.value as (typeof eligibilityOptions)[number]
+                e.target.value as (typeof eligibilityOptions)[number],
               )
             }
           >
             {eligibilityOptions.map((opt) => (
               <option key={opt} value={opt}>
-                {opt}
+                {t(opt)}
               </option>
             ))}
           </select>
@@ -101,7 +103,7 @@ export function PlacementFilterBar({
       </div>
 
       <div className="flex items-center gap-2">
-        <span>Sort By :</span>
+        <span>{t("Sort By :")}</span>
         <div className="relative">
           <select
             className="h-9 cursor-pointer rounded-md border border-gray-300 bg-[#F5F5F5] bg-none appearance-none px-3 pr-8 text-sm font-medium text-[#2B2B2B] focus:outline-none [&::-ms-expand]:hidden"
@@ -113,7 +115,7 @@ export function PlacementFilterBar({
           >
             {sortOptions.map((opt) => (
               <option key={opt} value={opt}>
-                {opt}
+                {t(opt)}
               </option>
             ))}
           </select>

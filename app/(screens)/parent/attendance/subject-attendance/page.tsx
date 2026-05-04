@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getParentSubjectWiseStats } from "@/lib/helpers/parent/attendance/parentAttendanceActions";
 import { SubjectAttendanceSkeleton } from "../shimmer/attendanceSkeletons";
+import { useTranslations } from "next-intl";
 
 interface CardItem {
   id: number;
@@ -27,6 +28,7 @@ interface CardItem {
 export default function ParentSubjectAttendance() {
   const router = useRouter();
   const { userId } = useUser();
+  const t = useTranslations("Attendance.parent"); // Hook
 
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export default function ParentSubjectAttendance() {
       value: dashboardData
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
-      label: "Semester wise Classes",
+      label: t("Semester wise Classes"),
       style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
@@ -74,14 +76,14 @@ export default function ParentSubjectAttendance() {
   ];
 
   const columns = [
-    { title: "Subject", key: "subject" },
-    { title: "Total", key: "total" },
-    { title: "Attended", key: "attended" },
-    { title: "Missed", key: "missed" },
-    { title: "Leave", key: "leave" },
-    { title: "Percentage", key: "percentage" },
-    { title: "Notes", key: "notes" },
-    { title: "Actions", key: "actions" },
+    { title: t("Subject"), key: "subject" },
+    { title: t("Total"), key: "total" },
+    { title: t("Attended"), key: "attended" },
+    { title: t("Missed"), key: "missed" },
+    { title: t("Leave"), key: "leave" },
+    { title: t("Percentage"), key: "percentage" },
+    { title: t("Notes"), key: "notes" },
+    { title: t("Actions"), key: "actions" },
   ];
 
   const tableData =
@@ -108,7 +110,7 @@ export default function ParentSubjectAttendance() {
             )
           }
         >
-          View Details
+          {t("View Details")}
         </span>
       ),
     })) || [];
@@ -135,12 +137,15 @@ export default function ParentSubjectAttendance() {
                 <CaretLeft size={24} weight="bold" color="#282828" />
               </button>
 
-              <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+              <h1 className="text-[#282828] font-bold text-2xl">
+                {t("Attendance")}
+              </h1>
             </div>
 
             <p className="text-[#282828] whitespace-nowrap">
-              Track, Monitor, and Stay Updated on Your Child’s Attendance
-              Effortlessly.
+              {t(
+                "Track, Monitor, and Stay Updated on Your Childs Attendance Effortlessly",
+              )}
             </p>
           </div>
         </div>
@@ -175,8 +180,12 @@ export default function ParentSubjectAttendance() {
       </div>
 
       <div className="mt-4 flex flex-col items-start">
-        <h4 className="text-[#282828] font-medium">Subject-Wise Attendance</h4>
-        <p className="text-[#282828] text-sm mt-1">Subject-Wise Breakdown</p>
+        <h4 className="text-[#282828] font-medium">
+          {t("Subject-Wise Attendance")}
+        </h4>
+        <p className="text-[#282828] text-sm mt-1">
+          {t("Subject-Wise Breakdown")}
+        </p>
         <TableComponent
           columns={columns}
           tableData={tableData}

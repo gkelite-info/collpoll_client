@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 interface AttendanceSummaryProps {
   percentage: number;
@@ -10,6 +11,7 @@ interface AttendanceSummaryProps {
 export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.round(latest));
+  const t = useTranslations("Progress.student"); // Hook
 
   useEffect(() => {
     const controls = animate(count, percentage, {
@@ -24,7 +26,7 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
   return (
     <div>
       <h2 className="text-[28px] font-bold text-[#333] mb-4 tracking-tight">
-        Attendance Summary
+        {t("Attendance Summary")}
       </h2>
 
       <div className="relative flex flex-col bg items-center">
@@ -64,18 +66,24 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
               </motion.span>
               <span className="text-3xl font-bold text-[#2D3139]">%</span>
             </div>
-            <p className="text-3xl font-bold text-[#2D3139] mt-2">Attendance</p>
+            <p className="text-3xl font-bold text-[#2D3139] mt-2">
+              {t("Attendance")}
+            </p>
           </div>
         </div>
 
         <div className="flex gap-10 mt-10">
           <div className="flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-[#D9F9C3]"></div>
-            <span className="text-lg font-medium text-gray-600">Absent</span>
+            <span className="text-lg font-medium text-gray-600">
+              {t("Absent")}
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-4 h-4 rounded-full bg-[#4ABF08]"></div>
-            <span className="text-lg font-medium text-gray-600">Present</span>
+            <span className="text-lg font-medium text-gray-600">
+              {t("Present")}
+            </span>
           </div>
         </div>
       </div>

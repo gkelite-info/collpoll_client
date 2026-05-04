@@ -14,6 +14,7 @@ import {
   TableSkeleton,
 } from "../shimmer/attendanceSkeletons";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { useTranslations } from "next-intl";
 
 interface CardItem {
   id: number;
@@ -45,6 +46,7 @@ function normalizeStatus(status: string) {
 }
 
 const StatusBadge = ({ status }: { status: string }) => {
+  const t = useTranslations("Attendance.parent"); // Hook for the badge
   let bg = "",
     color = "";
   switch (status) {
@@ -70,7 +72,7 @@ const StatusBadge = ({ status }: { status: string }) => {
         className="w-[90px] h-[28px] flex items-center justify-center rounded-lg text-sm font-medium"
         style={{ backgroundColor: bg, color: color }}
       >
-        {status}
+        {t(status)}
       </div>
     </div>
   );
@@ -78,6 +80,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 function ParentSubjectAttendanceDetails() {
   type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
+  const t = useTranslations("Attendance.parent"); // Hook
 
   const [activeView, setActiveView] = useState<ViewFilter>("ALL");
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +127,7 @@ function ParentSubjectAttendanceDetails() {
       id: 1,
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.total ?? 0,
-      label: "Total Classes",
+      label: t("Total Classes"),
       style: "bg-[#E2DAFF] w-[182px]",
       iconBgColor: "#714EF2",
       iconColor: "#EFEFEF",
@@ -133,7 +136,7 @@ function ParentSubjectAttendanceDetails() {
       id: 2,
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.attended ?? 0,
-      label: "Attended",
+      label: t("Attended"),
       style: "bg-[#FFEDDA] w-[182px]",
       iconBgColor: "#FFBC72",
       iconColor: "#EFEFEF",
@@ -142,7 +145,7 @@ function ParentSubjectAttendanceDetails() {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.absent ?? 0,
-      label: "Absent",
+      label: t("Absent"),
       style: "bg-[#FFE6E6] w-[182px]",
       iconBgColor: "#F62D2D",
       iconColor: "#EFEFEF",
@@ -151,21 +154,21 @@ function ParentSubjectAttendanceDetails() {
       id: 4,
       icon: <Percent size={30} weight="fill" />,
       value: `${data?.headerStats.percentage ?? 0}%`,
-      label: "Attendance",
+      label: t("Attendance"),
       style: "bg-[#CEE6FF] w-[182px]",
       iconBgColor: "#60AEFF",
       iconColor: "#EFEFEF",
     },
   ];
 
-  const attendanceText = `Classes Held: ${data?.headerStats.total ?? 0} | Attended: ${data?.headerStats.attended ?? 0} | Missed: ${data?.headerStats.absent ?? 0} | ${data?.headerStats.percentage ?? 0}%`;
+  const attendanceText = `${t("Classes Held:")} ${data?.headerStats.total ?? 0} | ${t("Attended:")} ${data?.headerStats.attended ?? 0} | ${t("Missed:")} ${data?.headerStats.absent ?? 0} | ${data?.headerStats.percentage ?? 0}%`;
 
   const columns = [
-    { title: "Date", key: "date" },
-    { title: "Time", key: "time" },
-    { title: "Status", key: "status" },
-    { title: "Reason", key: "reason" },
-    { title: "Notes", key: "notes" },
+    { title: t("Date"), key: "date" },
+    { title: t("Time"), key: "time" },
+    { title: t("Status"), key: "status" },
+    { title: t("Reason"), key: "reason" },
+    { title: t("Notes"), key: "notes" },
   ];
 
   const tableData: AttendanceTableRow[] =
@@ -213,10 +216,14 @@ function ParentSubjectAttendanceDetails() {
                 className="cursor-pointer text-black -ml-1.5"
               />
             </button>
-            <h1 className="text-[#282828] font-bold text-2xl">Attendance</h1>
+            <h1 className="text-[#282828] font-bold text-2xl">
+              {t("Attendance")}
+            </h1>
           </div>
           <p className="text-[#282828]">
-            Track, manage, and maintain your ward's attendance effortlessly
+            {t(
+              "Track, manage, and maintain your wards attendance effortlessly",
+            )}
           </p>
         </div>
         <div className="flex justify-end w-[32%]">
@@ -252,10 +259,12 @@ function ParentSubjectAttendanceDetails() {
 
       <div className="mt-4 flex flex-col items-center">
         <div className="w-full flex flex-col items-start">
-          <h4 className="text-[#282828] font-medium">Subject Detail View</h4>
+          <h4 className="text-[#282828] font-medium">
+            {t("Subject Detail View")}
+          </h4>
           <div className="bg-blue-00 w-full mt-2 flex items-center">
             <div className="flex items-center gap-1">
-              <h5 className="text-[#525252] text-sm">Subject :</h5>
+              <h5 className="text-[#525252] text-sm">{t("Subject :")}</h5>
               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
                 <p className="text-sm text-[#43C17A] font-medium">
                   {data?.subjectName ?? "-"}
@@ -263,7 +272,7 @@ function ParentSubjectAttendanceDetails() {
               </div>
             </div>
             <div className="flex items-center gap-1 ml-6">
-              <h5 className="text-[#525252] text-sm">Faculty :</h5>
+              <h5 className="text-[#525252] text-sm">{t("Faculty :")}</h5>
               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
                 <p className="text-sm text-[#43C17A] font-medium">
                   {data?.facultyName ?? "-"}
@@ -271,7 +280,7 @@ function ParentSubjectAttendanceDetails() {
               </div>
             </div>
             <div className="flex items-center gap-1 ml-6">
-              <h5 className="text-[#525252] text-sm">Attendance :</h5>
+              <h5 className="text-[#525252] text-sm">{t("Attendance :")}</h5>
               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
                 <p className="text-sm text-[#43C17A] font-medium">
                   {attendanceText}

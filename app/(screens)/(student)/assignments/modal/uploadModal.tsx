@@ -336,7 +336,7 @@ import { CloudArrowUp, Trash } from "@phosphor-icons/react";
 import { supabase } from "@/lib/supabaseClient";
 import { insertAssignmentSubmission } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import toast from "react-hot-toast";
-import { useTranslations } from "next-intl"; // Added import
+import { useTranslations } from "next-intl";
 
 type UploadModalProps = {
   isOpen: boolean;

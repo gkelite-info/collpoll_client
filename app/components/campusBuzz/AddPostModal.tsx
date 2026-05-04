@@ -7,6 +7,7 @@ import { X, Upload, Loader2 } from "lucide-react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { supabase } from "@/lib/supabaseClient";
 import { saveCampusBuzzPost } from "@/lib/helpers/campusBuzz/campusBuzzAPI";
+import { useTranslations } from "next-intl";
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -29,6 +30,7 @@ function TagsInputBox({
   tags: string[];
   setTags: (tags: string[]) => void;
 }) {
+  const t = useTranslations("CampusBuzz");
   const [inputValue, setInputValue] = useState("");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -88,7 +90,7 @@ function TagsInputBox({
         id="tag-input"
         type="text"
         placeholder={
-          tags.length === 0 ? "Add tags (press Enter or comma)..." : ""
+          tags.length === 0 ? t("Add tags press Enter or comma") : ""
         }
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
@@ -101,6 +103,7 @@ function TagsInputBox({
 
 export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
   const { collegeId, userId } = useUser();
+  const t = useTranslations("CampusBuzz"); // Hook
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<
@@ -132,7 +135,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
     if (!file) return;
 
     if (!["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
-      setErrorMsg("Only JPG and PNG allowed!");
+      setErrorMsg(t("Only JPG and PNG allowed!"));
       return;
     }
 
@@ -164,12 +167,12 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
   const handleSubmit = async () => {
     setErrorMsg("");
     if (!title.trim() || !description.trim()) {
-      setErrorMsg("Title and Description are required.");
+      setErrorMsg(t("Title and Description are required"));
       return;
     }
 
     if (!collegeId || !userId) {
-      setErrorMsg("User session missing. Please log in again.");
+      setErrorMsg(t("User session missing Please log in again"));
       return;
     }
 
@@ -199,7 +202,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
       onClose();
     } catch (error: any) {
       console.error("Failed to post:", error);
-      setErrorMsg(error.message || "Failed to create post. Please try again.");
+      setErrorMsg(error.message || t("Failed to create post Please try again"));
     } finally {
       setIsSubmitting(false);
     }
@@ -226,7 +229,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
             <div className="px-[40px] pt-[30px] pb-[20px] bg-white shrink-0">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-roboto font-semibold text-[#282828]">
-                  Create a New Post
+                  {t("Create a New Post")}
                 </h2>
                 <button
                   onClick={!isSubmitting ? onClose : undefined}
@@ -239,8 +242,9 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 </button>
               </div>
               <p className="text-base font-roboto font-normal text-[#282828] mt-[6px]">
-                Share announcements, achievements, or updates with students and
-                faculty.
+                {t(
+                  "Share announcements, achievements, or updates with students and faculty",
+                )}
               </p>
               {errorMsg && (
                 <p className="text-red-500 font-medium mt-2">{errorMsg}</p>
@@ -250,41 +254,45 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
             <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
               <div className="mb-6">
                 <label className="text-lg font-roboto font-medium text-[#282828]">
-                  Post Title <span className="text-red-500">*</span>
+                  {t("Post Title")} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Faculty Development Workshop on Generative AI"
+                  placeholder={t(
+                    "Faculty Development Workshop on Generative AI",
+                  )}
                   className="w-full h-[50px] mt-2 px-3 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] placeholder:text-[#898989] outline-none focus:border-[#43C17A]"
                 />
               </div>
 
               <div className="mb-6">
                 <label className="text-lg font-roboto font-medium text-[#282828]">
-                  Category <span className="text-red-500">*</span>
+                  {t("Category")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
                   className="w-full h-[50px] mt-2 px-4 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] outline-none focus:border-[#43C17A] bg-white cursor-pointer"
                 >
-                  <option value="announcements">Announcements</option>
-                  <option value="achievements">Achievements</option>
-                  <option value="clubactivities">Clubs & Activities</option>
+                  <option value="announcements">{t("Announcements")}</option>
+                  <option value="achievements">{t("Achievements")}</option>
+                  <option value="clubactivities">
+                    {t("Clubs & Activities")}
+                  </option>
                 </select>
               </div>
 
               <div className="mb-6">
                 <label className="text-lg font-roboto font-medium text-[#282828]">
-                  Description <span className="text-red-500">*</span>
+                  {t("Description")} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Provide details about the event..."
+                  placeholder={t("Provide details about the event")}
                   className="w-full mt-2 border border-[#C4C4C4] rounded-md text-base font-roboto text-[#282828] outline-none px-3 py-3 focus:border-[#43C17A]"
                   style={{ resize: "vertical" }}
                 />
@@ -292,14 +300,14 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
               <div className="mb-6">
                 <label className="text-lg font-roboto font-medium text-[#282828]">
-                  Tags
+                  {t("Tags")}
                 </label>
                 <TagsInputBox tags={tags} setTags={setTags} />
               </div>
 
               <div className="mb-6">
                 <label className="text-[20px] font-roboto font-medium text-[#282828]">
-                  Image Feature (Optional)
+                  {t("Image Feature Optional")}
                 </label>
                 <input
                   type="file"
@@ -318,11 +326,10 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                   >
                     <Upload size={40} className="opacity-70 text-[#282828]" />
                     <p className="text-[18px] text-[#282828]">
-                      Click to Upload Image
+                      {t("Click to Upload Image")}
                     </p>
                   </div>
                 ) : (
-                  // Fixed: Clean, glitch-free bounding box
                   <div className="mt-3 relative w-full h-[250px] bg-gray-50 border border-gray-200 rounded-xl overflow-hidden flex items-center justify-center">
                     <img
                       src={imagePreview}
@@ -357,10 +364,10 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="animate-spin mr-2" size={20} />{" "}
-                    Posting...
+                    {t("Posting")}
                   </>
                 ) : (
-                  "Share Post"
+                  t("Share Post")
                 )}
               </button>
               <button
@@ -368,7 +375,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 onClick={onClose}
                 disabled={isSubmitting}
               >
-                Cancel
+                {t("Cancel")}
               </button>
             </div>
           </motion.div>

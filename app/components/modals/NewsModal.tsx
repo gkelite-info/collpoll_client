@@ -17,6 +17,7 @@ import {
   fetchEPapers,
 } from "@/lib/helpers/news/epaperAPI";
 import DeleteConfirmModal from "./DeleteConfirmModal";
+import { useTranslations } from "next-intl";
 
 const EPaperShimmer = () => (
   <div className="space-y-5">
@@ -55,6 +56,7 @@ type Props = {
 export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
   const { role, collegeId } = useUser();
   const isAdmin = role === "Admin" || role === "SuperAdmin";
+  const t = useTranslations("News"); // Initialize hook
 
   const [activeTab, setActiveTab] = useState<"epaper" | "news">("epaper");
   const [news, setNews] = useState<any[]>([]);
@@ -104,15 +106,15 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
   }, [isOpen, loadEpapers]);
 
   const handleDelete = async (ePaperId: number) => {
-    if (!confirm("Are you sure you want to delete this e-paper?")) return;
+    if (!confirm(t("Are you sure you want to delete this e-paper?"))) return;
     setDeletingId(ePaperId);
-    const toastId = toast.loading("Deleting...");
+    const toastId = toast.loading(t("Deleting"));
     try {
       await deleteEPaper(ePaperId);
-      toast.success("E-Paper deleted", { id: toastId });
+      toast.success(t("EPaper deleted"), { id: toastId });
       loadEpapers();
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete", { id: toastId });
+      toast.error(error.message || t("Failed to delete"), { id: toastId });
     } finally {
       setDeletingId(null);
     }
@@ -159,7 +161,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                 <div className="flex items-center gap-2">
                   <NewspaperIcon size={24} weight="fill" color="#43C17A" />
                   <h2 className="font-medium text-[20px] text-[#111827] leading-none">
-                    News
+                    {t("News")}
                   </h2>
                 </div>
                 <button
@@ -179,7 +181,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  E-Papers
+                  {t("EPapers")}
                 </button>
                 <button
                   onClick={() => setActiveTab("news")}
@@ -189,7 +191,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  Current News
+                  {t("Current News")}
                 </button>
               </div>
 
@@ -201,7 +203,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                         onClick={() => setIsAddModalOpen(true)}
                         className="w-full flex items-center justify-center gap-2 py-2.5 bg-white border border-[#43C17A] text-[#43C17A] rounded-lg font-medium hover:bg-[#43C17A]/5 transition-colors cursor-pointer"
                       >
-                        <Plus size={18} /> Add E-Paper
+                        <Plus size={18} /> {t("Add EPaper")}
                       </button>
                     )}
 
@@ -209,7 +211,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                       <EPaperShimmer />
                     ) : Object.keys(groupedEpapers).length === 0 ? (
                       <p className="text-center text-gray-500 text-sm mt-8">
-                        No E-Papers available.
+                        {t("No EPapers available")}
                       </p>
                     ) : (
                       Object.entries(groupedEpapers).map(([date, papers]) => (
@@ -236,7 +238,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                                     className="flex items-center gap-1.5 px-3 py-1.5 bg-[#43C17A]/10 text-[#43C17A] rounded-md text-xs font-medium hover:bg-[#43C17A]/20 transition-colors cursor-pointer"
                                   >
                                     <FilePdfIcon size={14} weight="fill" />
-                                    View
+                                    {t("View")}
                                   </button>
 
                                   {isAdmin && (
@@ -245,7 +247,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                                         setEPaperToDelete(paper.ePaperId)
                                       }
                                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                                      title="Delete"
+                                      title={t("Delete")}
                                     >
                                       <Trash size={16} />
                                     </button>
@@ -282,7 +284,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                             className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"
                           >
                             <p className="text-[14px] font-medium text-[#111827] flex items-center gap-2 mb-2">
-                              🗞️ {item.source?.name || "News Source"}
+                              🗞️ {item.source?.name || t("News Source")}
                             </p>
                             <p className="text-[14px] leading-relaxed text-[#414141]">
                               {item.title}
@@ -296,7 +298,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })
-                                  : "Updated"}
+                                  : t("Updated")}
                               </p>
                               <button
                                 onClick={() => {
@@ -305,7 +307,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
                                 }}
                                 className="text-[#43C17A] text-[12px] font-medium hover:underline cursor-pointer"
                               >
-                                Read More
+                                {t("Read More")}
                               </button>
                             </div>
                           </div>
@@ -341,14 +343,16 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
         onConfirm={async () => {
           if (!ePaperToDelete) return;
           setIsDeleting(true);
-          const toastId = toast.loading("Deleting E-Paper...");
+          const toastId = toast.loading(t("Deleting EPaper"));
           try {
             await deleteEPaper(ePaperToDelete);
-            toast.success("E-Paper deleted", { id: toastId });
+            toast.success(t("EPaper deleted"), { id: toastId });
             loadEpapers();
             setEPaperToDelete(null);
           } catch (error: any) {
-            toast.error(error.message || "Failed to delete", { id: toastId });
+            toast.error(error.message || t("Failed to delete"), {
+              id: toastId,
+            });
           } finally {
             setIsDeleting(false);
           }

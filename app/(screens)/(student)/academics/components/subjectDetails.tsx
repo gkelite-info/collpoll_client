@@ -1,8 +1,15 @@
 "use client";
-import { ArrowLeft, CalendarBlank, CheckCircleIcon, FilePdf, UserCircle } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  CalendarBlank,
+  CheckCircleIcon,
+  FilePdf,
+  UserCircle,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { CardProps, UnitTopic } from "./subjectCard";
 import { TopicPdfViewModal } from "./TopicPdfViewModal";
+import { useTranslations } from "next-intl";
 
 type Unit = {
   id: number;
@@ -46,12 +53,13 @@ type FilterBannerProps = {
 };
 
 function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
+  const t = useTranslations("Academics.student");
   return (
     <div className="flex flex-col gap-4">
       <div className="w-full flex flex-wrap gap-x-6 gap-y-3">
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm whitespace-nowrap">
-            Subject :
+            {t("Subject :")}
           </p>
           <p className="px-5 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap">
             {filterBannerDetails.subjectTitle}
@@ -60,11 +68,11 @@ function FilterBanner({ filterBannerDetails }: FilterBannerProps) {
 
         <div className="flex items-center gap-2">
           <p className="text-[#525252] text-sm whitespace-nowrap">
-            Semester :
+            {t("Semester :")}
           </p>
           <p className="px-3 py-1 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium whitespace-nowrap">
             {filterBannerDetails.semester
-              ? `Sem ${filterBannerDetails.semester}`
+              ? `${t("Sem")} ${filterBannerDetails.semester}`
               : "N/A"}
           </p>
         </div>
@@ -84,6 +92,7 @@ type UnitCardProps = {
 };
 
 function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
+  const t = useTranslations("Academics.student"); // Hook
   const colors = colorMap[unit.color] || colorMap.purple;
   const percentage = unit.percentage ?? 0;
 
@@ -106,10 +115,6 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
         </h3>
 
         <div className="flex items-center justify-end text-xs md:text-sm mb-2 shrink-0">
-          {/* <div className="flex items-center gap-2 text-[#6C6C6C]">
-            <CalendarBlank size={16} className={colors.accent} />
-            <span>{unit.dateRange}</span>
-          </div> */}
           <span className="font-semibold text-[#333333]">{percentage}%</span>
         </div>
 
@@ -165,7 +170,7 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
                     })
                   }
                   className="cursor-pointer"
-                  title="View PDFs"
+                  title={t("View PDFs")}
                 >
                   <FilePdf
                     size={16}
@@ -176,7 +181,7 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
               </li>
             ))
           ) : (
-            <li className="text-gray-400 italic">No topics found</li>
+            <li className="text-gray-400 italic">{t("No topics found")}</li>
           )}
         </ul>
       </div>
@@ -191,6 +196,7 @@ export function SubjectDetailsCard({
   details: CardProps;
   onBack: () => void;
 }) {
+  const t = useTranslations("Academics.student");
   const dynamicUnits = details.unitsData || [];
   const [selectedTopicPdf, setSelectedTopicPdf] = useState<{
     unitLabel: string;
@@ -206,7 +212,7 @@ export function SubjectDetailsCard({
         className="mb-4 cursor-pointer inline-flex items-center gap-2 text-[#7153E1] hover:text-[#5436c8] font-medium transition w-fit"
       >
         <ArrowLeft size={18} weight="bold" />
-        Go Back
+        {t("Go Back")}
       </button>
 
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
@@ -216,7 +222,7 @@ export function SubjectDetailsCard({
           <div className="bg-[#122A5E] p-1.5 rounded-full flex items-center justify-center">
             <UserCircle size={16} color="white" weight="bold" />
           </div>
-          <span className="text-[#4C4C4C] text-sm">Faculty : </span>
+          <span className="text-[#4C4C4C] text-sm">{t("Faculty :")} </span>
           <span className="text-[#122A5E] font-medium text-sm">
             {details.lecturer}
           </span>
@@ -231,7 +237,7 @@ export function SubjectDetailsCard({
             </div>
           ))}
           {dynamicUnits.length === 0 && (
-            <p className="text-gray-500 italic p-4">No units found.</p>
+            <p className="text-gray-500 italic p-4">{t("No units found")}</p>
           )}
         </div>
       </div>

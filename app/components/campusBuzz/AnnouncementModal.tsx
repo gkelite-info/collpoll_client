@@ -15,6 +15,7 @@ import {
   deactivateCampusBuzzPost,
 } from "@/lib/helpers/campusBuzz/campusBuzzAPI";
 import DeleteConfirmModal from "../modals/DeleteConfirmModal";
+import { useTranslations } from "next-intl"; // Added import
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -23,14 +24,6 @@ function Portal({ children }: { children: React.ReactNode }) {
   return createPortal(children, document.body);
 }
 
-const tabs = [
-  "All",
-  "Achievements",
-  "Announcements",
-  "Clubs & Activities",
-] as const;
-
-// --- RESTORED SHIMMER SKELETON ---
 const PostSkeleton = () => (
   <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm animate-pulse">
     <div className="flex items-center gap-3 mb-4">
@@ -53,6 +46,14 @@ export default function AnnouncementModal({
   highlightedPostId,
 }: any) {
   const { collegeId, userId, fullName, profilePhoto } = useUser();
+  const t = useTranslations("CampusBuzz");
+
+  const tabs = [
+    t("All"),
+    t("Achievements"),
+    t("Announcements"),
+    t("Clubs & Activities"),
+  ];
 
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
@@ -60,7 +61,8 @@ export default function AnnouncementModal({
 
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
+  // Default to the first translated tab
+  const [activeTab, setActiveTab] = useState<string>(tabs[0]);
 
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -72,6 +74,11 @@ export default function AnnouncementModal({
   const [isDeletingPost, setIsDeletingPost] = useState(false);
 
   const POSTS_PER_PAGE = 10;
+
+  useEffect(() => {
+    // Reset to the first tab when tabs array translates/mounts
+    setActiveTab(tabs[0]);
+  }, [t]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchInput), 500);
@@ -142,13 +149,13 @@ export default function AnnouncementModal({
   };
 
   const filteredPosts = posts.filter((post) => {
-    if (activeTab === "All") return true;
-    if (activeTab === "Achievements" && post.category === "achievements")
+    if (activeTab === t("All")) return true;
+    if (activeTab === t("Achievements") && post.category === "achievements")
       return true;
-    if (activeTab === "Announcements" && post.category === "announcements")
+    if (activeTab === t("Announcements") && post.category === "announcements")
       return true;
     if (
-      activeTab === "Clubs & Activities" &&
+      activeTab === t("Clubs & Activities") &&
       post.category === "clubactivities"
     )
       return true;
@@ -179,7 +186,7 @@ export default function AnnouncementModal({
                   <div className="flex items-center gap-3 cursor-default">
                     <MegaphoneIcon size={32} weight="fill" color="#43C17A" />
                     <h2 className="text-[22px] font-roboto font-semibold text-[#282828] leading-none">
-                      Campus Buzz
+                      {t("Campus Buzz")}
                     </h2>
                   </div>
                   <div className="flex items-center gap-4">
@@ -191,7 +198,7 @@ export default function AnnouncementModal({
                       className="flex items-center justify-center gap-2 px-4 py-[6px] rounded-full bg-[rgba(67,193,122,0.12)] text-[#43C17A] text-[16px] font-medium transition-colors hover:bg-[rgba(67,193,122,0.2)] cursor-pointer"
                     >
                       <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} />{" "}
-                      <span>Add Post</span>
+                      <span>{t("Add Post")}</span>
                     </button>
                     <button
                       onClick={onClose}
@@ -214,7 +221,7 @@ export default function AnnouncementModal({
                     id="buzz-search"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Search posts or announcements..."
+                    placeholder={t("Search posts or announcements")}
                     className="w-full bg-transparent outline-none text-[16px] font-roboto text-[#282828] placeholder:text-gray-500"
                   />
                   <Search className="w-[20px] h-[24px] text-[#43C17A]" />
@@ -245,8 +252,8 @@ export default function AnnouncementModal({
                     <MegaphoneIcon size={48} opacity={0.3} />
                     <p>
                       {debouncedSearch
-                        ? "No matching posts found."
-                        : "No posts found. Be the first to share!"}
+                        ? t("No matching posts found")
+                        : t("No posts found Be the first to share!")}
                     </p>
                   </div>
                 ) : (
@@ -279,10 +286,10 @@ export default function AnnouncementModal({
                           {isLoadingMore ? (
                             <>
                               <Loader2 size={16} className="animate-spin" />{" "}
-                              Loading...
+                              {t("Loading")}...
                             </>
                           ) : (
-                            "Load More Posts"
+                            t("Load More Posts")
                           )}
                         </button>
                       </div>

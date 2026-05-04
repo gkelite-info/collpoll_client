@@ -1,3 +1,7 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+
 type AttendanceItem = {
   subject: string;
   attended: number;
@@ -9,10 +13,12 @@ type AttendanceListProps = {
   data?: AttendanceItem[];
 };
 export function AttendanceList({ data }: AttendanceListProps) {
+  const t = useTranslations("Progress.parent");
+
   return (
     <div className="w-full h-[400px] flex flex-col font-sans overflow-hidden ">
       <h2 className="p-5 pb-2 text-lg font-bold text-gray-800">
-        Attendance by Subject
+        {t("Attendance by Subject")}
       </h2>
 
       <div className="flex-1 overflow-y-auto px-5 pb-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

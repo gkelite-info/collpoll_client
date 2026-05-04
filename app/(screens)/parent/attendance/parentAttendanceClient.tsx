@@ -16,6 +16,7 @@ import {
   DashboardSkeleton,
   TableSkeleton,
 } from "../../(student)/(attendance)/shimmer/attendanceDashSkeleton";
+import { useTranslations } from "next-intl";
 
 interface TableRow {
   Subject: string;
@@ -38,15 +39,6 @@ interface CardItem {
   totalPercentage?: string | number;
 }
 
-const columns = [
-  "Subject",
-  "Faculty",
-  "Today's Status",
-  "Class Attendance",
-  "Percentage %",
-  "Notes",
-];
-
 function formatAttendanceStatus(status: string) {
   return status
     .toLowerCase()
@@ -58,6 +50,7 @@ export default function ParentAttendanceClient() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { userId, loading: userLoading } = useUser();
+  const t = useTranslations("Attendance.parent"); // Hook
 
   const tab = searchParams.get("tab");
   const showSubjectAttendanceTable = tab === "subject-attendance";
@@ -73,6 +66,15 @@ export default function ParentAttendanceClient() {
 
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
+
+  const columns = [
+    t("Subject"),
+    t("Faculty"),
+    t("Todays Status"),
+    t("Class Attendance"),
+    t("Percentage %"),
+    t("Notes"),
+  ];
 
   useEffect(() => {
     if (userLoading || !userId) return;
@@ -123,7 +125,7 @@ export default function ParentAttendanceClient() {
     dashboardData?.tableData?.map((row: any) => ({
       Subject: row.subject,
       Faculty: row.faculty,
-      "Today's Status": formatAttendanceStatus(row.status),
+      "Todays Status": t(formatAttendanceStatus(row.status)),
       "Class Attendance": row.classAttendance,
       "Percentage %": row.percentage,
       Notes: <FilePdf size={17} />,
@@ -136,7 +138,7 @@ export default function ParentAttendanceClient() {
       value: dashboardData
         ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
-      label: "Today Total Classes",
+      label: t("Today Total Classes"),
       style: "bg-[#FFEDDA] w-44",
       iconBgColor: "#FFBB70",
       iconColor: "#EFEFEF",
@@ -147,7 +149,7 @@ export default function ParentAttendanceClient() {
       value: dashboardData
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
-      label: "Semester wise Attendance",
+      label: t("Semester wise Attendance"),
       style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
@@ -174,10 +176,12 @@ export default function ParentAttendanceClient() {
           <>
             <div className="mb-5">
               <h1 className="text-[#282828] font-bold text-2xl mb-1">
-                Attendance
+                {t("Attendance")}
               </h1>
               <p className="text-[#282828] text-sm">
-                Track, Manage, and Maintain Your ward's Attendance Effortlessly
+                {t(
+                  "Track, Manage, and Maintain Your wards Attendance Effortlessly",
+                )}
               </p>
             </div>
 
@@ -205,10 +209,7 @@ export default function ParentAttendanceClient() {
                   presentPercent={dashboardData?.semesterStats.present || 0}
                   absentPercent={dashboardData?.semesterStats.absent || 0}
                   leavePercent={dashboardData?.semesterStats.leave || 0}
-                  overallPercent={
-                    (dashboardData?.semesterStats.present || 0) 
-                    // + (dashboardData?.semesterStats.late || 0)
-                  }
+                  overallPercent={dashboardData?.semesterStats.present || 0}
                 />
               </div>
             )}
@@ -216,11 +217,11 @@ export default function ParentAttendanceClient() {
             <div className="bg-red-00 flex flex-col">
               <h5 className="text-[#282828] font-medium text-md">
                 {isToday
-                  ? "Today’s Attendance"
-                  : `Attendance – ${formattedDate}`}
+                  ? t("Todays Attendance")
+                  : t("Attendance – {date}", { date: formattedDate })}
               </h5>
               <p className="text-[#282828] text-sm">
-                Classes on {formattedDate}
+                {t("Classes on {date}", { date: formattedDate })}
               </p>
 
               {dataLoading ? (
@@ -263,7 +264,9 @@ export default function ParentAttendanceClient() {
                   )}
                   {tableRows.length === 0 && (
                     <p className="text-gray-400 italic text-sm mt-4 text-center border p-4 rounded-lg">
-                      No classes scheduled for {formattedDate}.
+                      {t("No classes scheduled for {date}", {
+                        date: formattedDate,
+                      })}
                     </p>
                   )}
                 </>

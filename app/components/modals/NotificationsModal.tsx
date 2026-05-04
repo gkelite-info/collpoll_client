@@ -9,6 +9,7 @@ import {
   getUserNotifications,
   markNotificationRead,
 } from "@/lib/helpers/notifications/notificationAPI";
+import { useTranslations } from "next-intl";
 
 type Props = {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
   const { userId } = useUser();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations("Notifications"); // Initialize hook
 
   useEffect(() => {
     async function loadNotifications() {
@@ -39,9 +41,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
   }, [isOpen, userId]);
 
   const handleNotificationClick = async (notif: any) => {
-    // Only fire if it's currently unread
     if (!notif.isRead) {
-      // 1. Optimistically update the UI inside the modal so the color changes instantly
       setNotifications((prev) =>
         prev.map((n) =>
           n.notificationId === notif.notificationId
@@ -50,30 +50,9 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
         ),
       );
 
-      // 2. Update the Database
-      // This will trigger an 'UPDATE' event in Supabase Realtime,
-      // which the Header will catch, and the red dot count will instantly drop!
       await markNotificationRead(notif.notificationId);
     }
   };
-
-  // const handleNotificationClick = async (
-  //   notificationId: number,
-  //   isRead: boolean,
-  // ) => {
-  //   if (!isRead) {
-  //     // Optimistically update UI
-  //     setNotifications((prev) =>
-  //       prev.map((n) =>
-  //         n.notificationId === notificationId ? { ...n, isRead: true } : n,
-  //       ),
-  //     );
-  //     // Update DB
-  //     await markNotificationRead(notificationId);
-  //     // Trigger custom event to update the bell icon count in Header
-  //     document.dispatchEvent(new Event("notification-read"));
-  //   }
-  // };
 
   if (!isOpen) return null;
 
@@ -89,7 +68,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
           <div className="flex items-center gap-2">
             <BellSimple size={25} weight="fill" color="#43C17A" />
             <h2 className="text-[16px] font-semibold text-[#282828]">
-              Notifications
+              {t("Notifications")}
             </h2>
           </div>
           <button
@@ -103,11 +82,11 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
         <div className="overflow-y-auto flex-1 custom-scrollbar p-2">
           {isLoading ? (
             <div className="p-5 text-center text-sm text-gray-500">
-              Loading notifications...
+              {t("Loading notifications")}
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-5 text-center text-sm text-gray-500">
-              No notifications.
+              {t("No notifications")}
             </div>
           ) : (
             notifications.map((notif) => (
