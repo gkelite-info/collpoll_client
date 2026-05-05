@@ -14,6 +14,7 @@ import { fetchAdminDepartmentStats } from "@/lib/helpers/admin/assignments/fetch
 import AssignmentCard from "./components/assignmentCard";
 import QuizBasic from "./components/quizBasic";
 import DiscussionForumBasic from "./components/discussionForumBasic";
+import AdminLabBasic from "./components/adminLabBasic";
 import TabNavigation from "./components/tabNavigation";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "../../(student)/calendar/right/timetable";
@@ -72,7 +73,7 @@ const AssignmentPage = () => {
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
   const { collegeEducationType } = useAdmin();
-  const cardsPerPage = 15;
+  const cardsPerPage = 10;
 
   useEffect(() => {
     const loadData = async () => {
@@ -136,6 +137,10 @@ const AssignmentPage = () => {
 
   if (activeTab === "discussion") {
     return <DiscussionForumBasic />;
+  }
+
+  if (activeTab === "lab") {
+    return <AdminLabBasic />;
   }
 
   return (

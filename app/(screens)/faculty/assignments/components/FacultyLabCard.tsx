@@ -30,11 +30,12 @@ function formatFileSize(bytes: number): string {
 
 function formatDate(dateStr: string) {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${day}-${month}-${year}`;
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    });
 }
 
 export default function FacultyLabCard({ data, onDelete, onEdit }: FacultyLabCardProps) {
@@ -60,7 +61,7 @@ export default function FacultyLabCard({ data, onDelete, onEdit }: FacultyLabCar
                     )}
                     {data.sectionName && (
                         <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                            {data.sectionName}
+                            Sec : {data.sectionName}
                         </span>
                     )}
                 </div>
