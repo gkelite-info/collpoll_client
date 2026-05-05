@@ -152,7 +152,7 @@ export default function NewsModal({ isOpen, onClose, onOpenPDF }: Props) {
             />
 
             <motion.div
-              className="fixed top-16 right-5 z-[1000] w-[380px] h-[600px] max-h-[85vh] bg-white rounded-xl border border-[#E5E7EB] shadow-xl flex flex-col overflow-hidden"
+              className="fixed top-16 right-5 z-[1000] h-[450px] w-[335px] md:w-[380px] md:h-[600px] lg:w-[380px] lg:h-[600px] max-h-[85vh] bg-white rounded-xl border border-[#E5E7EB] shadow-xl flex flex-col overflow-hidden"
               initial={{ opacity: 0, y: -12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.98 }}

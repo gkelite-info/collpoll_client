@@ -13,11 +13,12 @@ export type TaskPayload = {
 
 type TaskModalProps = {
   open: boolean;
-  role: "faculty" | "student";
+  role?: "faculty" | "student";
   collegeSubjectId?: number;
   facultyId?: number;
   studentId?: number;
   onClose: () => void;
+
   defaultValues?: {
     facultyTaskId: number;
     title: string;
@@ -25,6 +26,7 @@ type TaskModalProps = {
     time: string;
     date: string;
   } | null;
+
   onSave: (
     payload: {
       title: string;
@@ -49,6 +51,7 @@ export default function TaskModal({
   onClose,
   onSave,
   defaultValues,
+
 }: TaskModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -82,9 +85,14 @@ export default function TaskModal({
     onClose();
   };
   const handleSave = async () => {
+    // if (!onSave) {
+    //   toast.error("Save action is not configured.");
+    //   return;
+    // }
+
     if (!title.trim()) {
       toast.error("Task title is required.");
-      return; // Stop execution immediately
+      return;
     }
 
     if (!description.trim()) {
@@ -105,13 +113,12 @@ export default function TaskModal({
     try {
       setSaving(true);
 
-      await onSave(
-        {
-          title: title.trim(),
-          description: description.trim(),
-          dueDate,
-          dueTime,
-        },
+      await onSave({
+        title: title.trim(),
+        description: description.trim(),
+        dueDate,
+        dueTime,
+      },
         defaultValues?.facultyTaskId,
       );
 
@@ -122,8 +129,8 @@ export default function TaskModal({
       );
 
       handleCancel();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save task");
+    } catch {
+      toast.error("Failed to save task");
     } finally {
       setSaving(false);
     }
@@ -131,7 +138,7 @@ export default function TaskModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-[450px] animate-fadeIn relative">
+      <div className="bg-white rounded-lg shadow-xl p-6 lg:w-[450px] animate-fadeIn relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-[#282828]">
             {defaultValues ? "Edit Task" : "Add Task"}
@@ -209,11 +216,10 @@ export default function TaskModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${
-              saving
-                ? "bg-[#A7DDBE] text-white cursor-not-allowed"
-                : "bg-[#43C17A] text-white"
-            }`}
+            className={`w-1/2 py-2 rounded-md text-sm cursor-pointer ${saving
+              ? "bg-[#A7DDBE] text-white cursor-not-allowed"
+              : "bg-[#43C17A] text-white"
+              }`}
           >
             {saving ? "Saving..." : "Save task"}
           </button>

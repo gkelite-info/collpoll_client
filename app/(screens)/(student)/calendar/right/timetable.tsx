@@ -279,8 +279,6 @@ export default function CalendarTimeTable({
           isInter: isInter,
         });
 
-        console.log("Am i getting rawData", rawData);
-
         // const timetableWithResources = await Promise.all(
         //   rawData.map(async (item: any) => {
         //     let pdfUrl = null;
@@ -312,11 +310,6 @@ export default function CalendarTimeTable({
 
             if (item.topicId) {
               const resources = await fetchTopicResources(item.topicId);
-              // DEBUG: Let's see what the database says about this topic
-              console.log(
-                `Topic ${item.topicId} (${item.eventTitle}) resources:`,
-                resources,
-              );
 
               if (resources && resources.length > 0) {
                 pdfUrl = resources[0].resourceUrl;
@@ -420,11 +413,10 @@ export default function CalendarTimeTable({
                       </div>
 
                       <div
-                        className={`rounded-full h-[40px] min-w-[40px] flex items-center justify-center transition-all ${
-                          item.pdfUrl
+                        className={`rounded-full h-[40px] min-w-[40px] flex items-center justify-center transition-all ${item.pdfUrl
                             ? "bg-[#16284F] cursor-pointer"
                             : "bg-gray-300"
-                        }`}
+                          }`}
                         onClick={() =>
                           item.pdfUrl && window.open(item.pdfUrl, "_blank")
                         }

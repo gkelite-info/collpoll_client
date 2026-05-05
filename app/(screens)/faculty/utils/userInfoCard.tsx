@@ -160,18 +160,14 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
   return (
     <div
       className="w-full relative rounded-2xl h-[170px] shadow-sm"
-      style={{
-        backgroundImage: `url(${bgBanner})`,
-        backgroundRepeat: "no-repeat",
-        backgroundSize: "cover",
-      }}
+      style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
     >
       {cardProps.map((item, index) => (
         <div
-          className="relative z-10 grid grid-cols-[70%_30%] h-full items-center justify-between px-8"
+          className="relative z-10 grid md:grid-cols-[70%_30%] lg:grid-cols-[70%_30%] h-full items-center justify-between px-2 lg:px-8"
           key={index}
         >
-          <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
+          <div className="bg-blue-00 flex flex-col w-full lg:max-w-[65%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
               {item.show && t("StudentID:")} {item.studentId}
               {item.show && ", "} {item.studentBranch}
@@ -189,8 +185,8 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
               <div className="bg-yellow-00 min-w-0 overflow-x-auto">
                 {!item.show && faculty_subject?.length > 0 && (
-                  <span className="text-[#454545] text-md font-medium whitespace-nowrap">
-                    {faculty_subject.map((s) => s.subjectName).join(", ")}
+                  <span className="text-[#454545] text-xs md:text-sm lg:text-base font-medium whitespace-nowrap">
+                    ({faculty_subject.map((s) => s.subjectName).join(", ")})
                   </span>
                 )}
               </div>
@@ -205,8 +201,8 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               )}
             </div>
 
-            <p className="text-md text-[#454545] mt-0 font-medium">
-              {!item.show && t("Your Students Completed ")}
+            <p className="text-xs md:text-base lg:text-base text-[#454545] mt-0 font-medium">
+              {!item.show && "Your Students Completed "}
               <span className="text-[#089144] font-bold">
                 {item.studentsTaskPercentage}
                 {!item.show && "%"}
@@ -225,8 +221,8 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               className="lg:relative lg:top-[-10] bg-green-00 z-50 h-[180px]"
             />
           )} */}
-          {cardProps[0].image && (
-            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+          {cardProps[0].image &&
+            <div className="absolute -right-0 md:-right-3 lg:right-10 bottom-0 h-[95%] w-[140px] lg:h-[105%] lg:w-[180px]">
               <Image
                 src={cardProps[0].image}
                 alt="Avatar"
@@ -235,7 +231,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
                 priority
               />
             </div>
-          )}
+          }
         </div>
       ))}
 
@@ -254,6 +250,6 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           fill="#BCE6D0"
         />
       </svg>
-    </div>
+    </div >
   );
 }

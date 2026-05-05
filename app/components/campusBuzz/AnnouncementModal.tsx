@@ -179,13 +179,13 @@ export default function AnnouncementModal({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="fixed z-[1000] top-[80px] right-10 w-[500px] h-[80vh] bg-white translate-x-6 rounded-xl shadow-xl flex flex-col"
+              className="fixed z-[1000] top-[50px] md:top-[80px] lg:top-[80px] right-10 w-[342px] md:w-[500px] lg:w-[500px] h-[80vh] bg-white translate-x-6 rounded-xl shadow-xl flex flex-col"
             >
               <div className="px-[20px] pt-[20px] shrink-0 ">
                 <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-3 cursor-default">
-                    <MegaphoneIcon size={32} weight="fill" color="#43C17A" />
-                    <h2 className="text-[22px] font-roboto font-semibold text-[#282828] leading-none">
+                  <div className="flex items-center gap-2 md:gap-3 cursor-default">
+                    <MegaphoneIcon weight="fill" className="text-[#43C17A] h-5 w-5 md:h-7 md:w-7 lg:h-7 lg:w-7" />
+                    <h2 className="text-base md:text-xl lg:text-2xl font-roboto font-semibold text-[#282828] leading-none">
                       {t("Campus Buzz")}
                     </h2>
                   </div>
@@ -197,18 +197,18 @@ export default function AnnouncementModal({
                       }}
                       className="flex items-center justify-center gap-2 px-4 py-[6px] rounded-full bg-[rgba(67,193,122,0.12)] text-[#43C17A] text-[16px] font-medium transition-colors hover:bg-[rgba(67,193,122,0.2)] cursor-pointer"
                     >
-                      <Plus className="w-[18px] h-[18px]" strokeWidth={2.5} />{" "}
-                      <span>{t("Add Post")}</span>
-                    </button>
+                      <Plus className="w-[10px] h-[18px] md:w-[18px] md:w-[18px] lg:w-[18px] lg:w-[18px]" strokeWidth={2.5} />{" "}
+                      <span className="text-sm md:text-base lg:text-base">{t("Add Post")}</span>
+                    </button >
                     <button
                       onClick={onClose}
                       className="cursor-pointer p-1 hover:bg-gray-100 rounded-full transition-colors"
                     >
                       <X className="w-6 h-6 text-[#6B7280]" />
                     </button>
-                  </div>
-                </div>
-              </div>
+                  </div >
+                </div >
+              </div >
 
               <div className="mt-[16px] px-[20px]">
                 <div
@@ -297,7 +297,7 @@ export default function AnnouncementModal({
                   </>
                 )}
               </div>
-            </motion.div>
+            </motion.div >
 
             <DeleteConfirmModal
               isOpen={postToDelete !== null}
@@ -314,8 +314,9 @@ export default function AnnouncementModal({
               onSuccess={() => loadPosts(0, true)}
             />
           </>
-        </Portal>
-      )}
-    </AnimatePresence>
+        </Portal >
+      )
+      }
+    </AnimatePresence >
   );
 }

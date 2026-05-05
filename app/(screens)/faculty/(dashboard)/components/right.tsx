@@ -134,15 +134,14 @@ export default function FacultyDashRight() {
     taskId?: number,
   ) => {
     try {
-      const res = await saveFacultyTask(
-        {
-          facultyTaskId: taskId,
-          collegeSubjectId: collegeSubjectId!,
-          taskTitle: payload.title,
-          description: payload.description,
-          date: payload.dueDate,
-          time: payload.dueTime,
-        },
+      const res = await saveFacultyTask({
+        facultyTaskId: taskId,
+        collegeSubjectId: collegeSubjectId!,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime,
+      },
         facultyId!,
       );
 
@@ -162,7 +161,7 @@ export default function FacultyDashRight() {
   }, [collegeId, userId, role, view]);
 
   return (
-    <div className="w-[32%] p-2 flex flex-col">
+    <div className="hidden md:w-[35%] lg:w-[32%] p-2 flex flex-col hidden md:flex lg:flex">
       <CourseScheduleCard />
       <WorkWeekCalendar />
 
@@ -172,7 +171,7 @@ export default function FacultyDashRight() {
         loading={loading}
         collegeSubjectId={collegeSubjectId ?? undefined}
         facultyId={facultyId ?? undefined}
-        onAddTask={() => {}}
+        onAddTask={() => { }}
         onSaveTask={handleSave}
         onDeleteTask={async () => {
           await loadTasks();

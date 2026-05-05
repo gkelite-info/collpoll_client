@@ -221,12 +221,12 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
           />
 
           <motion.div
-            className="fixed top-[70px] left-1/2 -translate-x-1/2 bg-white w-[700px] max-h-[84vh] rounded-[20px] shadow-xl z-[5000] overflow-hidden flex flex-col"
+            className="fixed top-[70px] left-1/2 -translate-x-1/2 bg-white w-[340px] md:w-[700px] lg:w-[700px] max-h-[84vh] rounded-[20px] shadow-xl z-[5000] overflow-hidden flex flex-col"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
           >
-            <div className="px-[40px] pt-[30px] pb-[20px] bg-white shrink-0">
+            <div className="p-5 md:px-[40px] md:pt-[30px] md:pb-[20px] lg:px-[40px] lg:pt-[30px] lg:pb-[20px] bg-white shrink-0">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-roboto font-semibold text-[#282828]">
                   {t("Create a New Post")}
@@ -251,7 +251,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
               )}
             </div>
 
-            <div className="px-[40px] pt-[10px] pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
+            <div className="p-5 md:px-[40px] md:pt-[10px] md:pb-[20px] lg:px-[40px] lg:pt-[10px] lg:pb-[20px] overflow-y-auto flex-1 custom-scrollbar">
               <div className="mb-6">
                 <label className="text-lg font-roboto font-medium text-[#282828]">
                   {t("Post Title")} <span className="text-red-500">*</span>
@@ -357,7 +357,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
 
             <div className="px-[40px] py-[20px] border-t bg-white flex justify-between gap-4 shrink-0">
               <button
-                className="flex-1 h-[50px] rounded-lg bg-[#43C17A] text-base text-white font-medium cursor-pointer hover:bg-[#3ba869] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 p-2 md:p-4 lg:p-4 rounded-lg bg-[#43C17A] text-base md:text-lg text-white font-medium cursor-pointer hover:bg-[#3ba869] transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleSubmit}
                 disabled={isSubmitting}
               >
@@ -371,7 +371,7 @@ export default function AddPostModal({ isOpen, onClose, onSuccess }: Props) {
                 )}
               </button>
               <button
-                className="flex-1 h-[50px] rounded-lg border border-[#C4C4C4] text-base text-[#282828] font-medium cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="flex-1 p-2 md:p-4 lg:p-4 rounded-lg border border-[#C4C4C4] text-base md:text-lg text-[#282828] font-medium cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={onClose}
                 disabled={isSubmitting}
               >
