@@ -644,7 +644,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
         ref={modalContentRef}
-        className="bg-white rounded-xl shadow-2xl w-full max-w-[450px] max-h-[90vh] flex flex-col relative"
+        className="bg-white rounded-xl shadow-2xl w-[95%] md:max-w-[450px] lg:max-w-[450px] max-h-[70vh] md:max-h-[80vh] lg:max-h-[90vh] flex flex-col relative"
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky z-10">
           <h2 className="text-xl font-bold text-gray-800">
@@ -781,7 +781,6 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
             </div>
           </div>
 
-          {/* 🟢 Meeting specific inputs */}
           {selectedType === "meeting" && (
             <>
               <div className="space-y-1">
@@ -908,12 +907,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({
               </div>
             </div>
 
-            <div className="w-1/2 space-y-1 mt-3">
+            <div className="bg-red-00 flex flex-col space-y-1 mt-3">
               <label className="block text-gray-700 font-medium text-sm">
                 Time
               </label>
 
-              <div className="flex gap-4">
+              <div className="bg-green-00 flex flex-col landscape:flex-row md:flex md:flex-row lg:flex lg:flex-row gap-4">
                 <div className="flex-1">
                   <div className="flex gap-0.5">
                     <span className="block text-gray-500 text-xs mb-1">
