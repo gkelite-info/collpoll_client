@@ -61,7 +61,7 @@ export default function studentPerformanceCard({
   return (
     <>
       <div
-        className={`bg-white relative overflow-hidden rounded-2xl shadow-lg p-6 w-full max-w-[420px] font-sans flex flex-col`}
+        className={`bg-white relative overflow-hidden rounded-2xl shadow-lg p-6 w-full lg:max-w-[420px] font-sans flex flex-col`}
       >
         <div className="flex items-center justify-between mb-4 shrink-0">
           <h2 className="text-lg font-bold text-gray-900">

@@ -100,6 +100,9 @@ export async function saveFacultyTask(
   facultyId: number,
 ) {
   const now = new Date().toISOString();
+  const today = new Date().toISOString().split("T")[0];
+  const taskDate = payload.date;
+  const shouldBeActive = taskDate >= today;
 
   const upsertPayload: any = {
     collegeSubjectId: payload.collegeSubjectId,
@@ -107,6 +110,8 @@ export async function saveFacultyTask(
     description: payload.description.trim(),
     date: payload.date,
     time: payload.time,
+    isActive: shouldBeActive,
+    is_deleted: !shouldBeActive,
     updatedAt: now,
   };
 
@@ -198,32 +203,28 @@ export async function fetchFacultyTasksForLoggedInFaculty(
 
 
 export const fetchFacultyTasksByFacultyId = async (facultyId: number) => {
+  const today = new Date().toISOString().split("T")[0];
+
+  await supabase
+    .from("faculty_tasks")
+    .update({
+      isActive: false,
+      is_deleted: true,
+      deletedAt: new Date().toISOString(),
+    })
+    .lt("date", today)
+    .eq("createdBy", facultyId)
+    .eq("isActive", true);
+
   const { data, error } = await supabase
     .from("faculty_tasks")
-    .select(`
-      facultyTaskId,
-      collegeSubjectId,
-      taskTitle,
-      description,
-      date,
-      time,
-      createdBy,
-      isActive,
-      createdAt,
-      updatedAt,
-      deletedAt
-    `)
+    .select(`*`)
     .eq("createdBy", facultyId)
     .eq("isActive", true)
     .is("deletedAt", null)
-    .order("date", { ascending: true })
-    .order("time", { ascending: true });
+    .order("date", { ascending: true });
 
-  if (error) {
-    console.error("fetchFacultyTasksByFacultyId error:", error);
-    throw error;
-  }
-
+  if (error) throw error;
   return data ?? [];
 };
 
@@ -262,4 +263,39 @@ export async function fetchFacultyTasksForStudent(params: {
   }
 
   return data ?? [];
+}
+
+export async function countActiveFacultyTasks(facultyId: number) {
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const { count, error } = await supabase
+    .from("faculty_tasks")
+    .select("*", { count: "exact", head: true })
+    .eq("createdBy", facultyId)
+    .eq("date", today)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (error) {
+    console.error("countActiveFacultyTasks error:", error);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+export async function cleanupExpiredTasks(collegeSubjectId: number) {
+  const today = new Date().toISOString().split("T")[0];
+
+  await supabase
+    .from("faculty_tasks")
+    .update({
+      isActive: false,
+      is_deleted: true,
+      deletedAt: new Date().toISOString(),
+    })
+    .lt("date", today)
+    .eq("collegeSubjectId", collegeSubjectId)
+    .eq("isActive", true);
 }

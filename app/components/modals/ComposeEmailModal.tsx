@@ -10,6 +10,7 @@ import {
   getYears,
 } from "@/lib/helpers/email/emailFiltersAPI";
 import { supabase } from "@/lib/supabaseClient";
+import { PaperPlaneRightIcon } from "@phosphor-icons/react";
 import {
   Bold,
   Check,
@@ -136,7 +137,6 @@ export default function ComposeEmailModal({
           editorRef.current.innerHTML = finalHtml;
         }
       } else if (initialEmail) {
-        // 🟢 IF NO REPLY DATA BUT WE HAVE AN INITIAL EMAIL, PREFILL IT
         setAudience("");
         setManualEmail(initialEmail);
       }
@@ -320,7 +320,7 @@ export default function ComposeEmailModal({
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-      <div className="w-full max-w-[580px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col relative">
+      <div className="w-[90%] max-w-[580px] bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col relative">
         <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
           <h2 className="text-[17px] font-semibold text-[#282828]">
             Compose Email
@@ -350,7 +350,7 @@ export default function ComposeEmailModal({
               ) : (
                 <>
                   <select
-                    className="w-1/3 px-3 py-1.5 border cursor-pointer border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A] capitalize"
+                    className="w-1/3 px-1 lg:px-3 py-1.5 border cursor-pointer border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A] capitalize"
                     value={audience}
                     onChange={(e) => setAudience(e.target.value)}
                   >
@@ -448,6 +448,7 @@ export default function ComposeEmailModal({
               type="text"
               className="w-full px-3 py-1.5 border border-gray-300 rounded-md text-[13px] text-[#111827] focus:outline-none focus:border-[#43C17A]"
               value={subject}
+              placeholder="Subject"
               onChange={(e) => setSubject(e.target.value)}
             />
           </div>
@@ -547,7 +548,7 @@ export default function ComposeEmailModal({
               )}
 
               <div className="flex items-center justify-between p-1.5 border-t border-gray-100 bg-gray-50 rounded-b-md">
-                <div className="flex items-center gap-0.5 ml-1">
+                <div className="flex items-center gap-0.5 ml-0 md:ml-1 lg:ml-1">
                   <ToolbarIcon
                     onClick={() => formatText("bold")}
                     icon={<Bold size={14} />}
@@ -604,10 +605,21 @@ export default function ComposeEmailModal({
                 <button
                   onClick={handleSend}
                   disabled={isSubmitting}
-                  className="bg-[#43C17A] cursor-pointer hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-1.5 rounded-md text-[13px] font-medium transition-colors"
+                  className="hidden md:block lg:block bg-[#43C17A] cursor-pointer hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white px-6 py-1.5 rounded-md text-[13px] font-medium transition-colors"
                 >
                   Send
                 </button>
+
+                {/* Mobile View*/}
+                <button
+                  onClick={handleSend}
+                  disabled={isSubmitting}
+                  className="block md:hidden lg:hidden bg-[#43C17A] cursor-pointer hover:bg-[#3ba869] disabled:bg-[#a1e0bd] text-white p-1 ml-0.5 rounded-full text-[13px] font-medium transition-colors"
+                >
+                  <PaperPlaneRightIcon size={15} weight="fill" />
+                </button>
+                {/* Mobile View*/}
+
               </div>
             </div>
           </div>

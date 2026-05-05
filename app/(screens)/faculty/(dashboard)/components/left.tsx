@@ -61,25 +61,25 @@ export default function FacultyDashLeft() {
 
   const cardData = [
     {
-      style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
+      style: "bg-[#E2DAFF]",
       icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
       value: `${pad(stats.acceptedClasses)}/${pad(stats.totalClasses)}`,
       label: "Total Classes",
     },
     {
-      style: "bg-[#FFEDDA] h-[126.35px] w-[182px]",
+      style: "bg-[#FFEDDA]",
       icon: <UsersThree size={32} weight="fill" color="#FFBB70" />,
       value: `${pad(stats.presentStudents)}/${pad(stats.totalStudents)}`,
       label: "Total Students",
     },
     {
-      style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
+      style: "bg-[#E6FBEA]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
       value: `${pad(stats.completedLessons)}/${pad(stats.totalLessons)}`,
       label: "Total Lessons",
     },
     {
-      style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
+      style: "bg-[#CEE6FF]",
       icon: <ClockAfternoon size={32} weight="fill" color="#60AEFF" />,
       value: `${pad(stats.acceptedHours)}/${pad(stats.totalHours)}`,
       label: "Total Hours",
@@ -111,9 +111,9 @@ export default function FacultyDashLeft() {
 
   return (
     <>
-      <div className="w-[68%] p-2">
+      <div className="w-full md:w-[65%] lg:w-[68%] mt-4 md:mt-0 lg:mt-0 p-1 lg:p-2">
         <UserInfoCard cardProps={card} />
-        <div className="mt-5 rounded-lg flex gap-3 text-xs">
+        <div className="mt-5 rounded-lg grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}
@@ -125,9 +125,9 @@ export default function FacultyDashLeft() {
           ))}
         </div>
         <div>
-          <div className=" bg-gray-100">
+          <div className="bg-gray-100">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 mb-4">
-              <div>
+              <div className="w-full">
                 <StudentPerformanceCard students={STUDENT_DATA} />
               </div>
               <div className="overflow-y-auto shadow-md rounded-2xl bg-white min-h-75">

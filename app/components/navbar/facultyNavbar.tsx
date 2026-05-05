@@ -13,6 +13,8 @@ import {
   Note,
   Student,
   UsersThreeIcon,
+  X,
+  XCircle,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -25,7 +27,11 @@ type NavItem = {
   path: string;
 };
 
-export default function FacultyNavbar() {
+type FacultyNavbarProps = {
+  onClose?: () => void;
+};
+
+export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
   const pathname = usePathname();
   const [active, setActive] = useState("");
   const t = useTranslations("Navbars");
@@ -137,26 +143,26 @@ export default function FacultyNavbar() {
   }, [pathname, items]);
 
   return (
-    <div className="bg-[#43C17A] flex flex-col items-center h-full w-full rounded-tr-3xl shadow-md focus:outline-none">
+    <div className="lg:bg-[#43C17A] lg:flex flex flex-col items-center h-full w-[100%] lg:w-full rounded-tr-3xl shadow-md focus:outline-none">
       <div className="h-[10%] w-full flex items-center justify-center text-white font-bold text-lg">
         Logo
       </div>
 
-      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 pl-4 lg:pb-5 overflow-y-auto focus:outline-none">
-        {items.map((item) => {
+      <div className="flex flex-col items-start w-full h-full lg:gap-[11px] pt-4 lg:pl-4 lg:pb-5 overflow-y-auto focus:outline-none">
+        {items.map((item, index) => {
           const isActive = active === item.label;
 
           return (
             <Link
               key={item.path}
               href={item.path}
-              className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
+              onClick={() => onClose?.()}
+              className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                  : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                 }
               `}
             >
@@ -165,15 +171,22 @@ export default function FacultyNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>
             </Link>
           );
         })}
+        <div className="flex items-center gap-3 w-full pl-4 py-2 mt-auto border-t border-white/20 pt-4">
+          <button className="flex items-center gap-2 text-white text-sm font-medium"
+            onClick={() => onClose?.()}
+          >
+            <X size={18} weight="bold" />
+            <span>Close</span>
+          </button>
+        </div>
       </div>
     </div>
   );

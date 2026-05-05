@@ -49,11 +49,10 @@ export default function CardComponent({
     <div
       onClick={handleClick}
       style={{ ...inlineStyle }}
-      className={`relative rounded-lg p-3 h-32 ${style} flex flex-col justify-between shadow-sm 
+      className={`relative rounded-lg p-3 h-fit md:h-32 lg:h-32 ${style} flex flex-col justify-between shadow-sm 
         ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
-      {/* {value === "Mid Exams" && <WipOverlay isSmall={true}/>} */}
-      <div className="flex items-center justify-between gap-3 mb-2">
+      <div className="hidden md:flex lg:flex items-center justify-between gap-3 mb-2">
         <div
           className="w-9 h-8 rounded-sm flex items-center justify-center"
           style={{ backgroundColor: iconBgColor, color: iconColor }}
@@ -74,16 +73,53 @@ export default function CardComponent({
       </div>
 
       <div
-        className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}
+        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}
       >
         {value}
       </div>
 
       <span
-        className={`${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}
+        className={`hidden md:block lg:block ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}
       >
         {label}
       </span>
+
+
+      {/* Mobile View */}
+      <div className="flex md:hidden lg:hidden items-center justify-start gap-3 mb-2">
+        <div
+          className="w-9 h-8 rounded-sm flex items-center justify-center"
+          style={{ backgroundColor: iconBgColor, color: iconColor }}
+        >
+          {icon}
+        </div>
+
+        {/* {totalPercentage !== undefined && (
+          <div className="flex items-baseline gap-1">
+            <span
+              className="text-lg font-semibold"
+              style={{ color: iconBgColor }}
+            >
+              {totalPercentage}
+            </span>
+          </div>
+        )} */}
+        <div className="flex flex-col">
+          <div
+            className={`block md:hidden lg:hidden ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize} text-lg font-semibold`}
+          >
+            {value}
+          </div>
+
+          <span
+            className={`block md:hidden lg:hidden ${isActive ? "text-[#ffffff]" : "text-[#282828]"} ${textSize}`}
+          >
+            {label}
+          </span>
+        </div>
+      </div>
+      {/* Mobile View */}
+
     </div>
   );
 }

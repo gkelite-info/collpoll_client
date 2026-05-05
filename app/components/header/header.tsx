@@ -5,6 +5,7 @@ import {
   CaretDown,
   CircleNotch,
   EnvelopeSimple,
+  ListIcon,
   MagnifyingGlass,
   Megaphone,
   Newspaper,
@@ -24,8 +25,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ProfileShimmer from "./ProfileShimmer";
 import { AnimatePresence, motion } from "framer-motion";
 import { getSearchRoutesByRole } from "@/lib/config/searchRoutes";
+import { Avatar } from "@/app/utils/Avatar";
+import { countActiveFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
+import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 
-function HeaderContent() {
+type Props = {
+  onMenuClick?: () => void;
+  onAddTaskClick?: () => void;
+};
+
+function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -54,11 +63,14 @@ function HeaderContent() {
     identifierId,
     loading
   } = useUser();
+  const { facultyId } = useFaculty();
+
 
   const searchParams = useSearchParams();
   const router = useRouter();
   const highlightedPostId = searchParams.get("post");
-
+  const [openAddTask, setOpenAddTask] = useState(false);
+  const [activeTaskCount, setActiveTaskCount] = useState<number>(0);
   const availableRoutes = useMemo(() => getSearchRoutesByRole(role), [role]);
 
   // const filteredSuggestions = useMemo(() => {
@@ -95,6 +107,17 @@ function HeaderContent() {
   useEffect(() => {
     setSelectedIndex(-1);
   }, [searchValue]);
+
+  useEffect(() => {
+    if (!facultyId) return;
+
+    const fetchTaskCount = async () => {
+      const count = await countActiveFacultyTasks(facultyId);
+      setActiveTaskCount(count);
+    };
+
+    fetchTaskCount();
+  }, [facultyId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -259,7 +282,7 @@ function HeaderContent() {
 
   return (
     <>
-      <div className="h-full w-full flex justify-between gap-1 p-2">
+      <div className="bg-pink-00 h-[100%] w-[100%] md:h-[100%] md:w-[100%] lg:h-full lg:w-full flex justify-between lg:gap-1 p-3 md:p-4 lg:p-2">
         {/* <div className="w-[59%] flex justify-end items-center">
           <div className="relative lg:w-[80%] lg:h-[60%]">
             <input
@@ -278,8 +301,196 @@ function HeaderContent() {
           </div>
         </div> */}
 
-        <div className="w-[59%] flex justify-end items-center">
-          <div ref={searchContainerRef} className="relative lg:w-[80%] lg:h-[60%]">
+
+        {/* mobile view */}
+        <div className="bg-yellow-00 w-[100%] md:w-[100%] flex flex-col gap-2 md:flex lg:hidden">
+          <div className="bg-red-00 flex items-center justify-between w-full">
+            <div className="flex gap-4 md:gap-10 items-center">
+              <ListIcon weight="bold" className="text-2xl text-black w-6 h-6 md:w-8 md:h-8" onClick={() => {
+                if (typeof onMenuClick === "function") {
+                  onMenuClick();
+                }
+              }}
+              />
+              {/* <p className="text-[#282828] font-medium text-xl md:text-2xl">Tekton Campus</p> */}
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsNewsOpen(true)} className="relative">
+                <Newspaper size={21} color="#282828" className="cursor-pointer" />
+              </button>
+              <button
+                //  onClick={() => setIsEmailOpen(true)}
+                onClick={() => {
+                  setEmailInitialView({ compose: false, tab: "all" });
+                  setIsEmailOpen(true);
+                }}
+                className="relative">
+                <EnvelopeSimple
+                  size={21}
+                  color="#282828"
+                  className="cursor-pointer"
+                />
+                {unreadEmailCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 border border-white rounded-full">
+                    {unreadEmailCount > 99 ? "99+" : unreadEmailCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setIsNotificationsOpen(true)}
+                className="relative"
+              >
+                <BellSimple
+                  size={21}
+                  color="#282828"
+                  className="cursor-pointer"
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 border border-white rounded-full">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setIsAnnouncementOpen(true)}
+                className="relative"
+              >
+                <Megaphone size={20} color="#282828" className="cursor-pointer" />
+              </button>
+              <div className="flex items-center gap-2">
+                <Avatar
+                  alt=""
+                  sizes="w-8 h-8 md:w-10 md:h-10"
+                />
+                <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
+              </div>
+            </div>
+          </div>
+          <div className="w-full h-full bg-blue-00 flex items-center justify-between">
+            <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[80%]">
+              <input
+                type="text"
+                disabled={loading || !role}
+                value={searchValue}
+                onChange={handleChange}
+                onFocus={() => setIsSearchFocused(true)}
+                onKeyDown={handleKeyDown}
+                // placeholder="What do you want to find?"
+                placeholder={
+                  loading ? "Loading modules..." : "What do you want to find?"
+                }
+                // className="rounded-full w-full h-full bg-[#EAEAEA] text-[#282828] lg:text-sm pl-5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#43C17A]/40 transition-all shadow-inner"
+                className={`rounded-full w-full h-full lg:text-sm pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
+                  ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
+                  : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
+                  }`}
+              />
+              {loading ? (
+                <CircleNotch
+                  size={20}
+                  weight="bold"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin pointer-events-none"
+                />
+              ) : (
+                <MagnifyingGlass
+                  size={20}
+                  weight="bold"
+                  color="#43C17A"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+                />
+              )}
+
+              <AnimatePresence>
+                {!loading && role && isSearchFocused && searchValue.trim().length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute top-[120%] z-100 mt-1 w-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden py-2"
+                  >
+                    {filteredSuggestions.length > 0 ? (
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {filteredSuggestions.map((item, index) => {
+                          const isSelected = selectedIndex === index;
+                          return (
+                            <div
+                              key={item.path}
+                              onClick={() => handleSuggestionClick(item.path)}
+                              onMouseEnter={() => setSelectedIndex(index)}
+                              className={`px-4 py-3 mx-2 my-1 rounded-xl text-sm cursor-pointer transition-all flex items-center justify-between group ${isSelected
+                                ? "bg-[#43C17A] text-white shadow-md"
+                                : "text-gray-700 hover:bg-[#43C17A]/10"
+                                }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <MagnifyingGlass
+                                  size={16}
+                                  weight="bold"
+                                  className={`transition-colors ${isSelected ? "text-white" : "text-[#43C17A]"}`}
+                                />
+                                {/* <span className="font-semibold">{item.label}</span> */}
+                                <div className="flex flex-col leading-tight">
+                                  <span className="font-semibold">{item.label}</span>
+                                  {item.subLabel && (
+                                    <span className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}>
+                                      {item.subLabel}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${isSelected
+                                ? "bg-white/20 text-white"
+                                : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
+                                }`}>
+                                {item.category}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="px-6 py-10 text-center flex flex-col items-center justify-center gap-3">
+                        <div className="bg-[#43C17A]/10 p-4 rounded-full mb-1">
+                          <MagnifyingGlass size={32} className="text-[#43C17A]" weight="duotone" />
+                        </div>
+                        <p className="text-[15px] text-gray-700 font-medium">
+                          No matches found for "<span className="font-bold text-black">{searchValue}</span>"
+                        </p>
+                        <p className="text-xs text-gray-400 max-w-[250px]">
+                          Try checking for typos or searching with different keywords like 'fees', 'grades', or 'schedule'.
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <div className="bg-[#DAEEE3] h-full w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
+              <button
+                onClick={() => onAddTaskClick?.()}
+                className="p-2 md:px-3 h-[80%] md:h-[60%] bg-[#43C17A] rounded-md flex items-center"
+              >
+                <p className="text-white text-xs md:text-sm font-medium">Add task +</p>
+              </button>
+              {typeof activeTaskCount === 'number' ? (
+                <div className="bg-[#EED5D5] h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center">
+                  <p className="text-[#FF2A2A] font-medium text-sm md:text-base">
+                    {activeTaskCount > 99 ? "99+" : activeTaskCount}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        {/* mobile view */}
+
+
+        <div className="hidden md:hidden lg:flex w-[59%] flex justify-end items-center">
+          <div ref={searchContainerRef} className="relative w-[80%] h-[60%] lg:w-[80%] lg:h-[60%]">
             <input
               type="text"
               disabled={loading || !role}
@@ -344,7 +555,6 @@ function HeaderContent() {
                               {/* <span className="font-semibold">{item.label}</span> */}
                               <div className="flex flex-col leading-tight">
                                 <span className="font-semibold">{item.label}</span>
-                                {/* 🟢 NEW: Render subLabel if it exists to show inner page context */}
                                 {item.subLabel && (
                                   <span className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}>
                                     {item.subLabel}
@@ -353,7 +563,6 @@ function HeaderContent() {
                               </div>
                             </div>
 
-                            {/* Category Badge for better UI hierarchy */}
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${isSelected
                               ? "bg-white/20 text-white"
                               : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
@@ -383,7 +592,7 @@ function HeaderContent() {
           </div>
         </div>
 
-        <div className="w-[40%] flex justify-between ">
+        <div className="hidden md:hidden lg:flex w-[40%] flex justify-between ">
           <div className="w-[40%] h-[100%] flex items-center justify-center gap-3">
             <button onClick={() => setIsNewsOpen(true)} className="relative">
               <Newspaper size={21} color="#282828" className="cursor-pointer" />
@@ -458,9 +667,7 @@ function HeaderContent() {
                 )}
               </div>
 
-              {/* FIX: Removed 'gap-2' and added 'gap-0.5' to keep lines tight so they don't touch the bottom */}
               <div className="w-[75%] flex flex-col justify-center px-2 gap-[2px] text-[#282828] font-semibold min-w-0">
-
                 <div className="flex items-center justify-between w-full">
                   <p className="text-sm text-[#ffffff] truncate leading-none" title={fullName || ""}>
                     {fullName}
@@ -473,7 +680,6 @@ function HeaderContent() {
                   />
                 </div>
 
-                {/* FIX: leading-[1.2] tightly packs the stacked text specifically for PlacementOfficer */}
                 <div className={`w-full text-[#E5E5E5] ${role === "PlacementOfficer"
                   ? "flex flex-col items-start text-[11px] leading-[1.2]"
                   : "flex items-center justify-between text-xs"
@@ -700,10 +906,16 @@ function HeaderContent() {
   );
 }
 
-export default function Header() {
+type HeaderProps = {
+  onMenuClick?: () => void;
+  onAddTaskClick?: () => void;
+};
+
+
+export default function Header({ onMenuClick, onAddTaskClick }: HeaderProps) {
   return (
     <Suspense>
-      <HeaderContent />
+      <HeaderContent onMenuClick={onMenuClick} onAddTaskClick={onAddTaskClick} />
     </Suspense>
   );
 }

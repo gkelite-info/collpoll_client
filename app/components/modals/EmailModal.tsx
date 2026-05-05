@@ -156,8 +156,7 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
         onClick={onClose}
         className="fixed inset-0 z-[999] bg-black/20 backdrop-blur-[3px] cursor-pointer"
       />
-      <div className="fixed bottom-10 right-10 z-[1000] top-20 translate-x-6 w-[400px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
-        {/* HEADER */}
+      <div className="fixed bottom-10 right-10 z-[1000] top-10 lg:top-20 translate-x-6 w-[343px] md:w-[400px] lg:w-[400px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <EnvelopeSimpleIcon size={25} weight="fill" color="#43C17A" />
@@ -189,11 +188,10 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
-              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${
-                activeTab === tab
-                  ? "border-[#43C17A] text-[#43C17A]"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
-              }`}
+              className={`pb-2 text-[13px] font-semibold cursor-pointer capitalize transition-colors border-b-2 ${activeTab === tab
+                ? "border-[#43C17A] text-[#43C17A]"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               {tab}
             </button>
@@ -215,11 +213,10 @@ export default function EmailModal({ isOpen, onClose, initialView }: Props) {
               {displayedEmails.map((mail) => (
                 <div
                   key={mail.id}
-                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${
-                    mail.isRead
-                      ? "bg-white hover:bg-gray-50"
-                      : "bg-blue-50 hover:bg-blue-100 border border-blue-100"
-                  }`}
+                  className={`flex gap-3 p-3 mb-1 rounded-lg cursor-pointer transition-colors ${mail.isRead
+                    ? "bg-white hover:bg-gray-50"
+                    : "bg-blue-50 hover:bg-blue-100 border border-blue-100"
+                    }`}
                   onClick={() => handleEmailClick(mail)}
                 >
                   <div

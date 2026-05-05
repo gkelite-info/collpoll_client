@@ -63,7 +63,7 @@ export default function NotificationsModal({ isOpen, onClose }: Props) {
         className="fixed inset-0 z-[999] bg-black/20 backdrop-blur-[3px]"
       />
 
-      <div className="fixed bottom-10 right-10 z-[1000] top-20 translate-x-6 w-[400px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
+      <div className="fixed md:bottom-10 md:right-10 lg:bottom-10 lg:right-10 z-[1000] top-12 md:top-15 lg:top-20 translate-x-6 w-[328px] lg:w-[400px] bg-white rounded-md border border-[#E5E7EB] shadow-xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 shrink-0 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <BellSimple size={25} weight="fill" color="#43C17A" />
