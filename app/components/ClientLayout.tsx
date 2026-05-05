@@ -152,15 +152,15 @@ export default function ClientLayout({
             </div>
           )}
 
-          <div className="flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]">
-            <div className="h-[15%] flex justify-end bg-[#F4F4F4]">
+          <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]">
+            <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]">
               <Header
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={() => setIsAddTaskOpen(true)}
               />
             </div>
 
-            <div className="h-[87%] overflow-auto bg-[#F4F4F4] px-2">
+            <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2">
               {children}
             </div>
           </div>

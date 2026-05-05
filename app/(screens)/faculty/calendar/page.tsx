@@ -595,8 +595,8 @@ export default function Page() {
   };
 
   return (
-    <main className="p-4">
-      <section className="flex justify-between items-center mb-4">
+    <main className="p-1.5 md:p-2.5 lg:p-4">
+      <section className="bg-indigo-00 flex justify-between items-center mb-4">
         <div>
           <h1 className="text-black text-xl font-semibold">
             Calendar & Events
@@ -606,7 +606,7 @@ export default function Page() {
           </p>
         </div>
 
-        <CourseScheduleCard style="w-[320px]" />
+        <CourseScheduleCard style="w-[320px] hidden md:flex lg:flex" />
       </section>
 
       <div className="flex gap-3 mb-5">
@@ -618,7 +618,6 @@ export default function Page() {
         </button>
       </div>
 
-      {/* 🟢 Modified header area to correctly arrange toolbars and dropdowns */}
       <div className="flex flex-col md:flex-row justify-between md:items-center mb-2 gap-4">
         {mainTab === "Faculty" ? (
           <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -634,7 +633,6 @@ export default function Page() {
           <CalendarHeader
             currentDate={currentDate}
             onMonthYearChange={(month, year) => {
-              // Smoothly jump to the 1st day of the newly selected month/year
               setCurrentDate(new Date(year, month, 1));
             }}
             onAddClick={() => {

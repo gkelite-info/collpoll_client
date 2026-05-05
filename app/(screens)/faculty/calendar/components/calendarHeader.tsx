@@ -42,8 +42,7 @@ const CalendarHeader = ({
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-4 mb-2">
-      {/* 🟢 Smart Month & Year Filter */}
+    <div className="bg-red-00 flex flex-wrap items-center gap-4 mb-4 md:mb-2 lg:mb-0">
       <div className="flex items-center bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
         <div className="relative flex items-center">
           <select
@@ -51,7 +50,7 @@ const CalendarHeader = ({
             onChange={(e) =>
               onMonthYearChange(Number(e.target.value), currentYear)
             }
-            className="appearance-none bg-transparent text-gray-700 py-1.5 pl-3 pr-8 text-sm font-semibold focus:outline-none cursor-pointer"
+            className="appearance-none bg-transparent text-gray-700 py-1.5 pl-3 pr-6 text-sm font-semibold focus:outline-none cursor-pointer"
           >
             {MONTHS.map((m, i) => (
               <option key={m} value={i}>
@@ -90,7 +89,6 @@ const CalendarHeader = ({
         </div>
       </div>
 
-      {/* 🟢 Add New Button */}
       <button
         onClick={onAddClick}
         className="flex items-center gap-1.5 px-4 py-2 bg-[#43C17A] hover:bg-emerald-600 rounded-lg text-white transition-colors shadow-sm text-sm font-bold cursor-pointer"
