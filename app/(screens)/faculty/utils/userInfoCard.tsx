@@ -174,12 +174,24 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
               {item.show && ", "} {item.studentAcademicYear}
             </p>
 
-            <p className="text-lg text-[#282828] leading-tight mt-3">
+            {/* Mobile View */}
+            <div className="md:hidden lg:hidden flex items-center gap-1">
+              <p className="text-lg text-[#282828] leading-tight">
+                {t("Welcome Back,")}
+              </p>
+              <h1 className="block md:hidden lg:hidden text-lg font-semibold text-[#089144] leading-tight">
+                {!item.show ? `${t("Prof")} ${item.user}` : item.user}
+              </h1>
+            </div>
+            {/* Mobile View */}
+
+
+            <p className="hidden md:block lg:block text-lg text-[#282828] leading-tight mt-3">
               {t("Welcome Back,")}
             </p>
 
             <div className="flex items-baseline flex-wrap gap-1.5">
-              <h1 className="text-lg font-semibold text-[#089144] leading-tight">
+              <h1 className="hidden md:block lg:block text-lg font-semibold text-[#089144] leading-tight">
                 {!item.show ? `${t("Prof")} ${item.user}` : item.user}
               </h1>
 

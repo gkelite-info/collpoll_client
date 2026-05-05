@@ -230,3 +230,37 @@ html {
   transition: all 0s ease;
   z-index: 10;
 }
+
+
+.custom-scrollbar::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
+
+/* 2. Track (The background area) */
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f4f4f4;
+  /* Matches your background gray */
+  border-radius: 10px;
+}
+
+/* 3. Thumb (The moving part) */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #43c17a;
+  /* Your theme green */
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+/* 4. Hover effect so it feels interactive */
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #36a365;
+}
+
+/* 5. Support for Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #43c17a #f4f4f4;
+  -ms-overflow-style: auto;
+  /* For Edge/IE if needed */
+}

@@ -75,7 +75,7 @@ export default function studentPerformanceCard({
           </button>
         </div>
 
-        <div className="flex flex-col overflow-y-auto custom-scrollbar max-h-[355px]">
+        <div className="flex flex-col overflow-y-auto custom-scrollbar max-h-[355px] pr-3 md:pr-3 lg:pr-2">
           {students.map((student, index) => (
             <StudentRow key={student.id} student={student} number={index} />
           ))}

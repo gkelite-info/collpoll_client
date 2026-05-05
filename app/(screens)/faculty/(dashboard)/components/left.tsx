@@ -13,6 +13,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { getUpcomingClasses, UpcomingLesson } from "@/lib/helpers/faculty/attendance/getClasses";
 import { getFacultyDashboardStats } from "@/lib/helpers/faculty/dashboard/getFacultyDashboardStats";
+import toast from "react-hot-toast";
 
 export default function FacultyDashLeft() {
   const { userId, fullName, gender, loading: userLoading } = useUser();
@@ -45,7 +46,7 @@ export default function FacultyDashLeft() {
       setUpcomingClasses(classesData);
       setStats(statsData);
     } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+      toast.error("Failed to load data");
     } finally {
       setIsLoadingClasses(false);
     }
@@ -111,9 +112,9 @@ export default function FacultyDashLeft() {
 
   return (
     <>
-      <div className="w-full md:w-[65%] lg:w-[68%] mt-4 md:mt-0 lg:mt-0 p-1 lg:p-2">
+      <div className="w-full md:w-[65%] lg:w-[68%] mt-2 md:mt-0 lg:mt-0 p-1 lg:p-2">
         <UserInfoCard cardProps={card} />
-        <div className="mt-5 rounded-lg grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 text-xs">
+        <div className="mt-4 rounded-lg grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-3 text-xs">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}
@@ -126,7 +127,7 @@ export default function FacultyDashLeft() {
         </div>
         <div>
           <div className="bg-gray-100">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 mb-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4 mb-4">
               <div className="w-full">
                 <StudentPerformanceCard students={STUDENT_DATA} />
               </div>

@@ -171,7 +171,7 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
               </div>
 
               <p
-                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                className={`text-sm sm:text-sm md:text-base lg:text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
                   }`}
               >
                 {item.label}
