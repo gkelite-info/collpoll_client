@@ -19,6 +19,7 @@ export default function TabNavigation() {
     params.delete("year");
     params.delete("subjectId");
     params.delete("discussionView");
+    params.delete("labId");
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -55,11 +56,22 @@ export default function TabNavigation() {
           >
             Discussion forum
           </span>
+          <span className="text-[#282828]">/</span>
+          <span
+            onClick={() => handleTabChange("lab")}
+            className={`cursor-pointer transition-colors ${activeTab === "lab"
+              ? "text-[#43C17A]"
+              : "text-[#282828]"
+              }`}
+          >
+            Lab
+          </span>
         </h1>
         <p className="text-[#282828] text-sm">
           {activeTab === "assignments" && "Track subjects, faculty who created assignments, raised issues, and submission progress."}
           {activeTab === "quiz" && "Monitor and manage quizzes across all departments."}
           {activeTab === "discussion" && `Manage project discussions and forums across all ${!(collegeEducationType === "Inter") ? "branches." : "groups."}`}
+          {activeTab === "lab" && "Upload and manage lab manuals across subjects and sections."}
         </p>
       </div>
       <div className="w-[320px]">

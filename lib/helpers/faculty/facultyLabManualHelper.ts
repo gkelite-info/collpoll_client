@@ -16,6 +16,11 @@ export type LabManualRow = {
     deletedAt: string | null;
 };
 
+function getIndianTimestamp() {
+    return new Date()
+        .toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" })
+        .replace(" ", "T");
+}
 
 export async function fetchLabManualsForStudent(
     params: {
@@ -100,6 +105,11 @@ export async function fetchLabManualsForStudent(
 export async function fetchLabManualsForStaff(params: {
     facultyId?: number;
     adminId?: number;
+    collegeId?: number;
+    collegeEducationId?: number;
+    collegeBranchId?: number;
+    collegeAcademicYearId?: number;
+    collegeSubjectId?: number;
     page?: number;
     pageSize?: number;
 }) {
@@ -110,13 +120,34 @@ export async function fetchLabManualsForStaff(params: {
 
     let query = supabase
         .from("faculty_lab_manuals")
-        .select(`*, college_subjects(subjectName), college_sections(collegeSections)`, { count: "exact" })
+        .select(`*, college_subjects!inner(subjectName, collegeId, collegeEducationId, collegeBranchId, collegeAcademicYearId), college_sections(collegeSections)`, { count: "exact" })
         .is("deletedAt", null);
 
     if (params.adminId) {
         query = query.eq("adminId", params.adminId);
     } else if (params.facultyId) {
         query = query.eq("facultyId", params.facultyId);
+    }
+
+    if (params.collegeId) {
+        query = query.eq("college_subjects.collegeId", params.collegeId);
+    }
+
+    if (params.collegeEducationId) {
+        query = query.eq("college_subjects.collegeEducationId", params.collegeEducationId);
+    }
+
+    if (params.collegeBranchId) {
+        query = query.eq("college_subjects.collegeBranchId", params.collegeBranchId);
+    }
+
+    if (params.collegeAcademicYearId) {
+        query = query.eq("collegeAcademicYearId", params.collegeAcademicYearId);
+        query = query.eq("college_subjects.collegeAcademicYearId", params.collegeAcademicYearId);
+    }
+
+    if (params.collegeSubjectId) {
+        query = query.eq("collegeSubjectId", params.collegeSubjectId);
     }
 
     const { data: facultyLabManual, error: faculty_lab_manualsError, count } = await query
@@ -163,6 +194,22 @@ export async function fetchLabManualsForStaff(params: {
     };
 }
 
+export async function fetchLabManualById(labManualId: number) {
+    const { data, error } = await supabase
+        .from("faculty_lab_manuals")
+        .select(`*, college_subjects!inner(subjectName, collegeId, collegeEducationId, collegeBranchId, collegeAcademicYearId), college_sections(collegeSections)`)
+        .eq("labManualId", labManualId)
+        .is("deletedAt", null)
+        .single();
+
+    if (error) {
+        console.error("fetchLabManualById error:", error);
+        throw error;
+    }
+
+    return data;
+}
+
 export async function saveLabManual(
     payload: {
         labManualId?: number;
@@ -172,11 +219,11 @@ export async function saveLabManual(
         collegeSubjectId: number;
         collegeAcademicYearId: number;
         collegeSectionsId: number;
-        facultyId: number;
+        facultyId?: number;
     },
     actingUser: { id: number; role: 'admin' | 'faculty' }
 ) {
-    const now = new Date().toISOString();
+    const now = getIndianTimestamp();
 
     const manualData: any = {
         labTitle: payload.labTitle.trim(),
@@ -185,9 +232,12 @@ export async function saveLabManual(
         collegeSubjectId: payload.collegeSubjectId,
         collegeAcademicYearId: payload.collegeAcademicYearId,
         collegeSectionsId: payload.collegeSectionsId,
-        facultyId: payload.facultyId,
         updatedAt: now,
     };
+
+    if (payload.facultyId) {
+        manualData.facultyId = payload.facultyId;
+    }
 
     if (actingUser.role === 'admin') {
         manualData.adminId = actingUser.id;
@@ -222,7 +272,7 @@ export async function deleteLabManual(labManualId: number) {
         .from("faculty_lab_manuals")
         .update({
             isActive: false,
-            deletedAt: new Date().toISOString(),
+            deletedAt: getIndianTimestamp(),
         })
         .eq("labManualId", labManualId);
 

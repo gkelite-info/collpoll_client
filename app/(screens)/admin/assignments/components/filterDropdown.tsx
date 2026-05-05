@@ -24,7 +24,7 @@ export const FilterDropdown = ({
     <div className="flex items-center gap-2">
       <label className="text-[13px] text-[#525252] font-medium">{label}</label>
 
-      <div className="relative bg-[#43C17A1C] rounded-full pl-3 pr-7 py-1 flex items-center">
+      <div className="relative bg-[#43C17A1C] rounded-full pl-3 pr-7 py-1 flex items-center cursor-pointer">
         <select
           value={value}
           disabled={disabled}
@@ -48,7 +48,7 @@ export const FilterDropdown = ({
 
         <CaretDown
           size={12}
-          className="absolute right-2.5 text-[#43C17A] pointer-events-none"
+          className="absolute right-2.5 text-[#43C17A] pointer-events-none cursor-pointer"
           weight="bold"
         />
       </div>

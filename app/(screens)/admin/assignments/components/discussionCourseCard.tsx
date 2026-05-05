@@ -13,6 +13,7 @@ interface Props {
   pendingSubmissions: number;
   buttonText?: string;
   activeLabel?: string;
+  pendingLabel?: string;
   branchId?: number;
   yearId?: number;
   role?: "admin" | "faculty";
@@ -30,6 +31,7 @@ export default function DiscussionCourseCard({
   pendingSubmissions,
   buttonText,
   activeLabel,
+  pendingLabel,
   branchId,
   yearId,
   role,
@@ -80,7 +82,7 @@ export default function DiscussionCourseCard({
         </div>
         <div className="flex gap-2 items-center">
           <span className="text-[#282828] text-[13px]">
-            Pending Submissions
+            {pendingLabel || "Pending Submissions"}
           </span>
           <span className="bg-[#D0EFDE] text-[#43C17A] text-[12px] font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
             {pendingSubmissions}
