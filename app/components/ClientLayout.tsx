@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import Header from "./header/header";
 import { Toaster } from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
-
 import StudentNavbar from "./navbar/studentNavbar";
 import AdminNavbar from "./navbar/adminNavbar";
 import ParentNavbar from "./navbar/parentNavbar";
@@ -154,7 +153,7 @@ export default function ClientLayout({
           )}
 
           <div className="flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]">
-            <div className="h-[13%] flex justify-end bg-[#F4F4F4]">
+            <div className="h-[15%] flex justify-end bg-[#F4F4F4]">
               <Header
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={() => setIsAddTaskOpen(true)}
