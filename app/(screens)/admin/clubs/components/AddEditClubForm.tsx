@@ -320,6 +320,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         direction="down"
                         collegeId={collegeId}
                         roleGroup="student"
+                        currentClubId={rawEditId ? parseInt(rawEditId, 10) : null}
                     />
                     <SearchableUserDropdown
                         label="Vice President"
@@ -330,6 +331,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         direction="down"
                         collegeId={collegeId}
                         roleGroup="student"
+                        currentClubId={rawEditId ? parseInt(rawEditId, 10) : null}
                     />
                 </div>
 
@@ -343,6 +345,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         direction="up"
                         collegeId={collegeId}
                         roleGroup="faculty"
+                        currentClubId={rawEditId ? parseInt(rawEditId, 10) : null}
                     />
 
                     <SearchableUserDropdown
@@ -365,6 +368,7 @@ export default function AddEditClubForm({ editId }: { editId: string | null }) {
                         direction="up"
                         collegeId={collegeId}
                         roleGroup="faculty"
+                        currentClubId={rawEditId ? parseInt(rawEditId, 10) : null}
                     />
 
                 </div>

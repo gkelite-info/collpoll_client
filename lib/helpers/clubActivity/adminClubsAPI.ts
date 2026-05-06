@@ -7,6 +7,8 @@ export type SearchableUser = {
     avatar: string;
     education: string;
     role: string;
+    isDisabled?: boolean;
+    disabledReason?: string;
 };
 
 export type ClubPayload = {
@@ -25,7 +27,8 @@ export async function getSearchableUsers(
     roleGroup: "student" | "faculty",
     searchQuery: string = "",
     page: number = 1,
-    limit: number = 20
+    limit: number = 20,
+    currentClubId: number | null = null
 ): Promise<{ users: SearchableUser[]; hasMore: boolean }> {
     try {
         const offset = (page - 1) * limit;
@@ -43,13 +46,19 @@ export async function getSearchableUsers(
                     student_academic_history!left(
                         isCurrent,
                         college_academic_year!left(collegeAcademicYear)
-                    )
+                    ),
+                    president_clubs:clubs!clubs_presidentStudentId_fkey(clubId, is_deleted),
+                    vp_clubs:clubs!clubs_vicePresidentStudentId_fkey(clubId, is_deleted),
+                    club_members(clubId, is_deleted, removedAt, clubs(is_deleted)),
+                    club_join_requests(clubId, status, is_deleted, clubs(is_deleted))
                  )`
                 : `faculty!inner(
-              facultyId, 
-              college_education!left(collegeEducationType),
-              college_branch!left(collegeBranchCode)
-            )`
+                        facultyId, 
+                        college_education!left(collegeEducationType),
+                        college_branch!left(collegeBranchCode),
+                        responsible_clubs:clubs!clubs_responsibleFacultyId_fkey(clubId, is_deleted),
+                        club_mentors(clubId, is_deleted, clubs(is_deleted))
+                    )`
             }
         `;
 
@@ -81,6 +90,8 @@ export async function getSearchableUsers(
         const users: SearchableUser[] = data.map((user: any) => {
             let educationStr = "";
             let specificRoleId = "";
+            let isDisabled = false;
+            let disabledReason = "";
 
             const studentRecord = user.students ?? null;
             const facultyRecord = user.faculty ?? null;
@@ -94,10 +105,25 @@ export async function getSearchableUsers(
                 const currentHistory = academicHistory.find((h: any) => h?.isCurrent) ?? academicHistory[0] ?? null;
                 const year = currentHistory?.college_academic_year?.collegeAcademicYear ?? "";
                 const eduBranch = [eduType, branch].filter(Boolean).join(" ");
+                educationStr = eduBranch && year ? `${eduBranch} - ${year}` : eduBranch || "Not Assigned";
 
-                educationStr = eduBranch && year
-                    ? `${eduBranch} - ${year}`
-                    : eduBranch || "Not Assigned";
+                const pClubs = studentRecord.president_clubs || [];
+                const vpClubs = studentRecord.vp_clubs || [];
+                const members = studentRecord.club_members || [];
+                const requests = studentRecord.club_join_requests || [];
+
+                const activePresident = pClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
+                const activeVP = vpClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
+                const activeMember = members.some((m: any) => !m.is_deleted && !m.removedAt && m.clubs && !m.clubs.is_deleted && m.clubId !== currentClubId);
+                const pendingRequest = requests.some((r: any) => !r.is_deleted && r.status === 'pending' && r.clubs && !r.clubs.is_deleted && r.clubId !== currentClubId);
+
+                if (activePresident || activeVP || activeMember) {
+                    isDisabled = true;
+                    disabledReason = "Already in a club";
+                } else if (pendingRequest) {
+                    isDisabled = true;
+                    disabledReason = "Pending request";
+                }
 
             } else if (roleGroup === "faculty" && facultyRecord) {
                 specificRoleId = facultyRecord?.facultyId?.toString() ?? "";
@@ -106,6 +132,17 @@ export async function getSearchableUsers(
                 const branch = facultyRecord?.college_branch?.collegeBranchCode ?? "";
 
                 educationStr = [eduType, branch].filter(Boolean).join(" ") || "Not Assigned";
+
+                const fClubs = facultyRecord.responsible_clubs || [];
+                const mentors = facultyRecord.club_mentors || [];
+
+                const activeResponsible = fClubs.some((c: any) => !c.is_deleted && c.clubId !== currentClubId);
+                const activeMentor = mentors.some((m: any) => !m.is_deleted && m.clubs && !m.clubs.is_deleted && m.clubId !== currentClubId);
+
+                if (activeResponsible || activeMentor) {
+                    isDisabled = true;
+                    disabledReason = "Assigned to a club";
+                }
             }
 
             return {
@@ -114,7 +151,9 @@ export async function getSearchableUsers(
                 name: user.fullName,
                 avatar: user.user_profile?.[0]?.profileUrl,
                 education: educationStr || "Not Assigned",
-                role: user.role
+                role: user.role,
+                isDisabled,
+                disabledReason
             };
         });
 
@@ -143,10 +182,10 @@ export async function getSearchableUsers(
 
 async function uploadClubLogo(file: File, collegeId: number, clubId?: number): Promise<string> {
     let fileExt = file.type.split('/')[1] || 'webp';
-    if (fileExt === 'svg+xml') fileExt = 'svg'; 
-    
+    if (fileExt === 'svg+xml') fileExt = 'svg';
+
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-    
+
     const folder = clubId ? clubId.toString() : 'new';
     const filePath = `clubs/${collegeId}/${folder}/${fileName}`;
 
@@ -167,7 +206,7 @@ async function uploadClubLogo(file: File, collegeId: number, clubId?: number): P
 
             const { data: urlData } = supabase.storage.from("club_profile").getPublicUrl(filePath);
             return urlData.publicUrl;
-            
+
         } catch (error) {
             lastError = error;
             attempt++;

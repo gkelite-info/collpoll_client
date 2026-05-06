@@ -254,6 +254,7 @@ import { useEffect, useState } from "react";
 import { useUser } from "@/app/utils/context/UserContext";
 import { getStudentDashboardData } from "@/lib/helpers/student/attendance/subjectWiseStats";
 import { useTranslations } from "next-intl";
+import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 
 interface CardItem {
   id: number;
@@ -424,6 +425,17 @@ export default function SubjectAttendance() {
           <WorkWeekCalendar style="w-[345px] mt-0" />
         </div>
 
+        <div className="my-2 w-[69.5%]">
+          <AiAttendanceNotificationBanner
+            className="h-auto min-h-[90px]"
+            message={
+              <>
+                🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
+              </>
+            }
+          />
+        </div>
+
         <div className="mt-4 flex flex-col items-start">
           <h4 className="text-[#282828] font-medium">
             {t("Subject-Wise Attendance")}
@@ -442,11 +454,10 @@ export default function SubjectAttendance() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === 1
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === 1
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ‹
               </button>
@@ -456,11 +467,10 @@ export default function SubjectAttendance() {
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`w-10 h-10 rounded-lg font-semibold
-        ${
-          currentPage === i + 1
-            ? "bg-[#16284F] text-white"
-            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -473,11 +483,10 @@ export default function SubjectAttendance() {
                 }
                 disabled={currentPage === totalPages}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === totalPages
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === totalPages
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ›
               </button>
