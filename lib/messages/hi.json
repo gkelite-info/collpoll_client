@@ -552,7 +552,8 @@
       "No PDFs uploaded for this topic yet": "इस विषय के लिए अभी तक कोई PDF अपलोड नहीं किया गया है।",
       "Close": "बंद करें",
       "Download File": "फ़ाइल डाउनलोड करें",
-      "Select File(s)": "फ़ाइल(फ़ाइलें) चुनें"
+      "Select File(s)": "फ़ाइल(फ़ाइलें) चुनें",
+      "Track syllabus Progress and manage notes": "सिलेबस प्रगति को ट्रैक करें और नोट्स प्रबंधित करें."
     }
   },
   "Drive": {

@@ -72,7 +72,6 @@ export default function StudentMeetingsPage() {
     });
   };
 
-  // Moved inside component to access t()
   const typeTabs = [
     { id: "upcoming", label: t("Upcoming Meetings") },
     { id: "previous", label: t("Previous Meetings") },
@@ -110,7 +109,6 @@ export default function StudentMeetingsPage() {
       setMeetings(finalMeetings);
       setTotalPages(res.totalPages || 1);
     } catch (err) {
-      // Translates the dynamic type word (e.g. "upcoming" -> local equivalent)
       toast.error(t("Failed to fetch type meetings", { type: t(currentType) }));
     } finally {
       setIsLoading(false);
@@ -119,38 +117,41 @@ export default function StudentMeetingsPage() {
 
   return (
     <>
-      <div className="bg-red-00 h-screen p-2 flex flex-col">
-        <div className="flex justify-between items-start mb-6">
+      <div className="bg-red-00 max-md:bg-[#f4f5f6] h-screen p-2 max-md:p-4 flex flex-col">
+        <div className="flex justify-between items-start mb-6 max-md:mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#282828]">
+            <h1 className="text-2xl font-bold text-[#282828] max-md:text-[22px]">
               {t("Meetings")}
             </h1>
-            <p className="text-[#282828] text-sm mt-1">
+            <p className="text-[#282828] text-sm mt-1 max-md:hidden">
               {t("View and join scheduled meetings")}
             </p>
           </div>
-          <div className="w-[320px]">
+          <div className="w-[320px] max-md:hidden">
             <CourseScheduleCard isVisibile={false} />
           </div>
         </div>
-        <div className="bg-red-00">
+
+        <div className="bg-red-00 max-md:bg-transparent">
           <div className="flex items-center justify-center w-full">
-            <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
+            <div className="bg-white/80 max-md:bg-transparent p-2 max-md:p-0 rounded-full inline-flex gap-2 mx-auto self-center">
               {typeTabs.map((tab) => {
                 const isActive = currentType === tab.id;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => updateFilter("type", tab.id)}
-                    className={`relative z-10 cursor-pointer px-5 py-2 rounded-full text-sm font-medium transition-colors ${
-                      isActive ? "text-[#E9E9E9]" : "text-[#414141]"
+                    className={`relative z-10 cursor-pointer px-5 py-2 max-md:px-4 max-md:py-1.5 rounded-full text-sm max-md:text-[13px] font-medium max-md:font-semibold transition-colors ${
+                      isActive
+                        ? "text-[#E9E9E9] max-md:text-white"
+                        : "text-[#414141] max-md:text-[#4A4A4A]"
                     }`}
                   >
                     {tab.label}
                     {isActive && (
                       <motion.div
                         layoutId="type-pill"
-                        className="absolute inset-0 rounded-full bg-[#43C17A] shadow-sm -z-10"
+                        className="absolute inset-0 rounded-full bg-[#43C17A] max-md:bg-[#48c774] shadow-sm -z-10"
                         transition={{
                           type: "spring",
                           stiffness: 300,
@@ -160,15 +161,15 @@ export default function StudentMeetingsPage() {
                     )}
 
                     {!isActive && (
-                      <div className="absolute inset-0 rounded-full bg-[#DEDEDE] shadow-sm -z-10" />
+                      <div className="absolute inset-0 rounded-full bg-[#DEDEDE] max-md:bg-[#e4e4e4] shadow-sm -z-10 max-md:shadow-none" />
                     )}
                   </button>
                 );
               })}
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-2 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+          <div className="flex-1 overflow-y-auto p-2 mt-4 max-md:p-0 max-md:mt-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10 max-md:gap-4">
               {isLoading ? (
                 <MeetingCardShimmer
                   role={role}
@@ -181,7 +182,7 @@ export default function StudentMeetingsPage() {
                   <MeetingCard key={meeting.id} data={meeting} role={role} />
                 ))
               ) : (
-                <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
+                <div className="col-span-full py-20 text-center text-gray-500 bg-white max-md:bg-transparent rounded-xl border border-dashed border-gray-300 max-md:border-none">
                   <p className="text-lg">
                     {t("No type meetings found", { type: t(currentType) })}
                   </p>
@@ -190,7 +191,7 @@ export default function StudentMeetingsPage() {
             </div>
           </div>
           {totalPages > 1 && (
-            <div className="flex justify-center pb-4">
+            <div className="flex justify-center pb-4 max-md:pb-6">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}

@@ -22,15 +22,16 @@
 // import { getStudentDashboardData } from "@/lib/helpers/student/attendance/studentAttendanceActions";
 // import { ValueShimmer } from "@/app/components/shimmers/valueShimmer";
 // import { fetchStudentFeePlan } from "@/lib/helpers/student/payments/fetchStudentFeePlan";
+// import { useStudent } from "@/app/utils/context/student/useStudent";
+// import toast from "react-hot-toast";
 // import { Loader } from "../calendar/right/timetable";
+// import { useTranslations } from "next-intl";
 
 // const formatTimeToAMPM = (time24: string) => {
 //   const [h, m] = time24.split(":");
 //   let hour = Number(h);
-
 //   const period = hour >= 12 ? "PM" : "AM";
 //   hour = hour % 12 || 12;
-
 //   return `${hour}:${m} ${period}`;
 // };
 
@@ -48,6 +49,9 @@
 //   const [feeLoading, setFeeLoading] = useState(true);
 //   const [subjects, setSubjects] = useState<any[]>([]);
 //   const [subjectsLoading, setSubjectsLoading] = useState(true);
+//   const { studentId } = useStudent();
+
+//   const t = useTranslations("Dashboard.student");
 
 //   useEffect(() => {
 //     loadUpcomingClasses();
@@ -75,7 +79,6 @@
 
 //       const studentContext = await fetchStudentContext(userRow.userId);
 
-//       // 🟢 Fetch active subjects and their units to calculate correct completion %
 //       let query = supabase
 //         .from("college_subjects")
 //         .select(
@@ -108,7 +111,6 @@
 //         return;
 //       }
 
-//       // Fetch faculty names for professors
 //       const facultyIds = new Set<number>();
 //       subjectData.forEach((sub: any) => {
 //         sub.college_subject_units?.forEach((unit: any) => {
@@ -127,7 +129,6 @@
 //         });
 //       }
 
-//       // Maintain dynamic colors
 //       const colorPalettes = [
 //         {
 //           radialStart: "#10FD77",
@@ -155,7 +156,6 @@
 //         const units = sub.college_subject_units || [];
 //         const totalUnits = units.length;
 
-//         // Calculate average completion percentage of all units
 //         const avgPercentage =
 //           totalUnits > 0
 //             ? Math.round(
@@ -170,8 +170,8 @@
 //         const firstUnit = units[0];
 //         const professor =
 //           firstUnit && facultyMap[firstUnit.createdBy]
-//             ? `Prof. ${facultyMap[firstUnit.createdBy]}`
-//             : "Faculty Assigned";
+//             ? t("Prof {name}", { name: facultyMap[firstUnit.createdBy] })
+//             : t("Faculty Assigned");
 //         const colors = colorPalettes[index % colorPalettes.length];
 
 //         return {
@@ -187,7 +187,7 @@
 
 //       setSubjects(mappedSubjects);
 //     } catch (err) {
-//       console.error("Failed to load subjects", err);
+//       toast.error("Failed to load subjects");
 //     } finally {
 //       setSubjectsLoading(false);
 //     }
@@ -336,7 +336,7 @@
 //       icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
 //       value:
 //         attendancePercent === null ? <ValueShimmer /> : `${attendancePercent}%`,
-//       label: "Attendance",
+//       label: t("Attendance"),
 //       to: "/attendance",
 //     },
 //     {
@@ -345,16 +345,16 @@
 //       value: assignmentsLoading ? (
 //         <ValueShimmer />
 //       ) : (
-//         `${dueAssignmentsCount} Due`
+//         t("{count} Due", { count: dueAssignmentsCount })
 //       ),
-//       label: "Assignments",
+//       label: t("Assignments"),
 //       to: "/assignments",
 //     },
 //     {
 //       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
 //       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-//       value: "Mid Exams",
-//       label: "N/A",
+//       value: t("Mid Exams"),
+//       label: t("N/A"),
 //       onClick: () => setView("exams"),
 //     },
 //     {
@@ -365,33 +365,33 @@
 //       ) : (
 //         `₹${pendingFeeAmount?.toLocaleString("en-IN")}`
 //       ),
-//       label: "Fee Due",
+//       label: t("Fee Due"),
 //       to: "/payments",
 //     },
 //   ];
 
-// const formatDate = (dateStr: string) => {
-//   const date = new Date(dateStr);
-//   const day = String(date.getDate()).padStart(2, "0");
-//   const month = String(date.getMonth() + 1).padStart(2, "0");
-//   const year = date.getFullYear();
+//   const formatDate = (dateStr: string) => {
+//     const date = new Date(dateStr);
+//     const day = String(date.getDate()).padStart(2, "0");
+//     const month = String(date.getMonth() + 1).padStart(2, "0");
+//     const year = date.getFullYear();
 
-//   return `${day}-${month}-${year}`;
-// };
+//     return `${day}-${month}-${year}`;
+//   };
 
-// const handleUpcomingClasses = () => {
-//   router.push("/calendar");
-//   return;
-// };
+//   const handleUpcomingClasses = () => {
+//     router.push("/calendar");
+//     return;
+//   };
 
-// const handleSubjectProgress = () => {
-//   router.push("/academics");
-//   return;
-// };
+//   const handleSubjectProgress = () => {
+//     router.push("/academics");
+//     return;
+//   };
 
 //   return (
 //     <>
-//       <div className="w-[68%] p-2">
+//       <div className=" p-2">
 //         {view === "dashboard" ? (
 //           <>
 //             <UserInfoCard />
@@ -409,7 +409,7 @@
 //               ))}
 //             </div>
 //             <div className="mt-5">
-//               <AcademicPerformance />
+//               <AcademicPerformance studentId={studentId} />
 //             </div>
 //             <div className="mt-5 flex items-center justify-between rounded-lg">
 //               <SubjectProgressCards
@@ -421,7 +421,7 @@
 //                 <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2">
 //                   <div className="flex justify-between items-center">
 //                     <h6 className="text-[#282828] font-semibold">
-//                       Upcoming Events
+//                       {t("Upcoming Events")}
 //                     </h6>
 //                     <FaChevronRight
 //                       className="cursor-pointer text-black"
@@ -436,7 +436,7 @@
 //                     ) : lectures.length === 0 ? (
 //                       <div className="bg-red-00 min-h-[25vh] flex items-center justify-center">
 //                         <p className="text-[#282828] text-sm">
-//                           No events scheduled..
+//                           {t("No events scheduled")}
 //                         </p>
 //                       </div>
 //                     ) : (
@@ -448,11 +448,12 @@
 //                           <LectureCard
 //                             time={`${formatTimeToAMPM(lec.fromTime)}\n-\n${formatTimeToAMPM(lec.toTime)}`}
 //                             title={lec.eventTitle}
-//                             professor={`Prof. ${lec.facultyName}`}
+//                             professor={t("Prof {name}", {
+//                               name: lec.facultyName,
+//                             })}
 //                             description={`${lec.eventTopic} • ${formatDate(lec.date)}`}
-//                             status={lec.isCancelled ? "Cancelled" : ""}
+//                             status={lec.isCancelled ? t("Cancelled") : ""}
 //                           />
-
 //                           {lec.meetingLink && !lec.isCancelled && (
 //                             <a
 //                               href={lec.meetingLink}
@@ -460,7 +461,7 @@
 //                               rel="noopener noreferrer"
 //                               className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#43C17A] text-white px-4 py-0.5 rounded-md text-xs font-medium hover:bg-[#35a868] transition-colors shadow-sm z-10 cursor-pointer"
 //                             >
-//                               Join
+//                               {t("Join")}
 //                             </a>
 //                           )}
 //                         </div>
@@ -651,8 +652,8 @@ export default function StuDashLeft() {
         const firstUnit = units[0];
         const professor =
           firstUnit && facultyMap[firstUnit.createdBy]
-            ? t("Prof {name}", { name: facultyMap[firstUnit.createdBy] }) // Natural Key
-            : t("Faculty Assigned"); // Natural Key
+            ? t("Prof {name}", { name: facultyMap[firstUnit.createdBy] })
+            : t("Faculty Assigned");
         const colors = colorPalettes[index % colorPalettes.length];
 
         return {
@@ -817,7 +818,7 @@ export default function StuDashLeft() {
       icon: <Chalkboard size={32} weight="fill" color="#714EF2" />,
       value:
         attendancePercent === null ? <ValueShimmer /> : `${attendancePercent}%`,
-      label: t("Attendance"), // Natural Key
+      label: t("Attendance"),
       to: "/attendance",
     },
     {
@@ -826,16 +827,16 @@ export default function StuDashLeft() {
       value: assignmentsLoading ? (
         <ValueShimmer />
       ) : (
-        t("{count} Due", { count: dueAssignmentsCount }) // Pluralization/Variable key
+        t("{count} Due", { count: dueAssignmentsCount })
       ),
-      label: t("Assignments"), // Natural Key
+      label: t("Assignments"),
       to: "/assignments",
     },
     {
       style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
       icon: <BookOpen size={32} weight="fill" color="#74FF8F" />,
-      value: t("Mid Exams"), // Natural Key
-      label: t("N/A"), // Natural Key
+      value: t("Mid Exams"),
+      label: t("N/A"),
       onClick: () => setView("exams"),
     },
     {
@@ -846,7 +847,7 @@ export default function StuDashLeft() {
       ) : (
         `₹${pendingFeeAmount?.toLocaleString("en-IN")}`
       ),
-      label: t("Fee Due"), // Natural Key
+      label: t("Fee Due"),
       to: "/payments",
     },
   ];
@@ -872,12 +873,15 @@ export default function StuDashLeft() {
 
   return (
     <>
-      <div className="w-[68%] p-2">
+      <div className="p-2 max-md:p-1 max-md:bg-[#f4f5f6] max-md:flex max-md:flex-col max-md:gap-5 min-h-screen max-md:pb-7">
         {view === "dashboard" ? (
           <>
-            <UserInfoCard />
-            <div className="mt-5 rounded-lg flex gap-3 text-xs">
-              {cardData.map((item, index) => (
+            <div className="max-md:order-1">
+              <UserInfoCard />
+            </div>
+
+            <div className="mt-5 max-md:mt-0 rounded-lg flex max-md:grid max-md:grid-cols-2 gap-3 max-md:gap-3 text-xs max-md:order-2 w-full max-md:justify-items-center max-md:place-content-center">
+              {cardData.map((item: any, index: number) => (
                 <CardComponent
                   key={index}
                   style={item.style}
@@ -889,19 +893,24 @@ export default function StuDashLeft() {
                 />
               ))}
             </div>
-            <div className="mt-5">
+
+            <div className="mt-5 max-md:mt-0 max-md:order-4 max-md:w-full">
               <AcademicPerformance studentId={studentId} />
             </div>
-            <div className="mt-5 flex items-center justify-between rounded-lg">
-              <SubjectProgressCards
-                props={subjectsLoading ? [] : subjects}
-                isLoading={subjectsLoading}
-                onViewMore={handleSubjectProgress}
-              />
-              <div className="bg-red-400 h-64 rounded-lg w-[49%] shadow-md">
-                <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2">
-                  <div className="flex justify-between items-center">
-                    <h6 className="text-[#282828] font-semibold">
+
+            <div className="mt-5 max-md:mt-0 flex items-center justify-between rounded-lg max-md:contents">
+              <div className="w-[49%] max-md:w-full max-md:order-5">
+                <SubjectProgressCards
+                  props={subjectsLoading ? [] : subjects}
+                  isLoading={subjectsLoading}
+                  onViewMore={handleSubjectProgress}
+                />
+              </div>
+
+              <div className="bg-red-400 h-64 rounded-lg w-[49%] shadow-md max-md:w-full max-md:h-auto max-md:shadow-none max-md:order-3">
+                <div className="bg-white h-64 rounded-lg w-[100%] p-4 flex flex-col gap-2 max-md:h-auto  max-md:p-4 max-md:gap-3">
+                  <div className="flex justify-between items-center max-md:mb-1">
+                    <h6 className="text-[#282828] font-semibold max-md:text-[17px]">
                       {t("Upcoming Events")}
                     </h6>
                     <FaChevronRight
@@ -909,7 +918,8 @@ export default function StuDashLeft() {
                       onClick={handleUpcomingClasses}
                     />
                   </div>
-                  <div className="overflow-y-auto pr-1">
+
+                  <div className="overflow-y-auto pr-1 max-md:overflow-visible max-md:pr-0">
                     {loadingLectures ? (
                       <div className="flex justify-center items-center h-[120px]">
                         <div className="w-8 h-8 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
@@ -921,7 +931,7 @@ export default function StuDashLeft() {
                         </p>
                       </div>
                     ) : (
-                      lectures.map((lec) => (
+                      lectures.map((lec: any) => (
                         <div
                           key={lec.calendarEventId}
                           className="relative mb-3 last:mb-0"
@@ -940,7 +950,7 @@ export default function StuDashLeft() {
                               href={lec.meetingLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#43C17A] text-white px-4 py-0.5 rounded-md text-xs font-medium hover:bg-[#35a868] transition-colors shadow-sm z-10 cursor-pointer"
+                              className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#43C17A] text-white px-4 py-0.5 rounded-md text-xs font-medium hover:bg-[#35a868] transition-colors shadow-sm z-10 cursor-pointer max-md:right-3 max-md:px-3 max-md:py-1"
                             >
                               {t("Join")}
                             </a>

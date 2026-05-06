@@ -4,6 +4,7 @@ import { getStudentAcademicPerformance } from "@/lib/helpers/student/AcademicPer
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { FaChevronRight } from "react-icons/fa6";
 import {
   BarChart,
   Bar,
@@ -78,11 +79,17 @@ export default function AcademicPerformance({
 
   return (
     <div className="relative mx-auto h-full w-full max-w-6xl overflow-hidden rounded-lg bg-white px-2 pt-5 shadow-md">
-      <h2 className="mb-6 ml-3 text-xl font-semibold text-[#282828]">
-        {t("Academic Performance")}
-      </h2>
+      <div className="flex justify-between items-center pr-3 mb-6">
+        <h2 className="ml-3 text-xl font-semibold text-[#282828] max-md:text-[17px] max-md:ml-1">
+          {t("Academic Performance")}
+        </h2>
+        <FaChevronRight
+          className="hidden max-md:block text-[#282828]"
+          size={16}
+        />
+      </div>
 
-      <div className="h-80 w-full bg-green-00">
+      <div className="hidden md:block h-80 w-full bg-green-00">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -176,9 +183,115 @@ export default function AcademicPerformance({
                   );
                 }}
               />
-
               {data.map((_, index) => (
                 <Cell key={index} fill="url(#barGradient)" />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="block md:hidden h-72 w-full bg-green-00 pb-2">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
+            barGap={-28}
+            barCategoryGap={0}
+          >
+            <defs>
+              <linearGradient
+                id="barGradientMobile"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop offset="0%" stopColor="#A8E089" />
+                <stop offset="100%" stopColor="#9ACC7D" />
+              </linearGradient>
+            </defs>
+
+            <YAxis
+              domain={[10, 100]}
+              ticks={[10, 25, 40, 55, 70, 85, 100]}
+              tick={{ fontSize: 10, fill: "#888" }}
+              tickFormatter={(value) => `${value}%`}
+              axisLine={false}
+              tickLine={false}
+            />
+
+            <XAxis
+              dataKey="subject"
+              tick={{ fontSize: 10, fill: "#282828", fontWeight: 600 }}
+              interval={0}
+              angle={0}
+              textAnchor="middle"
+              height={40}
+              axisLine={false}
+              tickLine={false}
+            />
+
+            <Tooltip
+              cursor={{ fill: "transparent" }}
+              contentStyle={{
+                backgroundColor: "#ffffff",
+                color: "#000000",
+                border: "1px solid #ccc",
+                borderRadius: "10px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              }}
+              labelStyle={{ color: "#000000", fontWeight: 600 }}
+              itemStyle={{ color: "#000000", fontSize: 13 }}
+            />
+
+            <Bar
+              dataKey="full"
+              barSize={28}
+              fill="rgba(233, 245, 230, 0.7)"
+              radius={[6, 6, 6, 6]}
+            />
+
+            <Bar dataKey="value" barSize={28} radius={[6, 6, 6, 6]}>
+              <LabelList
+                dataKey="value"
+                content={(props) => {
+                  const { x, y, width, value } = props as LabelContentProps;
+                  const labelX = toNumber(x);
+                  const labelY = toNumber(y);
+                  const labelWidth = toNumber(width);
+                  const labelValue = toNumber(value);
+                  const adjustedY =
+                    labelValue === 0
+                      ? labelY - 10
+                      : labelValue < 15
+                        ? labelY + 2
+                        : labelY + 10;
+
+                  return (
+                    <g>
+                      <circle
+                        cx={labelX + labelWidth / 2}
+                        cy={adjustedY}
+                        r={9}
+                        fill="#E8F6E2"
+                      />
+                      <text
+                        x={labelX + labelWidth / 2}
+                        y={adjustedY + 3}
+                        textAnchor="middle"
+                        fill="#7CD24C"
+                        fontSize={6.5}
+                        fontWeight="bold"
+                      >
+                        {labelValue}%
+                      </text>
+                    </g>
+                  );
+                }}
+              />
+              {data.map((_, index) => (
+                <Cell key={index} fill="url(#barGradientMobile)" />
               ))}
             </Bar>
           </BarChart>

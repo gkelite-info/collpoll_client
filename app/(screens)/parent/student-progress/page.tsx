@@ -147,32 +147,32 @@ const Page = () => {
   }
 
   return (
-    <main className="relative overflow-hidden p-3">
-      <section className="mb-3">
-        <div className="flex items-center justify-between gap-3 p-2">
+    <main className="relative overflow-hidden p-3 max-md:p-2 max-md:bg-[#f4f5f6] min-h-screen">
+      <section className="mb-3 max-md:mb-2">
+        <div className="flex items-center justify-between gap-3 p-2 max-md:p-1 max-md:gap-2">
           <div className="w-full max-w-5xl rounded-xl">
-            <div className="flex gap-3">
+            <div className="flex gap-3 max-md:gap-2 max-md:items-center">
               <div>
-                <span className="text-lg font-medium text-gray-600">
+                <span className="text-lg font-medium text-gray-600 max-md:text-[13px]">
                   {collegeEducationType === "Inter"
                     ? t("Group:")
                     : t("Branch:")}
                 </span>
-                <span className="lg:ml-1 rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                <span className="lg:ml-1 rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A] max-md:px-2 max-md:py-0.5 max-md:text-[11px] max-md:ml-1">
                   {studentContext?.collegeBranchCode ?? "N/A"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-medium text-gray-600">
+              <div className="flex items-center gap-1 max-md:gap-1">
+                <span className="text-lg font-medium text-gray-600 max-md:text-[13px] max-md:ml-1">
                   {t("Year:")}
                 </span>
-                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
+                <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A] max-md:px-2 max-md:py-0.5 max-md:text-[11px]">
                   {studentContext?.collegeAcademicYear ?? "N/A"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 max-md:hidden">
                 <span className="text-lg font-medium text-gray-600">
                   {t("Section:")}
                 </span>
@@ -181,7 +181,7 @@ const Page = () => {
                 </span>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 max-md:hidden">
                 <span className="text-lg font-medium text-gray-600">
                   {t("Semester:")}
                 </span>
@@ -192,21 +192,25 @@ const Page = () => {
             </div>
           </div>
 
-          <div className="flex w-[32%] justify-end">
+          <div className="flex w-[32%] justify-end max-md:hidden">
             <CourseScheduleCard style="w-[320px]" />
           </div>
 
           <div
-            className="flex aspect-square h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[#43C17A1A]"
+            className="flex aspect-square h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-[#43C17A1A] max-md:w-8 max-md:h-8 max-md:ml-auto max-md:shrink-0"
             onClick={() => setOpen(true)}
           >
-            <List size={26} weight="bold" className="text-gray-700 " />
+            <List
+              size={26}
+              weight="bold"
+              className="text-gray-700 max-md:w-[18px] max-md:h-[18px]"
+            />
           </div>
         </div>
       </section>
 
-      <section className="min-h-screen grid-rows-[300px_300px] bg-gray-100 flex flex-col gap-6">
-        <article className="grid grid-cols-1 gap-6 lg:grid-cols-10 ">
+      <section className="min-h-screen grid-rows-[300px_300px] bg-gray-100 max-md:bg-transparent flex flex-col gap-6 max-md:gap-4">
+        <article className="grid grid-cols-1 gap-6 max-md:gap-4 lg:grid-cols-10">
           <section className="rounded-2xl bg-white shadow-sm lg:col-span-6">
             <ProfileCard
               name={childMeta?.fullName ?? "Student"}
@@ -222,7 +226,7 @@ const Page = () => {
             />
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm lg:col-span-4 ">
+          <section className="rounded-2xl bg-white p-4 shadow-sm lg:col-span-4 max-md:p-3">
             <AttendanceSummaryCard percentage={attendancePercentage} />
           </section>
 
@@ -238,7 +242,7 @@ const Page = () => {
           </section>
         </article>
 
-        <section className="rounded-2xl bg-white">
+        <section className="rounded-2xl bg-white max-md:bg-transparent max-md:rounded-none">
           <AssignmentsSummaryTable
             rows={progressData?.subjectProgressRows ?? []}
             semesterLabel={semesterLabel}
@@ -253,7 +257,7 @@ const Page = () => {
             onClick={() => setOpen(false)}
           />
 
-          <div className="absolute right-9 top-35">
+          <div className="absolute right-9 top-35 max-md:top-14 max-md:right-4">
             <div className="min-w-55 rounded-xl border border-gray-200 bg-white shadow-lg">
               <div className="flex items-center justify-between border-b px-4 py-2">
                 <span className="text-sm font-semibold text-gray-800">
@@ -268,7 +272,7 @@ const Page = () => {
                 </button>
               </div>
 
-              <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50">
+              <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 rounded-b-xl">
                 {t("Enrollment")}
               </button>
             </div>

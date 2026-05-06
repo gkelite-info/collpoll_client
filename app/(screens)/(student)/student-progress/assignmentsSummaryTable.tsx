@@ -44,21 +44,23 @@ export function AssignmentsSummaryTable({
   const t = useTranslations("Progress.student"); // Hook
 
   return (
-    <div className="w-full rounded-3xl bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-[#282828]">
+    <div className="w-full rounded-3xl bg-white p-6 shadow-sm max-md:p-0 max-md:bg-transparent max-md:shadow-none max-md:rounded-none">
+      <div className="mb-6 flex items-center justify-between max-md:flex-col-reverse max-md:items-stretch max-md:gap-3 max-md:mb-3">
+        <h2 className="text-lg font-bold text-[#282828] max-md:text-[14.5px] max-md:font-bold max-md:tracking-tight max-md:text-gray-800">
           {t("Class Progress Overview")}
         </h2>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white"
-        >
-          {semesterLabel}
-          <CaretDownIcon size={16} weight="bold" />
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="flex items-center gap-2 rounded-lg bg-[#43C17A] px-4 py-2 text-sm font-medium text-white max-md:px-3 max-md:py-1.5 max-md:text-xs max-md:rounded-md shadow-sm"
+          >
+            {semesterLabel}
+            <CaretDownIcon size={16} weight="bold" />
+          </button>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-gray-100">
+      <div className="overflow-hidden rounded-xl border border-gray-100 max-md:hidden">
         <table className="w-full border-collapse text-left">
           <thead>
             <tr className="bg-gray-100">
@@ -121,6 +123,57 @@ export function AssignmentsSummaryTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="hidden max-md:flex flex-col gap-3">
+        {rows.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center text-sm text-gray-500 border border-gray-100">
+            {t("No subject progress data available for this semester")}
+          </div>
+        ) : (
+          rows.map((row, index) => (
+            <div
+              key={`${row.subject}-${index}`}
+              className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 relative"
+            >
+              <div className="grid grid-cols-[135px_10px_1fr] gap-y-2.5 text-[13px]">
+                <div className="font-semibold text-[#282828]">
+                  {t("Subject")}
+                </div>
+                <div className="text-[#282828]">:</div>
+                <div className="text-[#525252] truncate pr-14">
+                  {row.subject}
+                </div>
+
+                <div className="font-semibold text-[#282828]">
+                  {t("Attendance")}
+                </div>
+                <div className="text-[#282828]">:</div>
+                <div className="text-[#525252]">{row.attendance}</div>
+
+                <div className="font-semibold text-[#282828]">
+                  {t("Assignments Done")}
+                </div>
+                <div className="text-[#282828]">:</div>
+                <div className="text-[#525252]">{row.assignmentsDone}</div>
+
+                <div className="font-semibold text-[#282828]">{t("Quiz")}</div>
+                <div className="text-[#282828]">:</div>
+                <div className="text-[#525252]">{row.quiz}</div>
+
+                <div className="font-semibold text-[#282828]">
+                  {t("Discussion Forum")}
+                </div>
+                <div className="text-[#282828]">:</div>
+                <div className="text-[#525252]">{row.discussionForum}</div>
+              </div>
+
+              <div className="absolute right-4 top-4 scale-[0.85] origin-top-right">
+                <ProgressRing value={row.progressPercent} />
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
