@@ -16,6 +16,7 @@ import { saveAcademicUnit } from "@/lib/helpers/faculty/saveAcademicUnit";
 import { CardProps } from "@/lib/types/faculty";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { generateTopicNotesBatchAction } from "@/lib/helpers/faculty/ai/generateTopicNotes.server";
+import type { TopicNotes } from "@/lib/helpers/faculty/ai/Generatetopicnotes";
 import { buildTopicPdfFile } from "@/lib/helpers/faculty/ai/generateTopicPdf.client";
 import { uploadTopicResource } from "@/lib/helpers/faculty/topicResources";
 
@@ -53,6 +54,50 @@ type FacultyAcademicForm = {
 function toPascalCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
+
+function runWhenBrowserIsIdle(task: () => void) {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(task, { timeout: 5000 });
+    return;
+  }
+
+  globalThis.setTimeout(task, 2500);
+}
+
+function hasGenericTopicNotes(notes: TopicNotes) {
+  const genericTerms = new Set([
+    "concept",
+    "process",
+    "application",
+    "diagram",
+    "example",
+    "advantage",
+    "limitation",
+    "revision",
+    "key point",
+    "summary",
+  ]);
+  const genericTermCount =
+    notes.keyTerms?.filter((term) => genericTerms.has(term.term.trim().toLowerCase())).length ?? 0;
+  const genericImageText = notes.imageExamples
+    ?.map((image) => `${image.title} ${image.labels?.join(" ")}`)
+    .join(" ") ?? "";
+  const genericQuestionText = [
+    ...(notes.keyPoints ?? []),
+    ...(notes.workedExamples?.map((example) => `${example.problem} ${example.solution}`) ?? []),
+  ].join(" ");
+
+  return (
+    genericTermCount >= 3 ||
+    /labelled concept|structure or apparatus|process diagram|main part|working area|use case/i.test(
+      genericImageText,
+    ) ||
+    /how does key point|explain summary|write short notes on example|diagram improves clarity/i.test(
+      genericQuestionText,
+    )
+  );
+}
+
 const INVALID_UNIT_MESSAGE =
   "The unit name does not match the selected subject.";
 // // 🔹 AI unit name suggestion helper
@@ -112,6 +157,7 @@ export default function AddNewCardModal({
   const [aiTopics, setAiTopics] = useState<string[]>([]);
   // const [facultyId, setFacultyId] = useState<number | null>(null);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pdfGenerationKeysRef = useRef<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -466,60 +512,123 @@ export default function AddNewCardModal({
         branches.find((b) => b.collegeBranchId === formData.branchId)
           ?.collegeBranchCode ?? "Branch";
 
-      let failedTopicPdfCount = 0;
+      const selectedTopicTitles = new Set(
+        validTopics.map((topic) => topic.trim().toLowerCase()),
+      );
+      const topicsForPdf = unitResult.topics.filter((topic) =>
+        selectedTopicTitles.has(topic.topicTitle.trim().toLowerCase()),
+      );
 
-      if (unitResult.topics.length > 0) {
-        const notesResults = await generateTopicNotesBatchAction({
-          subjectName: formData.subjectName,
-          unitName: formData.unitName,
-          branch: selectedBranch,
-          educationType: selectedEducationType,
-          topics: unitResult.topics.map((topic) => ({
-            collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
-            topicTitle: topic.topicTitle,
-          })),
-        });
+      if (topicsForPdf.length > 0) {
+        const pdfGenerationKey = [
+          collegeSubjectUnitId,
+          ...topicsForPdf.map((topic) => topic.collegeSubjectUnitTopicId),
+        ].join(":");
 
-        for (const result of notesResults) {
-          if (!result.success) {
-            failedTopicPdfCount += 1;
-            console.error("[AddNewCardModal] Topic notes generation failed", {
-              topicId: result.collegeSubjectUnitTopicId,
-              topicTitle: result.topicTitle,
-              error: result.error,
-            });
-            continue;
-          }
-
-          try {
-            const pdfFile = await buildTopicPdfFile({
-              notes: result.notes,
-              unitNumber: formData.unitNumber,
-            });
-
-            await uploadTopicResource({
-              file: pdfFile,
-              collegeSubjectUnitTopicId: result.collegeSubjectUnitTopicId,
-            });
-          } catch (pdfError: any) {
-            failedTopicPdfCount += 1;
-            console.error("[AddNewCardModal] Topic PDF upload failed", {
-              topicId: result.collegeSubjectUnitTopicId,
-              topicTitle: result.topicTitle,
-              error: pdfError?.message ?? pdfError,
-            });
-          }
+        if (pdfGenerationKeysRef.current.has(pdfGenerationKey)) {
+          toast.success("Unit saved successfully. PDFs are already generating.");
+          onClose();
+          return;
         }
+
+        pdfGenerationKeysRef.current.add(pdfGenerationKey);
+
+        runWhenBrowserIsIdle(() => {
+          const pdfToastId = toast.loading(
+            "Selected topic PDFs are generating in the background...",
+          );
+          let failedTopicPdfCount = 0;
+
+          void (async () => {
+            try {
+              const topicRows = topicsForPdf.map((topic) => ({
+                collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
+                topicTitle: topic.topicTitle,
+              }));
+
+              const noteResults = await generateTopicNotesBatchAction({
+                subjectName: formData.subjectName,
+                unitName: formData.unitName,
+                branch: selectedBranch,
+                educationType: selectedEducationType,
+                topics: topicRows,
+              });
+
+              for (let index = 0; index < noteResults.length; index += 1) {
+                const result = noteResults[index];
+                toast.loading(
+                  `Generating PDF ${index + 1}/${noteResults.length}: ${result.topicTitle}`,
+                  { id: pdfToastId },
+                );
+
+                if (!result.success) {
+                  failedTopicPdfCount += 1;
+                  console.error("[AddNewCardModal] Topic notes generation failed", {
+                    topicId: result.collegeSubjectUnitTopicId,
+                    topicTitle: result.topicTitle,
+                    error: result.error,
+                  });
+                  continue;
+                }
+
+                try {
+                  if (hasGenericTopicNotes(result.notes)) {
+                    failedTopicPdfCount += 1;
+                    console.error("[AddNewCardModal] Refusing generic topic PDF", {
+                      topicId: result.collegeSubjectUnitTopicId,
+                      topicTitle: result.topicTitle,
+                      keyTerms: result.notes.keyTerms?.map((term) => term.term),
+                      imageExamples: result.notes.imageExamples?.map((image) => image.title),
+                    });
+                    continue;
+                  }
+
+                  const pdfFile = await buildTopicPdfFile({
+                    notes: result.notes,
+                    unitNumber: formData.unitNumber,
+                  });
+
+                  await uploadTopicResource({
+                    file: pdfFile,
+                    collegeSubjectUnitTopicId: result.collegeSubjectUnitTopicId,
+                    replaceExisting: true,
+                  });
+                } catch (pdfError: any) {
+                  failedTopicPdfCount += 1;
+                  console.error("[AddNewCardModal] Topic PDF upload failed", {
+                    topicId: result.collegeSubjectUnitTopicId,
+                    topicTitle: result.topicTitle,
+                    error: pdfError?.message ?? pdfError,
+                  });
+                }
+              }
+
+              if (failedTopicPdfCount > 0) {
+                toast.error(
+                  `${failedTopicPdfCount} topic PDF${failedTopicPdfCount > 1 ? "s were" : " was"} not generated.`,
+                  { id: pdfToastId },
+                );
+              } else {
+                toast.success("Topic PDFs generated successfully", {
+                  id: pdfToastId,
+                });
+              }
+            } catch (pdfBatchError: any) {
+              console.error("[AddNewCardModal] Topic PDF background job failed", {
+                error: pdfBatchError?.message ?? pdfBatchError,
+              });
+
+              toast.error("Unit saved, but topic PDFs could not be generated.", {
+                id: pdfToastId,
+              });
+            } finally {
+              pdfGenerationKeysRef.current.delete(pdfGenerationKey);
+            }
+          })();
+        });
       }
 
-      if (failedTopicPdfCount > 0) {
-        toast.error(
-          `Unit saved successfully, but ${failedTopicPdfCount} topic PDF${failedTopicPdfCount > 1 ? "s were" : " was"} not generated.`,
-        );
-      } else {
-        toast.success("Unit and topic PDFs saved successfully");
-      }
-
+      toast.success("Unit saved successfully. PDFs will appear shortly.");
       onClose();
       setFormData({
         educationId: undefined,

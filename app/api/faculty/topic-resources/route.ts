@@ -241,6 +241,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file");
     const topicId = Number(formData.get("topicId"));
+    const replaceExisting = formData.get("replaceExisting") === "true";
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "File is required" }, { status: 400 });
@@ -267,9 +268,35 @@ export async function POST(req: Request) {
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
+      replaceExisting,
     });
 
     const topic = await getTopicInCollege(topicId, actor.collegeId);
+
+    const { data: existingResources, error: existingResourcesError } =
+      replaceExisting
+        ? await supabaseAdmin
+            .from("college_subject_unit_topic_resources")
+            .select(
+              `
+              collegeSubjectUnitTopicResourceId,
+              resourceUrl
+            `,
+            )
+            .eq("collegeSubjectUnitTopicId", topicId)
+            .eq("resourceName", file.name)
+            .eq("resourceType", "PDF")
+            .eq("isActive", true)
+        : { data: [], error: null };
+
+    if (existingResourcesError) {
+      console.log("[topic-resources][POST] Existing resource lookup failed", {
+        topicId,
+        fileName: file.name,
+        error: existingResourcesError.message,
+      });
+      throw new Error(`Existing resource lookup failed: ${existingResourcesError.message}`);
+    }
 
     console.log("[topic-resources][POST] Topic lookup result", topic);
     console.log("[topic-resources][POST] Derived storage metadata", {
@@ -367,6 +394,49 @@ export async function POST(req: Request) {
       });
       await supabaseAdmin.storage.from(TOPIC_RESOURCES_BUCKET).remove([storagePath]);
       throw new Error(`DB insert failed: ${error.message}`);
+    }
+
+    if (replaceExisting && existingResources?.length) {
+      const oldResourceIds = existingResources.map(
+        (resource) => resource.collegeSubjectUnitTopicResourceId,
+      );
+      const oldStoragePaths = existingResources.flatMap((resource) => {
+        try {
+          return [getStoragePathFromUrl(resource.resourceUrl)];
+        } catch {
+          return [];
+        }
+      });
+
+      const { error: deactivateError } = await supabaseAdmin
+        .from("college_subject_unit_topic_resources")
+        .update({
+          isActive: false,
+          updatedAt: now,
+        })
+        .in("collegeSubjectUnitTopicResourceId", oldResourceIds);
+
+      if (deactivateError) {
+        console.log("[topic-resources][POST] Existing resource deactivate failed", {
+          topicId,
+          fileName: file.name,
+          error: deactivateError.message,
+        });
+      }
+
+      if (oldStoragePaths.length) {
+        const { error: removeOldError } = await supabaseAdmin.storage
+          .from(TOPIC_RESOURCES_BUCKET)
+          .remove(oldStoragePaths);
+
+        if (removeOldError) {
+          console.log("[topic-resources][POST] Existing storage cleanup failed", {
+            topicId,
+            fileName: file.name,
+            error: removeOldError.message,
+          });
+        }
+      }
     }
 
     console.log("[topic-resources][POST] DB insert succeeded", {

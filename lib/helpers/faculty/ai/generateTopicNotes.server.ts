@@ -18,6 +18,10 @@ type BatchParams = {
   topics: TopicInput[];
 };
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to generate topic notes";
+}
+
 export type GeneratedTopicNotesResult =
   | {
       success: true;
@@ -60,21 +64,53 @@ export async function generateTopicNotesBatchAction(
         topicTitle: topic.topicTitle,
         notes,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[generateTopicNotesBatchAction] Failed", {
         topicId: topic.collegeSubjectUnitTopicId,
         topicTitle: topic.topicTitle,
-        error: error?.message ?? error,
+        error: getErrorMessage(error),
       });
 
       results.push({
         success: false,
         collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
         topicTitle: topic.topicTitle,
-        error: error?.message || "Failed to generate topic notes",
+        error: getErrorMessage(error),
       });
     }
   }
 
   return results;
+}
+
+export async function generateFastTopicNotesBatchAction(
+  params: BatchParams,
+): Promise<GeneratedTopicNotesResult[]> {
+  return Promise.all(
+    params.topics.map(async (topic) => {
+      try {
+        const notes = await generateTopicNotes({
+          topicTitle: topic.topicTitle,
+          subjectName: params.subjectName,
+          unitName: params.unitName,
+          branch: params.branch,
+          educationType: params.educationType,
+        });
+
+        return {
+          success: true,
+          collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
+          topicTitle: topic.topicTitle,
+          notes,
+        };
+      } catch (error: unknown) {
+        return {
+          success: false,
+          collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
+          topicTitle: topic.topicTitle,
+          error: getErrorMessage(error),
+        };
+      }
+    }),
+  );
 }
