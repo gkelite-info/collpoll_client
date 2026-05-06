@@ -78,6 +78,7 @@ export type PlacementDrive = {
 
 export type PlacementStudentRow = {
   id: number;
+  placementCompanyId?: number;
   studentName: string;
   studentId: string;
   branch: string;

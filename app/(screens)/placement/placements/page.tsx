@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -207,11 +207,21 @@ function PlacementPageContent() {
   ) => {
     setResultsOffers((prev) => ({
       ...prev,
-      placedStudents: prev.placedStudents.map((student) =>
-        student.id === studentPlacementApplicationId
-          ? { ...student, status }
-          : student,
-      ),
+      placedStudents: prev.placedStudents.some(
+        (student) => student.id === studentPlacementApplicationId,
+      )
+        ? prev.placedStudents.map((student) =>
+            student.id === studentPlacementApplicationId
+              ? { ...student, status }
+              : student,
+          )
+        : [
+            ...prev.placedStudents,
+            ...placementDrives
+              .flatMap((drive) => drive.students)
+              .filter((student) => student.id === studentPlacementApplicationId)
+              .map((student) => ({ ...student, status })),
+          ],
     }));
   };
 
@@ -332,6 +342,22 @@ function PlacementPageContent() {
         (drive) => drive.id === selectedDriveId,
       ) ?? null;
 
+  const resultOfferStudents = useMemo(() => {
+    const studentsByApplicationId = new Map<number, PlacementStudentRow>();
+
+    placementDrives.forEach((drive) => {
+      drive.students.forEach((student) => {
+        studentsByApplicationId.set(student.id, student);
+      });
+    });
+
+    resultsOffers.placedStudents.forEach((student) => {
+      studentsByApplicationId.set(student.id, student);
+    });
+
+    return Array.from(studentsByApplicationId.values());
+  }, [placementDrives, resultsOffers.placedStudents]);
+
   if (isPlacementLoading) {
     return <PlacementPageFallback />;
   }
@@ -393,7 +419,7 @@ function PlacementPageContent() {
             />
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 pb-4">
             {activeTab === "company-management" && (
               isCompaniesLoading ? (
                 <div className="h-full overflow-y-auto pr-2 pb-4">
@@ -430,7 +456,7 @@ function PlacementPageContent() {
               <ResultsOffersView
                 companyStats={resultsOffers.companyStats}
                 branchStats={resultsOffers.branchStats}
-                placedStudents={resultsOffers.placedStudents}
+                placedStudents={resultOfferStudents}
                 isLoading={isResultsOffersLoading}
                 placementEmployeeId={placementEmployeeId}
                 onStatusSaved={handleResultsOfferStatusSaved}
