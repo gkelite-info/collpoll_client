@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import Link from "next/link";
 import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -265,12 +266,21 @@ export default function LoginPage() {
       <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center py-6 overflow-hidden">
         <div className="w-full z-20 px-8 flex flex-col items-center text-center shrink-0">
           <div className="flex flex-col items-center">
-            <img
+            {/* <img
               src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
+              // src='/tekton-logo.jpeg'
               height={85}
               width={85}
               alt=""
               className="rounded-full bg-transparent"
+            /> */}
+            <Image
+              src='/tekton-final-logo.png'
+              height={85}
+              width={85}
+              alt=""
+              unoptimized={true}
+              className="rounded-full object-contain bg-transparent"
             />
             <h1 className="text-gray-700 text-[11px] font-bold tracking-wide mt-1">
               Powered by GK Elite-Info

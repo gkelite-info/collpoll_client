@@ -391,6 +391,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 
 interface CardItem {
   id: number;
@@ -613,32 +614,45 @@ export default function SubjectAttendanceDetailsClient() {
         </div>
       </div>
 
-      <div className="w-full h-[170px] mt-4 flex items-start gap-3">
-        {cards.map((card, index) => {
-          return (
-            <div
-              key={index}
-              className="cursor-pointer"
-              onClick={() => {
-                if (index === 0) setActiveView("ALL");
-                if (index === 1) setActiveView("ATTENDED");
-                if (index === 2) setActiveView("ABSENT");
-              }}
-            >
-              <CardComponent
-                style={card.style}
-                icon={card.icon}
-                value={card.value}
-                label={card.label}
-                iconBgColor={card.iconBgColor}
-                iconColor={card.iconColor}
-                underlineValue={card.underlineValue}
-                totalPercentage={card.totalPercentage}
-              />
-            </div>
-          );
-        })}
-        <WorkWeekCalendar style="w-[345px] mt-0" />
+      <div className="w-full mt-4 grid lg:grid-cols-[68%_32%] gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+          {cards.map((card, index) => {
+            return (
+              <div
+                key={index}
+                className="cursor-pointer"
+                onClick={() => {
+                  if (index === 0) setActiveView("ALL");
+                  if (index === 1) setActiveView("ATTENDED");
+                  if (index === 2) setActiveView("ABSENT");
+                }}
+              >
+                <CardComponent
+                  style={card.style}
+                  icon={card.icon}
+                  value={card.value}
+                  label={card.label}
+                  iconBgColor={card.iconBgColor}
+                  iconColor={card.iconColor}
+                  underlineValue={card.underlineValue}
+                  totalPercentage={card.totalPercentage}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <WorkWeekCalendar  style="mt-0 w-[360px]"/>
+      </div>
+
+      <div className="my-2 w-[68%]">
+        <AiAttendanceNotificationBanner
+          className="h-auto min-h-[90px]"
+          message={
+            <>
+              🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
+            </>
+          }
+        />
       </div>
 
       <div className="mt-4 flex flex-col items-center">
@@ -688,11 +702,10 @@ export default function SubjectAttendanceDetailsClient() {
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === 1
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === 1
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ‹
               </button>
@@ -702,11 +715,10 @@ export default function SubjectAttendanceDetailsClient() {
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
                   className={`w-10 h-10 rounded-lg font-semibold
-        ${
-          currentPage === i + 1
-            ? "bg-[#16284F] text-white"
-            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === i + 1
+                      ? "bg-[#16284F] text-white"
+                      : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
                 >
                   {i + 1}
                 </button>
@@ -718,11 +730,10 @@ export default function SubjectAttendanceDetailsClient() {
                 }
                 disabled={currentPage === totalPages}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === totalPages
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === totalPages
+                    ? "border-gray-200 text-gray-300"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 ›
               </button>

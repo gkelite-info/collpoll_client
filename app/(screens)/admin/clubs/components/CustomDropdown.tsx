@@ -15,6 +15,7 @@ interface SearchableDropdownProps {
     direction?: "up" | "down";
     collegeId: number | null;
     roleGroup: "student" | "faculty";
+    currentClubId?: number | null;
 }
 
 const globalFetchCache = new Map<string, Promise<{ users: SearchableUser[], hasMore: boolean }>>();
@@ -29,7 +30,8 @@ export function SearchableUserDropdown({
     isMulti = false,
     direction = "down",
     collegeId,
-    roleGroup
+    roleGroup,
+    currentClubId = null
 }: SearchableDropdownProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -60,7 +62,7 @@ export function SearchableUserDropdown({
         let isMounted = true;
         const fetchUsers = async () => {
             setLoading(true);
-            const cacheKey = `${collegeId}-${roleGroup}-${debouncedQuery}-${page}`;
+            const cacheKey = `${collegeId}-${roleGroup}-${debouncedQuery}-${page}-${currentClubId || 'new'}`;
             try {
                 let fetchPromise = globalFetchCache.get(cacheKey);
                 if (!fetchPromise) {
@@ -69,7 +71,8 @@ export function SearchableUserDropdown({
                         roleGroup,
                         debouncedQuery,
                         page,
-                        ITEMS_PER_PAGE
+                        ITEMS_PER_PAGE,
+                        currentClubId
                     );
                     globalFetchCache.set(cacheKey, fetchPromise);
                 }
@@ -200,9 +203,14 @@ export function SearchableUserDropdown({
                                             <div
                                                 key={user.id}
                                                 ref={isLast ? lastElementRef : null}
-                                                className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-[#F4F4F4] transition-colors border-b border-gray-50 last:border-0"
+                                                // className="px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-[#F4F4F4] transition-colors border-b border-gray-50 last:border-0"
+                                                className={`px-4 py-2.5 flex items-center gap-3 transition-colors border-b border-gray-50 last:border-0 ${user.isDisabled
+                                                    ? 'opacity-50 cursor-not-allowed bg-gray-50'
+                                                    : 'cursor-pointer hover:bg-[#F4F4F4]'
+                                                    }`}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
+                                                    if (user.isDisabled) return;
                                                     onSelect(user);
                                                     if (!isMulti) onToggle();
                                                 }}
@@ -219,6 +227,12 @@ export function SearchableUserDropdown({
                                                 <div className="flex flex-col flex-1 min-w-0">
                                                     <span className="text-sm font-bold text-[#1a2b4c] truncate">{user.name}</span>
                                                     <span className="text-[12px] font-medium text-gray-500 truncate mt-0.5">{user.education}</span>
+
+                                                     {user.isDisabled && (
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 whitespace-nowrap">
+                                                            {user.disabledReason}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
