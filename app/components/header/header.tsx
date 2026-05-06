@@ -282,7 +282,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
 
   return (
     <>
-      <div className="bg-pink-00 h-[100%] w-[100%] md:h-[100%] md:w-[100%] lg:h-full lg:w-full flex justify-between lg:gap-1 p-3 md:p-4 lg:p-2">
+      <div className="bg-pink-00 h-[100%] w-[100%] md:h-[100%] md:w-[100%] lg:h-full lg:w-full flex justify-between lg:gap-1 p-3 pt-2 md:p-4 lg:p-2">
         {/* <div className="w-[59%] flex justify-end items-center">
           <div className="relative lg:w-[80%] lg:h-[60%]">
             <input
@@ -369,7 +369,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
             </div>
           </div>
           <div className="w-full h-full bg-blue-00 flex items-center justify-between">
-            <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[80%]">
+            <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[100%]">
               <input
                 type="text"
                 disabled={loading || !role}
@@ -469,10 +469,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
                 )}
               </AnimatePresence>
             </div>
-            <div className="bg-[#DAEEE3] h-full w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
+            <div className="bg-[#DAEEE3] h-full w-fit md:h-[100%] md:w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
               <button
                 onClick={() => onAddTaskClick?.()}
-                className="p-2 md:px-3 h-[80%] md:h-[60%] bg-[#43C17A] rounded-md flex items-center"
+                className="p-2 md:px-3 h-[80%] md:h-[70%] bg-[#43C17A] rounded-md flex items-center"
               >
                 <p className="text-white text-xs md:text-sm font-medium">Add task +</p>
               </button>
