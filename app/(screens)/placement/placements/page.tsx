@@ -26,6 +26,7 @@ import {
   PlacementTabId,
   PlacementCompany,
   PlacementDrive,
+  PlacementStudentRow,
   placementTabContent,
 } from "./components/mockData";
 import CompanyDetailsModal from "./modal/CompanyDetailsModal";
