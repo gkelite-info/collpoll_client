@@ -84,7 +84,6 @@ export default function CardComponent({
         {label}
       </span>
 
-
       {/* Mobile View */}
       <div className="flex md:hidden lg:hidden items-center justify-start gap-3 mb-2">
         <div
@@ -119,7 +118,6 @@ export default function CardComponent({
         </div>
       </div>
       {/* Mobile View */}
-
     </div>
   );
 }

@@ -21,7 +21,6 @@ export default function Academics() {
   const hasLoadedOnce = useRef(false);
 
   useEffect(() => {
-
     if (userId === null || collegeId === null) {
       setPageLoading(false);
       return;
@@ -82,14 +81,14 @@ export default function Academics() {
 
   return (
     <div className="p-2 flex flex-col h-[calc(100vh-80px)] lg:pb-5">
-
       <div className="flex justify-between items-center mb-5">
         <div className="flex flex-col w-[50%]">
           <h1 className="text-[#282828] font-semibold text-2xl mb-1">
             My Classes
           </h1>
           <p className="text-[#282828] text-sm">
-            Track progress, add lessons and manage course content across all your batches.
+            Track progress, add lessons and manage course content across all
+            your batches.
           </p>
         </div>
 
@@ -107,7 +106,11 @@ export default function Academics() {
               No classes assigned
             </p>
           ) : (
-            <SubjectCard subjectProps={subjects} facultyCtx={facultyCtx} role={role} />
+            <SubjectCard
+              subjectProps={subjects}
+              facultyCtx={facultyCtx}
+              role={role}
+            />
           )}
         </div>
       )}

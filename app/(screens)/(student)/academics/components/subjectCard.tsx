@@ -95,14 +95,16 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
   return (
     <>
       <div className="mb-4 flex flex-col gap-3">
-        <div className="w-full flex flex-wrap gap-6">
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">{t("Subject :")}</p>
+        <div className="w-full flex items-center flex-nowrap gap-3 md:gap-6 overflow-x-auto no-scrollbar py-2">
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
+            <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
+              {t("Subject :")}
+            </p>
             <div className="relative flex items-center">
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-8 cursor-pointer focus:outline-none max-w-[200px] truncate"
+                className="px-2 md:px-4 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium appearance-none pr-6 md:pr-8 cursor-pointer focus:outline-none max-w-[100px] md:max-w-[200px] truncate"
               >
                 <option value="All">{t("All")}</option>
                 {uniqueSubjects.map((title) => (
@@ -111,25 +113,31 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                   </option>
                 ))}
               </select>
-              <span className="absolute right-3 pointer-events-none text-[#43C17A] text-xs">
+              <span className="absolute right-2 md:right-3 pointer-events-none text-[#43C17A] text-[10px] md:text-xs">
                 <FaChevronDown />
               </span>
             </div>
           </div>
+
           {!(collegeEducationType === "Inter") && (
-            <div className="flex items-center gap-2">
-              <p className="text-[#525252] text-sm">{t("Semester :")}</p>
+            <div className="flex items-center gap-1 md:gap-2 shrink-0">
+              <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
+                {t("Semester :")}
+              </p>
               <div className="relative flex items-center">
-                <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
+                <p className="px-2 md:px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium whitespace-nowrap">
                   {subjectProps[0]?.semester || "N/A"}
                 </p>
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">{t("Year :")}</p>
+
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
+            <p className="text-[#525252] text-[12px] md:text-sm whitespace-nowrap">
+              {t("Year :")}
+            </p>
             <div className="relative flex items-center">
-              <p className="px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-sm font-medium appearance-none pr-6 focus:outline-none">
+              <p className="px-2 md:px-3 py-0.5 bg-[#DCEAE2] text-[#43C17A] rounded-full text-[11px] md:text-sm font-medium whitespace-nowrap">
                 {subjectProps[0]?.academicYear || "N/A"}
               </p>
             </div>

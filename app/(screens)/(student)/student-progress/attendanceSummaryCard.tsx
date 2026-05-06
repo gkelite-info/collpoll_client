@@ -25,11 +25,11 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
   const circumference = Math.PI * radius;
   return (
     <div>
-      <h2 className="text-[28px] font-bold text-[#333] mb-4 tracking-tight">
+      <h2 className="text-[17px] sm:text-[28px] font-semibold text-[#333] mb-4 tracking-tight">
         {t("Attendance Summary")}
       </h2>
 
-      <div className="relative flex flex-col bg items-center">
+      <div className="relative flex flex-col bg items-center ">
         <div className="w-full max-w-[300px] aspect-2/1 relative">
           <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
             <defs>

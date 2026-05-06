@@ -22,68 +22,91 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   absentPercentage,
   leavePercentage,
 }) => {
-  const t = useTranslations("Progress.parent");
+  const t = useTranslations("Progress.student");
 
   return (
-    <div className="bg-white w-full max-w-5xl rounded-3xl p-5 ">
-      <div className="flex flex-col md:flex-row md:items-center mb-8 gap-4">
+    <div className="bg-white w-full max-w-5xl rounded-3xl p-5 max-md:p-3 max-md:rounded-2xl">
+      <div className="flex flex-col md:flex-row md:items-center mb-8 gap-4 max-md:mb-4 max-md:flex-row max-md:gap-3 lg:mt-4">
         <img
           src={avatarUrl}
-          alt="Ananya Sharma"
-          className="w-16 h-16 rounded-full object-cover shadow-sm"
+          alt={name}
+          className="w-16 h-16 rounded-full object-cover shadow-sm max-md:w-11 max-md:h-11"
         />
 
-        <div className="flex flex-grow items-center flex-wrap gap-3">
-          <h1 className="text-2xl font-bold text-gray-800">{name}</h1>
+        <div className="flex grow items-center flex-wrap gap-3 max-md:gap-1.5">
+          <h1 className="text-2xl font-bold text-gray-800 max-md:text-[15px] max-md:w-full">
+            {name}
+          </h1>
 
-          <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full">
+          <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full max-md:px-2 max-md:py-0.5 max-md:text-[9px]">
             {department}
           </span>
 
-          <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full md:ml-auto">
+          <span className="bg-green-100 text-green-600 text-sm font-semibold px-3 py-1 rounded-full md:ml-auto max-md:px-2 max-md:py-0.5 max-md:text-[9px]">
             {studentId}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-green-50 rounded-xl p-5 flex items-center gap-5">
-          <div className="bg-green-500 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm">
-            <User size={32} weight="fill" color="white" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-md:grid-cols-3 max-md:gap-2 lg:mt-15">
+        {/* Attendance Item */}
+        <div className="bg-green-50 rounded-xl p-5 flex items-center gap-5 max-md:p-2 max-md:gap-2 max-md:rounded-lg">
+          <div className="bg-green-500 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm max-md:w-8 max-md:h-8 max-md:rounded-md max-md:shrink-0">
+            <div className="hidden md:block">
+              <User size={32} weight="fill" color="white" />
+            </div>
+            <div className="block md:hidden">
+              <User size={16} weight="fill" color="white" />
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-bold text-gray-800">
-              {attendancePercentage}%
+          <div className="flex flex-col max-md:justify-center">
+            <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
+              <span className="md:inline hidden">{attendancePercentage}%</span>
+              <span className="md:hidden inline">
+                {attendancePercentage} Days
+              </span>
             </p>
-            <p className="text-gray-600 text-sm font-medium">
+            <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Attendance")}
             </p>
           </div>
         </div>
 
-        <div className="bg-orange-50 rounded-xl p-5 flex items-center gap-5">
-          <div className="bg-orange-400 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm">
-            <User size={32} weight="fill" color="white" />
+        <div className="bg-orange-50 rounded-xl p-5 flex items-center gap-5 max-md:p-2 max-md:gap-2 max-md:rounded-lg ">
+          <div className="bg-orange-400 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm max-md:w-8 max-md:h-8 max-md:rounded-md max-md:shrink-0">
+            <div className="hidden md:block">
+              <User size={32} weight="fill" color="white" />
+            </div>
+            <div className="block md:hidden">
+              <User size={16} weight="fill" color="white" />
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-bold text-gray-800">
-              {absentPercentage}%
+          <div className="flex flex-col max-md:justify-center">
+            <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
+              <span className="md:inline hidden">{absentPercentage}%</span>
+              <span className="md:hidden inline">{absentPercentage} Days</span>
             </p>
-            <p className="text-gray-600 text-sm font-medium">
+            <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Absent")}
             </p>
           </div>
         </div>
 
-        <div className="bg-blue-50 rounded-xl p-5 flex items-center gap-5">
-          <div className="bg-blue-400 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm">
-            <User size={32} weight="fill" color="white" />
+        <div className="bg-blue-50 rounded-xl p-5 flex items-center gap-5 max-md:p-2 max-md:gap-2 max-md:rounded-lg">
+          <div className="bg-blue-400 w-14 h-14 rounded-lg flex items-center justify-center shadow-sm max-md:w-8 max-md:h-8 max-md:rounded-md max-md:shrink-0">
+            <div className="hidden md:block">
+              <User size={32} weight="fill" color="white" />
+            </div>
+            <div className="block md:hidden">
+              <User size={16} weight="fill" color="white" />
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-bold text-gray-800">
-              {leavePercentage}%
+          <div className="flex flex-col max-md:justify-center">
+            <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
+              <span className="md:inline hidden">{leavePercentage}%</span>
+              <span className="md:hidden inline">{leavePercentage}</span>
             </p>
-            <p className="text-gray-600 text-sm font-medium">
+            <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Leave")}
             </p>
           </div>

@@ -505,7 +505,7 @@ export default function StuDashRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="p-2 flex flex-col">
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel

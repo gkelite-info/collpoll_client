@@ -22,11 +22,14 @@ function AcademicsContent() {
           <h1 className="text-[#282828] font-bold text-[28px] mb-1">
             {t("Academics")}
           </h1>
-          <p className="text-[#282828] text-sm">
+          <p className="text-[#282828] text-sm hidden lg:block">
             {t("Track syllabus progress and manage notes by semester")}
           </p>
+          <p className="text-[#282828] text-sm lg:hidden">
+            {t("Track syllabus Progress and manage notes")}
+          </p>
         </div>
-        <div className="flex justify-end w-[32%]">
+        <div className=" justify-end w-[32%]  hidden lg:flex">
           <CourseScheduleCard
             department={loading ? "..." : studentProfile?.department || "N/A"}
             degree={loading ? "..." : studentProfile?.degree || "N/A"}
@@ -36,7 +39,7 @@ function AcademicsContent() {
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="lg:mt-4">
         {loading ? (
           <SubjectSkeleton />
         ) : (

@@ -32,7 +32,7 @@ export function AttendanceList({ data }: AttendanceListProps) {
               <div className="flex justify-between font-semibold text-gray-800">
                 <h3>{item.subject}</h3>
                 <span className="bg-green-100 text-green-500 px-3 py-1 rounded-md text-sm">
-                  {t(item.status)}
+                  {item.status}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-sm font-medium text-green-500">
