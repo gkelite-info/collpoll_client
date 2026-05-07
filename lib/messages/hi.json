@@ -893,6 +893,8 @@
       "Oldest First": "सबसे पुराना पहले",
       "Company Name A-Z": "कंपनी का नाम A-Z",
       "Company Name Z-A": "कंपनी का नाम Z-A",
+      "CTC (High to Low)": "CTC (High to Low)",
+      "CTC (Low to High)": "CTC (Low to High)",
       "Applied on {date}": "तारीख {date} पर आवेदन किया गया",
       "Click card to see more": "अधिक देखने के लिए कार्ड पर क्लिक करें"
     }

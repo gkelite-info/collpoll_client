@@ -308,12 +308,14 @@ export default function Page() {
     },
   ];
 
-  const subtitleParts = [summary.yearLabel, summary.sectionLabel]
-    .filter((value) => value && value !== "N/A" && value !== "ALL")
-    .join(" • ");
-  const subtitle = subtitleParts
-    ? `Your class students overview for ${subtitleParts}`
-    : "Your class students overview";
+  const headerBranchLabel = selectedBranch?.collegeBranchCode ?? "All Branches";
+  const headerYearLabel = selectedYear?.collegeAcademicYear ?? "";
+  const headerTitle = `Student Progress - ${[
+    headerBranchLabel,
+    headerYearLabel,
+  ]
+    .filter(Boolean)
+    .join(" ")}`;
 
   const topPerformers = useMemo(
     () =>
@@ -376,10 +378,12 @@ export default function Page() {
         <div>
           <div className="flex">
             <h1 className="text-xl font-semibold text-black">
-              Student Performance
+              {headerTitle}
             </h1>
           </div>
-          <p className="text-sm text-black">{subtitle}</p>
+          <p className="text-sm text-black">
+            Monitor and compare overall student performance across all Branches.
+          </p>
         </div>
 
         <article className="flex w-[32%] justify-end">
@@ -546,44 +550,6 @@ export default function Page() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">
-              Department:{" "}
-            </span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {selectedBranch?.collegeBranchCode ?? "ALL"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium text-gray-600">Subject:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {selectedSubject?.subjectName ?? "ALL"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium text-gray-600">Year:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {selectedYear?.collegeAcademicYear ?? "ALL"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium text-gray-600">Section:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {selectedSection?.collegeSections ?? "ALL"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-medium text-gray-600">Semester:</span>
-            <span className="rounded-full bg-[#43C17A1C] px-4 py-0.5 text-sm font-semibold tracking-wide text-[#43C17A]">
-              {selectedSemester?.collegeSemester?.toString() ?? "ALL"}
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* <article className="mb-4 grid items-start gap-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_320px]">

@@ -287,15 +287,25 @@ function ProjectsOverview() {
     params.delete("year");
     params.delete("branchId");
     params.delete("yearId");
+    params.delete("subjectId");
+    params.delete("facultyId");
+    params.delete("projectView");
+    params.delete("subjectName");
 
-    router.push("/admin/projects");
+    const query = params.toString();
+    router.push(query ? `/admin/projects?${query}` : "/admin/projects");
   };
 
   return (
-    <div className="relative overflow-hidden p-4 flex flex-col">
+    <div className="relative min-h-screen overflow-hidden bg-[#F4F4F4] p-4 flex flex-col">
       {/* <WipOverlay fullHeight={true} /> */}
       <div className="flex w-full justify-between items-center">
-        <ProjectsHeader />
+        <ProjectsHeader
+          title="Projects"
+          subtitle="Create, manage, and track student projects effortlessly."
+          showBack={Boolean(dept)}
+          onBackClick={handleBack}
+        />
         <div className="w-[350px]">
           <CourseScheduleCard isVisibile={false} />
         </div>

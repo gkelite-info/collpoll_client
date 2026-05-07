@@ -644,7 +644,7 @@ export default function AttendanceClient() {
 
               <div className="my-2">
                 <AiAttendanceNotificationBanner
-                  className="h-auto min-h-[90px]"
+                  className="h-auto min-h-22.5"
                   message={
                     <>
                       🎉 Great job, {dashboardData?.studentName || "Shravani"}! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!

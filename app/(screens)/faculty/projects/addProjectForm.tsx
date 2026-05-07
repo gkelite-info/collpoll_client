@@ -34,6 +34,12 @@ export type ProjectPayload = {
     files: File[];
 };
 
+type FacultyOption = {
+    id: number | string;
+    name: string;
+    image?: string;
+};
+
 interface Props {
     onCancel: () => void;
     college_branch: string | null;
@@ -70,7 +76,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [domainInput, setDomainInput] = useState("");
-    const [allFaculties, setAllFaculties] = useState<{ id: string; name: string; image?: string }[]>([]);
+    const [allFaculties, setAllFaculties] = useState<{ id: number; name: string; image?: string }[]>([]);
     const [isMentorModalOpen, setIsMentorModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [allStudents, setAllStudents] = useState<{ id: number; name: string; image?: string }[]>([]);
@@ -93,7 +99,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
         section: "",
     });
 
-    const handleChange = (field: keyof ProjectPayload, value: any) => {
+    const handleChange = <K extends keyof ProjectPayload>(field: K, value: ProjectPayload[K]) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     };
 
@@ -171,7 +177,12 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             setIsLoading(true);
             try {
                 const { data } = await fetchFilteredFaculties({ collegeId: resolvedCollegeId });
-                setAllFaculties(data.map((f: any) => ({ ...f, id: Number(f.id) })));
+                setAllFaculties(
+                    (data as FacultyOption[]).map((faculty) => ({
+                        ...faculty,
+                        id: Number(faculty.id),
+                    })),
+                );
             } catch (error) {
                 console.error("Failed to load mentors", error);
             } finally {
@@ -265,9 +276,17 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
     };
 
     const handleSaveProject = async () => {
+        const pendingDomain = domainInput.trim();
+        const domainValues = pendingDomain && !formData.domain.includes(pendingDomain)
+            ? [...formData.domain, pendingDomain]
+            : formData.domain;
+
         if (!formData.title.trim()) { toast.error("Project title is required."); return; }
-        if (formData.domain.length === 0) { toast.error("Please add at least one domain."); return; }
+        if (domainValues.length === 0) { toast.error("Please add at least one domain."); return; }
         if (!formData.description.trim()) { toast.error("Project description is required."); return; }
+        if (!formData.year) { toast.error("Please select a year."); return; }
+        if (!formData.subject) { toast.error("Please select a subject."); return; }
+        if (!formData.section) { toast.error("Please select a section."); return; }
         if (formData.studentIds.length === 0) { toast.error("Please assign at least one team member."); return; }
         if (formData.mentorIds.length === 0) { toast.error("Please assign at least one mentor."); return; }
         if (formData.marks === "" || Number(formData.marks) <= 0) { toast.error("Please enter valid marks."); return; }
@@ -276,6 +295,8 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
         if (new Date(formData.endDate) <= new Date(formData.startDate)) {
             toast.error("End date must be after start date."); return;
         }
+        if (!resolvedCollegeId) { toast.error("College context is not loaded."); return; }
+        if (!resolvedFacultyId) { toast.error("Faculty context is not loaded."); return; }
 
         setLoading(true);
         const loadingToast = toast.loading("Creating project...");
@@ -284,12 +305,12 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
             const projectResult = await saveProject({
                 title: formData.title,
                 description: formData.description,
-                domain: formData.domain,
+                domain: domainValues,
                 marks: formData.marks === "" ? 0 : Number(formData.marks),
                 startDate: formData.startDate,
                 endDate: formData.endDate,
-                collegeId: resolvedCollegeId!,
-                facultyId: resolvedFacultyId!,
+                collegeId: resolvedCollegeId,
+                facultyId: resolvedFacultyId,
                 adminId: isAdmin ? adminId : null,
                 collegeAcademicYearId: Number(formData.year),
                 collegeSubjectId: Number(formData.subject),
@@ -328,6 +349,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                 toast.error("Project saved, but some team/mentor data failed.", { id: loadingToast });
             }
         } catch (error) {
+            console.error("handleSaveProject error:", error);
             toast.error("Something went wrong during save.", { id: loadingToast });
         } finally {
             setLoading(false);
@@ -643,6 +665,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
 
                 <div className="flex gap-4 mt-8">
                     <button
+                        type="button"
                         onClick={handleSaveProject}
                         className="flex-1 bg-[#43C17A] text-white py-3 rounded-md font-semibold transition-colors cursor-pointer"
                         disabled={loading}
@@ -650,6 +673,7 @@ const AddProjectForm = ({ onCancel, college_branch, collegeAcademicYear, faculty
                         {loading ? "Saving.." : "Save"}
                     </button>
                     <button
+                        type="button"
                         onClick={onCancel}
                         className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-md font-semibold hover:bg-gray-50 cursor-pointer"
                     >
