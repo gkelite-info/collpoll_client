@@ -2,13 +2,13 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Suspense } from "react";
-import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { MagnifyingGlass, CaretLeft, CaretRight, BuildingApartmentIcon, WarningCircleIcon, WarningIcon } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import FacultyAttendanceCard, {
   Department,
 } from "./components/facultyAttendanceCard";
 
-import { User, UsersThree } from "@phosphor-icons/react";
+import { User } from "@phosphor-icons/react";
 import CardComponent from "./components/cards";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -307,15 +307,16 @@ const AttendancePage = () => {
     }
   };
 
+  const isInter = education?.collegeEducationType === "Inter"
 
   const cardData = [
     {
       id: "1",
       style: "bg-[#CEE6FF]",
-      icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
+      icon: <BuildingApartmentIcon size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#60AEFF",
       value: stats.totalDepartments,
-      label: "Total branches",
+      label: isInter ? "Total Groups" : "Total Branches",
     },
     {
       id: "2",
@@ -323,7 +324,7 @@ const AttendancePage = () => {
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#43C17A",
       value: stats.totalStudents,
-      label: "Total students",
+      label: "Total Students",
     },
     {
       id: "3",
@@ -331,15 +332,15 @@ const AttendancePage = () => {
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#FF2020",
       value: stats.studentsBelow75,
-      label: "Students below 75%",
+      label: "Students Below 75%",
     },
     {
       id: "4",
-      style: "bg-[#CEE6FF]",
-      icon: <User size={23} weight="fill" color="#EFEFEF" />,
-      iconBgColor: "#60AEFF",
+      style: "bg-[#FFEDDA]",
+      icon: <WarningIcon size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#FFBB70",
       value: stats.pendingCorrections,
-      label: "Pending attedance corrections",
+      label: "Pending Attedance Corrections",
     },
   ];
 
