@@ -204,7 +204,6 @@ export default function AddAnnouncementModal({
       resetForm();
       await refreshAnnouncements?.();
     } catch (error) {
-      console.error("handleSave error:", error);
       toast.error(t("Something went wrong"));
     } finally {
       setSaving(false);
@@ -248,7 +247,6 @@ export default function AddAnnouncementModal({
     setTargetRoles([]);
   };
 
-  // Types array to map over cleanly for translation
   const announcementTypes = [
     "class",
     "exam",
@@ -267,172 +265,167 @@ export default function AddAnnouncementModal({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div
-        className="bg-white w-[540px] rounded-xl shadow-xl p-7 relative"
+        className="bg-white landscape:md:h-[60%] landscape:lg:h-fit w-[540px] rounded-xl shadow-xl p-7 relative overflow-y-auto flex flex-col justify-between"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[20px] font-semibold text-[#2F2F2F]">
-            {t("Add Announcement")}
-          </h2>
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-[20px] font-semibold text-[#2F2F2F]">
+              {t("Add Announcement")}
+            </h2>
 
-          <button
-            onClick={onClose}
-            className="text-[#6B7280] hover:text-black cursor-pointer"
-          >
-            <X size={20} weight="bold" />
-          </button>
-        </div>
-
-        {/* Title */}
-        <div className="flex flex-col gap-1 mb-5">
-          <label className="text-base font-medium text-[#2F2F2F]">
-            {t("Title")}
-          </label>
-
-          <input
-            type="text"
-            placeholder={t("Short title of the announcement")}
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] placeholder:text-[#B0B0B0] outline-none focus:ring-2 focus:ring-[#43C17A]"
-          />
-        </div>
-
-        {/* Schedule */}
-        <div className="mb-6">
-          <p className="text-base font-semibold text-[#2F2F2F] mb-3">
-            {t("Schedule")}
-          </p>
+            <button
+              onClick={onClose}
+              className="text-[#6B7280] hover:text-black cursor-pointer"
+            >
+              <X size={20} weight="bold" />
+            </button>
+          </div>
 
           <div className="flex flex-col gap-1 mb-5">
-            <label className="text-base font-medium text-[#2F2F2F] mb-1">
-              {t("Date")}
+            <label className="text-base font-medium text-[#2F2F2F]">
+              {t("Title")}
             </label>
 
             <input
-              type="date"
-              min={new Date().toISOString().split("T")[0]}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
+              type="text"
+              placeholder={t("Short title of the announcement")}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] placeholder:text-[#B0B0B0] outline-none focus:ring-2 focus:ring-[#43C17A]"
             />
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex flex-col w-1/2">
+          <div className="mb-6">
+            <p className="text-base font-semibold text-[#2F2F2F] mb-3">
+              {t("Schedule")}
+            </p>
+
+            <div className="flex flex-col gap-1 mb-5">
               <label className="text-base font-medium text-[#2F2F2F] mb-1">
-                {t("Type")}
+                {t("Date")}
               </label>
 
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
+              <input
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
                 className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
-              >
-                <option value="">{t("Select Type")}</option>
-                {announcementTypes.map((tItem) => (
-                  <option key={tItem} value={tItem}>
-                    {t(tItem.charAt(0).toUpperCase() + tItem.slice(1))}
-                  </option>
-                ))}
-              </select>
-
-              {/* Icon Preview */}
-              {type && typeIcons[type] && (
-                <div className="flex items-center gap-2 mt-3">
-                  <div className="w-10 h-10 rounded-md bg-[#F2F6FF] flex items-center justify-center">
-                    <img src={typeIcons[type]} alt={type} className="h-6" />
-                  </div>
-                  <span className="text-sm capitalize text-[#2F2F2F]">
-                    {t("{type} announcement", {
-                      type: t(type.charAt(0).toUpperCase() + type.slice(1)),
-                    })}
-                  </span>
-                </div>
-              )}
+              />
             </div>
 
-            <div className="flex flex-col w-1/2 relative role-dropdown">
-              <label className="text-base font-medium text-[#2F2F2F] mb-1">
-                {t("Select Roles")}
-              </label>
+            <div className="flex gap-4">
+              <div className="flex flex-col w-1/2">
+                <label className="text-base font-medium text-[#2F2F2F] mb-1">
+                  {t("Type")}
+                </label>
 
-              {/* Trigger */}
-              <div
-                onClick={() => setShowRoleDropdown((prev) => !prev)}
-                className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] cursor-pointer flex justify-between items-center bg-white"
-              >
-                <span className="truncate">
-                  {targetRoles.length > 0
-                    ? targetRoles.map((r) => t(formatRole(r))).join(", ")
-                    : t("Select Roles")}
-                </span>
-
-                <svg
-                  className={`w-4 h-4 text-gray-500 transition-transform ${
-                    showRoleDropdown ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F]"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                  <option value="">{t("Select Type")}</option>
+                  {announcementTypes.map((tItem) => (
+                    <option key={tItem} value={tItem}>
+                      {t(tItem.charAt(0).toUpperCase() + tItem.slice(1))}
+                    </option>
+                  ))}
+                </select>
+
+                {type && typeIcons[type] && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="w-10 h-10 rounded-md bg-[#F2F6FF] flex items-center justify-center">
+                      <img src={typeIcons[type]} alt={type} className="h-6" />
+                    </div>
+                    <span className="text-sm capitalize text-[#2F2F2F]">
+                      {t("{type} announcement", {
+                        type: t(type.charAt(0).toUpperCase() + type.slice(1)),
+                      })}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {showRoleDropdown && (
-                <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[110px] overflow-y-auto p-3">
-                  <div className="flex justify-between items-center mb-2">
-                    <button
-                      onClick={handleSelectAll}
-                      className="text-xs text-[#43C17A] font-medium hover:underline cursor-pointer"
-                    >
-                      {t("Select All")}
-                    </button>
+              <div className="flex flex-col w-1/2 relative role-dropdown">
+                <label className="text-base font-medium text-[#2F2F2F] mb-1">
+                  {t("Select Roles")}
+                </label>
 
-                    <button
-                      onClick={handleClearAll}
-                      className="text-xs text-red-500 font-medium hover:underline cursor-pointer"
-                    >
-                      {t("Clear")}
-                    </button>
-                  </div>
+                <div
+                  onClick={() => setShowRoleDropdown((prev) => !prev)}
+                  className="border border-[#E4E4E4] rounded-md px-3 py-2 text-[14px] text-[#2F2F2F] cursor-pointer flex justify-between items-center bg-white"
+                >
+                  <span className="truncate">
+                    {targetRoles.length > 0
+                      ? targetRoles.map((r) => t(formatRole(r))).join(", ")
+                      : t("Select Roles")}
+                  </span>
 
-                  <div className="border-t border-gray-200 mb-2" />
-
-                  {availableRoles.length === 0 && (
-                    <p className="text-sm text-gray-400">
-                      {t("No roles available")}
-                    </p>
-                  )}
-
-                  {availableRoles.map((r: string) => (
-                    <label
-                      key={r}
-                      className="flex items-center gap-2 cursor-pointer text-sm mb-2 text-[#2F2F2F] hover:bg-gray-50 px-1 rounded"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={targetRoles.includes(r)}
-                        onChange={() => handleRoleToggle(r)}
-                        className="accent-[#43C17A] cursor-pointer"
-                      />
-                      {t(formatRole(r))}
-                    </label>
-                  ))}
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${showRoleDropdown ? "rotate-180" : ""
+                      }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
                 </div>
-              )}
+
+                {showRoleDropdown && (
+                  <div className="absolute bottom-[110%] left-0 w-full bg-white border border-[#E4E4E4] rounded-md shadow-lg z-[999] max-h-[110px] overflow-y-auto p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-xs text-[#43C17A] font-medium hover:underline cursor-pointer"
+                      >
+                        {t("Select All")}
+                      </button>
+
+                      <button
+                        onClick={handleClearAll}
+                        className="text-xs text-red-500 font-medium hover:underline cursor-pointer"
+                      >
+                        {t("Clear")}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-gray-200 mb-2" />
+
+                    {availableRoles.length === 0 && (
+                      <p className="text-sm text-gray-400">
+                        {t("No roles available")}
+                      </p>
+                    )}
+
+                    {availableRoles.map((r: string) => (
+                      <label
+                        key={r}
+                        className="flex items-center gap-2 cursor-pointer text-sm mb-2 text-[#2F2F2F] hover:bg-gray-50 px-1 rounded"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={targetRoles.includes(r)}
+                          onChange={() => handleRoleToggle(r)}
+                          className="accent-[#43C17A] cursor-pointer"
+                        />
+                        {t(formatRole(r))}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex gap-4">
           <button
             onClick={onClose}
@@ -444,11 +437,10 @@ export default function AddAnnouncementModal({
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`flex-1 py-2 rounded-md text-[14px] text-white ${
-              saving
-                ? "bg-[#A7DDBE] cursor-not-allowed"
-                : "bg-[#43C17A] hover:bg-[#3AAA6B] cursor-pointer"
-            }`}
+            className={`flex-1 py-2 rounded-md text-[14px] text-white ${saving
+              ? "bg-[#A7DDBE] cursor-not-allowed"
+              : "bg-[#43C17A] hover:bg-[#3AAA6B] cursor-pointer"
+              }`}
           >
             {saving ? t("Saving") : t("Save Announcement")}
           </button>

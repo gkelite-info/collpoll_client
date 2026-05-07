@@ -15,7 +15,7 @@ const AddAutomationModal: React.FC<AddAutomationModalProps> = ({
 
   return (
     <div className="fixed text-[#282828] inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="relative bg-white w-full max-w-[600px] rounded-xl shadow-2xl overflow-hidden font-sans">
+      <div className="bg-white relative h-fit landscape:h-[85%] w-[95%] landscape:md:h-[70%] landscape:lg:h-fit lg:w-full max-w-[600px] rounded-xl shadow-2xl overflow-auto md:overflow-auto lg:overflow-hidden font-sans">
         <WipOverlay/>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-[#282828]">Automation Name</h2>
@@ -27,8 +27,9 @@ const AddAutomationModal: React.FC<AddAutomationModalProps> = ({
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-6 space-y-5 flex flex-col bg-pink-00 justify-between">
           <div>
+            <label className="text-sm font-bold text-[#282828]">Automation</label>
             <input
               type="text"
               placeholder="Automation Name"
@@ -68,7 +69,7 @@ const AddAutomationModal: React.FC<AddAutomationModalProps> = ({
                 <label className="text-[13px] text-gray-600">
                   Run Frequency
                 </label>
-                <div className="flex items-center gap-2 border border-gray-300 px-3 py-3 rounded-lg">
+                <div className="flex items-center gap-2 border border-gray-300 px-3 py-3 rounded-lg  overflow-x-auto">
                   {["Hourly", "Daily", "Weekly", "Monthly"].map((freq) => (
                     <label
                       key={freq}

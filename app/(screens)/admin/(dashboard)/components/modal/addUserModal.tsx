@@ -229,7 +229,6 @@ const AddUserModal: React.FC<{
 
           setDbData({ ...data, semesters: semesterData || [] });
         } catch (error) {
-          console.error("Error initializing modal data:", error);
           toast.error("Failed to load college data");
         }
       };
@@ -434,7 +433,6 @@ const AddUserModal: React.FC<{
   const isParent = basicData.role === "Parent";
   const isFinance = basicData.role === "Finance";
   const isHR = basicData.role === "CollegeHr";
-  // ✅ NEW: Placement Officer role flag
   const isPlacement = basicData.role === "PlacementOfficer";
 
   const handleSave = async () => {
@@ -834,7 +832,7 @@ const AddUserModal: React.FC<{
                 className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
               />
             </div>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid landscape:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
                   College ID <span className="text-red-600">*</span>
@@ -911,7 +909,6 @@ const AddUserModal: React.FC<{
                 </div>
               </div>
 
-              {/* ✅ UPDATED: Added isPlacement to show locked Education Type */}
               {(isFaculty || isFinance || isAdmin || isPlacement) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
@@ -1206,11 +1203,11 @@ const AddUserModal: React.FC<{
                                   prev.map((b) =>
                                     b.id === block.id
                                       ? {
-                                          ...b,
-                                          yearId,
-                                          subjectId: null,
-                                          sectionIds: [],
-                                        }
+                                        ...b,
+                                        yearId,
+                                        subjectId: null,
+                                        sectionIds: [],
+                                      }
                                       : b,
                                   ),
                                 );
@@ -1296,11 +1293,11 @@ const AddUserModal: React.FC<{
                             prev.map((b) =>
                               b.id === block.id
                                 ? {
-                                    ...b,
-                                    sectionIds: b.sectionIds.includes(sid)
-                                      ? b.sectionIds.filter((i) => i !== sid)
-                                      : [...b.sectionIds, sid],
-                                  }
+                                  ...b,
+                                  sectionIds: b.sectionIds.includes(sid)
+                                    ? b.sectionIds.filter((i) => i !== sid)
+                                    : [...b.sectionIds, sid],
+                                }
                                 : b,
                             ),
                           );
@@ -1315,11 +1312,11 @@ const AddUserModal: React.FC<{
                             prev.map((b) =>
                               b.id === block.id
                                 ? {
-                                    ...b,
-                                    sectionIds: b.sectionIds.filter(
-                                      (i) => i !== sid,
-                                    ),
-                                  }
+                                  ...b,
+                                  sectionIds: b.sectionIds.filter(
+                                    (i) => i !== sid,
+                                  ),
+                                }
                                 : b,
                             ),
                           );
@@ -1546,7 +1543,7 @@ const AddUserModal: React.FC<{
                       value={basicData.password}
                       onChange={handleBasicChange}
                       placeholder="Enter password"
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] pr-8"
+                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E] pr-8"
                     />
                     <div
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
@@ -1576,7 +1573,7 @@ const AddUserModal: React.FC<{
                         }
                       }}
                       placeholder="Confirm password"
-                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                      className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                     />
                     <div
                       className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400"
@@ -1601,8 +1598,8 @@ const AddUserModal: React.FC<{
               onClick={handleSave}
               disabled={loading || isSuccess}
               className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-1 rounded-md transition-all shadow-sm ${isSuccess
-                  ? "bg-green-600 cursor-default"
-                  : "bg-[#43C17A] hover:bg-[#3ea876]"
+                ? "bg-green-600 cursor-default"
+                : "bg-[#43C17A] hover:bg-[#3ea876]"
                 }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}

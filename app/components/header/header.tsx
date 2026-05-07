@@ -32,9 +32,10 @@ import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 type Props = {
   onMenuClick?: () => void;
   onAddTaskClick?: () => void;
+  onAddUserClick?: () => void;
 };
 
-function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
+function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   const [openProfile, setOpenProfile] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -469,21 +470,33 @@ function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
                 )}
               </AnimatePresence>
             </div>
-            <div className="bg-[#DAEEE3] h-full w-fit md:h-[100%] md:w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
+            {(role === "Faculty") ? (
+              <div className="bg-[#DAEEE3] h-full w-fit md:h-[100%] md:w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
+                <button
+                  onClick={() => onAddTaskClick?.()}
+                  className="p-2 md:px-3 h-[80%] md:h-[70%] bg-[#43C17A] rounded-md flex items-center"
+                >
+                  <p className="text-white text-xs md:text-sm font-medium">Add task +</p>
+                </button>
+                {typeof activeTaskCount === 'number' ? (
+                  <div className="bg-[#EED5D5] h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center">
+                    <p className="text-[#FF2A2A] font-medium text-sm md:text-base">
+                      {activeTaskCount > 99 ? "99+" : activeTaskCount}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : role === "Admin" ? (
               <button
-                onClick={() => onAddTaskClick?.()}
+                onClick={() => onAddUserClick?.()}
                 className="p-2 md:px-3 h-[80%] md:h-[70%] bg-[#43C17A] rounded-md flex items-center"
               >
-                <p className="text-white text-xs md:text-sm font-medium">Add task +</p>
+                <p className="text-white text-xs md:text-sm font-medium">+ Add User</p>
               </button>
-              {typeof activeTaskCount === 'number' ? (
-                <div className="bg-[#EED5D5] h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center">
-                  <p className="text-[#FF2A2A] font-medium text-sm md:text-base">
-                    {activeTaskCount > 99 ? "99+" : activeTaskCount}
-                  </p>
-                </div>
-              ) : null}
-            </div>
+            ) : (
+              <p className="text-black">X</p>
+            )}
+
           </div>
         </div>
         {/* mobile view */}
@@ -909,13 +922,14 @@ function HeaderContent({ onMenuClick, onAddTaskClick }: Props) {
 type HeaderProps = {
   onMenuClick?: () => void;
   onAddTaskClick?: () => void;
+  onAddUserClick?: () => void;
 };
 
 
-export default function Header({ onMenuClick, onAddTaskClick }: HeaderProps) {
+export default function Header({ onMenuClick, onAddTaskClick, onAddUserClick }: HeaderProps) {
   return (
     <Suspense>
-      <HeaderContent onMenuClick={onMenuClick} onAddTaskClick={onAddTaskClick} />
+      <HeaderContent onMenuClick={onMenuClick} onAddTaskClick={onAddTaskClick} onAddUserClick={onAddUserClick} />
     </Suspense>
   );
 }

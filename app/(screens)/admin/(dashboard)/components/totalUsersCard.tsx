@@ -35,7 +35,7 @@ export default function CardComponent({
         {styledIcon}
       </div>
       <div className="text-lg font-semibold leading-none mt-1">{value}</div>
-      <div className="text-md text-[#515151] mt-1">{label}</div>
+      <div className="text-base landscape:text-base md:text-base landscape:md:text-sm text-[#515151] mt-1">{label}</div>
     </div>
   );
 }

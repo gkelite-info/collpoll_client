@@ -24,11 +24,10 @@ export default function AdminDashLeft({
 }: {
   onPendingFull: () => void;
 }) {
-  // 1. ALL hooks must be called at the top level, before any early returns!
   const searchParams = useSearchParams();
   const router = useRouter();
   const { cards, loading: adminLoading } = useAdminDashboard();
-  const { fullName, gender, loading: userLoading } = useUser(); // <-- Moved this up!
+  const { fullName, gender, loading: userLoading } = useUser();
 
   const currentView = searchParams.get("view") || "MAIN";
   const isAutomationsView = searchParams.get("view") === "automations";
@@ -38,7 +37,6 @@ export default function AdminDashLeft({
     router.push("?");
   };
 
-  // 2. Early returns happen AFTER all hooks are called
   if (currentView === "automations") {
     return (
       <div className="w-[68%] p-2">
@@ -66,7 +64,7 @@ export default function AdminDashLeft({
   if (currentView === "SYSTEM_HEALTH") {
     return (
       <div className="w-[68%] p-2">
-        <SystemHealth onBack={handleBack} onViewDetails={() => {}} />
+        <SystemHealth onBack={handleBack} onViewDetails={() => { }} />
       </div>
     );
   }
@@ -102,7 +100,7 @@ export default function AdminDashLeft({
     },
   ];
 
-  const adminImage = gender && (gender === "Female" ? "/admin-f.png" : "/male-admin1.png");
+  const adminImage = gender && (gender === "Male" ? "/admin-f.png" : "/male-admin1.png");
 
   const card = [
     {
@@ -123,53 +121,30 @@ export default function AdminDashLeft({
 
   return (
     <>
-      <div className="w-[68%] p-2">
+      <div className="bg-blue-00 w-[100%] md:w-[65%] lg:w-[68%] p-1 md:p-2 lg:p-2 bg-red-00 pb-7 lg:pb-0">
         <AdminInfoCard cardProps={card} />
 
-        <div className="mt-5 rounded-lg grid grid-cols-4 gap-3 text-xs relative z-10 w-full">
-          {normalCards.map((item, index) => (
+        <div className="bg-blue-00 mt-3 md:mt-5 lg:mt-5 rounded-lg grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-3 lg:gap-3 gap-3 text-xs relative z-10">
+          {cardData.map((item, index) => (
             <CardComponent
               key={index}
-              style={`${item.style} cursor-pointer w-full`}
+              style={`${item.style} cursor-pointer w-full !h-auto py-4`}
               icon={item.icon}
               value={item.value}
               label={item.label}
               iconBgColor="#FFFFFF"
               onClick={() => {
                 if (item.id === "TOTAL_USERS") router.push("?view=TOTAL_USERS");
+                if (item.id === "SYSTEM_HEALTH") router.push("?view=SYSTEM_HEALTH");
+                if (item.id === "AUTOMATIONS") router.push("?view=automations");
+                if (item.id === "PENDING_APPROVALS") onPendingFull();
               }}
             />
           ))}
-
-          <div className="col-span-3 relative grid grid-cols-3 gap-3">
-            {/* <WipOverlay
-              isMedium={true}
-              fullWidth={true}
-              borderRadius="rounded-lg"
-            /> */}
-
-            {overlayCards.map((item, index) => (
-              <CardComponent
-                key={index}
-                style={`${item.style} cursor-pointer w-full`}
-                icon={item.icon}
-                value={item.value}
-                label={item.label}
-                iconBgColor="#FFFFFF"
-                onClick={() => {
-                  if (item.id === "SYSTEM_HEALTH")
-                    router.push("?view=SYSTEM_HEALTH");
-                  if (item.id === "AUTOMATIONS")
-                    router.push("?view=automations");
-                  if (item.id === "PENDING_APPROVALS") onPendingFull();
-                }}
-              />
-            ))}
-          </div>
         </div>
 
         <div>
-          <div className="overflow-hidden bg-gray-100 mt-5">
+          <div className="overflow-hidden bg-gray-100 mt-3 md:mt-5 lg:mt-5">
             <DashboardGrid data={dashboardData} />
           </div>
         </div>

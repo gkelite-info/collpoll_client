@@ -70,7 +70,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
     {
       value: roles?.FINANCE?.toString() || "0",
       label: "Finance",
-      bgColor: "bg-[#FFE4E6]", // Soft pink/red theme
+      bgColor: "bg-[#FFE4E6]",
       icon: <UserCircle />,
       iconBgColor: "bg-[#FFFFFF]",
       iconColor: "text-[#E11D48]",
@@ -78,7 +78,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
     {
       value: roles?.COLLEGE_HR?.toString() || "0",
       label: "College HR",
-      bgColor: "bg-[#FEF3C7]", // Soft amber/yellow theme
+      bgColor: "bg-[#FEF3C7]",
       icon: <UserCircle />,
       iconBgColor: "bg-[#FFFFFF]",
       iconColor: "text-[#D97706]",
@@ -98,8 +98,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
-      {/* Header stays static and mounts immediately */}
+    <div className="bg-red-00 flex flex-col w-[92.5vw] landscape:w-[96.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen p-1 md:p-0 lg:p-0 pb-7 md:pb-0 lg:pb-0">
       <div className="mb-3">
         <div className="flex items-center gap-2 w-fit">
           <CaretLeft
@@ -115,9 +114,7 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
         </p>
       </div>
 
-      {/* Scrollable Cards Section */}
       <div className="w-full mb-4">
-        {/* Hides the scrollbar but allows horizontal swiping/scrolling */}
         <article className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth
          [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]
           [&::-webkit-scrollbar]:h-2.5
@@ -128,14 +125,14 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
           hover:[&::-webkit-scrollbar-thumb]:bg-slate-400
          ">
           {isLoading
-            ? // Card Shimmer Effect
+            ?
             [...Array(6)].map((_, i) => (
               <div
                 key={`shimmer-card-${i}`}
                 className="min-w-[22.5%] shrink-0 h-[135px] rounded-lg bg-gray-200 animate-pulse snap-start"
               />
             ))
-            : // Actual Cards
+            :
             cardData.map((item, index) => (
               <div key={index} className="min-w-[22.5%] shrink-0 snap-start">
                 <CardComponent {...item} />
@@ -144,11 +141,10 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
         </article>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-2xl shadow-sm overflow-auto md:overflow-hidden lg:overflow-hidden">
+        <table className="w-full text-left border-collapse overflow-auto">
           <thead>
-            <tr className="bg-[#F1F2F4]">
+            <tr className="bg-[#F1F2F4] overflow-auto">
               <th className="py-4 px-8 font-semibold text-[#4A5568] text-sm">
                 Branches
               </th>
@@ -169,7 +165,6 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
 
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
-              // Table Shimmer Effect (4 placeholder rows)
               [...Array(4)].map((_, i) => (
                 <tr key={`shimmer-row-${i}`} className="animate-pulse bg-white">
                   <td className="py-4 px-8">

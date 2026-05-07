@@ -64,11 +64,11 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="overflow-hidden flex flex-col m-4 ">
+    <div className="bg-red-00 overflow-hidden flex flex-col ml-1.5 md:ml-2 lg:ml-3 lg:mt-2 w-[92.5vw] landscape:w-[95.5vw] md:w-[98%] landscape:md:w-[98%] lg:w-full min-h-screen pb-7 landscape:pb-7 md:pb-0 lg:pb-0">
       <div className="mb-6 flex justify-between items-center">
         <div className="w-50% flex-0.5">
           <div
-            className="flex items-center gap-2 group w-fit cursor-pointer"
+            className="flex items-center gap-2 group w-fit cursor-pointer pt-2 md:pt-0 lg:pt-0"
             onClick={onBack}
           >
             <CaretLeft
@@ -84,13 +84,13 @@ const PendingApprovals: React.FC<PendingApprovalsProps> = ({ onBack }) => {
             Review and manage pending user registration requests
           </p>
         </div>
-        <div className="w-38">
+        <div className="hidden md:block lg:block w-38">
           <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
       </div>
       <div className="relative">
         <WipOverlay fullHeight={true} />
-        <div className="flex gap-4 w-full h-full mb-3">
+        <div className="bg-blue-00 overflow-x-auto custom-scrollbar flex gap-4 w-full h-full mb-3 pb-1">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}

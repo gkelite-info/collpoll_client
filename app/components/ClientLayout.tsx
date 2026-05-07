@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import TaskModal from "./modals/taskModal";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
+import AddUserModal from "../(screens)/admin/(dashboard)/components/modal/addUserModal";
 
 export default function ClientLayout({
   children,
@@ -29,6 +30,7 @@ export default function ClientLayout({
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
 
   const handleMenuClick = () => {
     setIsSidebarOpen(prev => !prev);
@@ -78,7 +80,7 @@ export default function ClientLayout({
       }
     }
 
-    if (pathname.startsWith("/admin")) return <AdminNavbar />;
+    if (pathname.startsWith("/admin")) return <AdminNavbar onClose={onClose} />;
     if (pathname.startsWith("/faculty")) return <FacultyNavbar onClose={onClose} />;
     if (pathname.startsWith("/parent")) return <ParentNavbar />;
     if (pathname === "/placement" || pathname.startsWith("/placement/")) {
@@ -87,7 +89,7 @@ export default function ClientLayout({
     if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
     if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
-    if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar />;
+    if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar onClose={onClose} />;
     if (pathname.startsWith("/hr")) return <HrNavbar />;
     return <StudentNavbar />;
   };
@@ -157,6 +159,7 @@ export default function ClientLayout({
               <Header
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={() => setIsAddTaskOpen(true)}
+                onAddUserClick={() => setIsAddUserOpen(true)}
               />
             </div>
 
@@ -171,6 +174,12 @@ export default function ClientLayout({
               onSave={handleSaveTask}
               role="faculty"
               facultyId={facultyId!}
+            />
+          )}
+          {isAddUserOpen && (
+            <AddUserModal
+              isOpen={isAddUserOpen}
+              onClose={() => setIsAddUserOpen(false)}
             />
           )}
         </div>

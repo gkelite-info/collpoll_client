@@ -92,29 +92,15 @@ const ApprovalRequest: React.FC<{
 const ActionCard: React.FC<{ data: ActionData }> = ({ data }) => {
   const handleAction = (type: "Approve" | "Reject") => {
     if (type === "Approve") {
-      toast.success("Request Approved", {
-        style: {
-          borderRadius: "10px",
-          background: "#333",
-          color: "#fff",
-          fontSize: "14px",
-        },
-      });
+      toast.success("Request Approved")
     } else {
-      toast.error("Request Rejected", {
-        style: {
-          borderRadius: "10px",
-          background: "#333",
-          color: "#fff",
-          fontSize: "14px",
-        },
-      });
+      toast.error("Request Rejected");
     }
   };
 
   return (
     <div>
-      <Toaster position="top-left" reverseOrder={false} />
+      <Toaster position="top-right" reverseOrder={false} />
 
       <div className="bg-white rounded-2xl space-y-3 p-5 mb-5">
         <h3 className="text-lg font-bold text-gray-800 mb-4 ">
@@ -162,7 +148,7 @@ const Right: React.FC<{ actionData: ActionData }> = ({ actionData }) => {
 
   return (
     <>
-      <div className="w-[32%] pl-4 flex flex-col gap-6">
+      <div className="bg-blue-00 hidden md:w-[32%] lg:w-[32%] md:flex md:flex-col lg:flex lg:flex-col pl-4 md:pl-0 gap-6">
         <div className="grid grid-cols-2 gap-4 w-full items-center">
           <span
             onClick={() => setIsModalOpen(true)}
@@ -221,9 +207,9 @@ const RequestDetail: React.FC<RequestDetailProps> = ({
   };
 
   return (
-    <div className="relative flex w-full min-h-screen p-3">
-      <div className="flex-1">
-        <div className="mb-3">
+    <div className="relative flex w-full min-h-screen p-0 gap-3">
+      <div className="flex-1 bg-red-00 pb-7 lg:pb-0">
+        <div className="mb-3 w-[68%]">
           <div className="flex items-center gap-2 group w-fit">
             <CaretLeft
               onClick={onBack}
@@ -239,7 +225,7 @@ const RequestDetail: React.FC<RequestDetailProps> = ({
             Review this request and take action.
           </p>
         </div>
-        <div className="relative">
+        <div className="relative md:p-2.5 lg:p-2.5">
           <WipOverlay fullHeight={true} />
           <div className="mb-6">
             <FacultyCard data={facultyData} />
