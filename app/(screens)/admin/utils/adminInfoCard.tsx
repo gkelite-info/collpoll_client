@@ -29,19 +29,19 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
   return (
     <div
       style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
-      className="w-full relative rounded-2xl h-[170px] shadow-sm"
+      className="w-full relative rounded-2xl h-[170px] landscape:h-[180px] lg:h-[170px] shadow-sm mt-2 md:mt-0 lg:mt-0"
     >
       {cardProps.map((item, index) => (
         <div
-          className=" z-10 flex h-full items-center justify-between px-8"
+          className="z-10 flex h-full items-center justify-between px-5 lg:px-8"
           key={index}
         >
           <div className="bg-blue-00 flex flex-col max-w-[65%] mt-3">
             <div className="mb-2">
-              <span className="text-lg text-[#282828] leading-tight ">
+              <span className="text-sm md:text-lg lg:text-lg text-[#282828] leading-tight ">
                 Welcome Back,
               </span>
-              <span className="text-lg font-semibold text-[#089144] leading-tight">
+              <span className="text-sm landscape:text-lg md:text-lg lg:text-lg font-semibold text-[#089144] leading-tight">
                 {!item.show && " Mr."} {item.user}
               </span>
             </div>
@@ -60,7 +60,7 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
           </div>
 
           {cardProps[0].image &&
-            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+            <div className="absolute -right-3 md:-right-0 lg:right-10 bottom-0 h-[95%] w-[180px] md:h-[100%] md:w-[180px] lg:h-[105%] lg:w-[180px]">
               <Image
                 src={adminImage!}
                 alt="Avatar"

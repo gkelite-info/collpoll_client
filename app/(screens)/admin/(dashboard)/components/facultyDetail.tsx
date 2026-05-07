@@ -39,7 +39,7 @@ const cardData: CardProps[] = [
 
 const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeEdu }) => {
   return (
-    <div className="w-full px-1">
+    <div className="px-1 w-[92.5vw] landscape:w-[95.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen pb-7 md:pb-0 lg:pb-0">
       <div className="mb-3">
         <div className="flex items-center gap-2 w-fit">
           <CaretLeft
@@ -48,7 +48,7 @@ const FacultyDetail: React.FC<FacultyDetailProps> = ({ faculty, onBack, collegeE
             weight="bold"
             className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
-          <h1 className="text-2xl font-bold text-[#282828]">CSE Faculty</h1>
+          <h1 className="text-2xl font-bold text-[#282828]">Faculty</h1>
         </div>
         <p className="text-[#282828] mt-1 ml-8 text-sm">
           Overview of all user roles in the system

@@ -32,7 +32,7 @@ const formatRole = (role: string) =>
 
 export default function AdminDashRight() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] =useState(false);
+  const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] = useState(false);
   const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
   const { collegeId, userId, role } = useUser();
 
@@ -53,12 +53,12 @@ export default function AdminDashRight() {
   }) => (
     <button
       onClick={onClick}
-      className="flex cursor-pointer items-center gap-2 bg-[#16284F] h-full hover:bg-[#1a3161] text-white py-2 rounded-lg transition-all shadow-md active:scale-95 group w-full justify-center"
+      className="flex cursor-pointer items-center gap-2 bg-[#16284F] h-full hover:bg-[#1a3161] text-white p-2 rounded-lg transition-all shadow-md active:scale-95 group w-full justify-center"
     >
       <div className="flex items-center justify-center aspect-square bg-white text-[#16284F] h-7 w-7 rounded-full shadow-[0px_2px_4px_rgba(0,0,0,0.25)]">
         <Plus size={18} weight="bold" />
       </div>
-      <span className="text-sm text-nowrap">{label}</span>
+      <span className="text-sm text-wrap">{label}</span>
     </button>
   );
 
@@ -107,7 +107,7 @@ export default function AdminDashRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col ">
+      <div className="bg-yellow-00 md:[35%] lg:w-[32%] p-2 lg:p-2 lg:pr-0 hidden landscape:hidden md:flex landscape:md:flex md:flex-col lg:flex lg:flex-col">
         <div className="grid grid-cols-2 gap-4 w-full items-center">
           {isAutomationsPage ? (
             <NavyActionButton
@@ -122,13 +122,12 @@ export default function AdminDashRight() {
           ) : (
             <span
               onClick={() => setIsAddUserModalOpen(true)}
-              className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around gap-1 text-[#EFEFEF] px-4"
+              className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around text-[#EFEFEF] px-4"
             >
-              <Plus size={24} />
-              <p className="text-lg">Add User</p>
+              <Plus className="h-10 w-10 md:h-6 md:w-6 lg:h-5 lg:w-5" />
+              <p className="text-sm md:text-base lg:text-lg">Add User</p>
             </span>
           )}
-
           <CourseScheduleCard isVisibile={false} fullWidth={true} />
         </div>
 

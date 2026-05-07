@@ -109,7 +109,7 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   const { collegeId, collegeEducationId } = useAdmin();
 
   const handleRowClick = (id: string) => {
-    console.log("Automation ID:", id);
+    // console.log("Automation ID:", id);
   };
 
   if (selectedDept && collegeId && collegeEducationId) {
@@ -125,14 +125,14 @@ const ActiveAutomations: React.FC<TotalAutomationsProps> = ({ onBack }) => {
   }
 
   return (
-    <div className=" overflow-hidden flex flex-col w-full min-h-screen">
+    <div className="overflow-hidden flex flex-col w-[92.5vw] landscape:w-[96.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen p-1 md:p-0 lg:p-0 pb-7 md:pb-0 lg:pb-0">
       <div className="mb-5">
-        <div className="flex items-center gap-2 group w-fit">
+        <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
             size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
           <h1 className="text-2xl font-medium text-[#282828]">
             Active Automations

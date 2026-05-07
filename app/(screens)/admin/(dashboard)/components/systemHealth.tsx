@@ -77,14 +77,14 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
   }
 
   return (
-    <div className="overflow-hidden flex flex-col w-full min-h-screen">
+    <div className="bg-blue-00 overflow-hidden flex flex-col min-h-screen w-[92.5vw] landscape:w-[96.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen p-1 md:p-0 lg:p-0 pb-7 md:pb-0 lg:pb-0">
       <div className="mb-5">
-        <div className="flex items-center gap-2 group w-fit">
+        <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
             size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer group-hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
           />
           <h1 className="text-2xl font-bold text-[#282828]">System Health</h1>
         </div>
@@ -94,7 +94,7 @@ const SystemHealth: React.FC<TotalUsersProps> = ({ onBack }) => {
       </div>
       <div className="relative">
         <WipOverlay fullHeight={true} />
-        <article className="flex gap-3 justify-center items-center mb-4">
+        <article className="bg-yellow-00 gap-3 pb-2 landscape:grid-cols-4 grid grid-cols-2 lg:grid-cols-4 mb-4 overflow-x-auto custom-scrollbar">
           {cardData.map((item, index) => (
             <CardComponent
               key={index}

@@ -220,7 +220,6 @@ export default function AnnouncementsCard({
 }: AnnouncementsCardProps) {
   const pathname = usePathname();
   const t = useTranslations("Dashboard.student");
-
   const isFinanceDashboard = pathname.startsWith("/finance");
   const isCollegeAdminDashboard = pathname.startsWith("/college-admin");
   const isAdminDashboard = pathname.startsWith("/admin");
@@ -390,7 +389,7 @@ export default function AnnouncementsCard({
 
         {!isReadOnlyUser && canManageAnnouncements && (
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-sm font-semibold lg:mt-2">
+            <div className="flex items-center gap-1 text-sm font-semibold mt-2 lg:mt-2">
               <button
                 onClick={() => handleTabChange("others")}
                 className={`px-3 py-1 text-sm rounded-md transition-all duration-200 cursor-pointer ${
@@ -419,7 +418,7 @@ export default function AnnouncementsCard({
         )}
       </div>
 
-      <div className={`flex flex-col gap-2 overflow-y-auto max-h-[${height}]`}>
+      <div className={`flex flex-col text-center gap-2 overflow-y-auto max-h-[${height}]`}>
         {isLoading ? (
           <AnnouncementListShimmer />
         ) : announceCard.length === 0 ? (

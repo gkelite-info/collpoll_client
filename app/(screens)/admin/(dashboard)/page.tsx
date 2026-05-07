@@ -23,7 +23,7 @@ function DashboardContent() {
   }
 
   return (
-    <main className="flex w-full min-h-screen">
+    <main className="bg-yellow-00 flex justify-between w-full min-h-screen overflow-x-hidden md:pb-7 lg:pb-5">
       <AdminDashLeft onPendingFull={() => setShowPendingFull(true)} />
       <AdminDashRight />
     </main>

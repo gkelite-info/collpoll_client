@@ -106,9 +106,8 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
-      <div className="bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden font-sans border border-gray-100 flex flex-col">
-
-        <div className="flex items-start justify-between px-8 py-6 pb-2">
+      <div className="bg-white w-full max-w-[700px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col">
+        <div className="flex items-start justify-between px-4 md:px-8 lg:px-8 py-6 pb-2">
           <div>
             <h2 className="text-[18px] font-medium text-[#1A1A1A]">
               Role & Permissions
@@ -125,7 +124,7 @@ const RolePermissionsModal: React.FC<RolePermissionsModalProps> = ({
           </button>
         </div>
 
-        <div className="flex relative flex-1 p-8 pt-6 gap-8 overflow-hidden min-h-0">
+        <div className="flex flex-col landscape:flex-row md:flex-row landscape:md:flex-row lg:flex-row relative flex-1 p-4 md:px-8 lg:px-8 pt-6 gap-8 overflow-hidden min-h-0">
           <WipOverlay />
           <div className="w-[180px] flex flex-col gap-3 shrink-0">
             <TabButton role="Faculty" icon={GraduationCap} />

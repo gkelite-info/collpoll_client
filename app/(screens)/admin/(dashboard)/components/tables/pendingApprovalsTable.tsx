@@ -95,7 +95,7 @@ const PendingApprovalsTable: React.FC<RequestsTableProps> = ({
                   </button>
                   <button
                     onClick={() => onViewClick(request)}
-                    className="text-[#16284F] cursor-pointer px-2 py-1 text-[11px] font-bold underline hover:text-blue-700 transition-colors"
+                    className="text-[#16284F] cursor-pointer px-2 py-1 text-[11px] font-bold hover:underline hover:text-blue-700 transition-colors"
                   >
                     View
                   </button>

@@ -299,21 +299,20 @@ const FacultyView: React.FC<FacultyViewProps> = ({
   }
 
   return (
-    <div className="flex flex-col w-full min-h-screen">
+    <div className="flex flex-col w-[92.5vw] landscape:w-[95.5vw] md:w-full landscape:md:w-full lg:w-full min-h-screen pb-7 md:pb-0 lg:pb-0">
       <div className="mb-3">
         <div className="flex items-center gap-2 w-fit">
           <CaretLeft
             onClick={onBack}
-            size={24}
             weight="bold"
-            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform"
+            className="text-[#2D3748] cursor-pointer hover:-translate-x-1 transition-transform h-10 w-10 landscape:h-6 landscape:w-6 landscape:md:h-6 landscape:md:w-6 md:h-8 md:w-8 lg:h-6 lg:w-6"
           />
-          <h1 className="text-2xl font-bold text-[#282828]">{dynamicHeader}</h1>
+          <h1 className="text-xl font-bold text-[#282828]">{dynamicHeader}</h1>
         </div>
 
         {activeTab === "Faculty" ? (
           <p className="text-[#282828] mt-1 ml-8 text-sm">
-            Overview of all faculty in this Branch
+            Overview of all faculty in this branch
           </p>
         ) : (
           <div className="flex items-center gap-8 mt-5 ml-8">
@@ -330,7 +329,7 @@ const FacultyView: React.FC<FacultyViewProps> = ({
 
             {activeYearId && (
               <FilterDropdownChip
-                label="Sec :"
+                label="Section :"
                 selectedValue={activeSectionId}
                 valueText={
                   currentSectionOption
@@ -362,15 +361,15 @@ const FacultyView: React.FC<FacultyViewProps> = ({
           >
             <span className="w-full ml-8">{tab}</span>
             {activeTab === tab ? (
-              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px]  bg-[#43C17A] rounded-full" />
+              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px] bg-[#43C17A] rounded-full" />
             ) : (
-              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px]  bg-[#525252] rounded-full" />
+              <div className="absolute bottom-0 left-0 w-[120px] h-[1.5px] bg-[#525252] rounded-full" />
             )}
           </button>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[300px] z-0">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-auto relative min-h-[300px] z-0">
         {/* {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex justify-center pt-20">
             <Loader />
@@ -378,8 +377,8 @@ const FacultyView: React.FC<FacultyViewProps> = ({
         )} */}
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#F1F2F4]">
-              <th className="py-3 px-4 w-10 text-center flex ">
+            <tr className="bg-[#F1F2F4] overflow-x-auto">
+              <th className="py-3 px-4 w-10 text-center flex">
                 {/* <div className="bg-[#3EAD6F] p-2 ml-2 rounded-full inline-block">
                   <MagnifyingGlass size={14} weight="bold" color="white" />
                 </div> */}
