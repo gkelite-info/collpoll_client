@@ -275,7 +275,7 @@ export default function LoginPage() {
               className="rounded-full bg-transparent"
             /> */}
             <Image
-              src='/tekton-final-logo.png'
+              src='/login-logo.png'
               height={85}
               width={85}
               alt=""

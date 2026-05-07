@@ -45,6 +45,7 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
                 alt={faculty.id}
                 width={56}
                 height={56}
+                unoptimized={true}
                 className="rounded-full aspect-square object-cover"
                 onError={() => setImgError(true)}
               />

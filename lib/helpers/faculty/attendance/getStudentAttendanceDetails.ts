@@ -18,7 +18,8 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .select(
       `
       studentId,
-      user:users (fullName, email, mobile, gender), 
+      student_pins (pinNumber),
+      user:users (fullName, email, mobile, gender, user_profile (profileUrl)), 
       education:college_education (collegeEducationType), 
       branch:college_branch (collegeBranchCode) 
     `,
@@ -134,9 +135,12 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
   }));
 
+  const pinData = safeGet(student.student_pins) || {};
+  const profileData = safeGet(user.user_profile) || {};
+
   return {
     fullName: user.fullName || "Unknown",
-    studentsId: student.studentId,
+    studentsId: pinData.pinNumber || student.studentId,
     department: branch.collegeBranchCode || "N/A",
     year: yearData.collegeAcademicYear || "N/A",
     section: section.collegeSections || "N/A",
@@ -144,7 +148,7 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     mobile: user.mobile || "N/A",
     email: user.email || "N/A",
     address: "Not Available",
-    photo: user.gender === "Female" ? "/student-f.png" : "/maleuser.png",
+    photo: profileData.profileUrl,
 
     attendanceDays: totalPresent,
     absentDays: totalAbsent,

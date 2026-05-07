@@ -27,6 +27,8 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import SubjectWiseAttendance from "./components/subjectWiseAttendance";
 import { getBatchSectionStats } from "@/lib/helpers/admin/attendance/getBatchSectionStats";
 import { supabase } from "@/lib/supabaseClient";
+import { AcademicSectionsSkeleton } from "../academics/shimmer/academicSectionsSkeleton";
+import { StatsCardsSkeleton } from "./shimmers/statsCardsSkeleton";
 
 interface ExtendedDepartment extends Department {
   id: string;
@@ -256,9 +258,12 @@ const AttendancePage = () => {
   }, [adminContext]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || adminLoading || !adminContext) return;
+    if (adminContext.collegeEducationId && (!education || educations.length === 0)) {
+      return;
+    }
     loadCardsOnly();
-  }, [userId, currentPage, education, branch, year, section, subject, debouncedSearch]);
+  }, [userId, adminLoading, adminContext, educations.length, currentPage, education, branch, year, section, subject, debouncedSearch]);
 
   const loadCardsOnly = async () => {
     try {
@@ -385,8 +390,8 @@ const AttendancePage = () => {
 
       <div className="flex gap-4 w-full h-full mb-3">
         {showStatsLoader ? (
-          <div className="flex items-center justify-center w-full h-32">
-            <Loader />
+          <div className="w-full">
+            <StatsCardsSkeleton />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full h-32">
@@ -541,10 +546,8 @@ const AttendancePage = () => {
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {loading || adminLoading || collegeEducationId === null ? (
-            <div className="flex items-center col-span-full justify-center w-full h-32">
-              <Loader />
-            </div>
+          {loading || adminLoading || collegeEducationId === null || (adminContext?.collegeEducationId && !education) ? (
+            [...Array(9)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">
               {cards.length > 0

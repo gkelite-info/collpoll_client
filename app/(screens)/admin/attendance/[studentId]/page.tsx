@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectWiseAttendance from "../tables/subjectWiseTable";
 import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 
 export default function StudentAttendanceDetailsPage() {
   const params = useParams();
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
     : params?.studentId;
+
+  const router = useRouter()
 
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +59,7 @@ export default function StudentAttendanceDetailsPage() {
     <main className="p-4 space-y-6 min-h-screen">
       <section className="flex items-center justify-between">
         <div className="flex items-center gap-6">
+          <CaretLeftIcon onClick={()=> router.back()} className="cursor-pointer h-4 w-4 -mr-4 font-bold"/>
           <Info label="Department" value={student.department} />
           <Info label="Year" value={student.year?.toString()} />
           <Info label="Section" value={student.section} />

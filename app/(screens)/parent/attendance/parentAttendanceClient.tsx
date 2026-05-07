@@ -17,6 +17,7 @@ import {
   TableSkeleton,
 } from "../../(student)/(attendance)/shimmer/attendanceDashSkeleton";
 import { useTranslations } from "next-intl";
+import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 
 interface TableRow {
   Subject: string;
@@ -213,6 +214,17 @@ export default function ParentAttendanceClient() {
                 />
               </div>
             )}
+
+            <div className="my-2">
+              <AiAttendanceNotificationBanner
+                className="h-auto min-h-[90px]"
+                message={
+                  <>
+                    🎉 Great job, {dashboardData?.studentName || "Shravani"}! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
+                  </>
+                }
+              />
+            </div>
 
             <div className="bg-red-00 flex flex-col">
               <h5 className="text-[#282828] font-medium text-md">

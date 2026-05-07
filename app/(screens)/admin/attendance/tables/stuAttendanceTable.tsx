@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import {
   ClassOption,
   SectionOption,
@@ -318,7 +319,7 @@ export default function StuAttendanceTable({
                     <span className="text-[#43C17A]">ID </span> - {s.roll}
                   </td>
                   <td className="px-4 py-4">
-                    {s.photo ? (
+                    {/* {s.photo ? (
                       <img
                         src={s.photo}
                         className="h-8 w-8 rounded-full border border-gray-200 object-cover"
@@ -328,7 +329,8 @@ export default function StuAttendanceTable({
                       <div className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
                         {s.name?.charAt(0).toUpperCase()}
                       </div>
-                    )}
+                    )} */}
+                    <Avatar src={s.photo} size={32} alt={s.name} />
                   </td>
                   <td className="px-4 py-4 font-semibold text-gray-800">
                     {s.name}
@@ -353,11 +355,10 @@ export default function StuAttendanceTable({
                             disabled={!isEditing}
                             className={`
     appearance-none bg-transparent border-none outline-none text-xs font-bold pl-4 pr-8 py-1.5 cursor-pointer z-10
-      ${
-        isEditing
-          ? "px-4 cursor-pointer"
-          : "pl-4 pr-8 cursor-default pointer-events-none"
-      }
+      ${isEditing
+                                ? "px-4 cursor-pointer"
+                                : "pl-4 pr-8 cursor-default pointer-events-none"
+                              }
     `}
                           >
                             {s.attendance === "Not Marked" && (

@@ -21,12 +21,12 @@ export interface UIStudent {
   photo?: string;
   percentage: string;
   attendance:
-    | "Not Marked"
-    | "Present"
-    | "Absent"
-    | "Leave"
-    | "Late"
-    | "Class Cancel";
+  | "Not Marked"
+  | "Present"
+  | "Absent"
+  | "Leave"
+  | "Late"
+  | "Class Cancel";
   reason: string;
 }
 
@@ -210,7 +210,7 @@ export async function getStudentsForClass(
   const { data: students, error } = await supabase
     .from("students")
     .select(
-      `studentId, user:users (fullName, gender), attendance_record (status, reason, calendarEventId)`,
+      `studentId, user:users (fullName, gender, user_profile (profileUrl)), student_pins (pinNumber), attendance_record (status, reason, calendarEventId)`,
     )
     .in("studentId", ids)
     .eq("attendance_record.calendarEventId", classId)
@@ -253,11 +253,17 @@ export async function getStudentsForClass(
       stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
     const userGender = s.user?.gender || "Male";
 
+    const pinData = s.student_pins;
+    const pinNumber = Array.isArray(pinData) ? pinData[0]?.pinNumber : pinData?.pinNumber;
+
+    const profileData = s.user?.user_profile;
+    const avatarUrl = Array.isArray(profileData) ? profileData[0]?.profileUrl : profileData?.profileUrl;
+
     return {
       id: String(s.studentId),
       name: s.user?.fullName || `Student ${s.studentId}`,
-      roll: String(s.studentId),
-      photo: userGender === "Female" ? "/student-f.png" : "/maleuser.png",
+      roll: pinNumber || String(s.studentId),
+      photo: avatarUrl,
       percentage: `${pct}%`,
       attendance: status as any,
       reason: reason,
