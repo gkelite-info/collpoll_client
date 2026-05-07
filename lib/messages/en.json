@@ -262,7 +262,12 @@
       "Topic:": "Topic:",
       "Room:": "Room:",
       "Faculty:": "Faculty:",
-      "Class Cancel": "Class Cancel"
+      "Class Cancel": "Class Cancel",
+      "No classes scheduled": "No classes scheduled",
+      "Active": "Active",
+      "Quiz": "Quizzes",
+      "Assignment": "Assignments",
+      "Discussion": "Discussions"
     }
   },
   "WipOverlay": {
@@ -308,7 +313,10 @@
       "Subject Detail View": "Subject Detail View",
       "Subject :": "Subject :",
       "Faculty :": "Faculty :",
-      "Attendance :": "Attendance :"
+      "Attendance :": "Attendance :",
+      "Subject Name": "Subject Name",
+      "Sem Attendance": "Sem Attendance",
+      "Class Attendance": "Class Attendance"
     },
     "parent": {
       "Subject": "Subject",
@@ -351,7 +359,9 @@
       "Subject Detail View": "Subject Detail View",
       "Subject :": "Subject :",
       "Faculty :": "Faculty :",
-      "Attendance :": "Attendance :"
+      "Attendance :": "Attendance :",
+      "Subject Name": "Subject Name",
+      "Sem Attendance": "Sem Attendance"
     }
   },
   "Assignment": {
