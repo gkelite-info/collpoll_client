@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import { User, Chalkboard, Laptop } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
@@ -52,7 +53,7 @@ export default function StudentProfileCard({
     <div className="rounded-[20px] bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          {photo ? (
+          {/* {photo ? (
             <img
               src={photo}
               alt={name}
@@ -62,7 +63,9 @@ export default function StudentProfileCard({
             <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-4xl font-medium text-white">
               {name?.charAt(0).toUpperCase()}
             </div>
-          )}
+          )} */}
+
+          <Avatar src={photo} size={64} alt={name}/>
 
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#333333]">{name}</h2>

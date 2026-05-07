@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
@@ -8,9 +8,11 @@ import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/ge
 import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/stuProfileCard";
 import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectAttendanceTable from "@/app/(screens)/faculty/attendance/components/subjectAttendanceTable";
+import { CaretLeftIcon } from "@phosphor-icons/react";
 
 export default function SubjectDetailPage() {
   const params = useParams();
+  const router = useRouter()
 
   const studentId = Array.isArray(params?.studentId)
     ? params.studentId[0]
@@ -103,7 +105,10 @@ export default function SubjectDetailPage() {
     <main className="px-4 py-4 min-h-screen space-y-6">
       <section className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+          <div className="flex items-center">
+            <CaretLeftIcon className="h-6 w-6 -ml-1 cursor-pointer mr-1" onClick={()=>router.back()}/>
+            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+          </div>
           <p className="text-sm text-gray-500 mt-1">
             Track, Verify and Manage Attendance Records.
           </p>

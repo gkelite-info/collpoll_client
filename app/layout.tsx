@@ -94,8 +94,8 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/tekton-final-logo.png',
-        href: '/tekton-final-logo.png',
+        url: '/logo-secondary.png',
+        href: '/logo-secondary.png',
       },
     ],
   }

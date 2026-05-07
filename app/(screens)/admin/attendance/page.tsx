@@ -2,13 +2,13 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Suspense } from "react";
-import { MagnifyingGlass, CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { MagnifyingGlass, CaretLeft, CaretRight, BuildingApartmentIcon, WarningCircleIcon, WarningIcon } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import FacultyAttendanceCard, {
   Department,
 } from "./components/facultyAttendanceCard";
 
-import { User, UsersThree } from "@phosphor-icons/react";
+import { User } from "@phosphor-icons/react";
 import CardComponent from "./components/cards";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
@@ -27,6 +27,8 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import SubjectWiseAttendance from "./components/subjectWiseAttendance";
 import { getBatchSectionStats } from "@/lib/helpers/admin/attendance/getBatchSectionStats";
 import { supabase } from "@/lib/supabaseClient";
+import { AcademicSectionsSkeleton } from "../academics/shimmer/academicSectionsSkeleton";
+import { StatsCardsSkeleton } from "./shimmers/statsCardsSkeleton";
 
 interface ExtendedDepartment extends Department {
   id: string;
@@ -256,9 +258,12 @@ const AttendancePage = () => {
   }, [adminContext]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || adminLoading || !adminContext) return;
+    if (adminContext.collegeEducationId && (!education || educations.length === 0)) {
+      return;
+    }
     loadCardsOnly();
-  }, [userId, currentPage, education, branch, year, section, subject, debouncedSearch]);
+  }, [userId, adminLoading, adminContext, educations.length, currentPage, education, branch, year, section, subject, debouncedSearch]);
 
   const loadCardsOnly = async () => {
     try {
@@ -302,15 +307,16 @@ const AttendancePage = () => {
     }
   };
 
+  const isInter = education?.collegeEducationType === "Inter"
 
   const cardData = [
     {
       id: "1",
       style: "bg-[#CEE6FF]",
-      icon: <UsersThree size={23} weight="fill" color="#EFEFEF" />,
+      icon: <BuildingApartmentIcon size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#60AEFF",
       value: stats.totalDepartments,
-      label: "Total branches",
+      label: isInter ? "Total Groups" : "Total Branches",
     },
     {
       id: "2",
@@ -318,7 +324,7 @@ const AttendancePage = () => {
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#43C17A",
       value: stats.totalStudents,
-      label: "Total students",
+      label: "Total Students",
     },
     {
       id: "3",
@@ -326,15 +332,15 @@ const AttendancePage = () => {
       icon: <User size={23} weight="fill" color="#EFEFEF" />,
       iconBgColor: "#FF2020",
       value: stats.studentsBelow75,
-      label: "Students below 75%",
+      label: "Students Below 75%",
     },
     {
       id: "4",
-      style: "bg-[#CEE6FF]",
-      icon: <User size={23} weight="fill" color="#EFEFEF" />,
-      iconBgColor: "#60AEFF",
+      style: "bg-[#FFEDDA]",
+      icon: <WarningIcon size={23} weight="fill" color="#EFEFEF" />,
+      iconBgColor: "#FFBB70",
       value: stats.pendingCorrections,
-      label: "Pending attedance corrections",
+      label: "Pending Attedance Corrections",
     },
   ];
 
@@ -385,8 +391,8 @@ const AttendancePage = () => {
 
       <div className="flex gap-4 w-full h-full mb-3">
         {showStatsLoader ? (
-          <div className="flex items-center justify-center w-full h-32">
-            <Loader />
+          <div className="w-full">
+            <StatsCardsSkeleton />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 w-full h-32">
@@ -541,10 +547,8 @@ const AttendancePage = () => {
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {loading || adminLoading || collegeEducationId === null ? (
-            <div className="flex items-center col-span-full justify-center w-full h-32">
-              <Loader />
-            </div>
+          {loading || adminLoading || collegeEducationId === null || (adminContext?.collegeEducationId && !education) ? (
+            [...Array(9)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">
               {cards.length > 0

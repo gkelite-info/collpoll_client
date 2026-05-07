@@ -69,7 +69,14 @@ export const EXEMPTED_ROUTES = [
   "/api",
   "/_next",
   "/public",
-  "/favicon.ico",
+  // "/favicon.ico",
+  "/dashboard-banner-bg.png",
+  "/login-logo.png",
+  "/tekton-final-logo.png",
+  "/AI Robot.png",
+  "/bot.png",
+  "/ai-bot.png",
+  "/logo-secondary.png"
 ];
 
 /**
@@ -169,7 +176,18 @@ export const isAuthOnlyRoute = (pathname: string): boolean => {
  * Check if a route is protected (requires authentication)
  */
 export const isProtectedRoute = (pathname: string): boolean => {
-  return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+  // return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
+  if (isPublicRoute(pathname)) return false;
+  if (isExemptedRoute(pathname)) return false;
+
+  return true
+};
+
+export const isLegacyStudentRoute = (pathname: string): boolean => {
+  return LEGACY_STUDENT_ROUTES.some((route) => {
+    if (route === "*") return false;
+    return pathname.startsWith(route);
+  });
 };
 
 /**
@@ -233,7 +251,11 @@ export const isValidRole = (role: any): role is UserRole => {
  * Optimizes middleware to skip unnecessary database queries
  */
 export const needsRolePortalProtection = (pathname: string): boolean => {
-  return ROLE_PROTECTED_PORTALS.some((portal) => pathname.startsWith(portal));
+  // return ROLE_PROTECTED_PORTALS.some((portal) => pathname.startsWith(portal));
+  const isSpecificPortal = ROLE_PROTECTED_PORTALS.some((portal) => pathname.startsWith(portal));
+  const isLegacyRoute = isLegacyStudentRoute(pathname);
+
+  return isSpecificPortal || isLegacyRoute || (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname));
 };
 
 /**

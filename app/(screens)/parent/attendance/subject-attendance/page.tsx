@@ -12,6 +12,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { getParentSubjectWiseStats } from "@/lib/helpers/parent/attendance/parentAttendanceActions";
 import { SubjectAttendanceSkeleton } from "../shimmer/attendanceSkeletons";
 import { useTranslations } from "next-intl";
+import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 
 interface CardItem {
   id: number;
@@ -177,6 +178,17 @@ export default function ParentSubjectAttendance() {
           overallPercent={dashboardData?.cards.percentage || 0}
         />
         <WorkWeekCalendar style="w-[345px] mt-0" />
+      </div>
+
+      <div className="my-2 w-[69.5%]">
+        <AiAttendanceNotificationBanner
+          className="h-auto min-h-[90px]"
+          message={
+            <>
+              🎉 Great job, {dashboardData?.studentName || "Shravani"}! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
+            </>
+          }
+        />
       </div>
 
       <div className="mt-4 flex flex-col items-start">

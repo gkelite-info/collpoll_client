@@ -11,6 +11,7 @@ import {
     normalizeRole,
     isValidRole,
     LEGACY_STUDENT_ROUTES,
+    isPublicRoute
 } from "@/lib/constants/routes";
 
 export async function middleware(request: NextRequest) {
@@ -59,17 +60,31 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
 
-    if (!user) {
-        const isLegacyStudentRoute = LEGACY_STUDENT_ROUTES.some(
-            route => pathname === route || pathname.startsWith(route + '?')
-        );
+    // if (!user) {
+    //     const isLegacyStudentRoute = LEGACY_STUDENT_ROUTES.some(
+    //         route => pathname === route || pathname.startsWith(route + '?')
+    //     );
 
-        if (isProtectedRoute(pathname) || isAuthProtectedRoute(pathname) || isLegacyStudentRoute) {
+    //     if (isProtectedRoute(pathname) || isAuthProtectedRoute(pathname) || isLegacyStudentRoute) {
+    //         const url = request.nextUrl.clone();
+    //         url.pathname = "/login";
+    //         url.searchParams.set("from", pathname);
+    //         return NextResponse.redirect(url);
+    //     }
+    //     return response;
+    // }
+
+    if (!user) {
+        // [CHANGED] If the route is NOT a public route (/login, /signup), kick them to login.
+        // Because exempted routes (/api, /_next) are caught earlier, this safely catches random URLs like /ramu.
+        if (!isPublicRoute(pathname)) {
             const url = request.nextUrl.clone();
             url.pathname = "/login";
             url.searchParams.set("from", pathname);
             return NextResponse.redirect(url);
         }
+        
+        // If it IS a public route, let them through
         return response;
     }
 
