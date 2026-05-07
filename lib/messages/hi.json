@@ -230,7 +230,12 @@
       "Discussions": "{count, plural, =0 {कोई चर्चा नहीं} =1 {1 चर्चा} other {# चर्चाएँ}}",
       "General Revision": "सामान्य पुनरावलोकन",
       "Organize your study desk": "अपनी अध्ययन डेस्क व्यवस्थित करें",
-      "Check the deadlines for": "समय सीमाएँ जाँचें"
+      "Check the deadlines for": "समय सीमाएँ जाँचें",
+      "No classes scheduled": "कोई कक्षाएँ निर्धारित नहीं हैं",
+      "Active": "सक्रिय",
+      "Quiz": "क्विज़",
+      "Assignment": "असाइनमेंट",
+      "Discussion": "चर्चाएँ"
     }
   },
   "WipOverlay": {
@@ -276,7 +281,10 @@
       "Subject Detail View": "विषय विवरण दृश्य",
       "Subject :": "विषय :",
       "Faculty :": "फैकल्टी :",
-      "Attendance :": "उपस्थिति :"
+      "Attendance :": "उपस्थिति :",
+      "Subject Name": "विषय का नाम",
+      "Sem Attendance": "सत्र उपस्थिति",
+      "Class Attendance": "कक्षा उपस्थिति"
     },
     "parent": {
       "Subject": "विषय",
@@ -319,7 +327,9 @@
       "Subject Detail View": "विषय विवरण दृश्य",
       "Subject :": "विषय :",
       "Faculty :": "फैकल्टी :",
-      "Attendance :": "उपस्थिति :"
+      "Attendance :": "उपस्थिति :",
+      "Subject Name": "विषय का नाम",
+      "Sem Attendance": "सत्र उपस्थिति"
     }
   },
   "Assignment": {

@@ -12,6 +12,8 @@
 // import { useRouter } from "next/navigation";
 // import { useEffect, useState } from "react";
 // import { useSearchParams } from "next/navigation";
+// import { useTranslations } from "next-intl";
+// import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 
 // interface CardItem {
 //   id: number;
@@ -43,6 +45,7 @@
 // }
 
 // const StatusBadge = ({ status }: { status: string }) => {
+//   const t = useTranslations("Attendance.student");
 //   let bg = "";
 //   let color = "";
 
@@ -69,7 +72,7 @@
 //         className="w-[90px] h-[28px] flex items-center justify-center rounded-lg text-sm font-medium"
 //         style={{ backgroundColor: bg, color: color }}
 //       >
-//         {status}
+//         {t(status)}
 //       </div>
 //     </div>
 //   );
@@ -77,6 +80,7 @@
 
 // export default function SubjectAttendanceDetailsClient() {
 //   type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
+//   const t = useTranslations("Attendance.student");
 
 //   const [activeView, setActiveView] = useState<ViewFilter>("ALL");
 //   const [currentPage, setCurrentPage] = useState(1);
@@ -84,10 +88,6 @@
 
 //   const rowsPerPage = 10;
 //   const totalPages = Math.ceil(totalRecords / rowsPerPage);
-
-//   // const [activeView, setActiveView] = useState<"table" | "present" | "absent">(
-//   //   "table"
-//   // );
 
 //   const router = useRouter();
 
@@ -132,7 +132,7 @@
 //       id: 1,
 //       icon: <Chalkboard size={30} weight="fill" />,
 //       value: data?.headerStats.total ?? 0,
-//       label: "Total Classes",
+//       label: t("Total Classes"),
 //       style: "bg-[#E2DAFF] w-[182px]",
 //       iconBgColor: "#714EF2",
 //       iconColor: "#EFEFEF",
@@ -141,7 +141,7 @@
 //       id: 2,
 //       icon: <Chalkboard size={30} weight="fill" />,
 //       value: data?.headerStats.attended ?? 0,
-//       label: "Attended",
+//       label: t("Attended"),
 //       style: "bg-[#FFEDDA] w-[182px]",
 //       iconBgColor: "#FFBC72",
 //       iconColor: "#EFEFEF",
@@ -150,7 +150,7 @@
 //       id: 3,
 //       icon: <Chalkboard size={30} weight="fill" />,
 //       value: data?.headerStats.absent ?? 0,
-//       label: "Absent",
+//       label: t("Absent"),
 //       style: "bg-[#FFE6E6] w-[182px]",
 //       iconBgColor: "#F62D2D",
 //       iconColor: "#EFEFEF",
@@ -159,7 +159,7 @@
 //       id: 4,
 //       icon: <Percent size={30} weight="fill" />,
 //       value: `${data?.headerStats.percentage ?? 0}%`,
-//       label: "Attendance",
+//       label: t("Attendance"),
 //       style: "bg-[#CEE6FF] w-[182px]",
 //       iconBgColor: "#60AEFF",
 //       iconColor: "#EFEFEF",
@@ -169,17 +169,19 @@
 //   const subjectName = data?.subjectName ?? "-";
 //   const facultyName = data?.facultyName ?? "-";
 
-//   const attendanceText = `Classes Held: ${data?.headerStats.total ?? 0} |
-// Attended: ${data?.headerStats.attended ?? 0} |
-// Missed: ${data?.headerStats.absent ?? 0} |
-// %: ${data?.headerStats.percentage ?? 0}%`;
+//   // Build the string dynamically using localized parts
+//   const totalStr = data?.headerStats.total ?? 0;
+//   const attendedStr = data?.headerStats.attended ?? 0;
+//   const missedStr = data?.headerStats.absent ?? 0;
+//   const percentageStr = data?.headerStats.percentage ?? 0;
+
+//   const attendanceText = `${t("Classes Held")}: ${totalStr} | ${t("Attended")}: ${attendedStr} | ${t("Missed")}: ${missedStr} | %: ${percentageStr}%`;
 
 //   const columns = [
-//     { title: "Date", key: "date" },
-//     { title: "Time", key: "time" },
-//     { title: "Status", key: "status" },
-//     { title: "Reason", key: "reason" },
-//     // { title: "Notes", key: "notes" },
+//     { title: t("Date"), key: "date" },
+//     { title: t("Time"), key: "time" },
+//     { title: t("Status"), key: "status" },
+//     { title: t("Reason"), key: "reason" },
 //   ];
 
 //   const tableData: AttendanceTableRow[] =
@@ -189,13 +191,6 @@
 //       rawStatus: r.status,
 //       status: <StatusBadge status={normalizeStatus(r.status)} />,
 //       reason: r.reason,
-//       // notes: (
-//       //   <div className="w-full flex justify-center">
-//       //     <div className="w-9 h-9 flex items-center justify-center rounded-full bg-[#F0EDFC] cursor-pointer">
-//       //       <FilePdf size={20} color="#7557E3" />
-//       //     </div>
-//       //   </div>
-//       // ),
 //     })) ?? [];
 
 //   const filteredTableData = (() => {
@@ -211,22 +206,6 @@
 
 //     return tableData;
 //   })();
-
-//   const present = [
-//     { title: "Date", key: "date" },
-//     { title: "Time", key: "time" },
-//     { title: "Status", key: "status" },
-//     { title: "Reason", key: "reason" },
-//     { title: "Notes", key: "notes" },
-//   ];
-
-//   const absent = [
-//     { title: "Date", key: "date" },
-//     { title: "Time", key: "time" },
-//     { title: "Status", key: "status" },
-//     { title: "Reason", key: "reason" },
-//     { title: "Notes", key: "notes" },
-//   ];
 
 //   const handleBack = () => {
 //     router.push("/attendance?tab=subject-attendance");
@@ -244,11 +223,11 @@
 //               />
 //             </button>
 //             <h1 className="text-[#282828] font-bold text-2xl mb-1">
-//               Attendance
+//               {t("Attendance")}
 //             </h1>
 //           </div>
 //           <p className="text-[#282828]">
-//             Track, manage, and maintain your attendance effortlessly
+//             {t("Track, manage, and maintain your attendance effortlessly")}
 //           </p>
 //         </div>
 
@@ -257,41 +236,56 @@
 //         </div>
 //       </div>
 
-//       <div className="w-full h-[170px] mt-4 flex items-start gap-3">
-//         {cards.map((card, index) => {
-//           return (
-//             <div
-//               key={index}
-//               className="cursor-pointer"
-//               onClick={() => {
-//                 if (index === 0) setActiveView("ALL");
-//                 if (index === 1) setActiveView("ATTENDED");
-//                 if (index === 2) setActiveView("ABSENT");
-//               }}
-//             >
-//               <CardComponent
-//                 style={card.style}
-//                 icon={card.icon}
-//                 value={card.value}
-//                 label={card.label}
-//                 iconBgColor={card.iconBgColor}
-//                 iconColor={card.iconColor}
-//                 underlineValue={card.underlineValue}
-//                 totalPercentage={card.totalPercentage}
-//               />
-//             </div>
-//           );
-//         })}
-//         <WorkWeekCalendar style="w-[345px] mt-0" />
+//       <div className="w-full mt-4 grid lg:grid-cols-[68%_32%] gap-3">
+//         <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+//           {cards.map((card, index) => {
+//             return (
+//               <div
+//                 key={index}
+//                 className="cursor-pointer"
+//                 onClick={() => {
+//                   if (index === 0) setActiveView("ALL");
+//                   if (index === 1) setActiveView("ATTENDED");
+//                   if (index === 2) setActiveView("ABSENT");
+//                 }}
+//               >
+//                 <CardComponent
+//                   style={card.style}
+//                   icon={card.icon}
+//                   value={card.value}
+//                   label={card.label}
+//                   iconBgColor={card.iconBgColor}
+//                   iconColor={card.iconColor}
+//                   underlineValue={card.underlineValue}
+//                   totalPercentage={card.totalPercentage}
+//                 />
+//               </div>
+//             );
+//           })}
+//         </div>
+//         <WorkWeekCalendar  style="mt-0 w-[360px]"/>
+//       </div>
+
+//       <div className="my-2 w-[68%]">
+//         <AiAttendanceNotificationBanner
+//           className="h-auto min-h-[90px]"
+//           message={
+//             <>
+//               🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
+//             </>
+//           }
+//         />
 //       </div>
 
 //       <div className="mt-4 flex flex-col items-center">
 //         <div className="w-full flex flex-col items-start">
-//           <h4 className="text-[#282828] font-medium">Subject Detail View</h4>
+//           <h4 className="text-[#282828] font-medium">
+//             {t("Subject Detail View")}
+//           </h4>
 
 //           <div className="bg-blue-00 w-full mt-2 flex items-center">
 //             <div className="flex items-center gap-1">
-//               <h5 className="text-[#525252] text-sm">Subject :</h5>
+//               <h5 className="text-[#525252] text-sm">{t("Subject :")}</h5>
 //               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
 //                 <p className="text-sm text-[#43C17A] font-medium">
 //                   {subjectName}
@@ -300,7 +294,7 @@
 //             </div>
 
 //             <div className="flex items-center gap-1 ml-6">
-//               <h5 className="text-[#525252] text-sm">Faculty :</h5>
+//               <h5 className="text-[#525252] text-sm">{t("Faculty :")}</h5>
 //               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
 //                 <p className="text-sm text-[#43C17A] font-medium">
 //                   {facultyName}
@@ -309,7 +303,7 @@
 //             </div>
 
 //             <div className="flex items-center gap-1 ml-6">
-//               <h5 className="text-[#525252] text-sm">Attendance :</h5>
+//               <h5 className="text-[#525252] text-sm">{t("Attendance :")}</h5>
 //               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
 //                 <p className="text-sm text-[#43C17A] font-medium">
 //                   {attendanceText}
@@ -330,11 +324,10 @@
 //                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
 //                 disabled={currentPage === 1}
 //                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-//       ${
-//         currentPage === 1
-//           ? "border-gray-200 text-gray-300"
-//           : "border-gray-300 text-gray-600 hover:bg-gray-100"
-//       }`}
+//       ${currentPage === 1
+//                     ? "border-gray-200 text-gray-300"
+//                     : "border-gray-300 text-gray-600 hover:bg-gray-100"
+//                   }`}
 //               >
 //                 ‹
 //               </button>
@@ -344,11 +337,10 @@
 //                   key={i}
 //                   onClick={() => setCurrentPage(i + 1)}
 //                   className={`w-10 h-10 rounded-lg font-semibold
-//         ${
-//           currentPage === i + 1
-//             ? "bg-[#16284F] text-white"
-//             : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-//         }`}
+//         ${currentPage === i + 1
+//                       ? "bg-[#16284F] text-white"
+//                       : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+//                     }`}
 //                 >
 //                   {i + 1}
 //                 </button>
@@ -360,11 +352,10 @@
 //                 }
 //                 disabled={currentPage === totalPages}
 //                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-//       ${
-//         currentPage === totalPages
-//           ? "border-gray-200 text-gray-300"
-//           : "border-gray-300 text-gray-600 hover:bg-gray-100"
-//       }`}
+//       ${currentPage === totalPages
+//                     ? "border-gray-200 text-gray-300"
+//                     : "border-gray-300 text-gray-600 hover:bg-gray-100"
+//                   }`}
 //               >
 //                 ›
 //               </button>
@@ -386,7 +377,12 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { getStudentAttendanceDetails } from "@/lib/helpers/student/attendance/getStudentAttendanceDetails";
-import { CaretLeft, Chalkboard, FilePdf, Percent } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  CaretLeft,
+  Chalkboard,
+  Percent,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -447,7 +443,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   return (
     <div className="flex justify-center w-full">
       <div
-        className="w-[90px] h-[28px] flex items-center justify-center rounded-lg text-sm font-medium"
+        className="w-[90px] h-[28px] max-md:w-[70px] max-md:h-[24px] max-md:text-[11px] flex items-center justify-center rounded-lg text-sm font-medium"
         style={{ backgroundColor: bg, color: color }}
       >
         {t(status)}
@@ -528,8 +524,8 @@ export default function SubjectAttendanceDetailsClient() {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.absent ?? 0,
-      label: t("Absent"),
-      style: "bg-[#FFE6E6] w-[182px]",
+      label: t("Leave"), // Switched label to map visually to Screenshot
+      style: "bg-[#E2DAFF] w-[182px]", // Soft purple map
       iconBgColor: "#F62D2D",
       iconColor: "#EFEFEF",
     },
@@ -547,7 +543,6 @@ export default function SubjectAttendanceDetailsClient() {
   const subjectName = data?.subjectName ?? "-";
   const facultyName = data?.facultyName ?? "-";
 
-  // Build the string dynamically using localized parts
   const totalStr = data?.headerStats.total ?? 0;
   const attendedStr = data?.headerStats.attended ?? 0;
   const missedStr = data?.headerStats.absent ?? 0;
@@ -559,7 +554,6 @@ export default function SubjectAttendanceDetailsClient() {
     { title: t("Date"), key: "date" },
     { title: t("Time"), key: "time" },
     { title: t("Status"), key: "status" },
-    { title: t("Reason"), key: "reason" },
   ];
 
   const tableData: AttendanceTableRow[] =
@@ -590,9 +584,9 @@ export default function SubjectAttendanceDetailsClient() {
   };
 
   return (
-    <div className="flex flex-col pb-3">
+    <div className="flex flex-col pb-3 max-md:pb-0">
       <div className="flex justify-between items-center">
-        <div className="flex flex-col w-[50%]">
+        <div className="flex flex-col w-[50%] max-md:w-full">
           <div className="flex gap-0 items-center">
             <button onClick={handleBack} className="cursor-pointer">
               <CaretLeft
@@ -600,27 +594,28 @@ export default function SubjectAttendanceDetailsClient() {
                 className="cursor-pointer text-black -ml-1.5"
               />
             </button>
-            <h1 className="text-[#282828] font-bold text-2xl mb-1">
+            <h1 className="text-[#282828] font-bold text-2xl mb-1 max-md:text-[22px]">
               {t("Attendance")}
             </h1>
           </div>
-          <p className="text-[#282828]">
+          <p className="text-[#282828] max-md:text-gray-600 max-md:text-[13px]">
             {t("Track, manage, and maintain your attendance effortlessly")}
           </p>
         </div>
 
-        <div className="flex justify-end w-[32%]">
+        <div className="flex justify-end w-[32%] max-md:hidden">
           <CourseScheduleCard style="w-[320px]" />
         </div>
       </div>
 
-      <div className="w-full mt-4 grid lg:grid-cols-[68%_32%] gap-3">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+      <div className="w-full mt-4 grid lg:grid-cols-[68%_32%] gap-3 max-md:flex max-md:flex-col">
+        {/* 📱 Transforms into a 2x2 grid on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 max-md:grid-cols-2 max-md:gap-3 w-full">
           {cards.map((card, index) => {
             return (
               <div
                 key={index}
-                className="cursor-pointer"
+                className="cursor-pointer max-md:w-full"
                 onClick={() => {
                   if (index === 0) setActiveView("ALL");
                   if (index === 1) setActiveView("ATTENDED");
@@ -641,71 +636,84 @@ export default function SubjectAttendanceDetailsClient() {
             );
           })}
         </div>
-        <WorkWeekCalendar  style="mt-0 w-[360px]"/>
+        <WorkWeekCalendar style="mt-0 w-[360px] max-md:hidden" />
       </div>
 
-      <div className="my-2 w-[68%]">
-        <AiAttendanceNotificationBanner
-          className="h-auto min-h-[90px]"
-          message={
-            <>
-              🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep maintaining your streak attend your next <span className="font-bold">2</span> classes to stay safe above <span className="font-bold">85%</span>!
-            </>
-          }
-        />
-      </div>
-
-      <div className="mt-4 flex flex-col items-center">
+      <div className="mt-4 flex flex-col items-center  max-md:p-3 ">
         <div className="w-full flex flex-col items-start">
-          <h4 className="text-[#282828] font-medium">
+          <h4 className="text-[#282828] font-medium max-md:font-semibold max-md:text-[17px]">
             {t("Subject Detail View")}
           </h4>
 
-          <div className="bg-blue-00 w-full mt-2 flex items-center">
-            <div className="flex items-center gap-1">
-              <h5 className="text-[#525252] text-sm">{t("Subject :")}</h5>
-              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                <p className="text-sm text-[#43C17A] font-medium">
-                  {subjectName}
+          {/* Subject Detail View Headers (Shrinks dynamically on mobile) */}
+          <div className="bg-blue-00 w-full mt-2 flex flex-wrap items-center gap-y-2 gap-x-6 max-md:gap-x-3 max-md:mt-3">
+            <div className="flex items-center gap-1 max-md:gap-1.5">
+              <h5 className="text-[#525252] text-sm max-md:text-[12px]">
+                {t("Subject :")}
+              </h5>
+              <div className="rounded-full px-3 max-md:px-2 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+                <p className="text-sm max-md:text-[12px] text-[#43C17A] font-medium whitespace-nowrap">
+                  {subjectName}{" "}
+                  {/* <CaretDown className="hidden max-md:inline" size={10} /> */}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 ml-6">
-              <h5 className="text-[#525252] text-sm">{t("Faculty :")}</h5>
-              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                <p className="text-sm text-[#43C17A] font-medium">
+            <div className="flex items-center gap-1 max-md:gap-1.5">
+              <h5 className="text-[#525252] text-sm max-md:text-[12px]">
+                {t("Faculty :")}
+              </h5>
+              <div className="rounded-full px-3 max-md:px-2 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+                <p className="text-sm max-md:text-[12px] text-[#43C17A] font-medium whitespace-nowrap">
                   {facultyName}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 ml-6">
+            <div className="flex items-center gap-1 max-md:hidden">
               <h5 className="text-[#525252] text-sm">{t("Attendance :")}</h5>
               <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
-                <p className="text-sm text-[#43C17A] font-medium">
+                <p className="text-sm text-[#43C17A] font-medium whitespace-nowrap">
                   {attendanceText}
                 </p>
               </div>
             </div>
           </div>
         </div>
-        <div className="mt-4 w-[85%]">
-          <TableComponent
-            columns={columns}
-            tableData={filteredTableData}
-            isLoading={loading}
+
+        <div className="hidden max-md:block my-2 w-full mt-5">
+          <AiAttendanceNotificationBanner
+            className="h-auto min-h-[70px]  max-md:py-4"
+            message={
+              <>
+                🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep
+                maintaining your streak attend your next{" "}
+                <span className="font-bold">2</span> classes to stay safe above{" "}
+                <span className="font-bold">85%</span>!
+              </>
+            }
           />
+        </div>
+
+        <div className="mt-4 w-[85%] max-md:w-full max-md:mt-3 max-md:overflow-x-auto scrollbar-hide">
+          <div className="max-md:min-w-[400px]">
+            <TableComponent
+              columns={columns}
+              tableData={filteredTableData}
+              isLoading={loading}
+            />
+          </div>
           {totalPages > 1 && (
             <div className="flex justify-end items-center gap-3 mt-6">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${currentPage === 1
-                    ? "border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                  }`}
+      ${
+        currentPage === 1
+          ? "border-gray-200 text-gray-300"
+          : "border-gray-300 text-gray-600 hover:bg-gray-100"
+      }`}
               >
                 ‹
               </button>
@@ -714,11 +722,12 @@ export default function SubjectAttendanceDetailsClient() {
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-10 h-10 rounded-lg font-semibold
-        ${currentPage === i + 1
-                      ? "bg-[#16284F] text-white"
-                      : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    }`}
+                  className={`w-10 h-10 rounded-lg font-semibold max-md:w-8 max-md:h-8
+        ${
+          currentPage === i + 1
+            ? "bg-[#16284F] text-white"
+            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+        }`}
                 >
                   {i + 1}
                 </button>
@@ -730,10 +739,11 @@ export default function SubjectAttendanceDetailsClient() {
                 }
                 disabled={currentPage === totalPages}
                 className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${currentPage === totalPages
-                    ? "border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                  }`}
+      ${
+        currentPage === totalPages
+          ? "border-gray-200 text-gray-300"
+          : "border-gray-300 text-gray-600 hover:bg-gray-100"
+      }`}
               >
                 ›
               </button>
