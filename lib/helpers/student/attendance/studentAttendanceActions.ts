@@ -17,6 +17,31 @@ function isCancelledStatus(status: string) {
   return (CANCELLED_STATUSES as readonly string[]).includes(status);
 }
 
+function toDateKey(value: string) {
+  return value.slice(0, 10);
+}
+
+function formatDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getWeekDateKeys(dateStr: string) {
+  const date = new Date(`${dateStr}T00:00:00`);
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + mondayOffset);
+
+  return Array.from({ length: 6 }, (_, index) => {
+    const dateKey = new Date(monday);
+    dateKey.setDate(monday.getDate() + index);
+    return formatDateKey(dateKey);
+  });
+}
+
 export interface SubjectWiseStats {
   subjectId: number;
   subjectName: string;
@@ -25,6 +50,14 @@ export interface SubjectWiseStats {
   missed: number;
   leave: number;
   percentage: number;
+}
+
+export interface StudentAttendanceTableRow {
+  subject: string;
+  faculty: string;
+  status: string;
+  classAttendance: string;
+  percentage: string;
 }
 
 export interface StudentDashboardResponse {
@@ -42,7 +75,7 @@ export interface StudentDashboardResponse {
     absent: number;
     leave: number;
   };
-  tableData: any[];
+  tableData: StudentAttendanceTableRow[];
   totalCount: number;
   subjectWiseStats: SubjectWiseStats[];
   weeklyData: number[];
@@ -101,6 +134,9 @@ export async function getStudentDashboardData(
   const classStudentIds = (classStudents ?? []).map((s) => s.studentId);
   if (!classStudentIds.length) return emptyDashboard();
 
+  const weekDateKeys = getWeekDateKeys(dateStr);
+  const weekStartDate = weekDateKeys[0] ?? dateStr;
+
   const { data: todayAll, error: todayErr } = await supabase
     .from("attendance_record")
     .select("studentId, calendarEventId, status")
@@ -111,13 +147,26 @@ export async function getStudentDashboardData(
 
   const { data: semAll, error: semErr } = await supabase
     .from("attendance_record")
-    .select("studentId, calendarEventId, status")
+    .select("studentId, calendarEventId, status, markedAt")
     .in("studentId", classStudentIds)
     .lte("markedAt", dateStr);
 
   if (semErr) throw semErr;
 
-  const eventIds = [...new Set((semAll ?? []).map((r) => r.calendarEventId))];
+  const { data: weekAll, error: weekErr } = await supabase
+    .from("attendance_record")
+    .select("studentId, calendarEventId, status, markedAt")
+    .in("studentId", classStudentIds)
+    .gte("markedAt", weekStartDate)
+    .lte("markedAt", dateStr);
+
+  if (weekErr) throw weekErr;
+
+  const eventIds = [
+    ...new Set(
+      [...(semAll ?? []), ...(weekAll ?? [])].map((r) => r.calendarEventId),
+    ),
+  ];
 
   const { data: events, error: eventErr } = await supabase
     .from("calendar_event")
@@ -190,7 +239,7 @@ export async function getStudentDashboardData(
   if (semesterConducted > 0) {
     presentPercent = Math.round((presentCount / semesterConducted) * 100);
     absentPercent = Math.round((absentCount / semesterConducted) * 100);
-    leavePercent = 100 - presentPercent - absentPercent;
+    leavePercent = Math.round((leaveCount / semesterConducted) * 100);
   }
 
   const subjectWiseMap: Record<
@@ -304,6 +353,29 @@ export async function getStudentDashboardData(
   });
 
   const paginatedRows = tableData.slice(from, to + 1);
+  const weeklyStats = weekDateKeys.map((dayKey) => {
+    const conductedSet = new Set<number>();
+    const attendedSet = new Set<number>();
+
+    for (const r of weekAll ?? []) {
+      if (toDateKey(r.markedAt) !== dayKey) continue;
+
+      const ev = eventMap.get(r.calendarEventId);
+      if (!ev || isCancelledStatus(r.status)) continue;
+
+      if (isConductedStatus(r.status)) {
+        conductedSet.add(r.calendarEventId);
+      }
+
+      if (r.studentId === studentId && isAttendedStatus(r.status)) {
+        attendedSet.add(r.calendarEventId);
+      }
+    }
+
+    return conductedSet.size === 0
+      ? 0
+      : Math.round((attendedSet.size / conductedSet.size) * 100);
+  });
 
   return {
     todayStats: {
@@ -326,7 +398,7 @@ export async function getStudentDashboardData(
     tableData: paginatedRows,
     totalCount: tableData.length,
     subjectWiseStats,
-    weeklyData: [0, 0, 0, 0, 0, 0, 0],
+    weeklyData: weeklyStats,
   };
 }
 

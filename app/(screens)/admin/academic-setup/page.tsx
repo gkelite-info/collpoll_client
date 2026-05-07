@@ -6,6 +6,7 @@ import AddAcademicSetup, { AcademicData } from "./components/AddAcademicSetup";
 import ViewAcademicStructure, { AcademicViewData } from "./components/ViewAcademicStructure";
 import ViewSubjects, { SubjectViewData } from "./components/ViewSubjects";
 import AddSubject, { SubjectFormData, SubjectUIState } from "./components/AddSubject";
+import AttendanceEligibility from "./components/AttendanceEligibility";
 import toast from "react-hot-toast";
 import { getAcademicSubjectById, resolveSubjectUIFromIds, upsertAcademicSubject, resolveSubjectIds } from "@/lib/helpers/admin/academicSetup/academicSubjectsAPI";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -15,7 +16,12 @@ import {
   uploadSubjectImage,
 } from "@/lib/helpers/admin/academicSetup/subjectImageStorageAPI";
 
-type Tab = "view" | "add" | "view-subject" | "add-subject";
+type Tab =
+  | "view"
+  | "add"
+  | "view-subject"
+  | "add-subject"
+  | "attendance-eligibility";
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Something went wrong";
@@ -54,7 +60,19 @@ export default function AcademicSetup() {
     { id: "add", label: "Add Academic Setup" },
     { id: "add-subject", label: "Add Subject" },
     { id: "view-subject", label: "View Subjects" },
+    { id: "attendance-eligibility", label: "Attendance Eligibility" },
   ];
+  const pageHeader =
+    activeTab === "attendance-eligibility"
+      ? {
+          title: "Attendance Eligibility Criteria",
+          description:
+            "Configure minimum overall attendance criteria for students.",
+        }
+      : {
+          title: "Academic Structure",
+          description: "Add new academic structures for your institution.",
+        };
 
   const handleEdit = (row: AcademicViewData) => {
     const sanitizedData: AcademicData = {
@@ -201,13 +219,13 @@ export default function AcademicSetup() {
         )}
 
         <h1 className="text-xl font-bold text-[#282828] mb-1">
-          Academic Structure
+          {pageHeader.title}
         </h1>
         <p className="text-[#5C5C5C] mb-8 text-sm">
-          Add new academic structures for your institution.
+          {pageHeader.description}
         </p>
 
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-start pl-14 mb-5">
           <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full">
             {tabs.map((tab) => (
               <button
@@ -257,6 +275,7 @@ export default function AcademicSetup() {
             onSave={handleSubjectSave}
           />
         )}
+        {activeTab === "attendance-eligibility" && <AttendanceEligibility />}
       </div>
     </section>
   );

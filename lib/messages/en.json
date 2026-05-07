@@ -920,6 +920,8 @@
       "Oldest First": "Oldest First",
       "Company Name A-Z": "Company Name A-Z",
       "Company Name Z-A": "Company Name Z-A",
+      "CTC (High to Low)": "CTC (High to Low)",
+      "CTC (Low to High)": "CTC (Low to High)",
       "Applied on {date}": "Applied on {date}",
       "Click card to see more": "Click card to see more"
     }
