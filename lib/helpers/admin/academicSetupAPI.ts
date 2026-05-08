@@ -16,8 +16,16 @@ type DegreeGroup = {
   sections: Record<string, Set<string>>;
 };
 
-export async function fetchAdminBranchesWithDetails(adminId: number) {
+export async function fetchAdminBranchesWithDetails(adminId: number, page: number = 1, limit: number = 10) {
   try {
+    const { data: adminCtx } = await supabase
+      .from("admins")
+      .select("collegeId, collegeEducationId")
+      .eq("adminId", adminId)
+      .maybeSingle();
+
+    const validEduIds = adminCtx?.collegeEducationId ? [adminCtx.collegeEducationId] : [];
+
     const { data: branches, error: branchErr } = await supabase
       .from("college_branch")
       .select(
@@ -26,87 +34,82 @@ export async function fetchAdminBranchesWithDetails(adminId: number) {
         collegeBranchType,
         collegeBranchCode,
         collegeEducationId,
+        updatedAt,
         college_education!inner(collegeEducationType)
       `,
       )
-      .eq("createdBy", adminId)
+      // .eq("createdBy", adminId)
+      .eq("collegeId", adminCtx?.collegeId)
+      .in("collegeEducationId", validEduIds)
       .eq("isActive", true)
       .is("deletedAt", null);
 
     if (branchErr) throw branchErr;
-    if (!branches || branches.length === 0) return [];
+    if (!branches || branches.length === 0) return { data: [], total: 0 };
 
     const branchIds = branches.map((b) => b.collegeBranchId);
 
-    // const { data: years } = await supabase
-    //   .from("college_academic_year")
-    //   .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId")
-    //   .in("collegeBranchId", branchIds)
-    //   .eq("isActive", true)
-    //   .is("deletedAt", null);
-
-    // const { data: sections } = await supabase
-    //   .from("college_sections")
-    //   .select("collegeSectionsId, collegeSections, collegeBranchId")
-    //   .in("collegeBranchId", branchIds)
-    //   .eq("isActive", true)
-    //   .is("deletedAt", null);
-
-    // const { data: batches } = await supabase
-    //   .from("college_batches")
-    //   .select("collegeBatchId, collegeBatchName, collegeBranchId")
-    //   .in("collegeBranchId", branchIds)
-    //   .eq("isActive", true)
-    //   .is("deletedAt", null);
-
     const [yearsRes, sectionsRes, batchesRes] = await Promise.all([
-      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
-      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null)
+      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId, updatedAt").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId, collegeAcademicYearId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId, collegeAcademicYearId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null)
     ]);
 
     const years = yearsRes.data || [];
     const sections = sectionsRes.data || [];
     const batches = batchesRes.data || [];
 
-    return branches.map((branch: any) => {
-      const branchYears =
-        years?.filter((y) => y.collegeBranchId === branch.collegeBranchId) ||
-        [];
-      const branchSections =
-        sections?.filter((s) => s.collegeBranchId === branch.collegeBranchId) ||
-        [];
+    const flatYearlyData: any[] = [];
 
-      const branchBatches = batches?.filter((b) => b.collegeBranchId === branch.collegeBranchId) || [];
+    branches.forEach((branch: any) => {
+      const branchYears = years.filter((y) => y.collegeBranchId === branch.collegeBranchId);
 
-      const uniqueYears = Array.from(
-        new Set(branchYears.map((y) => y.collegeAcademicYear)),
-      );
-      const uniqueSections = Array.from(
-        new Set(branchSections.map((s) => s.collegeSections).filter(Boolean)),
-      );
+      if (branchYears.length === 0) {
+        flatYearlyData.push({
+          id: branch.collegeBranchId.toString(),
+          degree: branch.college_education?.collegeEducationType || "",
+          branch: branch.collegeBranchType,
+          dept: branch.collegeBranchCode,
+          year: "",
+          sections: [],
+          batch: "",
+          timestamp: new Date(branch.updatedAt || 0).getTime(),
+        });
+      } else {
+        branchYears.forEach((yearObj) => {
+          const yearSections = sections.filter((s) => s.collegeAcademicYearId === yearObj.collegeAcademicYearId);
+          const yearBatches = batches.filter((b) => b.collegeAcademicYearId === yearObj.collegeAcademicYearId);
 
-      const uniqueBatches = Array.from(
-        new Set(
-          branchBatches
-            .map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "")
-            .filter(Boolean)
-        )
-      );
+          const uniqueSections = Array.from(new Set(yearSections.map((s) => s.collegeSections).filter(Boolean)));
+          const uniqueBatches = Array.from(new Set(yearBatches.map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "").filter(Boolean)));
 
-      return {
-        id: branch.collegeBranchId.toString(),
-        degree: branch.college_education?.collegeEducationType || "",
-        branch: branch.collegeBranchType,
-        dept: branch.collegeBranchCode,
-        year: uniqueYears,
-        sections: uniqueSections,
-        batch: uniqueBatches[0] || "",
-      };
+          flatYearlyData.push({
+            id: `${branch.collegeBranchId}-${yearObj.collegeAcademicYearId}`,
+            degree: branch.college_education?.collegeEducationType || "",
+            branch: branch.collegeBranchType,
+            dept: branch.collegeBranchCode,
+            year: yearObj.collegeAcademicYear,
+            sections: uniqueSections,
+            batch: uniqueBatches[0] || "",
+            timestamp: Math.max(
+              new Date(branch.updatedAt || 0).getTime(),
+              new Date(yearObj.updatedAt || 0).getTime()
+            ),
+          });
+        });
+      }
     });
+
+    flatYearlyData.sort((a, b) => b.timestamp - a.timestamp);
+
+    const total = flatYearlyData.length;
+    const start = (page - 1) * limit;
+    const paginatedData = flatYearlyData.slice(start, start + limit);
+
+    return { data: paginatedData, total };
   } catch (err) {
     console.error("Error fetching admin branches:", err);
-    return [];
+    return { data: [], total: 0 };
   }
 }
 
@@ -134,7 +137,7 @@ export async function fetchAvailableBatchesByCollege(collegeId: number) {
   }
 }
 
-export async function fetchAdminAssignedEducation(userId: number | string) {
+export async function fetchAdminAssignedEducationsList(userId: number | string): Promise<{ collegeEducationId: number; collegeEducationType: string }[]> {
   try {
     const { data: admin, error: adminErr } = await supabase
       .from("admins")
@@ -144,21 +147,22 @@ export async function fetchAdminAssignedEducation(userId: number | string) {
       .single();
 
     if (adminErr || !admin?.collegeEducationId) {
-      throw new Error("Admin education ID not found");
+      return [];
+      // throw new Error("Admin education ID not found");
     }
 
     const { data: edu, error: eduErr } = await supabase
       .from("college_education")
-      .select("collegeEducationType")
+      .select("collegeEducationId, collegeEducationType")
       .eq("collegeEducationId", admin.collegeEducationId)
-      .single();
+      .eq("isActive", true);
 
     if (eduErr || !edu) throw new Error("Education type not found");
 
-    return { success: true, data: edu.collegeEducationType };
+    return edu;
   } catch (err) {
     console.error("Error fetching admin assigned education:", err);
-    return { success: false, data: "" };
+    return [];
   }
 }
 

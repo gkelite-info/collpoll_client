@@ -92,12 +92,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tekton Campus",
   icons: {
-    icon: [
-      {
-        url: '/logo-secondary.png',
-        href: '/logo-secondary.png',
-      },
-    ],
+    // icon: [
+    //   {
+    //     url: '/logo-secondary.png',
+    //     href: '/logo-secondary.png',
+    //   },
+    // ],
+    icon: '/logo-secondary.png',
+    apple: '/logo-secondary.png',
+    shortcut: '/logo-secondary.png',
   }
 };
 

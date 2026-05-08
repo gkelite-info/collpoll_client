@@ -90,6 +90,7 @@ export default function AcademicSetup() {
           )
           .filter(Boolean)
         : [],
+      batch: row.batch || "",
     };
     setEditData(sanitizedData);
     setActiveTab("add");
@@ -225,8 +226,8 @@ export default function AcademicSetup() {
           {pageHeader.description}
         </p>
 
-        <div className="flex justify-start pl-14 mb-5">
-          <div className="relative flex items-center bg-gray-100 p-1.5 rounded-full">
+        <div className="flex mx-auto mb-5">
+          <div className="relative flex mx-auto items-center bg-gray-100 p-1.5 rounded-full">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
