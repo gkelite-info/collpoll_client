@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchDegreeAndDepartments, fetchAdminAssignedEducation, fetchAvailableBatchesByCollege } from "@/lib/helpers/admin/academicSetupAPI";
+import { fetchDegreeAndDepartments, fetchAvailableBatchesByCollege, fetchAdminAssignedEducationsList } from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
@@ -26,7 +26,9 @@ export default function AddAcademicSetup({
   editData: AcademicData | null;
   onSuccess?: () => void;
 }) {
-  const { userId, loading: userLoading, adminId } = useUser();
+  const { userId, loading: userLoading, adminId, collegeId } = useUser();
+
+  console.log("edit data check child", editData)
 
   const [form, setForm] = useState<AcademicData>({
     degree: "",
@@ -42,11 +44,13 @@ export default function AddAcademicSetup({
   >({});
   const [availableDepts, setAvailableDepts] = useState<string[]>([]);
   const [availableBatches, setAvailableBatches] = useState<string[]>([]);
+  const [availableEducations, setAvailableEducations] = useState<{ collegeEducationId: number, collegeEducationType: string }[]>([]);
 
   const defaultSectionOptions = ["A", "B", "C", "D"];
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingExisting, setIsFetchingExisting] = useState(false);
+  const [isFetchingOptions, setIsFetchingOptions] = useState(true);
 
   const [customMode, setCustomMode] = useState({
     dept: false,
@@ -66,22 +70,29 @@ export default function AddAcademicSetup({
       //   sections: Array.isArray(editData.sections) ? editData.sections : [],
       //   batch: editData.batch || "",
       // });
-      
-      setForm((prev) => {
-        let safeBatch = "";
-        if (Array.isArray(editData.batch)) {
-          safeBatch = editData.batch[0] || "";
-        } else if (typeof editData.batch === "string") {
-          safeBatch = editData.batch;
-        }
 
-        return {
-          ...prev,
-          ...editData,
-          year: Array.isArray(editData.year) ? (editData.year[0] || "") : (editData.year || ""),
-          sections: Array.isArray(editData.sections) ? editData.sections : [],
-          batch: safeBatch.trim(),
-        };
+      // setForm((prev) => {
+      //   const safeBatch = editData.batch ? String(editData.batch).trim() : "";
+      //   const safeDegree = editData.degree ? String(editData.degree).trim() : "";
+
+      //   return {
+      //     ...prev,
+      //     ...editData,
+      //     degree: safeDegree,
+      //     year: editData.year || "",
+      //     sections: Array.isArray(editData.sections) ? editData.sections : [],
+      //     batch: safeBatch,
+      //   };
+      // });
+
+      setForm({
+        id: editData.id || "",
+        degree: editData.degree ? String(editData.degree).trim() : "",
+        branch: editData.branch ? String(editData.branch).trim() : "",
+        dept: editData.dept ? String(editData.dept).trim() : "",
+        year: editData.year ? String(editData.year).trim() : "",
+        sections: Array.isArray(editData.sections) ? [...editData.sections] : [],
+        batch: editData.batch ? String(editData.batch).trim() : "",
       });
     }
   }, [editData]);
@@ -89,6 +100,7 @@ export default function AddAcademicSetup({
   useEffect(() => {
     const loadOptions = async () => {
       if (userLoading || !userId) return;
+      setIsFetchingOptions(true);
 
       const { success: deptSuccess, data: deptData } =
         await fetchDegreeAndDepartments();
@@ -96,14 +108,31 @@ export default function AddAcademicSetup({
         setAcademicOptions(deptData);
       }
 
-      const { success: eduSuccess, data: eduType } =
-        await fetchAdminAssignedEducation(userId);
-      if (eduSuccess && eduType) {
-        setForm((prev) => ({
-          ...prev,
-          degree: eduType,
-        }));
+      // const { success: eduSuccess, data: eduType } =
+      //   await fetchAdminAssignedEducation(userId);
+      // if (eduSuccess && eduType) {
+      //   setForm((prev) => ({
+      //     ...prev,
+      //     degree: eduType,
+      //   }));
+      // }
+
+      try {
+        const adminEdus = await fetchAdminAssignedEducationsList(userId);
+        if (adminEdus.length > 0) {
+          setAvailableEducations(adminEdus);
+
+          if (!editData && adminEdus.length === 1) {
+            setForm((prev) => ({
+              ...prev,
+              degree: prev.degree || adminEdus[0].collegeEducationType
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load educations", err);
       }
+
       try {
         const adminCtx = await fetchAdminContext(userId);
         if (adminCtx?.collegeId) {
@@ -114,10 +143,13 @@ export default function AddAcademicSetup({
         }
       } catch (err) {
         console.error("Failed to load existing batches", err);
+      } finally {
+        setIsFetchingOptions(false);
       }
+      setIsFetchingOptions(false);
     };
     loadOptions();
-  }, [userId, userLoading]);
+  }, [userId, userLoading, editData]);
 
   useEffect(() => {
     if (form.degree && academicOptions[form.degree]) {
@@ -303,13 +335,31 @@ export default function AddAcademicSetup({
           <label className="block text-sm text-[#16284F] font-medium mb-1">
             Education Type <span className="text-red-500">*</span>
           </label>
-          <input
+          {/* <input
             type="text"
             value={form.degree || (userLoading ? "Loading..." : "")}
             disabled
             placeholder="Loading..."
             className="w-full border border-[#CCCCCC] bg-gray-50 text-gray-500 outline-none rounded-lg px-4 py-2 cursor-not-allowed"
-          />
+          /> */}
+          <div className="relative">
+            <select
+              value={form.degree}
+              onChange={(e) => setForm({ ...form, degree: e.target.value, dept: "" })}
+              className="w-full appearance-none border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2 focus:border-[#48C78E] focus:ring-1 focus:ring-[#48C78E]"
+            >
+              <option value="" disabled>{isFetchingOptions ? "Loading educations..." : "Select Education"}</option>
+              {availableEducations.map((edu) => (
+                <option key={edu.collegeEducationId} value={edu.collegeEducationType}>
+                  {edu.collegeEducationType}
+                </option>
+              ))}
+            </select>
+            <CaretDown
+              size={14}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+          </div>
         </div>
         <div>
           <label className="block text-sm text-[#16284F] font-medium mb-1">
@@ -437,7 +487,7 @@ export default function AddAcademicSetup({
                 onChange={(e) => handleSingleSelectChange("batch", e.target.value)}
                 className="w-full appearance-none border border-[#CCCCCC]  cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-1.5"
               >
-                <option value="">Select Batch (Optional)</option>
+                <option value="">{isFetchingOptions ? "Loading batches..." : "Select Batch (Optional)"}</option>
                 {availableBatches.map((opt) => (
                   <option key={opt} value={opt}>
                     {opt}

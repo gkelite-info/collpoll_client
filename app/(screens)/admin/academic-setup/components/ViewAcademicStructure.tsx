@@ -11,7 +11,8 @@ export type AcademicViewData = {
   degree: string;
   dept: string;
   branch: string;
-  year: any[];
+  // year: any[];
+  year: string;
   sections: any[];
   batch?: string;
 };
@@ -27,6 +28,7 @@ export default function ViewAcademicStructure({
   const [data, setData] = useState<AcademicViewData[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
@@ -34,17 +36,18 @@ export default function ViewAcademicStructure({
       if (adminLoading || !adminId) return;
       setIsFetching(true);
 
-      const mappedData = await fetchAdminBranchesWithDetails(adminId);
-      setData(mappedData);
-      setCurrentPage(1);
+      const response = await fetchAdminBranchesWithDetails(adminId, currentPage, ITEMS_PER_PAGE);
+      setData(response.data);
+      setTotalItems(response.total);
+      // setCurrentPage(1);
       setIsFetching(false);
     };
 
     loadData();
-  }, [adminId, adminLoading]);
+  }, [adminId, adminLoading, currentPage]);
 
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  // const currentData = data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   return (
     <div className="w-[85%] mx-auto bg-white rounded-md border overflow-hidden flex flex-col">
@@ -65,13 +68,13 @@ export default function ViewAcademicStructure({
             {isFetching ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={12}
                   className="p-8 text-center text-gray-400 h-[300px]"
                 >
                   <Loader />
                 </td>
               </tr>
-            ) : currentData.length === 0 ? (
+            ) : data.length === 0 ? (
               <tr>
                 <td
                   colSpan={5}
@@ -81,7 +84,7 @@ export default function ViewAcademicStructure({
                 </td>
               </tr>
             ) : (
-              currentData.map((row, i) => (
+              data.map((row, i) => (
                 <tr
                   key={i}
                   className="hover:bg-gray-50 text-gray-800 transition border-b border-gray-50 last:border-b-0"
@@ -89,18 +92,21 @@ export default function ViewAcademicStructure({
                   <td className="p-4">{row.degree}</td>
                   <td className="p-4">{row.dept}</td>
 
-                  <td className="p-4">
+                  {/* <td className="p-4">
                     {!row.year || row.year.length === 0
                       ? "-"
                       : row.year.map((y: any) => y.name || y).join(", ")}
-                  </td>
+                  </td> */}
+
+                  <td className="p-4">{row.year || "-"}</td>
 
                   <td className="p-4">{row.batch || "-"}</td>
 
                   <td className="p-4">
                     {!row.sections || row.sections.length === 0
                       ? "-"
-                      : row.sections.map((s: any) => s.name || s).join(", ")}
+                      // : row.sections.map((s: any) => s.name || s).join(", ")}
+                      : row.sections.join(", ")}
                   </td>
 
                   <td className="p-4">
@@ -121,7 +127,7 @@ export default function ViewAcademicStructure({
       {!isFetching && (
         <Pagination
           currentPage={currentPage}
-          totalItems={data.length}
+          totalItems={totalItems}
           itemsPerPage={ITEMS_PER_PAGE}
           onPageChange={setCurrentPage}
         />
