@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { X, CaretDown, Check } from "@phosphor-icons/react";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchDegreeAndDepartments, fetchAdminAssignedEducation } from "@/lib/helpers/admin/academicSetupAPI";
+import { fetchDegreeAndDepartments, fetchAdminAssignedEducation, fetchAvailableBatchesByCollege } from "@/lib/helpers/admin/academicSetupAPI";
 import toast, { Toaster } from "react-hot-toast";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { saveAcademicSetupMaster } from "@/lib/helpers/admin/academicSetup/academicSetupMasterAPI";
@@ -16,6 +16,7 @@ export type AcademicData = {
   dept: string;
   year: string;
   sections: string[];
+  batch?: string;
 };
 
 export default function AddAcademicSetup({
@@ -25,7 +26,7 @@ export default function AddAcademicSetup({
   editData: AcademicData | null;
   onSuccess?: () => void;
 }) {
-  const { userId, loading: userLoading } = useUser();
+  const { userId, loading: userLoading, adminId } = useUser();
 
   const [form, setForm] = useState<AcademicData>({
     degree: "",
@@ -33,12 +34,14 @@ export default function AddAcademicSetup({
     dept: "",
     year: "",
     sections: [],
+    batch: "",
   });
 
   const [academicOptions, setAcademicOptions] = useState<
     Record<string, string[]>
   >({});
   const [availableDepts, setAvailableDepts] = useState<string[]>([]);
+  const [availableBatches, setAvailableBatches] = useState<string[]>([]);
 
   const defaultSectionOptions = ["A", "B", "C", "D"];
 
@@ -48,16 +51,37 @@ export default function AddAcademicSetup({
   const [customMode, setCustomMode] = useState({
     dept: false,
     sections: false,
+    batch: false,
   });
   const [tempCustomInput, setTempCustomInput] = useState("");
   const { collegeEducationType } = useAdmin();
 
   useEffect(() => {
     if (editData) {
-      setForm({
-        ...editData,
-        year: editData.year ?? "",
-        sections: Array.isArray(editData.sections) ? editData.sections : [],
+      // setForm({
+      //   ...editData,
+      //   // year: editData.year ?? "",
+      //   // sections: Array.isArray(editData.sections) ? editData.sections : [],
+      //   year: Array.isArray(editData.year) ? (editData.year[0] || "") : (editData.year || ""),
+      //   sections: Array.isArray(editData.sections) ? editData.sections : [],
+      //   batch: editData.batch || "",
+      // });
+      
+      setForm((prev) => {
+        let safeBatch = "";
+        if (Array.isArray(editData.batch)) {
+          safeBatch = editData.batch[0] || "";
+        } else if (typeof editData.batch === "string") {
+          safeBatch = editData.batch;
+        }
+
+        return {
+          ...prev,
+          ...editData,
+          year: Array.isArray(editData.year) ? (editData.year[0] || "") : (editData.year || ""),
+          sections: Array.isArray(editData.sections) ? editData.sections : [],
+          batch: safeBatch.trim(),
+        };
       });
     }
   }, [editData]);
@@ -79,6 +103,17 @@ export default function AddAcademicSetup({
           ...prev,
           degree: eduType,
         }));
+      }
+      try {
+        const adminCtx = await fetchAdminContext(userId);
+        if (adminCtx?.collegeId) {
+          const existingBatches = await fetchAvailableBatchesByCollege(adminCtx.collegeId);
+          if (existingBatches.length > 0) {
+            setAvailableBatches(existingBatches);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load existing batches", err);
       }
     };
     loadOptions();
@@ -156,6 +191,7 @@ export default function AddAcademicSetup({
             code: form.dept.replace(/\s+/g, "").toUpperCase(),
             academicYear: form.year,
             sections: form.sections,
+            batch: form.batch,
           },
         },
         {
@@ -177,7 +213,7 @@ export default function AddAcademicSetup({
     }
   };
 
-  const handleSingleSelectChange = (field: "dept", value: string) => {
+  const handleSingleSelectChange = (field: "dept" | "batch", value: string) => {
     if (value === "+ other") {
       setCustomMode((prev) => ({ ...prev, [field]: true }));
       setTempCustomInput("");
@@ -197,7 +233,7 @@ export default function AddAcademicSetup({
     }
   };
 
-  const saveCustomInput = (field: "dept" | "sections") => {
+  const saveCustomInput = (field: "dept" | "sections" | "batch") => {
     if (!tempCustomInput.trim()) return;
 
     if (field === "sections") {
@@ -208,7 +244,14 @@ export default function AddAcademicSetup({
         }));
       }
       setCustomMode((prev) => ({ ...prev, sections: false }));
-    } else {
+    } else if (field === "batch") {
+      if (!availableBatches.includes(tempCustomInput)) {
+        setAvailableBatches((prev) => [...prev, tempCustomInput]);
+      }
+      setForm((prev) => ({ ...prev, batch: tempCustomInput }));
+      setCustomMode((prev) => ({ ...prev, batch: false }));
+    }
+    else {
       setForm((prev) => ({ ...prev, [field]: tempCustomInput }));
       setCustomMode((prev) => ({ ...prev, [field]: false }));
     }
@@ -216,13 +259,13 @@ export default function AddAcademicSetup({
     setTempCustomInput("");
   };
 
-  const cancelCustomInput = (field: "dept" | "sections") => {
+  const cancelCustomInput = (field: "dept" | "sections" | "batch") => {
     setCustomMode((prev) => ({ ...prev, [field]: false }));
     setTempCustomInput("");
   };
 
   const renderCustomInput = (
-    field: "dept" | "sections",
+    field: "dept" | "sections" | "batch",
     placeholder: string,
   ) => (
     <div className="flex items-center gap-2 w-full">
@@ -239,13 +282,13 @@ export default function AddAcademicSetup({
       />
       <button
         onClick={() => saveCustomInput(field)}
-        className="p-2 bg-[#D6F1E2] text-[#43C17A] rounded-lg hover:bg-[#c2e5d3]"
+        className="p-2 cursor-pointer bg-[#D6F1E2] text-[#43C17A] rounded-lg hover:bg-[#c2e5d3]"
       >
         <Check weight="bold" />
       </button>
       <button
         onClick={() => cancelCustomInput(field)}
-        className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100"
+        className="p-2 cursor-pointer bg-red-50 text-red-500 rounded-lg hover:bg-red-100"
       >
         <X weight="bold" />
       </button>
@@ -296,27 +339,33 @@ export default function AddAcademicSetup({
           {customMode.dept ? (
             renderCustomInput("dept", "Enter Branch Code")
           ) : (
-            <select
-              value={form.dept}
-              onChange={(e) => handleSingleSelectChange("dept", e.target.value)}
-              className="w-full border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2"
-              disabled={!form.degree}
-            >
-              <option value="" disabled>
-                {collegeEducationType === "Inter" ? "Select Group Code" : "Select Branch Code"}
-              </option>
-              {availableDepts.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
+            <div className="relative">
+              <select
+                value={form.dept}
+                onChange={(e) => handleSingleSelectChange("dept", e.target.value)}
+                className="w-full appearance-none border border-[#CCCCCC] cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-2"
+                disabled={!form.degree}
+              >
+                <option value="" disabled>
+                  {collegeEducationType === "Inter" ? "Select Group Code" : "Select Branch Code"}
                 </option>
-              ))}
-              {!availableDepts.includes(form.dept) && form.dept && (
-                <option value={form.dept}>{form.dept}</option>
-              )}
-              <option className="text-[#43C17A] font-semibold" value="+ other">
-                + Other
-              </option>
-            </select>
+                {availableDepts.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+                {!availableDepts.includes(form.dept) && form.dept && (
+                  <option value={form.dept}>{form.dept}</option>
+                )}
+                <option className="text-[#43C17A] font-semibold" value="+ other">
+                  + Other
+                </option>
+              </select>
+              <CaretDown
+                size={14}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+            </div>
           )}
         </div>
 
@@ -375,46 +424,80 @@ export default function AddAcademicSetup({
           )}
         </div>
 
-        <div className="flex flex-col justify-start">
-          <label className="block text-sm font-medium mb-1 opacity-0 pointer-events-none select-none">
-            Spacer
+        <div>
+          <label className="block text-sm text-[#16284F] font-medium mb-1">
+            Batch Type <span className="text-gray-400 font-normal ml-1">(Optional)</span>
           </label>
-          <button
-            onClick={handleSave}
-            disabled={
-              isLoading || userLoading || isFetchingExisting || !form.degree
-            }
-            className="bg-[#43C17A] w-full cursor-pointer text-white py-2 rounded-lg font-semibold hover:bg-[#3ab06e] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Saving...
-              </>
-            ) : (
-              "Save"
-            )}
-          </button>
+          {customMode.batch ? (
+            renderCustomInput("batch", "Enter Custom Batch")
+          ) : (
+            <div className="relative">
+              <select
+                value={form.batch || ""}
+                onChange={(e) => handleSingleSelectChange("batch", e.target.value)}
+                className="w-full appearance-none border border-[#CCCCCC]  cursor-pointer outline-none text-[#2D3748] rounded-lg px-4 py-1.5"
+              >
+                <option value="">Select Batch (Optional)</option>
+                {availableBatches.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+                {!availableBatches.includes(form.batch || "") && form.batch && (
+                  <option value={form.batch}>{form.batch}</option>
+                )}
+                <option className="text-[#43C17A] font-semibold" value="+ other">
+                  + Other
+                </option>
+              </select>
+              <CaretDown
+                size={14}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+            </div>
+          )}
         </div>
+
+      </div>
+      <div className="flex justify-center px-auto max-w-md mx-auto">
+        {/* <label className="block text-sm font-medium mb-1 opacity-0 pointer-events-none select-none">
+          Spacer
+        </label> */}
+        <button
+          onClick={handleSave}
+          disabled={
+            isLoading || userLoading || isFetchingExisting || !form.degree
+          }
+          className="bg-[#43C17A] mx-auto w-full cursor-pointer text-white py-2 rounded-lg font-semibold hover:bg-[#3ab06e] transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+        >
+          {isLoading ? (
+            <>
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Saving...
+            </>
+          ) : (
+            "Save"
+          )}
+        </button>
       </div>
     </div>
   );

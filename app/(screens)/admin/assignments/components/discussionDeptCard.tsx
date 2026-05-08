@@ -207,8 +207,7 @@ export default function DiscussionDeptCard({
     ? facultyPhotos
     : facultyList.map(
       (f) =>
-        f.avatar ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(f.name || "F")}&background=random&color=fff`,
+        f.avatar,
     );
 
   return (

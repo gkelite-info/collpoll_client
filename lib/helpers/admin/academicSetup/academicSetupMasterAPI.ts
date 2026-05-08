@@ -15,6 +15,7 @@ export async function saveAcademicSetupMaster(
             code: string;
             academicYear: string;
             sections: string[];
+            batch?: string;
         };
     },
     context: {
@@ -105,6 +106,53 @@ export async function saveAcademicSetupMaster(
         },
             context.adminId
         );
+    }
+
+    if (input.branch.batch?.trim()) {
+        const batchName = input.branch.batch.trim();
+
+        const { data: existingBatch } = await supabase
+            .from("college_batches")
+            .select("collegeBatchId")
+            .eq("collegeId", context.collegeId)
+            .eq("collegeEducationId", collegeEducationId)
+            .eq("collegeBranchId", collegeBranchId)
+            .eq("collegeAcademicYearId", collegeAcademicYearId)
+            .eq("collegeBatchName", batchName)
+            .is("deletedAt", null)
+            .maybeSingle();
+
+        if (existingBatch) {
+            const { error: updateError } = await supabase
+                .from("college_batches")
+                .update({ updatedAt: new Date().toISOString() })
+                .eq("collegeBatchId", existingBatch.collegeBatchId);
+
+            if (updateError) {
+                console.error("Batch update error:", updateError);
+                throw new Error("Failed to update batch details");
+            }
+        } else {
+            const { error: insertError } = await supabase
+                .from("college_batches")
+                .insert({
+                    collegeBatchName: batchName,
+                    collegeId: context.collegeId,
+                    collegeEducationId,
+                    collegeBranchId,
+                    collegeAcademicYearId,
+                    createdBy: context.adminId, 
+                    isActive: true,
+                    is_deleted: false,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                });
+
+            if (insertError) {
+                console.error("Batch insert error:", insertError);
+                throw new Error("Failed to save batch details");
+            }
+        }
     }
 
     return { success: true };

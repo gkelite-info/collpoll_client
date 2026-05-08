@@ -38,19 +38,36 @@ export async function fetchAdminBranchesWithDetails(adminId: number) {
 
     const branchIds = branches.map((b) => b.collegeBranchId);
 
-    const { data: years } = await supabase
-      .from("college_academic_year")
-      .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId")
-      .in("collegeBranchId", branchIds)
-      .eq("isActive", true)
-      .is("deletedAt", null);
+    // const { data: years } = await supabase
+    //   .from("college_academic_year")
+    //   .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId")
+    //   .in("collegeBranchId", branchIds)
+    //   .eq("isActive", true)
+    //   .is("deletedAt", null);
 
-    const { data: sections } = await supabase
-      .from("college_sections")
-      .select("collegeSectionsId, collegeSections, collegeBranchId")
-      .in("collegeBranchId", branchIds)
-      .eq("isActive", true)
-      .is("deletedAt", null);
+    // const { data: sections } = await supabase
+    //   .from("college_sections")
+    //   .select("collegeSectionsId, collegeSections, collegeBranchId")
+    //   .in("collegeBranchId", branchIds)
+    //   .eq("isActive", true)
+    //   .is("deletedAt", null);
+
+    // const { data: batches } = await supabase
+    //   .from("college_batches")
+    //   .select("collegeBatchId, collegeBatchName, collegeBranchId")
+    //   .in("collegeBranchId", branchIds)
+    //   .eq("isActive", true)
+    //   .is("deletedAt", null);
+
+    const [yearsRes, sectionsRes, batchesRes] = await Promise.all([
+      supabase.from("college_academic_year").select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_sections").select("collegeSectionsId, collegeSections, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null),
+      supabase.from("college_batches").select("collegeBatchId, collegeBatchName, collegeBranchId").in("collegeBranchId", branchIds).eq("isActive", true).is("deletedAt", null)
+    ]);
+
+    const years = yearsRes.data || [];
+    const sections = sectionsRes.data || [];
+    const batches = batchesRes.data || [];
 
     return branches.map((branch: any) => {
       const branchYears =
@@ -60,11 +77,21 @@ export async function fetchAdminBranchesWithDetails(adminId: number) {
         sections?.filter((s) => s.collegeBranchId === branch.collegeBranchId) ||
         [];
 
+      const branchBatches = batches?.filter((b) => b.collegeBranchId === branch.collegeBranchId) || [];
+
       const uniqueYears = Array.from(
         new Set(branchYears.map((y) => y.collegeAcademicYear)),
       );
       const uniqueSections = Array.from(
         new Set(branchSections.map((s) => s.collegeSections).filter(Boolean)),
+      );
+
+      const uniqueBatches = Array.from(
+        new Set(
+          branchBatches
+            .map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "")
+            .filter(Boolean)
+        )
       );
 
       return {
@@ -74,10 +101,35 @@ export async function fetchAdminBranchesWithDetails(adminId: number) {
         dept: branch.collegeBranchCode,
         year: uniqueYears,
         sections: uniqueSections,
+        batch: uniqueBatches[0] || "",
       };
     });
   } catch (err) {
     console.error("Error fetching admin branches:", err);
+    return [];
+  }
+}
+
+export async function fetchAvailableBatchesByCollege(collegeId: number) {
+  try {
+    const { data: batches, error } = await supabase
+      .from("college_batches")
+      .select("collegeBatchName")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (error || !batches) return [];
+
+    return Array.from(
+      new Set(
+        batches
+          .map((b) => typeof b.collegeBatchName === "string" ? b.collegeBatchName.trim() : "")
+          .filter(Boolean)
+      )
+    );
+  } catch (err) {
+    console.error("Error fetching available batches:", err);
     return [];
   }
 }

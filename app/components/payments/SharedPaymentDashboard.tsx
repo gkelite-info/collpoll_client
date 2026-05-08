@@ -177,7 +177,7 @@ export default function SharedPaymentDashboard({
           rollNo={identifierId!}
           email={profile.email}
           mobile={profile.mobile}
-          image={profilePhoto ? profilePhoto : "/rahul.png"}
+          image={profilePhoto!}
         />
       )}
 

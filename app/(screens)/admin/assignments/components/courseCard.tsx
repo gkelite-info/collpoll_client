@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface CourseCardData {
   id: number;
@@ -56,11 +57,12 @@ const CourseCard: React.FC<CourseCardData> = ({
 
       <div className="flex items-center mb-3 px-1">
         <div className="w-12 h-12 mr-3 flex-shrink-0">
-          <img
+          {/* <img
             src={avatarUrl}
             alt={instructorName}
             className="w-full h-full rounded-full object-cover"
-          />
+          /> */}
+          <Avatar src={avatarUrl} size={48} alt={instructorName}/>
         </div>
         <div>
           <p className="text-[#282828] font-bold text-base leading-tight">

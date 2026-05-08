@@ -68,15 +68,6 @@ export const EXEMPTED_ROUTES = [
   "/construction",
   "/api",
   "/_next",
-  "/public",
-  // "/favicon.ico",
-  "/dashboard-banner-bg.png",
-  "/login-logo.png",
-  "/tekton-final-logo.png",
-  "/AI Robot.png",
-  "/bot.png",
-  "/ai-bot.png",
-  "/logo-secondary.png"
 ];
 
 /**
@@ -194,6 +185,8 @@ export const isLegacyStudentRoute = (pathname: string): boolean => {
  * Check if a route should be exempted from protection checks
  */
 export const isExemptedRoute = (pathname: string): boolean => {
+  const staticFileRegex = /\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|css|js)$/i;
+  if (staticFileRegex.test(pathname)) return true;
   return EXEMPTED_ROUTES.some((route) => pathname.includes(route));
 };
 
