@@ -19,6 +19,7 @@ export async function createStudent(
     entryType: "Regular" | "Lateral" | "Transfer";
     status?: "Active" | "Inactive";
     collegeId: number;
+    batch?: string | null;
   },
   timestamp: string,
 ): Promise<number> {

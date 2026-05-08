@@ -13,6 +13,7 @@ export type AcademicViewData = {
   branch: string;
   year: any[];
   sections: any[];
+  batch?: string;
 };
 
 const ITEMS_PER_PAGE = 10;
@@ -54,6 +55,7 @@ export default function ViewAcademicStructure({
               <th className="p-4 text-left">Education Type</th>
               <th className="p-4 text-left">{collegeEducationType === "Inter" ? "Group Code" : "Branch Code"}</th>
               <th className="p-4 text-left">Year</th>
+              <th className="p-4 text-left">Batch</th>
               <th className="p-4 text-left">Sections</th>
               <th className="p-4 text-left">Actions</th>
             </tr>
@@ -92,6 +94,8 @@ export default function ViewAcademicStructure({
                       ? "-"
                       : row.year.map((y: any) => y.name || y).join(", ")}
                   </td>
+
+                  <td className="p-4">{row.batch || "-"}</td>
 
                   <td className="p-4">
                     {!row.sections || row.sections.length === 0

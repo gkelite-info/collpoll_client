@@ -55,14 +55,14 @@ const validatePassword = (password: string) => {
   return null;
 };
 
-const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(-[A-Za-z0-9]+)?$/;
+const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+){0,2}$/;
 
 const validateIdentifier = (value: string) => {
   if (!value?.trim()) {
     return "is required.";
   }
   if (value.length < 6 || value.length > 15 || !IDENTIFIER_REGEX.test(value)) {
-    return "Must be 6–15 characters and include at least one number. Only letters, numbers and one hyphen (-) allowed.";
+    return "Must be 6–15 characters and include at least one number. Only letters, numbers and up to two hyphen (-) allowed.";
   }
 
   return null;
@@ -111,6 +111,7 @@ const AddUserModal: React.FC<{
     dateOfJoining: "",
     professionalExperienceYears: undefined as number | undefined,
     identifierValue: "",
+    batch: "",
   };
   const [basicData, setBasicData] = useState<any>(initialBasicData);
 
@@ -270,10 +271,20 @@ const AddUserModal: React.FC<{
     [dbData.branches, selectedEducation],
   );
 
-  const filteredYears = useMemo(
-    () => dbData.years.filter((y) => y.collegeBranchId == selectedBranchId),
-    [dbData.years, selectedBranchId],
-  );
+  // const filteredYears = useMemo(
+  //   () => dbData.years.filter((y) => y.collegeBranchId == selectedBranchId),
+  //   [dbData.years, selectedBranchId],
+  // );
+
+  const filteredYears = useMemo(() => {
+    const years = dbData.years.filter((y) => y.collegeBranchId == selectedBranchId);
+    return years.sort((a, b) => {
+      // Parses "1st Year" -> 1, "2nd Year" -> 2, allowing mathematical sorting
+      const numA = parseInt(a.collegeAcademicYear) || 0;
+      const numB = parseInt(b.collegeAcademicYear) || 0;
+      return numA - numB;
+    });
+  }, [dbData.years, selectedBranchId]);
 
   const filteredSubjects = useMemo(
     () =>
@@ -281,11 +292,20 @@ const AddUserModal: React.FC<{
     [dbData.subjects, selectedYearId],
   );
 
-  const filteredSections = useMemo(
-    () =>
-      dbData.sections.filter((s) => s.collegeAcademicYearId == selectedYearId),
-    [dbData.sections, selectedYearId],
-  );
+  // const filteredSections = useMemo(
+  //   () =>
+  //     dbData.sections.filter((s) => s.collegeAcademicYearId == selectedYearId),
+  //   [dbData.sections, selectedYearId],
+  // );
+
+  const filteredSections = useMemo(() => {
+    const rawSections = dbData.sections.filter(
+      (s) => s.collegeAcademicYearId == selectedYearId
+    );
+    return Array.from(
+      new Map(rawSections.map((s) => [s.collegeSections, s])).values()
+    );
+  }, [dbData.sections, selectedYearId]);
 
   const studentSelectedEducation = useMemo(
     () =>
@@ -315,15 +335,29 @@ const AddUserModal: React.FC<{
     [studentAvailableBranches, selectedDepts],
   );
 
-  const studentAvailableYears = useMemo(
-    () =>
-      studentSelectedBranch
-        ? dbData.years.filter(
-          (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
-        )
-        : [],
-    [studentSelectedBranch, dbData.years],
-  );
+  // const studentAvailableYears = useMemo(
+  //   () =>
+  //     studentSelectedBranch
+  //       ? dbData.years.filter(
+  //         (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+  //       )
+  //       : [],
+  //   [studentSelectedBranch, dbData.years],
+  // );
+
+  const studentAvailableYears = useMemo(() => {
+    if (!studentSelectedBranch) return [];
+    
+    const years = dbData.years.filter(
+      (y) => y.collegeBranchId === studentSelectedBranch.collegeBranchId,
+    );
+    
+    return years.sort((a, b) => {
+      const numA = parseInt(a.collegeAcademicYear) || 0;
+      const numB = parseInt(b.collegeAcademicYear) || 0;
+      return numA - numB;
+    });
+  }, [studentSelectedBranch, dbData.years]);
 
   const studentSelectedYear = useMemo(
     () =>
@@ -345,17 +379,29 @@ const AddUserModal: React.FC<{
     [studentSelectedYear, dbData.semesters],
   );
 
-  const studentAvailableSections = useMemo(
-    () =>
-      studentSelectedYear
-        ? dbData.sections.filter(
-          (s) =>
-            s.collegeAcademicYearId ===
-            studentSelectedYear.collegeAcademicYearId,
-        )
-        : [],
-    [studentSelectedYear, dbData.sections],
-  );
+  // const studentAvailableSections = useMemo(
+  //   () =>
+  //     studentSelectedYear
+  //       ? dbData.sections.filter(
+  //         (s) =>
+  //           s.collegeAcademicYearId ===
+  //           studentSelectedYear.collegeAcademicYearId,
+  //       )
+  //       : [],
+  //   [studentSelectedYear, dbData.sections],
+  // );
+
+  const studentAvailableSections = useMemo(() => {
+    if (!studentSelectedYear) return [];
+    const rawSections = dbData.sections.filter(
+      (s) =>
+        s.collegeAcademicYearId ===
+        studentSelectedYear.collegeAcademicYearId,
+    );
+    return Array.from(
+      new Map(rawSections.map((s) => [s.collegeSections, s])).values()
+    );
+  }, [studentSelectedYear, dbData.sections]);
 
   const handleBasicChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -385,8 +431,14 @@ const AddUserModal: React.FC<{
     } else if (name === "identifierValue") {
       const sanitized = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
       const hyphenCount = (sanitized.match(/-/g) || []).length;
-      if (hyphenCount > 1) return;
+      // if (hyphenCount > 1) return;
+      // formattedValue = sanitized;
+      if (hyphenCount > 2 || sanitized.includes("--")) return;
       formattedValue = sanitized;
+    } else if (name === "batch") {
+      const alphanumeric = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+      if (alphanumeric.length > 5) return;
+      formattedValue = alphanumeric;
     }
 
     setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
@@ -698,6 +750,7 @@ const AddUserModal: React.FC<{
             createdBy: basicData.adminId,
             entryType: selectedEntryType[0] as any,
             status: "Active",
+            batch: basicData.batch || null,
           },
           timestamp,
         );
@@ -1164,8 +1217,15 @@ const AddUserModal: React.FC<{
                   const blockFilteredSubjects = dbData.subjects.filter(
                     (s) => s.collegeAcademicYearId == block.yearId,
                   );
-                  const blockFilteredSections = dbData.sections.filter(
+                  // const blockFilteredSections = dbData.sections.filter(
+                  //   (s) => s.collegeAcademicYearId == block.yearId,
+                  // );
+
+                  const rawBlockSections = dbData.sections.filter(
                     (s) => s.collegeAcademicYearId == block.yearId,
+                  );
+                  const blockFilteredSections = Array.from(
+                    new Map(rawBlockSections.map((s) => [s.collegeSections, s])).values()
                   );
 
                   return (
@@ -1400,6 +1460,20 @@ const AddUserModal: React.FC<{
                     onChange={(v) => handleSingleSelect(v, setSelectedSections)}
                     onRemove={() => setSelectedSections([])}
                   />
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Batch <span className="text-gray-400 font-normal ml-1">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="batch"
+                      value={basicData.batch}
+                      onChange={handleBasicChange}
+                      placeholder="e.g. LU"
+                      maxLength={5}
+                      className="w-full border border-gray-200 rounded-md px-3 py-2 mt-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                  </div>
                   <CustomMultiSelect
                     label="Entry Type"
                     placeholder="Select Entry Type"

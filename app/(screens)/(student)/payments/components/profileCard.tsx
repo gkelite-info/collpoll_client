@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import { useTranslations } from "next-intl";
 
 type ProfileCardProps = {
@@ -25,11 +26,12 @@ export default function ProfileCard({
 
   return (
     <div className="flex rounded-xl bg-white p-6 shadow-sm mb-8 items-center gap-6">
-      <img
+      {/* <img
         src={image}
         alt={name}
         className="h-28 w-28 rounded-full object-cover"
-      />
+      /> */}
+      <Avatar src={image} size={112} alt={name} />
 
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-[#1F2937]">{name}</h2>

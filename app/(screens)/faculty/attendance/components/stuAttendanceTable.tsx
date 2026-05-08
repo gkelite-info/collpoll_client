@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import {
   ClassOption,
   SectionOption,
@@ -470,7 +471,7 @@ export default function StuAttendanceTable({
                       <span className="text-[#43C17A]">ID </span> - {s.roll}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {s.photo ? (
+                      {/* {s.photo ? (
                         <img
                           src={s.photo}
                           className="h-7 w-7 rounded-full border border-gray-200 object-cover"
@@ -480,7 +481,8 @@ export default function StuAttendanceTable({
                         <div className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 bg-indigo-500 text-xs font-medium text-white">
                           {s.name?.charAt(0).toUpperCase()}
                         </div>
-                      )}
+                      )} */}
+                      <Avatar src={s.photo} size={28} alt={s.name}/>
                     </td>
                     <td className="px-3 py-2 font-semibold text-gray-800 whitespace-nowrap">
                       {s.name}
