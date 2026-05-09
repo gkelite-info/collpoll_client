@@ -26,33 +26,39 @@ export function FolderCard({
   return (
     <div
       style={{ backgroundColor: `${color}26` }}
-      className="relative flex min-w-[200px] flex-col rounded-md p-2 cursor-pointer"
+      className="relative flex min-w-[200px] flex-col rounded-md p-2 cursor-pointer max-md:min-w-0 max-md:rounded-xl max-md:h-[110px]"
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center justify-center">
-          <Folder size={60} weight="fill" color={color} />
+          {/* Responsive Icon Sizes */}
+          <div className="hidden md:block">
+            <Folder size={60} weight="fill" color={color} />
+          </div>
+          <div className="block md:hidden">
+            <Folder size={48} weight="fill" color={color} />
+          </div>
         </div>
 
-        <div className="relative">
+        <div className="relative mt-1">
           <button
             type="button"
-            className="text-[#94A3B8] cursor-pointer hover:text-[#64748B]"
+            className="text-[#94A3B8] cursor-pointer hover:text-[#64748B] p-1"
             onClick={(e) => {
               e.stopPropagation();
               setOpenMenu((prev) => !prev);
             }}
           >
-            <DotsThreeOutlineVertical size={14} weight="fill" />
+            <DotsThreeOutlineVertical size={16} weight="fill" />
           </button>
 
           {openMenu && (
             <div
-              className="absolute right-0 mt-2 w-32 rounded-lg border border-gray-100 bg-white text-xs shadow-lg z-20"
+              className="absolute right-0 mt-1 w-32 rounded-lg border border-gray-100 bg-white text-xs shadow-lg z-20 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                className="block w-full px-3 py-2 text-left text-black hover:bg-gray-50 cursor-pointer"
+                className="block w-full px-4 py-2.5 text-left font-medium text-black hover:bg-gray-50 cursor-pointer"
                 onClick={() => {
                   onRename();
                   setOpenMenu(false);
@@ -61,7 +67,7 @@ export function FolderCard({
                 {t("Rename")}
               </button>
               <button
-                className="block w-full px-3 py-2 text-left text-red-500 hover:bg-red-50 cursor-pointer"
+                className="block w-full px-4 py-2.5 text-left font-medium text-red-500 hover:bg-red-50 cursor-pointer"
                 onClick={() => {
                   onDelete();
                   setOpenMenu(false);
@@ -74,9 +80,11 @@ export function FolderCard({
         </div>
       </div>
 
-      <div className="mt-auto px-1">
-        <p className="text-sm font-semibold text-[#0F172A]">{name}</p>
-        <p className="mt-1 text-xs text-[#94A3B8]">
+      <div className="mt-auto px-1 max-md:px-0">
+        <p className="text-sm font-semibold text-[#0F172A] truncate max-md:text-[13px]">
+          {name}
+        </p>
+        <p className="mt-1 text-xs text-[#94A3B8] max-md:text-[10px]">
           {t("{count} Files", { count: filesCount })} · {sizeLabel}
         </p>
       </div>

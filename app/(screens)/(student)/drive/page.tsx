@@ -202,7 +202,7 @@ const Page = () => {
         setLoadingFolders(false);
         setLoadingFiles(false);
       });
-  }, [collegeId, userId, currentPage]);
+  }, [collegeId, userId, currentPage, t]);
 
   const sortedFolders = [...folders].sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
@@ -216,6 +216,7 @@ const Page = () => {
     return 0;
   });
 
+  // Action Logic functions preserved exactly as requested
   const handleCreateFolder = async (data: { name: string; color: string }) => {
     if (!collegeId || !userId) {
       showToast(t("Missing college or user info"), "error");
@@ -546,12 +547,12 @@ const Page = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden max-md:bg-[#F4F5F6]">
       <style>{`
-                @keyframes shimmer {
-                    100% { transform: translateX(100%); }
-                }
-            `}</style>
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+      `}</style>
 
       {toastState && (
         <div
@@ -581,19 +582,19 @@ const Page = () => {
         onFilesChanged={handleFilesChanged}
       />
 
-      <div className="bg-[#F5F5F5] px-4 pt-4 pb-3 shrink-0 sticky top-0 z-10">
+      <div className="bg-[#F5F5F5] max-md:bg-[#F4F5F6] px-4 pt-4 pb-3 shrink-0 sticky top-0 z-10">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h1 className="text-2xl font-semibold text-[#282828]">
+            <h1 className="text-2xl font-semibold text-[#282828] max-md:text-[22px]">
               {t("Drive")}
             </h1>
-            <p className="text-[#282828]">
+            <p className="text-[#282828] max-md:text-sm max-md:text-gray-600">
               {t(
                 "Manage, organize & monitor all academic and administrative files",
               )}
             </p>
           </div>
-          <article className="flex w-[32%] justify-end">
+          <article className="flex w-[32%] justify-end max-md:hidden">
             <CourseScheduleCard style="w-[320px]" />
           </article>
         </div>
@@ -607,33 +608,25 @@ const Page = () => {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6">
-        <section className="mt-6">
-          <h2 className="text-md font-semibold text-[#282828]">
+      <div className="flex-1 overflow-y-auto px-4 pb-6 max-md:pb-24">
+        <section className="mt-6 max-md:mt-4">
+          <h2 className="text-md font-semibold text-[#282828] mb-2 max-md:text-[17px]">
             {t("Folders")}
           </h2>
 
           {loadingFolders ? (
-            <div className="mt-2 flex gap-4">
+            <div className="mt-2 flex gap-4 max-md:grid max-md:grid-cols-2 max-md:gap-3">
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex min-w-[200px] flex-col rounded-md p-2 bg-gray-100 h-[130px]"
+                  className="relative overflow-hidden flex min-w-[200px] max-md:min-w-0 flex-col rounded-md p-2 bg-gray-100 h-[130px] max-md:h-[110px] max-md:rounded-xl"
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-                  <div className="flex items-start justify-between">
-                    <div className="w-14 h-14 rounded-lg bg-gray-200" />
-                    <div className="w-3 h-6 rounded bg-gray-200" />
-                  </div>
-                  <div className="mt-auto px-1 flex flex-col gap-1">
-                    <div className="h-3 w-3/4 rounded bg-gray-200" />
-                    <div className="h-2.5 w-1/2 rounded bg-gray-200" />
-                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="mt-2 flex gap-4 overflow-x-auto pb-2">
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-2 max-md:grid max-md:grid-cols-2 max-md:gap-3 max-md:overflow-visible">
               {sortedFolders.map((f) => (
                 <FolderCard
                   key={f.driveFolderId}
@@ -655,29 +648,24 @@ const Page = () => {
           )}
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-md font-semibold text-[#282828]">
+        <section className="mt-6 max-md:mt-5">
+          <h2 className="text-md font-semibold text-[#282828] mb-2 max-md:text-[17px]">
             {t("Recent")}
           </h2>
 
           {loadingFiles ? (
-            <div className="mt-2 flex gap-4">
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-1">
               {[...Array(4)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex items-center min-w-[220px] rounded-md bg-gray-100 p-3 gap-2"
+                  className="relative overflow-hidden flex items-center min-w-[220px] rounded-md bg-gray-100 p-3 gap-2 h-16 max-md:rounded-xl"
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-                  <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0" />
-                  <div className="flex flex-col gap-2 flex-1">
-                    <div className="h-3 w-3/4 rounded bg-gray-200" />
-                    <div className="h-2.5 w-1/2 rounded bg-gray-200" />
-                  </div>
                 </div>
               ))}
             </div>
           ) : recentViewed.length > 0 ? (
-            <div className="mt-2 flex gap-4 overflow-x-scroll pb-1">
+            <div className="mt-2 flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
               {recentViewed.slice(0, 10).map((file) => (
                 <RecentFileCard
                   key={file.driveFileId}
@@ -695,24 +683,21 @@ const Page = () => {
           )}
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-md font-semibold text-[#282828]">
+        <section className="mt-6 max-md:mt-5">
+          <h2 className="text-md font-semibold text-[#282828] mb-2 max-md:text-[17px]">
             {t("All Files")}
           </h2>
 
           {loadingFiles ? (
-            <div className="mt-2 rounded-2xl bg-white overflow-hidden">
+            <div className="mt-2 rounded-2xl bg-white overflow-hidden max-md:bg-transparent">
               {[...Array(5)].map((_, i) => (
                 <div
                   key={i}
-                  className="relative overflow-hidden flex gap-4 px-4 py-3 border-b border-gray-100"
+                  className="relative overflow-hidden flex gap-4 px-4 py-3 border-b border-gray-100 max-md:bg-white max-md:rounded-xl max-md:mb-2 max-md:border-none"
                 >
                   <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
                   <div className="h-4 flex-[3] rounded bg-gray-200" />
-                  <div className="h-4 flex-1 rounded bg-gray-200" />
-                  <div className="h-4 flex-1 rounded bg-gray-200" />
-                  <div className="h-4 flex-[1.5] rounded bg-gray-200" />
-                  <div className="h-8 w-16 rounded bg-gray-200" />
+                  <div className="h-4 flex-1 rounded bg-gray-200 max-md:hidden" />
                 </div>
               ))}
             </div>
