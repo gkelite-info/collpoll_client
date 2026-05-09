@@ -120,6 +120,7 @@ export const FacultyProvider = ({ children }: { children: React.ReactNode }) => 
                 setState((s) => ({ ...s, loading: false }));
             }
         };
+        
 
         loadFaculty();
     }, [userId, role, userLoading]);

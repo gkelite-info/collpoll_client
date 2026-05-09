@@ -2,8 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import FinanceDashLeft from "./components/left";
-import FinanceDashRight from "./components/right";
+import CollegeAdminDashLeft from "./components/left";
+import CollegeAdminDashRight from "./components/right";
 
 export function DashboardContent() {
   const searchParams = useSearchParams();
@@ -18,9 +18,9 @@ export function DashboardContent() {
   // }
 
   return (
-    <main className="flex w-full min-h-screen pb-4">
-      <FinanceDashLeft />
-      <FinanceDashRight />
+    <main className="flex w-full min-h-screen overflow-hidden pb-4">
+      <CollegeAdminDashLeft />
+      <CollegeAdminDashRight />
     </main>
   );
 }

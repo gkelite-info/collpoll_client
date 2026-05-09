@@ -66,7 +66,7 @@ export default function StaffOnboardingView() {
   };
 
   return (
-    <div className="rounded-xl p-4 w-full h-full min-h-[80vh] flex flex-col">
+    <div className="rounded-xl p-4 w-full h-full min-h-[80vh] flex flex-col pb-7 lg:pb-0">
       {selectedUser && (
         <AddEmployeeModal
           isOpen={isModalOpen}
@@ -87,9 +87,9 @@ export default function StaffOnboardingView() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-100 flex flex-col flex-1">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse text-[13px]">
-            <thead>
+        <div className="overflow-x-auto w-full rounded-lg">
+          <table className="w-full text-left border-collapse text-[13px] rounded-lg">
+            <thead className="rounded-t-lg">
               <tr className="bg-[#F2F2F2] text-[#333]">
                 <th className="py-3 px-4 font-bold whitespace-nowrap">Name</th>
                 <th className="py-3 px-4 font-bold whitespace-nowrap">
@@ -102,10 +102,10 @@ export default function StaffOnboardingView() {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="rounded-b-lg">
               {isLoading ? (
                 [...Array(LIMIT)].map((_, i) => (
-                  <tr key={i} className="border-b border-gray-50">
+                  <tr key={i} className="border-b border-gray-50 rounded-b-lg">
                     <td className="py-3 px-4">
                       <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
                     </td>
@@ -180,6 +180,7 @@ export default function StaffOnboardingView() {
             totalItems={totalCount}
             itemsPerPage={LIMIT}
             onPageChange={setCurrentPage}
+            roundedBottom="rounded-b-lg"
           />
         )}
       </div>

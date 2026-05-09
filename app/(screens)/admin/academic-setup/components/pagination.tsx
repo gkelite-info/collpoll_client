@@ -5,6 +5,7 @@ interface PaginationProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  roundedBottom?: string;
 }
 
 export function Pagination({
@@ -12,6 +13,7 @@ export function Pagination({
   totalItems,
   itemsPerPage,
   onPageChange,
+  roundedBottom
 }: PaginationProps) {
   if (totalItems <= itemsPerPage) return null;
 
@@ -34,7 +36,7 @@ export function Pagination({
   );
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-auto">
+    <div className={`flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-auto ${roundedBottom}`}>
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700">
@@ -72,11 +74,10 @@ export function Pagination({
               <button
                 key={page}
                 onClick={() => onPageChange(page)}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 cursor-pointer ${
-                  currentPage === page
+                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 cursor-pointer ${currentPage === page
                     ? "z-10 bg-[#16284F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43C17A]"
                     : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
-                }`}
+                  }`}
               >
                 {page}
               </button>

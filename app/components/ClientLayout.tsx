@@ -18,6 +18,8 @@ import TaskModal from "./modals/taskModal";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
 import AddUserModal from "../(screens)/admin/(dashboard)/components/modal/addUserModal";
+import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
+import TaskPanelModal from "../utils/taskPanelModal";
 
 export default function ClientLayout({
   children,
@@ -25,12 +27,13 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { role, facultyId } = useUser();
+  const { role, facultyId, studentId } = useUser();
   const { subjectIds } = useFaculty();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [openTaskPanelModal, setOpenTaskPanelModal] = useState(false);
 
   const handleMenuClick = () => {
     setIsSidebarOpen(prev => !prev);
@@ -86,11 +89,11 @@ export default function ClientLayout({
     if (pathname === "/placement" || pathname.startsWith("/placement/")) {
       return <PlacementNavbar />;
     }
-    if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar />;
+    if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar onClose={onClose} />;
     if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
     if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar onClose={onClose} />;
-    if (pathname.startsWith("/hr")) return <HrNavbar />;
+    if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
     return <StudentNavbar />;
   };
 
@@ -125,6 +128,34 @@ export default function ClientLayout({
     }
   };
 
+  const handleSaveStudentTask = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number,
+  ) => {
+    if (!studentId) {
+      throw new Error("Student context not loaded");
+    }
+
+    const result = await saveStudentTask({
+      studentTaskId: taskId,
+      taskTitle: payload.title,
+      description: payload.description,
+      date: payload.dueDate,
+      time: payload.dueTime,
+    },
+      studentId,
+    );
+
+    if (!result.success) {
+      throw new Error("Failed to save student task");
+    }
+  };
+
   return (
     <>
       <Toaster
@@ -136,6 +167,7 @@ export default function ClientLayout({
       {shouldHideLayout ? (
         <>{children}</>
       ) : (
+        // <div className="flex h-screen w-screen overflow-hidden justify-between">
         <div className="flex h-screen w-screen overflow-hidden justify-between">
           <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">{renderNavbar()}</div>
 
@@ -154,16 +186,26 @@ export default function ClientLayout({
             </div>
           )}
 
-          <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]">
-            <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]">
+          {/* <div className="bg-yellow-00 flex flex-col h-full w-[100%] md:w-[100%] lg:w-[83%]"> */}
+          <div className="flex flex-col min-h-screen w-full lg:w-[83%]">
+            {/* <div className="bg-red-00 h-[100px] landscape:h-[110px] md:h-[120px] md:landscape:h-[120px] lg:h-[13%] lg:landscape:h-[13%] flex justify-end bg-[#F4F4F4]"> */}
+            <div className="shrink-0 h-auto w-full lg:h-[13%] flex justify-end bg-[#F4F4F4] z-40">
               <Header
                 onMenuClick={handleMenuClick}
-                onAddTaskClick={() => setIsAddTaskOpen(true)}
+                // onAddTaskClick={() => setIsAddTaskOpen(true)}
+                onAddTaskClick={() => {
+                  if (role === "Student") {
+                    setOpenTaskPanelModal(true);
+                  } else {
+                    setIsAddTaskOpen(true);
+                  }
+                }}
                 onAddUserClick={() => setIsAddUserOpen(true)}
               />
             </div>
 
-            <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2">
+            {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
+            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain">
               {children}
             </div>
           </div>
@@ -171,11 +213,35 @@ export default function ClientLayout({
             <TaskModal
               open={isAddTaskOpen}
               onClose={() => setIsAddTaskOpen(false)}
-              onSave={handleSaveTask}
-              role="faculty"
-              facultyId={facultyId!}
+              // onSave={handleSaveTask}
+              onSave={
+                role === "Student"
+                  ? handleSaveStudentTask
+                  : handleSaveTask
+              }
+              // role="faculty"
+              // facultyId={facultyId!}
+              role={role === "Student" ? "student" : "faculty"}
+              facultyId={role === "Faculty" ? facultyId! : undefined}
+              studentId={role === "Student" ? studentId! : undefined}
             />
           )}
+
+          <TaskPanelModal
+            open={openTaskPanelModal}
+            onClose={() => {
+              setOpenTaskPanelModal(false);
+            }}
+            role={role === "Faculty" ? "faculty" : "student"}
+            studentId={studentId ?? undefined}
+            facultyId={facultyId ?? undefined}
+            onSaveTask={
+              role === "Faculty"
+                ? handleSaveTask
+                : handleSaveStudentTask
+            }
+          />
+
           {isAddUserOpen && (
             <AddUserModal
               isOpen={isAddUserOpen}

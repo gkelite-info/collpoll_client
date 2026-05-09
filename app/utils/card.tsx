@@ -145,7 +145,7 @@ type CardProps = {
 };
 
 export default function CardComponent({
-  style = "bg-white h-32 w-44",
+  style = "bg-white h-32 w-full",
   inlineStyle,
   isActive,
   textSize,

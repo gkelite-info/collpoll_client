@@ -336,7 +336,7 @@ export default function StudentListView({ onBack }: Props) {
           <CardsShimmer />
         ) : (
           <div
-            className="flex gap-3 mb-5 overflow-x-auto"
+            className="flex gap-3 mb-5 overflow-x-auto custom-scrollbar pb-3 landscape:pb-3 lg:pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {STAT_DEFS.map((def) => (
@@ -361,7 +361,7 @@ export default function StudentListView({ onBack }: Props) {
             {[...Array(3)].map((_, i) => <div key={i} className="min-w-[280px] h-[260px] flex-shrink-0 animate-pulse bg-gray-200 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="flex gap-4 overflow-y-hidden overflow-x-auto p-2 mb-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex gap-4 overflow-y-hidden overflow-x-auto custom-scrollbar p-2 mb-4 pb-3 landscape:pb-3 lg:pb-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {(data?.distributions ?? []).map((dist) => (
               <div key={dist.collegeEducationId}
                 onClick={() => { setSelectedEduId(dist.collegeEducationId); setSelectedBranch("All"); setSelectedYear("All"); setSelectedAdmin("All"); setCurrentPage(1); }}
@@ -429,7 +429,7 @@ export default function StudentListView({ onBack }: Props) {
           </div>
         </div>
 
-        <div className="w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
+        <div className="w-full md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
           <input type="text" placeholder="Search by Student Name or ID"
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"

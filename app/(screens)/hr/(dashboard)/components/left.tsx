@@ -104,6 +104,7 @@ function Shimmer({ className }: { className?: string }) {
     </div>
   );
 }
+
 function CardShimmer() {
   return (
     <div className="flex gap-3 w-full">
@@ -118,6 +119,7 @@ function CardShimmer() {
     </div>
   );
 }
+
 function ChartShimmer() {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5">
@@ -138,6 +140,7 @@ function ChartShimmer() {
     </div>
   );
 }
+
 function TableShimmer({
   rows = 5,
   cols = 6,
@@ -226,7 +229,7 @@ function TodayTable({
     classesTaken: r.classesTaken ?? 0,
     action: (
       <span
-        className="text-emerald-600 hover:text-emerald-500 cursor-pointer font-medium underline"
+        className="text-emerald-600 hover:text-emerald-500 cursor-pointer font-medium hover:underline"
         onClick={() => onViewClick(r.userId)}
       >
         View
@@ -370,25 +373,25 @@ export default function HrDashLeft() {
 
   const cardData = [
     {
-      style: "bg-[#E2DAFF] h-[126.35px] w-[182px]",
+      style: "bg-[#E2DAFF] h-[126.35px]",
       icon: <UsersThree size={21} weight="fill" color="#6C20CA" />,
       value: String(cards?.totalStaff ?? 0).padStart(2, "0"),
       label: "Total Staff",
     },
     {
-      style: "bg-[#E6FBEA] h-[126.35px] w-[182px]",
+      style: "bg-[#E6FBEA] h-[126.35px]",
       icon: <User size={21} weight="fill" color="#22C55E" />,
       value: String(cards?.presentToday ?? 0).padStart(2, "0"),
       label: "Present Today",
     },
     {
-      style: "bg-[#FFE0E0] h-[126.35px] w-[182px]",
+      style: "bg-[#FFE0E0] h-[126.35px]",
       icon: <User size={21} weight="fill" color="#FF0000" />,
       value: String(cards?.absentToday ?? 0).padStart(2, "0"),
       label: "Absent Today",
     },
     {
-      style: "bg-[#CEE6FF] h-[126.35px] w-[182px]",
+      style: "bg-[#CEE6FF] h-[126.35px]",
       icon: <Clock size={21} weight="fill" color="#60AEFF" />,
       value: String(cards?.lateCheckins ?? 0).padStart(2, "0"),
       label: "Late Check-ins",
@@ -397,7 +400,7 @@ export default function HrDashLeft() {
 
   if (currentView === "onboarding") {
     return (
-      <div ref={topRef} className="w-[68%] p-2">
+      <div ref={topRef} className="bg-red-00 w-[100%] lg:w-[68%] pb-7 ">
         <StaffOnboardingView />
       </div>
     );
@@ -412,7 +415,7 @@ export default function HrDashLeft() {
   }
 
   return (
-    <div ref={topRef} className="w-[68%] p-2">
+    <div ref={topRef} className="bg-red-00 w-full md:w-[68%] lg:w-[68%] p-2 pb-7 lg:pb-5">
       {selectedMonth ? (
         <FacultyMonthDetailTable
           month={selectedMonth}
@@ -443,11 +446,11 @@ export default function HrDashLeft() {
             ]}
           />
 
-          <div className="mt-5">
+          <div className="mt-3 lg:mt-5">
             {loadingCards ? (
               <CardShimmer />
             ) : (
-              <div className="flex gap-3 text-xs">
+              <div className="grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-3 text-xs">
                 {cardData.map((item, i) => (
                   <CardComponent
                     key={i}

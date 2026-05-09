@@ -3,15 +3,15 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { UserInfoCard } from "./financerInfoCard";
-import DashboardPage from "./gridDashMain";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchTodayCollectionAmount } from "../../../../../lib/helpers/collegeAdmin/fetchcollection";
+import CollegeAdminDashboard from "./gridDashMain";
 
 const collegeImage = "/college-admin-m.png";
 
 const SUBVIEWS = ["admins", "faculty", "students", "parents", "finance", "hr"];
 
-export default function FinanceDashLeft() {
+export default function CollegeAdminDashLeft() {
   const searchParams = useSearchParams();
   const subview = searchParams.get("subview");
   const isSubview = SUBVIEWS.includes(subview ?? "");
@@ -41,10 +41,9 @@ export default function FinanceDashLeft() {
   ];
 
   return (
-    <div className="w-[68%] p-2">
+    <div className="w-[100%] md:w-[68%] lg:w-[68%] p-2">
       {!isSubview && <UserInfoCard cardProps={card} />}
-      {!isSubview && <div className="mt-5 rounded-lg flex gap-3 text-xs" />}
-      <DashboardPage />
+      <CollegeAdminDashboard />
     </div>
   );
 }

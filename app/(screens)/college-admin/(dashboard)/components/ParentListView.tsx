@@ -30,22 +30,22 @@ type ParentPageSummary = {
 };
 
 type StatDef = {
-  label:     string;
-  key:       keyof ParentPageSummary;
-  bg:        string;
-  iconBg:    string;
+  label: string;
+  key: keyof ParentPageSummary;
+  bg: string;
+  iconBg: string;
   iconColor: string;
-  icon:      React.ReactNode;
+  icon: React.ReactNode;
 };
 
 const STAT_DEFS: StatDef[] = [
-  { label: "Admins",            key: "admins",            bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED", icon: <UserGear size={18} weight="fill" /> },
-  { label: "Students",          key: "students",           bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706", icon: <GraduationCap size={18} weight="fill" /> },
-  { label: "Parents",           key: "parents",            bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669", icon: <UsersThree size={18} weight="fill" /> },
-  { label: "Faculty",           key: "faculty",            bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB", icon: <UsersFour size={18} weight="fill" /> },
-  { label: "Finance Manager",   key: "financeManagers",    bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626", icon: <CurrencyDollar size={18} weight="fill" /> },
-  { label: "HR Executive",      key: "hrExecutives",       bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7", icon: <Buildings size={18} weight="fill" /> },
-  { label: "Placement Manager", key: "placementManagers",  bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777", icon: <Briefcase size={18} weight="fill" /> },
+  { label: "Admins", key: "admins", bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED", icon: <UserGear size={18} weight="fill" /> },
+  { label: "Students", key: "students", bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706", icon: <GraduationCap size={18} weight="fill" /> },
+  { label: "Parents", key: "parents", bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669", icon: <UsersThree size={18} weight="fill" /> },
+  { label: "Faculty", key: "faculty", bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB", icon: <UsersFour size={18} weight="fill" /> },
+  { label: "Finance Manager", key: "financeManagers", bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626", icon: <CurrencyDollar size={18} weight="fill" /> },
+  { label: "HR Executive", key: "hrExecutives", bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7", icon: <Buildings size={18} weight="fill" /> },
+  { label: "Placement Manager", key: "placementManagers", bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777", icon: <Briefcase size={18} weight="fill" /> },
 ];
 
 // ── ADDED: CardsShimmer ───────────────────────────────────────────────────────
@@ -157,12 +157,12 @@ function TableShimmer() {
 }
 
 const TABLE_COLUMNS = [
-  { title: "Parent Name",    key: "fullName" },
+  { title: "Parent Name", key: "fullName" },
   { title: "Linked Student", key: "linkedStudent" },
-  { title: "Support Admin",  key: "supportAdmin" },
+  { title: "Support Admin", key: "supportAdmin" },
   { title: "Education Type", key: "eduType" },
-  { title: "Branch",         key: "branchCode" },
-  { title: "Year",           key: "academicYear" },
+  { title: "Branch", key: "branchCode" },
+  { title: "Year", key: "academicYear" },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -170,24 +170,24 @@ type Props = { onBack: () => void };
 
 export default function ParentListView({ onBack }: Props) {
   const { collegeId, loading: contextLoading } = useCollegeAdmin();
-  const router       = useRouter();       // ← ADDED
+  const router = useRouter();       // ← ADDED
   const searchParams = useSearchParams(); // ← ADDED
 
-  const [data, setData]             = useState<(ParentListData & { totalCount: number }) | null>(null);
-  const [summary, setSummary]       = useState<ParentPageSummary | null>(null); // ← ADDED
+  const [data, setData] = useState<(ParentListData & { totalCount: number }) | null>(null);
+  const [summary, setSummary] = useState<ParentPageSummary | null>(null); // ← ADDED
   const [isFetching, setIsFetching] = useState(true);
   const [isSearching, setIsSearching] = useState(false);       // ← ADDED
-  const [search, setSearch]         = useState("");
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");  // ← ADDED
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const [selectedEduId, setSelectedEduId]   = useState<number | null>(null);
+  const [selectedEduId, setSelectedEduId] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState("All");
-  const [selectedYear, setSelectedYear]     = useState("All");
+  const [selectedYear, setSelectedYear] = useState("All");
 
   const [branchOpen, setBranchOpen] = useState(false);
-  const [yearOpen, setYearOpen]     = useState(false);
+  const [yearOpen, setYearOpen] = useState(false);
 
   const totalPages = Math.ceil(totalRecords / ROWS_PER_PAGE);
 
@@ -227,10 +227,10 @@ export default function ParentListView({ onBack }: Props) {
         : undefined;
 
       const d = await getParentListData(collegeId, page, ROWS_PER_PAGE, {
-        collegeEducationId:    eduId ?? undefined,
-        collegeBranchId:       branchId,
+        collegeEducationId: eduId ?? undefined,
+        collegeBranchId: branchId,
         collegeAcademicYearId: yearId,
-        search:                searchTerm || undefined, // ← ADDED
+        search: searchTerm || undefined, // ← ADDED
       });
       setData(d);
       setTotalRecords(d.totalCount);
@@ -289,7 +289,7 @@ export default function ParentListView({ onBack }: Props) {
   // ← ADDED: total across all roles for header count
   const totalUsers = summary
     ? summary.admins + summary.students + summary.parents + summary.faculty +
-      summary.financeManagers + summary.hrExecutives + summary.placementManagers
+    summary.financeManagers + summary.hrExecutives + summary.placementManagers
     : 0;
 
   const closeAll = () => { setBranchOpen(false); setYearOpen(false); };
@@ -317,7 +317,7 @@ export default function ParentListView({ onBack }: Props) {
           <CardsShimmer />
         ) : (
           <div
-            className="flex gap-3 mb-5 overflow-x-auto"
+            className="flex gap-3 mb-5 overflow-x-auto custom-scrollbar pb-3 landscape:pb-3 lg:pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {STAT_DEFS.map((def) => (
@@ -344,7 +344,7 @@ export default function ParentListView({ onBack }: Props) {
             {[...Array(3)].map((_, i) => <div key={i} className="min-w-[280px] h-[260px] flex-shrink-0 animate-pulse bg-gray-200 rounded-2xl" />)}
           </div>
         ) : (
-          <div className="flex gap-4 overflow-y-hidden overflow-x-auto p-2 mb-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex gap-4 overflow-y-hidden overflow-x-auto custom-scrollbar p-2 mb-4 pb-3 landscape:pb-3 lg:pb-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {(data?.distributions ?? []).map((dist) => (
               <div key={dist.collegeEducationId}
                 onClick={() => { setSelectedEduId(dist.collegeEducationId); setSelectedBranch("All"); setSelectedYear("All"); setCurrentPage(1); }}
@@ -399,7 +399,7 @@ export default function ParentListView({ onBack }: Props) {
         </div>
 
         {/* ── Search (spinner on search same as AdminListView) ── */}
-        <div className="w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
+        <div className="w-full md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
           <input type="text" placeholder="Search by Parent Name or Student Name"
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"

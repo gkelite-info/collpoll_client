@@ -178,7 +178,7 @@ export async function fetchFacultyTasksForLoggedInFaculty(
   facultyId: number,
   collegeSubjectId: number,
 ) {
-  const { data, error } = await supabase
+  const { data: facultyTaskData, error: facultyTaskError } = await supabase
     .from("faculty_tasks")
     .select(`
       facultyTaskId,
@@ -193,12 +193,12 @@ export async function fetchFacultyTasksForLoggedInFaculty(
     .is("deletedAt", null)
     .order("date", { ascending: true });
 
-  if (error) {
-    console.error("fetchFacultyTasksForLoggedInFaculty error:", error);
-    throw error;
+  if (facultyTaskError) {
+    console.error("fetchFacultyTasksForLoggedInFaculty error:", facultyTaskError);
+    throw facultyTaskError;
   }
 
-  return data ?? [];
+  return facultyTaskData ?? [];
 }
 
 

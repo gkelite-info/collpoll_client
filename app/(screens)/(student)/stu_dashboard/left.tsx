@@ -159,12 +159,12 @@ export default function StuDashLeft() {
         const avgPercentage =
           totalUnits > 0
             ? Math.round(
-                units.reduce(
-                  (acc: number, curr: any) =>
-                    acc + (curr.completionPercentage || 0),
-                  0,
-                ) / totalUnits,
-              )
+              units.reduce(
+                (acc: number, curr: any) =>
+                  acc + (curr.completionPercentage || 0),
+                0,
+              ) / totalUnits,
+            )
             : 0;
 
         const firstUnit = units[0];

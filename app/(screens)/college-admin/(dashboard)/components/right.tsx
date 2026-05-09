@@ -22,11 +22,10 @@ const typeIcons: Record<string, string> = {
   other: "/others.png",
 };
 
-// ✅ role formatter
 const formatRole = (role: string) =>
   role?.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function SemwiseDetailsRight() {
+export default function CollegeAdminDashRight() {
   const { userId, collegeId, role } = useUser();
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -34,7 +33,6 @@ export default function SemwiseDetailsRight() {
 
   const fetchData = async () => {
     try {
-      // ✅ FIX: include role
       if (!collegeId || !userId || !role) return;
 
       const res = await fetchCollegeAnnouncements({
@@ -53,7 +51,7 @@ export default function SemwiseDetailsRight() {
         createdAt: item.createdAt,
         type: item.type,
 
-        targetRoles: item.targetRoles, // ✅ FIXED
+        targetRoles: item.targetRoles,
 
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
@@ -79,7 +77,7 @@ export default function SemwiseDetailsRight() {
     fetchData();
   }, [collegeId, userId, role, view]);
   return (
-    <div className="w-[32%] p-2 flex flex-col">
+    <div className="hidden md:flex md:flex-col lg:flex lg:flex-col md:w-[32%] lg:w-[32%] p-2">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
 
