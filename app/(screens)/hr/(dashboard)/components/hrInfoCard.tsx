@@ -32,15 +32,15 @@ export function HrInfoCard({ cardProps }: UserInfoProps) {
           key={index}
           className="w-full relative h-full rounded-2xl shadow-sm flex items-center overflow-visible"
         >
-          <div className="flex flex-col z-10 pl-8 lg:pl-10 max-w-[65%] gap-1">
-            <h1 className="text-[#282828] text-lg font-medium leading-tight">
+          <div className="flex flex-col z-10 pl-4 lg:pl-5 max-w-[65%] gap-1">
+            <h1 className="text-[#282828] text-sm md:text-base lg:text-lg font-medium leading-tight">
               Welcome back, {" "}
-              <span className="text-[#089144] font-bold">{fullName}</span>
+              <span className="text-[#089144] text-sm md:text-base lg:text-lg font-bold">{fullName}</span>
             </h1>
 
             <div className="flex flex-col gap-1.5 mt-2">
               <p className="text-[#454545] text-xs font-medium leading-snug">
-                94% attendance rate this week with 4 late check-ins and 2
+                0% attendance rate this week with 0 late check-ins and 0
                 approved leaves.
               </p>
               <p className="text-[#454545] text-xs font-medium leading-snug">
@@ -63,7 +63,7 @@ export function HrInfoCard({ cardProps }: UserInfoProps) {
           )} */}
 
           {gender &&
-            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+            <div className="absolute -right-4 md:-right-3 lg:right-10 bottom-0 h-[95%] lg:h-[105%] w-[180px]">
               <Image
                 src={avatarImage}
                 alt="Avatar"

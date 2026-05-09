@@ -2,7 +2,6 @@
 
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -34,7 +33,6 @@ export default function MyAttendanceRight() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Read URL State
   const currentView = searchParams.get("view");
 
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -120,7 +118,7 @@ export default function MyAttendanceRight() {
   };
 
   return (
-    <div className="w-[32%] p-2 flex flex-col gap-3">
+    <div className="hidden md:flex md:flex-col lg:flex lg:flex-col lg:w-[32%] p-2 gap-3">
       <div className="flex w-full gap-2">
         <button
           onClick={toggleOnboardingView}

@@ -283,7 +283,8 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
 
   return (
     <>
-      <div className="bg-pink-00 h-[100%] w-[100%] md:h-[100%] md:w-[100%] lg:h-full lg:w-full flex justify-between lg:gap-1 p-3 pt-2 md:p-4 lg:p-2">
+      {/* <div className="bg-pink-00 h-[100%] w-[100%] md:h-[100%] md:w-[100%] lg:h-full lg:w-full flex justify-between lg:gap-1 p-3 pt-2 md:p-4 lg:p-2"> */}
+      <div className="bg-[#F4F4F4] h-full w-full flex justify-between lg:gap-1 p-3 pt-2 md:p-4 lg:p-2">
         {/* <div className="w-[59%] flex justify-end items-center">
           <div className="relative lg:w-[80%] lg:h-[60%]">
             <input
@@ -304,7 +305,8 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
 
 
         {/* mobile view */}
-        <div className="bg-yellow-00 w-[100%] md:w-[100%] flex flex-col gap-2 md:flex lg:hidden">
+        {/* <div className="bg-yellow-00 w-[100%] md:w-[100%] flex flex-col gap-2 md:flex lg:hidden"> */}
+        <div className="bg-yellow-00 w-full flex flex-col gap-2 md:flex lg:hidden pb-0">
           <div className="bg-red-00 flex items-center justify-between w-full">
             <div className="flex gap-4 md:gap-10 items-center">
               <ListIcon weight="bold" className="text-2xl text-black w-6 h-6 md:w-8 md:h-8" onClick={() => {
@@ -370,7 +372,14 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
             </div>
           </div>
           <div className="w-full h-full bg-blue-00 flex items-center justify-between">
-            <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[100%]">
+            {/* <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[100%]"> */}
+            <div
+              ref={searchContainerRef}
+              className={`relative h-[100%] md:h-[100%] ${["Faculty", "Admin", "Student"].includes(role!)
+                ? "w-[60%] md:w-[70%]"
+                : "w-full"
+                }`}
+            >
               <input
                 type="text"
                 disabled={loading || !role}
@@ -383,7 +392,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   loading ? "Loading modules..." : "What do you want to find?"
                 }
                 // className="rounded-full w-full h-full bg-[#EAEAEA] text-[#282828] lg:text-sm pl-5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#43C17A]/40 transition-all shadow-inner"
-                className={`rounded-full w-full h-full lg:text-sm pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
+                className={`rounded-full w-full h-full lg:text-sm p-1 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
                   ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
                   : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
                   }`}
@@ -470,7 +479,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 )}
               </AnimatePresence>
             </div>
-            {(role === "Faculty") ? (
+            {["Faculty", "Student"].includes(role!) ? (
               <div className="bg-[#DAEEE3] h-full w-fit md:h-[100%] md:w-fit flex items-center justify-center gap-2 px-1.5 rounded-md">
                 <button
                   onClick={() => onAddTaskClick?.()}
@@ -493,10 +502,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               >
                 <p className="text-white text-xs md:text-sm font-medium">+ Add User</p>
               </button>
-            ) : (
-              <p className="text-black">X</p>
-            )}
-
+            ) : null}
           </div>
         </div>
         {/* mobile view */}
@@ -516,7 +522,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 loading ? "Loading modules..." : "What do you want to find?"
               }
               // className="rounded-full w-full h-full bg-[#EAEAEA] text-[#282828] lg:text-sm pl-5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#43C17A]/40 transition-all shadow-inner"
-              className={`rounded-full w-full h-full lg:text-sm pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
+              className={`rounded-full w-full h-full lg:text-sm p-2 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
                 ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
                 : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
                 }`}

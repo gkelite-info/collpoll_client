@@ -137,7 +137,7 @@ export default function TaskModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[1000000]">
       <div className="bg-white rounded-lg shadow-xl p-6 lg:w-[450px] animate-fadeIn relative">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold text-[#282828]">

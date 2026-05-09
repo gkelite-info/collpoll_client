@@ -11,7 +11,6 @@ import {
 } from "@/lib/helpers/faculty/facultyTasks";
 import type { Task } from "@/app/utils/taskPanel";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
-import toast from "react-hot-toast";
 import TaskModal from "@/app/components/modals/taskModal";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 
@@ -146,7 +145,7 @@ export default function FacultyDashRight() {
       );
 
       if (!res.success) {
-        throw new Error(res.error?.message || "Save failed");
+        throw new Error("Save failed");
       }
 
       await loadTasks();
@@ -155,6 +154,7 @@ export default function FacultyDashRight() {
       throw error;
     }
   };
+
   useEffect(() => {
     if (!collegeId || !userId || !role) return;
     fetchAnnouncements();

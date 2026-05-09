@@ -24,7 +24,6 @@ import { fetchSubjectFacultyList } from "@/lib/helpers/admin/facultyCountAPI";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-// ─── Stat card definitions (same pattern as AdminListView) ────────────────────
 
 type FacultyPageSummary = {
   admins: number;
@@ -37,75 +36,73 @@ type FacultyPageSummary = {
 };
 
 type StatDef = {
-  label:     string;
-  key:       keyof FacultyPageSummary;
-  bg:        string;
-  iconBg:    string;
+  label: string;
+  key: keyof FacultyPageSummary;
+  bg: string;
+  iconBg: string;
   iconColor: string;
-  icon:      React.ReactNode;
+  icon: React.ReactNode;
 };
 
 const STAT_DEFS: StatDef[] = [
   {
-    label: "Admins",           key: "admins",
-    bg: "bg-[#EDE9FE]",        iconBg: "#DDD6FE", iconColor: "#7C3AED",
+    label: "Admins", key: "admins",
+    bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED",
     icon: <UserGear size={18} weight="fill" />,
   },
   {
-    label: "Students",         key: "students",
-    bg: "bg-[#FEF3C7]",        iconBg: "#FDE68A", iconColor: "#D97706",
+    label: "Students", key: "students",
+    bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706",
     icon: <GraduationCap size={18} weight="fill" />,
   },
   {
-    label: "Parents",          key: "parents",
-    bg: "bg-[#D1FAE5]",        iconBg: "#A7F3D0", iconColor: "#059669",
+    label: "Parents", key: "parents",
+    bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669",
     icon: <UsersThree size={18} weight="fill" />,
   },
   {
-    label: "Faculty",          key: "faculty",
-    bg: "bg-[#DBEAFE]",        iconBg: "#BFDBFE", iconColor: "#2563EB",
+    label: "Faculty", key: "faculty",
+    bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB",
     icon: <UsersFour size={18} weight="fill" />,
   },
   {
-    label: "Finance Manager",  key: "financeManagers",
-    bg: "bg-[#FEE2E2]",        iconBg: "#FECACA", iconColor: "#DC2626",
+    label: "Finance Manager", key: "financeManagers",
+    bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626",
     icon: <CurrencyDollar size={18} weight="fill" />,
   },
   {
-    label: "HR Executive",     key: "hrExecutives",
-    bg: "bg-[#E0F2FE]",        iconBg: "#BAE6FD", iconColor: "#0284C7",
+    label: "HR Executive", key: "hrExecutives",
+    bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7",
     icon: <Buildings size={18} weight="fill" />,
   },
   {
     label: "Placement Manager", key: "placementManagers",
-    bg: "bg-[#FCE7F3]",         iconBg: "#FBCFE8", iconColor: "#DB2777",
+    bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777",
     icon: <Briefcase size={18} weight="fill" />,
   },
 ];
 
-// ─── Donut colors (added collegeHr) ──────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  admins:    "#7C3AED",
-  students:  "#FBA945",
-  parents:   "#10B981",
-  faculty:   "#3B82F6",
-  finance:   "#F97316",
+  admins: "#7C3AED",
+  students: "#FBA945",
+  parents: "#10B981",
+  faculty: "#3B82F6",
+  finance: "#F97316",
   placement: "#EC4899",
   collegeHr: "#0284C7",
 };
 
-// ─── Donut card ───────────────────────────────────────────────────────────────
 
 function EduDonutCard({ dist, hrExecutives = 0 }: { dist: EduTypeDistribution; hrExecutives?: number }) {
   const roles = ["admins", "students", "parents", "faculty", "finance", "placement", "collegeHr"] as const;
 
   const LEGEND_LABELS: Record<string, string> = {
-    admins:    "Admins",
-    students:  "Students",
-    parents:   "Parents",
-    faculty:   "Faculty",
-    finance:   "Finance",
+    admins: "Admins",
+    students: "Students",
+    parents: "Parents",
+    faculty: "Faculty",
+    finance: "Finance",
     placement: "Placement",
     collegeHr: "HR Executive",
   };
@@ -146,7 +143,6 @@ function EduDonutCard({ dist, hrExecutives = 0 }: { dist: EduTypeDistribution; h
   );
 }
 
-// ─── FilterPill ───────────────────────────────────────────────────────────────
 
 function FilterPill({ label, value, showCaret = false, onClick }: {
   label: string; value: string; showCaret?: boolean;
@@ -165,7 +161,6 @@ function FilterPill({ label, value, showCaret = false, onClick }: {
   );
 }
 
-// ─── Shimmer components ───────────────────────────────────────────────────────
 
 function CardsShimmer() {
   return (
@@ -203,60 +198,56 @@ function TableShimmer() {
   );
 }
 
-// ─── Table columns ────────────────────────────────────────────────────────────
 
 const TABLE_COLUMNS = [
-  { title: "Faculty Name",     key: "fullName" },
-  { title: "Faculty ID",       key: "facultyId" },
-  { title: "Education Type",   key: "eduType" },
-  { title: "Branch",           key: "branchCode" },
+  { title: "Faculty Name", key: "fullName" },
+  { title: "Faculty ID", key: "facultyId" },
+  { title: "Education Type", key: "eduType" },
+  { title: "Branch", key: "branchCode" },
   { title: "Subjects Handled", key: "subjectsHandled" },
-  { title: "Support Admin",    key: "supportAdmin" },
-  { title: "Status",           key: "statusEl" },
+  { title: "Support Admin", key: "supportAdmin" },
+  { title: "Status", key: "statusEl" },
 ];
 
 const ROWS_PER_PAGE = 10;
 
 type Props = { onBack: () => void };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FacultyListView({ onBack }: Props) {
   const { collegeId, loading: contextLoading } = useCollegeAdmin();
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [data, setData]             = useState<(FacultyListData & { totalCount: number }) | null>(null);
-  const [summary, setSummary]       = useState<FacultyPageSummary | null>(null);
+  const [data, setData] = useState<(FacultyListData & { totalCount: number }) | null>(null);
+  const [summary, setSummary] = useState<FacultyPageSummary | null>(null);
   const [isFetching, setIsFetching] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-  const [search, setSearch]         = useState("");
+  const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
 
-  const [selectedEduId, setSelectedEduId]   = useState<number | null>(null);
+  const [selectedEduId, setSelectedEduId] = useState<number | null>(null);
   const [eduOpen, setEduOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string>("All");
-  const [selectedAdmin, setSelectedAdmin]   = useState<string>("All");
-  const [selectedYear, setSelectedYear]     = useState<string>("All");
+  const [selectedAdmin, setSelectedAdmin] = useState<string>("All");
+  const [selectedYear, setSelectedYear] = useState<string>("All");
   const [availableYears, setAvailableYears] = useState<{ id: number; label: string }[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<number | "All">("All");
   const [subjectFacultyList, setSubjectFacultyList] = useState<any[] | null>(null);
 
   const [branchOpen, setBranchOpen] = useState(false);
-  const [adminOpen, setAdminOpen]   = useState(false);
-  const [yearOpen, setYearOpen]     = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [yearOpen, setYearOpen] = useState(false);
 
-  // ── Refs for each dropdown container ──────────────────────────────────────
-  const eduRef    = useRef<HTMLDivElement>(null);
+  const eduRef = useRef<HTMLDivElement>(null);
   const branchRef = useRef<HTMLDivElement>(null);
-  const adminRef  = useRef<HTMLDivElement>(null);
-  const yearRef   = useRef<HTMLDivElement>(null);
+  const adminRef = useRef<HTMLDivElement>(null);
+  const yearRef = useRef<HTMLDivElement>(null);
 
   const totalPages = Math.ceil(totalRecords / ROWS_PER_PAGE);
 
-  // ── Query routing ──
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("subview", "faculty");
@@ -268,7 +259,6 @@ export default function FacultyListView({ onBack }: Props) {
     };
   }, []);
 
-  // ── Close all dropdowns (called when clicking outside any dropdown) ──
   const closeAllDropdowns = () => {
     setEduOpen(false);
     setBranchOpen(false);
@@ -276,7 +266,6 @@ export default function FacultyListView({ onBack }: Props) {
     setYearOpen(false);
   };
 
-  // ── Debounce search ──
   useEffect(() => {
     setIsSearching(true);
     const timer = setTimeout(() => {
@@ -286,7 +275,6 @@ export default function FacultyListView({ onBack }: Props) {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // ── Fetch ──
   const load = useCallback(async (page: number, eduId: number | null, branch: string, admin: string, searchTerm: string) => {
     if (contextLoading || !collegeId) return;
     if (page === 1) setIsFetching(true);
@@ -301,9 +289,9 @@ export default function FacultyListView({ onBack }: Props) {
 
       const d = await getFacultyListData(collegeId, page, ROWS_PER_PAGE, {
         collegeEducationId: eduId ?? undefined,
-        collegeBranchId:    branchId,
+        collegeBranchId: branchId,
         adminId,
-        search:             searchTerm || undefined,
+        search: searchTerm || undefined,
       });
       setData(d);
       setTotalRecords(d.totalCount);
@@ -317,13 +305,11 @@ export default function FacultyListView({ onBack }: Props) {
     }
   }, [collegeId, contextLoading]);
 
-  // Initial load
   useEffect(() => {
     if (contextLoading || !collegeId) return;
     load(1, null, "All", "All", "");
   }, [collegeId, contextLoading]);
 
-  // Reload when filters, page, or debounced search change
   useEffect(() => {
     if (!collegeId || contextLoading) return;
     load(currentPage, selectedEduId, selectedBranch, selectedAdmin, debouncedSearch);
@@ -370,7 +356,7 @@ export default function FacultyListView({ onBack }: Props) {
 
   const totalUsers = summary
     ? summary.admins + summary.students + summary.parents + summary.faculty +
-      summary.financeManagers + summary.hrExecutives + summary.placementManagers
+    summary.financeManagers + summary.hrExecutives + summary.placementManagers
     : 0;
 
   const handleEduChange = (eduId: number | null) => {
@@ -402,13 +388,11 @@ export default function FacultyListView({ onBack }: Props) {
     <div className="flex w-full min-h-screen pb-4">
       <div className="flex-1 p-2 pt-0 flex flex-col overflow-hidden" onClick={closeAllDropdowns}>
 
-        {/* ── Header ── */}
         <div className="flex items-center gap-2 mb-4">
           <CaretLeft size={20} weight="bold" className="cursor-pointer text-[#282828] active:scale-90" onClick={onBack} />
           <h1 className="text-xl font-semibold text-[#282828]">Faculty</h1>
         </div>
 
-        {/* ── Total users ── */}
         <p className="text-[#1E40AF] font-bold text-[15px] mb-3">
           Total Users :{" "}
           <span className="text-[#22A55D]">
@@ -416,12 +400,11 @@ export default function FacultyListView({ onBack }: Props) {
           </span>
         </p>
 
-        {/* ── Stat Cards ── */}
         {isFetching && !summary ? (
           <CardsShimmer />
         ) : (
           <div
-            className="flex gap-3 mb-5 overflow-x-auto"
+            className="flex gap-3 mb-5 overflow-x-auto custom-scrollbar pb-3 landscape:pb-3 lg:pb-2"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {STAT_DEFS.map((def) => (
@@ -443,10 +426,8 @@ export default function FacultyListView({ onBack }: Props) {
           </div>
         )}
 
-        {/* ── User Distribution heading ── */}
         <p className="text-[#1E40AF] font-bold text-[15px] mb-3">User Distribution by Education Type</p>
 
-        {/* ── Donut cards ── */}
         {isFetching && !data ? (
           <div className="flex gap-4 mb-5" style={{ scrollbarWidth: "none" }}>
             {[...Array(3)].map((_, i) => (
@@ -454,7 +435,7 @@ export default function FacultyListView({ onBack }: Props) {
             ))}
           </div>
         ) : (
-          <div className="flex gap-4 overflow-y-hidden overflow-x-auto p-2 mb-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          <div className="flex gap-4 overflow-y-hidden overflow-x-auto custom-scrollbar p-2 mb-4 pb-3 landscape:pb-3 lg:pb-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
             {(data?.distributions ?? []).map((dist) => (
               <div key={dist.collegeEducationId} onClick={() => handleEduChange(dist.collegeEducationId)}
                 className={`flex-shrink-0 cursor-pointer transition-all ${selectedEduId === dist.collegeEducationId ? "ring-2 ring-[#43C17A] rounded-2xl" : ""}`}
@@ -465,15 +446,11 @@ export default function FacultyListView({ onBack }: Props) {
           </div>
         )}
 
-        {/* ── Total Faculty count ── */}
         <p className="text-[#1E40AF] font-bold text-[15px] mb-3">
           Total Faculty : {isFetching ? "…" : totalRecords}
         </p>
 
-        {/* ── Filters ── */}
         <div className="flex items-center gap-4 mb-4 overflow-x-auto whitespace-nowrap py-1">
-
-          {/* Education Type dropdown */}
           <div className="relative inline-block" ref={eduRef}>
             <FilterPill label="Education Type" value={selectedEduType || "All"} showCaret
               onClick={(e) => { e.stopPropagation(); setEduOpen((o) => !o); setBranchOpen(false); setAdminOpen(false); setYearOpen(false); }}
@@ -499,7 +476,6 @@ export default function FacultyListView({ onBack }: Props) {
             )}
           </div>
 
-          {/* Branch dropdown */}
           <div className="relative inline-block" ref={branchRef}>
             <FilterPill label="Branch" value={selectedBranch} showCaret
               onClick={(e) => { e.stopPropagation(); setBranchOpen((o) => !o); setEduOpen(false); setAdminOpen(false); setYearOpen(false); }}
@@ -519,7 +495,6 @@ export default function FacultyListView({ onBack }: Props) {
             )}
           </div>
 
-          {/* Support Admin dropdown */}
           <div className="relative inline-block" ref={adminRef}>
             <FilterPill label="Support Admin" value={selectedAdmin} showCaret
               onClick={(e) => { e.stopPropagation(); setAdminOpen((o) => !o); setEduOpen(false); setBranchOpen(false); setYearOpen(false); }}
@@ -539,7 +514,6 @@ export default function FacultyListView({ onBack }: Props) {
             )}
           </div>
 
-          {/* Teaching Year dropdown */}
           <div className="relative inline-block" ref={yearRef}>
             <FilterPill label="Teaching Year" value={selectedYear} showCaret
               onClick={(e) => { e.stopPropagation(); setYearOpen((o) => !o); setEduOpen(false); setBranchOpen(false); setAdminOpen(false); }}
@@ -583,8 +557,7 @@ export default function FacultyListView({ onBack }: Props) {
           </div>
         </div>
 
-        {/* ── Search ── */}
-        <div className="w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
+        <div className="w-full md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
           <input type="text" placeholder="Search by Faculty Name, Department, or Course"
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"
@@ -596,7 +569,6 @@ export default function FacultyListView({ onBack }: Props) {
           )}
         </div>
 
-        {/* ── Table / TableShimmer / Empty ── */}
         {showShimmer ? (
           <TableShimmer />
         ) : tableData.length === 0 ? (
@@ -605,7 +577,6 @@ export default function FacultyListView({ onBack }: Props) {
           <TableComponent columns={TABLE_COLUMNS} tableData={tableData} height="55vh" />
         )}
 
-        {/* ── Pagination ── */}
         {totalPages > 1 && !showShimmer && (
           <div className="flex justify-end items-center gap-3 mt-4 mb-2">
             <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}

@@ -114,15 +114,9 @@ const TotalUsersView: React.FC<TotalUsersProps> = ({ onBack }) => {
         </p>
       </div>
 
-      <div className="w-full mb-4">
+      <div className="w-full mb-4 grid">
         <article className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory scroll-smooth
-         [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]
-          [&::-webkit-scrollbar]:h-2.5
-          [&::-webkit-scrollbar-track]:bg-transparent
-          [&::-webkit-scrollbar-track]:rounded-full
-          [&::-webkit-scrollbar-thumb]:bg-slate-300
-          [&::-webkit-scrollbar-thumb]:rounded-full
-          hover:[&::-webkit-scrollbar-thumb]:bg-slate-400
+         custom-scrollbar
          ">
           {isLoading
             ?

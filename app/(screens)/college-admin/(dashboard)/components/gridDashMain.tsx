@@ -26,6 +26,7 @@ import FacultyListView from "./FacultyListView";
 import StudentListView from "./StudentListView";
 import ParentListView from "./ParentListView";
 import FinanceListView from "./FinanceListView";
+import toast from "react-hot-toast";
 
 // ─── Static config (icons / colors only) ─────────────────────────────────────
 
@@ -73,7 +74,6 @@ const quickLinks = [
   "Placement",
 ];
 
-// ─── StatCard ─────────────────────────────────────────────────────────────────
 
 const StatCard = ({
   label,
@@ -101,7 +101,7 @@ const StatCard = ({
   </div>
 );
 
-// ─── QuickLinkCard ────────────────────────────────────────────────────────────
+
 
 const QuickLinkCard = ({
   title,
@@ -129,12 +129,11 @@ const QuickLinkCard = ({
         bg-[#E4F2E7] relative
         ${!isPlacement && "hover:bg-[#d4eadd]"}
         transition-colors rounded-lg p-4 flex flex-col justify-between h-16
-        ${
-          isPlacement
-            ? gearRunning
-              ? "cursor-pointer"
-              : "cursor-not-allowed opacity-70"
-            : "cursor-pointer"
+        ${isPlacement
+          ? gearRunning
+            ? "cursor-pointer"
+            : "cursor-not-allowed opacity-70"
+          : "cursor-pointer"
         }
         shadow-xs
       `}
@@ -255,7 +254,6 @@ const FeeCollectionTrendCard = ({
         Fee Collection Trend
       </p>
 
-      {/* Donut centred */}
       <div className="flex justify-center">
         <div className="relative">
           <svg width="150" height="150" viewBox="0 0 140 140">
@@ -289,7 +287,6 @@ const FeeCollectionTrendCard = ({
         </div>
       </div>
 
-      {/* Legend below donut */}
       <div className="flex items-center justify-center flex-wrap gap-x-6 gap-y-2 text-[12px]">
         {arcs.length > 0 ? (
           arcs.map((seg, i) => (
@@ -319,7 +316,6 @@ const FeeCollectionTrendCard = ({
   );
 };
 
-// ─── MeetingCard ──────────────────────────────────────────────────────────────
 
 const PillTag = ({ label }: { label: string }) => (
   <span className="bg-gray-100 text-gray-600 font-medium text-xs px-3 py-1 rounded-full whitespace-nowrap">
@@ -328,8 +324,7 @@ const PillTag = ({ label }: { label: string }) => (
 );
 
 const MeetingCard = () => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col min-w-0">
-    {/* Green header bar */}
+  <div className="bg-white hidden md:hidden md:flex-col lg:flex lg:flex-col rounded-xl shadow-sm border border-gray-100 overflow-hidden min-w-0">
     <div className="bg-[#43C17A26] px-4 py-2.5 flex items-center gap-3 border-b-2 border-dotted border-[#43C17A]">
       <div className="bg-[#43C17A] p-1.5 rounded-full flex-shrink-0">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="#E9E9E9">
@@ -348,7 +343,6 @@ const MeetingCard = () => (
       </span>
     </div>
 
-    {/* Body */}
     <div className="p-5 flex flex-col gap-5 flex-1">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-[#43C17A] font-semibold text-[15px]">
@@ -392,9 +386,8 @@ const MeetingCard = () => (
   </div>
 );
 
-// ─── Main Layout ──────────────────────────────────────────────────────────────
 
-export default function AdminDashboard() {
+export default function CollegeAdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { collegeId, loading: contextLoading } = useCollegeAdmin();
@@ -426,7 +419,7 @@ export default function AdminDashboard() {
         setStats(dashData);
         setTrend(trendData);
       } catch (err) {
-        console.error("Dashboard fetch error:", err);
+        toast.error("Failed to load data");
       } finally {
         setIsFetching(false);
       }
@@ -460,8 +453,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen">
-      {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-2 landscape:md:grid-cols-4 lg:grid-cols-4 gap-3 mb-3 md:mb-3 lg:mb-6">
         {statConfig.map((stat) =>
           isLoading || !stats ? (
             <StatCardShimmer key={stat.id} />
@@ -478,9 +470,8 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Middle Quick Links Row - STATIC: No Shimmer */}
-      <div className="bg-white p-4 rounded-xl shadow-sm mb-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="bg-white p-4 rounded-xl shadow-sm mb-3 md:mb-3 lg:mb-6">
+        <div className="grid grid-cols-2 landscape:grid-cols-3 md:grid-cols-3 landscape:md:grid-cols-3 lg:grid-cols-6 landscape:lg:grid-cols-6 gap-4">
           {quickLinks.map((link) => (
             <QuickLinkCard
               key={link}
@@ -491,9 +482,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Admins Section - STATIC Header, DYNAMIC Cards */}
       <div>
-        {/* Header remains visible instantly */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[#1F2937] text-xl font-bold">Admins</h2>
           <button
@@ -504,29 +493,28 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* Cards container horizontally scrollable */}
         <div
-          className="flex gap-4 overflow-x-auto pb-2"
+          className="flex gap-4 overflow-x-auto pb-3 md:pb-3 landscape:pb-3 lg:pb-2 custom-scrollbar"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {isLoading || !stats
             ? [...Array(4)].map((_, i) => (
-                <div key={i} className="min-w-[260px] flex-shrink-0">
-                  <AdminProfileCardShimmer />
-                </div>
-              ))
+              <div key={i} className="min-w-[260px] flex-shrink-0">
+                <AdminProfileCardShimmer />
+              </div>
+            ))
             : (stats?.adminDetails ?? []).map((admin) => (
-                <div
-                  key={admin.adminId}
-                  className="min-w-[260px] flex-shrink-0"
-                >
-                  <AdminProfileCard data={admin} />
-                </div>
-              ))}
+              <div
+                key={admin.adminId}
+                className="min-w-[260px] flex-shrink-0"
+              >
+                <AdminProfileCard data={admin} />
+              </div>
+            ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-6">
+      <div className="grid grid-cols-1 md:grid-cols-1 landscape:md-grid-cols-2 landscape:lg:grid-cols-2 gap-4 mt-6">
         {isLoading || !trend ? (
           <FeeCollectionTrendCardShimmer />
         ) : (

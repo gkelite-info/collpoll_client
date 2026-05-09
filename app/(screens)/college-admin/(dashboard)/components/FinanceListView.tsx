@@ -16,44 +16,44 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 // ── ADDED: Stat card definitions ──────────────────────────────────
 
 type FinancePageSummary = {
-  admins: number;
-  students: number;
-  parents: number;
-  faculty: number;
-  financeManagers: number;
-  hrExecutives: number;
-  placementManagers: number;
+    admins: number;
+    students: number;
+    parents: number;
+    faculty: number;
+    financeManagers: number;
+    hrExecutives: number;
+    placementManagers: number;
 };
 
 type StatDef = {
-  label:     string;
-  key:       keyof FinancePageSummary;
-  bg:        string;
-  iconBg:    string;
-  iconColor: string;
-  icon:      React.ReactNode;
+    label: string;
+    key: keyof FinancePageSummary;
+    bg: string;
+    iconBg: string;
+    iconColor: string;
+    icon: React.ReactNode;
 };
 
 const STAT_DEFS: StatDef[] = [
-  { label: "Admins",            key: "admins",            bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED", icon: <UserGear size={18} weight="fill" /> },
-  { label: "Students",          key: "students",          bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706", icon: <GraduationCap size={18} weight="fill" /> },
-  { label: "Parents",           key: "parents",           bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669", icon: <UsersThree size={18} weight="fill" /> },
-  { label: "Faculty",           key: "faculty",           bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB", icon: <UsersFour size={18} weight="fill" /> },
-  { label: "Finance Manager",   key: "financeManagers",   bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626", icon: <CurrencyDollar size={18} weight="fill" /> },
-  { label: "HR Executive",      key: "hrExecutives",      bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7", icon: <Buildings size={18} weight="fill" /> },
-  { label: "Placement Manager", key: "placementManagers", bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777", icon: <Briefcase size={18} weight="fill" /> },
+    { label: "Admins", key: "admins", bg: "bg-[#EDE9FE]", iconBg: "#DDD6FE", iconColor: "#7C3AED", icon: <UserGear size={18} weight="fill" /> },
+    { label: "Students", key: "students", bg: "bg-[#FEF3C7]", iconBg: "#FDE68A", iconColor: "#D97706", icon: <GraduationCap size={18} weight="fill" /> },
+    { label: "Parents", key: "parents", bg: "bg-[#D1FAE5]", iconBg: "#A7F3D0", iconColor: "#059669", icon: <UsersThree size={18} weight="fill" /> },
+    { label: "Faculty", key: "faculty", bg: "bg-[#DBEAFE]", iconBg: "#BFDBFE", iconColor: "#2563EB", icon: <UsersFour size={18} weight="fill" /> },
+    { label: "Finance Manager", key: "financeManagers", bg: "bg-[#FEE2E2]", iconBg: "#FECACA", iconColor: "#DC2626", icon: <CurrencyDollar size={18} weight="fill" /> },
+    { label: "HR Executive", key: "hrExecutives", bg: "bg-[#E0F2FE]", iconBg: "#BAE6FD", iconColor: "#0284C7", icon: <Buildings size={18} weight="fill" /> },
+    { label: "Placement Manager", key: "placementManagers", bg: "bg-[#FCE7F3]", iconBg: "#FBCFE8", iconColor: "#DB2777", icon: <Briefcase size={18} weight="fill" /> },
 ];
 
 // ── ADDED: CardsShimmer ───────────────────────────────────────────
 
 function CardsShimmer() {
-  return (
-    <div className="flex gap-3 mb-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-      {[...Array(7)].map((_, i) => (
-        <div key={i} className="min-w-[176px] h-32 flex-shrink-0 animate-pulse bg-gray-200 rounded-lg" />
-      ))}
-    </div>
-  );
+    return (
+        <div className="flex gap-3 mb-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {[...Array(7)].map((_, i) => (
+                <div key={i} className="min-w-[176px] h-32 flex-shrink-0 animate-pulse bg-gray-200 rounded-lg" />
+            ))}
+        </div>
+    );
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -123,36 +123,36 @@ function FilterPill({ label, value, showCaret = false, onClick }: {
 // ── ADDED: TableShimmer ───────────────────────────────────────────
 
 function TableShimmer() {
-  return (
-    <div className="animate-pulse">
-      <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
-        {TABLE_COLUMNS.map((col) => (
-          <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
-        ))}
-      </div>
-      {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
-        >
-          {TABLE_COLUMNS.map((col) => (
-            <div
-              key={col.key}
-              className="flex-1 h-3.5 bg-gray-200 rounded"
-              style={{ opacity: 1 - i * 0.1 }}
-            />
-          ))}
+    return (
+        <div className="animate-pulse">
+            <div className="flex gap-4 px-4 py-3 bg-gray-100 rounded-t-xl mb-1">
+                {TABLE_COLUMNS.map((col) => (
+                    <div key={col.key} className="flex-1 h-4 bg-gray-300 rounded" />
+                ))}
+            </div>
+            {[...Array(6)].map((_, i) => (
+                <div
+                    key={i}
+                    className={`flex gap-4 px-4 py-4 ${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${i === 5 ? "rounded-b-xl" : ""}`}
+                >
+                    {TABLE_COLUMNS.map((col) => (
+                        <div
+                            key={col.key}
+                            className="flex-1 h-3.5 bg-gray-200 rounded"
+                            style={{ opacity: 1 - i * 0.1 }}
+                        />
+                    ))}
+                </div>
+            ))}
         </div>
-      ))}
-    </div>
-  );
+    );
 }
 
 const TABLE_COLUMNS = [
     { title: "Finance Manager", key: "fullName" },
-    { title: "Finance ID",      key: "financeManagerId" },
-    { title: "Education Type",  key: "eduType" },
-    { title: "Support Admin",   key: "supportAdmin" },
+    { title: "Finance ID", key: "financeManagerId" },
+    { title: "Education Type", key: "eduType" },
+    { title: "Support Admin", key: "supportAdmin" },
 ];
 
 const ROWS_PER_PAGE = 10;
@@ -161,20 +161,20 @@ type Props = { onBack: () => void };
 
 export default function FinanceListView({ onBack }: Props) {
     const { collegeId, loading: contextLoading } = useCollegeAdmin();
-    const router       = useRouter(); // ← ADDED
+    const router = useRouter(); // ← ADDED
     const searchParams = useSearchParams(); // ← ADDED
 
-    const [data, setData]                     = useState<(FinanceListData & { totalCount: number }) | null>(null);
-    const [summary, setSummary]               = useState<FinancePageSummary | null>(null); // ← ADDED
-    const [isFetching, setIsFetching]         = useState(true);
-    const [isSearching, setIsSearching]       = useState(false); // ← ADDED
-    const [search, setSearch]                 = useState(""); // ← ADDED
+    const [data, setData] = useState<(FinanceListData & { totalCount: number }) | null>(null);
+    const [summary, setSummary] = useState<FinancePageSummary | null>(null); // ← ADDED
+    const [isFetching, setIsFetching] = useState(true);
+    const [isSearching, setIsSearching] = useState(false); // ← ADDED
+    const [search, setSearch] = useState(""); // ← ADDED
     const [debouncedSearch, setDebouncedSearch] = useState(""); // ← ADDED
-    const [selectedEduId, setSelectedEduId]   = useState<number | null>(null);
-    const [selectedAdmin, setSelectedAdmin]   = useState("All");
-    const [adminOpen, setAdminOpen]           = useState(false);
-    const [currentPage, setCurrentPage]       = useState(1);
-    const [totalRecords, setTotalRecords]     = useState(0);
+    const [selectedEduId, setSelectedEduId] = useState<number | null>(null);
+    const [selectedAdmin, setSelectedAdmin] = useState("All");
+    const [adminOpen, setAdminOpen] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalRecords, setTotalRecords] = useState(0);
 
     const totalPages = Math.ceil(totalRecords / ROWS_PER_PAGE);
 
@@ -208,7 +208,7 @@ export default function FinanceListView({ onBack }: Props) {
         try {
             const d = await getFinanceListData(collegeId, page, ROWS_PER_PAGE, {
                 collegeEducationId: eduId ?? undefined,
-                search:             searchTerm || undefined, // ← ADDED
+                search: searchTerm || undefined, // ← ADDED
             });
             setData(d);
             setTotalRecords(d.totalCount);
@@ -247,8 +247,8 @@ export default function FinanceListView({ onBack }: Props) {
     const tableData = useMemo(() => {
         if (!data) return [];
         return data.finance.filter((f) => {
-            const matchEdu    = !selectedEduId || f.collegeEducationId === selectedEduId;
-            const matchAdmin  = selectedAdmin === "All" || f.supportAdmin === selectedAdmin;
+            const matchEdu = !selectedEduId || f.collegeEducationId === selectedEduId;
+            const matchAdmin = selectedAdmin === "All" || f.supportAdmin === selectedAdmin;
             const matchSearch = !search ||
                 f.fullName.toLowerCase().includes(search.toLowerCase()) ||
                 String(f.financeManagerId).includes(search);
@@ -275,12 +275,12 @@ export default function FinanceListView({ onBack }: Props) {
                     <span className="text-[#22A55D]">
                         {isFetching ? "…" : (
                             ((summary?.admins ?? 0) +
-                              (summary?.students ?? 0) +
-                              (summary?.parents ?? 0) +
-                              (summary?.faculty ?? 0) +
-                              (summary?.financeManagers ?? 0) +
-                              (summary?.hrExecutives ?? 0) +
-                              (summary?.placementManagers ?? 0)
+                                (summary?.students ?? 0) +
+                                (summary?.parents ?? 0) +
+                                (summary?.faculty ?? 0) +
+                                (summary?.financeManagers ?? 0) +
+                                (summary?.hrExecutives ?? 0) +
+                                (summary?.placementManagers ?? 0)
                             ).toLocaleString("en-IN")
                         )}
                     </span>
@@ -291,7 +291,7 @@ export default function FinanceListView({ onBack }: Props) {
                     <CardsShimmer />
                 ) : (
                     <div
-                        className="flex gap-3 mb-5 overflow-x-auto"
+                        className="flex gap-3 mb-5 overflow-x-auto custom-scrollbar pb-3 landscape:pb-3 lg:pb-2"
                         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                     >
                         {STAT_DEFS.map((def) => (
@@ -316,7 +316,7 @@ export default function FinanceListView({ onBack }: Props) {
                         {[...Array(3)].map((_, i) => <div key={i} className="min-w-[280px] h-[260px] flex-shrink-0 animate-pulse bg-gray-200 rounded-2xl" />)}
                     </div>
                 ) : (
-                    <div className="flex gap-4 overflow-y-hidden overflow-x-auto p-2 mb-4" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                    <div className="flex gap-4 overflow-y-hidden overflow-x-auto custom-scrollbar p-2 mb-4 pb-3 landscape:pb-3 lg:pb-2" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                         {(data?.distributions ?? []).map((dist) => (
                             <div key={dist.collegeEducationId}
                                 onClick={() => { setSelectedEduId(dist.collegeEducationId); setSelectedAdmin("All"); setCurrentPage(1); }}
@@ -351,7 +351,7 @@ export default function FinanceListView({ onBack }: Props) {
                     </div>
                 </div>
 
-                <div className="w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
+                <div className="w-full md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
                     <input type="text" placeholder="Search by Finance Manager Name or ID"
                         value={search} onChange={(e) => setSearch(e.target.value)}
                         className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"

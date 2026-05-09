@@ -115,7 +115,8 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden flex justify-between`}
+        // className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-screen overflow-hidden flex justify-between`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen w-screen flex justify-between`}
       >
         <NextIntlClientProvider messages={messages}>
           <FontProvider>
