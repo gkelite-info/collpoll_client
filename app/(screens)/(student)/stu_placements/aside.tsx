@@ -6,7 +6,10 @@ import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
-import { fetchStudentTasks, saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
+import {
+  fetchStudentTasks,
+  saveStudentTask,
+} from "@/lib/helpers/student/studentTaskAPI";
 import { useEffect, useState } from "react";
 
 const typeIcons: Record<string, string> = {
@@ -33,7 +36,6 @@ export default function AssignmentsRight() {
   const [view, setView] = useState<"my" | "others">("others");
   const { collegeId, userId, role } = useUser();
 
-
   const allowedCreatorRoles = [
     "Admin",
     "Faculty",
@@ -42,7 +44,6 @@ export default function AssignmentsRight() {
     "CollegeHr",
   ];
 
-
   useEffect(() => {
     if (!studentId) return;
     loadStudentTasks();
@@ -50,11 +51,8 @@ export default function AssignmentsRight() {
 
   const loadStudentTasks = async () => {
     if (!studentId) return;
-
     setLoading(true);
-
     const data = await fetchStudentTasks(studentId);
-
     const formatted = data.map((task) => ({
       facultyTaskId: task.studentTaskId,
       title: task.taskTitle,
@@ -62,11 +60,9 @@ export default function AssignmentsRight() {
       time: task.time,
       date: task.date,
     }));
-
     setStudentTasks(formatted);
     setLoading(false);
   };
-
 
   useEffect(() => {
     if (!subjects?.length) return;
@@ -75,11 +71,8 @@ export default function AssignmentsRight() {
       setLoading(true);
       try {
         const allTasks: any[] = [];
-
         for (const subject of subjects) {
-
           const tasks = await fetchFacultyTasks(subject.collegeSubjectId);
-
           if (tasks?.length) {
             allTasks.push(
               ...tasks.map((task: any) => ({
@@ -88,24 +81,18 @@ export default function AssignmentsRight() {
                 description: task.description,
                 time: task.time,
                 date: task.date,
-              }))
+              })),
             );
           }
         }
-
         setFacultyTasks(allTasks);
-
       } catch (err) {
         console.error("Load faculty tasks failed", err);
-      }
-      finally {
+      } finally {
         setLoading(false);
       }
-
     };
-
     loadFacultyTasks();
-
   }, [subjects]);
 
   useEffect(() => {
@@ -116,7 +103,6 @@ export default function AssignmentsRight() {
   const fetchAnnouncements = async () => {
     try {
       if (!collegeId || !userId || !role) return;
-
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
@@ -127,7 +113,7 @@ export default function AssignmentsRight() {
       });
 
       const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole)
+        allowedCreatorRoles.includes(item.createdByRole),
       );
 
       const formatted = filtered.map((item: any) => ({
@@ -137,21 +123,17 @@ export default function AssignmentsRight() {
         createdAt: item.createdAt,
         type: item.type,
         targetRoles: item.targetRoles,
-
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
         cardBg: "#E8F8EF",
         imageBg: "#D3F1E0",
-
         professor: `By ${item.createdByRole}`,
       }));
-
       setAnnouncements(formatted);
     } catch (err) {
       console.error("Student announcements error:", err);
     }
   };
-
 
   const handleSaveStudentTask = async (
     payload: {
@@ -160,38 +142,34 @@ export default function AssignmentsRight() {
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ): Promise<void> => {
     if (!studentId) return;
     try {
-
-      const response = await saveStudentTask({
-        studentTaskId: taskId,
-        taskTitle: payload.title,
-        description: payload.description,
-        date: payload.dueDate,
-        time: payload.dueTime
-      },
-        studentId
+      const response = await saveStudentTask(
+        {
+          studentTaskId: taskId,
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime,
+        },
+        studentId,
       );
 
       if (!response.success) {
         console.error("Save student task failed");
         return;
       }
-
       await loadStudentTasks();
-
     } catch (err) {
       console.error("Save student task failed", err);
     }
-
   };
-
 
   return (
     <>
-      <div className="w-[32%] shrink-0 p-1 pt-0 pr-0 flex flex-col">
+      <div className="w-[32%] shrink-0 p-1 pt-0 pr-0 hidden lg:flex flex-col">
         <WorkWeekCalendar />
         <TaskPanel
           role="student"
@@ -199,7 +177,7 @@ export default function AssignmentsRight() {
           studentId={studentId ?? undefined}
           studentTasks={studentTasks}
           facultyTasks={facultyTasks}
-          onAddTask={() => { }}
+          onAddTask={() => {}}
           onSaveTask={handleSaveStudentTask}
           onDeleteTask={async () => {
             await loadStudentTasks();
@@ -210,7 +188,7 @@ export default function AssignmentsRight() {
           height="60vh"
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
-           readOnly={true}
+          readOnly={true}
         />
       </div>
     </>

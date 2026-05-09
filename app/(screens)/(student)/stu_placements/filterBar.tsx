@@ -48,7 +48,7 @@ export function PlacementFilterBar({
   const t = useTranslations("Placements.student"); // Hook
 
   return (
-    <div className="flex flex-wrap items-center gap-4 text-sm text-[#4B4B4B]">
+    <div className="flex max-md:overflow-x-auto max-md:flex-nowrap max-md:pb-2 [&::-webkit-scrollbar]:hidden items-center gap-4 text-sm text-[#4B4B4B] whitespace-nowrap">
       <div className="flex items-center gap-2">
         <span>{t("Placement Cycle :")}</span>
         <div className="relative">
