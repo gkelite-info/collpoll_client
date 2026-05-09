@@ -171,7 +171,7 @@ export default function StuDashLeft() {
         const professor =
           firstUnit && facultyMap[firstUnit.createdBy]
             ? t("Prof {name}", { name: facultyMap[firstUnit.createdBy] })
-            : t("Faculty Assigned");
+            : t("Faculty not assigned");
         const colors = colorPalettes[index % colorPalettes.length];
 
         return {

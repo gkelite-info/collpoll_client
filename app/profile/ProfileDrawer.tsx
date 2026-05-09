@@ -188,7 +188,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                 )}
                 {role === "Parent" && (
                   <span className="text-xs text-[#282828]">
-                    ID - {parentId}
+                    ID - {identifierId || parentId}
                   </span>
                 )}
                 {/* {role === "Student" && (

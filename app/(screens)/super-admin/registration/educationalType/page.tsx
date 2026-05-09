@@ -121,22 +121,22 @@ export default function EducationalType() {
             exit={{ opacity: 0, x: -10 }}
             className="space-y-5"
         >
-            <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Education Name
-                </label>
-                <input
-                    type="text"
-                    name="educationName"
-                    placeholder='e.g., "Bachelor of Technology"'
-                    value={form.educationName}
-                    onChange={handleChange}
-                    className={`${baseInput} ${errors.educationName ? errorBorder : normalBorder}`}
-                />
-                {renderError("educationName")}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block mb-1 text-sm font-medium text-gray-700">
+                        Education Name
+                    </label>
+                    <input
+                        type="text"
+                        name="educationName"
+                        placeholder='e.g., "Bachelor of Technology"'
+                        value={form.educationName}
+                        onChange={handleChange}
+                        className={`${baseInput} ${errors.educationName ? errorBorder : normalBorder}`}
+                    />
+                    {renderError("educationName")}
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
                         Education Code
@@ -151,7 +151,9 @@ export default function EducationalType() {
                     />
                     {renderError("educationCode")}
                 </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
                         Education Level
@@ -166,9 +168,7 @@ export default function EducationalType() {
                     />
                     {renderError("educationLevel")}
                 </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4 items-end">
                 <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">
                         Duration (Years)
@@ -183,10 +183,12 @@ export default function EducationalType() {
                     />
                     {renderError("durationYears")}
                 </div>
+            </div>
 
+            <div className="flex w-full max-w-sm mx-auto mt-3">
                 <button
                     onClick={handleSubmit}
-                    className="mt-6 bg-[#49C77F] text-white h-[42px] rounded-lg font-bold text-lg shadow-md hover:bg-[#3fb070] transition-all cursor-pointer"
+                    className=" w-full bg-[#49C77F] text-white h-[42px] rounded-lg font-bold text-lg shadow-md hover:bg-[#3fb070] transition-all cursor-pointer"
                 >
                     Save
                 </button>

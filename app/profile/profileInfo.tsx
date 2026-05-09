@@ -133,7 +133,7 @@ export default function ProfileInfo() {
 
     setProfileData({
       // registrationId: String(registrationId ?? ""),
-      registrationId: role === "Parent" ? String(parentId) : role === "SuperAdmin" ? String(userId) : String(identifierId ?? ""),
+      registrationId: role === "SuperAdmin" ? String(userId) : String(identifierId ?? ""),
       email: email || "",
       phone: mobile || "",
       educationType: collegeEducationType || "",

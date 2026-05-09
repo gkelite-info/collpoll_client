@@ -210,6 +210,7 @@ export async function getParentDashboardWidgets(userId: number) {
         `
         collegeSubjectId,
         subjectName,
+        image,
         college_subject_units (
           completionPercentage,
           createdBy
@@ -289,13 +290,13 @@ export async function getParentDashboardWidgets(userId: number) {
         const professor =
           firstUnit && facultyMap[firstUnit.createdBy]
             ? `Prof. ${facultyMap[firstUnit.createdBy]}`
-            : "Faculty Assigned";
+            : "Faculty not assigned";
         const colors = colorPalettes[index % colorPalettes.length];
 
         return {
           title: sub.subjectName,
           professor: professor,
-          image: "/subject-default.png",
+          image: sub.image || "",
           percentage: avgPercentage,
           radialStart: colors.radialStart,
           radialEnd: colors.radialEnd,
