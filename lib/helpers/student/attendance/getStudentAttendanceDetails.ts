@@ -1,11 +1,16 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  buildStudentAttendancePolicyInsight,
+  type StudentAttendancePolicyInsight,
+} from "./studentAttendancePolicyInsight";
 
 /* ================================
    STATUS RULES
 ================================ */
 const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
+const ELIGIBILITY_STATUSES = ["PRESENT", "ABSENT", "LATE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS"] as const;
 
 type StatusFilter = "ALL" | "ATTENDED" | "ABSENT" | "LEAVE";
@@ -85,13 +90,17 @@ export async function getStudentAttendanceDetails({
   if (error) throw error;
   if (!data?.length) return emptyResult();
 
-  const baseRows = data.filter(
+  const overallRows = data.filter(
     (r) =>
       !isCancelledStatus(r.status) &&
       r.calendar_event &&
-      r.calendar_event.is_deleted === false &&
-      (!subjectId || r.calendar_event.subject === subjectId) &&
-      (!facultyId || r.calendar_event.facultyId === facultyId)
+      r.calendar_event.is_deleted === false
+  );
+
+  const baseRows = overallRows.filter(
+    (r) =>
+      (!subjectId || r.calendar_event!.subject === subjectId) &&
+      (!facultyId || r.calendar_event!.facultyId === facultyId)
   );
 
   const subjectIds = [
@@ -157,6 +166,26 @@ export async function getStudentAttendanceDetails({
   const total = conductedSet.size;
   const attended = attendedSet.size;
 
+  const overallConductedSet = new Set<number>();
+  const overallAttendedSet = new Set<number>();
+
+  for (const r of overallRows) {
+    if (ELIGIBILITY_STATUSES.includes(r.status as (typeof ELIGIBILITY_STATUSES)[number])) {
+      overallConductedSet.add(r.calendarEventId);
+    }
+
+    if (ATTENDED_STATUSES.includes(r.status as (typeof ATTENDED_STATUSES)[number])) {
+      overallAttendedSet.add(r.calendarEventId);
+    }
+  }
+
+  const attendancePolicyInsight = await buildStudentAttendancePolicyInsight({
+    userId,
+    context: ctx,
+    attendedClasses: overallAttendedSet.size,
+    totalClasses: overallConductedSet.size,
+  });
+
 
 
   const allRows = filteredRows.map((r) => ({
@@ -185,6 +214,7 @@ export async function getStudentAttendanceDetails({
     },
     rows: paginatedRows,
     totalCount: allRows.length,
+    attendancePolicyInsight,
   };
 }
 
@@ -204,5 +234,12 @@ function emptyResult() {
     },
      rows: [],
     totalCount: 0,
+    attendancePolicyInsight: {
+      minAttendance: 75,
+      percentage: 0,
+      classesNeeded: 0,
+      message:
+        "Student's minimum attendance is 75%. No attendance records yet. Start tracking from the next class.",
+    } satisfies StudentAttendancePolicyInsight,
   };
 }

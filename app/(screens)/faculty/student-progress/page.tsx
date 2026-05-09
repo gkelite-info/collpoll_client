@@ -6,7 +6,6 @@ import PerformanceTrendChart from "./components/performanceTrendChart";
 // import CardComponent, { CardProps } from "./components/stuPerfCards";
 import { StudentDataTable } from "./components/studentDataTable";
 import TopFivePerformers from "./components/topFivePerformers";
-import WipOverlay from "@/app/utils/WipOverlay";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import CardComponent from "@/app/utils/card";
 import { useEffect, useMemo, useState } from "react";
@@ -249,10 +248,7 @@ export default function Page() {
       !collegeId ||
       !facultyId ||
       !collegeEducationId ||
-      !collegeBranchId ||
-      !academicYearIds.length ||
-      !sectionIds.length ||
-      !subjectIds.length
+      !collegeBranchId
     ) {
       setSummary(defaultSummary);
       setSummaryLoading(false);

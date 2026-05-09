@@ -2,15 +2,40 @@
 
 import { createClient } from "@/app/utils/supabase/server";
 
-const safeGet = (
-  data: any,
-  key: string | null = null,
-  fallback: any = "N/A",
-) => {
+type UiAttendanceStatus =
+  | "Present"
+  | "Absent"
+  | "Leave"
+  | "Late"
+  | "Class Cancel";
+
+type FacultyRow = {
+  fullName?: string | null;
+};
+
+type EventRow = {
+  date?: string | null;
+  fromTime?: string | null;
+  toTime?: string | null;
+  faculty?: FacultyRow | FacultyRow[] | null;
+};
+
+type AttendanceRecordRow = {
+  attendanceRecordId: number;
+  status: string;
+  markedAt?: string | null;
+  reason?: string | null;
+  event?: EventRow | EventRow[] | null;
+};
+
+const safeGet = <T,>(
+  data: T | T[] | null | undefined,
+  fallback: T | null = null,
+): T | null => {
   if (!data) return fallback;
   const item = Array.isArray(data) ? data[0] : data;
   if (!item) return fallback;
-  return key ? (item[key] ?? fallback) : item;
+  return item;
 };
 
 export async function getSubjectAttendanceDetails(
@@ -71,7 +96,7 @@ export async function getSubjectAttendanceDetails(
 
   const facultyNames = new Map<string, number>();
 
-  const formattedRecords = records.map((r: any) => {
+  const formattedRecords = (records as AttendanceRecordRow[]).map((r) => {
     if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
       totalClasses++;
       if (r.status === "PRESENT") attended++;
@@ -84,7 +109,7 @@ export async function getSubjectAttendanceDetails(
     const fName = faculty?.fullName || "Unknown Faculty";
     facultyNames.set(fName, (facultyNames.get(fName) || 0) + 1);
 
-    const eventDate = r.date || event.date;
+    const eventDate = r.markedAt || event?.date || new Date().toISOString();
     const dateObj = new Date(eventDate);
     const formattedDate = dateObj.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -92,11 +117,11 @@ export async function getSubjectAttendanceDetails(
       year: "numeric",
     });
 
-    const timeStr = event.fromTime
-      ? `${event.fromTime.slice(0, 5)} - ${event.toTime.slice(0, 5)}`
+    const timeStr = event?.fromTime
+      ? `${event.fromTime.slice(0, 5)} - ${event.toTime?.slice(0, 5) ?? ""}`
       : "N/A";
 
-    let uiStatus = "Present";
+    let uiStatus: UiAttendanceStatus = "Present";
     switch (r.status) {
       case "PRESENT":
         uiStatus = "Present";
@@ -114,7 +139,7 @@ export async function getSubjectAttendanceDetails(
         uiStatus = "Class Cancel";
         break;
       default:
-        uiStatus = r.status;
+        uiStatus = "Present";
     }
 
     return {

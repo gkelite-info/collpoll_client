@@ -161,8 +161,9 @@ const Page = () => {
                 attendancePercentage={
                   progressData?.overallAttendancePercentage ?? 0
                 }
-                absentPercentage={progressData?.absentPercentage ?? 0}
-                leavePercentage={progressData?.leavePercentage ?? 0}
+                attendanceCount={progressData?.attendedCount ?? 0}
+                absentCount={progressData?.absentCount ?? 0}
+                leaveCount={progressData?.leaveCount ?? 0}
               />
             </section>
 

@@ -377,17 +377,16 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TableComponent from "@/app/utils/table/table";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { getStudentAttendanceDetails } from "@/lib/helpers/student/attendance/getStudentAttendanceDetails";
-import {
-  CaretDown,
-  CaretLeft,
-  Chalkboard,
-  Percent,
-} from "@phosphor-icons/react";
+import { CaretLeft, Chalkboard, Percent } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
+
+type StudentAttendanceDetails = Awaited<
+  ReturnType<typeof getStudentAttendanceDetails>
+>;
 
 interface CardItem {
   id: number;
@@ -407,7 +406,6 @@ type AttendanceTableRow = {
   rawStatus: "PRESENT" | "ABSENT" | "LATE" | "LEAVE";
   status: React.ReactNode;
   reason: string;
-  notes: React.ReactNode;
 };
 
 function normalizeStatus(status: string) {
@@ -471,7 +469,7 @@ export default function SubjectAttendanceDetailsClient() {
   const subjectId = Number(searchParams.get("subjectId"));
 
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<StudentAttendanceDetails | null>(null);
 
   useEffect(() => {
     if (!userId || !subjectId) return;
@@ -492,7 +490,7 @@ export default function SubjectAttendanceDetailsClient() {
 
         setData(res);
         setTotalRecords(res.totalCount || 0);
-      } catch (err) {
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -557,10 +555,10 @@ export default function SubjectAttendanceDetailsClient() {
   ];
 
   const tableData: AttendanceTableRow[] =
-    data?.rows.map((r: any) => ({
+    data?.rows.map((r) => ({
       date: r.date,
       time: r.time,
-      rawStatus: r.status,
+      rawStatus: r.status as AttendanceTableRow["rawStatus"],
       status: <StatusBadge status={normalizeStatus(r.status)} />,
       reason: r.reason,
     })) ?? [];
@@ -639,7 +637,17 @@ export default function SubjectAttendanceDetailsClient() {
         <WorkWeekCalendar style="mt-0 w-[360px] max-md:hidden" />
       </div>
 
-      <div className="mt-4 flex flex-col items-center  max-md:p-3 ">
+      <div className="my-2 w-[68%] max-md:w-full">
+        <AiAttendanceNotificationBanner
+          className="h-auto min-h-[90px] max-md:min-h-[70px] max-md:py-4"
+          message={
+            data?.attendancePolicyInsight?.message ||
+            "Attendance insight will appear once records are available."
+          }
+        />
+      </div>
+
+      <div className="mt-4 flex flex-col items-center max-md:p-3">
         <div className="w-full flex flex-col items-start">
           <h4 className="text-[#282828] font-medium max-md:font-semibold max-md:text-[17px]">
             {t("Subject Detail View")}
@@ -685,12 +693,8 @@ export default function SubjectAttendanceDetailsClient() {
           <AiAttendanceNotificationBanner
             className="h-auto min-h-[70px]  max-md:py-4"
             message={
-              <>
-                🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep
-                maintaining your streak attend your next{" "}
-                <span className="font-bold">2</span> classes to stay safe above{" "}
-                <span className="font-bold">85%</span>!
-              </>
+              data?.attendancePolicyInsight?.message ||
+              "Attendance insight will appear once records are available."
             }
           />
         </div>

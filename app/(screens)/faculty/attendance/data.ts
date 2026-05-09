@@ -4,7 +4,12 @@ export interface Parent {
   photo: string;
 }
 
-export type AttendanceStatus = "Present" | "Absent" | "Leave";
+export type AttendanceStatus =
+  | "Present"
+  | "Absent"
+  | "Leave"
+  | "Late"
+  | "Class Cancel";
 
 export interface SubjectAttendanceRecord {
   date: string;

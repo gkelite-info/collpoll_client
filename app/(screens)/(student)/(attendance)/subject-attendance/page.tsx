@@ -379,7 +379,7 @@ export default function SubjectAttendance() {
   const rawTableData = dashboardData?.subjectWiseStats || [];
 
   const tableData =
-    rawTableData.map((row: any) => ({
+    rawTableData.map((row) => ({
       subject: row.subjectName,
       total: row.total,
       attended: row.attended,
@@ -469,12 +469,8 @@ export default function SubjectAttendance() {
           <AiAttendanceNotificationBanner
             className="h-auto min-h-[90px] max-md:min-h-[70px] max-md:py-4"
             message={
-              <>
-                🎉 Great job, "Shravani"! You&apos;re eligible for exams. Keep
-                maintaining your streak attend your next{" "}
-                <span className="font-bold">2</span> classes to stay safe above{" "}
-                <span className="font-bold">85%</span>!
-              </>
+              dashboardData?.attendancePolicyInsight?.message ||
+              "Attendance insight will appear once records are available."
             }
           />
         </div>
@@ -503,7 +499,7 @@ export default function SubjectAttendance() {
                 <div className="w-6 h-6 border-2 border-[#16284F] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
-              rawTableData.map((row: any, i: number) => {
+              rawTableData.map((row, i) => {
                 const isExpanded = expandedRow === i;
                 return (
                   <div
