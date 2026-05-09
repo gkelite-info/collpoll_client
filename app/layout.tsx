@@ -91,17 +91,36 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Tekton Campus",
+  description: "A comprehensive management platform for modern educational institutions.",
+  keywords: [
+    "Tekton Campus",
+    "TC",
+    "Institution Management System",
+    "IMS",
+    "ERP",
+    "School ERP",
+    "Student Portal",
+    "Faculty Management",
+    "College Administration Software",
+    "CMS",
+    "Automated Attendance",
+    "Education Technology",
+    "Fee Management System",
+    "Institution Management System", "School ERP 2026",
+    "College Automation Platform", "Student Information System", "SIS",
+    "Faculty Performance Portal", "Automated Fee Management", "Placement Cell Software",
+    "CBCS Credit Tracking", "Biometric Attendance System", "Cloud-based School ERP",
+    "Paperless Campus", "Academic Workflow Automation", "HR and Payroll for Colleges"
+  ],
   icons: {
-    // icon: [
-    //   {
-    //     url: '/logo-secondary.png',
-    //     href: '/logo-secondary.png',
-    //   },
-    // ],
-    icon: '/logo-secondary.png',
-    apple: '/logo-secondary.png',
-    shortcut: '/logo-secondary.png',
-  }
+    icon: [
+      { url: "/logo-secondary.png" },
+      { url: "/logo-secondary.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [
+      { url: "/logo-secondary.png" },
+    ],
+  },
 };
 
 export default async function RootLayout({
