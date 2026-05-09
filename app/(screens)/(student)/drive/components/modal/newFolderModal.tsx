@@ -76,7 +76,7 @@ export default function NewFolderModal({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4">
       <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
         <h3 className="mb-4 text-lg font-semibold text-[#111827]">
           {t("New Folder")}
