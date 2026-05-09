@@ -354,7 +354,7 @@ export default function AdminRegistration({ activeTab }: { activeTab: string }) 
             Role
           </label>
           <div className="border border-gray-300 rounded-lg px-4 py-2.5 text-sm bg-gray-100 text-gray-600 cursor-not-allowed">
-            CollegeAdmin
+            College Admin
           </div>
         </div>
 

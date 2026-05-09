@@ -174,7 +174,7 @@ export default function SharedPaymentDashboard({
           course={profile.course}
           year={profile.year}
           // rollNo={profile.rollNo}
-          rollNo={identifierId!}
+          rollNo={identifierId!.split('/')[0]}
           email={profile.email}
           mobile={profile.mobile}
           image={profilePhoto!}

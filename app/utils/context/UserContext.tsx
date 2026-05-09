@@ -260,14 +260,47 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
     Parent: async (uid, _cid) => {
       const s = settersRef.current;
-      const { data } = await supabase
+
+      const { data: parentData } = await supabase
         .from("parents")
-        .select("parentId")
+        .select("parentId, studentId")
         .eq("userId", uid)
         .eq("is_deleted", false)
         .maybeSingle();
-      s.setParentId(data?.parentId ?? null);
-      // Parent has no identifier — identifierId stays null
+
+      s.setParentId(parentData?.parentId ?? null);
+
+      if (parentData?.studentId) {
+        const [userRes, studentRes] = await Promise.all([
+          supabase
+            .from("users")
+            .select("gender")
+            .eq("userId", uid)
+            .maybeSingle(),
+          supabase
+            .from("students")
+            .select("student_pins(pinNumber)")
+            .eq("studentId", parentData.studentId)
+            .maybeSingle(),
+        ]);
+
+        const userData = userRes.data;
+        const studentData = studentRes.data;
+
+        if (userData?.gender && studentData?.student_pins) {
+          const genderInitial = userData.gender === "Male" ? "F" : "M";
+          const pins: any = studentData.student_pins;
+          const pinNumber = Array.isArray(pins)
+            ? pins[0]?.pinNumber
+            : pins?.pinNumber;
+          const formattedId = `${pinNumber}/${genderInitial}`;
+          s.setIdentifierId(formattedId);
+        } else {
+          s.setIdentifierId(null);
+        }
+      } else {
+        s.setIdentifierId(null);
+      }
     },
 
     CollegeHr: async (uid, cid) => {

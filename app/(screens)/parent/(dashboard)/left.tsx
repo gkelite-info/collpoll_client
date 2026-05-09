@@ -194,7 +194,7 @@ export default function ParentLeft() {
         />
       </div>
 
-      <div className="bg-blue-00 mt-4 flex justify-between">
+      <div className="bg-blue-00 mt-4 grid grid-cols-1 md:grid-cols-[66%_66%] gap-4">
         <SubjectProgressCards
           props={dashData?.subjects || []}
           isLoading={false}

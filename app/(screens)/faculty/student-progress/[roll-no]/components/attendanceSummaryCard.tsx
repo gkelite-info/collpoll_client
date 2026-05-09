@@ -31,7 +31,7 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
         <div className="w-full max-w-[300px] aspect-2/1 relative">
           <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible">
             <defs>
-              <linearGradient id="gaugeGradient" x1="1" y1="0" x2="0" y2="0">
+              <linearGradient id="gaugeGradient" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#4ABF08" />
                 <stop offset="100%" stopColor="#A1D683" />
               </linearGradient>
@@ -46,7 +46,7 @@ export function AttendanceSummaryCard({ percentage }: AttendanceSummaryProps) {
             />
 
             <motion.path
-              d="M 180 100 A 80 80 0 0 0 20 100"
+              d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
               stroke="url(#gaugeGradient)"
               strokeWidth="24"
