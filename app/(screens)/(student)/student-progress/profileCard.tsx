@@ -9,8 +9,9 @@ export type ProfileCardProps = {
   studentId: string;
   avatarUrl: string;
   attendancePercentage: number;
-  absentPercentage: number;
-  leavePercentage: number;
+  attendanceCount: number;
+  absentCount: number;
+  leaveCount: number;
 };
 
 export const ProfileCard: React.FC<ProfileCardProps> = ({
@@ -19,8 +20,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
   studentId,
   avatarUrl,
   attendancePercentage,
-  absentPercentage,
-  leavePercentage,
+  attendanceCount,
+  absentCount,
+  leaveCount,
 }) => {
   const t = useTranslations("Progress.student"); // Hook
 
@@ -60,9 +62,14 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
             </div>
           </div>
           <div className="flex flex-col max-md:justify-center">
-            <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
-              {attendancePercentage} Days
-            </p>
+            <div className="flex items-center gap-2 max-md:gap-1">
+              <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
+                {attendanceCount} Present
+              </p>
+              <p className="text-lg font-semibold text-[#43C17A] max-md:text-[10px] max-md:leading-tight">
+                {attendancePercentage}%
+              </p>
+            </div>
             <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Attendance")}
             </p>
@@ -80,7 +87,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
           <div className="flex flex-col max-md:justify-center">
             <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
-              {absentPercentage} Days
+              {absentCount} Absent
             </p>
             <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Absent")}
@@ -99,7 +106,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
           </div>
           <div className="flex flex-col max-md:justify-center">
             <p className="text-xl font-bold text-gray-800 max-md:text-[11px] max-md:leading-tight">
-              {leavePercentage}
+              {leaveCount}
             </p>
             <p className="text-gray-600 text-sm font-medium max-md:text-[8px] max-md:leading-tight">
               {t("Total Leave")}

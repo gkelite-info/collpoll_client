@@ -3,7 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import SubjectAttendanceTable from "../../../components/subjectAttendanceTable";
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import AiBotCard from "../../../components/aiBotCard";
 import StudentProfileCard from "../../../components/stuProfileCard";
 
@@ -11,6 +10,13 @@ import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/ge
 import { getSubjectAttendanceDetails } from "@/lib/helpers/faculty/attendance/getSubjectAttendanceDetails";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeft } from "@phosphor-icons/react";
+
+type SubjectAttendanceDetails = NonNullable<
+  Awaited<ReturnType<typeof getSubjectAttendanceDetails>>
+>;
+type StudentAttendanceDetails = NonNullable<
+  Awaited<ReturnType<typeof getStudentAttendanceDetails>>
+>;
 
 export default function SubjectDetailPage() {
   const params = useParams();
@@ -27,12 +33,9 @@ export default function SubjectDetailPage() {
   const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(
     "ALL",
   );
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<SubjectAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<any>(null);
-
-  const response =
-    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
+  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
 
   useEffect(() => {
     if (!studentId || !subjectId) return;
@@ -105,7 +108,7 @@ export default function SubjectDetailPage() {
   const filteredRecords =
     filter === "ALL"
       ? data.records
-      : data.records.filter((r: any) => r.status === filter);
+      : data.records.filter((r) => r.status === filter);
 
   return (
     <main className="px-4 py-4 min-h-screen space-y-6">
@@ -148,7 +151,12 @@ export default function SubjectDetailPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <AiBotCard response={response} />
+          <AiBotCard
+            response={
+              student.attendancePrompt ||
+              "Attendance criteria will appear here once records are available."
+            }
+          />
         </div>
       </section>
 

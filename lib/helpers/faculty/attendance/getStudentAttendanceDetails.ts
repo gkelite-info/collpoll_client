@@ -1,10 +1,58 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { buildAttendancePolicyMessage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 
-const safeGet = (data: any) => {
+const safeGet = <T,>(data: T | T[] | null | undefined): T | null => {
   if (!data) return null;
   return Array.isArray(data) ? data[0] : data;
+};
+
+type AttendanceRecordRow = {
+  status: string;
+  event:
+    | {
+        subject: number | null;
+        college_subjects:
+          | { subjectName?: string | null; subjectCode?: string | null }
+          | Array<{ subjectName?: string | null; subjectCode?: string | null }>
+          | null;
+      }
+    | Array<{
+        subject: number | null;
+        college_subjects:
+          | { subjectName?: string | null; subjectCode?: string | null }
+          | Array<{ subjectName?: string | null; subjectCode?: string | null }>
+          | null;
+      }>
+    | null;
+};
+
+type UserRow = {
+  fullName?: string | null;
+  email?: string | null;
+  mobile?: string | null;
+  user_profile?: { profileUrl?: string | null } | Array<{ profileUrl?: string | null }> | null;
+};
+
+type PinRow = {
+  pinNumber?: string | number | null;
+};
+
+type EducationRow = {
+  collegeEducationType?: string | null;
+};
+
+type BranchRow = {
+  collegeBranchCode?: string | null;
+};
+
+type SectionRow = {
+  collegeSections?: string | null;
+};
+
+type YearRow = {
+  collegeAcademicYear?: string | number | null;
 };
 
 export async function getStudentAttendanceDetails(studentIdStr: string) {
@@ -18,6 +66,9 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .select(
       `
       studentId,
+      collegeId,
+      collegeEducationId,
+      collegeBranchId,
       student_pins (pinNumber),
       user:users (fullName, email, mobile, gender, user_profile (profileUrl)), 
       education:college_education (collegeEducationType), 
@@ -36,6 +87,9 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .from("student_academic_history")
     .select(
       `
+       collegeAcademicYearId,
+       collegeSemesterId,
+       collegeSectionsId,
        section:college_sections (collegeSections),
        year:college_academic_year (collegeAcademicYear)
     `,
@@ -44,12 +98,44 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .eq("isCurrent", true)
     .single();
 
-  const user = safeGet(student.user) || {};
-  const branch = safeGet(student.branch) || {};
-  const education = safeGet(student.education) || {};
+  if (historyError) {
+    console.error("Student academic history fetch error:", historyError);
+  }
 
-  const section = safeGet(history?.section) || {};
-  const yearData = safeGet(history?.year) || {};
+  const user: UserRow = safeGet<UserRow>(student.user) ?? {};
+  const branch: BranchRow = safeGet<BranchRow>(student.branch) ?? {};
+  const education: EducationRow =
+    safeGet<EducationRow>(student.education) ?? {};
+
+  const section: SectionRow = safeGet<SectionRow>(history?.section) ?? {};
+  const yearData: YearRow = safeGet<YearRow>(history?.year) ?? {};
+
+  let minAttendance: number | null = null;
+
+  if (
+    student.collegeEducationId &&
+    student.collegeBranchId &&
+    history?.collegeAcademicYearId &&
+    history?.collegeSemesterId
+  ) {
+    const { data: policy, error: policyError } = await supabase
+      .from("college_attendance_policies")
+      .select("minAttendance")
+      .eq("collegeEducationId", student.collegeEducationId)
+      .eq("collegeBranchId", student.collegeBranchId)
+      .eq("collegeAcademicYearId", history.collegeAcademicYearId)
+      .eq("collegeSemesterId", history.collegeSemesterId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null)
+      .maybeSingle();
+
+    if (policyError) {
+      console.error("Attendance policy fetch error:", policyError);
+    } else {
+      minAttendance = policy?.minAttendance ?? null;
+    }
+  }
 
   const { data: records, error: attendanceError } = await supabase
     .from("attendance_record")
@@ -62,7 +148,12 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
       )
     `,
     )
-    .eq("studentId", studentId);
+    .eq("studentId", studentId)
+    .is("deletedAt", null);
+
+  if (attendanceError) {
+    console.error("Student attendance fetch error:", attendanceError);
+  }
 
   const subjectMap = new Map<
     number,
@@ -76,12 +167,11 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     }
   >();
 
-  let totalClasses = 0;
   let totalPresent = 0;
   let totalAbsent = 0;
   let totalLeave = 0;
 
-  records?.forEach((r: any) => {
+  (records as AttendanceRecordRow[] | null)?.forEach((r) => {
     const event = safeGet(r.event);
     if (!event) return;
 
@@ -111,8 +201,6 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     }
 
     stats.total++;
-    totalClasses++;
-
     if (r.status === "PRESENT" || r.status === "LATE") {
       stats.present++;
       totalPresent++;
@@ -135,11 +223,25 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
   }));
 
-  const pinData = safeGet(student.student_pins) || {};
-  const profileData = safeGet(user.user_profile) || {};
+  const pinData: PinRow = safeGet<PinRow>(student.student_pins) ?? {};
+  const profileData = safeGet<{ profileUrl?: string | null }>(
+    user.user_profile,
+  ) ?? {};
+  const attendanceInsight = buildAttendancePolicyMessage({
+    studentName: user.fullName || "This student",
+    attendedClasses: totalPresent,
+    totalClasses: totalPresent + totalAbsent,
+    minAttendance,
+  });
 
   return {
     fullName: user.fullName || "Unknown",
+    collegeId: student.collegeId,
+    collegeEducationId: student.collegeEducationId,
+    collegeBranchId: student.collegeBranchId,
+    collegeAcademicYearId: history?.collegeAcademicYearId ?? null,
+    collegeSemesterId: history?.collegeSemesterId ?? null,
+    collegeSectionsId: history?.collegeSectionsId ?? null,
     studentsId: pinData.pinNumber || student.studentId,
     department: branch.collegeBranchCode || "N/A",
     year: yearData.collegeAcademicYear || "N/A",
@@ -155,5 +257,9 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     leaveDays: totalLeave,
 
     subjectAttendance,
+    minAttendance: attendanceInsight.minAttendance,
+    attendancePercentage: attendanceInsight.percentage,
+    attendanceClassesNeeded: attendanceInsight.classesNeeded,
+    attendancePrompt: attendanceInsight.message,
   };
 }

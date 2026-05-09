@@ -316,20 +316,23 @@ export async function getStudentProgressData(userId: number) {
     );
   });
 
+  const profileAttendanceRecords = (attendanceRecords ?? []).filter((record) => {
+    const event = record.calendar_event;
+
+    return (
+      !!event &&
+      event.date <= today &&
+      !!event.subject &&
+      !isCancelledStatus(record.status)
+    );
+  });
+
   let attendedCount = 0;
   let absentCount = 0;
   let leaveCount = 0;
-  let conductedCount = 0;
 
-  const subjectAttendanceMap = new Map<
-    number,
-    { attended: number; total: number }
-  >();
-
-  for (const record of validRecords) {
+  for (const record of profileAttendanceRecords) {
     if (!isConductedStatus(record.status)) continue;
-
-    conductedCount += 1;
 
     if (isAttendedStatus(record.status)) {
       attendedCount += 1;
@@ -338,6 +341,17 @@ export async function getStudentProgressData(userId: number) {
     } else if (record.status === "LEAVE") {
       leaveCount += 1;
     }
+  }
+
+  const conductedCount = attendedCount + absentCount;
+
+  const subjectAttendanceMap = new Map<
+    number,
+    { attended: number; total: number }
+  >();
+
+  for (const record of validRecords) {
+    if (!isConductedStatus(record.status)) continue;
 
     const subjectId = record.calendar_event?.subject;
     if (!subjectId) continue;

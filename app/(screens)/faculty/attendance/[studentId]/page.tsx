@@ -10,6 +10,10 @@ import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/ge
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeft } from "@phosphor-icons/react";
 
+type StudentAttendanceDetails = NonNullable<
+  Awaited<ReturnType<typeof getStudentAttendanceDetails>>
+>;
+
 export default function StudentAttendanceDetailsPage() {
   const router = useRouter();
   const params = useParams();
@@ -18,11 +22,8 @@ export default function StudentAttendanceDetailsPage() {
     ? params.studentId[0]
     : params?.studentId;
 
-  const [student, setStudent] = useState<any>(null);
+  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const llmResponse =
-    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
 
   useEffect(() => {
     async function fetchData() {
@@ -89,7 +90,7 @@ export default function StudentAttendanceDetailsPage() {
           style="w-[320px]"
           department={student.department}
           degree={student.degree}
-          year={student.year}
+          year={String(student.year)}
         />
       </section>
 
@@ -110,7 +111,12 @@ export default function StudentAttendanceDetailsPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <AiBotCard response={llmResponse} />
+          <AiBotCard
+            response={
+              student.attendancePrompt ||
+              "Attendance criteria will appear here once records are available."
+            }
+          />
         </div>
       </section>
 

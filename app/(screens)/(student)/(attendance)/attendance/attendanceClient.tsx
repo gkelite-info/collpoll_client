@@ -416,6 +416,8 @@ import { useTranslations } from "next-intl";
 import AiAttendanceNotificationBanner from "@/app/utils/AiAttendanceNotificationBanner";
 import { motion, AnimatePresence } from "framer-motion";
 
+type DashboardData = Awaited<ReturnType<typeof getStudentDashboardData>>;
+
 interface TableRow {
   Subject: string;
   Faculty: string;
@@ -480,7 +482,9 @@ export default function AttendanceClient() {
   const hideRightSection =
     showSubjectAttendanceTable || showSubjectAttendanceDetails;
   const [dataLoading, setDataLoading] = useState(false);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(
+    null,
+  );
   const { collegeEducationType, loading: studentLoading } = useStudent();
   const isInter = collegeEducationType === "Inter";
   const [viewDate, setViewDate] = useState<Date>(new Date());
@@ -492,7 +496,7 @@ export default function AttendanceClient() {
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
-  const [tableLoading, setTableLoading] = useState(false);
+  const [, setTableLoading] = useState(false);
 
   const columns = [
     t("Subject"),
@@ -532,7 +536,7 @@ export default function AttendanceClient() {
           setDashboardData(data);
           setTotalRecords(data.totalCount || 0);
         }
-      } catch (err) {
+      } catch {
       } finally {
         if (isMounted) {
           setDataLoading(false);
@@ -554,7 +558,7 @@ export default function AttendanceClient() {
   };
 
   const tableRows: TableRow[] =
-    dashboardData?.tableData?.map((row: any) => ({
+    dashboardData?.tableData?.map((row) => ({
       Subject: row.subject,
       Faculty: row.faculty,
       "Today's Status": (
@@ -628,7 +632,7 @@ export default function AttendanceClient() {
               ) : (
                 <div className="flex gap-4 flex-wrap max-md:grid max-md:grid-cols-[1fr_1fr] max-md:gap-3">
                   <div className="contents max-md:flex max-md:flex-col max-md:gap-3">
-                    {dynamicCards.map((card, index) => (
+                    {dynamicCards.map((card) => (
                       <div key={card.id}>
                         <CardComponent
                           style={card.style}
@@ -661,13 +665,8 @@ export default function AttendanceClient() {
                 <AiAttendanceNotificationBanner
                   className="h-auto min-h-[90px] max-md:min-h-[70px] max-md:py-4"
                   message={
-                    <>
-                      🎉 Great job, {dashboardData?.studentName || "Shravani"}!
-                      You&apos;re eligible for exams. Keep maintaining your
-                      streak attend your next{" "}
-                      <span className="font-bold">2</span> classes to stay safe
-                      above <span className="font-bold">85%</span>!
-                    </>
+                    dashboardData?.attendancePolicyInsight?.message ||
+                    "Attendance insight will appear once records are available."
                   }
                 />
               </div>

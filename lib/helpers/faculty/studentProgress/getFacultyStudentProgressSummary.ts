@@ -154,6 +154,53 @@ type FacultyWeightageConfigRow = {
     | null;
 };
 
+type FacultySectionScopeRawRow = {
+  collegeSectionsId: number;
+  collegeSubjectId: number;
+  collegeAcademicYearId: number;
+  faculty_subject: { subjectName: string }[] | { subjectName: string } | null;
+  college_sections: { collegeSections: string }[] | { collegeSections: string } | null;
+  college_academic_year:
+    | { collegeAcademicYear: string }[]
+    | { collegeAcademicYear: string }
+    | null;
+};
+
+type CalendarEventScopeRawRow = {
+  subject: number | null;
+  college_subjects:
+    | { subjectName: string }[]
+    | { subjectName: string }
+    | null;
+  calendar_event_section:
+    | {
+        collegeEducationId: number;
+        collegeBranchId: number;
+        collegeAcademicYearId: number;
+        collegeSectionId: number;
+        isActive: boolean | null;
+        deletedAt: string | null;
+        college_sections:
+          | { collegeSections: string }[]
+          | { collegeSections: string }
+          | null;
+        college_academic_year:
+          | { collegeAcademicYear: string }[]
+          | { collegeAcademicYear: string }
+          | null;
+      }[]
+    | null;
+};
+
+type StudentScopeRow = {
+  studentId: number;
+};
+
+type StudentHistoryScopeRawRow = {
+  collegeAcademicYearId: number;
+  collegeSectionsId: number;
+};
+
 export type FacultyStudentProgressRow = {
   studentId: number;
   userId: number;
@@ -200,6 +247,9 @@ const isCancelledStatus = (status: string) =>
 
 const uniqueJoinedLabel = (values: (string | null | undefined)[]) =>
   Array.from(new Set(values.filter(Boolean) as string[])).join(", ") || "N/A";
+
+const firstJoin = <T,>(value: T[] | T | null | undefined) =>
+  Array.isArray(value) ? value[0] ?? null : value ?? null;
 
 const formatDate = (date: Date) => {
   const year = date.getFullYear();
@@ -431,17 +481,195 @@ const buildEmptySummary = (
   semesterLabel: overrides?.semesterLabel ?? "N/A",
 });
 
+const needsProgressScopeFallback = (scope: FacultyStudentProgressScope) =>
+  !scope.academicYearIds.length ||
+  !scope.sectionIds.length ||
+  !scope.subjectIds.length ||
+  !scope.subjectLabel ||
+  scope.subjectLabel === "N/A";
+
+async function resolveFacultyStudentProgressScope(
+  scope: FacultyStudentProgressScope,
+): Promise<FacultyStudentProgressScope> {
+  if (!needsProgressScopeFallback(scope)) return scope;
+
+  const { data: facultySections, error: facultySectionsError } = await supabase
+    .from("faculty_sections")
+    .select(
+      `
+      collegeSectionsId,
+      collegeSubjectId,
+      collegeAcademicYearId,
+      faculty_subject:college_subjects (
+        subjectName
+      ),
+      college_sections:collegeSectionsId (
+        collegeSections
+      ),
+      college_academic_year:collegeAcademicYearId (
+        collegeAcademicYear
+      )
+    `,
+    )
+    .eq("facultyId", scope.facultyId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (facultySectionsError) throw facultySectionsError;
+
+  const sectionRows = (facultySections ?? []) as FacultySectionScopeRawRow[];
+
+  if (sectionRows.length) {
+    return {
+      ...scope,
+      academicYearIds: scope.academicYearIds.length
+        ? scope.academicYearIds
+        : Array.from(new Set(sectionRows.map((row) => row.collegeAcademicYearId))),
+      sectionIds: scope.sectionIds.length
+        ? scope.sectionIds
+        : Array.from(new Set(sectionRows.map((row) => row.collegeSectionsId))),
+      subjectIds: scope.subjectIds.length
+        ? scope.subjectIds
+        : Array.from(new Set(sectionRows.map((row) => row.collegeSubjectId))),
+      subjectLabel:
+        scope.subjectLabel && scope.subjectLabel !== "N/A"
+          ? scope.subjectLabel
+          : uniqueJoinedLabel(
+              sectionRows.map((row) => firstJoin(row.faculty_subject)?.subjectName),
+            ),
+    };
+  }
+
+  const { data: eventRows, error: eventError } = await supabase
+    .from("calendar_event")
+    .select(
+      `
+      subject,
+      college_subjects:subject (
+        subjectName
+      ),
+      calendar_event_section (
+        collegeEducationId,
+        collegeBranchId,
+        collegeAcademicYearId,
+        collegeSectionId,
+        isActive,
+        deletedAt,
+        college_sections:collegeSectionId (
+          collegeSections
+        ),
+        college_academic_year:collegeAcademicYearId (
+          collegeAcademicYear
+        )
+      )
+    `,
+    )
+    .eq("facultyId", scope.facultyId)
+    .eq("type", "class")
+    .eq("is_deleted", false)
+    .is("deletedAt", null)
+    .not("subject", "is", null);
+
+  if (eventError) throw eventError;
+
+  const calendarRows = (eventRows ?? []) as CalendarEventScopeRawRow[];
+  const academicYearIds = new Set(scope.academicYearIds);
+  const sectionIds = new Set(scope.sectionIds);
+  const subjectIds = new Set(scope.subjectIds);
+  const subjectNames = new Set<string>();
+
+  for (const event of calendarRows) {
+    if (event.subject) {
+      subjectIds.add(event.subject);
+    }
+
+    const subject = firstJoin(event.college_subjects);
+    if (subject?.subjectName) {
+      subjectNames.add(subject.subjectName);
+    }
+
+    for (const section of event.calendar_event_section ?? []) {
+      if (
+        section.collegeEducationId !== scope.collegeEducationId ||
+        section.collegeBranchId !== scope.collegeBranchId ||
+        section.isActive === false ||
+        section.deletedAt
+      ) {
+        continue;
+      }
+
+      academicYearIds.add(section.collegeAcademicYearId);
+      sectionIds.add(section.collegeSectionId);
+    }
+  }
+
+  const calendarScope = {
+    ...scope,
+    academicYearIds: Array.from(academicYearIds),
+    sectionIds: Array.from(sectionIds),
+    subjectIds: Array.from(subjectIds),
+    subjectLabel:
+      scope.subjectLabel && scope.subjectLabel !== "N/A"
+        ? scope.subjectLabel
+        : Array.from(subjectNames).join(", ") || "N/A",
+  };
+
+  if (academicYearIds.size && sectionIds.size) {
+    return calendarScope;
+  }
+
+  const { data: studentRows, error: studentError } = await supabase
+    .from("students")
+    .select("studentId")
+    .eq("collegeId", scope.collegeId)
+    .eq("collegeEducationId", scope.collegeEducationId)
+    .eq("collegeBranchId", scope.collegeBranchId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (studentError) throw studentError;
+
+  const branchStudentIds = ((studentRows ?? []) as StudentScopeRow[]).map(
+    (row) => row.studentId,
+  );
+
+  if (!branchStudentIds.length) {
+    return calendarScope;
+  }
+
+  const { data: historyRows, error: historyError } = await supabase
+    .from("student_academic_history")
+    .select("collegeAcademicYearId, collegeSectionsId")
+    .eq("isCurrent", true)
+    .is("deletedAt", null)
+    .in("studentId", branchStudentIds);
+
+  if (historyError) throw historyError;
+
+  for (const history of (historyRows ?? []) as StudentHistoryScopeRawRow[]) {
+    academicYearIds.add(history.collegeAcademicYearId);
+    sectionIds.add(history.collegeSectionsId);
+  }
+
+  return {
+    ...calendarScope,
+    academicYearIds: Array.from(academicYearIds),
+    sectionIds: Array.from(sectionIds),
+  };
+}
+
 export async function getFacultyStudentProgressSummary(
   scope: FacultyStudentProgressScope,
 ) {
+  Object.assign(scope, await resolveFacultyStudentProgressScope(scope));
+
   const page = Math.max(1, scope.page ?? 1);
   const pageSize = Math.max(1, scope.pageSize ?? 10);
   const searchQuery = scope.searchQuery?.trim().toLowerCase() ?? "";
 
   if (
     !scope.academicYearIds.length ||
-    !scope.sectionIds.length ||
-    !scope.subjectIds.length
+    !scope.sectionIds.length
   ) {
     return buildEmptySummary(scope);
   }
@@ -509,6 +737,26 @@ export async function getFacultyStudentProgressSummary(
     });
   }
 
+  const historyLabels = {
+    yearLabel: uniqueJoinedLabel(
+      academicHistory.map((row) => row.college_academic_year?.collegeAcademicYear),
+    ),
+    sectionLabel: uniqueJoinedLabel(
+      academicHistory.map((row) => row.college_sections?.collegeSections),
+    ),
+    semesterLabel: uniqueJoinedLabel(
+      academicHistory.map((row) =>
+        row.college_semester?.collegeSemester
+          ? String(row.college_semester.collegeSemester)
+          : "N/A",
+      ),
+    ),
+  };
+
+  if (!scope.subjectIds.length) {
+    return buildEmptySummary(scope, historyLabels);
+  }
+
   const { data: studentRows, error: studentError } = await supabase
     .from("students")
     .select("studentId, userId")
@@ -553,23 +801,6 @@ export async function getFacultyStudentProgressSummary(
     .is("deletedAt", null);
 
   if (todayError) throw todayError;
-
-  const presentToday = new Set(
-    ((todayRows ?? []) as AttendanceRecordRow[])
-      .filter((row) => {
-        const event = Array.isArray(row.calendar_event)
-          ? row.calendar_event[0]
-          : row.calendar_event;
-
-        return (
-          isAttendedStatus(row.status) &&
-          event?.facultyId === scope.facultyId &&
-          !!event.subject &&
-          scope.subjectIds.includes(event.subject)
-        );
-      })
-      .map((row) => row.studentId),
-  ).size;
 
   const { data: allAttendanceRows, error: allAttendanceError } = await supabase
     .from("attendance_record")

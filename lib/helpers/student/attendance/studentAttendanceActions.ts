@@ -1,8 +1,13 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  buildStudentAttendancePolicyInsight,
+  type StudentAttendancePolicyInsight,
+} from "./studentAttendancePolicyInsight";
 
 const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
 const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
+const ELIGIBILITY_STATUSES = ["PRESENT", "ABSENT", "LATE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS"] as const;
 
 function isAttendedStatus(status: string) {
@@ -11,6 +16,10 @@ function isAttendedStatus(status: string) {
 
 function isConductedStatus(status: string) {
   return (CONDUCTED_STATUSES as readonly string[]).includes(status);
+}
+
+function isEligibilityStatus(status: string) {
+  return (ELIGIBILITY_STATUSES as readonly string[]).includes(status);
 }
 
 function isCancelledStatus(status: string) {
@@ -79,6 +88,7 @@ export interface StudentDashboardResponse {
   totalCount: number;
   subjectWiseStats: SubjectWiseStats[];
   weeklyData: number[];
+  attendancePolicyInsight: StudentAttendancePolicyInsight;
 }
 
 export async function getStudentDashboardData(
@@ -204,7 +214,8 @@ export async function getStudentDashboardData(
   );
 
   const semesterConductedSet = new Set<number>();
-  const semesterAttendedSet = new Set<number>();
+  const eligibilityConductedSet = new Set<number>();
+  const eligibilityAttendedSet = new Set<number>();
 
   let presentCount = 0;
   let absentCount = 0;
@@ -219,8 +230,12 @@ export async function getStudentDashboardData(
     }
 
     if (r.studentId === studentId) {
+      if (isEligibilityStatus(r.status)) {
+        eligibilityConductedSet.add(r.calendarEventId);
+      }
+
       if (isAttendedStatus(r.status)) {
-        semesterAttendedSet.add(r.calendarEventId);
+        eligibilityAttendedSet.add(r.calendarEventId);
       }
 
       if (r.status === "PRESENT" || r.status === "LATE") presentCount++;
@@ -230,7 +245,8 @@ export async function getStudentDashboardData(
   }
 
   const semesterConducted = semesterConductedSet.size;
-  const semesterAttended = semesterAttendedSet.size;
+  const eligibilityConducted = eligibilityConductedSet.size;
+  const eligibilityAttended = eligibilityAttendedSet.size;
 
   let presentPercent = 0;
   let absentPercent = 0;
@@ -376,6 +392,12 @@ export async function getStudentDashboardData(
       ? 0
       : Math.round((attendedSet.size / conductedSet.size) * 100);
   });
+  const attendancePolicyInsight = await buildStudentAttendancePolicyInsight({
+    userId,
+    context: ctx,
+    attendedClasses: eligibilityAttended,
+    totalClasses: eligibilityConducted,
+  });
 
   return {
     todayStats: {
@@ -383,12 +405,12 @@ export async function getStudentDashboardData(
       total: todayConductedSet.size,
     },
     cards: {
-      attended: semesterAttended,
-      totalClasses: semesterConducted,
+      attended: eligibilityAttended,
+      totalClasses: eligibilityConducted,
       percentage:
-        semesterConducted === 0
+        eligibilityConducted === 0
           ? 0
-          : Math.round((semesterAttended / semesterConducted) * 100),
+          : Math.round((eligibilityAttended / eligibilityConducted) * 100),
     },
     semesterStats: {
       present: presentPercent,
@@ -399,6 +421,7 @@ export async function getStudentDashboardData(
     totalCount: tableData.length,
     subjectWiseStats,
     weeklyData: weeklyStats,
+    attendancePolicyInsight,
   };
 }
 
@@ -411,5 +434,12 @@ function emptyDashboard() {
     totalCount: 0,
     subjectWiseStats: [],
     weeklyData: [0, 0, 0, 0, 0, 0, 0],
+    attendancePolicyInsight: {
+      minAttendance: 75,
+      percentage: 0,
+      classesNeeded: 0,
+      message:
+        "Student's minimum attendance is 75%. No attendance records yet. Start tracking from the next class.",
+    },
   };
 }

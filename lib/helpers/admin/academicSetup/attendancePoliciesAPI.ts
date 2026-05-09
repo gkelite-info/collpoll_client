@@ -99,6 +99,7 @@ export const fetchAttendancePolicies = async (
       )
       .in("collegeEducationId", collegeEducationIds)
       .eq("isActive", true)
+      .eq("is_deleted", false)
       .is("deletedAt", null)
       .order("createdAt", { ascending: false });
 
@@ -141,6 +142,7 @@ export const upsertAttendancePolicy = async (
       ...rest,
       minAttendance: Number(payload.minAttendance),
       isActive: true,
+      is_deleted: false,
       deletedAt: null,
       updatedAt: now,
     };
@@ -241,6 +243,7 @@ export const deleteAttendancePolicy = async (
       .from("college_attendance_policies")
       .update({
         isActive: false,
+        is_deleted: true,
         deletedAt: now,
         updatedAt: now,
       })
