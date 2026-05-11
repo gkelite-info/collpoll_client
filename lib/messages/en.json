@@ -480,7 +480,8 @@
       "File removed successfully": "File removed successfully",
       "Failed to remove file": "Failed to remove file",
       "An error occurred": "An error occurred",
-      "Submit Quiz" : "Submit Quiz"
+      "Submit Quiz" : "Submit Quiz",
+      "Deadline:" : "Deadline:"
     }
   },
   "Payments": {

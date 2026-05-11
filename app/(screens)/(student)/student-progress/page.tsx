@@ -155,8 +155,7 @@ const Page = () => {
                 department={collegeBranchCode ?? "N/A"}
                 studentId={identifierId ?? "N/A"}
                 avatarUrl={
-                  profilePhoto ||
-                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80"
+                  profilePhoto
                 }
                 attendancePercentage={
                   progressData?.overallAttendancePercentage ?? 0
