@@ -339,6 +339,7 @@ export async function fetchFacultyDiscussionSubmissions(
             submittedAt,
             marksObtained,
             students!inner (
+                student_pins(pinNumber),
                 users!inner (
                     fullName,
                     collegePublicId,
@@ -380,6 +381,10 @@ export async function fetchFacultyDiscussionSubmissions(
       (h: any) => h.isCurrent === true,
     );
 
+    const pinNumber = Array.isArray(studentData?.student_pins)
+      ? studentData?.student_pins[0]?.pinNumber
+      : studentData?.student_pins?.pinNumber;
+
     if (!studentMap.has(row.studentId)) {
       studentMap.set(row.studentId, {
         studentId: row.studentId,
@@ -390,6 +395,7 @@ export async function fetchFacultyDiscussionSubmissions(
         totalMarks: row.discussion_forum_sections?.marks ?? 0,
         profiles: {
           full_name: studentData?.users?.fullName ?? "Unknown Student",
+          rollNumber: pinNumber || "N/A",
           avatar_url: studentData?.users?.user_profile?.[0]?.profileUrl ?? null,
           section: currentHistory?.college_sections?.collegeSections ?? "N/A",
         },

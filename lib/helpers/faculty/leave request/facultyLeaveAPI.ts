@@ -50,6 +50,7 @@ export async function fetchStudentLeavesForFaculty(
             isCurrent,
             college_semester ( collegeSemester )
           ),
+          student_pins ( pinNumber ),
           users:userId (
             fullName,
             user_profile ( profileUrl )
@@ -102,6 +103,10 @@ export async function fetchStudentLeavesForFaculty(
         ? `${semNumber}${getOrdinalSuffix(semNumber)} Semester`
         : "N/A";
 
+      const pinNumber = Array.isArray(student?.student_pins)
+        ? student?.student_pins[0]?.pinNumber
+        : student?.student_pins?.pinNumber;
+
       const typeLabel =
         l.leaveType === "attendanceregularization"
           ? "Attendance Regularization"
@@ -122,12 +127,8 @@ export async function fetchStudentLeavesForFaculty(
 
       return {
         id: l.studentLeaveId,
-        rollNo: String(student?.studentId || "N/A"),
-        photo:
-          profile?.profileUrl ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(
-            userObj?.fullName || "S",
-          )}&background=random&color=fff`,
+        rollNo: pinNumber || "N/A",
+        photo: profile?.profileUrl || null,
         name: userObj?.fullName || "Unknown Student",
         branch: branch?.collegeBranchCode || "N/A",
         semester: semString,

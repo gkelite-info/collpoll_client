@@ -29,6 +29,7 @@ import FacultyRequestLeaveModal from "./modal/RequestLeaveModal";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { ConfirmStatusModal } from "./modal/ConfirmStatusModal";
 import FacultyLeaveDetailsModal from "./modal/facultyLeaveStatusModal";
+import { Avatar } from "@/app/utils/Avatar";
 
 const STUDENT_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -224,11 +225,18 @@ function FacultyLeavesContent() {
             </>
           ),
           photo: (
-            <img
+            // <img
+            //   src={item.photo}
+            //   alt="student"
+            //   className="w-8 h-8 rounded-full object-cover border border-gray-200"
+            // />
+
+            <Avatar
               src={item.photo}
+              size={32}
               alt="student"
-              className="w-8 h-8 rounded-full object-cover border border-gray-200"
             />
+
           ),
           attachments:
             item.attachments && item.attachments.length > 0 ? (

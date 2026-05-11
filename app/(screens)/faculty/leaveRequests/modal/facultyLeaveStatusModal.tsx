@@ -17,6 +17,7 @@ import {
   markMessagesAsRead,
 } from "@/lib/helpers/student/leave request/leaveChatAPI";
 import toast from "react-hot-toast";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface FacultyLeaveDetailsModalProps {
   isOpen: boolean;
@@ -256,10 +257,15 @@ export default function FacultyLeaveDetailsModal({
 
         <div className="w-[30%] min-w-[220px] bg-gray-50/50 border-r border-gray-200 p-3 flex flex-col gap-2.5 overflow-y-auto custom-scrollbar">
           <div className="bg-[#10B9810F] border border-gray-200 rounded-lg p-3 flex flex-col items-center shadow-sm">
-            <img
+            {/* <img
               src={leaveData.photo}
               alt="Student"
               className="w-12 h-12 rounded-full object-cover shadow-sm mb-1.5 border border-gray-100"
+            /> */}
+            <Avatar
+              src={leaveData.photo}
+              size={48}
+              alt="Student"
             />
             <h3 className="font-bold text-[#282828] text-[13px] text-center leading-tight truncate w-full">
               {leaveData.name}
@@ -411,14 +417,8 @@ export default function FacultyLeaveDetailsModal({
                         key={`${msg.chatId}-${idx}`}
                         className={`flex gap-1.5 w-full max-w-[85%] ${isMe ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                       >
-                        <img
-                          src={
-                            msg.senderAvatar ||
-                            `https://ui-avatars.com/api/?name=${msg.senderName}&background=random&color=fff`
-                          }
-                          alt=""
-                          className="w-6 h-6 rounded-full object-cover shadow-sm shrink-0 border border-gray-100"
-                        />
+
+                        <Avatar src={msg.senderAvatar} size={24} alt="" />
 
                         <div
                           className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}

@@ -479,7 +479,8 @@
       "Upload a file first!": "Upload a file first!",
       "File removed successfully": "File removed successfully",
       "Failed to remove file": "Failed to remove file",
-      "An error occurred": "An error occurred"
+      "An error occurred": "An error occurred",
+      "Submit Quiz" : "Submit Quiz"
     }
   },
   "Payments": {
@@ -776,7 +777,8 @@
       "Section :": "Section :",
       "NA": "N/A",
       "Student": "Student",
-      "Parent": "Parent"
+      "Parent": "Parent",
+      "Faculty": "Faculty"
     }
   },
   "Clubs": {

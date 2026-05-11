@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import { useUser } from "@/app/utils/context/UserContext";
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
@@ -56,7 +57,7 @@ const SummaryShimmer = () => (
 export default function SummaryPage() {
   const { role, fullName, facultyId, college_branch, mobile, email } =
     useFaculty();
-  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears } =
+  const { userId, profilePhoto, dateOfJoining, professionalExperienceYears, identifierId } =
     useUser();
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,24 +88,18 @@ export default function SummaryPage() {
   };
 
   const isInter = ["Inter"].includes(role);
-  const systemId = facultyId ? `ID-${facultyId}` : `ID-${userId}`;
+  const systemId = identifierId ? `ID-${identifierId}` : `ID-${userId}`;
 
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
-          {profilePhoto ? (
-            <img
-              src={profilePhoto}
-              alt={fullName!}
-              className="w-[84px] h-[84px] rounded-full object-cover mb-3 shadow-sm"
-            />
-          ) : (
-            <div className="w-[84px] h-[84px] rounded-full flex items-center justify-center bg-gray-100 mb-3 shadow-sm border border-gray-200">
-              <User size={40} className="text-gray-400" weight="fill" />
-            </div>
-          )}
-          <h2 className="text-[17px] font-bold text-gray-800 text-center">
+          <Avatar
+            src={profilePhoto}
+            size={84}
+            alt={fullName!}
+          />
+          <h2 className="text-[17px] font-bold text-gray-800 text-center mt-3">
             {fullName}
           </h2>
           <span className="text-xs font-semibold text-[#43C17A] bg-[#43C17A]/10 px-2 py-0.5 rounded mt-1">

@@ -1015,7 +1015,7 @@ function AssignmentsLeftContent() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const rowsPerPage = 1;
+  const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const [discussionUploads, setDiscussionUploads] = useState<

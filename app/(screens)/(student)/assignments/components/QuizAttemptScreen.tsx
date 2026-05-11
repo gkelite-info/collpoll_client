@@ -1826,7 +1826,7 @@ function QuizAttemptScreenContent({
           disabled={isSubmitting}
           className="bg-[#43C17A] cursor-pointer focus:outline-none text-white px-6 py-2.5 rounded-md font-bold text-sm disabled:opacity-50"
         >
-          {isSubmitting ? t("Submitting...") : t("Submit Quiz")}
+          {isSubmitting ? t("Submitting") : t("Submit Quiz")}
         </button>
       </div>
     </div>

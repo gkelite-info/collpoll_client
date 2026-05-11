@@ -440,6 +440,7 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
             totalMarksObtained,
             submittedAt,
             students!inner (
+                student_pins(pinNumber),
                 users!inner (
                     fullName,
                     user_profile (
@@ -476,11 +477,15 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
       ? profileData[0]?.profileUrl
       : profileData?.profileUrl;
 
+    const pinNumber = Array.isArray(studentData?.student_pins)
+      ? studentData?.student_pins[0]?.pinNumber
+      : studentData?.student_pins?.pinNumber;
+
     return {
       ...sub,
       students: {
         fullName: studentData?.users?.fullName,
-        rollNumber: sub.studentId,
+        rollNumber: pinNumber || null,
         section: section,
         profileImage: profileUrl || null,
       },

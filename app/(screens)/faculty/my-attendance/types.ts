@@ -1,7 +1,7 @@
 export interface FacultyProfile {
   name: string;
   image: string;
-  facultyId: number | null;
+  facultyId: number | null | string;
   branch: string;
   mobile: string;
   email: string;
