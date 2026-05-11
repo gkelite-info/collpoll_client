@@ -7,7 +7,6 @@ import WipOverlay from "@/app/utils/WipOverlay";
 export interface TrustedDevice {
   id: string;
   name: string;
-
   icon: React.ComponentType<IconProps>;
   lastActivity: string;
   location: string;
@@ -69,35 +68,36 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, onRemove }) => {
   const accentColor = "text-green-500 bg-green-50";
 
   return (
-    <div className="rounded-xl p-5 border-2 flex flex-col space-y-3">
+    <div className="rounded-xl p-5 border flex flex-col space-y-3 bg-white max-md:p-4 max-md:shadow-sm max-md:border-gray-100">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className={`p-2 rounded-full text-xl ${accentColor}`}>
+        <div className="flex items-center space-x-3 min-w-0 pr-2">
+          <div className={`p-2 rounded-full text-xl shrink-0 ${accentColor}`}>
             <Icon weight="bold" />
           </div>
-
-          <h3 className="text-lg font-semibold text-gray-800">{device.name}</h3>
+          <h3 className="text-lg font-semibold text-gray-800 truncate">
+            {device.name}
+          </h3>
         </div>
 
-        <span className="py-0.5 px-2.5 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full">
+        <span className="py-0.5 px-2.5 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full shrink-0">
           {device.browser}
         </span>
       </div>
 
       <div className="text-sm space-y-2 text-gray-600">
-        <p>
+        <p className="truncate">
           <span className="font-medium text-gray-500">Last Activity : </span>
           {device.lastActivity}
         </p>
-        <p>
+        <p className="truncate">
           <span className="font-medium text-gray-500">
             Location ( Approx) :{" "}
           </span>
           {device.location}
         </p>
-        <p>
+        <p className="flex items-center">
           <span className="font-medium text-gray-500">Status : </span>
-          <span className="py-0.5 px-2 text-xs font-semibold text-green-700 bg-green-100 rounded-lg">
+          <span className="py-0.5 px-2 text-xs font-semibold text-green-700 bg-green-100 rounded-lg ml-1.5">
             {device.status}
           </span>
         </p>
@@ -105,7 +105,7 @@ const DeviceCard: React.FC<DeviceCardProps> = ({ device, onRemove }) => {
 
       <button
         onClick={() => onRemove(device.id)}
-        className="mt-4 cursor-pointer w-full py-2.5 px-4 bg-[#16284F] text-white font-medium rounded-lg hover:bg-red-700 transition duration-150 shadow-lg"
+        className="mt-4 cursor-pointer w-full py-2.5 px-4 bg-[#16284F] text-white font-medium rounded-lg hover:bg-red-700 transition duration-150 shadow-sm"
       >
         Remove Device
       </button>
@@ -123,32 +123,30 @@ const TrustedDevicesList: React.FC<TrustedDevicesListProps> = ({
     router.back();
   };
   return (
-    <div className="min-h-screen p-2 sm:p-2">
-      <div className="mx-auto font-sans">
-        <div className="flex justify-between">
+    <div className="min-h-screen p-2 sm:p-2 max-md:bg-[#F4F5F6] max-md:p-0">
+      <div className="mx-auto font-sans w-full">
+        <div className="flex justify-between max-md:p-4 max-md:pb-2">
           <div className="text-xl font-semibold flex flex-col">
-            <div className="flex justify-start items-center gap-2">
+            <div className="flex justify-start items-center gap-2 max-md:text-[22px]">
               <button
                 onClick={handleBack}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1"
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors cursor-pointer mr-1 -ml-1"
               >
                 <CaretLeft size={24} weight="bold" className="text-[#282828]" />
               </button>
               <span className="text-[#282828]">Trusted Devices List</span>
             </div>
-            {/* 5. Added margin-left (ml-9) to align description under the text */}
-            <p className="text-gray-500 text-sm ml-9">
+            <p className="text-gray-500 text-sm ml-9 max-md:hidden">
               View and manage devices that have access to your account.
             </p>
           </div>
-          <div className="w-[32%]">
+          <div className="w-[32%] max-md:hidden">
             <CourseScheduleCard />
           </div>
         </div>
-        <div></div>
 
-        <div className="relative mt-8 grid grid-cols-1 md:grid-cols-2 bg-white p-6 rounded-xl gap-6">
-          <WipOverlay/>
+        <div className="relative mt-8 grid grid-cols-1 md:grid-cols-2 bg-white p-6 rounded-xl gap-6 max-md:mt-2 max-md:bg-transparent max-md:p-4 max-md:gap-4 w-full">
+          <WipOverlay />
           {devices.map((device) => (
             <DeviceCard
               key={device.id}

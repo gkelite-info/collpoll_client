@@ -59,7 +59,6 @@ export const mockVerificationData: VerificationMethod[] = [
 
 interface VerificationRowProps {
   method: VerificationMethod;
-
   onToggleOrNavigate: (id: string) => void;
 }
 
@@ -83,7 +82,7 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
   const ActionElement: React.FC = () => {
     if (method.status === "toggle") {
       return (
-        <label className="relative inline-flex items-center cursor-pointer">
+        <label className="relative inline-flex items-center cursor-pointer shrink-0">
           <input
             type="checkbox"
             checked={method.enabled}
@@ -97,7 +96,7 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
       return (
         <button
           onClick={handleAction}
-          className="text-gray-400 p-1"
+          className="text-gray-400 p-1 shrink-0 cursor-pointer"
           aria-label={`Go to ${method.name} settings`}
         >
           <CaretRight size={24} weight="bold" />
@@ -109,18 +108,23 @@ const VerificationRow: React.FC<VerificationRowProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between p-4 border-2 rounded-xl  mb-4 ${method.status === "navigate"
+      className={`flex items-center justify-between p-4 max-md:p-3 max-md:border-gray-100 max-md:shadow-sm max-md:bg-white border-2 rounded-xl mb-4 max-md:mb-3 w-full ${
+        method.status === "navigate"
           ? "cursor-pointer hover:bg-gray-50 transition"
           : ""
-        }`}
+      }`}
       onClick={method.status === "navigate" ? handleAction : undefined}
     >
-      <div className="flex items-center space-x-4">
-        <div className={`p-3 rounded-full text-xl ${accentColor}`}>
+      <div className="flex items-center space-x-4 max-md:space-x-3 min-w-0 pr-2">
+        <div
+          className={`p-3 max-md:p-2 rounded-full text-xl shrink-0 ${accentColor}`}
+        >
           <Icon weight="bold" />
         </div>
-        <div>
-          <h3 className="text-lg font-medium text-gray-800">{method.name}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg max-md:text-[15px] font-medium text-gray-800 truncate">
+            {method.name}
+          </h3>
         </div>
       </div>
 
@@ -140,39 +144,40 @@ const TwoStepVerification: React.FC<TwoStepVerificationProps> = ({
   };
 
   return (
-    <div className=" p-2 space-y-6 sm:p-2">
-      <div className="flex justify-between">
+    <div className="p-2 space-y-6 sm:p-2 max-md:p-0 max-md:bg-[#F4F5F6] min-h-screen">
+      <div className="flex justify-between max-md:p-4 max-md:pb-2">
         <div className="text-xl font-semibold flex flex-col">
-          <div className="flex justify-start items-center gap-2">
+          <div className="flex justify-start items-center gap-2 max-md:text-[22px]">
             <button
               onClick={handleBack}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer mr-1"
+              className="p-1 hover:bg-gray-200 rounded-full transition-colors cursor-pointer mr-1 -ml-1"
             >
               <CaretLeft size={24} weight="bold" className="text-[#282828]" />
             </button>
             <span className="text-[#282828]">Two-Step Verification</span>
           </div>
-          <p className="text-gray-500 text-sm ml-9">
-            {" "}
-            {/* Added margin to align with text above */}
+          <p className="text-gray-500 text-sm ml-9 max-md:hidden">
             Add an extra layer of security to your account
           </p>
         </div>
-        <div className="w-[32%]">
+        <div className="w-[32%] max-md:hidden">
           <CourseScheduleCard />
         </div>
       </div>
-      <div>
-        <div className="relative mt-8 bg-white p-6 rounded-xl">
+
+      <div className="w-full">
+        <div className="relative mt-8 max-md:mt-2 bg-white max-md:bg-transparent p-6 max-md:p-4 rounded-xl w-full">
           <WipOverlay />
-          {verificationMethods.map((method) => (
-            <VerificationRow
-              key={method.id}
-              method={method}
-              onToggleOrNavigate={onToggleOrNavigate}
-            />
-          ))}
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="flex flex-col w-full relative z-0">
+            {verificationMethods.map((method) => (
+              <VerificationRow
+                key={method.id}
+                method={method}
+                onToggleOrNavigate={onToggleOrNavigate}
+              />
+            ))}
+          </div>
+          <div className="mt-6 max-md:mt-2 text-center text-sm text-gray-500 px-2">
             We recommend enabling at least one verification method.
           </div>
         </div>

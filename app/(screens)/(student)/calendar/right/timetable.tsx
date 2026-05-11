@@ -1,243 +1,3 @@
-// "use client";
-// import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
-// import { useStudent } from "@/app/utils/context/student/useStudent";
-// import { fetchStudentTimetableByDate } from "@/lib/helpers/profile/calender/fetchStudentTimetable";
-// import { supabase } from "@/lib/supabaseClient";
-// import { FilePdf } from "@phosphor-icons/react";
-// import { useEffect, useState } from "react";
-// import TimetableCardShimmer from "./TimetableCardShimmer";
-// import { useTranslations } from "next-intl";
-// import { fetchTopicResources } from "@/lib/helpers/faculty/Savetopicresource";
-
-// const formatTimeToAMPM = (time24: string) => {
-//   const [h, m] = time24.split(":");
-//   let hour = Number(h);
-//   const period = hour >= 12 ? "PM" : "AM";
-//   hour = hour % 12 || 12;
-//   return `${hour}:${m} ${period}`;
-// };
-
-// // Re-added your Loader component
-// export const Loader = () => (
-//   <div className="flex justify-center items-center h-[300px]">
-//     <div className="w-10 h-10 border-4 border-[#E8EAED] border-t-[#16284F] rounded-full animate-spin"></div>
-//   </div>
-// );
-
-// export default function CalendarTimeTable({
-//   selectedDate,
-//   height = "lg:min-h-[784px]",
-// }: {
-//   selectedDate: string;
-//   height?: string;
-// }) {
-//   const [todayDate, setTodayDate] = useState("");
-//   const [todayDay, setTodayDay] = useState("");
-//   const [timetable, setTimetable] = useState<any[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const { collegeEducationType } = useStudent();
-//   const t = useTranslations("Calendar.student");
-
-//   useEffect(() => {
-//     const now = new Date();
-//     setTodayDate(String(now.getDate()).padStart(2, "0"));
-//     setTodayDay(
-//       now.toLocaleString("en-US", { weekday: "short" }).replace(".", ""),
-//     );
-//   }, []);
-
-//   useEffect(() => {
-//     const loadTimetable = async () => {
-//       try {
-//         setLoading(true);
-//         const {
-//           data: { user },
-//         } = await supabase.auth.getUser();
-//         if (!user) throw new Error("No auth user");
-
-//         const { data: userRow } = await supabase
-//           .from("users")
-//           .select("userId")
-//           .eq("auth_id", user.id)
-//           .single();
-
-//         if (!userRow) throw new Error("Internal user not found");
-
-//         const studentContext = await fetchStudentContext(userRow.userId);
-//         const isInter = collegeEducationType === "Inter";
-
-//         const rawData = await fetchStudentTimetableByDate({
-//           date: selectedDate,
-//           collegeEducationId: studentContext.collegeEducationId,
-//           collegeBranchId: studentContext.collegeBranchId,
-//           collegeAcademicYearId: studentContext.collegeAcademicYearId,
-//           collegeSemesterId: studentContext.collegeSemesterId,
-//           collegeSectionId: studentContext.collegeSectionsId,
-//           isInter: isInter,
-//         });
-
-//         // const timetableWithResources = await Promise.all(
-//         //   rawData.map(async (item: any) => {
-//         //     let pdfUrl = null;
-//         //     // Fetch PDF if topicId exists
-//         //     if (item.topicId) {
-//         //       const resources = await fetchTopicResources(item.topicId);
-//         //       if (resources && resources.length > 0) {
-//         //         pdfUrl = resources[0].resourceUrl;
-//         //       }
-//         //     }
-
-//         //     return {
-//         //       start: formatTimeToAMPM(item.fromTime),
-//         //       end: formatTimeToAMPM(item.toTime),
-//         //       title: item.eventTitle,
-//         //       topic: item.eventTopic,
-//         //       room: item.roomNo,
-//         //       faculty: item.facultyName,
-//         //       img: "/stu_class.png",
-//         //       isCancelled: item.isCancelled,
-//         //       pdfUrl: pdfUrl,
-//         //     };
-//         //   })
-//         // );
-
-//         const timetableWithResources = await Promise.all(
-//           rawData.map(async (item: any) => {
-//             let pdfUrl = null;
-
-//             if (item.topicId) {
-//               const resources = await fetchTopicResources(item.topicId);
-
-//               if (resources && resources.length > 0) {
-//                 pdfUrl = resources[0].resourceUrl;
-//               }
-//             }
-
-//             return {
-//               start: formatTimeToAMPM(item.fromTime),
-//               end: formatTimeToAMPM(item.toTime),
-//               title: item.eventTitle,
-//               topic: item.eventTopic,
-//               room: item.roomNo,
-//               faculty: item.facultyName,
-//               img: "/stu_class.png",
-//               isCancelled: item.isCancelled,
-//               pdfUrl: pdfUrl,
-//             };
-//           }),
-//         );
-
-//         setTimetable(timetableWithResources);
-//       } catch (err) {
-//         console.error("Failed to load timetable", err);
-//         setTimetable([]);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     loadTimetable();
-//   }, [selectedDate, collegeEducationType]);
-
-//   return (
-//     <div
-//       className={`bg-white ${height} lg:w-[100%] rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto`}
-//     >
-//       <div className="w-full">
-//         <div className="flex bg-[#E8EAED] w-[35%] h-[54px] rounded-md shadow-md">
-//           <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
-//             <p className="text-md font-black text-[#EFEFEF]">{todayDate}</p>
-//             <p className="text-xs text-[#FFFFFF] font-light">{todayDay}</p>
-//           </div>
-//           <div className="flex items-center justify-center w-[146px] rounded-r-md">
-//             <p className="text-[#16284F] font-medium text-lg">Timetable</p>
-//           </div>
-//         </div>
-
-//         <div className="mt-5 flex w-[100%] flex-col gap-4">
-//           {loading ? (
-//             <TimetableCardShimmer count={6} />
-//           ) : timetable.length === 0 ? (
-//             <div className="flex items-center justify-center h-[50vh] w-[100%]">
-//               <p className="text-center text-[#282828]">No classes yet..</p>
-//             </div>
-//           ) : (
-//             timetable.map((item, index) => (
-//               <div
-//                 key={index}
-//                 className="h-[102px] w-[100%] flex justify-between"
-//               >
-//                 <div className="w-[88px] flex flex-col items-center justify-center">
-//                   <p className="text-[#282828] text-xs">{item.start}</p>
-//                   <span className="text-[#282828]">-</span>
-//                   <p className="text-[#282828] text-xs">{item.end}</p>
-//                 </div>
-
-//                 <div className="bg-[#16284F] w-[450px] rounded-xl flex justify-end">
-//                   <div className="w-[98%] h-full bg-[#E8E9ED] gap-3 rounded-r-lg flex items-center px-2">
-//                     <div className="h-[84px] w-[84px] rounded-lg bg-yellow-00 flex items-center justify-center">
-//                       <img src={item.img} alt="class" />
-//                     </div>
-
-//                     <div className="h-[84px] w-[408px] gap-2 flex items-center justify-between">
-//                       <div className="flex flex-col justify-center gap-1 h-full w-[80%] overflow-x-auto">
-//                         <p className="text-[#282828] font-medium leading-tight">
-//                           {item.title}
-//                         </p>
-//                         <p className="text-[#282828] font-medium text-sm">
-//                           Topic:{" "}
-//                           <span className="text-[#282828] font-normal text-xs ml-1">
-//                             {item.topic}
-//                           </span>
-//                         </p>
-//                         <div className="flex gap-2">
-//                           <p className="text-[#282828] font-medium text-xs">
-//                             Room:{" "}
-//                             <span className="font-normal">
-//                               {item.room || "-"}
-//                             </span>
-//                           </p>
-//                           <p className="text-[#282828] font-medium text-xs">
-//                             Faculty:{" "}
-//                             <span className="font-normal">{item.faculty}</span>
-//                           </p>
-//                           {item.isCancelled && (
-//                             <p className="text-red-500 text-xs font-semibold">
-//                               CANCELLED
-//                             </p>
-//                           )}
-//                         </div>
-//                       </div>
-
-//                       <div
-//                         className={`rounded-full h-[40px] min-w-[40px] flex items-center justify-center transition-all ${
-//                           item.pdfUrl
-//                             ? "bg-[#16284F] cursor-pointer"
-//                             : "bg-gray-300"
-//                         }`}
-//                         onClick={() =>
-//                           item.pdfUrl && window.open(item.pdfUrl, "_blank")
-//                         }
-//                       >
-//                         <FilePdf
-//                           size={23}
-//                           className={
-//                             item.pdfUrl ? "text-white" : "text-gray-500"
-//                           }
-//                         />
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-//             ))
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { useStudent } from "@/app/utils/context/student/useStudent";
@@ -361,11 +121,10 @@ export default function CalendarTimeTable({
 
   return (
     <div
-      // Shifted mobile overrides to max-lg to cover tablet screens cleanly
       className={`bg-white ${height} w-full rounded-lg lg:p-4 shadow-md flex flex-col overflow-y-auto max-lg:bg-transparent max-lg:shadow-none max-lg:p-0`}
     >
       <div className="w-full">
-        {/* 🖥️ DESKTOP HEADER (Strictly >= 1024px) */}
+        {/* DESKTOP HEADER */}
         <div className="hidden lg:flex bg-[#E8EAED] w-max h-[54px] rounded-md shadow-md mb-2">
           <div className="bg-[#16284F] w-[45px] h-[54px] rounded-l-md flex flex-col items-center justify-center">
             <p className="text-md font-black text-[#EFEFEF]">{todayDate}</p>
@@ -378,7 +137,7 @@ export default function CalendarTimeTable({
           </div>
         </div>
 
-        {/* 📱 TABLET & MOBILE HEADER (Scaled for tablet touch targets) */}
+        {/* MOBILE HEADER */}
         <div className="hidden max-lg:flex items-center gap-0 mt-2 mb-3">
           <div className="bg-[#16284F] text-white flex flex-col items-center justify-center w-10 h-10 md:w-14 md:h-14 rounded-l-md">
             <span className="text-[14px] md:text-[18px] font-bold leading-none">
@@ -405,7 +164,7 @@ export default function CalendarTimeTable({
           ) : (
             timetable.map((item, index) => (
               <div key={index} className="w-full">
-                {/* 🖥️ DESKTOP CARD VIEW (Strictly >= 1024px) */}
+                {/* DESKTOP CARD VIEW */}
                 <div className="hidden lg:flex h-[102px] w-full justify-between">
                   <div className="w-[88px] shrink-0 flex flex-col items-center justify-center">
                     <p className="text-[#282828] text-xs">{item.start}</p>
@@ -473,7 +232,7 @@ export default function CalendarTimeTable({
                   </div>
                 </div>
 
-                {/* 📱 TABLET & MOBILE CARD VIEW (Fluid layout + md: upscaling for Tablets) */}
+                {/* MOBILE CARD VIEW */}
                 <div className="lg:hidden w-full bg-white rounded-xl p-3 md:p-4 flex gap-3 md:gap-4 relative shadow-sm border border-gray-100">
                   <div className="h-16 w-16 md:h-20 md:w-20 rounded-lg bg-gray-100 shrink-0">
                     <img

@@ -176,7 +176,7 @@ export default function CardComponent({
       className={`relative rounded-lg p-3 h-fit md:h-32 lg:h-32 ${style} flex flex-col justify-between shadow-sm max-md:w-full max-md:h-auto max-md:p-2.5 max-md:justify-center
         ${to || onClick ? "cursor-pointer hover:scale-[1.02] transition-all" : ""}`}
     >
-      {/* 🖥️ DESKTOP VIEW */}
+      {/* DESKTOP VIEW */}
       <div className="hidden md:flex lg:flex items-center justify-between gap-3 mb-2">
         <div
           className="w-9 h-8 rounded-sm flex items-center justify-center"
@@ -209,7 +209,7 @@ export default function CardComponent({
         {label}
       </span>
 
-      {/* 📱 MOBILE VIEW (Compacted side-by-side matching screenshot) */}
+      {/* MOBILE VIEW */}
       <div className="flex md:hidden lg:hidden items-center justify-start gap-3">
         <div
           className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"

@@ -4,7 +4,7 @@ import { Suspense } from "react";
 export default function FacultySettingsPage() {
   return (
     <Suspense fallback={<div className="p-4">Loading settings...</div>}>
-      <div className="w-[82vw]">
+      <div className="md:w-[82vw] max-md:scale-[3.5] max-md:origin-top-left">
         <SettingsClient />
       </div>
     </Suspense>

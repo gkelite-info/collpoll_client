@@ -89,23 +89,23 @@ const AccountRow: React.FC<AccountRowProps> = ({
   const Icon = account.icon;
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm mb-4">
-      <div className="flex items-center space-x-4">
-        <div className={`p-1 rounded-full text-2xl ${account.color}`}>
+    <div className="flex items-center justify-between p-4 max-md:p-3 bg-white rounded-xl shadow-sm mb-4 w-full">
+      <div className="flex items-center space-x-4 max-md:space-x-3 min-w-0 pr-2">
+        <div className={`p-1 rounded-full text-2xl shrink-0 ${account.color}`}>
           <Icon weight="fill" />
         </div>
 
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg max-md:text-[16px] font-semibold text-gray-800 truncate">
             {account.name}
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm max-md:text-[12px] text-gray-500 truncate">
             {isProcessing ? "Updating..." : account.description}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 shrink-0">
         {isProcessing && (
           <CircleNotch
             size={20}
@@ -141,6 +141,7 @@ export default function LinkedAccounts() {
   const [accounts, setAccounts] = useState<LinkedAccount[]>(initialAccountData);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const pathname = usePathname();
+
   const loadFromSession = async (user: any) => {
     if (!user) return;
 
@@ -238,28 +239,29 @@ export default function LinkedAccounts() {
   };
 
   return (
-    <div className="p-2 space-y-6 sm:p-2">
-      <div className="flex justify-between">
+    <div className="p-2 space-y-6 sm:p-2 max-md:p-0 max-md:bg-[#F4F5F6] min-h-screen">
+      <div className="flex justify-between max-md:p-4 max-md:pb-2">
         <div className="text-xl font-semibold flex flex-col">
-          <div className="flex justify-start items-center gap-2">
+          <div className="flex justify-start items-center gap-2 max-md:text-[22px]">
             <Link
               href={pathname}
-              className="hover:bg-gray-200 p-1 rounded-full transition-colors"
+              className="hover:bg-gray-200 p-1 rounded-full transition-colors -ml-1"
             >
               <CaretLeft size={24} className="text-[#282828]" weight="bold" />
             </Link>
             <span className="text-[#282828]">Manage Linked Accounts</span>
           </div>
-          <p className="text-gray-500 text-sm ml-9">
+          <p className="text-gray-500 text-sm ml-9 max-md:hidden">
             Connect or disconnect your third party accounts
           </p>
         </div>
-        <div className="w-[32%]">
+        <div className="w-[32%] max-md:hidden">
           <CourseScheduleCard />
         </div>
       </div>
-      <div>
-        <div className="mt-8">
+
+      <div className="w-full">
+        <div className="mt-8 max-md:mt-2 max-md:px-4">
           {accounts.map((account) => (
             <AccountRow
               key={account.id}
