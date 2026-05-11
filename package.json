@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "translate": "npx tsx scripts/translate.ts"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.12",
