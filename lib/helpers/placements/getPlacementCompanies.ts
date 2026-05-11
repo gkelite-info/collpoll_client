@@ -429,12 +429,7 @@ export async function getPlacementCompanies({
       break;
   }
 
-  if (page && pageSize) {
-    const from = (page - 1) * pageSize;
-    query = query.range(from, from + pageSize - 1);
-  }
-
-  const { data, error, count } = await query;
+  const { data, error } = await query;
 
   if (error) {
     console.error("Failed to fetch placement companies:", error);
@@ -468,9 +463,11 @@ export async function getPlacementCompanies({
   const companies = mapRowsToCompanies(rows, branchInfoMap, educationMap, academicYearMap);
 
   if (page && pageSize) {
+    const from = (page - 1) * pageSize;
+
     return {
-      data: companies,
-      totalCount: count ?? companies.length,
+      data: companies.slice(from, from + pageSize),
+      totalCount: companies.length,
     };
   }
 

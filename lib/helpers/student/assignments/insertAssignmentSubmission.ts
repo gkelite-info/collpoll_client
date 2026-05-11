@@ -107,3 +107,35 @@ export async function getSubmissionForAssignment(assignmentId: number) {
 
     return data?.file ?? null;
 }
+
+export async function getSubmissionDetailsForAssignment(assignmentId: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    const { data: userRow } = await supabase
+        .from("users")
+        .select("userId")
+        .eq("auth_id", user.id)
+        .single();
+
+    if (!userRow) return null;
+
+    const { data: student } = await supabase
+        .from("students")
+        .select("studentId")
+        .eq("userId", userRow.userId)
+        .single();
+
+    if (!student) return null;
+
+    const { data } = await supabase
+        .from("student_assignments_submission")
+        .select("file, marksScored, status")
+        .eq("studentId", student.studentId)
+        .eq("assignmentId", assignmentId)
+        .is("deletedAt", null)
+        .maybeSingle();
+
+    return data ?? null;
+}
