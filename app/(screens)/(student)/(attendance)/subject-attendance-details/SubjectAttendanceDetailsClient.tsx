@@ -82,7 +82,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function SubjectAttendanceDetailsClient() {
-  type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
+  type ViewFilter = "ALL" | "ATTENDED" | "ABSENT" | "LEAVE";
   const t = useTranslations("Attendance.student");
 
   const [activeView, setActiveView] = useState<ViewFilter>("ALL");
@@ -152,7 +152,7 @@ export default function SubjectAttendanceDetailsClient() {
     {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: data?.headerStats.absent ?? 0,
+      value: data?.headerStats.leave ?? 0,
       label: t("Leave"),
       style: "bg-[#E2DAFF] w-[182px]",
       iconBgColor: "#F62D2D",
@@ -205,6 +205,10 @@ export default function SubjectAttendanceDetailsClient() {
       return tableData.filter((r) => r.rawStatus === "ABSENT");
     }
 
+    if (activeView === "LEAVE") {
+      return tableData.filter((r) => r.rawStatus === "LEAVE");
+    }
+
     return tableData;
   })();
 
@@ -247,7 +251,7 @@ export default function SubjectAttendanceDetailsClient() {
                 onClick={() => {
                   if (index === 0) setActiveView("ALL");
                   if (index === 1) setActiveView("ATTENDED");
-                  if (index === 2) setActiveView("ABSENT");
+                  if (index === 2) setActiveView("LEAVE");
                 }}
               >
                 <CardComponent

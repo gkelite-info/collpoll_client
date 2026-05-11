@@ -10,6 +10,13 @@ import AiBotCard from "@/app/(screens)/faculty/attendance/components/aiBotCard";
 import SubjectAttendanceTable from "@/app/(screens)/faculty/attendance/components/subjectAttendanceTable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 
+type StudentAttendanceDetails = Awaited<
+  ReturnType<typeof getStudentAttendanceDetails>
+>;
+type SubjectAttendanceDetails = Awaited<
+  ReturnType<typeof getSubjectAttendanceDetails>
+>;
+
 export default function SubjectDetailPage() {
   const params = useParams();
   const router = useRouter()
@@ -24,12 +31,9 @@ export default function SubjectDetailPage() {
   const [filter, setFilter] = useState<"ALL" | "Present" | "Absent" | "Leave">(
     "ALL",
   );
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<SubjectAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [student, setStudent] = useState<any>(null);
-
-  const response =
-    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
+  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
 
   useEffect(() => {
     if (!studentId || !subjectId) return;
@@ -48,17 +52,10 @@ export default function SubjectDetailPage() {
 
       if (attendanceRes.status === "fulfilled") {
         setData(attendanceRes.value);
-      } else {
-        console.error(
-          "Error fetching subject attendance:",
-          attendanceRes.reason,
-        );
       }
 
       if (studentRes.status === "fulfilled") {
         setStudent(studentRes.value);
-      } else {
-        console.error("Error fetching student details:", studentRes.reason);
       }
 
       setLoading(false);
@@ -99,7 +96,7 @@ export default function SubjectDetailPage() {
   const filteredRecords =
     filter === "ALL"
       ? data.records
-      : data.records.filter((r: any) => r.status === filter);
+      : data.records.filter((r) => r.status === filter);
 
   return (
     <main className="px-4 py-4 min-h-screen space-y-6">
@@ -137,7 +134,12 @@ export default function SubjectDetailPage() {
         </div>
 
         <div className="lg:col-span-1">
-          <AiBotCard response={response} />
+          <AiBotCard
+            response={
+              student.attendancePrompt ||
+              "Attendance criteria will appear here once records are available."
+            }
+          />
         </div>
       </section>
 

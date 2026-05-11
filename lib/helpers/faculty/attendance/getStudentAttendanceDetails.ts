@@ -1,7 +1,10 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
-import { buildAttendancePolicyMessage } from "@/lib/helpers/attendance/attendancePolicyMessage";
+import {
+  buildAttendancePolicyMessage,
+  calculateAttendancePercentage,
+} from "@/lib/helpers/attendance/attendancePolicyMessage";
 
 const safeGet = <T,>(data: T | T[] | null | undefined): T | null => {
   if (!data) return null;
@@ -10,9 +13,12 @@ const safeGet = <T,>(data: T | T[] | null | undefined): T | null => {
 
 type AttendanceRecordRow = {
   status: string;
-  event:
+      event:
     | {
         subject: number | null;
+        type: string | null;
+        date: string | null;
+        is_deleted: boolean | null;
         college_subjects:
           | { subjectName?: string | null; subjectCode?: string | null }
           | Array<{ subjectName?: string | null; subjectCode?: string | null }>
@@ -20,6 +26,9 @@ type AttendanceRecordRow = {
       }
     | Array<{
         subject: number | null;
+        type: string | null;
+        date: string | null;
+        is_deleted: boolean | null;
         college_subjects:
           | { subjectName?: string | null; subjectCode?: string | null }
           | Array<{ subjectName?: string | null; subjectCode?: string | null }>
@@ -78,12 +87,9 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .eq("studentId", studentId)
     .single();
 
-  if (studentError || !student) {
-    console.error("❌ Student Fetch Error:", studentError);
-    return null;
-  }
+  if (studentError || !student) return null;
 
-  const { data: history, error: historyError } = await supabase
+  const { data: history } = await supabase
     .from("student_academic_history")
     .select(
       `
@@ -97,10 +103,6 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     .eq("studentId", studentId)
     .eq("isCurrent", true)
     .single();
-
-  if (historyError) {
-    console.error("Student academic history fetch error:", historyError);
-  }
 
   const user: UserRow = safeGet<UserRow>(student.user) ?? {};
   const branch: BranchRow = safeGet<BranchRow>(student.branch) ?? {};
@@ -130,30 +132,27 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
       .is("deletedAt", null)
       .maybeSingle();
 
-    if (policyError) {
-      console.error("Attendance policy fetch error:", policyError);
-    } else {
+    if (!policyError) {
       minAttendance = policy?.minAttendance ?? null;
     }
   }
 
-  const { data: records, error: attendanceError } = await supabase
+  const { data: records } = await supabase
     .from("attendance_record")
     .select(
       `
       status,
       event:calendar_event (
         subject,
+        type,
+        date,
+        is_deleted,
         college_subjects (subjectName, subjectCode)
       )
     `,
     )
     .eq("studentId", studentId)
     .is("deletedAt", null);
-
-  if (attendanceError) {
-    console.error("Student attendance fetch error:", attendanceError);
-  }
 
   const subjectMap = new Map<
     number,
@@ -170,10 +169,14 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
   let totalPresent = 0;
   let totalAbsent = 0;
   let totalLeave = 0;
+  const today = new Date().toISOString().slice(0, 10);
 
   (records as AttendanceRecordRow[] | null)?.forEach((r) => {
     const event = safeGet(r.event);
     if (!event) return;
+    if (event.type !== "class" || event.is_deleted !== false || !event.date || event.date > today) {
+      return;
+    }
 
     const subjId = event.subject;
     const subjectData = safeGet(event.college_subjects);
@@ -220,7 +223,7 @@ export async function getStudentAttendanceDetails(studentIdStr: string) {
     present: s.present,
     absent: s.absent,
     leave: s.leave,
-    percentage: s.total > 0 ? Math.round((s.present / s.total) * 100) : 0,
+    percentage: calculateAttendancePercentage(s.present, s.total),
   }));
 
   const pinData: PinRow = safeGet<PinRow>(student.student_pins) ?? {};

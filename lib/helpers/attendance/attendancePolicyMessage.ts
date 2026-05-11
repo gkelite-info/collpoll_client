@@ -15,6 +15,14 @@ export type AttendancePolicyMessageResult = {
 
 const DEFAULT_MIN_ATTENDANCE = 75;
 
+export function calculateAttendancePercentage(
+  attendedClasses: number,
+  totalClasses: number,
+) {
+  if (totalClasses <= 0) return 0;
+  return Math.floor((attendedClasses / totalClasses) * 100);
+}
+
 function getFirstName(name: string) {
   return name.trim().split(/\s+/)[0] || "This student";
 }
@@ -49,8 +57,7 @@ export function buildAttendancePolicyMessage({
     typeof minAttendance === "number" && Number.isFinite(minAttendance)
       ? minAttendance
       : DEFAULT_MIN_ATTENDANCE;
-  const percentage =
-    safeTotal === 0 ? 0 : Math.round((safeAttended / safeTotal) * 100);
+  const percentage = calculateAttendancePercentage(safeAttended, safeTotal);
   const classesNeeded = calculateClassesNeeded(
     safeAttended,
     safeTotal,

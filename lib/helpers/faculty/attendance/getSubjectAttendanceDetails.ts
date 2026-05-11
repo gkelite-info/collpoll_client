@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 
 type UiAttendanceStatus =
   | "Present"
@@ -55,10 +56,7 @@ export async function getSubjectAttendanceDetails(
     .eq("subjectCode", subjectCode)
     .single();
 
-  if (subjError || !subjectData) {
-    console.error("Subject Not Found:", subjError);
-    return null;
-  }
+  if (subjError || !subjectData) return null;
 
   const subjectId = subjectData.collegeSubjectId;
 
@@ -84,10 +82,7 @@ export async function getSubjectAttendanceDetails(
     .eq("event.subject", subjectId)
     .order("markedAt", { ascending: false });
 
-  if (attendanceError) {
-    console.error("Attendance Fetch Error:", attendanceError);
-    return null;
-  }
+  if (attendanceError) return null;
 
   let totalClasses = 0;
   let attended = 0;
@@ -99,7 +94,7 @@ export async function getSubjectAttendanceDetails(
   const formattedRecords = (records as AttendanceRecordRow[]).map((r) => {
     if (["PRESENT", "ABSENT", "LEAVE", "LATE"].includes(r.status)) {
       totalClasses++;
-      if (r.status === "PRESENT") attended++;
+      if (r.status === "PRESENT" || r.status === "LATE") attended++;
       if (r.status === "ABSENT") absent++;
       if (r.status === "LEAVE") leave++;
     }
@@ -161,8 +156,7 @@ export async function getSubjectAttendanceDetails(
     }
   });
 
-  const percentage =
-    totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0;
+  const percentage = calculateAttendancePercentage(attended, totalClasses);
 
   return {
     subjectName: subjectData.subjectName,
