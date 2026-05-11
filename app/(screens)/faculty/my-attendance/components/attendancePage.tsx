@@ -41,7 +41,7 @@ export const formatDate = (isoDate?: string | null) => {
 const AttendancePage = () => {
 
   const { facultyId, email, collegeBranchCode, profilePhoto, mobile, fullName, dateOfJoining,
-    professionalExperienceYears, collegeEducationType, userId } = useUser()
+    professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
   const [profile, setProfile] = useState<FacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -118,14 +118,14 @@ const AttendancePage = () => {
   }, [userId, selectedMonth, selectedYear, currentPage]);
 
   useEffect(() => {
-    if (!facultyId) return;
+    if (!facultyId || !identifierId) return;
     setInfoLoading(true);
     try {
       const updatedProfile: FacultyProfile = {
         ...mockProfile,
         name: fullName!,
         mobile: mobile!,
-        facultyId: facultyId,
+        facultyId: identifierId!,
         branch: collegeBranchCode ?? mockProfile.branch,
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),

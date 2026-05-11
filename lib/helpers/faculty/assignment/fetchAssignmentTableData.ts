@@ -10,7 +10,7 @@ export async function fetchAssignmentTableData(assignmentId: string) {
   if (assignErr) throw assignErr;
   const { data: students, error: studentError } = await supabase
     .from("students")
-    .select(`studentId, users (fullName, email, userId)`)
+    .select(`studentId, student_pins ( pinNumber ), users (fullName, email, userId, user_profile ( profileUrl, is_deleted ))`)
     .eq("collegeBranchId", assign.collegeBranchId)
     .eq("isActive", true);
 

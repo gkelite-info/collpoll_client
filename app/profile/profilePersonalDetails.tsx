@@ -106,8 +106,8 @@ export default function ProfilePersonalDetails() {
             return toast.error("Name should contain only letters and spaces");
         if (!mobile) return toast.error("Mobile number is required!");
         if (!email) return toast.error("Email is required!");
-        if (!emailAllowed.test(email))
-            return toast.error("Email allows only lowercase letters, numbers, '@' and '.'");
+        // if (!emailAllowed.test(email))
+        //     return toast.error("Email allows only lowercase letters, numbers, '@' and '.'");
         if ((email.match(/@/g) || []).length !== 1)
             return toast.error("Email must contain exactly one '@'!");
         if (linkedIn && !linkedInRegex.test(linkedIn)) {

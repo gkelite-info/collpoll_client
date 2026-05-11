@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Cell, Pie, PieChart } from "recharts";
 
 import type { FacultyStudentProgressRow } from "@/lib/helpers/faculty/studentProgress/getFacultyStudentProgressSummary";
+import { Avatar } from "@/app/utils/Avatar";
 
 const getProgressColor = (progress: number): string => {
   if (progress >= 90) return "#43C17A";
@@ -174,17 +175,7 @@ export function StudentDataTable({
                 >
                   <td className="whitespace-nowrap px-4 py-1">
                     <div className="h-8 w-8">
-                      {student.profileUrl ? (
-                        <img
-                          className="h-full w-full rounded-full object-cover"
-                          src={student.profileUrl}
-                          alt={student.studentName}
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-semibold text-[#6B7280]">
-                          {student.studentName.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
+                      <Avatar src={student.profileUrl} size={32} alt={student.studentName}/>
                     </div>
                   </td>
 

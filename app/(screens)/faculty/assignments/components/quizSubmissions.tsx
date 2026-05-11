@@ -8,6 +8,7 @@ import {
   fetchSubmissionsWithStudentsByQuizId,
 } from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizSubmissionsShimmer from "../shimmer/FacultyQuizSubmissionsShimmer";
+import { Avatar } from "@/app/utils/Avatar";
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "-";
@@ -114,17 +115,7 @@ export default function FacultyQuizSubmissions({
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                  {submission.students?.profileImage ? (
-                    <img
-                      src={submission.students.profileImage}
-                      alt={submission.students?.fullName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm font-bold text-gray-500">
-                      {submission.students?.fullName?.[0] ?? "S"}
-                    </span>
-                  )}
+                  <Avatar src={submission.students.profileImage} size={40} alt={submission.students?.fullName}/>
                 </div>
 
                 <div className="flex flex-col gap-0.5">

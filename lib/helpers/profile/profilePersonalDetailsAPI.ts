@@ -16,6 +16,7 @@ export async function updateUserBasic(payload: {
   userId: number;
   fullName: string;
 }) {
+  const formattedName = payload.fullName.trim();
   const { data: existing } = await supabase
     .from("users")
     .select("fullName")
@@ -25,14 +26,49 @@ export async function updateUserBasic(payload: {
   if (existing?.fullName === payload.fullName.trim()) {
     return { success: true };
   }
-  const { error } = await supabase
-    .from("users")
-    .update({
-      fullName: payload.fullName.trim(),
-      updatedAt: new Date().toISOString(),
-    })
-    .eq("userId", payload.userId);
-  if (error) return { success: false };
+  // const { error } = await supabase
+  //   .from("users")
+  //   .update({
+  //     fullName: payload.fullName.trim(),
+  //     updatedAt: new Date().toISOString(),
+  //   })
+  //   .eq("userId", payload.userId);
+  // if (error) return { success: false };
+
+  const now = new Date().toISOString();
+
+  const [userUpdate, facultyUpdate, adminUpdate] = await Promise.all([
+    supabase
+      .from("users")
+      .update({
+        fullName: formattedName,
+        updatedAt: now,
+      })
+      .eq("userId", payload.userId),
+    supabase
+      .from("faculty")
+      .update({
+        fullName: formattedName,
+        updatedAt: now,
+      })
+      .eq("userId", payload.userId),
+    supabase
+      .from("admins")
+      .update({
+        fullName: formattedName,
+        updatedAt: now,
+      })
+      .eq("userId", payload.userId),
+  ]);
+
+  if (userUpdate.error) {
+    console.error("User update error:", userUpdate.error);
+    return { success: false };
+  }
+
+  if (facultyUpdate.error) console.error("Faculty update error:", facultyUpdate.error);
+  if (adminUpdate.error) console.error("Admin update error:", adminUpdate.error);
+
   return { success: true };
 }
 

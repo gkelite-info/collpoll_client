@@ -9,6 +9,7 @@ import { formatFileName } from "@/app/utils/formatFileName";
 import { fetchDiscussionById } from "@/lib/helpers/discussionForum/discussionForumAPI";
 import SubmissionShimmer from "@/app/(screens)/admin/assignments/components/shimmers/submissionShimmer";
 import { Pagination } from "./pagination"; // 🟢 IMPORT REUSABLE PAGINATION COMPONENT
+import { Avatar } from "@/app/utils/Avatar";
 
 interface Props {
   discussionId: string | null;
@@ -138,15 +139,7 @@ export default function FacultyDiscussionSubmissions({
             >
               <div className="flex-shrink-0 items-center">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative flex items-center justify-center">
-                  {submission.profiles?.avatar_url ? (
-                    <img
-                      src={submission.profiles.avatar_url}
-                      alt={submission.profiles.full_name}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <User size={20} weight="bold" className="text-gray-500" />
-                  )}
+                  <Avatar src={submission.profiles.avatar_url} size={40} alt={submission.profiles.full_name}/>
                 </div>
               </div>
 
@@ -182,7 +175,7 @@ export default function FacultyDiscussionSubmissions({
                         Student ID :{" "}
                       </span>
                       <span className="text-gray-600">
-                        {submission.studentId}
+                        {submission.profiles?.rollNumber || submission.studentId}
                       </span>
                     </div>
                     <div>
