@@ -78,7 +78,10 @@ export const CustomMultiSelect: React.FC<MultiSelectProps> = ({
         <label className={`text-sm font-medium text-gray-700`}>
           {label}
           {label !== "Academic Session" && (
-            <span className="text-red-600">*</span>
+            <>
+              {" "}
+              <span className="text-red-600">*</span>
+            </>
           )}
         </label>
       )}

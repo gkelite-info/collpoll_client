@@ -312,7 +312,7 @@ export default function SubjectAttendanceDetailsClient() {
 
             <div className="flex items-center gap-1 max-md:hidden">
               <h5 className="text-[#525252] text-sm">{t("Attendance :")}</h5>
-              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+              <div className="rounded-full px-3 h-6.25 flex items-center justify-center bg-[#DCEAE2]">
                 <p className="text-sm text-[#43C17A] font-medium whitespace-nowrap">
                   {attendanceText}
                 </p>
@@ -323,7 +323,7 @@ export default function SubjectAttendanceDetailsClient() {
 
         <div className="hidden max-md:block my-2 w-full mt-5">
           <AiAttendanceNotificationBanner
-            className="h-auto min-h-[70px]  max-md:py-4"
+            className="h-auto min-h-17.5  max-md:py-4"
             message={
               data?.attendancePolicyInsight?.message ||
               "Attendance insight will appear once records are available."
@@ -332,7 +332,7 @@ export default function SubjectAttendanceDetailsClient() {
         </div>
 
         <div className="mt-4 w-[85%] max-md:w-full max-md:mt-3 max-md:overflow-x-auto scrollbar-hide">
-          <div className="max-md:min-w-[400px]">
+          <div className="max-md:min-w-100">
             <TableComponent
               columns={columns}
               tableData={filteredTableData}

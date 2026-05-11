@@ -7,7 +7,9 @@ export const persistUser = async (
   targetUserId: number | null,
   timestamp: string,
 ) => {
-  const fullMobile = `${basicData.mobileCode}${basicData.mobileNumber}`;
+  const fullMobile = basicData.mobileNumber
+    ? `${basicData.mobileCode}${basicData.mobileNumber}`
+    : null;
   let finalUserId = targetUserId;
 
   if (isNewUser) {

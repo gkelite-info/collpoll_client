@@ -65,6 +65,12 @@ type StudentDataTableProps = {
 const formatScore = (obtained: number, total: number) =>
   total > 0 ? `${obtained}/${total}` : "-";
 
+const hasAnyProgressData = (student: FacultyStudentProgressRow) =>
+  student.conductedClasses > 0 ||
+  student.totalAssignments > 0 ||
+  student.totalQuizMarks > 0 ||
+  student.totalDiscussionForumMarks > 0;
+
 export function StudentDataTable({
   students,
   searchQuery,
@@ -191,7 +197,9 @@ export function StudentDataTable({
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-1 text-sm">
-                    {student.attendancePercentage}%
+                    {student.conductedClasses > 0
+                      ? `${student.attendancePercentage}%`
+                      : "-"}
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-1 text-sm">
@@ -212,7 +220,11 @@ export function StudentDataTable({
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-1 text-sm font-medium">
-                    <RechartsProgressCircle progress={student.progressPercent} />
+                    {hasAnyProgressData(student) ? (
+                      <RechartsProgressCircle progress={student.progressPercent} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
 
                   <td className="whitespace-nowrap px-4 py-1 text-sm font-medium">

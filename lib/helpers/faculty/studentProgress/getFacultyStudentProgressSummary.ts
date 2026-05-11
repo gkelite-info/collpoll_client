@@ -1255,12 +1255,12 @@ export async function getFacultyStudentProgressSummary(
     .filter((row): row is FacultyStudentProgressRow => row !== null)
     .sort((a, b) => a.rollNo.localeCompare(b.rollNo));
 
-  const visibleStudentProgressRows = studentProgressRows.filter(
+  const topPerformerProgressRows = studentProgressRows.filter(
     (student) => student.progressPercent > 0,
   );
 
   const filteredStudentProgressRows = searchQuery
-    ? visibleStudentProgressRows.filter((student) => {
+    ? studentProgressRows.filter((student) => {
         const rollNo = student.rollNo.toLowerCase();
         const studentName = student.studentName.toLowerCase();
 
@@ -1268,7 +1268,7 @@ export async function getFacultyStudentProgressSummary(
           rollNo.includes(searchQuery) || studentName.includes(searchQuery)
         );
       })
-    : visibleStudentProgressRows;
+    : studentProgressRows;
 
   const tableTotalCount = filteredStudentProgressRows.length;
   const paginatedStudentRows = filteredStudentProgressRows.slice(
@@ -1457,16 +1457,16 @@ export async function getFacultyStudentProgressSummary(
       },
   );
 
-  const visibleStudentIds = new Set(
-    visibleStudentProgressRows.map((student) => student.studentId),
+  const studentProgressIds = new Set(
+    studentProgressRows.map((student) => student.studentId),
   );
 
-  const lowAttendance = visibleStudentProgressRows.filter(
+  const lowAttendance = studentProgressRows.filter(
     (student) => student.conductedClasses > 0 && student.attendancePercentage < 70,
   ).length;
 
   return {
-    totalStudents: visibleStudentProgressRows.length,
+    totalStudents: studentProgressRows.length,
     tableTotalCount,
     presentToday: Array.from(
       new Set(
@@ -1477,7 +1477,7 @@ export async function getFacultyStudentProgressSummary(
               : row.calendar_event;
 
             return (
-              visibleStudentIds.has(row.studentId) &&
+              studentProgressIds.has(row.studentId) &&
               isAttendedStatus(row.status) &&
               event?.facultyId === scope.facultyId &&
               !!event.subject &&
@@ -1490,7 +1490,7 @@ export async function getFacultyStudentProgressSummary(
     lowAttendance,
     markedStudents,
     studentRows: paginatedStudentRows,
-    topPerformerRows: visibleStudentProgressRows,
+    topPerformerRows: topPerformerProgressRows,
     trendData,
     departmentLabel: scope.departmentLabel ?? "N/A",
     subjectLabel: scope.subjectLabel ?? "N/A",
