@@ -5,6 +5,7 @@ import { FaChevronDown } from "react-icons/fa6";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useTranslations } from "next-intl";
+import { Avatar } from "@/app/utils/Avatar";
 
 export type UnitTopic = {
   topicId: number;
@@ -179,9 +180,14 @@ export default function SubjectCard({ subjectProps }: SubjectCardProps) {
                         {t("Faculty -")}{" "}
                       </h4>
                       <div className="h-[30px] w-[30px] rounded-full overflow-hidden">
-                        <img
+                        {/* <img
                           src={item.profileIcon}
                           className="h-full w-full object-cover"
+                          alt="faculty"
+                        /> */}
+                        <Avatar
+                          src={item.profileIcon}
+                          size={30}
                           alt="faculty"
                         />
                       </div>
