@@ -43,7 +43,7 @@ export default function StudentMeetingsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const t = useTranslations("Meetings.student"); // Initialize hook
+  const t = useTranslations("Meetings.student");
 
   const [totalPages, setTotalPages] = useState(1);
   const currentType = (searchParams.get("type") as MeetingType) || "upcoming";

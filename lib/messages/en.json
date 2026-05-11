@@ -661,7 +661,10 @@
       "Enter folder name": "Enter folder name",
       "Only letters, numbers, spaces, - and _": "Only letters, numbers, spaces, - and _",
       "Choose Folder Color": "Choose Folder Color",
-      "Save Folder": "Save Folder"
+      "Save Folder": "Save Folder",
+      "Create Folder": "Create Folder",
+      "Upload File": "Upload File",
+      "Filter": "Filter"
     }
   },
   "Leave": {
