@@ -1,7 +1,8 @@
 "use client";
 
 import { Avatar } from "@/app/utils/Avatar";
-import { User, Chalkboard, Laptop } from "@phosphor-icons/react";
+import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
+import { User, Laptop } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
   attendanceDays?: number;
   absentDays?: number;
   leaveDays?: number;
+  attendancePercentage?: number;
 
   isSubjectMode?: boolean;
   subjectSummary?: {
@@ -39,6 +41,7 @@ export default function StudentProfileCard({
   attendanceDays = 0,
   absentDays = 0,
   leaveDays = 0,
+  attendancePercentage,
   isSubjectMode = false,
   subjectSummary,
   activeFilter,
@@ -47,7 +50,8 @@ export default function StudentProfileCard({
   const countedDays = attendanceDays + absentDays;
 
   const attendancePercent =
-    countedDays === 0 ? 0 : Math.round((attendanceDays / countedDays) * 100);
+    attendancePercentage ??
+    calculateAttendancePercentage(attendanceDays, countedDays);
 
   return (
     <div className="rounded-[20px] bg-white p-5 shadow-sm">

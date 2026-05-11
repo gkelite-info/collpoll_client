@@ -10,6 +10,10 @@ import StudentProfileCard from "@/app/(screens)/faculty/attendance/components/st
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 
+type StudentAttendanceDetails = Awaited<
+  ReturnType<typeof getStudentAttendanceDetails>
+>;
+
 export default function StudentAttendanceDetailsPage() {
   const params = useParams();
   const studentId = Array.isArray(params?.studentId)
@@ -18,11 +22,8 @@ export default function StudentAttendanceDetailsPage() {
 
   const router = useRouter()
 
-  const [student, setStudent] = useState<any>(null);
+  const [student, setStudent] = useState<StudentAttendanceDetails | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const llmResponse =
-    "Shravani has excellent attendance (85%). She’s eligible for exams and maintaining a consistent record!";
 
   useEffect(() => {
     async function fetchData() {
@@ -30,8 +31,7 @@ export default function StudentAttendanceDetailsPage() {
       try {
         const data = await getStudentAttendanceDetails(studentId);
         setStudent(data);
-      } catch (error) {
-        console.error("Failed to fetch student profile", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -70,7 +70,7 @@ export default function StudentAttendanceDetailsPage() {
           style="w-[320px]"
           department={student.department}
           degree={student.degree}
-          year={student.year}
+          year={student.year?.toString()}
         />
       </section>
 
@@ -87,11 +87,17 @@ export default function StudentAttendanceDetailsPage() {
             attendanceDays={student.attendanceDays}
             absentDays={student.absentDays}
             leaveDays={student.leaveDays}
+            attendancePercentage={student.attendancePercentage}
           />
         </div>
 
         <div className="lg:col-span-1">
-          <AiBotCard response={llmResponse} />
+          <AiBotCard
+            response={
+              student.attendancePrompt ||
+              "Attendance criteria will appear here once records are available."
+            }
+          />
         </div>
       </section>
 

@@ -31,8 +31,7 @@ export default function StudentAttendanceDetailsPage() {
       try {
         const data = await getStudentAttendanceDetails(studentId);
         setStudent(data);
-      } catch (error) {
-        console.error("Failed to fetch student profile", error);
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -107,6 +106,7 @@ export default function StudentAttendanceDetailsPage() {
             attendanceDays={student.attendanceDays}
             absentDays={student.absentDays}
             leaveDays={student.leaveDays}
+            attendancePercentage={student.attendancePercentage}
           />
         </div>
 

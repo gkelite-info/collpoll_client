@@ -806,10 +806,10 @@ export async function getAdminStudentProgressDetails(
   }
 
   const attendancePercentage =
-    attendanceDays + absentDays + leaveDays === 0
+    attendanceDays + absentDays === 0
       ? 0
       : Math.round(
-          (attendanceDays / (attendanceDays + absentDays + leaveDays)) * 100,
+          (attendanceDays / (attendanceDays + absentDays)) * 100,
         );
   const absentPercentage =
     attendanceDays + absentDays + leaveDays === 0

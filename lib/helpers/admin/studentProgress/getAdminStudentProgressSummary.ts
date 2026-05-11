@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 const ATTENDED_STATUSES = ["PRESENT", "LATE"] as const;
-const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE", "LEAVE"] as const;
+const CONDUCTED_STATUSES = ["PRESENT", "ABSENT", "LATE"] as const;
 const CANCELLED_STATUSES = ["CLASS_CANCEL", "CANCEL_CLASS", "CANCELLED"] as const;
 
 type AdminStudentProgressScope = {
@@ -53,14 +53,20 @@ type AttendanceRecordRow = {
   studentId: number;
   status: string;
   markedAt?: string | null;
-  calendar_event:
+      calendar_event:
     | {
         facultyId: number | null;
         subject: number | null;
+        type: string | null;
+        date: string | null;
+        is_deleted: boolean | null;
       }
     | {
         facultyId: number | null;
         subject: number | null;
+        type: string | null;
+        date: string | null;
+        is_deleted: boolean | null;
       }[]
     | null;
 };
@@ -571,7 +577,10 @@ export async function getAdminStudentProgressSummary(
       markedAt,
       calendar_event:calendarEventId (
         facultyId,
-        subject
+        subject,
+        type,
+        date,
+        is_deleted
       )
     `,
     )
@@ -580,25 +589,6 @@ export async function getAdminStudentProgressSummary(
     .is("deletedAt", null);
 
   if (todayError) throw todayError;
-
-  const presentToday = new Set(
-    ((todayRows ?? []) as AttendanceRecordRow[])
-      .filter((row) => {
-        const event = Array.isArray(row.calendar_event)
-          ? row.calendar_event[0]
-          : row.calendar_event;
-        const facultyId = event?.facultyId ?? null;
-        const subjectId = event?.subject ?? null;
-
-        return (
-          isAttendedStatus(row.status) &&
-          (!!facultyId ? facultyIds.includes(facultyId) : false) &&
-          !!subjectId &&
-          scope.subjectIds.includes(subjectId)
-        );
-      })
-      .map((row) => row.studentId),
-  ).size;
 
   const { data: allAttendanceRows, error: allAttendanceError } = await supabase
     .from("attendance_record")
@@ -609,7 +599,10 @@ export async function getAdminStudentProgressSummary(
       markedAt,
       calendar_event:calendarEventId (
         facultyId,
-        subject
+        subject,
+        type,
+        date,
+        is_deleted
       )
     `,
     )
@@ -777,7 +770,11 @@ export async function getAdminStudentProgressSummary(
       !event?.facultyId ||
       !facultyIds.includes(event.facultyId) ||
       !event.subject ||
-      !scope.subjectIds.includes(event.subject)
+      !scope.subjectIds.includes(event.subject) ||
+      event.type !== "class" ||
+      event.is_deleted !== false ||
+      !event.date ||
+      event.date > formatDate(new Date())
     ) {
       continue;
     }
@@ -1297,7 +1294,11 @@ export async function getAdminStudentProgressSummary(
               isAttendedStatus(row.status) &&
               (!!event?.facultyId ? facultyIds.includes(event.facultyId) : false) &&
               !!event?.subject &&
-              scope.subjectIds.includes(event.subject)
+              scope.subjectIds.includes(event.subject) &&
+              event.type === "class" &&
+              event.is_deleted === false &&
+              !!event.date &&
+              event.date <= today
             );
           })
           .map((row) => row.studentId),
