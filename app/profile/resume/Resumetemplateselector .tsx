@@ -179,8 +179,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
       </html>
     `;
 
-      let downloadedViaAPI = false;
-
       try {
         const blob = await generateResumePdf(html);
         const url = window.URL.createObjectURL(blob);
@@ -191,7 +189,6 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-        downloadedViaAPI = true;
       } catch (apiError) {
         console.warn("API PDF failed, falling back to window.print()", apiError);
         // Fallback: open in new window and trigger browser print dialog
@@ -575,12 +572,12 @@ export default function ResumeTemplateSelector({ onBack }: Props) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto bg-gray-100 p-5">
+            <div className="flex-1 overflow-y-auto bg-white p-0">
               <div
                 id="resume-print-area"
                 ref={printRef}
                 className="bg-white"
-                style={{ width: "794px", minHeight: "1123px", margin: "0 auto" }}
+                style={{ width: "100%", minHeight: "1123px", margin: "0 auto" }}
               >
                 <ModalTemplate data={resumeData} />
               </div>

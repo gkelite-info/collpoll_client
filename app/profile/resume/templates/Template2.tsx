@@ -21,7 +21,7 @@ export default function ResumeTemplate2({ data }: Props) {
   const langs = data?.languages ?? [];
 
   return (
-    <div className="bg-white font-sans text-sm px-10 py-8" style={{ width: "794px", minHeight: "1123px", margin: "0 auto" }}>
+    <div className="bg-white font-sans text-sm px-10 py-8" style={{ width: "100%", minHeight: "inherit", margin: "0 auto" }}>
       <div className="text-center mb-1">
         <h1 className="text-2xl font-bold text-gray-900 tracking-widest uppercase">{p?.fullName ?? ""}</h1>
       </div>

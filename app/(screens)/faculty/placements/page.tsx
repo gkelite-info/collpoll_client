@@ -4,9 +4,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import TaskPanel from "@/app/utils/taskPanel";
+import type { Task } from "@/app/utils/taskPanel";
 import { CaretLeftIcon, CaretRight, X } from "@phosphor-icons/react";
 
 import { useFaculty } from "@/app/utils/context/faculty/useFaculty";
+import {
+  fetchFacultyTasksForLoggedInFaculty,
+  saveFacultyTask,
+} from "@/lib/helpers/faculty/facultyTasks";
+import type { FacultyTaskRow } from "@/lib/helpers/faculty/facultyTasks";
 import { getPlacementCompanies } from "@/lib/helpers/placements/getPlacementCompanies";
 import { fetchAdminPlacementFilterOptions } from "@/lib/helpers/placements/getPlacementFilterOptions";
 import type { PlacementCompany } from "@/app/(screens)/placement/placements/components/mockData";
@@ -16,6 +22,11 @@ import PlacementFilters, {
 } from "@/app/(screens)/admin/placements/components/PlacementFilters";
 import PlacementList from "@/app/(screens)/admin/placements/components/PlacementList";
 import Announcements from "./compounents/Announcement";
+
+type FacultyTaskSummary = Pick<
+  FacultyTaskRow,
+  "facultyTaskId" | "taskTitle" | "description" | "time" | "date"
+>;
 
 function getPlacementCycle(company: PlacementCompany) {
   return company.startDate
@@ -222,9 +233,16 @@ function FacultyPlacementRightShimmer() {
 }
 
 export default function PlacementsPage() {
-  const { collegeId, loading: facultyLoading } = useFaculty();
+  const {
+    collegeId,
+    facultyId,
+    subjectIds,
+    loading: facultyLoading,
+  } = useFaculty();
   const [placements, setPlacements] = useState<PlacementCompany[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
   const [filterLoadingKey, setFilterLoadingKey] = useState<
     "cycle" | "branch" | "status" | "sort" | null
   >(null);
@@ -242,6 +260,76 @@ export default function PlacementsPage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
+  const collegeSubjectId = subjectIds?.[0] ?? null;
+
+  const loadTasks = useCallback(async () => {
+    if (!collegeSubjectId || !facultyId) {
+      setTasks([]);
+      setTasksLoading(false);
+      return;
+    }
+
+    try {
+      setTasksLoading(true);
+      const data = await fetchFacultyTasksForLoggedInFaculty(
+        facultyId,
+        collegeSubjectId,
+      );
+
+      setTasks(
+        data.map((task: FacultyTaskSummary) => ({
+          facultyTaskId: task.facultyTaskId,
+          title: task.taskTitle,
+          description: task.description,
+          time: task.time,
+          date: task.date,
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to load faculty placement tasks", error);
+      setTasks([]);
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [collegeSubjectId, facultyId]);
+
+  const handleSaveTask = async (
+    payload: {
+      title: string;
+      description: string;
+      dueDate: string;
+      dueTime: string;
+    },
+    taskId?: number,
+  ) => {
+    if (!collegeSubjectId || !facultyId) {
+      throw new Error("Faculty or subject details are unavailable");
+    }
+
+    const res = await saveFacultyTask(
+      {
+        facultyTaskId: taskId,
+        collegeSubjectId,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime,
+      },
+      facultyId,
+    );
+
+    if (!res.success) {
+      throw new Error("Save failed");
+    }
+
+    await loadTasks();
+  };
+
+  useEffect(() => {
+    if (!facultyLoading) {
+      void loadTasks();
+    }
+  }, [facultyLoading, loadTasks]);
 
   useEffect(() => {
     if (facultyLoading) return;
@@ -435,7 +523,7 @@ export default function PlacementsPage() {
                 className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
                   currentPage === 1
                     ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                    : "cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <CaretLeftIcon size={18} weight="bold" />
@@ -451,8 +539,8 @@ export default function PlacementsPage() {
                     onClick={() => setCurrentPage(page)}
                     className={`h-10 w-10 rounded-lg font-semibold transition ${
                       currentPage === page
-                        ? "bg-[#16284F] text-white"
-                        : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                        ? "cursor-pointer bg-[#16284F] text-white"
+                        : "cursor-pointer border border-gray-300 text-gray-600 hover:bg-gray-100"
                     }`}
                   >
                     {page}
@@ -469,7 +557,7 @@ export default function PlacementsPage() {
                 className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
                   currentPage === totalPages
                     ? "cursor-not-allowed border-gray-200 text-gray-300"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                    : "cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-100"
                 }`}
               >
                 <CaretRight size={18} weight="bold" />
@@ -486,7 +574,19 @@ export default function PlacementsPage() {
           <CourseScheduleCard />
           <WorkWeekCalendar />
           <div className="flex w-full flex-col gap-2 overflow-y-auto pb-4">
-            <TaskPanel style={true} />
+            <TaskPanel
+              role="faculty"
+              style={true}
+              facultyTasks={tasksLoading ? [] : tasks}
+              loading={tasksLoading}
+              collegeSubjectId={collegeSubjectId ?? undefined}
+              facultyId={facultyId ?? undefined}
+              onAddTask={() => {}}
+              onSaveTask={handleSaveTask}
+              onDeleteTask={async () => {
+                await loadTasks();
+              }}
+            />
             <Announcements />
           </div>
         </div>
