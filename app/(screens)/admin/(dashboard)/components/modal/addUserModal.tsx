@@ -112,6 +112,10 @@ const AddUserModal: React.FC<{
     professionalExperienceYears: undefined as number | undefined,
     identifierValue: "",
     batch: "",
+    wellbeingRegistrationTypes: [] as string[],
+    hostelBlock: "",
+    buildingNumber: "",
+    hostelType: "",
   };
   const [basicData, setBasicData] = useState<any>(initialBasicData);
 
@@ -133,6 +137,17 @@ const AddUserModal: React.FC<{
   const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
   const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
   const [selectedSessionType, setSelectedSessionType] = useState<string[]>([]);
+  const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] =
+    useState<string[]>([]);
+  const [selectedWellbeingBranches, setSelectedWellbeingBranches] = useState<
+    string[]
+  >([]);
+  const [selectedWellbeingYears, setSelectedWellbeingYears] = useState<
+    string[]
+  >([]);
+  const [selectedWellbeingSections, setSelectedWellbeingSections] = useState<
+    string[]
+  >([]);
   const [sessionOptions, setSessionOptions] = useState<
     { id: number; label: string; value: number }[]
   >([]);
@@ -179,6 +194,10 @@ const AddUserModal: React.FC<{
     setSelectedSubjects([]);
     setSelectedSemester([]);
     setSelectedEntryType([]);
+    setSelectedWellbeingEducationTypes([]);
+    setSelectedWellbeingBranches([]);
+    setSelectedWellbeingYears([]);
+    setSelectedWellbeingSections([]);
 
     setShowPassword(false);
     setIsSuccess(false);
@@ -189,6 +208,17 @@ const AddUserModal: React.FC<{
     setList: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     setList((prev) => (prev[0] === value ? [] : [value]));
+  };
+
+  const toggleMultiSelectValue = (
+    value: string,
+    setList: React.Dispatch<React.SetStateAction<string[]>>,
+  ) => {
+    setList((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value],
+    );
   };
 
   useEffect(() => {
@@ -439,9 +469,56 @@ const AddUserModal: React.FC<{
       const alphanumeric = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
       if (alphanumeric.length > 5) return;
       formattedValue = alphanumeric;
+    } else if (name === "hostelBlock") {
+      formattedValue = value.replace(/[^A-Za-z0-9\s/-]/g, "").toUpperCase();
+    } else if (name === "buildingNumber") {
+      formattedValue = value.replace(/[^A-Za-z0-9\s/-]/g, "").toUpperCase();
+    } else if (name === "role") {
+      setSelectedDepts([]);
+      setSelectedYears([]);
+      setSelectedSections([]);
+      setSelectedSemester([]);
+      setSelectedEntryType([]);
+      setBasicData((p: any) => ({
+        ...p,
+        wellbeingRegistrationTypes: [],
+        hostelBlock: "",
+        buildingNumber: "",
+        hostelType: "",
+      }));
+      formattedValue = value;
     }
 
     setBasicData((p: any) => ({ ...p, [name]: formattedValue }));
+  };
+
+  const toggleWellbeingRegistrationType = (type: "Hostel" | "College") => {
+    setBasicData((prev: any) => {
+      const current = prev.wellbeingRegistrationTypes || [];
+      const next = current.includes(type)
+        ? current.filter((item: string) => item !== type)
+        : [...current, type];
+
+      return {
+        ...prev,
+        wellbeingRegistrationTypes: next,
+        ...(type === "Hostel" && current.includes(type)
+          ? { hostelBlock: "", buildingNumber: "", hostelType: "" }
+          : {}),
+      };
+    });
+
+    const currentTypes = basicData.wellbeingRegistrationTypes || [];
+    const nextTypes = currentTypes.includes(type)
+      ? currentTypes.filter((item: string) => item !== type)
+      : [...currentTypes, type];
+
+    if (!nextTypes.includes("Hostel") && !nextTypes.includes("College")) {
+      setSelectedWellbeingEducationTypes([]);
+      setSelectedWellbeingBranches([]);
+      setSelectedWellbeingYears([]);
+      setSelectedWellbeingSections([]);
+    }
   };
 
   const toggleSectionId = (idStr: string) => {
@@ -472,6 +549,88 @@ const AddUserModal: React.FC<{
     [studentAvailableSections],
   );
 
+  const selectedWellbeingEducationIds = useMemo(
+    () =>
+      dbData.educations
+        .filter((education) =>
+          selectedWellbeingEducationTypes.includes(
+            education.collegeEducationType,
+          ),
+        )
+        .map((education) => education.collegeEducationId),
+    [dbData.educations, selectedWellbeingEducationTypes],
+  );
+
+  const wellbeingBranchRows = useMemo(
+    () =>
+      dbData.branches.filter((branch) =>
+        selectedWellbeingEducationIds.includes(branch.collegeEducationId),
+      ),
+    [dbData.branches, selectedWellbeingEducationIds],
+  );
+
+  const wellbeingBranchOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(wellbeingBranchRows.map((branch) => branch.collegeBranchCode)),
+      ),
+    [wellbeingBranchRows],
+  );
+
+  const selectedWellbeingBranchIds = useMemo(
+    () =>
+      wellbeingBranchRows
+        .filter((branch) =>
+          selectedWellbeingBranches.includes(branch.collegeBranchCode),
+        )
+        .map((branch) => branch.collegeBranchId),
+    [wellbeingBranchRows, selectedWellbeingBranches],
+  );
+
+  const wellbeingYearRows = useMemo(() => {
+    const years = dbData.years.filter((year) =>
+      selectedWellbeingBranchIds.includes(year.collegeBranchId),
+    );
+
+    return years.sort((a, b) => {
+      const numA = parseInt(a.collegeAcademicYear) || 0;
+      const numB = parseInt(b.collegeAcademicYear) || 0;
+      return numA - numB;
+    });
+  }, [dbData.years, selectedWellbeingBranchIds]);
+
+  const wellbeingYearOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(wellbeingYearRows.map((year) => year.collegeAcademicYear)),
+      ),
+    [wellbeingYearRows],
+  );
+
+  const selectedWellbeingYearIds = useMemo(
+    () =>
+      wellbeingYearRows
+        .filter((year) =>
+          selectedWellbeingYears.includes(year.collegeAcademicYear),
+        )
+        .map((year) => year.collegeAcademicYearId),
+    [wellbeingYearRows, selectedWellbeingYears],
+  );
+
+  const wellbeingSectionOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          dbData.sections
+            .filter((section) =>
+              selectedWellbeingYearIds.includes(section.collegeAcademicYearId),
+            )
+            .map((section) => section.collegeSections),
+        ),
+      ),
+    [dbData.sections, selectedWellbeingYearIds],
+  );
+
   const selectedSessionId = useMemo(
     () =>
       sessionOptions.find((s) => s.label === selectedSessionType[0])?.id ??
@@ -486,23 +645,35 @@ const AddUserModal: React.FC<{
   const isFinance = basicData.role === "Finance";
   const isHR = basicData.role === "CollegeHr";
   const isPlacement = basicData.role === "PlacementOfficer";
+  const isWellbeing =
+    basicData.role === "WellbeingExecutive" ||
+    basicData.role === "WellbeingManager";
+  const selectedWellbeingRegistrationTypes =
+    basicData.wellbeingRegistrationTypes || [];
+  const isWellbeingHostel =
+    isWellbeing && selectedWellbeingRegistrationTypes.includes("Hostel");
+  const isWellbeingCollege =
+    isWellbeing && selectedWellbeingRegistrationTypes.includes("College");
 
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
-    if (!basicData.mobileCode) {
+    if (!basicData.role) return toast.error("Role is required.");
+
+    const hasMobileNumber = Boolean(basicData.mobileNumber?.trim());
+    if (!isWellbeing && !basicData.mobileCode) {
       return toast.error("Country code is required.");
     }
-    if (!/^\+[0-9]+$/.test(basicData.mobileCode)) {
+    if ((hasMobileNumber || !isWellbeing) && !/^\+[0-9]+$/.test(basicData.mobileCode)) {
       return toast.error("Invalid country code format.");
     }
-    if (!basicData.mobileNumber) {
+    if (!isWellbeing && !basicData.mobileNumber) {
       return toast.error("Mobile number is required.");
     }
-    if (!/^[0-9]{10}$/.test(basicData.mobileNumber)) {
+    if (hasMobileNumber && !/^[0-9]{10}$/.test(basicData.mobileNumber)) {
       return toast.error("Mobile number must be exactly 10 digits.");
     }
-    if (basicData.mobileCode === "+91") {
+    if (hasMobileNumber && basicData.mobileCode === "+91") {
       if (!["6", "7", "8", "9"].includes(basicData.mobileNumber.charAt(0))) {
         return toast.error(
           "Indian mobile number must start with 6, 7, 8, or 9.",
@@ -510,7 +681,32 @@ const AddUserModal: React.FC<{
       }
     }
 
-    if (!basicData.role) return toast.error("Role is required.");
+    if (isWellbeing) {
+      if (!selectedWellbeingRegistrationTypes.length) {
+        return toast.error("Select at least one Registration Type.");
+      }
+      if (isWellbeingHostel) {
+        if (!basicData.hostelBlock) {
+          return toast.error("Block is required.");
+        }
+        if (!basicData.buildingNumber) {
+          return toast.error("Building Number is required.");
+        }
+        if (!basicData.hostelType) {
+          return toast.error("Hostel Type is required.");
+        }
+      }
+      if (isWellbeingCollege) {
+        if (
+          !selectedWellbeingEducationTypes.length ||
+          !selectedWellbeingBranches.length ||
+          !selectedWellbeingYears.length ||
+          !selectedWellbeingSections.length
+        ) {
+          return toast.error("Complete all college registration fields.");
+        }
+      }
+    }
 
     if (showRollNoField || showEmployeeIdField) {
       const error = validateIdentifier(basicData.identifierValue);
@@ -520,7 +716,8 @@ const AddUserModal: React.FC<{
       }
     }
 
-    if (!basicData.gender) return toast.error("Please select a gender.");
+    if (!isWellbeing && !basicData.gender)
+      return toast.error("Please select a gender.");
 
     if (isFaculty) {
       if (!collegeEducationId || !selectedBranchId)
@@ -836,10 +1033,12 @@ const AddUserModal: React.FC<{
       setLoading(false);
     }
   };
-  const showEmploymentFields = !isStudent && !isParent && basicData.role !== "";
+  const showEmploymentFields =
+    !isStudent && !isParent && !isWellbeing && basicData.role !== "";
 
   const showRollNoField = isStudent;
-  const showEmployeeIdField = !isStudent && !isParent && basicData.role !== "";
+  const showEmployeeIdField =
+    !isStudent && !isParent && !isWellbeing && basicData.role !== "";
 
   if (!isOpen) return null;
 
@@ -905,7 +1104,7 @@ const AddUserModal: React.FC<{
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
-                  Mobile <span className="text-red-600">*</span>
+                  Mobile {!isWellbeing && <span className="text-red-600">*</span>}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -954,6 +1153,10 @@ const AddUserModal: React.FC<{
                     <option value="CollegeHr">College HR</option>
                     {/* ✅ NEW: Placement Officer option */}
                     <option value="PlacementOfficer">Placement Officer</option>
+                    <option value="WellbeingExecutive">
+                      Wellbeing Executive
+                    </option>
+                    <option value="WellbeingManager">Wellbeing Manager</option>
                   </select>
                   <CaretDown
                     size={14}
@@ -961,6 +1164,27 @@ const AddUserModal: React.FC<{
                   />
                 </div>
               </div>
+
+              {isWellbeing && (
+                <CustomMultiSelect
+                  label="Registration Type"
+                  placeholder="Select registration type"
+                  options={["Hostel", "College"]}
+                  selectedValues={selectedWellbeingRegistrationTypes}
+                  onChange={(value) =>
+                    toggleWellbeingRegistrationType(
+                      value === "Hostel" ? "Hostel" : "College",
+                    )
+                  }
+                  onRemove={(value) =>
+                    toggleWellbeingRegistrationType(
+                      value === "Hostel" ? "Hostel" : "College",
+                    )
+                  }
+                  paddingY="py-1"
+                  gap="gap-1"
+                />
+              )}
 
               {(isFaculty || isFinance || isAdmin || isPlacement) && (
                 <div className="space-y-1">
@@ -1024,6 +1248,154 @@ const AddUserModal: React.FC<{
                 </div>
               )}
             </div>
+
+            {isWellbeingCollege && (
+              <>
+                <div className="grid grid-cols-2 gap-5">
+                  <CustomMultiSelect
+                    label="Education Type"
+                    placeholder="Select Education Type"
+                    options={degreeOptions}
+                    selectedValues={selectedWellbeingEducationTypes}
+                    onChange={(v) => {
+                      toggleMultiSelectValue(v, setSelectedWellbeingEducationTypes);
+                      setSelectedWellbeingBranches([]);
+                      setSelectedWellbeingYears([]);
+                      setSelectedWellbeingSections([]);
+                    }}
+                    onRemove={(v) => {
+                      setSelectedWellbeingEducationTypes((prev) =>
+                        prev.filter((education) => education !== v),
+                      );
+                      setSelectedWellbeingBranches([]);
+                      setSelectedWellbeingYears([]);
+                      setSelectedWellbeingSections([]);
+                    }}
+                  />
+                  <CustomMultiSelect
+                    label={
+                      selectedWellbeingEducationTypes.includes("Inter")
+                        ? "Group Type"
+                        : "Branch Type"
+                    }
+                    placeholder={
+                      selectedWellbeingEducationTypes.includes("Inter")
+                        ? "Select Group"
+                        : "Select Branch"
+                    }
+                    options={wellbeingBranchOptions}
+                    selectedValues={selectedWellbeingBranches}
+                    disabled={selectedWellbeingEducationTypes.length === 0}
+                    onChange={(v) => {
+                      toggleMultiSelectValue(v, setSelectedWellbeingBranches);
+                      setSelectedWellbeingYears([]);
+                      setSelectedWellbeingSections([]);
+                    }}
+                    onRemove={(v) => {
+                      setSelectedWellbeingBranches((prev) =>
+                        prev.filter((branch) => branch !== v),
+                      );
+                      setSelectedWellbeingYears([]);
+                      setSelectedWellbeingSections([]);
+                    }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <CustomMultiSelect
+                    label="Year"
+                    placeholder="Select Year"
+                    options={wellbeingYearOptions}
+                    selectedValues={selectedWellbeingYears}
+                    disabled={selectedWellbeingBranches.length === 0}
+                    onChange={(v) => {
+                      toggleMultiSelectValue(v, setSelectedWellbeingYears);
+                      setSelectedWellbeingSections([]);
+                    }}
+                    onRemove={(v) => {
+                      setSelectedWellbeingYears((prev) =>
+                        prev.filter((year) => year !== v),
+                      );
+                      setSelectedWellbeingSections([]);
+                    }}
+                  />
+                  <CustomMultiSelect
+                    label="Sections"
+                    placeholder="Select Sections"
+                    options={wellbeingSectionOptions}
+                    selectedValues={selectedWellbeingSections}
+                    disabled={selectedWellbeingYears.length === 0}
+                    onChange={(v) =>
+                      toggleMultiSelectValue(v, setSelectedWellbeingSections)
+                    }
+                    onRemove={(v) =>
+                      setSelectedWellbeingSections((prev) =>
+                        prev.filter((section) => section !== v),
+                      )
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {isWellbeingHostel && (
+              <>
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Block <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="hostelBlock"
+                      value={basicData.hostelBlock}
+                      onChange={handleBasicChange}
+                      placeholder="Enter block"
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Building Number <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="buildingNumber"
+                      value={basicData.buildingNumber}
+                      onChange={handleBasicChange}
+                      placeholder="Enter building number"
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Hostel Type <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        name="hostelType"
+                        value={basicData.hostelType}
+                        onChange={handleBasicChange}
+                        className="w-full border cursor-pointer border-gray-200 rounded-md px-3 py-1 text-sm appearance-none outline-none bg-white focus:ring-1 focus:ring-[#48C78E] text-gray-600"
+                      >
+                        <option value="" disabled>
+                          Select hostel type
+                        </option>
+                        <option value="Boys Hostel">Boys Hostel</option>
+                        <option value="Girls Hostel">Girls Hostel</option>
+                      </select>
+                      <CaretDown
+                        size={14}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* {isFaculty && (
               <>
@@ -1545,6 +1917,7 @@ const AddUserModal: React.FC<{
               </div>
             )}
 
+            {(showRollNoField || showEmployeeIdField || !isWellbeing) && (
             <div className="grid grid-cols-2 gap-5">
               {(showRollNoField || showEmployeeIdField) && (
                 <div className="space-y-1">
@@ -1567,6 +1940,7 @@ const AddUserModal: React.FC<{
                 </div>
               )}
 
+              {!isWellbeing && (
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
                   Gender <span className="text-red-600">*</span>
@@ -1602,7 +1976,9 @@ const AddUserModal: React.FC<{
                   ))}
                 </div>
               </div>
+              )}
             </div>
+            )}
 
             {!user && (
               <div className="grid grid-cols-2 gap-5">
