@@ -35,9 +35,9 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between py-3 border-t border-gray-200 mt-auto w-full">
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+      <div className="flex sm:flex gap-5 flex-1 items-center justify-between">
         <div>
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-gray-700 max-md:mb-2">
             Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
             <span className="font-medium">{endIndex}</span> of{" "}
             <span className="font-medium">{totalItems}</span> results

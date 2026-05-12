@@ -721,7 +721,8 @@
       "Document": "Document",
       "New": "New",
       "Sending": "Sending...",
-      "Type your message": "Type your message..."
+      "Type your message": "Type your message...",
+      "Submit leave, track approvals": "Submit leave, track approvals"
     }
   },
   "Notifications": {

@@ -630,7 +630,10 @@
       "Only letters, numbers, spaces, - and _": "केवल अक्षर, संख्या, स्पेस, - और _",
       "Choose Folder Color": "फ़ोल्डर का रंग चुनें",
       "Save Folder": "फ़ोल्डर सहेजें",
-      "No files matching {search}": "कोई फ़ाइल \"{search}\" से मेल नहीं खाती।"
+      "No files matching {search}": "कोई फ़ाइल \"{search}\" से मेल नहीं खाती।",
+      "Create Folder": "फ़ोल्डर बनाएं",
+      "Upload File": "फ़ाइल अपलोड करें",
+      "Filter": "फ़िल्टर"
     }
   },
   "Leave": {
@@ -685,7 +688,8 @@
       "Document": "दस्तावेज़",
       "New": "नया",
       "Sending": "भेजा जा रहा है...",
-      "Type your message": "अपना संदेश लिखें..."
+      "Type your message": "अपना संदेश लिखें...",
+      "Submit leave, track approvals": "छुट्टी जमा करें, अनुमोदन ट्रैक करें"
     }
   },
   "Notifications": {
