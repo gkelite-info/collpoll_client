@@ -632,7 +632,10 @@
       "{count} Files": "{count} ఫైళ్లు",
       "Delete folder": "ఫోల్డర్ తొలగించు",
       "Are you sure you want to delete {folderName}? This action cannot be undone": "మీరు నిజంగా {folderName}ని తొలగించాలనుకుంటున్నారా? ఈ చర్యను తిరిగి తీసుకోవడం సాధ్యం కాదు.",
-      "No files matching {search}": "సరిపోలే ఫైళ్లు కనుగొనబడలేదు \"{search}\""
+      "No files matching {search}": "సరిపోలే ఫైళ్లు కనుగొనబడలేదు \"{search}\"",
+      "Create Folder": "ఫోల్డర్ సృష్టించండి",
+      "Upload File": "ఫైల్ అప్‌లోడ్ చేయండి",
+      "Filter": "ఫిల్టర్"
     }
   },
   "Leave": {
@@ -687,7 +690,8 @@
       "Document": "పత్రం",
       "New": "కొత్త",
       "Sending": "పంపిస్తోంది...",
-      "Type your message": "మీ సందేశాన్ని టైప్ చేయండి..."
+      "Type your message": "మీ సందేశాన్ని టైప్ చేయండి...",
+      "Submit leave, track approvals": "విడుదల సమర్పించండి, ఆమోదాలను ట్రాక్ చేయండి."
     }
   },
   "Notifications": {

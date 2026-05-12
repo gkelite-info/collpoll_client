@@ -117,7 +117,7 @@ export default function LeavesRight() {
       const res = await fetchCollegeAnnouncements({
         collegeId,
         userId,
-        role, // 🔥 IMPORTANT → "student"
+        role,
         view,
         page: 1,
         limit: 20,
@@ -258,7 +258,7 @@ export default function LeavesRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="w-[32%] p-2 flex flex-col max-md:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel
