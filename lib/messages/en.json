@@ -778,9 +778,15 @@
       "Year :": "Year :",
       "Section :": "Section :",
       "NA": "N/A",
+      "Admin": "Admin",
+      "College Admin": "College Admin",
       "Student": "Student",
       "Parent": "Parent",
-      "Faculty": "Faculty"
+      "Faculty": "Faculty",
+      "Finance": "Finance",
+      "Finance Manager": "Finance Manager",
+      "Placement Officer": "Placement Officer",
+      "College Hr": "College HR"
     }
   },
   "Clubs": {

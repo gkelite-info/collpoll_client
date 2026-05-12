@@ -1,5 +1,5 @@
 "use client";
-import { CaretLeft, FilePdf, User } from "@phosphor-icons/react";
+import { CaretLeft, FilePdf } from "@phosphor-icons/react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import AdminAddMarksModal from "./adminAddMarksModal";
@@ -7,6 +7,7 @@ import { fetchDiscussionUploads } from "@/lib/helpers/student/assignments/discus
 import SubmissionShimmer from "./shimmers/submissionShimmer";
 import { formatFileName } from "@/app/utils/formatFileName";
 import { fetchDiscussionById } from "@/lib/helpers/admin/facultyCountAPI";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface Props {
   discussionId: string | null;
@@ -152,17 +153,11 @@ export default function AdminDiscussionSubmissions({
               className="bg-white overflow-x-auto rounded-xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-gray-100 flex gap-3"
             >
               <div className="flex-shrink-0 items-center">
-                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative flex items-center justify-center">
-                  {submission.profiles?.avatar_url ? (
-                    <img
-                      src={submission.profiles.avatar_url}
-                      alt={submission.profiles.full_name}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <User size={20} weight="bold" className="text-gray-500" />
-                  )}
-                </div>
+                <Avatar
+                  src={submission.profiles?.avatar_url}
+                  alt={submission.profiles?.full_name || "Student"}
+                  size={40}
+                />
               </div>
 
               <div className="flex flex-col flex-1">
@@ -197,7 +192,7 @@ export default function AdminDiscussionSubmissions({
                         Student ID :{" "}
                       </span>
                       <span className="text-gray-600">
-                        {submission.studentId}
+                        {submission.profiles?.rollNumber || submission.studentId}
                       </span>
                     </div>
                     <div>

@@ -4,6 +4,7 @@ import { Plus } from "@phosphor-icons/react";
 import ProjectsHeader from "../components/ProjectsHeader";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WipOverlay from "@/app/utils/WipOverlay";
+import { Avatar } from "@/app/utils/Avatar";
 
 const inputStyle =
   "w-full h-[42px] px-3 border border-gray-300 rounded-lg text-sm text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20";
@@ -96,16 +97,12 @@ export default function AddProjectPage() {
                   <Plus size={14} />
                 </button>
                 <div className="flex -space-x-2.5">
-                  {[10, 20, 30, 40, 50].map((seed, i) => (
+                  {[10, 20, 30, 40, 50].map((_, i) => (
                     <div
                       key={i}
                       className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                     >
-                      <img
-                       src={`https://i.pravatar.cc/100?u=member-${seed}`}
-                        alt="faculty"
-                        className="w-full h-full object-cover contrast-125"
-                      />
+                      <Avatar src={null} alt="member" size={32} />
                     </div>
                   ))}
                 </div>
@@ -115,11 +112,7 @@ export default function AddProjectPage() {
             <div>
               <label className="font-medium text-[#282828]">Mentor / Guide</label>
               <div className="mt-2 flex items-center gap-2 border border-[#D0D5DD] rounded-lg px-3 py-2 min-h-[42px]">
-                <img
-                  src="https://i.pravatar.cc/100?u=mentor"
-                  className="w-7 h-7 rounded-full"
-                  alt=""
-                />
+                <Avatar src={null} alt="mentor" size={28} />
                 <span className="text-[#111827]">Dr. Anjani Verma</span>
               </div>
             </div>

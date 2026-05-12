@@ -230,11 +230,12 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
             totalMarksObtained,
             submittedAt,
             students!inner (
-                rollNumber,
+                student_pins(pinNumber),
                 users!inner (
                     fullName,
                     user_profile (
-                        profileUrl
+                        profileUrl,
+                        is_deleted
                     )
                 ),
                 student_academic_history (
@@ -264,17 +265,20 @@ export async function fetchSubmissionsWithStudentsByQuizId(quizId: number) {
     const section = activeHistory?.college_sections?.collegeSections || "-";
 
     const profileData = studentData?.users?.user_profile;
-    const profileUrl = Array.isArray(profileData)
-      ? profileData[0]?.profileUrl
-      : profileData?.profileUrl;
+    const profiles = Array.isArray(profileData) ? profileData : [profileData];
+    const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
+    const pinData = studentData?.student_pins;
+    const pinNumber = Array.isArray(pinData)
+      ? pinData[0]?.pinNumber
+      : pinData?.pinNumber;
 
     return {
       ...sub,
       students: {
         fullName: studentData?.users?.fullName,
-        rollNumber: studentData?.rollNumber,
+        rollNumber: pinNumber || null,
         section: section,
-        profileImage: profileUrl || null,
+        profileImage: activeProfile?.profileUrl || null,
       },
     };
   });

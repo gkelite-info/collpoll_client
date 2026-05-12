@@ -8,6 +8,7 @@ interface Props {
   subject: string;
   facultyName: string;
   facultyId: string;
+  employeeId?: string;
   avatar: string | null;
   activeQuiz: number;
   pendingSubmissions: number;
@@ -26,6 +27,7 @@ export default function DiscussionCourseCard({
   subject,
   facultyName,
   facultyId,
+  employeeId,
   avatar,
   activeQuiz,
   pendingSubmissions,
@@ -67,7 +69,9 @@ export default function DiscussionCourseCard({
           <span className="text-[#282828] font-bold text-sm">
             {facultyName}
           </span>
-          <span className="text-[#8B8B8B] text-[12px]">ID - {facultyId}</span>
+          <span className="text-[#8B8B8B] text-[12px]">
+            ID - {employeeId || facultyId}
+          </span>
         </div>
       </div>
 

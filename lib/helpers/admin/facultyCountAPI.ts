@@ -169,6 +169,8 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
                 .select(`
                     facultyId,
                     fullName,
+                    userId,
+                    collegeId,
                     users (
                         user_profile (
                             profileUrl
@@ -185,6 +187,33 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
                 .is("deletedAt", null)
                 .gte("endDate", today),
         ]);
+
+        const facultyUserIds = (facultyRes.data || [])
+            .map((faculty: any) => faculty.userId)
+            .filter(Boolean);
+        const facultyCollegeIds = [
+            ...new Set(
+                (facultyRes.data || [])
+                    .map((faculty: any) => faculty.collegeId)
+                    .filter(Boolean)
+            ),
+        ];
+
+        const { data: employeeIds } = facultyUserIds.length
+            ? await supabase
+                .from("employee_ids")
+                .select("userId, collegeId, employeeId")
+                .in("userId", facultyUserIds)
+                .in("collegeId", facultyCollegeIds)
+                .eq("isActive", true)
+            : { data: [] };
+
+        const employeeIdMap = new Map(
+            (employeeIds || []).map((employee: any) => [
+                `${employee.userId}-${employee.collegeId}`,
+                employee.employeeId,
+            ])
+        );
 
 
         const subjectsMap = new Map(
@@ -211,6 +240,8 @@ export async function fetchSubjectFacultyList(collegeAcademicYearId: number, col
                 subjectId: item.collegeSubjectId,
                 facultyName: faculty?.fullName || "No Faculty Assigned",
                 facultyId: item.facultyId || "N/A",
+                employeeId:
+                    employeeIdMap.get(`${faculty?.userId}-${faculty?.collegeId}`) || "N/A",
                 avatar: profile?.profileUrl || null,
                 activeQuiz: activeProjectCountMap.get(item.facultyId) ?? 0,
                 pendingSubmissions: 0

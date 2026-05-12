@@ -30,9 +30,8 @@ export default function StudentProjectSubmissions() {
                     const user = student?.users;
 
                     const profileData = student?.users?.user_profile;
-                    const profileUrl = Array.isArray(profileData)
-                        ? profileData[0]?.profileUrl
-                        : profileData?.profileUrl;
+                    const profiles = Array.isArray(profileData) ? profileData : [profileData];
+                    const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
 
                     const rollData = student?.student_pins;
                     const pinNumber = Array.isArray(rollData)
@@ -44,8 +43,8 @@ export default function StudentProjectSubmissions() {
                         photo: (
                             <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden mx-auto border border-gray-100">
                                 <Avatar
-                                    src={profileUrl}
-                                    alt=""
+                                    src={activeProfile?.profileUrl}
+                                    alt={user?.fullName || "Student"}
                                     size={30}
                                 />
                             </div>

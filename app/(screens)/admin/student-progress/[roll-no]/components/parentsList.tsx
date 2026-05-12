@@ -1,6 +1,7 @@
 "use client";
 
 import { ChatCircleDots } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface Parent {
   name: string;
@@ -28,11 +29,7 @@ export default function ParentsList({ parents, onChatOpen }: ParentsListProps) {
               className="flex items-center justify-between rounded-full bg-[#E8F6E2] p-3"
             >
               <div className="flex items-center gap-4">
-                <img
-                  src={parent.avatar}
-                  alt={parent.name}
-                  className="h-14 w-14 rounded-full border-2 border-white object-cover shadow-sm"
-                />
+                <Avatar src={parent.avatar} alt={parent.name} size={56} />
 
                 <div className="flex flex-col">
                   <p className="text-base font-bold text-[#333333]">

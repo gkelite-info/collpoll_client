@@ -341,12 +341,40 @@ export async function fetchAdminQuizSubjects(
       .from("faculty_sections")
       .select(
         `
-            collegeSubjectId, facultyId, faculty ( fullName, users:userId ( user_profile ( profileUrl ) ) )
+            collegeSubjectId, facultyId, faculty ( fullName, userId, users:userId ( user_profile ( profileUrl ) ) )
         `,
       )
       .eq("collegeAcademicYearId", yearId)
       .eq("isActive", true),
   ]);
+
+  const facultyUserIds = [
+    ...new Set(
+      (facultyAssignments || [])
+        .map((fa: any) => {
+          const fac = Array.isArray(fa.faculty) ? fa.faculty[0] : fa.faculty;
+          return fac?.userId;
+        })
+        .filter(Boolean),
+    ),
+  ];
+
+  const { data: employeeIds } =
+    facultyUserIds.length > 0
+      ? await supabase
+          .from("employee_ids")
+          .select("userId, employeeId")
+          .in("userId", facultyUserIds)
+          .eq("isActive", true)
+          .eq("collegeId", collegeId)
+      : { data: [] };
+
+  const employeeIdMap = new Map(
+    (employeeIds || []).map((employee: any) => [
+      employee.userId,
+      employee.employeeId,
+    ]),
+  );
 
   const validStudentIds = new Set(students?.map((s) => s.studentId) || []);
   const totalStudents =
@@ -364,6 +392,7 @@ export async function fetchAdminQuizSubjects(
 
         subjectFacultyMap.set(fa.collegeSubjectId, {
           id: fa.facultyId,
+          employeeId: employeeIdMap.get(fac.userId) || "N/A",
           name: fac.fullName,
           avatar: profileUrl || null,
         });
@@ -386,9 +415,8 @@ export async function fetchAdminQuizSubjects(
       subject: sub.subjectName,
       facultyName: assignedFaculty ? assignedFaculty.name : "Unassigned",
       facultyId: assignedFaculty ? String(assignedFaculty.id) : "-",
-      avatar: assignedFaculty?.avatar
-        ? assignedFaculty.avatar
-        : `https://ui-avatars.com/api/?name=${encodeURIComponent(assignedFaculty?.name || "Unassigned")}&background=random&color=fff`,
+      employeeId: assignedFaculty?.employeeId || "N/A",
+      avatar: assignedFaculty?.avatar || null,
       activeQuiz: activeQuizzes.length,
       pendingSubmissions: pendingCount,
     };

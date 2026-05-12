@@ -151,10 +151,11 @@ import AssignmentSkeleton from "@/app/(screens)/faculty/assignments/shimmer/assi
 import AssignmentForm from "./assignmentForm";
 import { CaretLeftIcon } from "@phosphor-icons/react";
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { decryptId } from "@/app/utils/encryption";
 
 interface Props {
   subjectId: number;
-  facultyId: number;
+  facultyId: number | string;
   isAdminView?: boolean;
 }
 
@@ -178,9 +179,20 @@ export default function AssignmentsLeft({
   async function loadAssignments(currentPage: number) {
     try {
       setIsLoading(true);
+      const parsedFacultyId =
+        typeof facultyId === "string"
+          ? Number(/^\d+$/.test(facultyId) ? facultyId : decryptId(facultyId))
+          : facultyId;
+
+      if (!parsedFacultyId || isNaN(parsedFacultyId)) {
+        toast.error("Invalid Faculty ID");
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error, count } = await fetchAdminFacultyAssignments(
         subjectId,
-        facultyId,
+        parsedFacultyId,
         currentPage,
         pageSize,
       );
@@ -269,7 +281,7 @@ export default function AssignmentsLeft({
             activeView="active"
             cardProp={assignments}
             onEdit={(item: any) => setEditingAssignment(item)}
-            onDelete={(id: number) => {}}
+            onDelete={(id: number) => { }}
           />
         )}
       </div>

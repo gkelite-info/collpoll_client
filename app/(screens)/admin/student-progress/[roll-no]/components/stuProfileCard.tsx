@@ -1,6 +1,7 @@
 "use client";
 
 import { User } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface Props {
   name: string;
@@ -31,11 +32,7 @@ export default function StudentProfileCard({
     <div className="rounded-[20px] bg-white p-6 shadow-sm h-full font-sans">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <img
-            src={photo}
-            alt={name}
-            className="h-16 w-16 rounded-full object-cover"
-          />
+          <Avatar src={photo} alt={name} size={64} />
 
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold text-[#333333]">{name}</h2>

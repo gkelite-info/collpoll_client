@@ -5,6 +5,7 @@ import { fetchSubmissionsWithStudentsByQuizId } from "@/lib/helpers/quiz/quizSub
 import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
 import FacultyQuizSubmissionsShimmer from "@/app/(screens)/faculty/assignments/shimmer/FacultyQuizSubmissionsShimmer";
 import toast from "react-hot-toast";
+import { Avatar } from "@/app/utils/Avatar";
 
 function formatDate(dateStr: string) {
   if (!dateStr) return "-";
@@ -34,7 +35,9 @@ export default function AdminQuizSubmissions({
         setQuizDetails(quiz);
       })
       .catch(() => {
-        toast.error("Failed to load submissions");
+        toast.error("Failed to load submissions", {
+          id: `admin-quiz-submissions-${quizId}`,
+        });
       })
       .finally(() => setIsLoading(false));
   }, [quizId]);
@@ -88,19 +91,11 @@ export default function AdminQuizSubmissions({
               className="bg-white rounded-md px-4 py-3 flex items-center justify-between border border-gray-100 shadow-sm"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                  {sub.students?.profileImage ? (
-                    <img
-                      src={sub.students.profileImage}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm font-bold text-gray-500">
-                      {sub.students?.fullName?.[0] ?? "S"}
-                    </span>
-                  )}
-                </div>
+                <Avatar
+                  src={sub.students?.profileImage}
+                  alt={sub.students?.fullName || "Student"}
+                  size={40}
+                />
                 <div className="flex flex-col gap-0.5">
                   <p className="text-sm font-bold text-[#43C17A]">
                     {sub.students?.fullName || "-"}

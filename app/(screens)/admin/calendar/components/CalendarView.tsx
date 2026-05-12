@@ -39,6 +39,7 @@ interface Props {
   faculty: {
     name: string;
     id: string;
+    employeeId: string;
     branch: string;
     year?: string;
   };
@@ -72,13 +73,26 @@ export default function CalendarView({ faculty, onBack }: Props) {
   );
   const [showDetails, setShowDetails] = useState(false);
   const { collegeId } = useUser();
+  const [lastFetchedMonth, setLastFetchedMonth] = useState<string>("");
 
   const weekDays = getWeekDays(currentDate);
 
   useEffect(() => {
     loadEvents();
-    loadDegrees();
+    // loadDegrees();
   }, [faculty.id]);
+
+  useEffect(() => {
+    const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
+    const monthKey = `${year}-${month}`;
+
+    // Only hit the database if we moved to a new month/year
+    if (lastFetchedMonth !== monthKey) {
+      loadEvents(month, year);
+      setLastFetchedMonth(monthKey);
+    }
+  }, [faculty.id, currentDate.getMonth(), currentDate.getFullYear()]);
 
   const loadDegrees = async () => {
     try {
@@ -89,12 +103,26 @@ export default function CalendarView({ faculty, onBack }: Props) {
     }
   };
 
-  const loadEvents = async () => {
+  const loadEvents = async (
+    month: number = currentDate.getMonth(),
+    year: number = currentDate.getFullYear()
+  ) => {
     setIsLoadingEvents(true);
 
     try {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+
+      firstDay.setDate(firstDay.getDate() - 7);
+      lastDay.setDate(lastDay.getDate() + 7);
+
+      const startDate = firstDay.toISOString().split("T")[0];
+      const endDate = lastDay.toISOString().split("T")[0];
+
       const rows = await fetchCalendarEvents({
         facultyId: Number(faculty.id),
+        startDate,
+        endDate,
       });
 
       if (!rows || rows.length === 0) {
@@ -523,7 +551,7 @@ export default function CalendarView({ faculty, onBack }: Props) {
             Viewing Calendar for faculty:{" "}
             <span className="font-semibold">{faculty.name}</span> (
             {faculty.branch}){" "}
-            <span className="font-semibold"> facultyId - {faculty.id}</span>
+            <span className="font-semibold"> facultyId - {faculty.employeeId}</span>
           </p>
         </div>
         <CourseScheduleCard

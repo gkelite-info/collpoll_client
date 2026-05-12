@@ -30,9 +30,11 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Generate a dynamic list of years (e.g., current year - 5 to current year + 5)
   const currentRealYear = new Date().getFullYear();
-  const years = Array.from({ length: 11 }, (_, i) => currentRealYear - 5 + i);
+  const baseYear = 2026;
+  const maxYear = Math.max(currentRealYear + 3, baseYear + 3);
+  const yearsCount = maxYear - baseYear + 1;
+  const years = Array.from({ length: yearsCount }, (_, i) => baseYear + i);
 
   return (
     <div className="flex items-center gap-4 mb-1">

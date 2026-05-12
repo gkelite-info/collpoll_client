@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus, CaretDown } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface ProjectCardProps {
   title: string;
@@ -98,11 +99,7 @@ export default function ProjectCard({
                   key={i}
                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >
-                  <img
-                    src={`https://i.pravatar.cc/100?u=${name}${seed}`}
-                    alt="faculty"
-                    className="w-full h-full object-cover contrast-125"
-                  />
+                  <Avatar src={null} alt="member" size={32} />
                 </div>
               ))}
             </div>

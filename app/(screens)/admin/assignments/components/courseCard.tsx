@@ -3,12 +3,14 @@
 import React from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/app/utils/Avatar";
+import { encryptId } from "@/app/utils/encryption";
 
 export interface CourseCardData {
   id: number;
   subject: string;
   instructorName: string;
   instructorId: string;
+  employeeId: string;
   avatarUrl: string;
   activeAssignments: number;
   pendingSubmissions: number;
@@ -32,6 +34,7 @@ const CourseCard: React.FC<CourseCardData> = ({
   subject,
   instructorName,
   instructorId,
+  employeeId,
   avatarUrl,
   activeAssignments,
   pendingSubmissions,
@@ -42,7 +45,7 @@ const CourseCard: React.FC<CourseCardData> = ({
 
   const handleViewAssignments = () => {
     router.push(
-      `/admin/assignments/${params.departmentId}/subject/${id}?facultyId=${instructorId}`,
+      `/admin/assignments/${params.departmentId}/subject/${id}?facultyId=${encryptId(instructorId)}`,
     );
   };
 
@@ -69,7 +72,7 @@ const CourseCard: React.FC<CourseCardData> = ({
             {instructorName}
           </p>
           <p className="text-[#525252] text-xs font-medium">
-            ID - {instructorId}
+            ID - {employeeId}
           </p>
         </div>
       </div>

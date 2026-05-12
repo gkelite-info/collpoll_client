@@ -1,9 +1,11 @@
 "use client";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
+import { Avatar } from "@/app/utils/Avatar";
 import { CaretDown, CaretLeft, CaretRight } from "@phosphor-icons/react";
 export interface StudentRecord {
   sNo: string;
   rollNo: string;
+  studentId?: string;
   photo: string;
   name: string;
   attendance: | "PRESENT" | "ABSENT" | "LATE" | "LEAVE" | "CLASS_CANCEL" | "NA";
@@ -79,11 +81,7 @@ const Row = ({ s, onViewDetails, onAttendanceChange, }: { s: StudentRecord; onVi
       </td>
 
       <td className="py-2.5 px-3">
-        <img
-          src={s.photo}
-          alt=""
-          className="w-8 h-8 rounded-full object-cover shadow-sm"
-        />
+        <Avatar src={s.photo} alt={s.name} size={32} />
       </td>
 
       <td className="py-2.5 px-3 text-xs font-medium text-[#454545]">
@@ -130,7 +128,7 @@ const Row = ({ s, onViewDetails, onAttendanceChange, }: { s: StudentRecord; onVi
 
       <td className="py-2.5 px-3 text-center">
         <button
-          onClick={() => onViewDetails(s.rollNo)}
+          onClick={() => onViewDetails(s.studentId || s.rollNo)}
           className="text-xs cursor-pointer font-medium text-[#454545] hover:text-black hover:underline underline-offset-4"
         >
           View Details

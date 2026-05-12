@@ -127,7 +127,8 @@ export async function fetchProjectSubmissionsWithStudents(projectId: number) {
                     fullName,
                     email,
                     user_profile (
-                        profileUrl
+                        profileUrl,
+                        is_deleted
                     )
                 )
             )

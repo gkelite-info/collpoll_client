@@ -1,3 +1,4 @@
+import { Avatar } from "@/app/utils/Avatar";
 import { UserCircle } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 export interface Department {
@@ -22,6 +23,7 @@ export interface Department {
     facultyId: number;
     fullName: string;
     email: string;
+    profileUrl?: string;
   }[];
 }
 
@@ -106,10 +108,10 @@ const FacultyAttendanceCard = ({
                   title={f.fullName}
                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >
-                  <img
-                    src={`https://i.pravatar.cc/100?u=${f.email}`}
-                    alt={f.fullName}
-                    className="w-full h-full object-cover contrast-125"
+                  <Avatar 
+                    src={f.profileUrl} 
+                    alt={f.fullName} 
+                    sizes="w-full h-full !border-0" 
                   />
                 </div>
               ))}

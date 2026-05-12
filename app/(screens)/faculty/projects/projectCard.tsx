@@ -2,6 +2,7 @@
 
 import { ProjectCardProps } from "@/lib/projectTypes/project";
 import { CaretLeft } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 type ProjectCardListProps = {
   data: ProjectCardProps[];
@@ -10,24 +11,12 @@ type ProjectCardListProps = {
 };
 
 const MemberAvatar = ({ image, name, index }: { image: string; name?: string; index: number }) => {
-  const isValidImage = image && (
-    image.startsWith("http") ||
-    image.startsWith("data:") ||
-    image.startsWith("blob:")
-  );
-
   return (
     <div
       title={name ?? "Unknown"}
-      className={`w-9 h-9 rounded-full overflow-hidden border-2 border-white bg-gray-200 flex items-center justify-center flex-shrink-0 ${index > 0 ? "-ml-3" : ""}`}
+      className={`rounded-full border-2 border-white bg-gray-200 flex-shrink-0 ${index > 0 ? "-ml-3" : ""}`}
     >
-      {isValidImage ? (
-        <img src={image} alt={name ?? "member"} className="w-full h-full object-cover" />
-      ) : (
-        <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-        </svg>
-      )}
+      <Avatar src={image} alt={name ?? "member"} size={36} />
     </div>
   );
 };
@@ -209,15 +198,7 @@ export const ProjectDetailsModal = ({ project, onClose, onViewSubmissions }: Pro
                   {project.mentors.length > 0 ? (
                     project.mentors.map((mentor, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center flex-shrink-0">
-                          {mentor.image && (mentor.image.startsWith("http") || mentor.image.startsWith("data:")) ? (
-                            <img src={mentor.image} alt={mentor.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                            </svg>
-                          )}
-                        </div>
+                        <Avatar src={mentor.image} alt={mentor.name} size={40} />
                         <div>
                           <p className="text-sm font-semibold text-gray-900">{mentor.name}</p>
                           <p className="text-xs text-gray-500">Faculty / Guide</p>
