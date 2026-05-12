@@ -41,9 +41,16 @@ export async function fetchSectionStudents({
       students!inner (
         studentId,
         isActive,
+        student_pins (
+          pinNumber
+        ),
         users:userId (
           fullName,
-          email
+          email,
+          user_profile (
+            profileUrl,
+            is_deleted
+          )
         )
       )
     `,
@@ -133,6 +140,12 @@ export async function fetchSectionStudents({
         const user = Array.isArray(student.users)
             ? student.users[0]
             : student.users;
+        const pinData = Array.isArray(student.student_pins)
+            ? student.student_pins[0]
+            : student.student_pins;
+        const profileData = user?.user_profile;
+        const profiles = Array.isArray(profileData) ? profileData : [profileData];
+        const activeProfile = profiles.find((profile: any) => profile && !profile.is_deleted);
 
         const stats = statsMap[row.studentId] ?? { total: 0, present: 0 };
         const percentage =
@@ -144,8 +157,10 @@ export async function fetchSectionStudents({
 
         return {
             studentId: row.studentId,
+            pinNumber: pinData?.pinNumber || "N/A",
             fullName: user.fullName,
             email: user.email,
+            profileUrl: activeProfile?.profileUrl || "",
             attendance: latest?.status ?? "NA",
             reason: latest?.reason ?? "-",
             percentage,

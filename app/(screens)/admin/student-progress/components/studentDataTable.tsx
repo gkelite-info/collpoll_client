@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { Cell, Pie, PieChart } from "recharts";
+import { Avatar } from "@/app/utils/Avatar";
 
 import type { AdminStudentProgressRow } from "@/lib/helpers/admin/studentProgress/getAdminStudentProgressSummary";
 
@@ -190,19 +191,11 @@ export function StudentDataTable({
                       className="text-[#525252] transition-colors hover:bg-gray-50"
                     >
                       <td className="whitespace-nowrap px-4 py-1">
-                        <div className="h-8 w-8">
-                          {student.profileUrl ? (
-                            <img
-                              className="h-full w-full rounded-full object-cover"
-                              src={student.profileUrl}
-                              alt={student.studentName}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center rounded-full bg-[#E5E7EB] text-xs font-semibold text-[#6B7280]">
-                              {student.studentName.slice(0, 1).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar
+                          src={student.profileUrl}
+                          alt={student.studentName}
+                          size={32}
+                        />
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-1 text-sm font-medium">

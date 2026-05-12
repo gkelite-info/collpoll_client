@@ -7,6 +7,7 @@ import {
   ChatCircleDots,
 } from "@phosphor-icons/react";
 import { Parent } from "./parentsList";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface ChatWindowProps {
   parent: Parent;
@@ -46,11 +47,7 @@ export default function ChatWindow({ parent, onClose }: ChatWindowProps) {
 
       <div className="bg-[#E8F6E2] rounded-[24px] p-4 flex items-center justify-between mb-8 shadow-sm">
         <div className="flex items-center gap-4">
-          <img
-            src={parent.avatar}
-            alt={parent.name}
-            className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm"
-          />
+          <Avatar src={parent.avatar} alt={parent.name} size={56} />
           <div>
             <h3 className="text-lg font-bold text-[#1a1a1a]">{parent.name}</h3>
             <p className="text-sm font-medium text-[#555]">{parent.relation}</p>

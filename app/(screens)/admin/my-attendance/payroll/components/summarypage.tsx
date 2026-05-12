@@ -2,8 +2,8 @@
 
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { useUser } from "@/app/utils/context/UserContext";
+import { Avatar } from "@/app/utils/Avatar";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
-import { User } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 const InfoRow = ({
@@ -60,6 +60,7 @@ export default function SummaryPage() {
     userId,
     fullName,
     profilePhoto,
+    identifierId,
     role,
     dateOfJoining,
     mobile,
@@ -97,23 +98,15 @@ export default function SummaryPage() {
 
   const isInter = ["Inter"].includes(role);
 
-  const systemId = adminId ? `ID-${adminId}` : `ID-${userId}`;
+  const systemId = identifierId || (adminId ? `ID-${adminId}` : `ID-${userId}`);
 
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
-          {profilePhoto ? (
-            <img
-              src={profilePhoto}
-              alt={fullName!}
-              className="w-[84px] h-[84px] rounded-full object-cover mb-3 shadow-sm"
-            />
-          ) : (
-            <div className="w-[84px] h-[84px] rounded-full flex items-center justify-center bg-gray-100 mb-3 shadow-sm border border-gray-200">
-              <User size={40} className="text-gray-400" weight="fill" />
-            </div>
-          )}
+          <div className="mb-3">
+            <Avatar src={profilePhoto} alt={fullName || "Profile"} size={84} />
+          </div>
           <h2 className="text-[17px] font-bold text-gray-800 text-center">
             {fullName}
           </h2>

@@ -2,6 +2,7 @@
 
 import { CaretDown, UserCircle } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface Department {
   id: string;
@@ -18,6 +19,7 @@ export interface Department {
     facultyId: number;
     fullName: string;
     email: string;
+    profileUrl?: string | null;
   }[];
 }
 
@@ -73,13 +75,9 @@ const FacultyAcademicCard = ({
                   // key={f.facultyId}
                   key={index}
                   title={f.fullName}
-                  className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
+                  className="rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm"
                 >
-                  <img
-                    src={`https://i.pravatar.cc/100?u=${f.email}`}
-                    alt={f.fullName}
-                    className="w-full h-full object-cover contrast-125"
-                  />
+                  <Avatar src={f.profileUrl} alt={f.fullName} size={32} />
                 </div>
               ))}
               {faculties.length > 5 && (

@@ -90,10 +90,14 @@ export async function fetchDiscussionUploads(
       submittedAt,
       marksObtained,
       students:studentId (
+        student_pins (
+          pinNumber
+        ),
         user:userId (
           fullName,
           profile:user_profile (
-            profileUrl
+            profileUrl,
+            is_deleted
           )
         ),
         student_academic_history (
@@ -126,6 +130,15 @@ export async function fetchDiscussionUploads(
     const currentHistory = row.students?.student_academic_history?.find(
       (h: any) => h.isCurrent === true,
     );
+    const pinData = row.students?.student_pins;
+    const pinNumber = Array.isArray(pinData)
+      ? pinData[0]?.pinNumber
+      : pinData?.pinNumber;
+    const profileData = row.students?.user?.profile;
+    const profiles = Array.isArray(profileData) ? profileData : [profileData];
+    const activeProfile = profiles.find(
+      (profile: any) => profile && !profile.is_deleted,
+    );
 
     return {
       studentDiscussionUploadId: row.studentDiscussionUploadId,
@@ -136,7 +149,8 @@ export async function fetchDiscussionUploads(
       totalMarks: row.discussion_forum_sections?.marks ?? 25,
       profiles: {
         full_name: row.students?.user?.fullName ?? "Unknown Student",
-        avatar_url: row.students?.user?.profile?.[0]?.profileUrl ?? null,
+        rollNumber: pinNumber || "N/A",
+        avatar_url: activeProfile?.profileUrl ?? null,
         section: currentHistory?.college_sections?.collegeSections ?? "N/A",
       },
     };

@@ -2,6 +2,7 @@
 
 import { UsersThree } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface Department {
   name: string;
@@ -51,12 +52,9 @@ const FacultyAcademicCard = ({
 
         <div className="flex -space-x-2 ml-2">
           {[1, 2, 3, 4].map((i) => (
-            <img
-              key={i}
-              src={`https://i.pravatar.cc/40?img=${i}`}
-              className="w-7 h-7 rounded-full border-2 border-white"
-              alt="faculty"
-            />
+            <div key={i} className="rounded-full border-2 border-white">
+              <Avatar src={null} alt="faculty" size={28} />
+            </div>
           ))}
         </div>
 

@@ -6,6 +6,7 @@ import { Laptop, PencilSimple, Trash, X } from "@phosphor-icons/react";
 import PillTag from "./PillTag";
 import { Meeting } from "../page";
 import { useTranslations } from "next-intl";
+import { Avatar } from "@/app/utils/Avatar";
 
 const formatToAMPM = (timeStr: string) => {
   if (!timeStr) return "";
@@ -143,13 +144,10 @@ export default function MeetingCard({
             <div className="flex items-center gap-2">
               <span className="text-[#303030] text-sm">By :</span>
               <div className="flex items-center gap-1.5 bg-[#E2E6ED] pl-1 pr-2.5 py-0.5 rounded-full">
-                <img
-                  src={
-                    (data as any).hostImage ||
-                    "https://i.pravatar.cc/150?img=11"
-                  }
-                  alt="host"
-                  className="w-4 h-4 rounded-full"
+                <Avatar
+                  src={(data as any).hostImage || null}
+                  alt={(data as any).hostName || "host"}
+                  size={16}
                 />
                 <span className="text-xs text-[#16284F]">
                   {(data as any).hostName || "Dr. Anil Kumar"}

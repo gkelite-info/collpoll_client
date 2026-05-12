@@ -415,6 +415,7 @@ function ProjectsOverview() {
                     subject={course.subject}
                     facultyName={course.facultyName}
                     facultyId={course.facultyId}
+                    employeeId={course.employeeId}
                     avatar={course.avatar}
                     activeQuiz={course.activeQuiz || 0}
                     pendingSubmissions={course.pendingSubmissions}

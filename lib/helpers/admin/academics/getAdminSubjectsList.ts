@@ -93,7 +93,16 @@ export async function getAdminSubjectsList(
       .select(
         `
         collegeSubjectId,
-        faculty ( fullName, email, gender )
+        faculty (
+          fullName,
+          email,
+          users:userId (
+            user_profile (
+              profileUrl,
+              is_deleted
+            )
+          )
+        )
       `,
       )
       .eq("collegeSectionsId", sectionId)
@@ -169,15 +178,16 @@ export async function getAdminSubjectsList(
           ? Math.round((subjectCompletedTopics / subjectTotalTopics) * 100)
           : 0;
 
-      const profileIcon =
-        faculty?.gender === "Female"
-          ? "https://i.pravatar.cc/100?u=female"
-          : "https://i.pravatar.cc/100?u=male";
+      const profileData = faculty?.users?.user_profile;
+      const profiles = Array.isArray(profileData) ? profileData : [profileData];
+      const activeProfile = profiles.find(
+        (profile: any) => profile && !profile.is_deleted,
+      );
 
       return {
         subjectId: subject.collegeSubjectId,
         facultyName: faculty?.fullName || "Not Assigned",
-        facultyProfile: faculty ? profileIcon : "",
+        facultyProfile: activeProfile?.profileUrl || "",
         subjectTitle: subject.subjectName,
         year: `${branchName} - ${sectionName}`,
         units: units.length,

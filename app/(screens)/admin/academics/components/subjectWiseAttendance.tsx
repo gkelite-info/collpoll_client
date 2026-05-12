@@ -29,8 +29,10 @@ interface SubjectWiseAttendanceProps {
 
 type SectionStudent = {
   studentId: number;
+  pinNumber?: string;
   fullName: string;
   email: string;
+  profileUrl?: string;
   attendance: "PRESENT" | "ABSENT" | "LATE" | "LEAVE" | "CLASS_CANCEL" | "NA";
   reason: string;
   percentage: number;
@@ -169,8 +171,9 @@ export const SubjectWiseAttendance = ({
     if (!students.length) return [];
     return students.map((s, index) => ({
       sNo: String((currentPage - 1) * STUDENTS_PER_PAGE + index + 1),
-      rollNo: String(s.studentId),
-      photo: `https://i.pravatar.cc/100?u=${s.email}`,
+      rollNo: s.pinNumber || String(s.studentId),
+      photo: s.profileUrl || "",
+      studentId: String(s.studentId),
       name: s.fullName,
       attendance: s.attendance,
       percentage: s.percentage,

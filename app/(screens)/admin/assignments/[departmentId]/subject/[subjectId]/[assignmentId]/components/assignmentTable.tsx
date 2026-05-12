@@ -62,7 +62,7 @@ export default function AssignmentTable({
         const sub = submissions?.find((s) => s.studentId === student.studentId);
         const user = Array.isArray(student.users) ? student.users[0] : student.users;
         const pinData = Array.isArray(student.student_pins) ? student.student_pins[0] : student.student_pins;
-        const pinNumber = pinData?.pinNumber;
+        const pinNumber = pinData?.pinNumber || "N/A";
 
         const profileList = user?.user_profile || [];
         const profiles = Array.isArray(profileList) ? profileList : [profileList];

@@ -94,7 +94,7 @@ export default function AdminAddMarksModal({
         <div className="grid grid-cols-[100px_1fr] gap-y-3 text-sm font-semibold text-[#282828] mb-8">
           <span>Student ID</span>
           <span className="font-medium text-gray-600">
-            : {student.studentId}
+            : {student.profiles?.rollNumber || student.studentId}
           </span>
 
           <span>Submitted On</span>

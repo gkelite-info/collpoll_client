@@ -202,7 +202,13 @@ export async function getAdminAcademicsCards(
           fullName,
           email,
           collegeBranchId,
-          collegeEducationId
+          collegeEducationId,
+          users:userId (
+            user_profile (
+              profileUrl,
+              is_deleted
+            )
+          )
         )
       )
     `,
@@ -331,6 +337,16 @@ export function mapAcademicCards(data: any[]) {
               fs.faculty?.collegeEducationId === row.collegeEducationId,
           )
           .map((fs: any) => ({
+            ...(() => {
+              const profileData = fs.faculty.users?.user_profile;
+              const profiles = Array.isArray(profileData)
+                ? profileData
+                : [profileData];
+              const activeProfile = profiles.find(
+                (profile: any) => profile && !profile.is_deleted,
+              );
+              return { profileUrl: activeProfile?.profileUrl || null };
+            })(),
             facultyId: fs.faculty.facultyId,
             fullName: fs.faculty.fullName,
             email: fs.faculty.email,

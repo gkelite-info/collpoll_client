@@ -2,6 +2,7 @@
 
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { Avatar } from "@/app/utils/Avatar";
 
 export type CardProps = {
   subjectId?: number;
@@ -94,13 +95,11 @@ const IndividualCard = ({ item }: { item: CardProps }) => {
             <h4 className="text-[#282828] font-medium text-[15px]">
               Faculty -
             </h4>
-            <div className="h-[30px] w-[30px] rounded-full overflow-hidden">
-              <img
-                src={`https://i.pravatar.cc/100?u=${item.facultyProfile}`}
-                alt="faculty"
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <Avatar
+              src={item.facultyProfile}
+              alt={item.facultyName || "Faculty"}
+              size={30}
+            />
             <p className="text-[#525252] text-[15px]">{item.facultyName}</p>
           </div>
 
