@@ -1,3 +1,4 @@
+import { Avatar } from "@/app/utils/Avatar";
 import { CaretDown, UserCircle } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 
@@ -71,10 +72,10 @@ const AssignmentCard = ({
                 className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden shadow-sm relative group"
                 title={fac.fullName}
               >
-                <img
-                  src={`https://i.pravatar.cc/100?u=${fac.email || fac.userId}`}
+                <Avatar
+                  src={fac.profileUrl}
                   alt={fac.fullName}
-                  className="w-full h-full object-cover contrast-125"
+                  sizes="w-full h-full !border-0"
                 />
               </div>
             ))}

@@ -65,36 +65,61 @@ export async function fetchAdminSubjectDetails(
     const to = from + limit;
     const paginatedPairs = uniquePairs.slice(from, to);
 
-    const result = await Promise.all(
-      paginatedPairs.map(async (item: any) => {
-        const fac = Array.isArray(item.faculty)
-          ? item.faculty[0]
-          : item.faculty;
-        const sub = Array.isArray(item.college_subjects)
-          ? item.college_subjects[0]
-          : item.college_subjects;
+    const subjectIds = [...new Set(paginatedPairs.map(p => p.collegeSubjectId))];
+    const facultyIds = [...new Set(paginatedPairs.map(p => p.facultyId))];
+    const userIds = [...new Set(paginatedPairs.map(p => {
+      const fac = Array.isArray(p.faculty) ? p.faculty[0] : p.faculty;
+      return fac?.userId;
+    }).filter(Boolean))];
 
-        const { count } = await supabase
-          .from("assignments")
-          .select("*", { count: "exact", head: true })
-          .eq("subjectId", item.collegeSubjectId)
-          .eq("createdBy", item.facultyId)
-          .eq("status", "Active")
-          .eq("is_deleted", false);
+    const [assignmentsRes, profilesRes, empIdsRes] = await Promise.all([
+      subjectIds.length > 0
+        ? supabase.from("assignments").select("subjectId, createdBy").in("subjectId", subjectIds).in("createdBy", facultyIds).eq("status", "Active").eq("is_deleted", false)
+        : Promise.resolve({ data: [] }),
+      userIds.length > 0
+        ? supabase.from("user_profile").select("userId, profileUrl").in("userId", userIds).eq("is_deleted", false)
+        : Promise.resolve({ data: [] }),
+      userIds.length > 0
+        ? supabase.from("employee_ids").select("userId, employeeId").in("userId", userIds).eq("isActive", true).eq("collegeId", collegeId)
+        : Promise.resolve({ data: [] })
+    ]);
 
-        return {
-          uniqueId: `${item.facultyId}-${sub?.subjectCode}`,
-          id: item.collegeSubjectId,
-          subject: sub?.subjectName || "Unknown Subject",
-          instructorName: fac?.fullName || "Unknown Faculty",
-          instructorId: item.facultyId,
-          avatarUrl: `https://i.pravatar.cc/100?u=${fac?.email || item.facultyId}`,
-          activeAssignments: count || 0,
-          pendingSubmissions: 0,
-          issuesRaised: 0,
-        };
-      }),
-    );
+    const assignmentCounts = new Map<string, number>();
+    assignmentsRes.data?.forEach(a => {
+      const key = `${a.createdBy}-${a.subjectId}`;
+      assignmentCounts.set(key, (assignmentCounts.get(key) || 0) + 1);
+    });
+
+    const profileMap = new Map<number, string>();
+    profilesRes.data?.forEach(p => {
+      if (p.profileUrl) profileMap.set(p.userId, p.profileUrl);
+    });
+
+    const empIdMap = new Map<number, string>();
+    empIdsRes.data?.forEach(e => {
+      if (e.employeeId) empIdMap.set(e.userId, e.employeeId);
+    });
+
+    const result = paginatedPairs.map((item: any) => {
+      const fac = Array.isArray(item.faculty) ? item.faculty[0] : item.faculty;
+      const sub = Array.isArray(item.college_subjects) ? item.college_subjects[0] : item.college_subjects;
+      const userId = fac?.userId;
+
+      return {
+        uniqueId: `${item.facultyId}-${sub?.subjectCode}`,
+        id: item.collegeSubjectId,
+        subject: sub?.subjectName || "Unknown Subject",
+        instructorName: fac?.fullName || "Unknown Faculty",
+        instructorId: item.facultyId,
+        employeeId: empIdMap.get(userId) || "N/A",
+        profileUrl: profileMap.get(userId) || "",
+        // Maintained avatarUrl for legacy fallback if needed
+        avatarUrl: profileMap.get(userId),
+        activeAssignments: assignmentCounts.get(`${item.facultyId}-${item.collegeSubjectId}`) || 0,
+        pendingSubmissions: 0,
+        issuesRaised: 0,
+      };
+    });
 
     return { data: result, count: totalCount, error: null };
   } catch (err: any) {

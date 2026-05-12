@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
+import { Avatar } from "@/app/utils/Avatar";
+import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
 
 type Status = "Evaluated" | "Pending" | "Not Submitted";
 
@@ -39,33 +41,45 @@ export default function AssignmentTable({
     status: Status;
   } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 10;
 
   useEffect(() => {
-    if (assignmentId) fetchDynamicData();
-  }, [assignmentId]);
+    if (assignmentId) fetchDynamicData(page);
+  }, [assignmentId, page]);
 
-  async function fetchDynamicData() {
+  async function fetchDynamicData(currentPage: number) {
     try {
       setLoading(true);
 
-      const { students, submissions } =
-        await fetchAssignmentTableData(assignmentId);
+      const { students, submissions, totalCount: fetchedCount } =
+        await fetchAssignmentTableData(assignmentId, currentPage, pageSize);
+
+      setTotalCount(fetchedCount);
 
       const mergedRows: Row[] = (students || []).map((student: any) => {
         const sub = submissions?.find((s) => s.studentId === student.studentId);
-        const user = student.users;
+        const user = Array.isArray(student.users) ? student.users[0] : student.users;
+        const pinData = Array.isArray(student.student_pins) ? student.student_pins[0] : student.student_pins;
+        const pinNumber = pinData?.pinNumber;
+
+        const profileList = user?.user_profile || [];
+        const profiles = Array.isArray(profileList) ? profileList : [profileList];
+        const activeProfile = profiles.find((p: any) => p && !p.is_deleted);
+        const profileUrl = activeProfile?.profileUrl || "";
 
         return {
           id: student.studentId,
-          photo: `https://i.pravatar.cc/40?u=${user?.email || student.studentId}`,
+          photo: profileUrl,
           name: user?.fullName || "Unknown",
-          roll: String(student?.studentId || "N/A"),
+          roll: pinNumber,
           date: sub
             ? new Date(sub.submittedOn).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
             : "-",
           file: sub?.file?.split("/").pop() || "-",
           filePath: sub?.file || null,
@@ -273,10 +287,10 @@ export default function AssignmentTable({
                   {String(i + 1).padStart(2, "0")}
                 </td>
                 <td className="px-4 py-3">
-                  <img
+                  <Avatar
                     src={r.photo}
-                    className="h-8 w-8 rounded-full border border-gray-100"
-                    alt="avatar"
+                    alt={r.name}
+                    size={32}
                   />
                 </td>
                 <td className="px-4 py-3 font-semibold text-[#282828]">
@@ -380,11 +394,10 @@ export default function AssignmentTable({
                   ) : (
                     <button
                       onClick={() => startEditing(r)}
-                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                        r.status === "Evaluated"
-                          ? "bg-[#E3F6EB] text-[#13934B]"
-                          : "bg-[#FFF1E2] text-[#FFBB70]"
-                      }`}
+                      className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${r.status === "Evaluated"
+                        ? "bg-[#E3F6EB] text-[#13934B]"
+                        : "bg-[#FFF1E2] text-[#FFBB70]"
+                        }`}
                     >
                       {r.status}
                       <CaretDown size={12} weight="bold" />
@@ -396,6 +409,16 @@ export default function AssignmentTable({
           </tbody>
         </table>
       </div>
+      {!loading && totalCount > pageSize && (
+        <div className="mt-4 pb-2">
+          <Pagination
+            currentPage={page}
+            totalItems={totalCount}
+            itemsPerPage={pageSize}
+            onPageChange={(p) => setPage(p)}
+          />
+        </div>
+      )}
     </div>
   );
 }

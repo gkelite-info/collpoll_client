@@ -141,12 +141,14 @@ const AttendancePage = () => {
   } = useAcademicFilters(userId ?? undefined);
 
   const apiFilters = {
-    educationId: education?.collegeEducationId ?? null,
+    educationId: education?.collegeEducationId ?? adminContext?.collegeEducationId ?? null,
     branchId: branch?.collegeBranchId ?? null,
     academicYearId: year?.collegeAcademicYearId ?? null,
     sectionId: section?.collegeSectionsId ?? null,
     subjectId: subject?.collegeSubjectId ?? null,
   };
+
+  const apiFiltersStr = JSON.stringify(apiFilters);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -259,23 +261,25 @@ const AttendancePage = () => {
 
   useEffect(() => {
     if (!userId || adminLoading || !adminContext) return;
-    if (adminContext.collegeEducationId && (!education || educations.length === 0)) {
-      return;
-    }
+    // if (adminContext.collegeEducationId && (!education || educations.length === 0)) {
+    //   return;
+    // }
     loadCardsOnly();
-  }, [userId, adminLoading, adminContext, educations.length, currentPage, education, branch, year, section, subject, debouncedSearch]);
+  }, [userId, adminLoading, adminContext, currentPage, debouncedSearch, apiFiltersStr]);
 
   const loadCardsOnly = async () => {
+    if (!adminContext?.collegeId) return;
     try {
       setLoading(true);
-      const { collegeId } = await fetchAdminContext(userId!);
+      // const { collegeId } = await fetchAdminContext(userId!);
 
       const { data, totalCount } = await getAdminAcademicsCards(
-        collegeId,
+        adminContext.collegeId,
         currentPage,
         cardsPerPage,
         debouncedSearch,
-        apiFilters,
+        // apiFilters,
+        JSON.parse(apiFiltersStr),
       );
 
       let mappedCards = mapAcademicCards(data);
@@ -344,7 +348,7 @@ const AttendancePage = () => {
     },
   ];
 
-  const cardsPerPage = 15;
+  const cardsPerPage = 12;
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const router = useRouter();
@@ -547,7 +551,7 @@ const AttendancePage = () => {
 
       <div className="bg-[#F3F6F9] min-h-screen rounded-xl flex flex-col justify-between">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-[1200px] mx-auto">
-          {loading || adminLoading || collegeEducationId === null || (adminContext?.collegeEducationId && !education) ? (
+          {loading || adminLoading || collegeEducationId === null ? (
             [...Array(9)].map((_, i) => <AcademicSectionsSkeleton key={i} />)
           ) : !loading && cards.length === 0 ? (
             <div className="col-span-full flex justify-center py-20 text-gray-400">

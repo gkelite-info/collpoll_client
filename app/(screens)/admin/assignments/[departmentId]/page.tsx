@@ -11,13 +11,15 @@ import { CaretLeftIcon } from "@phosphor-icons/react";
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
 import { DiscussionDeptCardSkeleton } from "../components/shimmers/DiscussionDeptCardSkeleton";
 import { DiscussionCourseCardSkeleton } from "../components/shimmers/courseCardSkeleton";
+import { useUser } from "@/app/utils/context/UserContext";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 const DepartmentSubjectPage = () => {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { userId } = useUser();
 
   const departmentId = decodeURIComponent(params.departmentId as string);
   const year = searchParams.get("year") || "1";
@@ -29,6 +31,7 @@ const DepartmentSubjectPage = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
+    if (!userId) return;
     const loadData = async () => {
       try {
         if (currentPage === 1 && courses.length === 0) {
@@ -37,18 +40,7 @@ const DepartmentSubjectPage = () => {
           setIsFetchingMore(true);
         }
 
-        const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) return;
-
-        const { data: userRecord } = await supabase
-          .from("users")
-          .select("userId")
-          .eq("auth_id", auth.user.id)
-          .single();
-
-        if (!userRecord) return;
-
-        const adminCtx = await fetchAdminContext(userRecord.userId);
+        const adminCtx = await fetchAdminContext(userId);
 
         const { data, count } = await fetchAdminSubjectDetails(
           adminCtx.collegeId,
@@ -69,7 +61,7 @@ const DepartmentSubjectPage = () => {
     };
 
     loadData();
-  }, [departmentId, year, currentPage]);
+  }, [departmentId, year, currentPage, userId]);
 
   return (
     <div className="flex flex-col m-4 relative min-h-[calc(100vh-120px)]">

@@ -6,7 +6,7 @@ import {
   CaretRight,
   MagnifyingGlass,
 } from "@phosphor-icons/react";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
@@ -19,6 +19,7 @@ import TabNavigation from "./components/tabNavigation";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import { DiscussionCourseCardSkeleton } from "./components/shimmers/courseCardSkeleton";
+import { useUser } from "@/app/utils/context/UserContext";
 
 interface FilterProps {
   label: string;
@@ -73,29 +74,44 @@ const AssignmentPage = () => {
   const [loading, setLoading] = useState(true);
   const [dataList, setDataList] = useState<any[]>([]);
   const { collegeEducationType } = useAdmin();
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [uniqueDepts, setUniqueDepts] = useState<string[]>(["All"]);
+  const [uniqueYears, setUniqueYears] = useState<string[]>(["All"]);
   const cardsPerPage = 10;
+  const { userId } = useUser()
 
   useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, deptFilter, yearFilter]);
+
+  useEffect(() => {
+    if (!userId) return;
     const loadData = async () => {
       try {
-        const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) return;
+        setLoading(true);
+        const adminCtx = await fetchAdminContext(userId);
 
-        const { data: userRecord } = await supabase
-          .from("users")
-          .select("userId")
-          .eq("auth_id", auth.user.id)
-          .single();
-
-        if (!userRecord) return;
-
-        const adminCtx = await fetchAdminContext(userRecord.userId);
-
-        const { data } = await fetchAdminDepartmentStats(
+        const res = await fetchAdminDepartmentStats(
           adminCtx.collegeId,
           adminCtx.collegeEducationId,
+          currentPage,
+          cardsPerPage,
+          debouncedSearch,
+          deptFilter,
+          yearFilter
         );
-        setDataList(data || []);
+
+        setDataList(res.data || []);
+        setTotalRecords(res.totalCount || 0);
+
+        if (res.uniqueDepts) setUniqueDepts(res.uniqueDepts);
+        if (res.uniqueYears) setUniqueYears(res.uniqueYears);
       } catch (err) {
         console.error(err);
       } finally {
@@ -103,34 +119,10 @@ const AssignmentPage = () => {
       }
     };
     loadData();
-  }, []);
+  }, [userId, currentPage, debouncedSearch, deptFilter, yearFilter]);
 
-  const filteredResults = useMemo(() => {
-    return dataList.filter((item) => {
-      const matchesSearch = item.name
-        .toLowerCase()
-        .includes(search.toLowerCase());
-      const matchesDept = deptFilter === "All" || item.deptCode === deptFilter;
-      const matchesYear = yearFilter === "All" || item.year === yearFilter;
-      return matchesSearch && matchesDept && matchesYear;
-    });
-  }, [search, deptFilter, yearFilter, dataList]);
-
-  const totalPages = Math.ceil(filteredResults.length / cardsPerPage);
-  const currentCards = useMemo(() => {
-    const start = (currentPage - 1) * cardsPerPage;
-    return filteredResults.slice(start, start + cardsPerPage);
-  }, [filteredResults, currentPage]);
-
-  const uniqueDepts = useMemo(
-    () => ["All", ...Array.from(new Set(dataList.map((d) => d.name)))],
-    [dataList],
-  );
-  const uniqueYears = useMemo(
-    () => ["All", ...Array.from(new Set(dataList.map((d) => d.year)))],
-    [dataList],
-  );
-
+  const totalPages = Math.ceil(totalRecords / cardsPerPage);
+ 
   if (activeTab === "quiz") {
     return <QuizBasic />;
   }
@@ -192,7 +184,7 @@ const AssignmentPage = () => {
               <DiscussionCourseCardSkeleton />
             </>
           ) : (
-            currentCards.map((dept) => (
+            dataList.map((dept) => (
               <AssignmentCard key={dept.id} {...dept} />
             ))
           )}
@@ -222,7 +214,7 @@ const AssignmentPage = () => {
             </button>
           </div>
         )}
-        {!loading && filteredResults.length === 0 && (
+        {!loading && dataList.length === 0 && (
           <div className="flex justify-center py-20 text-gray-400">
             No matching records found.
           </div>

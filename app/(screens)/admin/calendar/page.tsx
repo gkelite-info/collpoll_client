@@ -9,16 +9,24 @@ import { fetchFilteredFaculties } from "@/lib/helpers/admin/calender/fetchFacult
 import { useUser } from "@/app/utils/context/UserContext"
 import { useAdmin } from "@/app/utils/context/admin/useAdmin"
 import toast from "react-hot-toast"
+import { decryptId, encryptId } from "@/app/utils/encryption"
 
 function PageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const facultyId = searchParams.get("facultyId")
+  const urlParamId = searchParams.get("facultyId")
+  const facultyId = urlParamId ? decryptId(urlParamId) : null
   const [selectedFaculty, setSelectedFaculty] = useState<any>(null)
   const { collegeId } = useUser()
   const { collegeEducationId } = useAdmin()
 
   useEffect(() => {
+    if (urlParamId && !facultyId) {
+      toast.error("Invalid calendar link")
+      router.push("/admin/calendar")
+      return
+    }
+
     if (!facultyId) {
       setSelectedFaculty(null)
       return
@@ -28,7 +36,7 @@ function PageContent() {
       if (!collegeId || !collegeEducationId) return
 
       try {
-        const {data} = await fetchFilteredFaculties({
+        const { data } = await fetchFilteredFaculties({
           collegeId,
           collegeEducationId,
         })
@@ -65,7 +73,7 @@ function PageContent() {
           onBack={() => router.push("/admin/calendar")}
         />
       ) : (
-        <FacultyOverview onSelect={(faculty) => router.push(`/admin/calendar?facultyId=${faculty.id}`)} />
+        <FacultyOverview onSelect={(faculty) => router.push(`/admin/calendar?facultyId=${encryptId(faculty.id)}`)} />
       )}
     </div>
   )

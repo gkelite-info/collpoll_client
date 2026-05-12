@@ -1,7 +1,126 @@
 import { supabase } from "@/lib/supabaseClient";
 
-export async function fetchAdminDepartmentStats(collegeId: number, collegeEducationId: number) {
+// export async function fetchAdminDepartmentStats(collegeId: number, collegeEducationId: number) {
+//   try {
+//     const { data: sections, error } = await supabase
+//       .from("faculty_sections")
+//       .select(
+//         `
+//         facultyId,
+//         collegeSubjectId,
+//         collegeAcademicYearId,
+//         college_academic_year (collegeAcademicYear),
+//         college_sections (
+//           collegeBranchId,
+//           college_branch (collegeBranchCode, collegeBranchType)
+//         ),
+//         faculty (fullName, userId, email)
+//       `,
+//       )
+//       .eq("isActive", true)
+//       .eq("college_sections.collegeEducationId", collegeEducationId);
+
+//     if (error) throw error;
+
+//     const { data: students } = await supabase
+//       .from("students")
+//       .select("collegeBranchId")
+//       .eq("collegeId", collegeId)
+//       .eq("isActive", true);
+
+//     const studentCounts = new Map<number, number>();
+//     students?.forEach((s) => {
+//       studentCounts.set(
+//         s.collegeBranchId,
+//         (studentCounts.get(s.collegeBranchId) || 0) + 1,
+//       );
+//     });
+
+//     const grouped = new Map();
+
+//     sections.forEach((item: any) => {
+//       const sectionObj = Array.isArray(item.college_sections)
+//         ? item.college_sections[0]
+//         : item.college_sections;
+//       const branchObj = sectionObj?.college_branch;
+//       const branchCode = branchObj?.collegeBranchCode;
+//       const branchId = sectionObj?.collegeBranchId;
+//       const year = item.college_academic_year?.collegeAcademicYear;
+
+//       if (!branchCode || !year) return;
+
+//       const key = `${branchCode}-${year}`;
+
+//       if (!grouped.has(key)) {
+//         grouped.set(key, {
+//           id: key,
+//           name: branchCode,
+//           deptCode: branchCode,
+//           year: year,
+//           facultySet: new Set(),
+//           subjectIds: new Set<number>(),
+//           studentCount: studentCounts.get(branchId) || 0,
+//         });
+//       }
+
+//       const group = grouped.get(key);
+//       group.subjectIds.add(item.collegeSubjectId);
+//       if (item.faculty) group.facultySet.add(JSON.stringify(item.faculty));
+//     });
+
+//     const result = await Promise.all(
+//       Array.from(grouped.values()).map(async (g) => {
+//         const uniqueFaculty = Array.from(g.facultySet).map((f: any) =>
+//           JSON.parse(f),
+//         );
+//         const subIds = Array.from(g.subjectIds) as number[];
+
+//         let activeSubjectsCount = 0;
+//         if (subIds.length > 0) {
+//           const { data: assignments } = await supabase
+//             .from("assignments")
+//             .select("subjectId")
+//             .in("subjectId", subIds)
+//             .eq("status", "Active")
+//             .eq("is_deleted", false);
+
+//           activeSubjectsCount = new Set(assignments?.map((a) => a.subjectId))
+//             .size;
+//         }
+
+//         return {
+//           id: g.id,
+//           name: g.name,
+//           deptCode: g.deptCode,
+//           year: g.year,
+//           ...getDeptColor(g.name),
+//           totalStudents: g.studentCount,
+//           activeSubjects: activeSubjectsCount,
+//           issuesRaised: 0,
+//           facultyCount: uniqueFaculty.length,
+//           facultyList: uniqueFaculty,
+//         };
+//       }),
+//     );
+
+//     return { data: result, error: null };
+//   } catch (err: any) {
+//     console.error("Admin Dept Fetch Error:", err);
+//     return { data: [], error: err.message };
+//   }
+// }
+
+export async function fetchAdminDepartmentStats(
+  collegeId: number,
+  collegeEducationId: number,
+  page: number = 1,
+  limit: number = 10,
+  search: string = "",
+  deptFilter: string = "All",
+  yearFilter: string = "All"
+) {
   try {
+    // 1. Fetch base structure (Lightweight query)
     const { data: sections, error } = await supabase
       .from("faculty_sections")
       .select(
@@ -22,22 +141,9 @@ export async function fetchAdminDepartmentStats(collegeId: number, collegeEducat
 
     if (error) throw error;
 
-    const { data: students } = await supabase
-      .from("students")
-      .select("collegeBranchId")
-      .eq("collegeId", collegeId)
-      .eq("isActive", true);
-
-    const studentCounts = new Map<number, number>();
-    students?.forEach((s) => {
-      studentCounts.set(
-        s.collegeBranchId,
-        (studentCounts.get(s.collegeBranchId) || 0) + 1,
-      );
-    });
-
     const grouped = new Map();
 
+    // 2. Group items in memory by Branch and Year
     sections.forEach((item: any) => {
       const sectionObj = Array.isArray(item.college_sections)
         ? item.college_sections[0]
@@ -57,9 +163,9 @@ export async function fetchAdminDepartmentStats(collegeId: number, collegeEducat
           name: branchCode,
           deptCode: branchCode,
           year: year,
+          branchId: branchId, // Saved for fast parallel querying later
           facultySet: new Set(),
           subjectIds: new Set<number>(),
-          studentCount: studentCounts.get(branchId) || 0,
         });
       }
 
@@ -68,45 +174,94 @@ export async function fetchAdminDepartmentStats(collegeId: number, collegeEducat
       if (item.faculty) group.facultySet.add(JSON.stringify(item.faculty));
     });
 
-    const result = await Promise.all(
-      Array.from(grouped.values()).map(async (g) => {
-        const uniqueFaculty = Array.from(g.facultySet).map((f: any) =>
-          JSON.parse(f),
-        );
-        const subIds = Array.from(g.subjectIds) as number[];
+    let allGroups = Array.from(grouped.values());
 
-        let activeSubjectsCount = 0;
-        if (subIds.length > 0) {
-          const { data: assignments } = await supabase
-            .from("assignments")
-            .select("subjectId")
-            .in("subjectId", subIds)
-            .eq("status", "Active")
-            .eq("is_deleted", false);
+    // 3. Extract unique dropdown options BEFORE applying filters
+    const uniqueDepts = ["All", ...Array.from(new Set(allGroups.map((g) => g.name)))];
+    const uniqueYears = ["All", ...Array.from(new Set(allGroups.map((g) => g.year)))];
 
-          activeSubjectsCount = new Set(assignments?.map((a) => a.subjectId))
-            .size;
-        }
+    // 4. Apply Filters (Server-Side Logic)
+    const searchText = search.toLowerCase().trim();
+    allGroups = allGroups.filter((item) => {
+      const matchesSearch = item.name.toLowerCase().includes(searchText);
+      const matchesDept = deptFilter === "All" || item.deptCode === deptFilter;
+      const matchesYear = yearFilter === "All" || item.year === yearFilter;
+      return matchesSearch && matchesDept && matchesYear;
+    });
 
-        return {
-          id: g.id,
-          name: g.name,
-          deptCode: g.deptCode,
-          year: g.year,
-          ...getDeptColor(g.name),
-          totalStudents: g.studentCount,
-          activeSubjects: activeSubjectsCount,
-          issuesRaised: 0,
-          facultyCount: uniqueFaculty.length,
-          facultyList: uniqueFaculty,
-        };
-      }),
-    );
+    const totalCount = allGroups.length;
 
-    return { data: result, error: null };
+    // 5. Apply Pagination (Slice the data so we only fetch heavy stats for the current page)
+    const from = (page - 1) * limit;
+    const to = from + limit;
+    const paginatedGroups = allGroups.slice(from, to);
+
+    // 6. Extract unique IDs for the Current Page ONLY
+    const branchIdsToFetch = [...new Set(paginatedGroups.map((g) => g.branchId))];
+    const subjectIdsToFetch = [...new Set(paginatedGroups.flatMap((g) => Array.from(g.subjectIds)))];
+    const facultyUserIds = new Set<number>();
+
+    paginatedGroups.forEach((g) => {
+      Array.from(g.facultySet).forEach((fStr: any) => {
+        const f = JSON.parse(fStr);
+        if (f.userId) facultyUserIds.add(f.userId);
+      });
+    });
+
+    // 7. PARALLEL FETCH: Heavy data (Students, Assignments, Profiles)
+    const [studentsRes, assignmentsRes, profilesRes] = await Promise.all([
+      branchIdsToFetch.length > 0
+        ? supabase.from("students").select("collegeBranchId").eq("collegeId", collegeId).eq("isActive", true).in("collegeBranchId", branchIdsToFetch)
+        : Promise.resolve({ data: [] }),
+      subjectIdsToFetch.length > 0
+        ? supabase.from("assignments").select("subjectId").eq("status", "Active").eq("is_deleted", false).in("subjectId", subjectIdsToFetch)
+        : Promise.resolve({ data: [] }),
+      facultyUserIds.size > 0
+        ? supabase.from("user_profile").select("userId, profileUrl").in("userId", Array.from(facultyUserIds)).eq("is_deleted", false)
+        : Promise.resolve({ data: [] })
+    ]);
+
+    const studentCounts = new Map<number, number>();
+    studentsRes.data?.forEach((s) => {
+      studentCounts.set(s.collegeBranchId, (studentCounts.get(s.collegeBranchId) || 0) + 1);
+    });
+
+    const activeAssignments = new Set(assignmentsRes.data?.map((a) => a.subjectId));
+
+    const profileMap = new Map<number, string>();
+    profilesRes.data?.forEach((p: any) => {
+      if (p.profileUrl) profileMap.set(p.userId, p.profileUrl);
+    });
+
+    // 8. Map final data injection
+    const result = paginatedGroups.map((g) => {
+      const uniqueFaculty = Array.from(g.facultySet).map((fStr: any) => {
+        const f = JSON.parse(fStr);
+        // Inject Profile URL here!
+        return { ...f, profileUrl: profileMap.get(f.userId) || "" };
+      });
+
+      const subIds = Array.from(g.subjectIds) as number[];
+      const activeSubjectsCount = subIds.filter(id => activeAssignments.has(id)).length;
+
+      return {
+        id: g.id,
+        name: g.name,
+        deptCode: g.deptCode,
+        year: g.year,
+        ...getDeptColor(g.name),
+        totalStudents: studentCounts.get(g.branchId) || 0,
+        activeSubjects: activeSubjectsCount,
+        issuesRaised: 0,
+        facultyCount: uniqueFaculty.length,
+        facultyList: uniqueFaculty,
+      };
+    });
+
+    return { data: result, totalCount, uniqueDepts, uniqueYears, error: null };
   } catch (err: any) {
     console.error("Admin Dept Fetch Error:", err);
-    return { data: [], error: err.message };
+    return { data: [], totalCount: 0, uniqueDepts: ["All"], uniqueYears: ["All"], error: err.message };
   }
 }
 
