@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   CaretLeft,
-  CalendarBlank,
   CheckCircle,
   FilePdf,
   FloppyDisk,
@@ -239,7 +238,7 @@ function UnitCard({
         <div className="flex items-center justify-between w-full mb-2">
           <div className="flex items-center gap-2">
             <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
-            <div className="font-semibold text-md flex items-center gap-2 text-[#282828]">
+            <div className={`font-semibold text-md flex items-center gap-2 ${colors.accent}`}>
               {unit.unitLabel}
               {hasChanges && (
                 <span className="text-[10px] bg-white/50 px-2 py-0.5 rounded-full font-bold animate-pulse text-red-500">
@@ -251,33 +250,21 @@ function UnitCard({
 
           <button
             onClick={() => setDeleteTarget({ type: "unit" })}
-            className="text-gray-400 hover:text-red-600 hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer"
+            className="text-red-500 hover:text-red-600 hover:bg-white/60 transition-all p-1.5 rounded-md cursor-pointer"
             title="Delete Unit"
           >
-            <Trash size={16} weight="regular" />
+            <Trash size={20} weight="regular" />
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-md p-4 h-full flex flex-col min-h-[300px] relative">
+        <div className="bg-[#F4F4F5] rounded-lg p-4 h-full flex flex-col min-h-[300px] relative">
           <h3
-            className={`text-base md:text-lg font-semibold mb-3 ${colors.title} line-clamp-2`}
+            className={`text-base md:text-lg font-semibold mb-5 ${colors.title} line-clamp-2`}
           >
             {unit.title || "Untitled Unit"}
           </h3>
 
-          <div className="flex items-center justify-between text-xs md:text-sm mb-2">
-            <div className="flex items-center gap-2 text-[#6C6C6C]">
-              <CalendarBlank size={16} className={colors.accent} />
-              <span>{unit.dateRange}</span>
-            </div>
-            <span
-              className={`font-semibold transition-colors duration-300 ${hasChanges ? colors.accent : "text-[#333333]"}`}
-            >
-              {localPercentage}%
-            </span>
-          </div>
-
-          <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-4">
+          <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500 ease-out"
               style={{
@@ -285,6 +272,12 @@ function UnitCard({
                 background: `linear-gradient(to right, ${colors.fadeStart}, ${colors.solidEnd})`,
               }}
             />
+          </div>
+
+          <div className="flex justify-end text-xs md:text-sm mt-3 mb-4">
+            <span className={`font-semibold transition-colors duration-300 ${colors.accent}`}>
+              {localPercentage}%
+            </span>
           </div>
 
           <ul
@@ -328,7 +321,7 @@ function UnitCard({
                         e.stopPropagation();
                         setDeleteTarget({ type: "topic", id: topic.id });
                       }}
-                      className="text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md opacity-0 group-hover/topic:opacity-100 cursor-pointer"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md opacity-0 group-hover/topic:opacity-100 cursor-pointer"
                       title="Delete Topic"
                     >
                       <Trash size={15} weight="regular" />

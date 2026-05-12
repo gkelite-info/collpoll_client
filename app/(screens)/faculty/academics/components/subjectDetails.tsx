@@ -265,35 +265,31 @@ function UnitCard({
     <div
       className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-[480px] flex flex-col`}
     >
-      <div className="bg-white rounded-2xl shadow-md p-4 flex-1 flex flex-col min-h-[300px] relative overflow-hidden">
-        <div className="flex items-center justify-between mb-3 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
-            <p className={`text-sm font-semibold ${colors.accent}`}>
-              {unit.unitLabel}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDeleteTarget({ type: "unit" })}
-            className="text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md cursor-pointer"
-            title="Delete Unit"
-          >
-            <Trash size={16} />
-          </button>
+      <div className="flex items-center justify-between mb-4 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
+          <p className={`text-sm md:text-base font-semibold ${colors.accent}`}>
+            {unit.unitLabel}
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setDeleteTarget({ type: "unit" })}
+          className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md cursor-pointer"
+          title="Delete Unit"
+        >
+          <Trash size={20} />
+        </button>
+      </div>
 
+      <div className="bg-[#F4F4F5] rounded-lg p-4 flex-1 flex flex-col min-h-[300px] relative overflow-hidden">
         <h3
-          className={`text-base md:text-lg font-semibold mb-3 shrink-0 ${colors.title}`}
+          className={`text-base md:text-lg font-semibold mb-5 shrink-0 ${colors.title}`}
         >
           {unit.title}
         </h3>
 
-        <div className="flex justify-end text-xs md:text-sm mb-2 shrink-0">
-          <span className="font-semibold text-[#333333]">{percentage}%</span>
-        </div>
-
-        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden mb-2 shrink-0">
+        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden shrink-0">
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{
@@ -307,7 +303,13 @@ function UnitCard({
           />
         </div>
 
-        <div className="relative flex-1 min-h-0 mt-2 mb-14 overflow-hidden">
+        <div className="flex justify-end text-xs md:text-sm mt-3 mb-4 shrink-0">
+          <span className={`font-semibold ${colors.accent}`}>
+            {percentage}%
+          </span>
+        </div>
+
+        <div className="relative flex-1 min-h-0 mb-14 overflow-hidden">
           <ul
             className="h-full space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-10"
             style={{
@@ -347,7 +349,7 @@ function UnitCard({
                   <button
                     type="button"
                     onClick={() => setDeleteTarget({ type: "topic", topicId: topic.id })}
-                    className="text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer"
+                    className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer"
                     title="Delete Topic"
                   >
                     <Trash size={14} />
@@ -377,7 +379,7 @@ function UnitCard({
             ))}
           </ul>
 
-          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b-md" />
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[#F4F4F5] to-transparent pointer-events-none rounded-b-md" />
         </div>
 
         <div className="absolute bottom-4 right-4 flex justify-end shrink-0">

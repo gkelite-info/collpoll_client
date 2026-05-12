@@ -24,7 +24,9 @@ export type UiUnit = {
 export type SubjectContext = {
   collegeId: number;
   educationId: number;
+  educationType: string;
   branchId: number;
+  branchCode: string;
   academicYearId: number;
   semesterId: number;
   subjectId: number;
@@ -72,7 +74,9 @@ export async function getAdminSubjectDetails(
         collegeAcademicYearId,
         collegeSemesterId,
         college_semester ( collegeSemester ),
-        college_academic_year ( collegeAcademicYear )
+        college_academic_year ( collegeAcademicYear ),
+        college_education ( collegeEducationType ),
+        college_branch ( collegeBranchCode )
       `,
       )
       .eq("collegeSubjectId", subjectId)
@@ -89,9 +93,17 @@ export async function getAdminSubjectDetails(
     const yearObj = Array.isArray(subject.college_academic_year)
       ? subject.college_academic_year[0]
       : subject.college_academic_year;
+    const educationObj = Array.isArray(subject.college_education)
+      ? subject.college_education[0]
+      : subject.college_education;
+    const branchObj = Array.isArray(subject.college_branch)
+      ? subject.college_branch[0]
+      : subject.college_branch;
 
     const semesterName = semesterObj?.collegeSemester ?? "N/A";
     const yearName = yearObj?.collegeAcademicYear ?? "N/A";
+    const educationType = educationObj?.collegeEducationType ?? "Education";
+    const branchCode = branchObj?.collegeBranchCode ?? "Branch";
 
     const { data: assignment } = await supabase
       .from("faculty_sections")
@@ -108,7 +120,9 @@ export async function getAdminSubjectDetails(
     const context: SubjectContext = {
       collegeId,
       educationId: subject.collegeEducationId,
+      educationType,
       branchId: subject.collegeBranchId,
+      branchCode,
       academicYearId: subject.collegeAcademicYearId,
       semesterId: subject.collegeSemesterId,
       subjectId: subjectId,
