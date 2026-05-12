@@ -1,5 +1,6 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
 import { supabase } from "@/lib/supabaseClient";
+import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 import {
   buildStudentAttendancePolicyInsight,
   type StudentAttendancePolicyInsight,
@@ -210,7 +211,7 @@ export async function getStudentAttendanceDetails({
       attended,
       absent,
       leave,
-      percentage: total === 0 ? 0 : Math.round((attended / total) * 100),
+      percentage: calculateAttendancePercentage(attended, total),
     },
     rows: paginatedRows,
     totalCount: allRows.length,

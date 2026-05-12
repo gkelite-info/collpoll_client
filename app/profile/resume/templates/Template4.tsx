@@ -51,8 +51,8 @@ export default function ResumeTemplate4({ data }: Props) {
     <div
       className="bg-white font-sans text-sm px-10 py-8"
       style={{
-        width: "794px",
-        minHeight: "1123px",
+        width: "100%",
+        minHeight: "inherit",
         margin: "0 auto",
       }}
     >

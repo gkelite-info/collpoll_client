@@ -17,6 +17,7 @@ import {
 } from "@/lib/helpers/student/leave request/leaveChatAPI";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface StudentLeaveDetailsModalProps {
   isOpen: boolean;
@@ -341,14 +342,9 @@ export default function StudentLeaveDetailsModal({
                       key={`${msg.chatId}-${idx}`}
                       className={`flex gap-1.5 w-full max-w-[85%] ${isMe ? "ml-auto flex-row-reverse" : "mr-auto"}`}
                     >
-                      <img
-                        src={
-                          msg.senderAvatar ||
-                          `https://ui-avatars.com/api/?name=${msg.senderName}&background=random&color=fff`
-                        }
-                        alt=""
-                        className="w-6 h-6 rounded-full object-cover shadow-sm shrink-0 border border-white"
-                      />
+                      
+
+                      <Avatar src={msg.senderAvatar} size={24} alt=""/>
 
                       <div
                         className={`flex flex-col gap-0.5 ${isMe ? "items-end" : "items-start"}`}

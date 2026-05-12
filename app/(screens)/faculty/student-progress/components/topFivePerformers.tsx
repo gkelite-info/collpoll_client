@@ -1,3 +1,5 @@
+import { Avatar } from "@/app/utils/Avatar";
+
 export interface TopPerformer {
   id: string;
   name: string;
@@ -14,17 +16,7 @@ const PerformerRow = ({ performer }: { performer: TopPerformer }) => {
   return (
     <div className="grid grid-cols-[36px_minmax(0,1fr)_minmax(120px,1fr)_56px] items-center gap-3 py-3 border-b border-gray-50 last:border-0">
       <div className="mr-3 h-9 w-9 shrink-0 overflow-hidden rounded-full border border-gray-100">
-        {performer.avatar ? (
-          <img
-            src={performer.avatar}
-            alt={performer.name}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[#E5E7EB] text-xs font-semibold text-[#6B7280]">
-            {performer.name.slice(0, 1).toUpperCase()}
-          </div>
-        )}
+        <Avatar src={performer.avatar} size={36} alt={performer.name}/>
       </div>
 
       <div className="min-w-0 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">

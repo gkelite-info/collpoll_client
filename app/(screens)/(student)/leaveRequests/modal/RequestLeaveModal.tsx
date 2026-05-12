@@ -398,6 +398,7 @@ import { fetchStudentFaculties } from "@/lib/helpers/student/leave request/stude
 import { X, CaretDown, Check, File as FileIcon } from "@phosphor-icons/react";
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface RequestLeaveModalProps {
   isOpen: boolean;
@@ -610,11 +611,10 @@ export default function RequestLeaveModal({
                   if (!loadingFaculties && faculties.length > 0)
                     setIsDropdownOpen(!isDropdownOpen);
                 }}
-                className={`w-full flex items-center justify-between border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm outline-none transition-colors ${
-                  loadingFaculties || faculties.length === 0
-                    ? "bg-gray-50 cursor-not-allowed text-gray-500"
-                    : "bg-white cursor-pointer hover:border-gray-300 focus:border-[#43C17A]"
-                }`}
+                className={`w-full flex items-center justify-between border border-[#E0E0E0] rounded-md px-3 py-2.5 text-sm outline-none transition-colors ${loadingFaculties || faculties.length === 0
+                  ? "bg-gray-50 cursor-not-allowed text-gray-500"
+                  : "bg-white cursor-pointer hover:border-gray-300 focus:border-[#43C17A]"
+                  }`}
               >
                 {loadingFaculties ? (
                   <span>{t("Loading faculties")}</span>
@@ -622,10 +622,15 @@ export default function RequestLeaveModal({
                   <span>{t("No faculties assigned")}</span>
                 ) : formData.faculty ? (
                   <div className="flex items-center gap-2 overflow-hidden pr-2">
-                    <img
+                    {/* <img
                       src={formData.faculty.avatar}
                       alt="faculty"
                       className="w-6 h-6 rounded-full shrink-0 object-cover"
+                    /> */}
+                    <Avatar
+                      src={formData.faculty.avatar}
+                      size={24}
+                      alt="faculty"
                     />
                     <span className="truncate text-[#282828] font-medium">
                       {formData.faculty.name} •{" "}
@@ -656,10 +661,10 @@ export default function RequestLeaveModal({
                       }}
                       className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer group"
                     >
-                      <img
+                      <Avatar
                         src={fac.avatar}
+                        size={32}
                         alt={fac.name}
-                        className="w-8 h-8 rounded-full shrink-0 object-cover border border-gray-100"
                       />
                       <div className="flex-1 overflow-hidden relative">
                         <p className="whitespace-nowrap inline-block text-sm text-[#282828] hover-marquee">

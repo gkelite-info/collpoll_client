@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import { fetchAssignmentTableData } from "@/lib/helpers/faculty/assignment/fetchAssignmentTableData";
 import { generateSubmissionSignedUrl } from "@/lib/helpers/faculty/assignment/generateSubmissionSignedUrl";
 import { updateSubmissionEvaluation } from "@/lib/helpers/faculty/assignment/updateSubmissionEvaluation";
+import { Avatar } from "@/app/utils/Avatar";
 
 type Status = "Evaluated" | "Pending" | "Not Submitted";
 
@@ -64,17 +65,24 @@ export default function AssignmentTable({
         const sub = submissions?.find((s) => s.studentId === student.studentId);
         const user = student.users;
 
+        const profiles = Array.isArray(user?.user_profile) ? user.user_profile : [];
+        const activeProfile = profiles.find((p: any) => p.is_deleted === false);
+
+        const pinNumber = Array.isArray(student.student_pins)
+          ? student.student_pins[0]?.pinNumber
+          : student.student_pins?.pinNumber;
+          
         return {
           id: student.studentId,
-          photo: `https://i.pravatar.cc/40?u=${user?.email || student.studentId}`,
+          photo: activeProfile?.profileUrl || null,
           name: user?.fullName || "Unknown",
-          roll: String(user?.userId || "N/A"),
+          roll: pinNumber || "N/A",
           date: sub
             ? new Date(sub.submittedOn).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })
             : "-",
           file: sub?.file?.split("/").pop() || "-",
           filePath: sub?.file || null,
@@ -284,11 +292,7 @@ export default function AssignmentTable({
                   {String(i + 1).padStart(2, "0")}
                 </td>
                 <td className="px-4 py-3">
-                  <img
-                    src={r.photo}
-                    className="h-8 w-8 rounded-full border border-gray-100"
-                    alt="avatar"
-                  />
+                  <Avatar src={r.photo} size={32} alt={r.name} />
                 </td>
                 <td className="px-4 py-3 font-semibold text-[#282828]">
                   {r.name}
@@ -391,11 +395,10 @@ export default function AssignmentTable({
                   ) : (
                     <button
                       onClick={() => startEditing(r)}
-                      className={`flex items-center gap-1 cursor-pointer  rounded-full px-3 py-1.5 text-xs font-bold transition-all ${
-                        r.status === "Evaluated"
-                          ? "bg-[#E3F6EB] text-[#13934B]"
-                          : "bg-[#FFF1E2] text-[#FFBB70]"
-                      }`}
+                      className={`flex items-center gap-1 cursor-pointer  rounded-full px-3 py-1.5 text-xs font-bold transition-all ${r.status === "Evaluated"
+                        ? "bg-[#E3F6EB] text-[#13934B]"
+                        : "bg-[#FFF1E2] text-[#FFBB70]"
+                        }`}
                     >
                       {r.status}
                       <CaretDown size={12} weight="bold" />

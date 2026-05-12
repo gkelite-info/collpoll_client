@@ -55,8 +55,7 @@ export async function fetchStudentFaculties(studentId: number) {
           name: fac?.fullName || "Unknown Faculty",
           subject: sub?.subjectName || "Unknown Subject",
           avatar:
-            profileUrl ||
-            `https://ui-avatars.com/api/?name=${encodeURIComponent(fac?.fullName || "F")}&background=random&color=fff`,
+            profileUrl,
         });
       }
     });

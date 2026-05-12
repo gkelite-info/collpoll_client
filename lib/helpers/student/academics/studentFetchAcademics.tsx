@@ -143,18 +143,23 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       });
     });
 
-    const facultyMap: Record<number, { fullName: string; gender: string }> = {};
+    const facultyMap: Record<number, { fullName: string; gender: string; profileUrl: string | null }> = {};
 
     if (facultyIds.size > 0) {
       const { data: facultyData, error: facultyDataError } = await supabase
         .from("faculty")
-        .select("facultyId, fullName, gender")
+        .select("facultyId, fullName, gender, users (user_profile (profileUrl))")
         .in("facultyId", Array.from(facultyIds));
 
       facultyData?.forEach((f: any) => {
+        const profileData = f.users?.user_profile;
+        const profileUrl = Array.isArray(profileData)
+          ? profileData[0]?.profileUrl
+          : profileData?.profileUrl;
         facultyMap[f.facultyId] = {
           fullName: f.fullName,
           gender: f.gender,
+          profileUrl: profileUrl || null,
         };
       });
 
@@ -266,8 +271,7 @@ const fetchStudentAcademicData = async (userId: number): Promise<FetchResult> =>
       const lecturerInfo = firstUnit ? facultyMap[firstUnit.createdBy] : null;
 
       return {
-        profileIcon:
-          lecturerInfo?.gender === "Female" ? "/lec-1.png" : "/lec-2.png",
+        profileIcon: lecturerInfo?.profileUrl || "",
         subjectTitle: subject.subjectName,
         subjectCredits: subject.credits,
         lecturer: lecturerInfo?.fullName || "Not Assigned",

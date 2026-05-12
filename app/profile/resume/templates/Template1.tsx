@@ -38,7 +38,7 @@ export default function ResumeTemplate1({ data }: Props) {
   return (
     <div
       className="bg-white font-sans text-sm px-10 py-8"
-      style={{ width: "794px", minHeight: "1123px", margin: "0 auto" }}
+      style={{ width: "100%", minHeight: "inherit", margin: "0 auto" }}
     >
       <div className="px-8 pt-8 pb-4 flex items-start justify-between border-b border-gray-200">
         <div>

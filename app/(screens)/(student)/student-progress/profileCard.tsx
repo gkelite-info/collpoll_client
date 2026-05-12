@@ -1,5 +1,6 @@
 "use client";
 
+import { Avatar } from "@/app/utils/Avatar";
 import { User } from "@phosphor-icons/react";
 import { useTranslations } from "next-intl";
 
@@ -7,7 +8,7 @@ export type ProfileCardProps = {
   name: string;
   department: string;
   studentId: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   attendancePercentage: number;
   attendanceCount: number;
   absentCount: number;
@@ -30,10 +31,10 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({
     <div className="bg-white w-full max-w-5xl rounded-3xl p-5 max-md:p-3 max-md:rounded-2xl">
       {/* Header Info */}
       <div className="flex flex-col md:flex-row md:items-center mb-8 gap-4 max-md:mb-4 max-md:flex-row max-md:gap-3">
-        <img
+        <Avatar
           src={avatarUrl}
+          size={64}
           alt={name}
-          className="w-16 h-16 rounded-full object-cover shadow-sm max-md:w-11 max-md:h-11"
         />
 
         <div className="flex grow items-center flex-wrap gap-3 max-md:gap-1.5">

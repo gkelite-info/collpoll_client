@@ -1,4 +1,5 @@
 import { fetchStudentContext } from "@/app/utils/context/student/studentContextAPI";
+import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 import { supabase } from "@/lib/supabaseClient";
 import {
   buildStudentAttendancePolicyInsight,
@@ -266,7 +267,7 @@ export async function getStudentDashboardData(
         attended,
         missed,
         leave,
-        percentage: total === 0 ? 0 : Math.round((attended / total) * 100),
+        percentage: calculateAttendancePercentage(attended, total),
       };
     },
   );
@@ -326,8 +327,7 @@ export async function getStudentDashboardData(
       faculty: facultyMap.get(ev.facultyId) ?? "Unknown",
       status: row.status,
       classAttendance: `${attended}/${total}`,
-      percentage:
-        total === 0 ? "0%" : `${Math.round((attended / total) * 100)}%`,
+      percentage: `${calculateAttendancePercentage(attended, total)}%`,
     };
   });
 
@@ -341,10 +341,10 @@ export async function getStudentDashboardData(
     cards: {
       attended: eligibilityAttended,
       totalClasses: eligibilityConducted,
-      percentage:
-        eligibilityConducted === 0
-          ? 0
-          : Math.round((eligibilityAttended / eligibilityConducted) * 100),
+      percentage: calculateAttendancePercentage(
+        eligibilityAttended,
+        eligibilityConducted,
+      ),
     },
     semesterStats: {
       present: presentPercent,

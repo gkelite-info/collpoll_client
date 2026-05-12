@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/app/utils/supabase/server";
+import { calculateAttendancePercentage } from "@/lib/helpers/attendance/attendancePolicyMessage";
 import { saveFacultyClassSession } from "../facultyClassSessionsAPI";
 
 export interface ClassOption {
@@ -53,10 +54,7 @@ export interface UIStudent {
 //     .eq("date", today)
 //     .order("fromTime", { ascending: true });
 
-//   if (error) {
-//     console.error("❌ getFacultyClasses Error:", error);
-//     return [];
-//   }
+//   if (error) return [];
 
 //   return events.map((e: any) => {
 //     const subj = Array.isArray(e.subject)
@@ -98,10 +96,7 @@ export async function getFacultyClasses(
     .eq("faculty_class_sessions.status", "Accepted") // <-- STRICT FILTER ADDED
     .order("fromTime", { ascending: true });
 
-  if (error) {
-    console.error("❌ getFacultyClasses Error:", error);
-    return [];
-  }
+  if (error) return [];
 
   return events.map((e: any) => {
     const subj = Array.isArray(e.subject)
@@ -247,8 +242,7 @@ export async function getStudentsForClass(
       reason = record.reason || "";
     }
     const stats = statsMap.get(s.studentId) || { present: 0, total: 0 };
-    const pct =
-      stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0;
+    const pct = calculateAttendancePercentage(stats.present, stats.total);
     const userGender = s.user?.gender || "Male";
 
     const profileUrl = Array.isArray(s.user?.user_profile)

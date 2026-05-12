@@ -82,7 +82,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function SubjectAttendanceDetailsClient() {
-  type ViewFilter = "ALL" | "ATTENDED" | "ABSENT";
+  type ViewFilter = "ALL" | "ATTENDED" | "ABSENT" | "LEAVE";
   const t = useTranslations("Attendance.student");
 
   const [activeView, setActiveView] = useState<ViewFilter>("ALL");
@@ -152,7 +152,7 @@ export default function SubjectAttendanceDetailsClient() {
     {
       id: 3,
       icon: <Chalkboard size={30} weight="fill" />,
-      value: data?.headerStats.absent ?? 0,
+      value: data?.headerStats.leave ?? 0,
       label: t("Leave"),
       style: "bg-[#E2DAFF] w-[182px]",
       iconBgColor: "#F62D2D",
@@ -205,6 +205,10 @@ export default function SubjectAttendanceDetailsClient() {
       return tableData.filter((r) => r.rawStatus === "ABSENT");
     }
 
+    if (activeView === "LEAVE") {
+      return tableData.filter((r) => r.rawStatus === "LEAVE");
+    }
+
     return tableData;
   })();
 
@@ -247,7 +251,7 @@ export default function SubjectAttendanceDetailsClient() {
                 onClick={() => {
                   if (index === 0) setActiveView("ALL");
                   if (index === 1) setActiveView("ATTENDED");
-                  if (index === 2) setActiveView("ABSENT");
+                  if (index === 2) setActiveView("LEAVE");
                 }}
               >
                 <CardComponent
@@ -308,7 +312,7 @@ export default function SubjectAttendanceDetailsClient() {
 
             <div className="flex items-center gap-1 max-md:hidden">
               <h5 className="text-[#525252] text-sm">{t("Attendance :")}</h5>
-              <div className="rounded-full px-3 h-[25px] flex items-center justify-center bg-[#DCEAE2]">
+              <div className="rounded-full px-3 h-6.25 flex items-center justify-center bg-[#DCEAE2]">
                 <p className="text-sm text-[#43C17A] font-medium whitespace-nowrap">
                   {attendanceText}
                 </p>
@@ -319,7 +323,7 @@ export default function SubjectAttendanceDetailsClient() {
 
         <div className="hidden max-md:block my-2 w-full mt-5">
           <AiAttendanceNotificationBanner
-            className="h-auto min-h-[70px]  max-md:py-4"
+            className="h-auto min-h-17.5  max-md:py-4"
             message={
               data?.attendancePolicyInsight?.message ||
               "Attendance insight will appear once records are available."
@@ -328,7 +332,7 @@ export default function SubjectAttendanceDetailsClient() {
         </div>
 
         <div className="mt-4 w-[85%] max-md:w-full max-md:mt-3 max-md:overflow-x-auto scrollbar-hide">
-          <div className="max-md:min-w-[400px]">
+          <div className="max-md:min-w-100">
             <TableComponent
               columns={columns}
               tableData={filteredTableData}

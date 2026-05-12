@@ -924,7 +924,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import AssignmentCard from "./components/card";
 import { supabase } from "@/lib/supabaseClient";
 import { fetchAssignmentsForStudent } from "@/lib/helpers/student/assignments/assignmentsAPI";
-import { getSubmissionForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
+import { getSubmissionDetailsForAssignment } from "@/lib/helpers/student/assignments/insertAssignmentSubmission";
 import { Loader } from "../calendar/right/timetable";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import AssignmentsRight from "./right";
@@ -1015,7 +1015,7 @@ function AssignmentsLeftContent() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
-  const rowsPerPage = 1;
+  const rowsPerPage = 10;
   const totalPages = Math.ceil(totalRecords / rowsPerPage);
 
   const [discussionUploads, setDiscussionUploads] = useState<
@@ -1423,9 +1423,13 @@ function AssignmentsLeftContent() {
 
       const formatted = await Promise.all(
         res.assignments.map(async (a: any) => {
-          const existingFilePath = await getSubmissionForAssignment(
+          const submission = await getSubmissionDetailsForAssignment(
             a.assignmentId,
           );
+          const marksScored =
+            submission?.marksScored !== null && submission?.marksScored !== undefined
+              ? submission.marksScored
+              : null;
 
           return {
             assignmentId: a.assignmentId,
@@ -1436,11 +1440,11 @@ function AssignmentsLeftContent() {
             subjectName: a.subject?.subjectName ?? "—",
             professor: a.faculty?.user?.fullName ?? "Faculty",
             marksTotal: a.marks,
-            marksScored: null,
+            marksScored,
             fromDate: convertIntToShow(a.dateAssignedInt),
             toDate: convertIntToShow(a.submissionDeadlineInt),
             toDateInt: a.submissionDeadlineInt,
-            existingFilePath,
+            existingFilePath: submission?.file ?? null,
           };
         }),
       );

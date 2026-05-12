@@ -378,7 +378,7 @@ export type CardProp = {
   toDate: string;
   professor: string;
   videoLink: string;
-  marksScored?: number;
+  marksScored?: number | null;
   marksTotal?: number;
   assignmentTitle?: string;
   existingFilePath?: string | null;
@@ -523,27 +523,14 @@ export default function AssignmentCard({
 
                 {activeView === "previous" && (
                   <div className="flex flex-col items-center justify-center">
-                    <div className="rounded-full w-[55px] h-[55px] bg-[#16284F] flex flex-col items-center justify-center relative">
-                      <p style={{ fontSize: 14, color: "white" }}>
-                        {item.marksScored}
+                    <div className="rounded-full w-[62px] h-[62px] bg-[#16284F] flex flex-col items-center justify-center px-1">
+                      <p className="text-white text-[14px] font-medium leading-none">
+                        {item.marksScored ?? "-"}
                       </p>
-                      <p style={{ fontSize: 14, color: "white" }}>
-                        {item.marksTotal}
+                      <span className="my-1 h-px w-9 bg-white/70" />
+                      <p className="text-white text-[14px] font-medium leading-none">
+                        {item.marksTotal ?? "-"}
                       </p>
-
-                      <style jsx>{`
-                        div::before {
-                          content: "";
-                          position: absolute;
-                          width: 70%;
-                          height: 1px;
-                          background: white;
-                          top: 50%;
-                          left: 50%;
-                          transform: translate(-50%, -50%);
-                          opacity: 0.7;
-                        }
-                      `}</style>
                     </div>
                     <p className="text-xs text-[#282828] font-regular mt-0.5">
                       {t("Marks")}

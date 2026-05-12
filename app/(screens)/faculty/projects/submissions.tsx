@@ -7,6 +7,7 @@ import { fetchProjectSubmissionsWithStudents } from "@/lib/helpers/student/stude
 import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
 import toast from "react-hot-toast";
+import { decodeId } from "@/app/utils/crypto";
 
 interface StudentSubmissionsProps {
     projectId: string | null;
@@ -26,10 +27,22 @@ export default function StudentSubmissions() {
 
     useEffect(() => {
         const getSubmissions = async () => {
-            if (!projectId) return;
+
+            if (!projectId) {
+                setIsLoading(false)
+                return
+            }
+            const decodedString = decodeId(projectId);
+            const parsedProjectId = Number(decodedString);
+            
+            if (!decodedString || isNaN(parsedProjectId)) {
+                setIsLoading(false);
+                return;
+            }
+
             setIsLoading(true);
             try {
-                const data = await fetchProjectSubmissionsWithStudents(Number(projectId));
+                const data = await fetchProjectSubmissionsWithStudents(Number(parsedProjectId));
 
                 const formattedData = data.map((item: any, index: number) => {
                     const student = item.students;
@@ -43,7 +56,7 @@ export default function StudentSubmissions() {
                     const rollData = student?.student_pins;
                     const pinNumber = Array.isArray(rollData)
                         ? rollData[0]?.pinNumber
-                        : rollData?.pinNumber || "N/A";
+                        : rollData?.pinNumber;
 
                     return {
                         sno: index + 1,
