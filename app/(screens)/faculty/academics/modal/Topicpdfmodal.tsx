@@ -385,7 +385,7 @@ export function TopicPdfModal({
                                         <button
                                             onClick={() => removeStagedFile(f.id)}
                                             disabled={isUploading}
-                                            className="text-gray-400 hover:text-red-500 transition flex-shrink-0 disabled:opacity-40 cursor-pointer"
+                                            className="text-red-500 hover:text-red-600 transition flex-shrink-0 disabled:opacity-40 cursor-pointer"
                                         >
                                             <Trash size={18} />
                                         </button>
@@ -433,7 +433,7 @@ export function TopicPdfModal({
                                                 <button
                                                     onClick={() => handleDeleteSaved(r)}
                                                     disabled={isDeleting}
-                                                    className="text-gray-400 hover:text-red-500 transition disabled:opacity-40"
+                                                    className="text-red-500 hover:text-red-600 transition disabled:opacity-40"
                                                     title="Delete"
                                                 >
                                                     {isDeleting

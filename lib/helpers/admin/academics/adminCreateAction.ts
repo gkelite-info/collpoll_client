@@ -43,6 +43,15 @@ type UpsertUnitPayload = {
   topics: string[];
 };
 
+type SavedTopic = {
+  collegeSubjectUnitTopicId: number;
+  topicTitle: string;
+  displayOrder: number;
+  collegeSubjectUnitId: number;
+  collegeSubjectId: number;
+  collegeId: number;
+};
+
 export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
   const {
     collegeId,
@@ -119,7 +128,33 @@ export async function upsertAdminSubjectUnit(payload: UpsertUnitPayload) {
     if (topicError) throw topicError;
   }
 
-  return { success: true, collegeSubjectUnitId };
+  const { data: savedTopics, error: savedTopicsError } = await supabase
+    .from("college_subject_unit_topics")
+    .select(
+      `
+      collegeSubjectUnitTopicId,
+      topicTitle,
+      displayOrder,
+      collegeSubjectUnitId,
+      collegeSubjectId,
+      collegeId
+    `,
+    )
+    .eq("collegeSubjectUnitId", collegeSubjectUnitId)
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .order("displayOrder", { ascending: true });
+
+  if (savedTopicsError) {
+    throw savedTopicsError;
+  }
+
+  return {
+    success: true,
+    collegeSubjectUnitId,
+    topics: (savedTopics ?? []) as SavedTopic[],
+  };
 }
 
 export async function saveAdminAcademicUnit(params: {

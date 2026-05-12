@@ -27,7 +27,7 @@ import { useAdmin } from "@/app/utils/context/admin/useAdmin";
 import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
 import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
-// ✅ NEW: Placement Officer helper
+import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
 // import { upsertPlacementOfficer } from "@/lib/helpers/admin/registrations/placement/placementRegistration";
 
 type SubjectBlock = {
@@ -716,7 +716,7 @@ const AddUserModal: React.FC<{
       }
     }
 
-    if (!isWellbeing && !basicData.gender)
+    if (!basicData.gender)
       return toast.error("Please select a gender.");
 
     if (isFaculty) {
@@ -893,6 +893,66 @@ const AddUserModal: React.FC<{
         });
       }
 
+      if (isWellbeing && !user) {
+        const wellbeingCollegeDetails = isWellbeingCollege
+          ? wellbeingBranchRows
+            .filter((branch) =>
+              selectedWellbeingBranches.includes(branch.collegeBranchCode),
+            )
+            .flatMap((branch) =>
+              wellbeingYearRows
+                .filter(
+                  (year) =>
+                    year.collegeBranchId === branch.collegeBranchId &&
+                    selectedWellbeingYears.includes(year.collegeAcademicYear),
+                )
+                .flatMap((year) =>
+                  dbData.sections
+                    .filter(
+                      (section) =>
+                        section.collegeAcademicYearId ===
+                        year.collegeAcademicYearId &&
+                        selectedWellbeingSections.includes(
+                          section.collegeSections,
+                        ),
+                    )
+                    .map((section) => ({
+                      collegeEducationId: branch.collegeEducationId,
+                      collegeBranchId: branch.collegeBranchId,
+                      collegeAcademicYearId: year.collegeAcademicYearId,
+                      collegeSectionsId: section.collegeSectionsId,
+                    })),
+                ),
+            )
+          : [];
+
+        if (isWellbeingCollege && !wellbeingCollegeDetails.length) {
+          throw new Error("Invalid wellbeing college selection data");
+        }
+
+        await createWellbeing({
+          userId: targetUserId,
+          collegeId: basicData.collegeIntId,
+          roleType:
+            basicData.role === "WellbeingManager"
+              ? "wellbeingManager"
+              : "wellbeingExecutive",
+          gender: basicData.gender,
+          employeeId: basicData.identifierValue,
+          createdBy: basicData.adminId,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          collegeDetails: wellbeingCollegeDetails,
+          hostelDetails: isWellbeingHostel
+            ? {
+              block: basicData.hostelBlock,
+              buildingNumber: basicData.buildingNumber,
+              hostelType: basicData.hostelType,
+            }
+            : undefined,
+        });
+      }
+
       if (isFaculty) {
         for (const block of subjectBlocks) {
           await persistFaculty(
@@ -988,7 +1048,7 @@ const AddUserModal: React.FC<{
         });
       }
 
-      if (basicData.identifierValue) {
+      if (basicData.identifierValue && !isWellbeing) {
         await upsertIdentifier({
           userId: targetUserId,
           studentId: isStudent ? studentId! : undefined,
@@ -1038,7 +1098,7 @@ const AddUserModal: React.FC<{
 
   const showRollNoField = isStudent;
   const showEmployeeIdField =
-    !isStudent && !isParent && !isWellbeing && basicData.role !== "";
+    !isStudent && !isParent && basicData.role !== "";
 
   if (!isOpen) return null;
 
@@ -1384,8 +1444,8 @@ const AddUserModal: React.FC<{
                         <option value="" disabled>
                           Select hostel type
                         </option>
-                        <option value="Boys Hostel">Boys Hostel</option>
-                        <option value="Girls Hostel">Girls Hostel</option>
+                        <option value="boyshostel">Boys Hostel</option>
+                        <option value="girlshostel">Girls Hostel</option>
                       </select>
                       <CaretDown
                         size={14}
@@ -1940,7 +2000,6 @@ const AddUserModal: React.FC<{
                 </div>
               )}
 
-              {!isWellbeing && (
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
                   Gender <span className="text-red-600">*</span>
@@ -1976,7 +2035,6 @@ const AddUserModal: React.FC<{
                   ))}
                 </div>
               </div>
-              )}
             </div>
             )}
 

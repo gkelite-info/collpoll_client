@@ -2,7 +2,11 @@
 
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import { useUser } from "@/app/utils/context/UserContext";
+import { generateTopicNotesBatchAction } from "@/lib/helpers/faculty/ai/generateTopicNotes.server";
 import { suggestTopicsAction } from "@/lib/helpers/faculty/ai/suggestTopics.server";
+import type { TopicNotes } from "@/lib/helpers/faculty/ai/Generatetopicnotes";
+import { buildTopicPdfFile } from "@/lib/helpers/faculty/ai/generateTopicPdf.client";
+import { uploadTopicResource } from "@/lib/helpers/faculty/topicResources";
 import { CheckCircle, UserCircle, Spinner } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -20,6 +24,57 @@ type AddNewCardModalProps = {
   prefilledContext?: SubjectContext;
   existingUnitNumbers?: number[];
 };
+
+const INVALID_UNIT_MESSAGE =
+  "The unit name does not match the selected subject.";
+
+function runWhenBrowserIsIdle(task: () => void) {
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(task, { timeout: 5000 });
+    return;
+  }
+
+  globalThis.setTimeout(task, 2500);
+}
+
+function hasGenericTopicNotes(notes: TopicNotes) {
+  const genericTerms = new Set([
+    "concept",
+    "process",
+    "application",
+    "diagram",
+    "example",
+    "advantage",
+    "limitation",
+    "revision",
+    "key point",
+    "summary",
+  ]);
+  const genericTermCount =
+    notes.keyTerms?.filter((term) =>
+      genericTerms.has(term.term.trim().toLowerCase()),
+    ).length ?? 0;
+  const genericImageText =
+    notes.imageExamples
+      ?.map((image) => `${image.title} ${image.labels?.join(" ")}`)
+      .join(" ") ?? "";
+  const genericQuestionText = [
+    ...(notes.keyPoints ?? []),
+    ...(notes.workedExamples?.map(
+      (example) => `${example.problem} ${example.solution}`,
+    ) ?? []),
+  ].join(" ");
+
+  return (
+    genericTermCount >= 3 ||
+    /labelled concept|structure or apparatus|process diagram|main part|working area|use case/i.test(
+      genericImageText,
+    ) ||
+    /how does key point|explain summary|write short notes on example|diagram improves clarity/i.test(
+      genericQuestionText,
+    )
+  );
+}
 
 export default function AddNewClassModal({
   isOpen,
@@ -42,6 +97,7 @@ export default function AddNewClassModal({
   const [showSearch, setShowSearch] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const aiTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pdfGenerationKeysRef = useRef<Set<string>>(new Set());
 
   const [adminId, setAdminId] = useState<number | null>(null);
   const { userId, collegeId, loading } = useUser();
@@ -110,7 +166,11 @@ export default function AddNewClassModal({
     //   toast.error("Start Date cannot be after the End Date.");
     //   return;
     // }
-    if (selectedTopics.length === 0) {
+    const validTopics = selectedTopics.filter(
+      (topic) => topic !== INVALID_UNIT_MESSAGE,
+    );
+
+    if (validTopics.length === 0) {
       toast.error("Please add at least one topic.");
       return;
     }
@@ -127,7 +187,7 @@ export default function AddNewClassModal({
         unitTitle: unitName,
         startDate: startDate,
         endDate: endDate,
-        topics: selectedTopics,
+        topics: validTopics,
       });
 
       await saveAdminAcademicUnit({
@@ -142,6 +202,132 @@ export default function AddNewClassModal({
         adminId: adminId,
         facultyId: prefilledContext.facultyId,
       });
+
+      const selectedTopicTitles = new Set(
+        validTopics.map((topic) => topic.trim().toLowerCase()),
+      );
+      const topicsForPdf = unitResult.topics.filter((topic) =>
+        selectedTopicTitles.has(topic.topicTitle.trim().toLowerCase()),
+      );
+
+      if (topicsForPdf.length > 0) {
+        const pdfGenerationKey = [
+          unitResult.collegeSubjectUnitId,
+          ...topicsForPdf.map((topic) => topic.collegeSubjectUnitTopicId),
+        ].join(":");
+
+        if (!pdfGenerationKeysRef.current.has(pdfGenerationKey)) {
+          pdfGenerationKeysRef.current.add(pdfGenerationKey);
+
+          runWhenBrowserIsIdle(() => {
+            const pdfToastId = toast.loading(
+              "Selected topic PDFs are generating in the background...",
+            );
+            let failedTopicPdfCount = 0;
+
+            void (async () => {
+              try {
+                const topicRows = topicsForPdf.map((topic) => ({
+                  collegeSubjectUnitTopicId: topic.collegeSubjectUnitTopicId,
+                  topicTitle: topic.topicTitle,
+                }));
+
+                const noteResults = await generateTopicNotesBatchAction({
+                  subjectName: prefilledContext.subjectName,
+                  unitName,
+                  branch: prefilledContext.branchCode,
+                  educationType: prefilledContext.educationType,
+                  topics: topicRows,
+                });
+
+                for (let index = 0; index < noteResults.length; index += 1) {
+                  const result = noteResults[index];
+                  const fallbackTopic = topicRows[index];
+                  const topicId =
+                    result.collegeSubjectUnitTopicId ??
+                    fallbackTopic?.collegeSubjectUnitTopicId;
+                  const topicTitle =
+                    result.topicTitle ?? fallbackTopic?.topicTitle ?? "Topic";
+                  const failureReason =
+                    "error" in result && result.error
+                      ? result.error
+                      : "Topic notes generation returned an invalid result.";
+
+                  toast.loading(
+                    `Generating PDF ${index + 1}/${noteResults.length}: ${topicTitle}`,
+                    { id: pdfToastId },
+                  );
+
+                  if (!result.success) {
+                    failedTopicPdfCount += 1;
+                    console.error(
+                      `[AddNewClassModal] Topic notes generation failed | topicId=${topicId ?? "unknown"} | topicTitle=${topicTitle} | error=${failureReason}`,
+                      result,
+                    );
+                    continue;
+                  }
+
+                  try {
+                    if (hasGenericTopicNotes(result.notes)) {
+                      failedTopicPdfCount += 1;
+                      console.error(
+                        "[AddNewClassModal] Refusing generic topic PDF",
+                        {
+                          topicId,
+                          topicTitle,
+                        },
+                      );
+                      continue;
+                    }
+
+                    const pdfFile = await buildTopicPdfFile({
+                      notes: result.notes,
+                      unitNumber: Number(unitNumber),
+                    });
+
+                    await uploadTopicResource({
+                      file: pdfFile,
+                      collegeSubjectUnitTopicId:
+                        result.collegeSubjectUnitTopicId,
+                      replaceExisting: true,
+                    });
+                  } catch (pdfError: any) {
+                    failedTopicPdfCount += 1;
+                    console.error(
+                      "[AddNewClassModal] Topic PDF upload failed",
+                      {
+                        topicId,
+                        topicTitle,
+                        error: pdfError?.message ?? pdfError,
+                      },
+                    );
+                  }
+                }
+
+                if (failedTopicPdfCount > 0) {
+                  toast.error(
+                    `${failedTopicPdfCount} topic PDF${failedTopicPdfCount > 1 ? "s were" : " was"} not generated.`,
+                    { id: pdfToastId },
+                  );
+                } else {
+                  toast.success("Topic PDFs generated successfully", {
+                    id: pdfToastId,
+                  });
+                }
+              } catch (pdfBatchError: any) {
+                console.error(
+                  "[AddNewClassModal] Topic PDF background job failed",
+                  { error: pdfBatchError?.message ?? pdfBatchError },
+                );
+                toast.error(
+                  "Unit saved, but topic PDFs could not be generated.",
+                  { id: pdfToastId },
+                );
+              }
+            })();
+          });
+        }
+      }
 
       toast.success("Class saved successfully");
       if (onSave) onSave();
@@ -177,6 +363,8 @@ export default function AddNewClassModal({
         const suggestions = await suggestTopicsAction(
           prefilledContext.subjectName,
           val,
+          prefilledContext.educationType,
+          prefilledContext.branchCode,
         );
         setAvailableTopics(suggestions);
       } catch (e) {
@@ -268,8 +456,11 @@ export default function AddNewClassModal({
                               onChange={(e) => {
                                 setSelectAll(e.target.checked);
                                 if (e.target.checked) {
+                                  const validAvailable = availableTopics.filter(
+                                    (topic) => topic !== INVALID_UNIT_MESSAGE,
+                                  );
                                   setSelectedTopics((p) => [
-                                    ...new Set([...p, ...availableTopics]),
+                                    ...new Set([...p, ...validAvailable]),
                                   ]);
                                   setAvailableTopics([]);
                                 }
@@ -307,21 +498,30 @@ export default function AddNewClassModal({
                         .filter((t) =>
                           t.toLowerCase().includes(searchQuery.toLowerCase()),
                         )
-                        .map((t) => (
-                          <span
-                            key={t}
-                            onClick={() => {
-                              setSelectedTopics((p) => [...p, t]);
-                              setAvailableTopics((p) =>
-                                p.filter((x) => x !== t),
-                              );
-                              setSelectAll(false);
-                            }}
-                            className="bg-green-100 text-green-700 text-[11px] px-2 py-1 rounded-full cursor-pointer border border-transparent hover:border-green-300 transition-colors"
-                          >
-                            + {t}
-                          </span>
-                        ))}
+                        .map((t) => {
+                          const isInvalidMessage = t === INVALID_UNIT_MESSAGE;
+
+                          return (
+                            <span
+                              key={t}
+                              onClick={() => {
+                                if (isInvalidMessage) return;
+                                setSelectedTopics((p) => [...p, t]);
+                                setAvailableTopics((p) =>
+                                  p.filter((x) => x !== t),
+                                );
+                                setSelectAll(false);
+                              }}
+                              className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                                isInvalidMessage
+                                  ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                                  : "bg-green-100 text-green-700 cursor-pointer border-transparent hover:border-green-300"
+                              }`}
+                            >
+                              {isInvalidMessage ? t : `+ ${t}`}
+                            </span>
+                          );
+                        })}
                     </div>
                   </div>
                 )}
