@@ -57,7 +57,7 @@ export default function FacultyCard({ faculty, onSelect }: Props) {
             <h3 className="font-semibold text-base text-[#282828] flex-1 truncate">
               {faculty.name}
             </h3>
-            <p className="text-xs text-[#525252] mb-2">ID - {faculty.employeeId}</p>
+            <p className="text-xs text-[#525252] mb-2">ID - {faculty.employeeId || "-"}</p>
           </div>
         </div>
       </div>

@@ -16,6 +16,7 @@ interface Props {
 
 interface FacultyUI {
     id: string;
+    employeeId: string;
     name: string;
     gender: "Male" | "Female";
     branch: string;
