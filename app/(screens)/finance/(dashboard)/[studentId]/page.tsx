@@ -34,6 +34,7 @@ import {
   fetchRecentOfflinePayments,
 } from "@/lib/helpers/finance/analytics/studentPaymentHelpers";
 import ComposeEmailModal from "@/app/components/modals/ComposeEmailModal";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
 const mockNonFinancialDues: NonFinancialDue[] = [
   {
@@ -110,7 +111,8 @@ const Page = () => {
     ? params.studentId[0]
     : params.studentId;
 
-  const { collegeId } = useUser();
+  const { collegeId: userCollegeId } = useUser();
+  const { collegeId: financeCollegeId } = useFinanceManager();
   const [isComposeEmailOpen, setIsComposeEmailOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<
@@ -147,13 +149,19 @@ const Page = () => {
     let mounted = true;
     async function fetchData() {
       const targetId = studentIdStr || "2";
+      const resolvedCollegeId = userCollegeId ?? financeCollegeId ?? undefined;
       try {
         setLoading(true);
-        const data = await getStudentFinanceDetails(targetId, collegeId);
-        const resolvedStudentId = data?.profile?.studentId ?? Number(targetId);
-        const obligationData = await fetchActiveObligationByStudent(
-          resolvedStudentId,
-        );
+        const data = await getStudentFinanceDetails(targetId, resolvedCollegeId);
+
+        const numericTargetId = Number(targetId);
+        const resolvedStudentId =
+          data?.profile?.studentId ??
+          (Number.isFinite(numericTargetId) ? numericTargetId : null);
+
+        const obligationData = resolvedStudentId
+          ? await fetchActiveObligationByStudent(resolvedStudentId)
+          : { success: false };
         if (mounted && data) {
           setProfile(data.profile);
           const enrichedStats = data.stats.map((s: any) => ({
@@ -167,9 +175,16 @@ const Page = () => {
           setTransactions(data.transactions);
           setHistoryTotal(data.transactions.length);
         }
-        if (mounted && obligationData.success && obligationData.obligationId) {
+        if (
+          mounted &&
+          obligationData.success &&
+          "obligationId" in obligationData &&
+          obligationData.obligationId
+        ) {
           setObligationId(obligationData.obligationId);
-          setSemesterId(obligationData.semesterId || 1);
+          setSemesterId(
+            ("semesterId" in obligationData && obligationData.semesterId) || 1
+          );
         }
       } catch (err) {
         console.error(err);
@@ -181,7 +196,7 @@ const Page = () => {
     return () => {
       mounted = false;
     };
-  }, [studentIdStr, collegeId]);
+  }, [studentIdStr, userCollegeId, financeCollegeId]);
 
   const handleAcademicPageChange = async (newPage: number) => {
     setAcademicPage(newPage);
@@ -471,7 +486,7 @@ const Page = () => {
       <ComposeEmailModal
         isOpen={isComposeEmailOpen}
         onClose={() => setIsComposeEmailOpen(false)}
-        collegeId={collegeId!}
+        collegeId={(userCollegeId ?? financeCollegeId)!}
         initialEmail={profile?.email}
       />
     </div>

@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export type AdminListRow = {
   adminId:       number;
+  identifierId:  string | null;
   adminName:     string;
   educationType: string;
   branches:      string;
@@ -37,6 +38,21 @@ export async function getAdminListData(
 
   const from = (page - 1) * limit;
   const to   = from + limit - 1;
+  const term = search?.trim() || "";
+
+  let matchedEmployeeUserIds: number[] = [];
+  if (term) {
+    const { data: empMatches } = await supabase
+      .from("employee_ids")
+      .select("userId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .ilike("employeeId", `%${term}%`);
+    matchedEmployeeUserIds = (empMatches ?? [])
+      .map((row: any) => Number(row.userId))
+      .filter(Boolean);
+  }
 
   // 1. Paginated admins query — with optional server-side search
   let query = supabase
@@ -49,8 +65,14 @@ export async function getAdminListData(
     .eq("collegeId", collegeId)
     .eq("is_deleted", false);
 
-  if (search && search.trim() !== "") {
-    query = query.ilike("fullName", `%${search.trim()}%`);
+  if (term) {
+    if (matchedEmployeeUserIds.length > 0) {
+      query = query.or(
+        `fullName.ilike.%${term}%,userId.in.(${matchedEmployeeUserIds.join(",")})`,
+      );
+    } else {
+      query = query.ilike("fullName", `%${term}%`);
+    }
   }
 
   const { data: admins, error: adminsError, count } = await query.range(from, to);
@@ -59,6 +81,7 @@ export async function getAdminListData(
 
   const eduIds       = admins ? [...new Set(admins.map((a: any) => a.collegeEducationId))] as number[] : [];
   const createdByIds = admins ? [...new Set(admins.map((a: any) => a.createdBy).filter(Boolean))] as number[] : [];
+  const adminUserIds = admins ? [...new Set(admins.map((a: any) => a.userId).filter(Boolean))] as number[] : [];
 
   // 2. Run all supporting queries in parallel (row-level + summary counts)
   const [
@@ -69,6 +92,7 @@ export async function getAdminListData(
     { data: financeData },
     { data: placementData },
     { data: hrData },
+    { data: employeeIdData },
     { data: creatorUsers },
     // summary totals (head:true → count only, no rows returned)
     { count: totalAdmins },
@@ -128,6 +152,14 @@ export async function getAdminListData(
       .eq("is_deleted", false),
 
     supabase
+      .from("employee_ids")
+      .select("userId, employeeId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .in("userId", adminUserIds.length > 0 ? adminUserIds : [-1]),
+
+    supabase
       .from("users")
       .select("userId, fullName")
       .in("userId", createdByIds.length > 0 ? createdByIds : [-1]),
@@ -157,6 +189,9 @@ export async function getAdminListData(
   const creatorMap = new Map(
     (creatorUsers ?? []).map((u: any) => [u.userId, u.fullName])
   );
+  const employeeIdMap = new Map(
+    (employeeIdData ?? []).map((row: any) => [row.userId, row.employeeId])
+  );
 
   const facultyByEdu   = (eduId: number) => (facultyData   ?? []).filter((r: any) => r.collegeEducationId === eduId).length;
   const studentByEdu   = (eduId: number) => (studentData   ?? []).filter((r: any) => r.collegeEducationId === eduId).length;
@@ -170,6 +205,7 @@ export async function getAdminListData(
     const eduId = a.collegeEducationId;
     return {
       adminId:       a.adminId,
+      identifierId:  employeeIdMap.get(a.userId) ?? null,
       adminName:     a.fullName,
       email:         a.email  ?? "—",
       mobile:        a.mobile ?? "—",

@@ -78,7 +78,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
         <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />
       ),
       label: t("My Attendance"),
-      path: "/hr/my-attendance",
+      path: "/hr/MyAttendance",
     },
     {
       icon: (isActive) => (

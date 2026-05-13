@@ -664,20 +664,26 @@ export async function getStudentFinanceDetails(
   studentIdentifier: string,
   collegeId?: number | null,
 ) {
-  let resolvedStudentId = Number(studentIdentifier);
+  const normalizedIdentifier = String(studentIdentifier || "").trim();
+  let resolvedStudentId = Number(normalizedIdentifier);
 
-  if (studentIdentifier && collegeId) {
-    const { data: pinData } = await supabase
+  if (normalizedIdentifier) {
+    let pinQuery = supabase
       .from("student_pins")
       .select("studentId")
-      .eq("collegeId", collegeId)
-      .eq("pinNumber", studentIdentifier)
+      .eq("pinNumber", normalizedIdentifier)
       .eq("isActive", true)
-      .is("deletedAt", null)
-      .maybeSingle();
+      .is("deletedAt", null);
 
-    if (pinData?.studentId) {
-      resolvedStudentId = pinData.studentId;
+    if (collegeId) {
+      pinQuery = pinQuery.eq("collegeId", collegeId);
+    }
+
+    const { data: pinData } = await pinQuery.limit(1);
+    const pinRow = Array.isArray(pinData) ? pinData[0] : pinData;
+
+    if (pinRow?.studentId) {
+      resolvedStudentId = pinRow.studentId;
     }
   }
 
@@ -735,7 +741,7 @@ export async function getStudentFinanceDetails(
     imageUrl: userProfileObj?.profileUrl || null,
   };
 
-  let feeComponents: { name: string; amount: number }[] = [];
+  const feeComponents: { name: string; amount: number }[] = [];
   let baseApplicableFees = 0;
   let gstAmount = 0;
 

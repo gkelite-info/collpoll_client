@@ -14,7 +14,7 @@ export type EduTypeDistribution = {
 };
  
 export type FinanceRow = {
-  financeManagerId: number;
+  financeManagerId: string | number;
   fullName: string;
   collegeEducationId: number;
   eduType: string;
@@ -60,7 +60,33 @@ export async function getFinanceListData(
     return { distributions: [], finance: [], totalCount: 0, summary: { admins: 0, students: 0, parents: 0, faculty: 0, financeManagers: 0, hrExecutives: 0, placementManagers: 0 } };
   }
  
-  const eduIds = eduList.map((e: any) => e.collegeEducationId) as number[];
+  const term = filters?.search?.trim() || "";
+  let matchedSearchUserIds: number[] = [];
+  if (term) {
+    const [{ data: userMatches }, { data: employeeMatches }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("userId")
+        .eq("collegeId", collegeId)
+        .eq("is_deleted", false)
+        .ilike("fullName", `%${term}%`),
+      supabase
+        .from("employee_ids")
+        .select("userId")
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .ilike("employeeId", `%${term}%`),
+    ]);
+
+    matchedSearchUserIds = Array.from(
+      new Set(
+        [...(userMatches ?? []), ...(employeeMatches ?? [])]
+          .map((row: any) => Number(row.userId))
+          .filter(Boolean),
+      ),
+    );
+  }
  
   // Paginated finance query
   let financeQuery = supabase
@@ -73,7 +99,12 @@ export async function getFinanceListData(
  
   if (filters?.collegeEducationId) financeQuery = financeQuery.eq("collegeEducationId", filters.collegeEducationId);
   if (filters?.adminId)            financeQuery = financeQuery.eq("createdBy", filters.adminId);
-  if (filters?.search)             financeQuery = financeQuery.ilike("fullName", `%${filters.search}%`); // ← ADDED
+  if (term) {
+    financeQuery = financeQuery.in(
+      "userId",
+      matchedSearchUserIds.length > 0 ? matchedSearchUserIds : [-1],
+    );
+  }
  
   const { data: financeData, count: financeCount } = await financeQuery;
  
@@ -135,6 +166,17 @@ export async function getFinanceListData(
 
   const userNameMap = new Map((usersData ?? []).map((u: any) => [u.userId, u.fullName]));
   const adminMap    = new Map((adminData ?? []).map((a: any) => [a.adminId, a.fullName]));
+  const financeUserIds = (financeData ?? []).map((f: any) => f.userId).filter(Boolean);
+  const { data: financeEmployeeIds } = await supabase
+    .from("employee_ids")
+    .select("userId, employeeId")
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .in("userId", financeUserIds.length > 0 ? financeUserIds : [-1]);
+  const financeEmployeeIdMap = new Map(
+    (financeEmployeeIds ?? []).map((row: any) => [row.userId, row.employeeId]),
+  );
 
   const distributions: EduTypeDistribution[] = eduList.map((edu: any) => {
     const eduId = edu.collegeEducationId;
@@ -158,7 +200,7 @@ export async function getFinanceListData(
   });
  
   const finance: FinanceRow[] = (financeData ?? []).map((f: any) => ({
-    financeManagerId:   f.financeManagerId,
+    financeManagerId:   financeEmployeeIdMap.get(f.userId) ?? f.financeManagerId,
     fullName:           userNameMap.get(f.userId) ?? "—",
     collegeEducationId: f.collegeEducationId,
     eduType:            eduList.find((e: any) => e.collegeEducationId === f.collegeEducationId)?.collegeEducationType ?? "—",

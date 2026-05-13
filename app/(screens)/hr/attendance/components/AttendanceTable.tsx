@@ -313,7 +313,7 @@ export default function AttendanceTable({
         );
 
         return {
-          id: item.userId,
+          id: item.identifierId || item.userId,
           name: item.fullName,
           role: item.role,
 

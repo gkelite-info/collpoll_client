@@ -117,7 +117,7 @@ const AttendanceAnalyticsPage = ({ userId, profile }: Props) => {
       setFacultyInfo({
         name: staffName,
         department: role,
-        employeeId: String(profile.userId || userId),
+        employeeId: String(profile.identifierId || "N/A"),
         experience: experience,
         leavesTaken: stats.leavesTaken,
         workingDays: stats.totalWorkingDays,

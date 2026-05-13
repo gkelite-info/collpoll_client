@@ -558,7 +558,7 @@ export default function FacultyListView({ onBack }: Props) {
         </div>
 
         <div className="w-full md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
-          <input type="text" placeholder="Search by Faculty Name, Department, or Course"
+          <input type="text" placeholder="Search by Faculty Name or ID"
             value={search} onChange={(e) => setSearch(e.target.value)}
             className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"
           />

@@ -76,14 +76,10 @@ const AttendancePage = ({ userId, profile }: Props) => {
 
   const staffName = profile.name || "Unknown Staff";
 
-  const displayImage =
-    profile.image ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(staffName)}&background=e2f6ea&color=43C17A&size=128&bold=true`;
-
   const formattedProfile: FacultyProfile = {
     name: staffName,
-    image: displayImage,
-    id: String(profile.userId || userId),
+    image: profile.image || "",
+    id: String(profile.identifierId || profile.id || profile.userId || userId),
     department: profile.role || "N/A",
     mobile: profile.mobile || "N/A",
     email: profile.email || "N/A",

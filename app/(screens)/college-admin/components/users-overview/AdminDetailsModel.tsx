@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface AdminModalProps {
     admin: any;
@@ -30,10 +31,10 @@ export default function AdminModal({ admin, onClose }: AdminModalProps) {
 
                 <div className="flex gap-3 mb-4 items-center">
                     <div className="w-15 h-15 rounded-full overflow-hidden mb-2">
-                        <img
-                            src="https://randomuser.me/api/portraits/women/44.jpg"
-                            alt="Admin"
-                            className="w-full h-full object-cover"
+                        <Avatar
+                            src={admin?.profileUrl || admin?.image || null}
+                            alt={admin?.name || "Admin"}
+                            size={60}
                         />
                     </div>
                     <div className="flex flex-col">

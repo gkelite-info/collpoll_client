@@ -28,7 +28,7 @@ const mockProfile: AnalyticsFacultyProfile = {
 
 const AttendanceAnalyticsPage = () => {
 
-  const { userId, collegeBranchCode, fullName, collegeAdminId, collegeEducationType, professionalExperienceYears } = useUser();
+  const { userId, identifierId, collegeBranchCode, fullName, collegeAdminId, collegeEducationType, professionalExperienceYears } = useUser();
   const [profile, setProfile] = useState<AnalyticsFacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -67,14 +67,14 @@ const AttendanceAnalyticsPage = () => {
   }, [userId, selectedMonth, selectedYear]);
 
   useEffect(() => {
-    if (!collegeAdminId || !fullName) return;
+    if (!userId || !fullName) return;
     setInfoLoading(true);
     try {
       const updatedProfile: AnalyticsFacultyProfile = {
         ...mockProfile,
         name: fullName,
         department: collegeBranchCode || "",
-        employeeId: collegeAdminId,
+        employeeId: identifierId || collegeAdminId || userId || "",
         collegeEducationType: collegeEducationType || "",
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
         workingDays
@@ -83,7 +83,7 @@ const AttendanceAnalyticsPage = () => {
     } finally {
       setInfoLoading(false)
     }
-  }, [collegeAdminId, collegeBranchCode, fullName, collegeEducationType, workingDays]);
+  }, [identifierId, collegeAdminId, userId, collegeBranchCode, fullName, collegeEducationType, workingDays, professionalExperienceYears]);
 
   useEffect(() => {
     if (!userId) return;

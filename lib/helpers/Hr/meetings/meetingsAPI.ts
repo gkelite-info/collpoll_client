@@ -91,8 +91,8 @@ export async function fetchHrMeetings({
       const url = Array.isArray(profile)
         ? profile[0]?.profileUrl
         : profile?.profileUrl;
-      return url || `https://i.pravatar.cc/150?u=${p.userId}`;
-    });
+      return url || null;
+    }).filter(Boolean);
 
     return {
       id: meeting.hrMeetingId,

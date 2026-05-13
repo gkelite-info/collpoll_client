@@ -1,5 +1,6 @@
 import React from "react";
 import { FacultyProfile } from "../types";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface Props {
   profile: FacultyProfile;
@@ -10,13 +11,7 @@ const FacultyInfoCard: React.FC<Props> = ({ profile }) => {
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
       {/* Avatar & Name */}
       <div className="flex flex-col items-center gap-2 pl-2">
-        <div className="w-[85px] h-[85px] rounded-full overflow-hidden bg-teal-500">
-          <img
-            src={profile.image}
-            alt={profile.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <Avatar src={profile.image || null} alt={profile.name} size={85} />
         <p className="text-[#282828] font-bold text-[15px] whitespace-nowrap">
           {profile.name}
         </p>
