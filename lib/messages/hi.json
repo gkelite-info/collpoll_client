@@ -447,7 +447,8 @@
       "File removed successfully": "फ़ाइल सफलतापूर्वक हटाई गई",
       "Failed to remove file": "फ़ाइल हटाने में विफल",
       "An error occurred": "एक त्रुटि हुई",
-      "Deadline :": "समय सीमा :"
+      "Deadline :": "समय सीमा :",
+      "Submit Quiz": "क्विज़ जमा करें"
     }
   },
   "Payments": {
@@ -531,7 +532,8 @@
       "Manage Fees, Track Transactions and Stay Updated Instantly": "शुल्क प्रबंधित करें, लेनदेन ट्रैक करें और तुरंत अपडेट रहें।",
       "Payment Successful 🎉": "भुगतान सफल 🎉",
       "Your fee payment has been completed successfully": "आपका शुल्क भुगतान सफलतापूर्वक पूरा हो गया है।",
-      "Back to Payments": "भुगतान पर वापस जाएँ"
+      "Back to Payments": "भुगतान पर वापस जाएँ",
+      "Semesters": "सत्र"
     }
   },
   "Academics": {
@@ -746,7 +748,14 @@
       "Section :": "विभाग :",
       "NA": "उपलब्ध नहीं",
       "Student": "छात्र",
-      "Parent": "माता-पिता"
+      "Parent": "माता-पिता",
+      "Faculty": "फैकल्टी",
+      "Admin": "प्रशासक",
+      "College Admin": "कॉलेज प्रशासक",
+      "Finance": "वित्त",
+      "Finance Manager": "वित्त प्रबंधक",
+      "Placement Officer": "प्लेसमेंट अधिकारी",
+      "College Hr": "कॉलेज मानव संसाधन"
     }
   },
   "Clubs": {
