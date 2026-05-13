@@ -101,7 +101,13 @@ export async function fetchActiveObligationByStudent(studentId: number) {
       .limit(1)
       .single();
 
-    if (error) throw error;
+    // if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return { success: false, error: "No active obligation found for this student." };
+      }
+      throw error;
+    }
 
     const { data: semData } = await supabase
       .from("college_semester")
@@ -117,7 +123,10 @@ export async function fetchActiveObligationByStudent(studentId: number) {
       semesterId: semData?.collegeSemesterId,
     };
   } catch (error: any) {
-    console.error("fetchActiveObligationByStudent error:", error);
-    return { success: false, error };
+    // console.error("fetchActiveObligationByStudent error:", error);
+    // return { success: false, error };
+    const errorMsg = error?.message || error?.details || (JSON.stringify(error) !== "{}" ? JSON.stringify(error) : "Unknown backend error occurred");
+    console.error("fetchActiveObligationByStudent error:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
