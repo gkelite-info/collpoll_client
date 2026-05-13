@@ -30,8 +30,20 @@ const getRegistrationIdByRole = ({
   collegeAdminId,
   financeManagerId,
   collegeHrId,
+  wellBeingId,
   userId
-}: any) => {
+}: {
+  role: string | null;
+  studentId: number | null;
+  facultyId: number | null;
+  parentId: number | null;
+  adminId: number | null;
+  collegeAdminId: number | null;
+  financeManagerId: number | null;
+  collegeHrId: number | null;
+  wellBeingId: number | null;
+  userId: number | null;
+}) => {
 
   const roleIdMap: Record<string, number | null> = {
     Student: studentId,
@@ -41,10 +53,12 @@ const getRegistrationIdByRole = ({
     SuperAdmin: userId,
     CollegeAdmin: collegeAdminId,
     Finance: financeManagerId,
-    CollegeHR: collegeHrId
+    CollegeHr: collegeHrId,
+    WellbeingExecutive: wellBeingId,
+    WellbeingManager: wellBeingId,
   };
 
-  return roleIdMap[role] ?? userId;
+  return role ? roleIdMap[role] ?? userId : userId;
 };
 
 const ALLOWED_IMAGE_TYPES = [
@@ -92,6 +106,8 @@ export default function ProfileInfo() {
     collegeAdminId,
     financeManagerId,
     collegeHrId,
+    wellBeingId,
+    wellBeingRegistrationTypes,
     identifierId
   } = useUser();
 
@@ -116,7 +132,13 @@ export default function ProfileInfo() {
   const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null);
 
   const isStudentOrFaculty = ["Student", "Faculty"].includes(role!)
+
+  const isWellbeingRole =
+    role === "WellbeingExecutive" || role === "WellbeingManager";
   const isSuperAdminOrOther = ["SuperAdmin", "CollegeHr", "CollegeAdmin", "Parent"].includes(role!)
+  const showEducationType = isWellbeingRole
+    ? wellBeingRegistrationTypes.includes("college")
+    : !isSuperAdminOrOther;
 
   useEffect(() => {
     const registrationId = getRegistrationIdByRole({
@@ -128,12 +150,15 @@ export default function ProfileInfo() {
       collegeAdminId,
       financeManagerId,
       collegeHrId,
+      wellBeingId,
       userId
     });
 
     setProfileData({
-      // registrationId: String(registrationId ?? ""),
-      registrationId: role === "SuperAdmin" ? String(userId) : String(identifierId ?? ""),
+      registrationId:
+        role === "SuperAdmin"
+          ? String(userId ?? "")
+          : String(identifierId ?? registrationId ?? ""),
       email: email || "",
       phone: mobile || "",
       educationType: collegeEducationType || "",
@@ -155,6 +180,7 @@ export default function ProfileInfo() {
     collegeAdminId,
     financeManagerId,
     collegeHrId,
+    wellBeingId,
     email,
     mobile,
     collegeEducationType,
@@ -382,7 +408,7 @@ export default function ProfileInfo() {
                 <ProfileRow label="Registration ID" value={profileData.registrationId} />
                 <ProfileRow label="Email" value={profileData.email} />
                 <ProfileRow label="Phone" value={profileData.phone} />
-                {!isSuperAdminOrOther &&
+                {showEducationType &&
                   <ProfileRow label="Education Type" value={profileData.educationType} />
                 }
                 {isStudentOrFaculty &&

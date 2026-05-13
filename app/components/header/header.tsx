@@ -10,7 +10,7 @@ import {
   Megaphone,
   Newspaper,
 } from "@phosphor-icons/react";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import NotificationsModal from "../modals/NotificationsModal";
 import NewsModal from "../modals/NewsModal";
 import EmailModal from "../modals/EmailModal";
@@ -773,6 +773,17 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                     </>
                   )}
 
+                  {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+                    <>
+                      <p className="truncate w-full" title={role}>
+                        {role}
+                      </p>
+                      <p className="whitespace-nowrap shrink-0 text-white/90">
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
+
                   {["SuperAdmin"].includes(role as string) && (
                     <p className="truncate">{role}</p>
                   )}
@@ -883,6 +894,14 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                       </p>
                     </>
                   )}
+                  {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+                    <>
+                      <p>{role}</p>
+                      <p>
+                        ID - <span>{identifierId}</span>
+                      </p>
+                    </>
+                  )}
                   {["SuperAdmin"].includes(role as string) && <p>{role}</p>}
                 </div>
               </div>
@@ -891,36 +910,48 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
         </div>
       </div>
 
-      <NotificationsModal
-        isOpen={isNotificationsOpen}
-        onClose={() => setIsNotificationsOpen(false)}
-      />
-      <NewsModal
-        isOpen={isNewsOpen}
-        onClose={() => setIsNewsOpen(false)}
-        onOpenPDF={openPDFModal}
-      />
-      <EmailModal
-        initialView={emailInitialView}
-        isOpen={isEmailOpen}
-        onClose={() => setIsEmailOpen(false)}
-      />
+      {isNotificationsOpen ? (
+        <NotificationsModal
+          isOpen={isNotificationsOpen}
+          onClose={() => setIsNotificationsOpen(false)}
+        />
+      ) : null}
+      {isNewsOpen ? (
+        <NewsModal
+          isOpen={isNewsOpen}
+          onClose={() => setIsNewsOpen(false)}
+          onOpenPDF={openPDFModal}
+        />
+      ) : null}
+      {isEmailOpen ? (
+        <EmailModal
+          initialView={emailInitialView}
+          isOpen={isEmailOpen}
+          onClose={() => setIsEmailOpen(false)}
+        />
+      ) : null}
 
-      <AnnouncementModal
-        isOpen={isAnnouncementOpen}
-        onClose={() => setIsAnnouncementOpen(false)}
-        highlightedPostId={highlightedPostId ? Number(highlightedPostId) : null}
-      />
+      {isAnnouncementOpen ? (
+        <AnnouncementModal
+          isOpen={isAnnouncementOpen}
+          onClose={() => setIsAnnouncementOpen(false)}
+          highlightedPostId={highlightedPostId ? Number(highlightedPostId) : null}
+        />
+      ) : null}
 
-      <DailyNewsModal
-        isOpen={isDailyModalOpen}
-        article={selectedArticle}
-        onClose={() => setIsDailyModalOpen(false)}
-      />
-      <ProfileWrapper
-        openProfile={openProfile}
-        onCloseProfile={() => setOpenProfile(false)}
-      />
+      {isDailyModalOpen ? (
+        <DailyNewsModal
+          isOpen={isDailyModalOpen}
+          article={selectedArticle}
+          onClose={() => setIsDailyModalOpen(false)}
+        />
+      ) : null}
+      {openProfile ? (
+        <ProfileWrapper
+          openProfile={openProfile}
+          onCloseProfile={() => setOpenProfile(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -932,10 +963,12 @@ type HeaderProps = {
 };
 
 
-export default function Header({ onMenuClick, onAddTaskClick, onAddUserClick }: HeaderProps) {
+function Header({ onMenuClick, onAddTaskClick, onAddUserClick }: HeaderProps) {
   return (
     <Suspense>
       <HeaderContent onMenuClick={onMenuClick} onAddTaskClick={onAddTaskClick} onAddUserClick={onAddUserClick} />
     </Suspense>
   );
 }
+
+export default memo(Header);

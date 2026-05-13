@@ -191,6 +191,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                     ID - {identifierId || parentId}
                   </span>
                 )}
+                {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+                  <span className="text-xs text-[#282828]">
+                    ID - {identifierId}
+                  </span>
+                )}
                 {/* {role === "Student" && (
                                     <CaretRight size={20} className="text-[#000000] cursor-pointer" onClick={(e) => {
                                         e.stopPropagation();
@@ -233,6 +238,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                     ID - {identifierId}
                   </span>
                 )}
+            {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+              <p className="text-xs text-[#282828] font-medium">{role}</p>
+            )}
             <div className="flex gap-3 flex-wrap">
               <div className="flex items-center gap-2 mt-2">
                 <EnvelopeSimple

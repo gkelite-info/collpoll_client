@@ -39,6 +39,15 @@ export type CreateWellbeingPayload = {
   };
 };
 
+const toWellbeingRoleType = (roleType: WellbeingRoleType) =>
+  roleType === "wellbeingManager" || roleType === "WellbeingManager"
+    ? "wellbeingManager"
+    : "wellbeingExecutive";
+
+const toWellbeingRegistrationType = (
+  registrationType: WellbeingRegistrationType,
+) => (registrationType === "hostel" || registrationType === "Hostel" ? "hostel" : "college");
+
 const createWellbeingBase = async (payload: {
   userId: number;
   collegeId: number;
@@ -51,8 +60,8 @@ const createWellbeingBase = async (payload: {
   const row = {
     userId: payload.userId,
     collegeId: payload.collegeId,
-    roleType: payload.roleType,
-    registrationType: payload.registrationType,
+    roleType: toWellbeingRoleType(payload.roleType),
+    registrationType: toWellbeingRegistrationType(payload.registrationType),
     createdBy: payload.createdBy,
     isActive: true,
     is_deleted: false,
@@ -67,35 +76,6 @@ const createWellbeingBase = async (payload: {
     .single();
 
   if (error) {
-    const shouldRetryWithDisplayValues =
-      error.code === "23514" ||
-      error.code === "22P02" ||
-      error.message?.toLowerCase().includes("invalid input value");
-
-    if (shouldRetryWithDisplayValues) {
-      const retryRow = {
-        ...row,
-        roleType:
-          payload.roleType === "wellbeingManager"
-            ? "WellbeingManager"
-            : "WellbeingExecutive",
-        registrationType:
-          payload.registrationType === "hostel" ? "Hostel" : "College",
-      };
-
-      const { data: retryData, error: retryError } = await supabase
-        .from("well_beings")
-        .insert(retryRow)
-        .select("wellBeingId")
-        .single();
-
-      if (retryError) {
-        throw new Error(formatSupabaseError("createWellbeingBase", retryError));
-      }
-
-      return retryData.wellBeingId as number;
-    }
-
     throw new Error(formatSupabaseError("createWellbeingBase", error));
   }
 

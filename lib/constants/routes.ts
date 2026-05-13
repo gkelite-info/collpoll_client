@@ -18,6 +18,8 @@ export const ROLES = {
   HR: "HR",
   PLACEMENT: "Placement",
   PARENT: "Parent",
+  WELLBEING_EXECUTIVE: "WellbeingExecutive",
+  WELLBEING_MANAGER: "WellbeingManager",
 } as const;
 
 export type UserRole = (typeof ROLES)[keyof typeof ROLES];
@@ -58,6 +60,8 @@ export const PROTECTED_ROUTES = [
   "/hr",
   "/placement",
   "/parent",
+  "/wellbeing-executive",
+  "/wellbeing-manager",
   "/profile",
 ];
 
@@ -86,6 +90,8 @@ export const ROLE_PROTECTED_PORTALS = [
   "/hr",
   "/placement",
   "/parent",
+  "/wellbeing-executive",
+  "/wellbeing-manager",
 ];
 
 /**
@@ -137,6 +143,8 @@ export const ROLE_LANDING_PAGES: Record<UserRole, string> = {
   [ROLES.HR]: "/hr",
   [ROLES.PLACEMENT]: "/placement",
   [ROLES.PARENT]: "/parent",
+  [ROLES.WELLBEING_EXECUTIVE]: "/wellbeing-executive",
+  [ROLES.WELLBEING_MANAGER]: "/wellbeing-manager",
 };
 
 /**
@@ -227,6 +235,12 @@ export const normalizeRole = (role: string | null): UserRole | null => {
     collegehr: ROLES.HR, // Map CollegeHr to HR portal
     placementofficer: ROLES.PLACEMENT,
     parent: ROLES.PARENT,
+    wellbeingexecutive: ROLES.WELLBEING_EXECUTIVE,
+    "wellbeing-executive": ROLES.WELLBEING_EXECUTIVE,
+    "wellbeing executive": ROLES.WELLBEING_EXECUTIVE,
+    wellbeingmanager: ROLES.WELLBEING_MANAGER,
+    "wellbeing-manager": ROLES.WELLBEING_MANAGER,
+    "wellbeing manager": ROLES.WELLBEING_MANAGER,
   };
 
   return roleMap[role.toLowerCase().trim()] || null;
@@ -235,8 +249,8 @@ export const normalizeRole = (role: string | null): UserRole | null => {
 /**
  * Validate if a role is valid
  */
-export const isValidRole = (role: any): role is UserRole => {
-  return Object.values(ROLES).includes(role);
+export const isValidRole = (role: unknown): role is UserRole => {
+  return typeof role === "string" && Object.values(ROLES).includes(role as UserRole);
 };
 
 /**

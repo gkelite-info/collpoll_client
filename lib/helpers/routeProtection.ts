@@ -100,7 +100,11 @@ export const buildRoleRedirectUrl = (role: string | null, fromPath?: string): st
  * @param role - Role to validate
  * @returns Normalized role if valid, null otherwise
  */
-export const validateAndNormalizeRole = (role: any): UserRole | null => {
+export const validateAndNormalizeRole = (role: unknown): UserRole | null => {
+    if (typeof role !== "string") {
+        return null;
+    }
+
     const normalized = normalizeRole(role);
     
     if (!normalized || !isValidRole(normalized)) {
@@ -172,6 +176,8 @@ export const canAccessFeature = (
         "HR": ["profile", "Staff", "payroll", "attendance"],
         "Placement": ["profile", "placements", "companies", "jobs"],
         "Parent": ["profile", "student-progress", "attendance", "grades"],
+        "WellbeingExecutive": ["profile", "issues", "wellbeing", "support"],
+        "WellbeingManager": ["profile", "issues", "wellbeing", "support", "executives"],
     };
     
     const allowedFeatures = featureAccess[normalized];

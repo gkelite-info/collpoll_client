@@ -68,6 +68,32 @@ export async function loginUser(email: string, password: string) {
       return { success: false, error: "Your account is inactive." };
     }
 
+    if (userProfile.role === "WellbeingExecutive" || userProfile.role === "WellbeingManager") {
+      const wellbeingRoleType =
+        userProfile.role === "WellbeingManager"
+          ? "wellbeingManager"
+          : "wellbeingExecutive";
+
+      const { data: wellbeingAccess, error: wellbeingError } = await supabase
+        .from("well_beings")
+        .select("wellBeingId")
+        .eq("userId", userProfile.userId)
+        .eq("collegeId", userProfile.collegeId)
+        .eq("roleType", wellbeingRoleType)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .limit(1);
+
+      if (wellbeingError || !wellbeingAccess?.length) {
+        await supabase.auth.signOut();
+        return {
+          success: false,
+          error: "Access denied: your wellbeing assignment is inactive.",
+        };
+      }
+    }
+
     return {
       success: true,
       session: authData.session,
