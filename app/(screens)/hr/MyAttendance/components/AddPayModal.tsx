@@ -4,6 +4,7 @@ import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
 import { saveEmployeePayDetails } from "@/lib/helpers/Hr/myAttendance/saveEmployeePayDetails";
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Avatar } from "@/app/utils/Avatar";
 
 export interface EmployeePayData {
   userId: number;
@@ -123,6 +124,19 @@ export default function AddPayModal({
 
   const [addons, setAddons] = useState(initialAddons);
 
+  function resetForm() {
+    setFormData(initialFormData);
+    setBasicSalary("");
+    setActiveAllowances(initialActiveAllowances);
+    setAvailableAllowances(initialAvailableAllowances);
+    setCompliances(initialCompliances);
+    setAddons(initialAddons);
+    setAddingCustomAllowance(false);
+    setAddingCustomCompliance(false);
+    setCustomAllowanceName("");
+    setCustomComplianceName("");
+  }
+
   useEffect(() => {
     if (isOpen && payData) {
       const leaves = Array.isArray(payData.leaveAllocations)
@@ -233,19 +247,6 @@ export default function AddPayModal({
   }, [isOpen, payData]);
 
   if (!isOpen) return null;
-
-  const resetForm = () => {
-    setFormData(initialFormData);
-    setBasicSalary("");
-    setActiveAllowances(initialActiveAllowances);
-    setAvailableAllowances(initialAvailableAllowances);
-    setCompliances(initialCompliances);
-    setAddons(initialAddons);
-    setAddingCustomAllowance(false);
-    setAddingCustomCompliance(false);
-    setCustomAllowanceName("");
-    setCustomComplianceName("");
-  };
 
   const handleClose = () => {
     resetForm();
@@ -484,17 +485,7 @@ export default function AddPayModal({
         </h2>
 
         <div className="border border-gray-200 rounded-lg p-3.5 flex items-start gap-5 mb-5 bg-[#fafafa]">
-          {employee.image ? (
-            <img
-              src={employee.image}
-              alt={employee.name}
-              className="w-[80px] h-[80px] rounded object-cover bg-gray-200 shadow-sm"
-            />
-          ) : (
-            <div className="w-[80px] h-[80px] rounded bg-gray-200 shadow-sm flex items-center justify-center text-gray-400">
-              No Image
-            </div>
-          )}
+          <Avatar src={employee.image || null} alt={employee.name} size={80} />
           <div className="flex-1">
             <h3 className="text-[16px] font-bold text-[#333] mb-2">
               {employee.name}

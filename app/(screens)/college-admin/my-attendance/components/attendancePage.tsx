@@ -13,7 +13,7 @@ import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttenda
 export interface AdminProfile {
   name: string;
   image: string;
-  adminId: number | null;
+  adminId: string | null;
   EducationType: string;
   mobile: string;
   email: string;
@@ -24,7 +24,7 @@ export interface AdminProfile {
 
 const mockProfile: AdminProfile = {
   name: "Harsha Sharma",
-  image: "/harshasharma.png",
+  image: "",
   adminId: null,
   EducationType: "B.Tech",
   mobile: "9876432134",
@@ -52,7 +52,7 @@ export const formatDate = (isoDate?: string | null) => {
 
 const AttendancePage = () => {
 
-  const { collegeAdminId, email, profilePhoto, mobile, fullName, dateOfJoining,
+  const { identifierId, collegeAdminId, email, profilePhoto, mobile, fullName, dateOfJoining,
     professionalExperienceYears, collegeEducationType, userId } = useUser()
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
@@ -130,14 +130,14 @@ const AttendancePage = () => {
   }, [userId, selectedMonth, selectedYear, currentPage]);
 
   useEffect(() => {
-    if (!collegeAdminId) return;
+    if (!userId) return;
     setInfoLoading(true);
     try {
       const updatedProfile: AdminProfile = {
         ...mockProfile,
-        name: fullName!,
-        mobile: mobile!,
-        adminId: collegeAdminId,
+        name: fullName || mockProfile.name,
+        mobile: mobile || mockProfile.mobile,
+        adminId: identifierId || (collegeAdminId ? String(collegeAdminId) : null),
         EducationType: collegeEducationType!,
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
@@ -149,7 +149,7 @@ const AttendancePage = () => {
     } finally {
       setInfoLoading(false);
     }
-  }, [collegeAdminId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+  }, [userId, identifierId, collegeAdminId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
 
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import { Avatar } from "@/app/utils/Avatar";
 import { getCollegeUsers } from "@/lib/helpers/Hr/meetings/getCollegeUsers";
 import { X, MagnifyingGlass } from "@phosphor-icons/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,13 +20,6 @@ const UserShimmer = () => (
     <div className="w-5 h-5 bg-gray-200 rounded shrink-0"></div>
   </div>
 );
-
-const getInitials = (name: string) => {
-  if (!name) return "";
-  const parts = name.trim().split(" ");
-  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-};
 
 export default function SelectFacultyModal({
   isOpen,
@@ -222,19 +216,7 @@ export default function SelectFacultyModal({
                       onClick={() => toggleSelection(id)}
                     >
                       <div className="flex items-center gap-3">
-                        {profileUrl ? (
-                          <img
-                            src={profileUrl}
-                            className="w-10 h-10 rounded-full object-cover"
-                            alt={f.name}
-                          />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full object-cover bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-                            <span className="text-sm font-semibold text-gray-500">
-                              {getInitials(f.name)}
-                            </span>
-                          </div>
-                        )}
+                        <Avatar src={profileUrl || null} alt={f.name} size={40} />
 
                         <div>
                           <p className="font-semibold text-sm text-gray-900">

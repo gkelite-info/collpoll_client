@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export interface UniversalProfileData {
   id: number | string;
+  identifierId: string | null;
   userId: number;
   name: string;
   email: string;
@@ -18,10 +19,10 @@ const ROLE_TABLE_MAP: Record<string, { tableName: string; idColumn: string }> =
   {
     faculty: { tableName: "faculty", idColumn: "facultyId" },
     admin: { tableName: "admins", idColumn: "adminId" },
-    collegeadmin: { tableName: "college_admins", idColumn: "collegeAdminId" },
+    collegeadmin: { tableName: "college_admin", idColumn: "collegeAdminId" },
     collegehr: { tableName: "college_hr", idColumn: "collegeHrId" },
     financemanager: {
-      tableName: "finance_managers",
+      tableName: "finance_manager",
       idColumn: "financeManagerId",
     },
   };
@@ -51,6 +52,7 @@ export const fetchUniversalStaffProfile = async (
     const roleConfig = ROLE_TABLE_MAP[normalizedRole];
 
     let tableId: number | string = user.userId;
+    let identifierId: string | null = null;
 
     if (roleConfig) {
       const { data: roleData, error: roleErr } = await supabase
@@ -64,8 +66,40 @@ export const fetchUniversalStaffProfile = async (
       }
     }
 
+    if (normalizedRole === "student") {
+      const { data: studentRow } = await supabase
+        .from("students")
+        .select("studentId")
+        .eq("userId", user.userId)
+        .is("deletedAt", null)
+        .maybeSingle();
+
+      if (studentRow?.studentId) {
+        const { data: pinRow } = await supabase
+          .from("student_pins")
+          .select("pinNumber")
+          .eq("studentId", studentRow.studentId)
+          .eq("collegeId", user.collegeId)
+          .eq("isActive", true)
+          .is("deletedAt", null)
+          .maybeSingle();
+        identifierId = pinRow?.pinNumber ?? null;
+      }
+    } else {
+      const { data: empRow } = await supabase
+        .from("employee_ids")
+        .select("employeeId")
+        .eq("userId", user.userId)
+        .eq("collegeId", user.collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .maybeSingle();
+      identifierId = empRow?.employeeId ?? null;
+    }
+
     return {
-      id: tableId,
+      id: identifierId ?? tableId,
+      identifierId,
       userId: user.userId,
       name: user.fullName || "Unknown",
       email: user.email || "N/A",

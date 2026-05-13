@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { CaretDown, CheckSquare } from "@phosphor-icons/react";
+import { Avatar } from "@/app/utils/Avatar";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface FacultyProfile {
@@ -35,7 +36,7 @@ interface AttendanceRecord {
 // ── Static mock data ──────────────────────────────────────────────────────────
 const mockProfile: FacultyProfile = {
   name: "Harsha Sharma",
-  image: "/harshasharma.png",
+  image: "",
   id: "9046928764",
   department: "CSE",
   mobile: "9876432134",
@@ -84,13 +85,7 @@ function FacultyInfoCard({ profile }: { profile: FacultyProfile }) {
   return (
     <div className="flex bg-white rounded-xl p-4 w-[70%] shadow-sm items-center gap-8 border border-gray-100/50">
       <div className="flex flex-col items-center gap-2 pl-2">
-        <div className="w-[85px] h-[85px] rounded-full overflow-hidden bg-teal-500">
-          <img
-            src={profile.image}
-            alt={profile.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <Avatar src={profile.image || null} alt={profile.name} size={85} />
         <p className="text-[#282828] font-bold text-[15px] whitespace-nowrap">
           {profile.name}
         </p>

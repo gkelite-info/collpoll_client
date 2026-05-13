@@ -155,7 +155,7 @@ function AdminDetailModal({ admin, onClose }: { admin: AdminDetailRow; onClose: 
 
         <div className="space-y-3 text-[13px]">
           {[
-            { label: "Admin ID", value: String(admin.adminId) },
+            { label: "Admin ID", value: admin.identifierId || String(admin.adminId) },
             { label: "Email", value: admin.email },
             { label: "Phone Number", value: admin.mobile },
             { label: "Gender", value: admin.gender },
@@ -317,7 +317,7 @@ export default function AdminListView({ onBack }: Props) {
         <div className="w-full md:w-full landscape:md:w-full lg:w-[40%] bg-[#EAEAEA] px-3 rounded-full flex items-center mb-4">
           <input
             type="text"
-            placeholder="Search by Admin Name, Department, or Course"
+            placeholder="Search by Admin Name or ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full p-2 outline-none text-sm bg-transparent text-[#282828] placeholder:text-[#6B7280]"

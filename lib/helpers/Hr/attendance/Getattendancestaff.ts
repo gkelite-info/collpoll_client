@@ -16,6 +16,7 @@ const EXCLUDED_ROLES = ["Student", "Parent", "SuperAdmin"];
 
 export type AttendanceStaffRow = {
   userId: number;
+  identifierId: string | null;
   fullName: string;
   role: string;
   rawRole: string;
@@ -92,6 +93,21 @@ export async function getAttendanceStaff(
   const to = from + limit - 1;
 
   // ── 1. Fetch users ────────────────────────────────────────────────────────
+  let matchedEmployeeUserIds: number[] = [];
+  const term = search.trim();
+  if (term) {
+    const { data: empMatches } = await supabase
+      .from("employee_ids")
+      .select("userId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .ilike("employeeId", `%${term}%`);
+    matchedEmployeeUserIds = (empMatches ?? [])
+      .map((r: any) => Number(r.userId))
+      .filter(Boolean);
+  }
+
   let usersQuery = supabase
     .from("users")
     .select("userId, fullName, role", { count: "exact" })
@@ -102,11 +118,14 @@ export async function getAttendanceStaff(
     .order("userId", { ascending: true })
     .range(from, to);
 
-  if (search.trim()) {
-    const t = search.trim();
-    usersQuery = /^\d+$/.test(t)
-      ? usersQuery.eq("userId", parseInt(t))
-      : usersQuery.ilike("fullName", `%${t}%`);
+  if (term) {
+    if (matchedEmployeeUserIds.length > 0) {
+      usersQuery = usersQuery.or(
+        `fullName.ilike.%${term}%,userId.in.(${matchedEmployeeUserIds.join(",")})`,
+      );
+    } else {
+      usersQuery = usersQuery.ilike("fullName", `%${term}%`);
+    }
   }
 
   // ADDED: Native DB filtering for Roles
@@ -128,6 +147,17 @@ export async function getAttendanceStaff(
   if (!users || users.length === 0) return { staff: [], totalCount: 0 };
 
   const userIds = users.map((u) => u.userId);
+
+  const { data: employeeIdsData } = await supabase
+    .from("employee_ids")
+    .select("userId, employeeId")
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .in("userId", userIds);
+  const employeeIdMap = new Map<number, string>(
+    (employeeIdsData ?? []).map((row: any) => [row.userId, row.employeeId]),
+  );
 
   // ── 2. Fetch today's attendance_daily rows ────────────────────────────────
   const { data: dailyRows, error: dailyError } = await supabase
@@ -264,11 +294,11 @@ export async function getAttendanceStaff(
     const displayCheckIn = adjustment?.newCheckIn ?? daily?.checkIn ?? null;
     const displayCheckOut = adjustment?.newCheckOut ?? daily?.checkOut ?? null;
 
-    const facultyId = facultyIdMap.get(u.userId) ?? null;
     const isFaculty = u.role === "Faculty";
 
     return {
       userId: u.userId,
+      identifierId: employeeIdMap.get(u.userId) ?? null,
       fullName: u.fullName,
       role: ROLE_DISPLAY_MAP[u.role ?? ""] ?? u.role ?? "Unknown",
       rawRole: u.role ?? "",

@@ -1,4 +1,5 @@
 "use client";
+import { Avatar } from "@/app/utils/Avatar";
 
 const admins = [
   { id: 1, name: "Rohan Sharma", dept: "B.Tech (CSE)", image: "/rahul.png" },
@@ -39,11 +40,7 @@ export default function SelectAdminModal({
               className="flex items-center justify-between"
             >
               <div className="flex items-center gap-4">
-                <img
-                  src={admin.image}
-                  alt={admin.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                <Avatar src={admin.image || null} alt={admin.name} size={40} />
 
                 <div>
                   <p className="font-medium text-[#282828]">

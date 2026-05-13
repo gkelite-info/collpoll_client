@@ -14,7 +14,7 @@ export type EduTypeDistribution = {
 };
 
 export type StudentRow = {
-  studentId: number;
+  studentId: string | number;
   userId: number;
   fullName: string;
   email: string;
@@ -85,6 +85,7 @@ export async function getStudentListData(
   // 2. All supporting data in parallel
   const [
     { data: allStudentData },
+    { data: studentPinsData },
     { data: parentData },
     { data: adminData },
     { data: financeData },
@@ -100,6 +101,13 @@ export async function getStudentListData(
       .select("studentId, userId, collegeEducationId, collegeBranchId, createdBy, entryType, status, isActive")
       .eq("collegeId", collegeId)
       .in("collegeEducationId", eduIds),
+
+    supabase
+      .from("student_pins")
+      .select("studentId, pinNumber")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
 
     supabase
       .from("parents")
@@ -162,6 +170,7 @@ export async function getStudentListData(
   const yearLabelMap = new Map((academicYearData ?? []).map((y: any) => [y.collegeAcademicYearId, y.collegeAcademicYear]));
   // studentId → current collegeAcademicYearId  (from student_academic_history WHERE isCurrent=true)
   const historyMap   = new Map((historyData ?? []).map((h: any) => [h.studentId, h.collegeAcademicYearId]));
+  const studentPinMap = new Map((studentPinsData ?? []).map((p: any) => [p.studentId, p.pinNumber]));
 
   // 4. Fetch user info (fullName, email, mobile, gender) for all students
   const studentUserIds = (allStudentData ?? []).map((s: any) => s.userId).filter(Boolean) as number[];
@@ -199,7 +208,8 @@ export async function getStudentListData(
   if (filters?.search) {
     const q = filters.search.toLowerCase();
     filtered = filtered.filter((s: any) =>
-      (userMap.get(s.userId)?.fullName ?? "").toLowerCase().includes(q)
+      (userMap.get(s.userId)?.fullName ?? "").toLowerCase().includes(q) ||
+      String(studentPinMap.get(s.studentId) ?? "").toLowerCase().includes(q)
     );
   }
 
@@ -213,8 +223,9 @@ export async function getStudentListData(
     const currentYearId = historyMap.get(s.studentId);
     const yearLabel     = currentYearId ? (yearLabelMap.get(currentYearId) ?? "—") : "—";
     const user          = userMap.get(s.userId);
+    const studentPin    = studentPinMap.get(s.studentId);
     return {
-      studentId:          s.studentId,
+      studentId:          studentPin || s.studentId,
       userId:             s.userId,
       fullName:           user?.fullName ?? "—",
       email:              user?.email    ?? "—",

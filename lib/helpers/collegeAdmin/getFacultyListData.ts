@@ -14,7 +14,7 @@ export type EduTypeDistribution = {
 };
  
 export type FacultyRow = {
-  facultyId: number;
+  facultyId: string | number;
   fullName: string;
   email: string;
   mobile: string;
@@ -79,7 +79,7 @@ export async function getFacultyListData(
   // Paginated faculty query with optional filters
   let facultyQuery = supabase
     .from("faculty")
-    .select("facultyId, fullName, email, mobile, gender, collegeEducationId, collegeBranchId, createdBy, isActive", { count: "exact" })
+    .select("facultyId, userId, fullName, email, mobile, gender, collegeEducationId, collegeBranchId, createdBy, isActive", { count: "exact" })
     .eq("collegeId", collegeId)
     .in("collegeEducationId", eduIds)
     .range(from, to);
@@ -88,7 +88,27 @@ export async function getFacultyListData(
   if (filters?.collegeBranchId)    facultyQuery = facultyQuery.eq("collegeBranchId", filters.collegeBranchId);
   if (filters?.adminId)            facultyQuery = facultyQuery.eq("createdBy", filters.adminId);
   // ── ADDED: search filter ──
-  if (filters?.search)             facultyQuery = facultyQuery.ilike("fullName", `%${filters.search}%`);
+  if (filters?.search?.trim()) {
+    const term = filters.search.trim();
+    const { data: employeeMatches } = await supabase
+      .from("employee_ids")
+      .select("userId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .ilike("employeeId", `%${term}%`);
+    const matchedUserIds = (employeeMatches ?? [])
+      .map((row: any) => Number(row.userId))
+      .filter(Boolean);
+
+    if (matchedUserIds.length > 0) {
+      facultyQuery = facultyQuery.or(
+        `fullName.ilike.%${term}%,userId.in.(${matchedUserIds.join(",")})`,
+      );
+    } else {
+      facultyQuery = facultyQuery.ilike("fullName", `%${term}%`);
+    }
+  }
  
   const { data: facultyData, count: facultyCount } = await facultyQuery;
  
@@ -152,6 +172,19 @@ export async function getFacultyListData(
  
   const branchMap = new Map((branchData ?? []).map((b: any) => [b.collegeBranchId, b.collegeBranchCode]));
   const adminMap  = new Map((adminData  ?? []).map((a: any) => [a.adminId, a.fullName]));
+  const facultyUserIds = (facultyData ?? [])
+    .map((f: any) => f.userId)
+    .filter(Boolean);
+  const { data: employeeIdData } = await supabase
+    .from("employee_ids")
+    .select("userId, employeeId")
+    .eq("collegeId", collegeId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .in("userId", facultyUserIds.length > 0 ? facultyUserIds : [-1]);
+  const employeeIdMap = new Map(
+    (employeeIdData ?? []).map((row: any) => [row.userId, row.employeeId]),
+  );
  
   const subjectCodesMap = new Map<string, string>();
   (subjectData ?? []).forEach((s: any) => {
@@ -199,7 +232,7 @@ export async function getFacultyListData(
   });
  
   const faculty: FacultyRow[] = (facultyData ?? []).map((f: any) => ({
-    facultyId:          f.facultyId,
+    facultyId:          employeeIdMap.get(f.userId) ?? f.facultyId,
     fullName:           f.fullName,
     email:              f.email,
     mobile:             f.mobile,

@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchMeetingParticipants } from "@/lib/helpers/Hr/meetings/meetingParticipantsAPI";
 import toast from "react-hot-toast";
 import MeetingCardSkeleton from "./MeetingCardSkeleton";
+import { Avatar } from "@/app/utils/Avatar";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Hr";
@@ -179,12 +180,9 @@ export default function NewMeetingCard({
             <div className="flex items-center">
               <div className="flex -space-x-2">
                 {displayAvatars.slice(0, 3).map((avatar, idx) => (
-                  <img
-                    key={idx}
-                    src={avatar}
-                    alt="Participant"
-                    className="w-8 h-8 rounded-full border-[2px] border-white object-cover bg-gray-100"
-                  />
+                  <div key={idx} className="border-[2px] border-white rounded-full">
+                    <Avatar src={avatar || null} alt="Participant" size={32} />
+                  </div>
                 ))}
               </div>
 
@@ -292,13 +290,10 @@ export default function NewMeetingCard({
                               className="flex items-center gap-2"
                               title={participants?.[0]?.name}
                             >
-                              <img
-                                src={
-                                  participants?.[0]?.avatar ||
-                                  `https://i.pravatar.cc/100?u=${participants[0].id}`
-                                }
-                                alt={participants?.[0]?.name}
-                                className="w-7 h-7 rounded-full object-cover bg-gray-100"
+                              <Avatar
+                                src={participants?.[0]?.avatar || null}
+                                alt={participants?.[0]?.name || "Participant"}
+                                size={28}
                               />
                               <span className="text-sm text-[#16284F] font-medium">
                                 {participants?.[0].name}
@@ -310,16 +305,17 @@ export default function NewMeetingCard({
                                 {participants
                                   ?.slice(0, 3)
                                   .map((p: any, i: number) => (
-                                    <img
+                                    <div
                                       key={p?.id || i}
-                                      src={
-                                        p?.avatar ||
-                                        `https://i.pravatar.cc/100?u=${p?.id}`
-                                      }
-                                      alt={p?.name}
                                       title={p?.name}
-                                      className="w-7 h-7 rounded-full border-2 border-white object-cover bg-gray-100"
-                                    />
+                                      className="border-2 border-white rounded-full"
+                                    >
+                                      <Avatar
+                                        src={p?.avatar || null}
+                                        alt={p?.name || "Participant"}
+                                        size={28}
+                                      />
+                                    </div>
                                   ))}
                               </div>
                               {data.participants > 3 && (
