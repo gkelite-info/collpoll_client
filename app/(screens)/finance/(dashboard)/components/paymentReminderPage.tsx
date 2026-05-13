@@ -252,7 +252,7 @@ const PaymentReminder = () => {
       />
     ),
     name: student.name,
-    regNo: student.studentId,
+    regNo: student.regNo,
     branch: student.branch,
     year: student.year,
     semester: student.semester,

@@ -7,6 +7,7 @@ import {
 import { Check, UsersThree, X, CircleNotch } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Avatar } from "@/app/utils/Avatar";
 
 const Checkbox = ({
   label,
@@ -194,17 +195,14 @@ export const SendFeeReminderModal = ({
                   ) : faculties.length > 0 ? (
                     <div className="flex -space-x-1.5">
                       {faculties.slice(0, 3).map((f, i) => (
-                        <img
+                        <div
                           key={f.facultyId}
-                          src={f.avatar}
-                          alt={f.name}
                           title={f.name}
-                          className="w-6 h-6 rounded-full object-cover border border-white relative z-10"
+                          className="relative z-10 rounded-full border border-white"
                           style={{ zIndex: 3 - i }}
-                          onError={(e) =>
-                            (e.currentTarget.style.display = "none")
-                          }
-                        />
+                        >
+                          <Avatar src={f.avatar} alt={f.name} size={24} />
+                        </div>
                       ))}
                       {faculties.length > 3 && (
                         <div className="w-6 h-6 rounded-full bg-gray-100 border border-white flex items-center justify-center text-[10px] font-bold text-gray-600 relative z-0">

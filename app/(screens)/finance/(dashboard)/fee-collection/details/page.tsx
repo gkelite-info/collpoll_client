@@ -123,7 +123,7 @@ function FeeCollectionDetailsPage() {
 
   const tableData = students.map((s) => ({
     name: s.studentName,
-    id: s.studentId,
+    id: s.displayStudentId,
     dept: s.branch,
     total: s.totalFee.toLocaleString(),
     paid: s.paidAmount.toLocaleString(),

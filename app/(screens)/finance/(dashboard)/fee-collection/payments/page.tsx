@@ -74,13 +74,13 @@ function FeePaymentsPage() {
         const matchesSearch =
           search.trim() === "" ||
           s.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-          s.studentId?.toString().includes(search);
+          s.displayStudentId?.toString().toLowerCase().includes(search.toLowerCase());
 
         return matchesRange && matchesSearch;
       })
       .map((s) => ({
         name: s.fullName,
-        id: s.studentId,
+        id: s.displayStudentId,
         branch: s.branch,
         total: s.totalAmount.toLocaleString("en-IN"),
         paid: s.paidAmount.toLocaleString("en-IN"),
