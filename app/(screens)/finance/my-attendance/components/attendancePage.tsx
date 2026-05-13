@@ -13,7 +13,7 @@ import { getAttendanceMonthlyStats } from "@/lib/helpers/myAttendance/getAttenda
 export interface AdminProfile {
   name: string;
   image: string;
-  adminId: number | null;
+  adminId: string | number | null;
   EducationType: string;
   mobile: string;
   email: string;
@@ -53,7 +53,7 @@ export const formatDate = (isoDate?: string | null) => {
 const AttendancePage = () => {
 
   const { financeManagerId, email, profilePhoto, mobile, fullName, dateOfJoining,
-    professionalExperienceYears, collegeEducationType, userId } = useUser()
+    professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -137,7 +137,7 @@ const AttendancePage = () => {
         ...mockProfile,
         name: fullName!,
         mobile: mobile!,
-        adminId: financeManagerId,
+        adminId: identifierId || financeManagerId,
         EducationType: collegeEducationType!,
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
@@ -149,7 +149,7 @@ const AttendancePage = () => {
     } finally {
       setInfoLoading(false);
     }
-  }, [financeManagerId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+  }, [financeManagerId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears, identifierId]);
 
 
   return (

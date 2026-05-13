@@ -25,6 +25,28 @@ export async function getOverallStudentsOverview(
     } = filters;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const trimmedSearch = search?.trim() ?? "";
+    let matchingUserIds: number[] = [];
+    let matchingPinStudentIds: number[] = [];
+
+    if (trimmedSearch) {
+        const [{ data: usersMatch }, { data: pinMatch }] = await Promise.all([
+            supabase
+                .from("users")
+                .select("userId")
+                .ilike("fullName", `%${trimmedSearch}%`),
+            supabase
+                .from("student_pins")
+                .select("studentId")
+                .eq("collegeId", collegeId)
+                .eq("isActive", true)
+                .is("deletedAt", null)
+                .ilike("pinNumber", `%${trimmedSearch}%`),
+        ]);
+
+        matchingUserIds = usersMatch?.map((u) => u.userId) || [];
+        matchingPinStudentIds = pinMatch?.map((p) => p.studentId) || [];
+    }
 
     /* --------------------------------------------------
        1️⃣ Fetch Students
@@ -35,12 +57,19 @@ export async function getOverallStudentsOverview(
             `
     studentId,
     collegeEducationId,
+    student_pins (
+      pinNumber
+    ),
     college_branch:collegeBranchId (
       collegeBranchId,
       collegeBranchCode
     ),
     users:userId!inner (
-      fullName
+      fullName,
+      user_profile (
+        profileUrl,
+        is_deleted
+      )
     ),
     student_academic_history!inner(
       collegeAcademicYearId,
@@ -85,16 +114,15 @@ export async function getOverallStudentsOverview(
     /* -----------------------------
        🔍 SEARCH LOGIC (FINAL SAFE VERSION)
     ------------------------------ */
-    if (search && search.trim() !== "") {
-        const trimmed = search.trim();
-        const isNumber = !isNaN(Number(trimmed));
-
-        if (isNumber) {
-            // Search only by studentId
-            query = query.eq("studentId", Number(trimmed));
+    if (trimmedSearch) {
+        if (matchingUserIds.length > 0 || matchingPinStudentIds.length > 0) {
+            const userIdsStr = matchingUserIds.length ? matchingUserIds.join(",") : "0";
+            const pinIdsStr = matchingPinStudentIds.length
+                ? matchingPinStudentIds.join(",")
+                : "0";
+            query = query.or(`userId.in.(${userIdsStr}),studentId.in.(${pinIdsStr})`);
         } else {
-            // Search only by fullName
-            query = query.ilike("users.fullName", `%${trimmed}%`);
+            query = query.in("studentId", [0]);
         }
     }
 
@@ -187,6 +215,15 @@ export async function getOverallStudentsOverview(
         }
         return {
             studentId: student.studentId,
+            displayStudentId:
+                (Array.isArray(student.student_pins)
+                    ? student.student_pins[0]?.pinNumber
+                    : student.student_pins?.pinNumber) || "N/A",
+            profileUrl:
+                (Array.isArray(student.users?.user_profile)
+                    ? student.users.user_profile.find((p: any) => p.is_deleted === false)?.profileUrl ||
+                    student.users.user_profile[0]?.profileUrl
+                    : student.users?.user_profile?.profileUrl) || null,
             studentName: student.users?.fullName || "",
             branchCode: student.college_branch?.collegeBranchCode || "",
             yearName:

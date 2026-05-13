@@ -479,26 +479,34 @@ export async function getYearWiseDetails(
   let validStudentIds: number[] | null = null;
 
   if (searchQuery) {
-    const { data: usersMatch } = await supabase
-      .from("users")
-      .select("userId")
-      .ilike("fullName", `%${searchQuery}%`);
+    const [{ data: usersMatch }, { data: pinsMatch }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("userId")
+        .ilike("fullName", `%${searchQuery}%`),
+      supabase
+        .from("student_pins")
+        .select("studentId")
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .ilike("pinNumber", `%${searchQuery}%`),
+    ]);
     const matchedUserIds = usersMatch?.map((u) => u.userId) || [];
+    const matchedPinStudentIds = pinsMatch?.map((p) => p.studentId) || [];
 
     let stuQuery = supabase
       .from("students")
       .select("studentId")
       .eq("collegeBranchId", branchData.collegeBranchId);
 
-    const isNum = /^\d+$/.test(searchQuery);
-    if (isNum) {
+    if (matchedUserIds.length || matchedPinStudentIds.length) {
       const uIds = matchedUserIds.length ? matchedUserIds.join(",") : "0";
-      stuQuery = stuQuery.or(`studentId.eq.${searchQuery},userId.in.(${uIds})`);
+      const pinIds = matchedPinStudentIds.length
+        ? matchedPinStudentIds.join(",")
+        : "0";
+      stuQuery = stuQuery.or(`userId.in.(${uIds}),studentId.in.(${pinIds})`);
     } else {
-      stuQuery = stuQuery.in(
-        "userId",
-        matchedUserIds.length ? matchedUserIds : [0],
-      );
+      stuQuery = stuQuery.in("studentId", [0]);
     }
 
     const { data: stuMatch } = await stuQuery;
@@ -534,6 +542,7 @@ export async function getYearWiseDetails(
       college_academic_year!inner ( collegeAcademicYear ),
       students!inner (
         studentId,
+        student_pins ( pinNumber ),
         users ( fullName, email ),
         student_academic_history (
           isCurrent,
@@ -582,7 +591,10 @@ export async function getYearWiseDetails(
 
     const studentInfo = ob.students?.users;
     const studentName = studentInfo?.fullName || "Unknown Student";
-    const rollNo = ob.students?.studentId?.toString() || "N/A";
+    const pinData = Array.isArray(ob.students?.student_pins)
+      ? ob.students?.student_pins[0]
+      : ob.students?.student_pins;
+    const rollNo = pinData?.pinNumber || "N/A";
     const acYear = ob.college_academic_year?.collegeAcademicYear || "N/A";
 
     const activeHistory = ob.students?.student_academic_history?.find(
@@ -593,6 +605,7 @@ export async function getYearWiseDetails(
     const yearlyTotal = Number(ob.totalAmount) || 0;
 
     tableData.push({
+      studentId: ob.students?.studentId,
       studentName: studentName,
       rollNo: rollNo,
       department: branchCode,
@@ -647,19 +660,42 @@ export async function fetchRecentOfflinePayments(
   }
 }
 
-export async function getStudentFinanceDetails(studentId: string) {
+export async function getStudentFinanceDetails(
+  studentIdentifier: string,
+  collegeId?: number | null,
+) {
+  let resolvedStudentId = Number(studentIdentifier);
+
+  if (studentIdentifier && collegeId) {
+    const { data: pinData } = await supabase
+      .from("student_pins")
+      .select("studentId")
+      .eq("collegeId", collegeId)
+      .eq("pinNumber", studentIdentifier)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .maybeSingle();
+
+    if (pinData?.studentId) {
+      resolvedStudentId = pinData.studentId;
+    }
+  }
+
+  if (!Number.isFinite(resolvedStudentId)) return null;
+
   const { data: studentData } = await supabase
     .from("students")
     .select(
       `
       studentId, collegeId, collegeEducationId, collegeBranchId, collegeSessionId,
+      student_pins ( pinNumber ),
       users ( fullName, email, mobile, user_profile ( profileUrl ) ),
       college_education ( collegeEducationType ),
       college_branch ( collegeBranchType ),
       student_academic_history ( isCurrent, college_academic_year ( collegeAcademicYear ) )
     `,
     )
-    .eq("studentId", parseInt(studentId))
+    .eq("studentId", resolvedStudentId)
     .maybeSingle();
 
   if (!studentData) return null;
@@ -684,12 +720,16 @@ export async function getStudentFinanceDetails(studentId: string) {
   const acYearObj: any = Array.isArray(activeHistory?.college_academic_year)
     ? activeHistory?.college_academic_year[0]
     : activeHistory?.college_academic_year;
+  const pinObj: any = Array.isArray((studentData as any).student_pins)
+    ? (studentData as any).student_pins[0]
+    : (studentData as any).student_pins;
 
   const profile = {
+    studentId: studentData.studentId,
     name: userObj?.fullName || "Unknown",
     course: `${educationObj?.collegeEducationType || "Course"} - ${branchObj?.collegeBranchType || "Branch"}`,
     year: acYearObj?.collegeAcademicYear || "N/A",
-    rollNo: studentData.studentId.toString(),
+    rollNo: pinObj?.pinNumber || "N/A",
     email: userObj?.email || "N/A",
     mobile: userObj?.mobile || "N/A",
     imageUrl: userProfileObj?.profileUrl || null,
@@ -743,7 +783,7 @@ export async function getStudentFinanceDetails(studentId: string) {
       )
     `,
     )
-    .eq("studentId", parseInt(studentId));
+    .eq("studentId", resolvedStudentId);
 
   let totalObligationAmount = 0;
   let totalPaidTillNow = 0;

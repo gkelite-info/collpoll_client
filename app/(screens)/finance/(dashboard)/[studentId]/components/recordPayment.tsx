@@ -8,6 +8,7 @@ import toast from "react-hot-toast";
 import { PaymentSuccessModal } from "../../modals/paymentSuccessModal";
 import { TableShimmer } from "../shimmer/TableShimmer";
 import { useRecordPayment } from "../useRecordPayment";
+import { Avatar } from "@/app/utils/Avatar";
 
 interface RecordPaymentProps {
   studentFeeObligationId: number;
@@ -43,6 +44,8 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
     newPendingAmount,
     financeManagerId,
     financeManagerName,
+    financeManagerProfilePhoto,
+    financeEmployeeId,
     fileInputRef,
     dateInputRef,
     handleUploadClick,
@@ -180,16 +183,13 @@ const RecordPayment: React.FC<RecordPaymentProps> = ({
                 Collected By
               </label>
               <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-1.5 h-[38px] bg-gray-50">
-                <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                  <img
-                    src="/rahul.png"
-                    alt="User"
-                    className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
-                </div>
+                <Avatar
+                  src={financeManagerProfilePhoto}
+                  alt={financeManagerName}
+                  size={24}
+                />
                 <span className="text-gray-700 font-medium text-xs">
-                  {financeManagerName} (ID: {financeManagerId})
+                  {financeManagerName} (ID: {financeEmployeeId || financeManagerId})
                 </span>
               </div>
             </div>

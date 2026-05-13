@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
 import { createOfflinePayment } from "@/app/api/payments/offline/actions";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { useUser } from "@/app/utils/context/UserContext";
 import {
   fetchRecentOfflinePayments,
   fetchStudentFeeDetails,
@@ -18,6 +19,11 @@ export function useRecordPayment({
   collegeSemesterId,
 }: UseRecordPaymentProps) {
   const { financeManagerId, userId, loading: fmLoading } = useFinanceManager();
+  const {
+    fullName,
+    profilePhoto,
+    identifierId,
+  } = useUser();
 
   const [studentName, setStudentName] = useState("Student");
   const [remainingBalance, setRemainingBalance] = useState<number>(0);
@@ -50,6 +56,10 @@ export function useRecordPayment({
 
   useEffect(() => {
     async function fetchFmName() {
+      if (fullName) {
+        setFinanceManagerName(fullName);
+        return;
+      }
       if (!userId) return;
       const { data, error } = await supabase
         .from("users")
@@ -59,7 +69,7 @@ export function useRecordPayment({
       if (data && !error) setFinanceManagerName(data.fullName);
     }
     fetchFmName();
-  }, [userId]);
+  }, [userId, fullName]);
 
   const fetchData = async () => {
     // Prevent fetching if ID is missing (prevents the {} crash)
@@ -221,6 +231,8 @@ export function useRecordPayment({
     newPendingAmount,
     financeManagerId,
     financeManagerName,
+    financeManagerProfilePhoto: profilePhoto,
+    financeEmployeeId: identifierId,
     fileInputRef,
     dateInputRef,
     handleUploadClick,
