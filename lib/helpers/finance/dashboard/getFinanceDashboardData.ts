@@ -30,6 +30,7 @@ export async function getFinanceDashboardData(
         .select(
             `
     studentId,
+    student_pins(pinNumber),
     user:users!students_userId_fkey (
       userId,
       fullName
@@ -183,6 +184,9 @@ export async function getFinanceDashboardData(
         else pendingStudents++;
         return {
             studentId: student.studentId,
+            displayStudentId: Array.isArray((student as any).student_pins)
+                ? (student as any).student_pins[0]?.pinNumber || "N/A"
+                : (student as any).student_pins?.pinNumber || "N/A",
             fullName: (student.user as any)?.fullName ?? "N/A",
             branch: (student.branch as any)?.collegeBranchCode ?? "N/A",
             totalAmount,

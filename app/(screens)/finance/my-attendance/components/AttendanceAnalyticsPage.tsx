@@ -28,7 +28,7 @@ const mockProfile: AnalyticsFacultyProfile = {
 
 const AttendanceAnalyticsPage = () => {
 
-  const { userId, collegeBranchCode, fullName, financeManagerId, collegeEducationType, professionalExperienceYears } = useUser();
+  const { userId, collegeBranchCode, fullName, financeManagerId, collegeEducationType, professionalExperienceYears, identifierId } = useUser();
   const [profile, setProfile] = useState<AnalyticsFacultyProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
@@ -74,7 +74,7 @@ const AttendanceAnalyticsPage = () => {
         ...mockProfile,
         name: fullName,
         department: collegeBranchCode || "",
-        employeeId: financeManagerId,
+        employeeId: identifierId || financeManagerId,
         collegeEducationType: collegeEducationType || "",
         experience: professionalExperienceYears ? `${professionalExperienceYears} ${Number(professionalExperienceYears) > 1 ? 'years' : 'year'} ` : "—",
         workingDays
@@ -83,7 +83,7 @@ const AttendanceAnalyticsPage = () => {
     } finally {
       setInfoLoading(false)
     }
-  }, [financeManagerId, collegeBranchCode, fullName, collegeEducationType, workingDays]);
+  }, [financeManagerId, collegeBranchCode, fullName, collegeEducationType, workingDays, identifierId]);
 
   useEffect(() => {
     if (!userId) return;

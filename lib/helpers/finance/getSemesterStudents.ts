@@ -12,6 +12,8 @@ export type PaymentStatus = "Pending" | "Paid" | "Partial";
 
 export type SemesterStudent = {
   studentId: number;
+  displayStudentId: string;
+  profileUrl: string | null;
   fullName: string;
   branch: string;
   totalAmount: number;
@@ -39,13 +41,26 @@ export async function getSemesterFinanceSummary(
   const to = from + limit - 1;
 
   let matchingUserIds: number[] = [];
+  let matchingStudentPinIds: number[] = [];
   if (searchQuery) {
-    const { data: usersMatch } = await supabase
-      .from("users")
-      .select("userId")
-      .ilike("fullName", `%${searchQuery}%`);
+    const [{ data: usersMatch }, { data: pinMatch }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("userId")
+        .ilike("fullName", `%${searchQuery}%`),
+      supabase
+        .from("student_pins")
+        .select("studentId")
+        .eq("collegeId", collegeId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .ilike("pinNumber", `%${searchQuery}%`),
+    ]);
     if (usersMatch) {
       matchingUserIds = usersMatch.map((u) => u.userId);
+    }
+    if (pinMatch) {
+      matchingStudentPinIds = pinMatch.map((p) => p.studentId);
     }
   }
 
@@ -55,7 +70,8 @@ export async function getSemesterFinanceSummary(
       `
     studentId,
     userId,
-    users!students_userId_fkey(fullName),
+    users!students_userId_fkey(fullName, user_profile(profileUrl, is_deleted)),
+    student_pins(pinNumber),
     college_branch(collegeBranchCode),
     student_academic_history!inner(
       collegeAcademicYearId,
@@ -77,22 +93,16 @@ export async function getSemesterFinanceSummary(
 
   /* 🟢 DB-LEVEL SEARCH FILTER INJECTION */
   if (searchQuery) {
-    const isNumeric = /^\d+$/.test(searchQuery);
-    if (isNumeric) {
-      // Search by Exact StudentID OR matched FullName
-      const userIdsStr =
-        matchingUserIds.length > 0 ? matchingUserIds.join(",") : "0";
+    const userIdsStr = matchingUserIds.length > 0 ? matchingUserIds.join(",") : "0";
+    const pinIdsStr =
+      matchingStudentPinIds.length > 0 ? matchingStudentPinIds.join(",") : "0";
+
+    if (matchingUserIds.length > 0 || matchingStudentPinIds.length > 0) {
       studentQuery = studentQuery.or(
-        `studentId.eq.${searchQuery},userId.in.(${userIdsStr})`,
+        `userId.in.(${userIdsStr}),studentId.in.(${pinIdsStr})`,
       );
     } else {
-      // Search ONLY by matching FullName
-      if (matchingUserIds.length > 0) {
-        studentQuery = studentQuery.in("userId", matchingUserIds);
-      } else {
-        // Force empty result gracefully if no name matched
-        studentQuery = studentQuery.in("userId", [0]);
-      }
+      studentQuery = studentQuery.in("studentId", [0]);
     }
   }
 
@@ -243,8 +253,18 @@ export async function getSemesterFinanceSummary(
     if (status === "Paid") paidStudents++;
     else pendingStudents++;
 
+    const pinData = Array.isArray(student.student_pins)
+      ? student.student_pins[0]
+      : student.student_pins;
+    const profileData = Array.isArray(student.users?.user_profile)
+      ? student.users?.user_profile.find((p: any) => p.is_deleted === false) ||
+        student.users?.user_profile[0]
+      : student.users?.user_profile;
+
     return {
       studentId: student.studentId,
+      displayStudentId: pinData?.pinNumber || "N/A",
+      profileUrl: profileData?.profileUrl || null,
       fullName: student.users?.fullName || "N/A",
       branch: student.college_branch?.collegeBranchCode || "N/A",
       totalAmount,
@@ -312,6 +332,19 @@ function buildFromNoPayments(
 
     return {
       studentId: student.studentId,
+      displayStudentId: (() => {
+        const pinData = Array.isArray(student.student_pins)
+          ? student.student_pins[0]
+          : student.student_pins;
+        return pinData?.pinNumber || "N/A";
+      })(),
+      profileUrl: (() => {
+        const profileData = Array.isArray(student.users?.user_profile)
+          ? student.users?.user_profile.find((p: any) => p.is_deleted === false) ||
+            student.users?.user_profile[0]
+          : student.users?.user_profile;
+        return profileData?.profileUrl || null;
+      })(),
       fullName: student.users?.fullName || "N/A",
       branch: student.college_branch?.collegeBranchCode || "N/A",
       totalAmount,

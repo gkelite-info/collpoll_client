@@ -585,6 +585,7 @@ export async function fetchStudentsWithDues(
       .select(
         `
         studentId,
+        student_pins(pinNumber),
         users!inner(fullName),
         academic_details(rollNumber),
         student_academic_history!inner(
@@ -632,9 +633,9 @@ export async function fetchStudentsWithDues(
         let totalPaid = 0;
         let oldestDueDate = today;
 
-        const rollNumber = Array.isArray(student.academic_details)
-          ? student.academic_details[0]?.rollNumber
-          : student.academic_details?.rollNumber || "N/A";
+        const pinData = Array.isArray(student.student_pins)
+          ? student.student_pins[0]
+          : student.student_pins;
 
         const historyRecord = Array.isArray(student.student_academic_history)
           ? student.student_academic_history[0]
@@ -670,7 +671,7 @@ export async function fetchStudentsWithDues(
         return {
           studentId: student.studentId,
           name: student.users?.fullName || "Unknown",
-          regNo: rollNumber,
+          regNo: pinData?.pinNumber || "N/A",
           branch: student.college_branch?.collegeBranchCode || "N/A",
           educationType: student.college_education?.collegeEducationType,
           year: determineYearFromSem(semNum),

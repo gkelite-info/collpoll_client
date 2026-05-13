@@ -149,10 +149,11 @@ const Page = () => {
       const targetId = studentIdStr || "2";
       try {
         setLoading(true);
-        const [data, obligationData] = await Promise.all([
-          getStudentFinanceDetails(targetId),
-          fetchActiveObligationByStudent(Number(targetId)),
-        ]);
+        const data = await getStudentFinanceDetails(targetId, collegeId);
+        const resolvedStudentId = data?.profile?.studentId ?? Number(targetId);
+        const obligationData = await fetchActiveObligationByStudent(
+          resolvedStudentId,
+        );
         if (mounted && data) {
           setProfile(data.profile);
           const enrichedStats = data.stats.map((s: any) => ({
@@ -180,7 +181,7 @@ const Page = () => {
     return () => {
       mounted = false;
     };
-  }, [studentIdStr]);
+  }, [studentIdStr, collegeId]);
 
   const handleAcademicPageChange = async (newPage: number) => {
     setAcademicPage(newPage);

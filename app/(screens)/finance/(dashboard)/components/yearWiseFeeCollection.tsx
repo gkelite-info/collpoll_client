@@ -251,7 +251,11 @@ function YearWiseFeeCollectionContent() {
         ),
         action: (
           <span
-            onClick={() => router.push(`/finance/${item.rollNo}`)}
+            onClick={() =>
+              router.push(
+                `/finance/${item.rollNo !== "N/A" ? item.rollNo : item.studentId}`,
+              )
+            }
             className="text-[#22A55D] cursor-pointer hover:underline"
           >
             View Details

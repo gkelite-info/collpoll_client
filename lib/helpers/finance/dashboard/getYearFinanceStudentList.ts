@@ -25,6 +25,7 @@ export async function getYearFinanceStudentList(
 
     const from = (page - 1) * limit;
     const to = from + limit - 1;
+    const searchLower = search.trim().toLowerCase();
 
     /* 1️⃣ Students in that Academic Year (PAGINATED) */
     const { data: students, count } = await supabase
@@ -32,6 +33,7 @@ export async function getYearFinanceStudentList(
         .select(
             `
             studentId,
+            student_pins(pinNumber),
             users!students_userId_fkey(fullName),
             college_branch(collegeBranchCode),
             student_academic_history!inner(
@@ -141,6 +143,9 @@ export async function getYearFinanceStudentList(
                 ? student.users[0]?.fullName
                 : (student.users as any)?.fullName || "N/A",
             studentId: student.studentId,
+            displayStudentId: Array.isArray((student as any).student_pins)
+                ? (student as any).student_pins[0]?.pinNumber || "N/A"
+                : (student as any).student_pins?.pinNumber || "N/A",
             branch: Array.isArray(student.college_branch)
                 ? student.college_branch[0]?.collegeBranchCode
                 : (student.college_branch as any)?.collegeBranchCode || "",
@@ -154,13 +159,11 @@ export async function getYearFinanceStudentList(
     /* 6️⃣ Apply search + status filter post-build
        (fullName is a joined field — not filterable at DB level;
         paymentStatus is a derived value — not a DB column) */
-    const searchLower = search.trim().toLowerCase();
-
     const filtered = result.filter(s => {
         const matchesSearch =
             searchLower === "" ||
             s.studentName.toLowerCase().includes(searchLower) ||
-            String(s.studentId).toLowerCase().includes(searchLower);
+            String(s.displayStudentId).toLowerCase().includes(searchLower);
 
         const matchesStatus =
             statusFilter === "all" ||

@@ -19,6 +19,7 @@ import {
   getOverallStudentsOverview,
   getOverallStudentsSummary,
 } from "@/lib/helpers/finance/getOverallStudentsOverview";
+import { Avatar } from "@/app/utils/Avatar";
 
 type Semester = {
   collegeSemesterId: number;
@@ -266,8 +267,13 @@ function OverallStudentsOverview() {
 
   const tableData = useMemo(() => {
     return studentsData.map((item) => ({
-      studentName: item.studentName,
-      rollNo: item.studentId,
+      studentName: (
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <Avatar src={item.profileUrl} alt={item.studentName} size={32} />
+          <span className="font-medium text-[#282828]">{item.studentName}</span>
+        </div>
+      ),
+      rollNo: item.displayStudentId,
       educationType: collegeEducationType,
       branch: item.branchCode,
       year: item.yearName,
@@ -277,7 +283,11 @@ function OverallStudentsOverview() {
       status: renderStatus(item.status),
       action: (
         <span
-          onClick={() => router.push(`/finance/${item.studentId}`)}
+          onClick={() =>
+            router.push(
+              `/finance/${item.displayStudentId !== "N/A" ? item.displayStudentId : item.studentId}`,
+            )
+          }
           className="text-[#22A55D] cursor-pointer hover:underline text-sm font-medium"
         >
           View
@@ -296,7 +306,7 @@ function OverallStudentsOverview() {
       setDownloadLoading(true);
 
       const exportData = studentsData.map((item) => ({
-        studentId: item.studentId,
+        studentId: item.displayStudentId,
         studentName: item.studentName,
         educationType: collegeEducationType ?? "",
         branchCode: item.branchCode,

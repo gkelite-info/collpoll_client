@@ -17,6 +17,7 @@ import { useFinanceManager } from "@/app/utils/context/financeManager/useFinance
 
 import { useSearchParams } from "next/navigation";
 import { getSemesterFinanceSummary } from "@/lib/helpers/finance/getSemesterStudents";
+import { Avatar } from "@/app/utils/Avatar";
 
 const SummarySkeleton = () => (
   <div className="bg-[#E2DAFF] rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-pulse">
@@ -82,6 +83,8 @@ const TableSkeleton = ({
 
 type StudentRow = {
   studentId: number;
+  displayStudentId: string;
+  profileUrl: string | null;
   fullName: string;
   branch: string;
   totalAmount: number;
@@ -92,7 +95,7 @@ type StudentRow = {
 };
 
 export default function SemwiseDetail({ semester }: { semester: string }) {
-  const [sortKey, setSortKey] = useState<string>("studentName");
+  const [sortKey, setSortKey] = useState<string>("fullName");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "paid" | "pending" | "partial"
@@ -145,7 +148,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   ];
 
   const columns = [
-    { title: "Student Name", key: "fullName" },
+    { title: "Student Name", key: "studentNameElement" },
     { title: "Student ID", key: "studentId" },
     { title: "Branch", key: "branch" },
     { title: "Total Fee (₹)", key: "totalAmountFormatted" },
@@ -195,6 +198,13 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
 
     return data.map((item) => ({
       ...item,
+      studentNameElement: (
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <Avatar src={item.profileUrl} alt={item.fullName} size={32} />
+          <span className="font-medium text-[#282828]">{item.fullName}</span>
+        </div>
+      ),
+      studentId: item.displayStudentId,
 
       totalAmount: item.totalAmount,
       paidAmount: item.paidAmount,
@@ -235,7 +245,11 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       action: (
         <span
           className="cursor-pointer text-[#00A94A] font-medium"
-          onClick={() => router.push(`/finance/${item.studentId}`)}
+          onClick={() =>
+            router.push(
+              `/finance/${item.displayStudentId !== "N/A" ? item.displayStudentId : item.studentId}`,
+            )
+          }
         >
           View Details
         </span>
