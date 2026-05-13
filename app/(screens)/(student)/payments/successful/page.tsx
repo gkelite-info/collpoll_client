@@ -8,7 +8,6 @@ import confetti from "canvas-confetti";
 
 export default function PaymentSuccessfulPage() {
   useEffect(() => {
-    // Fire multiple bursts for celebration effect
     const duration = 2500;
     const end = Date.now() + duration;
 
@@ -53,7 +52,6 @@ export default function PaymentSuccessfulPage() {
           <CheckCircle size={80} weight="fill" className="text-emerald-500" />
         </motion.div>
 
-        {/* Heading */}
         <motion.h1
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
@@ -63,7 +61,6 @@ export default function PaymentSuccessfulPage() {
           Payment Successful 🎉
         </motion.h1>
 
-        {/* Description */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

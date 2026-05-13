@@ -480,8 +480,8 @@
       "File removed successfully": "File removed successfully",
       "Failed to remove file": "Failed to remove file",
       "An error occurred": "An error occurred",
-      "Submit Quiz" : "Submit Quiz",
-      "Deadline:" : "Deadline:"
+      "Submit Quiz": "Submit Quiz",
+      "Deadline:": "Deadline:"
     }
   },
   "Payments": {
@@ -565,7 +565,8 @@
       "Manage Fees, Track Transactions and Stay Updated Instantly": "Manage Fees, Track Transactions and Stay Updated Instantly.",
       "Payment Successful 🎉": "Payment Successful 🎉",
       "Your fee payment has been completed successfully": "Your fee payment has been completed successfully.",
-      "Back to Payments": "Back to Payments"
+      "Back to Payments": "Back to Payments",
+      "Semesters": "Semesters"
     }
   },
   "Academics": {

@@ -447,7 +447,8 @@
       "Score :": "స్కోర్ :",
       "Correct": "సరైంది",
       "Wrong": "తప్పు",
-      "Deadline :": "గడువు :"
+      "Deadline :": "గడువు :",
+      "Submit Quiz": "క్విజ్ సమర్పించు"
     }
   },
   "Payments": {
@@ -531,7 +532,8 @@
       "Manage Fees, Track Transactions and Stay Updated Instantly": "ఫీజులను నిర్వహించండి, లావాదేవీలను ట్రాక్ చేయండి మరియు తక్షణమే అప్డేట్‌గా ఉండండి.",
       "Payment Successful 🎉": "చెల్లింపు విజయవంతం 🎉",
       "Your fee payment has been completed successfully": "మీ ఫీజు చెల్లింపు విజయవంతంగా పూర్తయింది.",
-      "Back to Payments": "చెల్లింపులకు తిరిగి"
+      "Back to Payments": "చెల్లింపులకు తిరిగి",
+      "Semesters": "సెమిస్టర్లు"
     }
   },
   "Academics": {
@@ -748,7 +750,14 @@
       "Section :": "విభాగం :",
       "NA": "లభించదు",
       "Student": "విద్యార్థి",
-      "Parent": "తల్లిదండ్రి"
+      "Parent": "తల్లిదండ్రి",
+      "Faculty": "ఫ్యాకల్టీ",
+      "Admin": "అడ్మిన్",
+      "College Admin": "కాలేజ్ అడ్మిన్",
+      "Finance": "ఫైనాన్స్",
+      "Finance Manager": "ఫైనాన్స్ మేనేజర్",
+      "Placement Officer": "ప్లేస్‌మెంట్ ఆఫీసర్",
+      "College Hr": "కాలేజ్ హెచ్.ఆర్."
     }
   },
   "Clubs": {

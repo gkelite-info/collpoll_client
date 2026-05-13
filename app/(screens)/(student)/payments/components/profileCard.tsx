@@ -25,7 +25,7 @@ export default function ProfileCard({
   const t = useTranslations("Payments.student");
 
   return (
-    <div className="flex rounded-xl bg-white p-6 shadow-sm mb-8 items-center gap-6">
+    <div className="flex rounded-xl bg-white p-6 max-md:p-4 shadow-sm mb-8 max-md:mb-0 items-center gap-6">
       {/* <img
         src={image}
         alt={name}
@@ -34,29 +34,31 @@ export default function ProfileCard({
       <Avatar src={image} size={112} alt={name} />
 
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-[#1F2937]">{name}</h2>
+        <h2 className="text-xl max-md:text-lg font-semibold text-[#1F2937]">
+          {name}
+        </h2>
 
-        <p className="text-sm text-[#111827]">
+        <p className="text-sm max-md:text-xs text-[#111827]">
           <span className="font-medium">{t("Course:")}</span>{" "}
           <span className="text-[#4B5563]">{course}</span>
         </p>
 
-        <p className="text-sm text-[#111827]">
+        <p className="text-sm max-md:text-xs text-[#111827]">
           <span className="font-medium">{t("Year:")}</span>{" "}
           <span className="text-[#4B5563]">{year}</span>
         </p>
 
-        <p className="text-sm text-[#111827]">
+        <p className="text-sm max-md:text-xs text-[#111827]">
           <span className="font-medium">{t("Roll No:")}</span>{" "}
           <span className="text-[#4B5563]">{rollNo}</span>
         </p>
 
-        <p className="text-sm text-[#111827]">
+        <p className="text-sm max-md:text-xs text-[#111827]">
           <span className="font-medium">{t("Email:")}</span>{" "}
           <span className="text-[#4B5563]">{email}</span>
         </p>
 
-        <p className="text-sm text-[#111827]">
+        <p className="text-sm max-md:text-xs text-[#111827]">
           <span className="font-medium">{t("Mobile:")}</span>{" "}
           <span className="text-[#4B5563]">{mobile}</span>
         </p>
