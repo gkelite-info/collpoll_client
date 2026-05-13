@@ -73,7 +73,11 @@ export function useRecordPayment({
 
   const fetchData = async () => {
     // Prevent fetching if ID is missing (prevents the {} crash)
-    if (!studentFeeObligationId) return;
+    if (!studentFeeObligationId) {
+      setIsLoadingData(false);
+      setIsTableLoading(false);
+      return;
+    }
 
     setIsLoadingData(true);
     setIsTableLoading(true);
@@ -102,7 +106,7 @@ export function useRecordPayment({
   };
 
   useEffect(() => {
-    if (studentFeeObligationId) fetchData();
+    fetchData();
   }, [studentFeeObligationId]);
 
   // DB Call triggered when page changes
@@ -112,24 +116,26 @@ export function useRecordPayment({
       isFirstRender.current = false;
       return;
     }
-    if (studentFeeObligationId) {
-      const fetchPaginatedData = async () => {
-        setIsTableLoading(true);
-        // 🟢 CHANGED: Passing arguments as (ID, Page: currentPage, Limit: 2)
-        const result = await fetchRecentOfflinePayments(
-          studentFeeObligationId,
-          currentPage,
-          2,
-        );
-
-        if (result.success && result.data) {
-          setRecentPayments(result.data);
-          setTotalItems(result.totalCount || 0);
-        }
-        setIsTableLoading(false);
-      };
-      fetchPaginatedData();
+    if (!studentFeeObligationId) {
+      setIsTableLoading(false);
+      return;
     }
+    const fetchPaginatedData = async () => {
+      setIsTableLoading(true);
+      // 🟢 CHANGED: Passing arguments as (ID, Page: currentPage, Limit: 2)
+      const result = await fetchRecentOfflinePayments(
+        studentFeeObligationId,
+        currentPage,
+        2,
+      );
+
+      if (result.success && result.data) {
+        setRecentPayments(result.data);
+        setTotalItems(result.totalCount || 0);
+      }
+      setIsTableLoading(false);
+    };
+    fetchPaginatedData();
   }, [currentPage, studentFeeObligationId]);
 
   const handleUploadClick = () => fileInputRef.current?.click();

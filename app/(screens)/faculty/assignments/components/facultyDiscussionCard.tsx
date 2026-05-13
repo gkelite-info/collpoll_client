@@ -107,7 +107,12 @@ export default function FacultyDiscussionCard({ data, discussionView = "active",
                             <CalendarDotsIcon size={18} className="text-[#43C17A]" weight="regular" />
                         </div>
                         <span className="font-bold text-[#282828] text-sm">Uploaded On :</span>
-                        <span className="text-gray-600">{data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—"}</span>
+                        <span className="text-gray-600">
+                            {/* {data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—"} */}
+                            {data.createdAt
+                                ? new Date(data.createdAt).toLocaleDateString("en-GB")
+                                : "—"}
+                        </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                         <div className="p-1.5 rounded-full bg-[#43C07A24]">
