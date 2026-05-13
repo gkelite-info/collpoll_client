@@ -135,7 +135,7 @@ export default function LoginPage() {
         return;
       }
 
-      const role = res.user.role?.toLowerCase();
+      const role = res.user.role?.toLowerCase().trim();
       const roleRouteMap: Record<string, string> = {
         admin: "/admin",
         student: "/stu_dashboard",
@@ -146,6 +146,10 @@ export default function LoginPage() {
         collegeadmin: "/college-admin",
         collegehr: "/hr",
         placementofficer: "/placement",
+        wellbeingexecutive: "/wellbeing-executive",
+        "wellbeing executive": "/wellbeing-executive",
+        wellbeingmanager: "/wellbeing-manager",
+        "wellbeing manager": "/wellbeing-manager",
       };
 
       const redirectPath = roleRouteMap[role] || "/login";

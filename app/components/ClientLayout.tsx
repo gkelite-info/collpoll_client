@@ -13,7 +13,9 @@ import FinanceNavbar from "./navbar/financeNavbar";
 import CollegeAdminNavbar from "./navbar/collegeAdminNavbar";
 import PlacementNavbar from "./navbar/placementNav";
 import HrNavbar from "./navbar/hrNavbar";
-import { useEffect, useState } from "react";
+import WellbeingExecutiveNavbar from "./navbar/wellbeingExecutiveNavbar";
+import WellbeingManagerNavbar from "./navbar/wellbeingManagerNavbar";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import TaskModal from "./modals/taskModal";
 import { saveFacultyTask } from "@/lib/helpers/faculty/facultyTasks";
 import { useFaculty } from "../utils/context/faculty/useFaculty";
@@ -35,11 +37,12 @@ export default function ClientLayout({
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [openTaskPanelModal, setOpenTaskPanelModal] = useState(false);
 
-  const handleMenuClick = () => {
+  const handleMenuClick = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
-  };
+  }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSidebarOpen(false);
   }, [pathname]);
 
@@ -56,7 +59,7 @@ export default function ClientLayout({
     pathname.startsWith(route),
   );
 
-  const renderNavbar = (onClose?: () => void) => {
+  const renderNavbar = useCallback((onClose?: () => void) => {
     // Handle profile page - render navbar based on user's role
     if (pathname === "/profile" || pathname.startsWith("/profile?")) {
       switch (role) {
@@ -78,6 +81,10 @@ export default function ClientLayout({
           return <SuperAdminNavbar />;
         case "Placement":
           return <PlacementNavbar />;
+        case "WellbeingExecutive":
+          return <WellbeingExecutiveNavbar onClose={onClose} />;
+        case "WellbeingManager":
+          return <WellbeingManagerNavbar onClose={onClose} />;
         default:
           return <StudentNavbar />;
       }
@@ -94,8 +101,16 @@ export default function ClientLayout({
     if (pathname.startsWith("/finance")) return <FinanceNavbar />;
     if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar onClose={onClose} />;
     if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
+    if (pathname.startsWith("/wellbeing-executive")) {
+      return <WellbeingExecutiveNavbar onClose={onClose} />;
+    }
+    if (pathname.startsWith("/wellbeing-manager")) {
+      return <WellbeingManagerNavbar onClose={onClose} />;
+    }
     return <StudentNavbar />;
-  };
+  }, [pathname, role]);
+
+  const desktopNavbar = useMemo(() => renderNavbar(), [renderNavbar]);
 
   const collegeSubjectId = subjectIds?.[0] ?? null;
 
@@ -156,6 +171,18 @@ export default function ClientLayout({
     }
   };
 
+  const handleAddTaskClick = useCallback(() => {
+    if (role === "Student") {
+      setOpenTaskPanelModal(true);
+    } else {
+      setIsAddTaskOpen(true);
+    }
+  }, [role]);
+
+  const handleAddUserClick = useCallback(() => {
+    setIsAddUserOpen(true);
+  }, []);
+
   return (
     <>
       <Toaster
@@ -169,7 +196,7 @@ export default function ClientLayout({
       ) : (
         // <div className="flex h-screen w-screen overflow-hidden justify-between">
         <div className="flex h-screen w-screen overflow-hidden justify-between">
-          <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">{renderNavbar()}</div>
+          <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">{desktopNavbar}</div>
 
           {isSidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
@@ -192,15 +219,8 @@ export default function ClientLayout({
             <div className="shrink-0 h-auto w-full lg:h-[13%] flex justify-end bg-[#F4F4F4] z-40">
               <Header
                 onMenuClick={handleMenuClick}
-                // onAddTaskClick={() => setIsAddTaskOpen(true)}
-                onAddTaskClick={() => {
-                  if (role === "Student") {
-                    setOpenTaskPanelModal(true);
-                  } else {
-                    setIsAddTaskOpen(true);
-                  }
-                }}
-                onAddUserClick={() => setIsAddUserOpen(true)}
+                onAddTaskClick={handleAddTaskClick}
+                onAddUserClick={handleAddUserClick}
               />
             </div>
 

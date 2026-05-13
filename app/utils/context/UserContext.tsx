@@ -36,6 +36,9 @@ type UserContextType = {
   parentId: number | null;
   collegeHrId: number | null;
   placementEmployeeId: number | null;
+  wellBeingId: number | null;
+  wellBeingIds: number[];
+  wellBeingRegistrationTypes: string[];
   collegeEducationType: string | null;
   collegeBranchCode: string | null;
   collegeAcademicYear: string | null;
@@ -48,6 +51,29 @@ type UserContextType = {
 };
 
 type RoleLoaderMap = Record<string, (userId: number, collegeId: number) => Promise<void>>;
+type FacultySectionContext = {
+  college_sections?: {
+    collegeSections?: string | null;
+  } | null;
+};
+type StudentPinContext =
+  | { pinNumber?: string | null }
+  | { pinNumber?: string | null }[];
+type WellbeingCollegeDetailContext = {
+  college_education?: { collegeEducationType?: string | null } | null;
+  college_branch?: { collegeBranchCode?: string | null } | null;
+  college_academic_year?: { collegeAcademicYear?: string | null } | null;
+  college_sections?: { collegeSections?: string | null } | null;
+};
+
+const uniqueJoinedValues = (values: Array<string | null | undefined>) =>
+  Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).join(", ") || null;
 
 const UserContext = createContext<UserContextType>({
   userId: null,
@@ -68,6 +94,9 @@ const UserContext = createContext<UserContextType>({
   parentId: null,
   collegeHrId: null,
   placementEmployeeId: null,
+  wellBeingId: null,
+  wellBeingIds: [],
+  wellBeingRegistrationTypes: [],
   collegeEducationType: null,
   collegeBranchCode: null,
   collegeAcademicYear: null,
@@ -97,6 +126,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [parentId, setParentId] = useState<number | null>(null);
   const [collegeHrId, setCollegeHrId] = useState<number | null>(null);
   const [placementEmployeeId, setPlacementEmployeeId] = useState<number | null>(null);
+  const [wellBeingId, setWellBeingId] = useState<number | null>(null);
+  const [wellBeingIds, setWellBeingIds] = useState<number[]>([]);
+  const [wellBeingRegistrationTypes, setWellBeingRegistrationTypes] = useState<string[]>([]);
   const [collegeEducationType, setCollegeEducationType] = useState<string | null>(null);
   const [collegeBranchCode, setCollegeBranchCode] = useState<string | null>(null);
   const [collegeAcademicYear, setCollegeAcademicYear] = useState<string | null>(null);
@@ -126,6 +158,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     setParentId,
     setCollegeHrId,
     setPlacementEmployeeId,
+    setWellBeingId,
+    setWellBeingIds,
+    setWellBeingRegistrationTypes,
     setCollegeEducationType,
     setCollegeBranchCode,
     setCollegeAcademicYear,
@@ -155,6 +190,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setParentId(null);
     s.setCollegeHrId(null);
     s.setPlacementEmployeeId(null);
+    s.setWellBeingId(null);
+    s.setWellBeingIds([]);
+    s.setWellBeingRegistrationTypes([]);
     s.setCollegeEducationType(null);
     s.setCollegeBranchCode(null);
     s.setCollegeAcademicYear(null);
@@ -164,6 +202,88 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     s.setProfessionalExperienceYears(null);
     s.setIdentifierId(null);
   });
+
+  const loadWellbeingContext = async (
+    uid: number,
+    cid: number,
+    roleType: "wellbeingExecutive" | "wellbeingManager",
+  ) => {
+    const s = settersRef.current;
+    const [{ data }, empId, userRes] = await Promise.all([
+      supabase
+        .from("well_beings")
+        .select("wellBeingId, registrationType")
+        .eq("userId", uid)
+        .eq("collegeId", cid)
+        .eq("roleType", roleType)
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .order("wellBeingId", { ascending: true }),
+      getEmployeeEmpId(uid, cid),
+      supabase
+        .from("users")
+        .select("gender")
+        .eq("userId", uid)
+        .maybeSingle(),
+    ]);
+
+    const rows = data ?? [];
+    const wellBeingIdsForRole = rows.map((row) => row.wellBeingId);
+    s.setWellBeingId(rows[0]?.wellBeingId ?? null);
+    s.setWellBeingIds(wellBeingIdsForRole);
+    s.setWellBeingRegistrationTypes(
+      rows
+        .map((row) => row.registrationType)
+        .filter((type): type is string => Boolean(type)),
+    );
+    s.setGender(userRes.data?.gender ?? null);
+    s.setIdentifierId(empId ?? (rows[0]?.wellBeingId ? String(rows[0].wellBeingId) : null));
+
+    const collegeWellBeingIds = rows
+      .filter((row) => row.registrationType === "college")
+      .map((row) => row.wellBeingId);
+
+    if (!collegeWellBeingIds.length) {
+      s.setCollegeEducationType(null);
+      s.setCollegeBranchCode(null);
+      s.setCollegeAcademicYear(null);
+      s.setCollegeSection(null);
+      return;
+    }
+
+    const { data: collegeDetails } = await supabase
+      .from("wellbeing_college_details")
+      .select(`
+        college_education:collegeEducationId ( collegeEducationType ),
+        college_branch:collegeBranchId ( collegeBranchCode ),
+        college_academic_year:collegeAcademicYearId ( collegeAcademicYear ),
+        college_sections:collegeSectionsId ( collegeSections )
+      `)
+      .in("wellBeingId", collegeWellBeingIds);
+
+    const details = (collegeDetails ?? []) as WellbeingCollegeDetailContext[];
+    s.setCollegeEducationType(
+      uniqueJoinedValues(
+        details.map((detail) => detail.college_education?.collegeEducationType),
+      ),
+    );
+    s.setCollegeBranchCode(
+      uniqueJoinedValues(
+        details.map((detail) => detail.college_branch?.collegeBranchCode),
+      ),
+    );
+    s.setCollegeAcademicYear(
+      uniqueJoinedValues(
+        details.map((detail) => detail.college_academic_year?.collegeAcademicYear),
+      ),
+    );
+    s.setCollegeSection(
+      uniqueJoinedValues(
+        details.map((detail) => detail.college_sections?.collegeSections),
+      ),
+    );
+  };
 
   const roleLoadersRef = useRef<RoleLoaderMap>({
     Student: async (uid, cid) => {
@@ -237,7 +357,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setCollegeAcademicYear(facultyCtx?.collegeAcademicYear ?? null);
       const sections =
         facultyCtx?.sections
-          ?.map((sec: any) => sec.college_sections.collegeSections)
+          ?.map((sec: FacultySectionContext) => sec.college_sections?.collegeSections)
+          .filter(Boolean)
           .join(", ") ?? null;
       s.setCollegeSection(sections);
       s.setIdentifierId(empId ?? null);
@@ -258,7 +379,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setIdentifierId(empId ?? null);
     },
 
-    Parent: async (uid, _cid) => {
+    Parent: async (uid) => {
       const s = settersRef.current;
 
       const { data: parentData } = await supabase
@@ -289,7 +410,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (userData?.gender && studentData?.student_pins) {
           const genderInitial = userData.gender === "Male" ? "F" : "M";
-          const pins: any = studentData.student_pins;
+          const pins = studentData.student_pins as StudentPinContext;
           const pinNumber = Array.isArray(pins)
             ? pins[0]?.pinNumber
             : pins?.pinNumber;
@@ -331,6 +452,14 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       ]);
       s.setPlacementEmployeeId(data?.placementEmployeeId ?? null);
       s.setIdentifierId(empId ?? null);
+    },
+
+    WellbeingExecutive: async (uid, cid) => {
+      await loadWellbeingContext(uid, cid, "wellbeingExecutive");
+    },
+
+    WellbeingManager: async (uid, cid) => {
+      await loadWellbeingContext(uid, cid, "wellbeingManager");
     },
 
   });
@@ -386,7 +515,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
           await loader(userData.userId, cid);
         }
         isContextLoaded.current = true;
-      } catch (err) {
+      } catch {
         console.error("Failed to load context");
       } finally {
         settersRef.current.setLoading(false);
@@ -443,6 +572,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       parentId,
       collegeHrId,
       placementEmployeeId,
+      wellBeingId,
+      wellBeingIds,
+      wellBeingRegistrationTypes,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,
@@ -471,6 +603,9 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       parentId,
       collegeHrId,
       placementEmployeeId,
+      wellBeingId,
+      wellBeingIds,
+      wellBeingRegistrationTypes,
       collegeEducationType,
       collegeBranchCode,
       collegeAcademicYear,

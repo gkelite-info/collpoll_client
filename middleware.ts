@@ -6,13 +6,19 @@ import {
     isProtectedRoute,
     isAuthProtectedRoute,
     needsRolePortalProtection,
-    ROLE_PORTALS,
     getLandingPageForRole,
     normalizeRole,
     isValidRole,
     LEGACY_STUDENT_ROUTES,
     isPublicRoute
 } from "@/lib/constants/routes";
+
+type MiddlewareUserProfile = {
+    userId?: number;
+    collegeId?: number;
+    role?: string | null;
+    colleges?: { collegeCode?: string | null } | null;
+};
 
 export async function middleware(request: NextRequest) {
     let response = NextResponse.next({
@@ -99,9 +105,11 @@ export async function middleware(request: NextRequest) {
             .eq('auth_id', user.id)
             .single();
 
-        if (!profile || profileError || (profile as any)?.role !== 'Student') {
-            if (profile && (profile as any)?.role) {
-                const normalizedRole = normalizeRole((profile as any)?.role);
+        const profileData = profile as MiddlewareUserProfile | null;
+
+        if (!profileData || profileError || profileData.role !== 'Student') {
+            if (profileData?.role) {
+                const normalizedRole = normalizeRole(profileData.role);
                 if (normalizedRole && isValidRole(normalizedRole)) {
                     const url = request.nextUrl.clone();
                     url.pathname = getLandingPageForRole(normalizedRole);
@@ -119,6 +127,7 @@ export async function middleware(request: NextRequest) {
         const { data: profile, error: profileError } = await supabase
             .from('users')
             .select(`
+                userId,
                 collegeId,
                 role,
                 colleges (
@@ -134,8 +143,9 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url);
         }
 
-        const rawCollegeCode = (profile as any)?.colleges?.collegeCode;
-        const userRole = (profile as any)?.role;
+        const profileData = profile as MiddlewareUserProfile;
+        const rawCollegeCode = profileData.colleges?.collegeCode;
+        const userRole = profileData.role;
 
         const userCode = (rawCollegeCode || "").trim().toUpperCase();
         const urlCode = (currentUrlCode || "").trim().toUpperCase();
@@ -151,7 +161,7 @@ export async function middleware(request: NextRequest) {
 
         if (isAuthOnlyRoute(pathname)) {
             if (userRole) {
-                const normalizedRole = normalizeRole(userRole);
+                const normalizedRole = normalizeRole(userRole ?? null);
                 if (normalizedRole && isValidRole(normalizedRole)) {
                     const landingPage = getLandingPageForRole(normalizedRole);
                     const url = request.nextUrl.clone();
@@ -170,7 +180,7 @@ export async function middleware(request: NextRequest) {
                 return NextResponse.redirect(url);
             }
 
-            const normalizedRole = normalizeRole(userRole);
+            const normalizedRole = normalizeRole(userRole ?? null);
             if (!normalizedRole || !isValidRole(normalizedRole)) {
                 const url = request.nextUrl.clone();
                 url.pathname = "/login";
@@ -178,6 +188,31 @@ export async function middleware(request: NextRequest) {
             }
 
             const userLandingPage = getLandingPageForRole(normalizedRole);
+
+            if (normalizedRole === "WellbeingExecutive" || normalizedRole === "WellbeingManager") {
+                const wellbeingRoleTypes =
+                    normalizedRole === "WellbeingManager"
+                        ? "wellbeingManager"
+                        : "wellbeingExecutive";
+
+                const { data: wellbeingRows, error: wellbeingError } = await supabase
+                    .from("well_beings")
+                    .select("wellBeingId")
+                    .eq("userId", profileData.userId)
+                    .eq("collegeId", profileData.collegeId)
+                    .eq("roleType", wellbeingRoleTypes)
+                    .eq("isActive", true)
+                    .eq("is_deleted", false)
+                    .is("deletedAt", null)
+                    .limit(1);
+
+                if (wellbeingError || !wellbeingRows?.length) {
+                    const url = request.nextUrl.clone();
+                    url.pathname = "/construction";
+                    url.searchParams.set("error", "wellbeing_access_inactive");
+                    return NextResponse.redirect(url);
+                }
+            }
 
             if (!pathname.startsWith(userLandingPage)) {
                 const url = request.nextUrl.clone();
@@ -198,8 +233,9 @@ export async function middleware(request: NextRequest) {
                 .single();
 
             if (profile && !profileError) {
-                const userRole = (profile as any)?.role;
-                const normalizedRole = normalizeRole(userRole);
+                const profileData = profile as MiddlewareUserProfile;
+                const userRole = profileData.role;
+                const normalizedRole = normalizeRole(userRole ?? null);
 
                 if (normalizedRole && isValidRole(normalizedRole)) {
                     const landingPage = getLandingPageForRole(normalizedRole);
