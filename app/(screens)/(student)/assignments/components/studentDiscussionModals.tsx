@@ -271,32 +271,39 @@ export function StudentDiscussionDetailsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
       <div className="absolute inset-0" onClick={handleClose} />
       <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-        <div className="flex justify-between items-start p-6 border-b border-gray-100">
-          <div className="flex flex-col gap-3">
+        <div className="flex flex-col md:flex-row justify-between items-start p-4 md:p-6 border-b border-gray-100 gap-4 md:gap-0 relative">
+          <button
+            onClick={handleClose}
+            className="md:hidden absolute top-4 right-4 text-gray-500 p-1 cursor-pointer rounded-md"
+          >
+            <X size={24} />
+          </button>
+          
+          <div className="flex flex-col gap-3 pr-8 md:pr-0 w-full md:w-auto">
             <h2 className="text-2xl font-bold text-[#43C17A]">
               {discussion.title}
             </h2>
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2 text-sm">
-                <div className="bg-[#43C07A24] p-1 rounded-full">
+                <div className="bg-[#43C07A24] p-1 rounded-full flex-shrink-0">
                   <UserCircle
                     size={18}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-bold text-[#282828]">Faculty Name :</span>
-                <span className="text-gray-600">{discussion.facultyName}</span>
+                <span className="font-bold text-[#282828] flex-shrink-0">Faculty Name :</span>
+                <span className="text-gray-600 truncate">{discussion.facultyName}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <div className="bg-[#43C07A24] p-1 rounded-full">
+                <div className="bg-[#43C07A24] p-1 rounded-full flex-shrink-0">
                   <CalendarDotsIcon
                     size={18}
                     className="text-[#43C17A]"
                     weight="regular"
                   />
                 </div>
-                <span className="font-bold text-[#282828]">Uploaded On :</span>
+                <span className="font-bold text-[#282828] flex-shrink-0">Uploaded On :</span>
                 <span className="text-gray-600">
                   {discussion.createdAt
                     ? new Date(discussion.createdAt).toLocaleDateString()
@@ -306,7 +313,7 @@ export function StudentDiscussionDetailsModal({
             </div>
           </div>
 
-          <div className="bg-red-00 flex flex-col items-start gap-6">
+          <div className="bg-red-00 flex flex-col items-start md:items-end gap-4 md:gap-6 w-full md:w-auto mt-2 md:mt-0">
             <div className="flex gap-4">
               <button
                 onClick={() => {
@@ -320,7 +327,7 @@ export function StudentDiscussionDetailsModal({
                     toast.error("No attachments available to download");
                   }
                 }}
-                className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm"
+                className="flex items-center cursor-pointer gap-2 bg-[#43C17A] text-white px-4 py-2 rounded-md font-bold text-sm w-full md:w-auto justify-center"
               >
                 Download{" "}
                 <span className="bg-white rounded-full text-[#43C17A] p-1">
@@ -329,7 +336,7 @@ export function StudentDiscussionDetailsModal({
               </button>
               <button
                 onClick={handleClose}
-                className="text-gray-500 p-1 cursor-pointer rounded-md"
+                className="hidden md:block text-gray-500 p-1 cursor-pointer rounded-md"
               >
                 <X size={24} />
               </button>
@@ -345,7 +352,7 @@ export function StudentDiscussionDetailsModal({
           </div>
         </div>
 
-        <div className="bg-pink-00 flex flex-col lg:px-5 lg:py-4">
+        <div className="bg-pink-00 flex flex-col px-4 py-4 lg:px-5 lg:py-4 overflow-y-auto">
           <div className="flex flex-col">
             <h3 className="text-base font-bold text-[#282828]">Description</h3>
             <p className="text-sm text-[#282828] leading-relaxed whitespace-pre-line">

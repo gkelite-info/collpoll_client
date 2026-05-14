@@ -4,7 +4,17 @@ import { useState, useEffect, useRef } from "react";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap, ArrowLeft, ArrowRight } from "@phosphor-icons/react";
+import {
+  EnvelopeSimple,
+  Eye,
+  EyeSlash,
+  GraduationCap,
+  Info,
+  Lock,
+  SpinnerGap,
+  ArrowLeft,
+  ArrowRight,
+} from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 
@@ -84,7 +94,7 @@ export default function LoginPage() {
 
     if (!isHovered) {
       intervalRef.current = setInterval(() => {
-        setCurrent(prev => (prev + 1) % slides.length);
+        setCurrent((prev) => (prev + 1) % slides.length);
       }, 2500);
     }
 
@@ -158,14 +168,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full h-[100dvh] flex overflow-hidden relative">
+    // <div className="w-full h-[100dvh] flex overflow-hidden relative">
+    <div className="fixed inset-0 w-full flex overflow-hidden">
       {/* <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center py-6 overflow-hidden"> */}
 
-      <div className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[35%] xl:w-[35%] h-full bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center pt-6 pb-4 overflow-hidden transition-transform duration-500 ease-in-out ${showMobileLogin ? '-translate-x-full lg:landscape:translate-x-0 xl:translate-x-0' : 'translate-x-0'}`}>
+      <div
+        className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[35%] xl:w-[35%] h-full bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center pt-6 pb-4 overflow-hidden transition-transform duration-500 ease-in-out ${showMobileLogin ? "-translate-x-full lg:landscape:translate-x-0 xl:translate-x-0" : "translate-x-0"}`}
+      >
         <div className="w-full z-20 px-8 flex flex-col items-center text-center shrink-0">
           <div className="flex flex-col items-center">
             <Image
-              src='/login-logo.png'
+              src="/login-logo.png"
               height={85}
               width={85}
               alt=""
@@ -184,7 +197,7 @@ export default function LoginPage() {
                 initial={{ opacity: 0, x: 60 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 60 }}
-                transition={{ duration: 0.50, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
               >
                 <h2 className="text-[19px] leading-tight font-bold text-[#1B4D3E]">
                   {slides[current].heading}
@@ -205,7 +218,8 @@ export default function LoginPage() {
           {slides.map((slide, idx) => {
             let position = "hidden";
             if (idx === current) position = "center";
-            else if (idx === (current - 1 + slides.length) % slides.length) position = "left";
+            else if (idx === (current - 1 + slides.length) % slides.length)
+              position = "left";
             else if (idx === (current + 1) % slides.length) position = "right";
 
             const opacityMap: Record<string, number> = {
@@ -256,10 +270,11 @@ export default function LoginPage() {
           {slides.map((_, i) => (
             <div
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-10 bg-[#1A5D3C]"
-                : "w-3 bg-white/60 border border-white/40"
-                }`}
+              className={`h-2 rounded-full transition-all duration-300 ${
+                current === i
+                  ? "w-10 bg-[#1A5D3C]"
+                  : "w-3 bg-white/60 border border-white/40"
+              }`}
             />
           ))}
         </div>
@@ -271,16 +286,19 @@ export default function LoginPage() {
           >
             <span className="relative z-10 flex items-center gap-2">
               Proceed to Login
-              <ArrowRight size={20} weight="bold" className="group-hover:translate-x-1 transition-transform" />
+              <ArrowRight
+                size={20}
+                weight="bold"
+                className="group-hover:translate-x-1 transition-transform"
+              />
             </span>
             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         </div>
-
       </div>
 
       <div
-        className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[65%] xl:w-[65%] h-full flex justify-center items-center transition-transform duration-500 ease-in-out ${showMobileLogin ? 'translate-x-0' : 'translate-x-full lg:landscape:translate-x-0 xl:translate-x-0'}`}
+        className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[65%] xl:w-[65%] h-full flex justify-center items-center transition-transform duration-500 ease-in-out ${showMobileLogin ? "translate-x-0" : "translate-x-full lg:landscape:translate-x-0 xl:translate-x-0"}`}
         style={{
           backgroundImage: "url('/loginpagebg.webp')",
           backgroundSize: "cover",
@@ -295,8 +313,14 @@ export default function LoginPage() {
             onClick={() => setShowMobileLogin(false)}
             className="group flex items-center gap-1.5 sm:gap-2 text-white/90 hover:text-white transition-all bg-black/20 hover:bg-black/40 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl backdrop-blur-md border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2)] hover:-translate-x-1"
           >
-            <ArrowLeft size={16} weight="bold" className="group-hover:-translate-x-0.5 transition-transform sm:w-[18px] sm:h-[18px]" />
-            <span className="font-semibold text-[12px] sm:text-[13.5px] tracking-wide">Back to slides</span>
+            <ArrowLeft
+              size={16}
+              weight="bold"
+              className="group-hover:-translate-x-0.5 transition-transform sm:w-[18px] sm:h-[18px]"
+            />
+            <span className="font-semibold text-[12px] sm:text-[13.5px] tracking-wide">
+              Back to slides
+            </span>
           </button>
         </div>
 
@@ -388,11 +412,7 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/60 hover:text-white focus:outline-none cursor-pointer transition-colors"
               >
-                {showPassword ? (
-                  <EyeSlash size={20} />
-                ) : (
-                  <Eye size={20} />
-                )}
+                {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
@@ -413,11 +433,11 @@ export default function LoginPage() {
           </div> */}
 
           <div className="flex flex-col-reverse sm:flex-row items-end sm:items-start justify-between mt-4 gap-3 sm:gap-4">
-
             <div className="flex items-start gap-1.5 w-full sm:w-auto">
               <Info size={15} className="shrink-0 text-amber-300 mt-[2px]" />
               <p className="text-[11.5px] text-white/70 leading-snug">
-                New account? Verify your email before logging in. Check inbox or spam.
+                New account? Verify your email before logging in. Check inbox or
+                spam.
               </p>
             </div>
 
@@ -427,7 +447,6 @@ export default function LoginPage() {
             >
               Forgot Password?
             </Link>
-
           </div>
 
           <div

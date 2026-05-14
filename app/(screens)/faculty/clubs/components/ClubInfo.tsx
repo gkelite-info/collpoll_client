@@ -28,14 +28,14 @@ export default function ClubInfo({ info, isLoading = false, isCollegeAdmin = fal
 
     return (
         <div className="mb-8 flex flex-col items-center">
-            <div className="mb-4 flex h-[150px] w-[150px] items-center justify-center overflow-hidden rounded-full shadow-sm border border-gray-100">
+            <div className="mb-4 flex h-[120px] w-[120px] md:h-[150px] md:w-[150px] items-center justify-center overflow-hidden rounded-full shadow-sm border border-gray-100">
                 <Avatar
                     src={info.logo}
                     alt={info.name}
-                    size={150}
+                    sizes="w-[120px] h-[120px] md:w-[150px] md:h-[150px]"
                 />
             </div>
-            <h2 className="mb-8 text-xl font-bold text-[#282828]">{info.name}</h2>
+            <h2 className="mb-8 text-lg md:text-xl font-bold text-[#282828] text-center">{info.name}</h2>
             {isCollegeAdmin && stats && (
                 <div className="grid grid-cols-2 gap-4 w-full max-w-2xl mb-10 px-2 md:px-4">
                     <div className="bg-gradient-to-br from-[#43C17A]/10 to-[#43C17A]/5 border border-[#43C17A]/20 rounded-2xl p-4 flex flex-col items-center justify-center shadow-sm">
@@ -48,7 +48,7 @@ export default function ClubInfo({ info, isLoading = false, isCollegeAdmin = fal
                     </div>
                 </div>
             )}
-            <div className="flex w-full max-w-2xl bg-red-00 flex-col justify-between gap-8 px-2 md:flex-row md:px-4">
+            <div className="flex w-full max-w-2xl flex-col justify-between gap-8 px-2 md:flex-row md:px-4">
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">
                         <Avatar src={info.responsibleFaculty?.avatar} alt={info.responsibleFaculty?.name} size={40} />

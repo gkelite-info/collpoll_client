@@ -13,7 +13,7 @@ export default function StudentClubHeader() {
           {t("Discover and join a club that matches your interests")}
         </p>
       </div>
-      <div className="w-[320px]">
+      <div className="w-full md:w-[320px] max-md:hidden">
         <CourseScheduleCard />
       </div>
     </div>

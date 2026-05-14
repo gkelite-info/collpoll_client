@@ -11,7 +11,7 @@ export default function StudentClubsPage() {
         <StudentClubHeader />
         <Suspense
           fallback={
-            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm min-h-[80vh]">
+            <div className="mt-8 rounded-3xl bg-white p-4 md:p-6 shadow-sm min-h-[80vh]">
               <ClubShimmer />
             </div>
           }
