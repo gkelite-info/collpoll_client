@@ -311,7 +311,7 @@ function UnitCard({
 
         <div className="relative flex-1 min-h-0 mb-14 overflow-hidden">
           <ul
-            className="h-full space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-10"
+            className="custom-scrollbar h-[280px] space-y-2 overflow-y-auto pr-2 pb-10 text-xs text-[#3F3F3F] md:text-sm"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: `${colors.solidEnd} #f1f5f9`,
@@ -763,14 +763,17 @@ export function SubjectDetailsCard({
         </button> */}
       </div>
 
-      <div className="flex gap-6 overflow-x-auto">
+      <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8">
         {loading ? (
           <div className="flex justify-center w-full">
             <Loader />
           </div>
         ) : units.length > 0 ? (
           units.map((unit) => (
-            <div key={`unit-${unit.id}`} className="min-w-75 shrink-0">
+            <div
+              key={`unit-${unit.id}`}
+              className="min-w-[320px] w-[350px] shrink-0 snap-start"
+            >
               <UnitCard
                 unit={unit}
                 onMarkComplete={handleMarkComplete}

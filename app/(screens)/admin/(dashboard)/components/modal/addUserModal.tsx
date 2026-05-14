@@ -643,6 +643,8 @@ const AddUserModal: React.FC<{
   const isStudent = basicData.role === "Student";
   const isParent = basicData.role === "Parent";
   const isFinance = basicData.role === "Finance";
+  const isFinanceManager = basicData.role === "FinanceManager";
+  const showFinanceFields = isFinance || isFinanceManager;
   const isHR = basicData.role === "CollegeHr";
   const isPlacement = basicData.role === "PlacementOfficer";
   const isWellbeing =
@@ -748,10 +750,9 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student ID required.");
 
-    if (isFinance && !collegeEducationId)
+    if (showFinanceFields && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
 
-    // ✅ NEW: Placement Officer validation
     if (isPlacement && !collegeEducationId)
       return toast.error("Select Education Type for Placement Officer.");
 
@@ -864,12 +865,13 @@ const AddUserModal: React.FC<{
 
       if (!targetUserId) throw new Error("User creation failed");
 
-      if (isFinance && !user) {
+      if (showFinanceFields && !user) {
         await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
           collegeEducationId: collegeEducationId!,
           createdBy: basicData.adminId,
+          type: isFinanceManager ? "manager" : "executive",
           isActive: true,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -1068,7 +1070,12 @@ const AddUserModal: React.FC<{
       }, 2000);
       setSessionOptions([]);
     } catch (e: any) {
-      console.error(e);
+      console.error("Add user failed:", {
+        message: e?.message,
+        details: e?.details ?? e?.cause?.details,
+        hint: e?.hint ?? e?.cause?.hint,
+        code: e?.code ?? e?.cause?.code,
+      });
 
       let message = "Something went wrong. Please try again.";
 
@@ -1209,6 +1216,7 @@ const AddUserModal: React.FC<{
                     <option value="Student">Student</option>
                     <option value="Parent">Parent</option>
                     <option value="Finance">Finance</option>
+                    <option value="FinanceManager">Finance Manager</option>
                     {/* <option value="CollegeHr">College HR</option> */}
                     <option value="CollegeHr">College HR</option>
                     {/* ✅ NEW: Placement Officer option */}
@@ -1246,7 +1254,7 @@ const AddUserModal: React.FC<{
                 />
               )}
 
-              {(isFaculty || isFinance || isAdmin || isPlacement) && (
+              {(isFaculty || showFinanceFields || isAdmin || isPlacement) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Education Type <span className="text-red-600">*</span>
