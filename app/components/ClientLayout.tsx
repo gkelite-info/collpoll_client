@@ -22,6 +22,8 @@ import { useFaculty } from "../utils/context/faculty/useFaculty";
 import AddUserModal from "../(screens)/admin/(dashboard)/components/modal/addUserModal";
 import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 import TaskPanelModal from "../utils/taskPanelModal";
+import WellbeingExecutiveDashboardShimmer from "../(screens)/wellbeing-executive/(dashboard)/components/DashboardShimmer";
+import WellbeingManagerDashboardShimmer from "../(screens)/wellbeing-manager/(dashboard)/components/DashboardShimmer";
 
 export default function ClientLayout({
   children,
@@ -36,6 +38,7 @@ export default function ClientLayout({
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [openTaskPanelModal, setOpenTaskPanelModal] = useState(false);
+  const [isWellbeingRouteLoading, setIsWellbeingRouteLoading] = useState(false);
 
   const handleMenuClick = useCallback(() => {
     setIsSidebarOpen(prev => !prev);
@@ -45,6 +48,28 @@ export default function ClientLayout({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const showWellbeingRouteLoading = () => {
+      setIsWellbeingRouteLoading(true);
+    };
+
+    window.addEventListener("wellbeing-route-loading", showWellbeingRouteLoading);
+
+    return () => {
+      window.removeEventListener("wellbeing-route-loading", showWellbeingRouteLoading);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isWellbeingRouteLoading) return;
+
+    const timeout = window.setTimeout(() => {
+      setIsWellbeingRouteLoading(false);
+    }, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, [isWellbeingRouteLoading, pathname]);
 
   const hideLayoutRoutes = [
     "/login",
@@ -58,6 +83,18 @@ export default function ClientLayout({
   const shouldHideLayout = hideLayoutRoutes.some((route) =>
     pathname.startsWith(route),
   );
+
+  const wellbeingRouteShimmer = useMemo(() => {
+    if (pathname.startsWith("/wellbeing-manager")) {
+      return <WellbeingManagerDashboardShimmer />;
+    }
+
+    if (pathname.startsWith("/wellbeing-executive")) {
+      return <WellbeingExecutiveDashboardShimmer />;
+    }
+
+    return null;
+  }, [pathname]);
 
   const renderNavbar = useCallback((onClose?: () => void) => {
     // Handle profile page - render navbar based on user's role
@@ -226,7 +263,9 @@ export default function ClientLayout({
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
             <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain">
-              {children}
+              {isWellbeingRouteLoading && wellbeingRouteShimmer
+                ? wellbeingRouteShimmer
+                : children}
             </div>
           </div>
           {isAddTaskOpen && (
