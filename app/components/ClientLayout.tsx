@@ -41,7 +41,7 @@ export default function ClientLayout({
   const [isWellbeingRouteLoading, setIsWellbeingRouteLoading] = useState(false);
 
   const handleMenuClick = useCallback(() => {
-    setIsSidebarOpen(prev => !prev);
+    setIsSidebarOpen((prev) => !prev);
   }, []);
 
   useEffect(() => {
@@ -54,10 +54,16 @@ export default function ClientLayout({
       setIsWellbeingRouteLoading(true);
     };
 
-    window.addEventListener("wellbeing-route-loading", showWellbeingRouteLoading);
+    window.addEventListener(
+      "wellbeing-route-loading",
+      showWellbeingRouteLoading,
+    );
 
     return () => {
-      window.removeEventListener("wellbeing-route-loading", showWellbeingRouteLoading);
+      window.removeEventListener(
+        "wellbeing-route-loading",
+        showWellbeingRouteLoading,
+      );
     };
   }, []);
 
@@ -96,56 +102,63 @@ export default function ClientLayout({
     return null;
   }, [pathname]);
 
-  const renderNavbar = useCallback((onClose?: () => void) => {
-    // Handle profile page - render navbar based on user's role
-    if (pathname === "/profile" || pathname.startsWith("/profile?")) {
-      switch (role) {
-        case "Student":
-          return <StudentNavbar />;
-        case "Faculty":
-          return <FacultyNavbar onClose={onClose} />;
-        case "Admin":
-          return <AdminNavbar />;
-        case "CollegeHr":
-          return <HrNavbar />;
-        case "Finance":
-          return <FinanceNavbar />;
-        case "CollegeAdmin":
-          return <CollegeAdminNavbar />;
-        case "Parent":
-          return <ParentNavbar />;
-        case "SuperAdmin":
-          return <SuperAdminNavbar />;
-        case "Placement":
-          return <PlacementNavbar />;
-        case "WellbeingExecutive":
-          return <WellbeingExecutiveNavbar onClose={onClose} />;
-        case "WellbeingManager":
-          return <WellbeingManagerNavbar onClose={onClose} />;
-        default:
-          return <StudentNavbar />;
+  const renderNavbar = useCallback(
+    (onClose?: () => void) => {
+      // Handle profile page - render navbar based on user's role
+      if (pathname === "/profile" || pathname.startsWith("/profile?")) {
+        switch (role) {
+          case "Student":
+            return <StudentNavbar />;
+          case "Faculty":
+            return <FacultyNavbar onClose={onClose} />;
+          case "Admin":
+            return <AdminNavbar />;
+          case "CollegeHr":
+            return <HrNavbar />;
+          case "Finance":
+            return <FinanceNavbar />;
+          case "CollegeAdmin":
+            return <CollegeAdminNavbar />;
+          case "Parent":
+            return <ParentNavbar />;
+          case "SuperAdmin":
+            return <SuperAdminNavbar />;
+          case "Placement":
+            return <PlacementNavbar />;
+          case "WellbeingExecutive":
+            return <WellbeingExecutiveNavbar onClose={onClose} />;
+          case "WellbeingManager":
+            return <WellbeingManagerNavbar onClose={onClose} />;
+          default:
+            return <StudentNavbar />;
+        }
       }
-    }
 
-    if (pathname.startsWith("/admin")) return <AdminNavbar onClose={onClose} />;
-    if (pathname.startsWith("/faculty")) return <FacultyNavbar onClose={onClose} />;
-    if (pathname.startsWith("/parent")) return <ParentNavbar />;
-    if (pathname === "/placement" || pathname.startsWith("/placement/")) {
-      return <PlacementNavbar />;
-    }
-    if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar onClose={onClose} />;
-    if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
-    if (pathname.startsWith("/finance")) return <FinanceNavbar />;
-    if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar onClose={onClose} />;
-    if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
-    if (pathname.startsWith("/wellbeing-executive")) {
-      return <WellbeingExecutiveNavbar onClose={onClose} />;
-    }
-    if (pathname.startsWith("/wellbeing-manager")) {
-      return <WellbeingManagerNavbar onClose={onClose} />;
-    }
-    return <StudentNavbar />;
-  }, [pathname, role]);
+      if (pathname.startsWith("/admin"))
+        return <AdminNavbar onClose={onClose} />;
+      if (pathname.startsWith("/faculty"))
+        return <FacultyNavbar onClose={onClose} />;
+      if (pathname.startsWith("/parent")) return <ParentNavbar />;
+      if (pathname === "/placement" || pathname.startsWith("/placement/")) {
+        return <PlacementNavbar />;
+      }
+      if (pathname.startsWith("/stu_dashboard"))
+        return <StudentNavbar onClose={onClose} />;
+      if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
+      if (pathname.startsWith("/finance")) return <FinanceNavbar />;
+      if (pathname.startsWith("/college-admin"))
+        return <CollegeAdminNavbar onClose={onClose} />;
+      if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
+      if (pathname.startsWith("/wellbeing-executive")) {
+        return <WellbeingExecutiveNavbar onClose={onClose} />;
+      }
+      if (pathname.startsWith("/wellbeing-manager")) {
+        return <WellbeingManagerNavbar onClose={onClose} />;
+      }
+      return <StudentNavbar />;
+    },
+    [pathname, role],
+  );
 
   const desktopNavbar = useMemo(() => renderNavbar(), [renderNavbar]);
 
@@ -164,14 +177,15 @@ export default function ClientLayout({
       throw new Error("Faculty or college context not loaded");
     }
 
-    const result = await saveFacultyTask({
-      facultyTaskId: taskId,
-      collegeSubjectId: collegeSubjectId,
-      taskTitle: payload.title,
-      description: payload.description,
-      date: payload.dueDate,
-      time: payload.dueTime,
-    },
+    const result = await saveFacultyTask(
+      {
+        facultyTaskId: taskId,
+        collegeSubjectId: collegeSubjectId,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime,
+      },
       facultyId,
     );
 
@@ -193,13 +207,14 @@ export default function ClientLayout({
       throw new Error("Student context not loaded");
     }
 
-    const result = await saveStudentTask({
-      studentTaskId: taskId,
-      taskTitle: payload.title,
-      description: payload.description,
-      date: payload.dueDate,
-      time: payload.dueTime,
-    },
+    const result = await saveStudentTask(
+      {
+        studentTaskId: taskId,
+        taskTitle: payload.title,
+        description: payload.description,
+        date: payload.dueDate,
+        time: payload.dueTime,
+      },
       studentId,
     );
 
@@ -233,7 +248,9 @@ export default function ClientLayout({
       ) : (
         // <div className="flex h-screen w-screen overflow-hidden justify-between">
         <div className="flex h-screen w-screen overflow-hidden justify-between">
-          <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">{desktopNavbar}</div>
+          <div className="hidden md:hidden lg:block w-0 md:w-0 lg:w-[17%] lg:h-full lg:bg-[#43C17A]">
+            {desktopNavbar}
+          </div>
 
           {isSidebarOpen && (
             <div className="fixed inset-0 z-50 lg:hidden">
@@ -258,7 +275,6 @@ export default function ClientLayout({
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={handleAddTaskClick}
                 onAddUserClick={handleAddUserClick}
-                isSidebarOpen={isSidebarOpen}
               />
             </div>
 
@@ -275,9 +291,7 @@ export default function ClientLayout({
               onClose={() => setIsAddTaskOpen(false)}
               // onSave={handleSaveTask}
               onSave={
-                role === "Student"
-                  ? handleSaveStudentTask
-                  : handleSaveTask
+                role === "Student" ? handleSaveStudentTask : handleSaveTask
               }
               // role="faculty"
               // facultyId={facultyId!}
@@ -296,9 +310,7 @@ export default function ClientLayout({
             studentId={studentId ?? undefined}
             facultyId={facultyId ?? undefined}
             onSaveTask={
-              role === "Faculty"
-                ? handleSaveTask
-                : handleSaveStudentTask
+              role === "Faculty" ? handleSaveTask : handleSaveStudentTask
             }
           />
 
