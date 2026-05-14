@@ -312,10 +312,10 @@ export default function AllClubsGrid() {
           return (
             <div
               key={club.id}
-              className="bg-[#FB8000]/10 rounded-2xl flex flex-col items-center px-5 pb-5 pt-[70px] relative"
+              className="bg-[#FB8000]/10 rounded-2xl flex flex-col items-center px-3 md:px-5 pb-4 md:pb-5 pt-[60px] md:pt-[70px] relative"
             >
-              <div className="absolute -top-[60px] w-[140px] h-[140px] rounded-full bg-white border-4 border-white flex items-center justify-center shadow-md overflow-hidden">
-                <Avatar src={club.logo} alt={club.name} size={150} />
+              <div className="absolute -top-[50px] md:-top-[60px] w-[110px] h-[110px] md:w-[140px] md:h-[140px] rounded-full bg-white border-4 border-white flex items-center justify-center shadow-md overflow-hidden">
+                <Avatar src={club.logo} alt={club.name} sizes="w-[110px] h-[110px] md:w-[140px] md:h-[140px]" />
               </div>
 
               <h3 className="text-[#282828] font-bold text-lg mb-4 text-center mt-8">

@@ -17,7 +17,7 @@ export default function StudentTabNavigation({
   ] as const;
 
   return (
-    <div className="bg-[#E9E9E9] relative p-2 rounded-full inline-flex gap-2">
+    <div className="bg-[#E9E9E9] relative p-1.5 md:p-2 rounded-full flex md:inline-flex w-full md:w-auto gap-1 md:gap-2">
       {TABS.map((tab) => {
         const isActive = currentTab === tab.id;
         return (
@@ -25,7 +25,7 @@ export default function StudentTabNavigation({
             key={tab.id}
             href={`?tab=${tab.id}`}
             scroll={false}
-            className={`relative z-10 w-[140px] md:w-[170px] text-center px-6 py-2.5 rounded-full text-sm font-semibold transition-colors ${
+            className={`relative z-10 w-1/2 md:w-[170px] text-center px-2 md:px-6 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-colors ${
               isActive ? "text-white" : "text-[#555555]"
             }`}
           >

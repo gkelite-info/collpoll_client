@@ -236,7 +236,7 @@ export default function MyClubView() {
   return (
     <div className="flex flex-col animate-in slide-in-from-bottom-4 duration-500">
       <ClubInfo info={clubState.info} />
-      <div className="relative mb-8 flex items-center justify-center">
+      <div className="relative mb-8 flex items-center justify-center px-4 md:px-0">
         <div className="absolute w-full border-t border-[#959595]"></div>
         <span className="relative bg-white px-6 text-xs font-bold text-[#3B3B3B]">
           {currentViewDate}

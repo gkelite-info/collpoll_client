@@ -431,7 +431,7 @@
 //     if (loading) return <StudentAnnouncementsShimmer />;
 
 //     return (
-//         <div className="mx-auto flex h-[650px] w-full max-w-2xl flex-col bg-transparent">
+//         <div className="mx-auto flex h-[65vh] md:h-[650px] w-full max-w-2xl flex-col bg-transparent">
 //             <div
 //                 ref={scrollRef}
 //                 onScroll={handleScroll}
@@ -1114,7 +1114,7 @@ export default function StudentAnnouncements({
 
       {canPost && (
         <form onSubmit={handleSend} className="mt-2 pb-2 px-1">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <motion.div
               initial={false}
               animate={{ scale: inputValue.trim() && !isPosting ? 1.01 : 1 }}
@@ -1129,7 +1129,7 @@ export default function StudentAnnouncements({
                 placeholder={
                   editingId ? t("Edit announcement") : t("Type here")
                 }
-                className="w-full rounded-full bg-[#E5E5E5] py-3.5 pl-6 pr-14 text-sm font-medium text-[#282828] placeholder-[#6F6F6F] border-2 border-transparent focus:border-[#16284F]/20 focus:bg-white focus:shadow-lg outline-none transition-all duration-300 disabled:opacity-70"
+                className="w-full rounded-full bg-[#E5E5E5] py-3 md:py-3.5 pl-4 md:pl-6 pr-12 md:pr-14 text-xs md:text-sm font-medium text-[#282828] placeholder-[#6F6F6F] border-2 border-transparent focus:border-[#16284F]/20 focus:bg-white focus:shadow-lg outline-none transition-all duration-300 disabled:opacity-70"
               />
 
               {editingId && !isPosting && (
@@ -1139,13 +1139,13 @@ export default function StudentAnnouncements({
                     setEditingId(null);
                     setInputValue("");
                   }}
-                  className="absolute right-14 top-1/2 -translate-y-1/2 text-xs text-red-500 font-bold hover:underline cursor-pointer"
+                  className="absolute right-12 md:right-14 top-1/2 -translate-y-1/2 text-[10px] md:text-xs text-red-500 font-bold hover:underline cursor-pointer"
                 >
                   {t("Cancel")}
                 </button>
               )}
 
-              <div className="absolute right-2 top-1/2 -translate-y-1/2  overflow-hidden rounded-full">
+              <div className="absolute right-1 md:right-2 top-1/2 -translate-y-1/2  overflow-hidden rounded-full">
                 <motion.button
                   type="submit"
                   disabled={!inputValue.trim() || isPosting}
@@ -1157,23 +1157,23 @@ export default function StudentAnnouncements({
                     opacity: inputValue.trim() ? 1 : 0,
                   }}
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  className="flex h-10 w-10 items-center justify-center bg-[#16284F] text-white shadow-lg disabled:bg-gray-400 cursor-pointer"
+                  className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center bg-[#16284F] text-white shadow-lg disabled:bg-gray-400 cursor-pointer"
                 >
                   {isPosting ? (
-                    <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                    <span className="h-4 w-4 md:h-5 md:w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
                   ) : (
                     <PaperPlaneRightIcon
-                      size={22}
+                      size={18}
+                      className="md:w-[22px] md:h-[22px]"
                       weight="fill"
-                      className="ml-0.5"
                     />
                   )}
                 </motion.button>
               </div>
             </motion.div>
-            <div className="w-12 shrink-0" />
+            <div className="hidden md:block w-12 shrink-0" />
           </div>
-          <div className="flex justify-end px-4 mt-1 pl-6 pr-17">
+          <div className="flex justify-end px-4 mt-1 pl-4 md:pl-6 pr-4 md:pr-17">
             <span
               className={`text-[10px] ${inputValue.length >= 1000 ? "text-red-500 font-bold" : "text-gray-400"}`}
             >
