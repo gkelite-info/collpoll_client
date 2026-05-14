@@ -8,6 +8,9 @@ type UpsertIdentifierParams = {
   identifierValue: string;
 };
 
+const getEmployeeIdentifierType = (role: string) =>
+  role === "FinanceManager" ? "Finance Manager" : role;
+
 async function getExistingStudentPin(
   studentId: number,
   collegeId: number
@@ -90,6 +93,7 @@ export async function upsertIdentifier({
   }
 
   if (role !== "Parent") {
+    const employeeType = getEmployeeIdentifierType(role);
     const existing = await getExistingEmployeeId(
       userId,
       collegeId
@@ -100,7 +104,7 @@ export async function upsertIdentifier({
         .from("employee_ids")
         .update({
           employeeId: value,
-          employeeType: role as any,
+          employeeType,
           isActive: true,
           deletedAt: null,
           updatedAt: now,
@@ -117,7 +121,7 @@ export async function upsertIdentifier({
         userId,
         collegeId,
         employeeId: value,
-        employeeType: role as any,
+        employeeType,
         isActive: true,
         createdAt: now,
         updatedAt: now,

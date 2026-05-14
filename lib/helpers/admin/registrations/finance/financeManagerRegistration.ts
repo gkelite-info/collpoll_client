@@ -1,10 +1,13 @@
 import { supabase } from "@/lib/supabaseClient";
 
+export type FinanceManagerType = "executive" | "manager";
+
 export type CreateFinanceManagerPayload = {
   userId: number;
   collegeId: number;
   collegeEducationId: number;
-  createdBy: number; 
+  createdBy: number;
+  type?: FinanceManagerType;
   isActive?: boolean;
   createdAt: string;
   updatedAt: string;
@@ -13,6 +16,7 @@ export type CreateFinanceManagerPayload = {
 export const createFinanceManager = async (
   payload: CreateFinanceManagerPayload,
 ) => {
+  const financeManagerType = payload.type ?? "executive";
   const { data, error } = await supabase
     .from("finance_manager")
     .insert({
@@ -24,10 +28,17 @@ export const createFinanceManager = async (
       is_deleted: false,
       createdAt: payload.createdAt,
       updatedAt: payload.updatedAt,
+      type: financeManagerType,
     })
     .select("financeManagerId")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(
+      error.message ||
+        `Finance manager registration failed for type "${financeManagerType}".`,
+      { cause: error },
+    );
+  }
   return data.financeManagerId as number;
 };
