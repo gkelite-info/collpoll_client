@@ -448,7 +448,9 @@
       "Failed to remove file": "फ़ाइल हटाने में विफल",
       "An error occurred": "एक त्रुटि हुई",
       "Deadline :": "समय सीमा :",
-      "Submit Quiz": "क्विज़ जमा करें"
+      "Submit Quiz": "क्विज़ जमा करें",
+      "Attachments": "संलग्नक",
+      "Performance Summary": "प्रदर्शन सारांश"
     }
   },
   "Payments": {

@@ -481,7 +481,9 @@
       "Failed to remove file": "Failed to remove file",
       "An error occurred": "An error occurred",
       "Submit Quiz": "Submit Quiz",
-      "Deadline:": "Deadline:"
+      "Deadline:": "Deadline:",
+      "Attachments": "Attachments",
+      "Performance Summary": "Performance Summary"
     }
   },
   "Payments": {
