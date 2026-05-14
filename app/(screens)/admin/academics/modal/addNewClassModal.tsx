@@ -585,6 +585,10 @@ export default function AddNewClassModal({
             </div> */}
           </div>
 
+          <div className="mt-5 rounded-lg border border-[#BBF7D0] bg-[#F0FDF4] px-4 py-3 text-xs font-medium text-[#15803d]">
+            Note: Along with the topic name, a PDF is also generated.
+          </div>
+
           <div className="flex gap-4 mt-6">
             <button
               onClick={handleSave}

@@ -1,7 +1,6 @@
 "use client";
 import {
   ArrowLeft,
-  CalendarBlank,
   CheckCircleIcon,
   FilePdf,
   UserCircle,
@@ -13,16 +12,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CardProps, UnitTopic } from "./subjectCard";
 import { TopicPdfViewModal } from "./TopicPdfViewModal";
 import { useTranslations } from "next-intl";
-
-type Unit = {
-  id: number;
-  unitLabel: string;
-  title: string;
-  color: "purple" | "orange" | "blue";
-  dateRange: string;
-  percentage: number;
-  topics: string[];
-};
 
 const colorMap = {
   purple: {
@@ -165,7 +154,7 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
 
         <div className="flex-1 min-h-0 flex flex-col max-md:mt-0">
           <ul
-            className="flex-1 space-y-2 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 max-md:hidden"
+            className="custom-scrollbar h-[250px] space-y-2 overflow-y-auto pr-2 text-xs text-[#3F3F3F] md:text-sm max-md:hidden"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: `${colors.solidEnd} #f1f5f9`,
@@ -227,7 +216,11 @@ function UnitCard({ unit, onOpenTopicPdf }: UnitCardProps) {
                   collapsed: { opacity: 0, height: 0, marginTop: "0px" },
                 }}
                 transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-                className="hidden max-md:block space-y-2 text-xs text-[#3F3F3F] overflow-hidden"
+                className="custom-scrollbar hidden max-h-[240px] space-y-2 overflow-y-auto pr-2 text-xs text-[#3F3F3F] max-md:block"
+                style={{
+                  scrollbarWidth: "thin",
+                  scrollbarColor: `${colors.solidEnd} #f1f5f9`,
+                }}
               >
                 {unit.topics.length > 0 ? (
                   unit.topics.map((topic: UnitTopic) => (
@@ -333,6 +326,20 @@ export function SubjectDetailsCard({
           <span className="text-[#122A5E] font-medium text-sm max-md:bg-[#E8ECF3] max-md:px-3 max-md:py-1 max-md:rounded-full max-md:text-[13px]">
             {details.lecturer}
           </span>
+        </div>
+      </div>
+
+      <div className="mb-5 flex w-fit items-center gap-3 rounded-2xl border border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF5] to-white px-4 py-3 shadow-sm max-md:mb-4 max-md:w-full">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#43C17A]/15">
+          <FilePdf size={20} weight="duotone" className="text-[#16A34A]" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[#14532D]">
+            AI Generated Notes
+          </p>
+          <p className="text-xs font-medium text-[#4B5563]">
+            Topic-wise PDFs are generated along with the notes for quick study.
+          </p>
         </div>
       </div>
 

@@ -281,7 +281,7 @@ function UnitCard({
           </div>
 
           <ul
-            className="flex-1 space-y-1 text-xs md:text-sm text-[#3F3F3F] overflow-y-auto pr-2 pb-12"
+            className="custom-scrollbar h-[280px] space-y-1 overflow-y-auto pr-2 pb-12 text-xs text-[#3F3F3F] md:text-sm"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: `${colors.solidEnd} #f1f5f9`,
