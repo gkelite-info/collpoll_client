@@ -826,7 +826,7 @@ function AssignmentsLeftContent() {
                   className={`flex-1 pb-2 text-sm font-bold border-b-2 transition-colors ${quizView === "attempted" ? "border-[#43C17A] text-[#43C17A]" : "border-transparent text-gray-500"}`}
                   onClick={() => handleQuizViewChange("attempted")}
                 >
-                  {t("Attempted Quizzes")}
+                  {t("Questions Attempted")}
                 </button>
               </>
             )}
