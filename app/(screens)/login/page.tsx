@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { loginUser } from "@/lib/helpers/loginUser";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap } from "@phosphor-icons/react";
+import { EnvelopeSimple, Eye, EyeSlash, GraduationCap, Info, Lock, SpinnerGap, ArrowLeft, ArrowRight } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 
@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [current, setCurrent] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [showMobileLogin, setShowMobileLogin] = useState(false);
 
   type Slide = {
     heading: string;
@@ -75,13 +76,6 @@ export default function LoginPage() {
       image: "/loginslide10.png",
     },
   ];
-
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     setCurrent((prev) => (prev + 1) % slides.length);
-  //   }, 2500);
-  //   return () => clearInterval(interval);
-  // }, []);
 
   useEffect(() => {
     if (intervalRef.current) {
@@ -164,120 +158,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full h-full flex">
+    <div className="w-full h-[100dvh] flex overflow-hidden relative">
+      {/* <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center py-6 overflow-hidden"> */}
 
-      {/* <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col justify-between items-center py-6">
-        <div className="w-full flex flex-col bg-red-00 justify-between items-center flex-shrink-0 mt-2 md:mt-2">
-          <div className="w-full z-20 px-8 flex flex-col items-center text-center">
-            <div className="flex flex-col items-center">
-              <img
-                src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
-                height={85}
-                width={85}
-                alt=""
-                className="rounded-full bg-transparent"
-              />
-              <h1 className="text-gray-700 text-[11px] font-bold tracking-wide mt-1">Powered by GK Elite-Info</h1>
-            </div>
-            
-
-            <div className="mt-5 w-full overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={current}
-                  initial={{ opacity: 0, x: 60 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 60 }}
-                  transition={{
-                    duration: 0.45,
-                    ease: [0.22, 1, 0.36, 1]
-                  }}
-                >
-                  <h2 className="text-[19px] leading-tight font-bold text-[#1B4D3E]">
-                    {slides[current].heading}
-                  </h2>
-
-                  <p className="text-[#1F3D2F] text-[13.5px] mt-2 w-full opacity-90">
-                    {slides[current].para}
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-          </div>
-
-          <div className="flex justify-center items-center w-full h-[380px] sm:h-[400px] md:h-[400px] bg-red-00 mt-10">
-            {slides.map((slide, idx) => {
-              let position = "hidden";
-              if (idx === current) position = "center";
-              else if (idx === (current - 1 + slides.length) % slides.length) position = "left";
-              else if (idx === (current + 1) % slides.length) position = "right";
-
-              const positionStyles: any = {
-                center: "rotate-0 opacity-100 z-10",
-                left: "-rotate-[40deg] opacity-0 z-0",
-                right: "rotate-[40deg] opacity-0 z-0",
-                hidden: "opacity-0 pointer-events-none",
-              };
-
-              return (
-                <div
-                  key={idx}
-                  className={`absolute bottom-[-30px] bg-green-00 mx-auto mt-10 left-1/2 w-[85%] max-w-[380px] flex items-center justify-center transition-all duration-700 ease-in-out origin-bottom pointer-events-none ${positionStyles[position]}`}
-                  style={{
-                    transform: `translateX(-50%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                      }deg) translateY(-220px)`,
-                  }}
-                >
-                  <div
-                    className="absolute w-[110%] h-[120%] opacity-80 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mt-1.5 z-[-1] transition-all duration-700 ease-in-out"
-                    style={{
-                      transform: `translate(0%, 25%) rotate(${position === "left" ? -40 : position === "right" ? 40 : 0
-                        }deg)`,
-                    }}
-                  />
-                  <div className="relative w-full aspect-4/3 rounded-2xl flex items-center justify-center p-2.5">
-                    <img
-                      src={encodeURI(slide.image)}
-                      alt={`Slide ${idx + 1}`}
-                      className="w-full h-full object-cover rounded-[14px]"
-                      loading="lazy"
-                    />
-                    
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        
-        <div className="flex-grow w-full"></div>
-
-        
-        <div className="flex gap-4 z-20 shrink-0 mb-8">
-          {slides.map((_, i) => (
-            <div
-              key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${current === i
-                ? "w-16 bg-[#1A5D3C]"
-                : "w-4 bg-white/60 border border-white/40"
-                }`}
-            />
-          ))}
-        </div>
-      </div> */}
-
-      <div className="w-[35%] h-screen sticky top-0 bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center py-6 overflow-hidden">
+      <div className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[35%] xl:w-[35%] h-full bg-linear-to-b from-[#6AE18B] to-[#B7F3CB] flex flex-col items-center pt-6 pb-4 overflow-hidden transition-transform duration-500 ease-in-out ${showMobileLogin ? '-translate-x-full lg:landscape:translate-x-0 xl:translate-x-0' : 'translate-x-0'}`}>
         <div className="w-full z-20 px-8 flex flex-col items-center text-center shrink-0">
           <div className="flex flex-col items-center">
-            {/* <img
-              src='https://png.pngtree.com/png-vector/20230306/ourmid/pngtree-scool-college-logo-victor-vector-png-image_6634445.png'
-              // src='/tekton-logo.jpeg'
-              height={85}
-              width={85}
-              alt=""
-              className="rounded-full bg-transparent"
-            /> */}
             <Image
               src='/login-logo.png'
               height={85}
@@ -312,7 +198,7 @@ export default function LoginPage() {
         </div>
 
         <div
-          className="relative w-full flex-1 min-h-0 mt-8 overflow-hidden"
+          className="relative w-full flex-1 min-h-[250px] mt-4 mb-4 overflow-hidden flex items-center justify-center"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
@@ -322,13 +208,6 @@ export default function LoginPage() {
             else if (idx === (current - 1 + slides.length) % slides.length) position = "left";
             else if (idx === (current + 1) % slides.length) position = "right";
 
-            const rotateMap: Record<string, number> = {
-              center: 0,
-              left: -40,
-              right: 40,
-              hidden: 0,
-            };
-
             const opacityMap: Record<string, number> = {
               center: 1,
               left: 0,
@@ -337,23 +216,20 @@ export default function LoginPage() {
             };
 
             const transformMap: Record<string, string> = {
-              center: "translate(-50%, 0px) rotate(0deg)",
-              right: "translate(-30%, 60px) rotate(35deg)",
-              left: "translate(-70%, 60px) rotate(-35deg)",
-              hidden: "translate(-50%, 80px) rotate(0deg)",
+              center: "translate(-50%, -50%) rotate(0deg) scale(1)",
+              right: "translate(-20%, -30%) rotate(25deg) scale(0.85)",
+              left: "translate(-80%, -30%) rotate(-25deg) scale(0.85)",
+              hidden: "translate(-50%, -20%) rotate(0deg) scale(0.75)",
             };
 
-            const rotate = rotateMap[position];
             const opacity = opacityMap[position];
             const transformValue = transformMap[position];
 
             return (
               <div
                 key={idx}
-                className="absolute left-1/2 w-[85%] max-w-[340px] transition-all duration-900 ease-in-out origin-bottom pointer-events-none"
+                className="absolute left-1/2 top-1/2 w-[90%] sm:w-[85%] md:w-[75%] max-w-[360px] sm:max-w-[500px] md:max-w-[560px] xl:max-w-[500px] 2xl:max-w-[560px] transition-all duration-900 ease-in-out origin-center pointer-events-none"
                 style={{
-                  top: "0px",
-                  // transform: `translateX(-50%) rotate(${rotate}deg)`,
                   transform: transformValue,
                   opacity,
                   zIndex: position === "center" ? 10 : 0,
@@ -388,10 +264,23 @@ export default function LoginPage() {
           ))}
         </div>
 
+        <div className="mt-auto pt-6 pb-3 lg:landscape:hidden xl:hidden w-full px-8 sm:px-16 md:px-24 z-20 shrink-0">
+          <button
+            onClick={() => setShowMobileLogin(true)}
+            className="group relative w-full py-2.5 flex items-center justify-center gap-2 rounded-xl text-[16px] font-bold tracking-wide text-white bg-[#16284F] max-w-xs mx-auto hover:from-[#13382c] hover:to-[#1B4D3E] shadow-[0_8px_20px_-6px_rgba(27,77,62,0.5)] hover:shadow-[0_12px_24px_-8px_rgba(27,77,62,0.6)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              Proceed to Login
+              <ArrowRight size={20} weight="bold" className="group-hover:translate-x-1 transition-transform" />
+            </span>
+            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </button>
+        </div>
+
       </div>
 
       <div
-        className="w-[65%] h-screen flex justify-center items-center relative"
+        className={`absolute lg:landscape:relative xl:relative z-10 lg:landscape:z-auto xl:z-auto w-full lg:landscape:w-[65%] xl:w-[65%] h-full flex justify-center items-center transition-transform duration-500 ease-in-out ${showMobileLogin ? 'translate-x-0' : 'translate-x-full lg:landscape:translate-x-0 xl:translate-x-0'}`}
         style={{
           backgroundImage: "url('/loginpagebg.webp')",
           backgroundSize: "cover",
@@ -401,8 +290,18 @@ export default function LoginPage() {
       >
         <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
 
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 lg:landscape:hidden xl:hidden z-20">
+          <button
+            onClick={() => setShowMobileLogin(false)}
+            className="group flex items-center gap-1.5 sm:gap-2 text-white/90 hover:text-white transition-all bg-black/20 hover:bg-black/40 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl backdrop-blur-md border border-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.2)] hover:-translate-x-1"
+          >
+            <ArrowLeft size={16} weight="bold" className="group-hover:-translate-x-0.5 transition-transform sm:w-[18px] sm:h-[18px]" />
+            <span className="font-semibold text-[12px] sm:text-[13.5px] tracking-wide">Back to slides</span>
+          </button>
+        </div>
+
         <div
-          className="relative z-10 w-[520px]"
+          className="relative z-10 w-[90%] sm:w-[80%] lg:w-[480px] xl:w-[520px] px-5 py-6 sm:px-10 sm:py-10 max-h-[85dvh] sm:max-h-[95dvh] mt-12 sm:mt-0 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{
             background: "rgba(255, 255, 255, 0.1)",
             backdropFilter: "blur(8px) saturate(140%)",
@@ -411,7 +310,6 @@ export default function LoginPage() {
             border: "1px solid rgba(255, 255, 255, 0.2)",
             boxShadow:
               "0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
-            padding: "40px 44px",
           }}
         >
           <div className="flex justify-center mb-6">
@@ -420,7 +318,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-[22px] font-semibold text-white text-center tracking-tight drop-shadow-md">
+          <h1 className="text-[20px] md:text-[22px] font-semibold text-white text-center tracking-tight drop-shadow-md">
             Login to Your Account
           </h1>
           <p className="text-[13px] text-white/80 text-center mt-1 mb-6 drop-shadow-sm">
@@ -499,7 +397,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="flex items-start justify-between mt-4 gap-4">
+          {/* <div className="flex items-start justify-between mt-4 gap-4">
             <div className="flex items-center gap-1.5">
               <Info size={15} className="shrink-0 text-amber-300 mt-[2px]" />
               <p className="text-[11.5px] text-white/70 leading-snug">
@@ -512,6 +410,24 @@ export default function LoginPage() {
             >
               Forgot Password?
             </Link>
+          </div> */}
+
+          <div className="flex flex-col-reverse sm:flex-row items-end sm:items-start justify-between mt-4 gap-3 sm:gap-4">
+
+            <div className="flex items-start gap-1.5 w-full sm:w-auto">
+              <Info size={15} className="shrink-0 text-amber-300 mt-[2px]" />
+              <p className="text-[11.5px] text-white/70 leading-snug">
+                New account? Verify your email before logging in. Check inbox or spam.
+              </p>
+            </div>
+
+            <Link
+              href="/forgot-password"
+              className="text-[12.5px] text-white hover:text-white/80 cursor-pointer whitespace-nowrap shrink-0 font-medium underline underline-offset-2 transition-colors self-end sm:self-auto pb-1 sm:pb-0"
+            >
+              Forgot Password?
+            </Link>
+
           </div>
 
           <div
