@@ -162,6 +162,16 @@ export default function WellbeingExecutiveNavbar({
     [pathname, router],
   );
 
+  const handleNavigate = useCallback(
+    (path: string) => {
+      if (path !== pathname) {
+        window.dispatchEvent(new Event("wellbeing-route-loading"));
+      }
+      onClose?.();
+    },
+    [onClose, pathname],
+  );
+
   const isActivePath = (itemPath: string) => {
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
     return pathname.startsWith(itemPath);
@@ -207,7 +217,7 @@ export default function WellbeingExecutiveNavbar({
               <Link
                 key={item.path}
                 href={item.path}
-                onClick={() => onClose?.()}
+                onClick={() => handleNavigate(item.path)}
                 onFocus={() => prefetchRoute(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
@@ -254,7 +264,7 @@ export default function WellbeingExecutiveNavbar({
               {showExecutiveMenu ? (
                 <Link
                   href={`${base}/executives`}
-                  onClick={() => onClose?.()}
+                  onClick={() => handleNavigate(`${base}/executives`)}
                   onFocus={() => prefetchRoute(`${base}/executives`)}
                   onMouseEnter={() => prefetchRoute(`${base}/executives`)}
                   onTouchStart={() => prefetchRoute(`${base}/executives`)}
