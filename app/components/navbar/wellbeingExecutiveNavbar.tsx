@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDots,
@@ -18,7 +18,7 @@ import {
   UsersThree,
   X,
 } from "@phosphor-icons/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import ConfirmLogoutModal from "../modals/logoutModal";
 import { logoutUser } from "@/lib/helpers/logoutUser";
@@ -45,6 +45,7 @@ export default function WellbeingExecutiveNavbar({
   showLeaveRequest = true,
 }: WellbeingExecutiveNavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const base = basePath;
   const iconSize = 18;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -152,6 +153,15 @@ export default function WellbeingExecutiveNavbar({
     [base, showLeaveRequest],
   );
 
+  const prefetchRoute = useCallback(
+    (path: string) => {
+      if (path !== pathname) {
+        router.prefetch(path);
+      }
+    },
+    [pathname, router],
+  );
+
   const isActivePath = (itemPath: string) => {
     if (itemPath === base) return pathname === base || pathname.startsWith("/profile");
     return pathname.startsWith(itemPath);
@@ -198,6 +208,9 @@ export default function WellbeingExecutiveNavbar({
                 key={item.path}
                 href={item.path}
                 onClick={() => onClose?.()}
+                onFocus={() => prefetchRoute(item.path)}
+                onMouseEnter={() => prefetchRoute(item.path)}
+                onTouchStart={() => prefetchRoute(item.path)}
                 className={`group relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${
                   active
                     ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
@@ -242,6 +255,9 @@ export default function WellbeingExecutiveNavbar({
                 <Link
                   href={`${base}/executives`}
                   onClick={() => onClose?.()}
+                  onFocus={() => prefetchRoute(`${base}/executives`)}
+                  onMouseEnter={() => prefetchRoute(`${base}/executives`)}
+                  onTouchStart={() => prefetchRoute(`${base}/executives`)}
                   className={`mt-1 flex min-h-[34px] w-full items-center rounded-md px-8 text-[13px] font-semibold transition-all duration-200 ${
                     pathname.startsWith(`${base}/executives`)
                       ? "bg-[#F4F4F4] text-[#43C17A]"
