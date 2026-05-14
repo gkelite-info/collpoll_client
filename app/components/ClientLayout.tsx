@@ -258,6 +258,7 @@ export default function ClientLayout({
                 onMenuClick={handleMenuClick}
                 onAddTaskClick={handleAddTaskClick}
                 onAddUserClick={handleAddUserClick}
+                isSidebarOpen={isSidebarOpen}
               />
             </div>
 

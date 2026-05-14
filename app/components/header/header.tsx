@@ -362,11 +362,22 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               >
                 <Megaphone size={20} color="#282828" className="cursor-pointer" />
               </button>
-              <div className="flex items-center gap-2">
-                <Avatar
-                  alt=""
-                  sizes="w-8 h-8 md:w-10 md:h-10"
-                />
+              <div 
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setOpenProfile(true)}
+              >
+                {profilePhoto ? (
+                  <img
+                    src={profilePhoto}
+                    alt="profile"
+                    className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <Avatar
+                    alt=""
+                    sizes="w-8 h-8 md:w-10 md:h-10"
+                  />
+                )}
                 <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
               </div>
             </div>
