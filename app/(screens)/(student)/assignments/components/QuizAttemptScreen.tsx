@@ -6,7 +6,10 @@
 // import { fetchQuestionsWithOptionsByQuizId } from "@/lib/helpers/quiz/quizQuestionAPI";
 // import toast from "react-hot-toast";
 // import { saveBulkSubmissionAnswers } from "@/lib/helpers/quiz/quizSubmissionAnswerAPI";
-// import { getStudentAttemptCount, saveQuizSubmission } from "@/lib/helpers/quiz/quizSubmissionAPI";
+// import {
+//   getStudentAttemptCount,
+//   saveQuizSubmission,
+// } from "@/lib/helpers/quiz/quizSubmissionAPI";
 // import { useStudent } from "@/app/utils/context/student/useStudent";
 // import { QuizAttemptShimmer } from "./shimmer/QuizAttemptShimmer";
 // import { fetchQuizById } from "@/lib/helpers/quiz/quizAPI";
@@ -16,9 +19,16 @@
 //   getSessionStartTime,
 // } from "@/lib/helpers/quiz/quizSessionAPI";
 // import { motion, AnimatePresence } from "framer-motion";
-// import { XCircle } from "@phosphor-icons/react";
+// import {
+//   ArrowLeft,
+//   CaretLeftIcon,
+//   CheckCircle,
+//   Question,
+//   XCircle,
+// } from "@phosphor-icons/react";
+// import { AttemptedQuizCard } from "./quizCard";
+// import { useTranslations } from "next-intl";
 
-// // ─── Exit Warning Modal ───────────────────────────────────────────────────────
 // function QuizExitWarningModal({
 //   countdown,
 //   onStay,
@@ -28,6 +38,7 @@
 //   onStay: () => void;
 //   onSubmit: () => void;
 // }) {
+//   const t = useTranslations("Assignment.student");
 //   return (
 //     <AnimatePresence>
 //       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -44,17 +55,20 @@
 //           className="relative bg-white rounded-2xl w-full max-w-[420px] p-8 shadow-2xl border border-gray-100"
 //         >
 //           <div className="flex flex-col items-center text-center mt-2">
-//             {/* ✅ Countdown ring */}
 //             <div className="relative w-20 h-20 mb-5">
 //               <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
 //                 <circle
-//                   cx="40" cy="40" r="34"
+//                   cx="40"
+//                   cy="40"
+//                   r="34"
 //                   fill="none"
 //                   stroke="#fee2e2"
 //                   strokeWidth="6"
 //                 />
 //                 <circle
-//                   cx="40" cy="40" r="34"
+//                   cx="40"
+//                   cy="40"
+//                   r="34"
 //                   fill="none"
 //                   stroke="#ef4444"
 //                   strokeWidth="6"
@@ -72,21 +86,18 @@
 //             </div>
 
 //             <h3 className="text-xl font-bold text-gray-900 mb-2">
-//               ⚠️ Don't Switch Tabs!
+//               ⚠️ {t("Don't Switch Tabs!")}
 //             </h3>
 
 //             <p className="text-[15px] text-gray-500 mb-2 leading-relaxed">
-//               You switched away from the quiz window. Your quiz will be{" "}
-//               <span className="font-semibold text-red-500">
-//                 automatically submitted
-//               </span>{" "}
-//               in{" "}
-//               <span className="font-bold text-red-600">{countdown} seconds</span>{" "}
-//               if you don't return.
+//               {t(
+//                 "You switched away from the quiz window Your quiz will be automatically submitted in {countdown} seconds if you don't return",
+//                 { countdown },
+//               )}
 //             </p>
 
 //             <p className="text-xs text-gray-400 mb-8">
-//               Switching tabs or windows during a quiz is not allowed.
+//               {t("Switching tabs or windows during a quiz is not allowed")}
 //             </p>
 
 //             <div className="flex gap-3 w-full">
@@ -94,13 +105,13 @@
 //                 onClick={onSubmit}
 //                 className="flex-1 px-4 py-3 font-semibold text-white rounded-xl bg-red-500 hover:bg-red-600 transition-all cursor-pointer"
 //               >
-//                 Submit Now
+//                 {t("Submit Now")}
 //               </button>
 //               <button
 //                 onClick={onStay}
 //                 className="flex-1 px-4 py-3 font-semibold text-white rounded-xl bg-[#43C17A] hover:bg-green-600 transition-all cursor-pointer"
 //               >
-//                 Return to Quiz
+//                 {t("Return to Quiz")}
 //               </button>
 //             </div>
 //           </div>
@@ -118,6 +129,7 @@
 //   onConfirm: () => void;
 //   onCancel: () => void;
 // }) {
+//   const t = useTranslations("Assignment.student");
 //   return (
 //     <AnimatePresence>
 //       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
@@ -138,26 +150,25 @@
 //               <XCircle size={32} weight="duotone" className="text-[#FF2A2A]" />
 //             </div>
 //             <h3 className="text-xl font-bold text-gray-900 mb-2">
-//               Quiz Interrupted
+//               {t("Quiz Interrupted")}
 //             </h3>
 //             <p className="text-[15px] text-gray-500 mb-8 leading-relaxed">
-//               Your quiz session was interrupted due to a{" "}
-//               <span className="font-semibold text-gray-700">page refresh</span>.
-//               Your progress has been auto-submitted. Please check your attempted
-//               quizzes or retry from ongoing quizzes.
+//               {t(
+//                 "Your quiz session was interrupted due to a page refresh Your progress has been auto-submitted Please check your attempted quizzes or retry from ongoing quizzes",
+//               )}
 //             </p>
 //             <div className="flex gap-3 w-full">
 //               <button
 //                 onClick={onCancel}
 //                 className="w-full px-4 py-3 font-semibold text-gray-700 rounded-xl border border-gray-300 hover:bg-gray-100 transition-all cursor-pointer"
 //               >
-//                 Stay Here
+//                 {t("Stay Here")}
 //               </button>
 //               <button
 //                 onClick={onConfirm}
 //                 className="w-full px-4 py-3 font-semibold text-white rounded-xl transition-all bg-[#16284F] hover:bg-opacity-90 shadow-sm shadow-slate-200 cursor-pointer"
 //               >
-//                 Go to Ongoing Quizzes
+//                 {t("Go to Ongoing Quizzes")}
 //               </button>
 //             </div>
 //           </div>
@@ -167,10 +178,8 @@
 //   );
 // }
 
-// // ─── Session storage key ──────────────────────────────────────────────────────
 // const QUIZ_SESSION_KEY = "quiz_in_progress";
 
-// // ─── Main component ───────────────────────────────────────────────────────────
 // function QuizAttemptScreenContent({
 //   quiz,
 //   onSubmitSuccess,
@@ -181,16 +190,20 @@
 //   const router = useRouter();
 //   const pathname = usePathname();
 //   const searchParams = useSearchParams();
+//   const t = useTranslations("Assignment.student"); // Hook
 
 //   const [questions, setQuestions] = useState<any[]>([]);
-//   const [answers, setAnswers] = useState<Record<number, { optionId?: number; writtenAnswer?: string }>>({});
+//   const [answers, setAnswers] = useState<
+//     Record<number, { optionId?: number; writtenAnswer?: string }>
+//   >({});
 //   const [isLoading, setIsLoading] = useState(true);
 //   const [isSubmitting, setIsSubmitting] = useState(false);
 //   const { studentId } = useStudent();
 
 //   const [quizMeta, setQuizMeta] = useState<any>(null);
 //   const maxAttempts = quizMeta?.maxAttempts ?? quiz?.maxAttempts ?? 3;
-//   const durationMinutes = quizMeta?.durationMinutes ?? quiz?.durationMinutes ?? 30;
+//   const durationMinutes =
+//     quizMeta?.durationMinutes ?? quiz?.durationMinutes ?? 30;
 
 //   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 //   const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
@@ -198,13 +211,13 @@
 //   const [alreadyAttempted, setAlreadyAttempted] = useState(false);
 //   const [showRefreshModal, setShowRefreshModal] = useState(false);
 
-//   // ✅ Exit warning modal states
 //   const [showExitWarningModal, setShowExitWarningModal] = useState(false);
 //   const [warningCountdown, setWarningCountdown] = useState(10);
 //   const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-//   // ─── Refs ─────────────────────────────────────────────────────────────────
-//   const answersRef = useRef<Record<number, { optionId?: number; writtenAnswer?: string }>>({});
+//   const answersRef = useRef<
+//     Record<number, { optionId?: number; writtenAnswer?: string }>
+//   >({});
 //   const questionsRef = useRef<any[]>([]);
 //   const attemptCountRef = useRef(0);
 //   const isSubmittingRef = useRef(false);
@@ -215,16 +228,28 @@
 //   const quizMetaRef = useRef<any>(null);
 //   const tabSwitchCountRef = useRef(0);
 
-//   // ─── Keep refs in sync ────────────────────────────────────────────────────
-//   useEffect(() => { answersRef.current = answers; }, [answers]);
-//   useEffect(() => { questionsRef.current = questions; }, [questions]);
-//   useEffect(() => { attemptCountRef.current = attemptCount; }, [attemptCount]);
-//   useEffect(() => { isSubmittingRef.current = isSubmitting; }, [isSubmitting]);
-//   useEffect(() => { hasAutoSubmittedRef.current = hasAutoSubmitted; }, [hasAutoSubmitted]);
-//   useEffect(() => { studentIdRef.current = studentId; }, [studentId]);
-//   useEffect(() => { quizMetaRef.current = quizMeta; }, [quizMeta]);
+//   useEffect(() => {
+//     answersRef.current = answers;
+//   }, [answers]);
+//   useEffect(() => {
+//     questionsRef.current = questions;
+//   }, [questions]);
+//   useEffect(() => {
+//     attemptCountRef.current = attemptCount;
+//   }, [attemptCount]);
+//   useEffect(() => {
+//     isSubmittingRef.current = isSubmitting;
+//   }, [isSubmitting]);
+//   useEffect(() => {
+//     hasAutoSubmittedRef.current = hasAutoSubmitted;
+//   }, [hasAutoSubmitted]);
+//   useEffect(() => {
+//     studentIdRef.current = studentId;
+//   }, [studentId]);
+//   useEffect(() => {
+//     quizMetaRef.current = quizMeta;
+//   }, [quizMeta]);
 
-//   // ─── Detect page refresh ──────────────────────────────────────────────────
 //   useEffect(() => {
 //     const wasInQuiz = sessionStorage.getItem(QUIZ_SESSION_KEY);
 //     if (wasInQuiz) {
@@ -250,7 +275,6 @@
 //     setShowRefreshModal(false);
 //   }, []);
 
-//   // ─── waitForNetwork ───────────────────────────────────────────────────────
 //   async function waitForNetwork(maxWaitMs = 10000): Promise<boolean> {
 //     const interval = 500;
 //     let waited = 0;
@@ -262,7 +286,6 @@
 //     return navigator.onLine;
 //   }
 
-//   // ─── handleSubmit via stable ref ──────────────────────────────────────────
 //   const handleSubmitRef = useRef<(() => Promise<void>) | null>(null);
 
 //   handleSubmitRef.current = async () => {
@@ -270,7 +293,7 @@
 //     const currentQuizId = quizIdRef.current;
 
 //     if (!currentStudentId || !currentQuizId) {
-//       toast.error("Missing student or quiz info");
+//       toast.error(t("Missing student or quiz info"));
 //       return;
 //     }
 
@@ -279,13 +302,12 @@
 
 //     if (isSubmittingRef.current) return;
 
-//     // ✅ Wait for network before attempting submission
-//     toast("Checking connection...", { icon: "⏳", id: "submitting" });
+//     toast(t("Checking connection..."), { icon: "⏳", id: "submitting" });
 //     const isOnline = await waitForNetwork(10000);
 //     toast.dismiss("submitting");
 
 //     if (!isOnline) {
-//       toast.error("No internet connection. Please reconnect and try again.");
+//       toast.error(t("No internet connection Please reconnect and try again"));
 //       isSubmitCalledRef.current = false;
 //       return;
 //     }
@@ -325,7 +347,7 @@
 //             !!answer?.writtenAnswer &&
 //             !!correctOption?.optionText &&
 //             answer.writtenAnswer.trim().toLowerCase() ===
-//             correctOption.optionText.trim().toLowerCase();
+//               correctOption.optionText.trim().toLowerCase();
 //           if (isCorrect) totalMarksObtained += marksPerQuestion;
 //           return {
 //             questionId: q.questionId,
@@ -345,7 +367,7 @@
 //       });
 
 //       if (!submissionResult.success || !submissionResult.submissionId) {
-//         toast.error("Failed to submit quiz");
+//         toast.error(t("Failed to submit quiz"));
 //         isSubmitCalledRef.current = false;
 //         return;
 //       }
@@ -362,11 +384,10 @@
 //       );
 
 //       sessionStorage.removeItem(QUIZ_SESSION_KEY);
-//       toast.success("Quiz submitted successfully!");
+//       toast.success(t("Quiz submitted successfully!"));
 //       onSubmitSuccess?.();
 //     } catch (err) {
-//       console.error("handleSubmit error:", err);
-//       toast.error("Something went wrong");
+//       toast.error(t("Something went wrong"));
 //       isSubmitCalledRef.current = false;
 //     } finally {
 //       setIsSubmitting(false);
@@ -378,7 +399,6 @@
 //     handleSubmitRef.current?.();
 //   }, []);
 
-//   // ─── Exit warning handlers ────────────────────────────────────────────────
 //   const handleExitWarningStay = useCallback(() => {
 //     setShowExitWarningModal(false);
 //     setWarningCountdown(10);
@@ -401,7 +421,6 @@
 //     triggerSubmit();
 //   }, [triggerSubmit]);
 
-//   // ─── Load quiz data ───────────────────────────────────────────────────────
 //   useEffect(() => {
 //     if (showRefreshModal) return;
 //     if (!quiz?.id || !studentId) return;
@@ -444,8 +463,7 @@
 
 //         setTimeLeft(remaining <= 0 ? 0 : remaining);
 //       } catch (err) {
-//         console.error("load error:", err);
-//         toast.error("Failed to load quiz");
+//         toast.error(t("Failed to load quiz"));
 //       } finally {
 //         setIsLoading(false);
 //       }
@@ -454,7 +472,6 @@
 //     load();
 //   }, [quiz?.id, studentId, showRefreshModal]);
 
-//   // ─── autoSubmitOnce ───────────────────────────────────────────────────────
 //   const autoSubmitOnce = useCallback(() => {
 //     if (hasAutoSubmittedRef.current) return;
 //     hasAutoSubmittedRef.current = true;
@@ -462,7 +479,6 @@
 //     triggerSubmit();
 //   }, [triggerSubmit]);
 
-//   // ─── Warning countdown when modal opens ──────────────────────────────────
 //   useEffect(() => {
 //     if (!showExitWarningModal) return;
 
@@ -491,7 +507,6 @@
 //     };
 //   }, [showExitWarningModal, triggerSubmit]);
 
-//   // ─── Timer + Visibility — single effect ──────────────────────────────────
 //   useEffect(() => {
 //     if (isLoading || timeLeft === null) return;
 
@@ -521,7 +536,6 @@
 //       }
 
 //       if (document.visibilityState === "visible") {
-//         // ✅ Wait briefly for network to reconnect
 //         await new Promise((resolve) => setTimeout(resolve, 1500));
 
 //         try {
@@ -556,13 +570,10 @@
 //           }
 
 //           hiddenAt = null;
-//         } catch (err) {
-//           console.error("visibility recalc error:", err);
-//         }
+//         } catch (err) {}
 //       }
 //     };
 
-//     // ✅ Poll every 10s as fallback for lid close
 //     const pollTimer = setInterval(async () => {
 //       try {
 //         const currentQuizId = quizIdRef.current;
@@ -592,9 +603,7 @@
 //           setTimeLeft(0);
 //           setTimeout(() => autoSubmitOnce(), 0);
 //         }
-//       } catch (err) {
-//         console.error("poll timer error:", err);
-//       }
+//       } catch (err) {}
 //     }, 10000);
 
 //     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -606,7 +615,6 @@
 //     };
 //   }, [isLoading, timeLeft === null, autoSubmitOnce]);
 
-//   // ─── Navigation lock ──────────────────────────────────────────────────────
 //   useEffect(() => {
 //     if (isLoading) return;
 
@@ -617,7 +625,7 @@
 //       if (!hasAutoSubmittedRef.current && !isSubmittingRef.current) {
 //         hasAutoSubmittedRef.current = true;
 //         setHasAutoSubmitted(true);
-//         toast("Quiz auto-submitted on back navigation.", { icon: "⚠️" });
+//         toast(t("Quiz auto-submitted on back navigation"), { icon: "⚠️" });
 //         triggerSubmit();
 //       }
 //     };
@@ -633,7 +641,7 @@
 //         if (!hasAutoSubmittedRef.current && !isSubmittingRef.current) {
 //           hasAutoSubmittedRef.current = true;
 //           setHasAutoSubmitted(true);
-//           toast("Quiz auto-submitted on navigation.", { icon: "⚠️" });
+//           toast(t("Quiz auto-submitted on navigation"), { icon: "⚠️" });
 //           triggerSubmit();
 //         }
 //       }
@@ -641,7 +649,7 @@
 
 //     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
 //       e.preventDefault();
-//       e.returnValue = "Your quiz is in progress. Leaving will auto-submit.";
+//       e.returnValue = t("Your quiz is in progress Leaving will auto-submit");
 //     };
 
 //     window.addEventListener("popstate", handlePopState);
@@ -676,17 +684,21 @@
 //     return () => window.removeEventListener("blur", handleWindowBlur);
 //   }, [isLoading, triggerSubmit]);
 
-//   // ─── Helpers ──────────────────────────────────────────────────────────────
 //   const handleOptionChange = (questionId: number, optionId: number) => {
 //     setAnswers((prev: any) => ({ ...prev, [questionId]: { optionId } }));
 //   };
 
 //   const handleWrittenAnswerChange = (questionId: number, text: string) => {
-//     setAnswers((prev: any) => ({ ...prev, [questionId]: { writtenAnswer: text } }));
+//     setAnswers((prev: any) => ({
+//       ...prev,
+//       [questionId]: { writtenAnswer: text },
+//     }));
 //   };
 
 //   const formatTime = (seconds: number) => {
-//     const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+//     const m = Math.floor(seconds / 60)
+//       .toString()
+//       .padStart(2, "0");
 //     const s = (seconds % 60).toString().padStart(2, "0");
 //     return `${m}:${s}`;
 //   };
@@ -698,14 +710,17 @@
 //     timerPercent > 50
 //       ? { bg: "bg-[#182142]", text: "text-[#87cefa]", ring: "border-[#87cefa]" }
 //       : timerPercent > 20
-//         ? { bg: "bg-[#7a4a00]", text: "text-yellow-300", ring: "border-yellow-300" }
+//         ? {
+//             bg: "bg-[#7a4a00]",
+//             text: "text-yellow-300",
+//             ring: "border-yellow-300",
+//           }
 //         : { bg: "bg-[#5c1010]", text: "text-red-400", ring: "border-red-400" };
 
 //   const progressCount = Object.keys(answers).length;
 //   const progressPercentage =
 //     questions.length > 0 ? (progressCount / questions.length) * 100 : 0;
 
-//   // ─── Renders ──────────────────────────────────────────────────────────────
 //   if (showRefreshModal) {
 //     return (
 //       <QuizRefreshModal
@@ -722,12 +737,14 @@
 //           <div className="w-16 h-16 rounded-full bg-[#D5FFE7] flex items-center justify-center">
 //             <span className="text-3xl">✅</span>
 //           </div>
-//           <h2 className="text-xl font-bold text-[#282828]">All Attempts Used!</h2>
+//           <h2 className="text-xl font-bold text-[#282828]">
+//             {t("All Attempts Used!")}
+//           </h2>
 //           <p className="text-sm text-gray-500 text-center">
-//             You have used all{" "}
-//             <span className="font-bold text-[#282828]">{maxAttempts} attempts</span>{" "}
-//             for this quiz.
-//             <br /> Check your score in Attempted Quizzes.
+//             {t(
+//               "You have used all {count} attempts for this quiz Check your score in Attempted Quizzes",
+//               { count: maxAttempts },
+//             )}
 //           </p>
 //           <button
 //             onClick={() => {
@@ -740,7 +757,7 @@
 //             }}
 //             className="bg-[#43C17A] text-white px-6 py-2 rounded-md font-bold text-sm cursor-pointer hover:bg-[#35a868] transition-colors"
 //           >
-//             View Attempted Quizzes
+//             {t("View Attempted Quizzes")}
 //           </button>
 //         </div>
 //       </div>
@@ -751,8 +768,6 @@
 
 //   return (
 //     <div className="flex flex-col h-full bg-[#f4f4f4] rounded-lg -m-2 p-4 relative">
-
-//       {/* ✅ Exit warning modal */}
 //       {showExitWarningModal && (
 //         <QuizExitWarningModal
 //           countdown={warningCountdown}
@@ -773,24 +788,28 @@
 //           </p>
 //         </div>
 
-//         {/* 🕐 Colorful Timer */}
 //         <div
 //           className={`flex flex-col items-center gap-1 ${timerColor.bg} px-4 py-2 rounded-xl border ${timerColor.ring} border-opacity-40 min-w-[90px]`}
 //         >
-//           <span className={`text-[10px] font-semibold uppercase tracking-widest ${timerColor.text} opacity-70`}>
-//             Time Left
+//           <span
+//             className={`text-[10px] font-semibold uppercase tracking-widest ${timerColor.text} opacity-70`}
+//           >
+//             {t("Time Left")}
 //           </span>
-//           <span className={`font-bold text-2xl tabular-nums ${timerColor.text}`}>
+//           <span
+//             className={`font-bold text-2xl tabular-nums ${timerColor.text}`}
+//           >
 //             {timeLeft !== null ? formatTime(timeLeft) : "--:--"}
 //           </span>
 //           <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden mt-0.5">
 //             <div
-//               className={`h-full rounded-full transition-all duration-1000 ${timerPercent > 50
-//                 ? "bg-[#87cefa]"
-//                 : timerPercent > 20
-//                   ? "bg-yellow-300"
-//                   : "bg-red-400"
-//                 }`}
+//               className={`h-full rounded-full transition-all duration-1000 ${
+//                 timerPercent > 50
+//                   ? "bg-[#87cefa]"
+//                   : timerPercent > 20
+//                     ? "bg-yellow-300"
+//                     : "bg-red-400"
+//               }`}
 //               style={{ width: `${timerPercent}%` }}
 //             />
 //           </div>
@@ -800,7 +819,7 @@
 //       <div className="mb-6">
 //         <div className="flex justify-end mb-2">
 //           <span className="text-[#43C17A] font-bold text-base">
-//             {progressCount} of {questions.length}
+//             {progressCount} {t("of")} {questions.length}
 //           </span>
 //         </div>
 //         <div className="h-2.5 w-full bg-[#43C17A2B] rounded-full overflow-hidden">
@@ -838,18 +857,20 @@
 //                         className="flex items-center gap-3 cursor-pointer group"
 //                       >
 //                         <div
-//                           className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isSelected
-//                             ? "border-[#43C17A]"
-//                             : "border-gray-400 group-hover:border-[#43C17A]"
-//                             }`}
+//                           className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+//                             isSelected
+//                               ? "border-[#43C17A]"
+//                               : "border-gray-400 group-hover:border-[#43C17A]"
+//                           }`}
 //                         >
 //                           {isSelected && (
 //                             <div className="w-2 h-2 rounded-full bg-[#43C17A]" />
 //                           )}
 //                         </div>
 //                         <span
-//                           className={`text-sm ${isSelected ? "text-[#282828]" : "text-gray-500"
-//                             }`}
+//                           className={`text-sm ${
+//                             isSelected ? "text-[#282828]" : "text-gray-500"
+//                           }`}
 //                         >
 //                           {opt.optionText}
 //                         </span>
@@ -874,7 +895,7 @@
 //                 onChange={(e) =>
 //                   handleWrittenAnswerChange(q.questionId, e.target.value)
 //                 }
-//                 placeholder="Type your answer here..."
+//                 placeholder={t("Type your answer here")}
 //                 className="w-full border-b border-gray-300 pb-1 text-sm text-[#282828] outline-none focus:border-[#43C17A] bg-transparent"
 //               />
 //             )}
@@ -888,7 +909,7 @@
 //           disabled={isSubmitting}
 //           className="bg-[#43C17A] cursor-pointer focus:outline-none text-white px-6 py-2.5 rounded-md font-bold text-sm disabled:opacity-50"
 //         >
-//           {isSubmitting ? "Submitting..." : "Submit Quiz"}
+//           {isSubmitting ? t("Submitting") : t("Submit Quiz")}
 //         </button>
 //       </div>
 //     </div>
@@ -969,7 +990,7 @@ function QuizExitWarningModal({
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative bg-white rounded-2xl w-full max-w-[420px] p-8 shadow-2xl border border-gray-100"
+          className="relative bg-white rounded-2xl w-[90%] max-w-[420px] p-6 md:p-8 shadow-2xl border border-gray-100 mx-auto"
         >
           <div className="flex flex-col items-center text-center mt-2">
             <div className="relative w-20 h-20 mb-5">
@@ -1060,7 +1081,7 @@ function QuizRefreshModal({
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative bg-white rounded-2xl w-full max-w-[400px] p-8 shadow-2xl border border-gray-100"
+          className="relative bg-white rounded-2xl w-[90%] max-w-[420px] p-6 md:p-8 shadow-2xl border border-gray-100 mx-auto"
         >
           <div className="flex flex-col items-center text-center mt-2">
             <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-5 ring-8 ring-red-50/50">

@@ -4,13 +4,15 @@ import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import TaskPanel from "@/app/utils/taskPanel";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import type { Task } from "@/app/utils/taskPanel";
-import { fetchStudentTasks, saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
+import {
+  fetchStudentTasks,
+  saveStudentTask,
+} from "@/lib/helpers/student/studentTaskAPI";
 import { fetchFacultyTasks } from "@/lib/helpers/faculty/facultyTasks";
 import { useEffect, useState } from "react";
 import { useStudent } from "@/app/utils/context/student/useStudent";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
-
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -43,7 +45,6 @@ export default function AssignmentsRight() {
     "Placement",
     "CollegeHr",
   ];
-
 
   useEffect(() => {
     if (!studentId) return;
@@ -78,7 +79,6 @@ export default function AssignmentsRight() {
         const allTasks: any[] = [];
 
         for (const subject of subjects) {
-
           const tasks = await fetchFacultyTasks(subject.collegeSubjectId);
 
           if (tasks?.length) {
@@ -89,24 +89,20 @@ export default function AssignmentsRight() {
                 description: task.description,
                 time: task.time,
                 date: task.date,
-              }))
+              })),
             );
           }
         }
 
         setFacultyTasks(allTasks);
-
       } catch (err) {
         console.error("Load faculty tasks failed", err);
-      }
-      finally {
+      } finally {
         setLoading(false);
       }
-
     };
 
     loadFacultyTasks();
-
   }, [subjects]);
 
   useEffect(() => {
@@ -128,7 +124,7 @@ export default function AssignmentsRight() {
       });
 
       const filtered = res.data.filter((item: any) =>
-        allowedCreatorRoles.includes(item.createdByRole)
+        allowedCreatorRoles.includes(item.createdByRole),
       );
 
       const formatted = filtered.map((item: any) => ({
@@ -153,7 +149,6 @@ export default function AssignmentsRight() {
     }
   };
 
-
   const handleSaveStudentTask = async (
     payload: {
       title: string;
@@ -161,19 +156,19 @@ export default function AssignmentsRight() {
       dueDate: string;
       dueTime: string;
     },
-    taskId?: number
+    taskId?: number,
   ): Promise<void> => {
     if (!studentId) return;
     try {
-
-      const response = await saveStudentTask({
-        studentTaskId: taskId,
-        taskTitle: payload.title,
-        description: payload.description,
-        date: payload.dueDate,
-        time: payload.dueTime
-      },
-        studentId
+      const response = await saveStudentTask(
+        {
+          studentTaskId: taskId,
+          taskTitle: payload.title,
+          description: payload.description,
+          date: payload.dueDate,
+          time: payload.dueTime,
+        },
+        studentId,
       );
 
       if (!response.success) {
@@ -182,11 +177,9 @@ export default function AssignmentsRight() {
       }
 
       await loadStudentTasks();
-
     } catch (err) {
       console.error("Save student task failed", err);
     }
-
   };
 
   const myTasks: Task[] = [
@@ -265,7 +258,7 @@ export default function AssignmentsRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="w-[32%] p-2 flex flex-col max-md:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel
@@ -274,7 +267,7 @@ export default function AssignmentsRight() {
           studentId={studentId ?? undefined}
           studentTasks={studentTasks}
           facultyTasks={facultyTasks}
-          onAddTask={() => { }}
+          onAddTask={() => {}}
           onSaveTask={handleSaveStudentTask}
           onDeleteTask={async () => {
             await loadStudentTasks();
@@ -285,7 +278,7 @@ export default function AssignmentsRight() {
           height="60vh"
           onViewChange={(v) => setView(v)}
           refreshAnnouncements={fetchAnnouncements}
-           readOnly={true}
+          readOnly={true}
         />
       </div>
     </>

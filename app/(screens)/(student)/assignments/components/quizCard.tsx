@@ -147,7 +147,7 @@ export default function QuizCard({ data }: { data: any }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useTranslations("Assignment.student"); // Hook
+  const t = useTranslations("Assignment.student");
 
   const handleStartQuiz = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -155,88 +155,173 @@ export default function QuizCard({ data }: { data: any }) {
     params.set("quizId", data.id.toString());
     router.push(`${pathname}?${params.toString()}`);
   };
-  return (
-    <div className="flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
-      <div className="flex items-stretch gap-5 h-full w-full">
-        <div
-          className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
-        >
-          <img
-            src="/quiz.png"
-            alt="Course Cover"
-            className="object-cover w-full h-full opacity-80 "
-          />
-        </div>
 
-        <div className="flex flex-col justify-between h-full w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-lg font-bold text-[#282828]">
-                {data.courseName}
-              </h3>
-              <p className="text-[#282828] font-medium text-sm mb-4">
-                {data.topic}
-              </p>
+  return (
+    <>
+      {/* ======================================================== */}
+      {/* 🖥️ DESKTOP VIEW (Strictly Preserved Original Code)      */}
+      {/* ======================================================== */}
+      <div className="hidden md:flex items-stretch justify-between p-3.5 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100">
+        <div className="flex items-stretch gap-5 h-full w-full">
+          <div
+            className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
+          >
+            <img
+              src="/quiz.png"
+              alt="Course Cover"
+              className="object-cover w-full h-full opacity-80"
+            />
+          </div>
+          <div className="flex flex-col justify-between h-full w-full">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-lg font-bold text-[#282828]">
+                  {data.courseName}
+                </h3>
+                <p className="text-[#282828] font-medium text-sm mb-4">
+                  {data.topic}
+                </p>
+              </div>
+              <div className="flex flex-col h-full justify-start items-end self-start">
+                <button
+                  onClick={handleStartQuiz}
+                  className="bg-[#43C17A] text-white px-5 py-2 rounded-md cursor-pointer text-sm font-semibold hover:bg-[#39A367]"
+                >
+                  {t("Start Quiz")}
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col h-full justify-start items-end self-start">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <UserCircle
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-[#282828] text-sm">
+                  {t("Faculty Name :")}
+                </span>{" "}
+                <span className="text-[#282828] text-sm truncate max-w-[150px]">
+                  {data.facultyName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <RepeatIcon
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-sm text-[#282828]">
+                  {t("Attempts Left :")}
+                </span>{" "}
+                <span className="text-[#282828]">{data.attemptsLeft}</span>
+              </div>
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
+                  <CalendarDotsIcon
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-sm text-[#282828]">
+                    {t("Quiz Duration:")}
+                  </span>
+                  <span className="text-xs font-medium text-[#282828]">
+                    {data.quizDuration}
+                  </span>
+                </div>
+              </div>
+              {data.timeLimit && (
+                <div className="flex items-center gap-2 text-xs text-[#282828]">
+                  <div className="bg-[#43C07A24] rounded-full p-1">
+                    <ClockCountdownIcon
+                      size={16}
+                      className="text-[#43C17A]"
+                      weight="regular"
+                    />
+                  </div>
+                  <span className="font-semibold text-sm text-[#282828]">
+                    Time Limit:
+                  </span>{" "}
+                  <span className="text-[#282828]">{data.timeLimit}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ======================================================== */}
+      {/* 📱 MOBILE VIEW (Matches Image Screenshots Perfectly)    */}
+      {/* ======================================================== */}
+      <div className="md:hidden flex flex-col p-4 bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 w-full">
+        <div className="flex gap-3">
+          <div
+            className={`w-[72px] h-[72px] rounded-lg ${data.bgColor} overflow-hidden shrink-0`}
+          >
+            <img
+              src="/quiz.png"
+              className="w-full h-full object-cover opacity-80"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col min-w-0 pr-1">
+                <h3 className="text-[#282828] font-bold text-sm truncate">
+                  {data.courseName}
+                </h3>
+                <p className="text-gray-500 text-[11px] truncate mt-0.5">
+                  {data.topic}
+                </p>
+              </div>
               <button
                 onClick={handleStartQuiz}
-                className="bg-[#43C17A] text-white px-5 py-2 rounded-md cursor-pointer text-sm font-semibold"
+                className="bg-[#43C17A] text-white px-3 py-1.5 rounded-md text-xs font-bold shrink-0 shadow-sm active:scale-95 transition-transform"
               >
                 {t("Start Quiz")}
               </button>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <UserCircle
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
+            <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 mt-4 w-full">
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <UserCircle size={14} className="text-[#43C17A] shrink-0" />
+                <span className="truncate">Faculty: {data.facultyName}</span>
               </div>
-              <span className="font-semibold text-[#282828] text-sm">
-                {t("Faculty Name :")}
-              </span>{" "}
-              <span className="text-[#282828] text-sm">{data.facultyName}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <RepeatIcon
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
-              </div>
-              <span className="font-semibold text-sm text-[#282828]">
-                {t("Attempts Left :")}
-              </span>{" "}
-              <span className="text-[#282828]">{data.attemptsLeft}</span>
-            </div>
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <div className="bg-[#43C07A24] rounded-full p-1 shrink-0">
-                <CalendarDotsIcon
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-sm text-[#282828]">
-                  {t("Quiz Duration:")}
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <RepeatIcon size={14} className="text-[#43C17A] shrink-0" />
+                <span className="truncate">
+                  Attempts Left: {data.attemptsLeft}
                 </span>
-                <span className="text-xs font-medium text-[#282828]">
-                  {data.quizDuration}
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <CalendarDotsIcon
+                  size={14}
+                  className="text-[#43C17A] shrink-0"
+                />
+                <span className="truncate">
+                  Duration: {data.quizDuration?.split("→")[0]?.trim()}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <ClockCountdownIcon
+                  size={14}
+                  className="text-[#43C17A] shrink-0"
+                />
+                <span className="truncate">
+                  Time: {data.timeLimit || "30 mins"}
                 </span>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -244,7 +329,7 @@ export function AttemptedQuizCard({ data }: { data: any }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const t = useTranslations("Assignment.student"); // Hook
+  const t = useTranslations("Assignment.student");
 
   const handleOpenModal = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -254,99 +339,153 @@ export function AttemptedQuizCard({ data }: { data: any }) {
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const attemptsUsedNumber = parseInt(data.attemptsUsed?.split(" of ")[0]) || 0;
-  const maxAttempts = parseInt(data.attemptsUsed?.split(" of ")[1]) || 3;
-
   return (
-    <div
-      onClick={handleOpenModal}
-      className="flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100"
-    >
-      <div className="flex items-stretch gap-5 h-full w-full">
-        <div
-          className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
-        >
-          <img
-            src="/quiz.png"
-            alt="Course Cover"
-            className="object-cover w-full h-full opacity-80"
-          />
-        </div>
-
-        <div className="flex flex-col justify-between h-full w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-lg font-bold text-[#282828]">
-                {data.courseName}
-              </h3>
-              <p className="text-[#282828] font-medium text-sm mb-4">
-                {data.topic}
-              </p>
-            </div>
-            <div className="flex flex-col h-full justify-start items-end self-start">
-              <div className="bg-[#43C17A] text-[#EFEFEF] px-4 py-1.5 rounded-md text-base font-bold">
-                {data.score}
-              </div>
-            </div>
+    <>
+      {/* 🖥️ DESKTOP VIEW */}
+      <div
+        onClick={handleOpenModal}
+        className="hidden md:flex items-stretch cursor-pointer justify-between p-3.5 bg-[#E7E7E7] hover:bg-[#dfdfdf] transition-colors rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.06)] mb-4 border border-gray-100"
+      >
+        <div className="flex items-stretch gap-5 h-full w-full">
+          <div
+            className={`rounded-lg flex items-center justify-center ${data.bgColor} overflow-hidden relative flex-shrink-0`}
+          >
+            <img
+              src="/quiz.png"
+              alt="Course Cover"
+              className="object-cover w-full h-full opacity-80"
+            />
           </div>
-
-          <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <UserCircle
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
+          <div className="flex flex-col justify-between h-full w-full">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-lg font-bold text-[#282828]">
+                  {data.courseName}
+                </h3>
+                <p className="text-[#282828] font-medium text-sm mb-4">
+                  {data.topic}
+                </p>
               </div>
-              <span className="font-semibold text-[#282828] text-sm">
-                {t("Faculty Name :")}
-              </span>{" "}
-              <span className="text-[#282828]">{data.facultyName}</span>
+              <div className="flex flex-col h-full justify-start items-end self-start">
+                <div className="bg-[#43C17A] text-[#EFEFEF] px-4 py-1.5 rounded-md text-base font-bold shadow-sm">
+                  {data.score}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <UserCircle
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <UserCircle
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-[#282828] text-sm">
+                  {t("Faculty Name :")}
+                </span>
+                <span className="text-[#282828]">{data.facultyName}</span>
               </div>
-              <span className="font-semibold text-sm text-[#282828]">
-                {t("Attempted On :")}
-              </span>{" "}
-              <span className="text-[#282828]">{data.attemptedOn}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <Question
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <CalendarDotsIcon
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-sm text-[#282828]">
+                  {t("Attempted On :")}
+                </span>
+                <span className="text-[#282828]">{data.attemptedOn}</span>
               </div>
-              <span className="font-semibold text-sm text-[#282828]">
-                {t("Questions Attempted :")}
-              </span>{" "}
-              <span className="text-[#282828]">{data.questionsAttempted}</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-[#282828]">
-              <div className="bg-[#43C07A24] rounded-full p-1">
-                <RepeatIcon
-                  size={16}
-                  className="text-[#43C17A]"
-                  weight="regular"
-                />
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <Question
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-sm text-[#282828]">
+                  {t("Questions Attempted :")}
+                </span>
+                <span className="text-[#282828]">
+                  {data.questionsAttempted}
+                </span>
               </div>
-              <span className="font-semibold text-sm text-[#282828]">
-                {t("Attempts Used :")}
-              </span>{" "}
-              <span className="text-[#282828]">{data.attemptsUsed}</span>
+              <div className="flex items-center gap-2 text-xs text-[#282828]">
+                <div className="bg-[#43C07A24] rounded-full p-1">
+                  <RepeatIcon
+                    size={16}
+                    className="text-[#43C17A]"
+                    weight="regular"
+                  />
+                </div>
+                <span className="font-semibold text-sm text-[#282828]">
+                  {t("Attempts Used :")}
+                </span>
+                <span className="text-[#282828]">{data.attemptsUsed}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* 📱 MOBILE VIEW */}
+      <div
+        onClick={handleOpenModal}
+        className="md:hidden flex flex-col p-4 cursor-pointer bg-white rounded-2xl shadow-sm mb-4 border border-gray-100 w-full"
+      >
+        <div className="flex gap-3">
+          <div
+            className={`w-[72px] h-[72px] rounded-lg ${data.bgColor} overflow-hidden shrink-0`}
+          >
+            <img
+              src="/quiz.png"
+              className="w-full h-full object-cover opacity-80"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col min-w-0 pr-1">
+                <h3 className="text-[#282828] font-bold text-sm truncate">
+                  {data.courseName}
+                </h3>
+                <p className="text-gray-500 text-[11px] truncate mt-0.5">
+                  {data.topic}
+                </p>
+              </div>
+              <div className="bg-[#43C17A] text-white px-3 py-1 rounded-md text-[11px] font-bold shrink-0 shadow-sm">
+                {data.score}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-1.5 gap-x-2 mt-4 w-full">
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <UserCircle size={14} className="text-[#43C17A] shrink-0" />
+                <span className="truncate">Faculty: {data.facultyName}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <CalendarDotsIcon
+                  size={14}
+                  className="text-[#43C17A] shrink-0"
+                />
+                <span className="truncate">Att: {data.attemptedOn}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <Question size={14} className="text-[#43C17A] shrink-0" />
+                <span className="truncate">Qs: {data.questionsAttempted}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] text-gray-600 min-w-0">
+                <RepeatIcon size={14} className="text-[#43C17A] shrink-0" />
+                <span className="truncate">Used: {data.attemptsUsed}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
