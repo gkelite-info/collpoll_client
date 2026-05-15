@@ -409,8 +409,9 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               >
                 <Megaphone size={20} color="#282828" className="cursor-pointer" />
               </button>
-              <div 
-                className="flex items-center gap-2 cursor-pointer"
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
                 onClick={() => setOpenProfile(true)}
               >
                 {profilePhoto ? (
@@ -426,7 +427,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   />
                 )}
                 <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
-              </div>
+              </button>
             </div>
           </div>
           <div className="w-full h-full bg-blue-00 flex items-center justify-between">
