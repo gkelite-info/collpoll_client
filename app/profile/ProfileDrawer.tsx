@@ -193,12 +193,12 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             </div>
           )}
 
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-md text-[#282828]">{fullName}</p>
-              <div className="flex gap-2 items-center">
-                <span className="text-xs text-[#282828]">
-                  {displayRole || "-"} | ID - {displayId || "-"}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-semibold text-md text-[#282828] truncate" title={fullName || ""}>{fullName}</p>
+              <div className="flex gap-2 items-center shrink-0">
+                <span className="text-xs text-[#282828] whitespace-nowrap">
+                  ID - {displayId || "-"}
                 </span>
               </div>
               <div className="hidden gap-2 items-center">
@@ -280,13 +280,28 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             {role === "FinanceManager" && (
               <p className="text-xs text-[#282828] font-medium">Finance Manager</p>
             )}
+            {role === "Admin" && (
+              <p className="text-xs text-[#282828] font-medium">Admin</p>
+            )}
+            {role === "CollegeAdmin" && (
+              <p className="text-xs text-[#282828] font-medium">College Admin</p>
+            )}
+            {role === "CollegeHr" && (
+              <p className="text-xs text-[#282828] font-medium">College HR</p>
+            )}
+            {role === "Parent" && (
+              <p className="text-xs text-[#282828] font-medium">Parent</p>
+            )}
             {role === "PlacementOfficer" && (
-                  <span className="text-xs text-[#282828]">
-                    ID - {identifierId}
-                  </span>
-                )}
+              <p className="text-xs text-[#282828] font-medium">Placement Officer</p>
+            )}
             {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
-              <p className="text-xs text-[#282828] font-medium">{role}</p>
+              <p className="text-xs text-[#282828] font-medium">
+                {displayRole || role}
+              </p>
+            )}
+            {role === "SuperAdmin" && (
+              <p className="text-xs text-[#282828] font-medium">Super Admin</p>
             )}
             <div className="flex gap-3 flex-wrap">
               <div className="flex items-center gap-2 mt-2">
