@@ -42,16 +42,50 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     mobile,
     email,
     role,
+    userId,
     collegeEducationType,
     collegeBranchCode,
     collegeAcademicYear,
     profilePhoto,
     identifierId,
-    parentId
+    parentId,
+    studentId,
+    facultyId,
+    adminId,
+    financeManagerId,
+    collegeAdminId,
+    collegeHrId,
+    placementEmployeeId,
+    wellBeingId
   } = useUser();
   const { college_branch, faculty_edu_type } = useFaculty();
   const [loading, setLoading] = useState(false);
   const academicYear = extractAcademicYearNumber(collegeAcademicYear);
+  const roleIdMap: Record<string, number | null> = {
+    Student: studentId,
+    Faculty: facultyId,
+    Admin: adminId,
+    Finance: financeManagerId,
+    FinanceManager: financeManagerId,
+    CollegeAdmin: collegeAdminId,
+    CollegeHr: collegeHrId,
+    Parent: parentId,
+    PlacementOfficer: placementEmployeeId,
+    WellbeingExecutive: wellBeingId,
+    WellbeingManager: wellBeingId,
+    SuperAdmin: userId,
+  };
+  const displayRoleMap: Record<string, string> = {
+    FinanceManager: "Finance Manager",
+    CollegeAdmin: "College Admin",
+    CollegeHr: "College HR",
+    PlacementOfficer: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    SuperAdmin: "Super Admin",
+  };
+  const displayRole = role ? displayRoleMap[role] ?? role : "";
+  const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
   const profileOptions: ProfileOptions[] = [
     {
       id: "terms",
@@ -159,10 +193,15 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             </div>
           )}
 
-          <div className="flex-1">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-md text-[#282828]">{fullName}</p>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-md text-[#282828]">{fullName}</p>
               <div className="flex gap-2 items-center">
+                <span className="text-xs text-[#282828]">
+                  {displayRole || "-"} | ID - {displayId || "-"}
+                </span>
+              </div>
+              <div className="hidden gap-2 items-center">
                 {role === "Student" && (
                   <span className="text-xs text-[#282828]">
                     ID - {identifierId}
@@ -177,6 +216,11 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                   <span className="text-xs text-[#282828]">ID - {identifierId}</span>
                 )}
                 {role === "Finance" && (
+                  <span className="text-xs text-[#282828]">
+                    ID - {identifierId}
+                  </span>
+                )}
+                {role === "FinanceManager" && (
                   <span className="text-xs text-[#282828]">
                     ID - {identifierId}
                   </span>
@@ -232,6 +276,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             )}
             {role === "Finance" && (
               <p className="text-xs text-[#282828] font-medium">{role}</p>
+            )}
+            {role === "FinanceManager" && (
+              <p className="text-xs text-[#282828] font-medium">Finance Manager</p>
             )}
             {role === "PlacementOfficer" && (
                   <span className="text-xs text-[#282828]">

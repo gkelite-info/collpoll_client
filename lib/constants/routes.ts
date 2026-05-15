@@ -15,6 +15,7 @@ export const ROLES = {
   SUPER_ADMIN: "Super-Admin",
   COLLEGE_ADMIN: "College-Admin",
   FINANCE: "Finance",
+  FINANCE_MANAGER: "FinanceManager",
   HR: "HR",
   PLACEMENT: "Placement",
   PARENT: "Parent",
@@ -32,7 +33,7 @@ export type UserRole = (typeof ROLES)[keyof typeof ROLES];
  * Public routes accessible to everyone (authenticated or not)
  * Pattern: paths that don't require authentication
  */
-export const PUBLIC_ROUTES = ["/login", "/signup", "/verify-email"];
+export const PUBLIC_ROUTES = ["/login", "/forgot-password"];
 
 /**
  * Auth-only routes - if user is logged in, redirect to their dashboard
@@ -57,6 +58,7 @@ export const PROTECTED_ROUTES = [
   "/super-admin",
   "/college-admin",
   "/finance",
+  "/finance-manager",
   "/hr",
   "/placement",
   "/parent",
@@ -86,6 +88,7 @@ export const ROLE_PROTECTED_PORTALS = [
   "/faculty",
   "/super-admin",
   "/college-admin",
+  "/finance-manager",
   "/finance",
   "/hr",
   "/placement",
@@ -140,6 +143,7 @@ export const ROLE_LANDING_PAGES: Record<UserRole, string> = {
   [ROLES.SUPER_ADMIN]: "/super-admin",
   [ROLES.COLLEGE_ADMIN]: "/college-admin",
   [ROLES.FINANCE]: "/finance",
+  [ROLES.FINANCE_MANAGER]: "/finance-manager",
   [ROLES.HR]: "/hr",
   [ROLES.PLACEMENT]: "/placement",
   [ROLES.PARENT]: "/parent",
@@ -231,6 +235,9 @@ export const normalizeRole = (role: string | null): UserRole | null => {
     "college-admin": ROLES.COLLEGE_ADMIN,
     collegeadmin: ROLES.COLLEGE_ADMIN,
     finance: ROLES.FINANCE,
+    financemanager: ROLES.FINANCE_MANAGER,
+    "finance-manager": ROLES.FINANCE_MANAGER,
+    "finance manager": ROLES.FINANCE_MANAGER,
     hr: ROLES.HR,
     collegehr: ROLES.HR, // Map CollegeHr to HR portal
     placementofficer: ROLES.PLACEMENT,

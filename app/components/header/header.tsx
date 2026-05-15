@@ -61,10 +61,18 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     userId,
     profilePhoto,
     parentId,
+    studentId,
+    adminId,
+    financeManagerId,
+    facultyId,
+    collegeAdminId,
+    collegeHrId,
+    placementEmployeeId,
+    wellBeingId,
     identifierId,
     loading
   } = useUser();
-  const { facultyId } = useFaculty();
+  const { facultyId: activeFacultyId } = useFaculty();
 
 
   const searchParams = useSearchParams();
@@ -73,6 +81,45 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   const [openAddTask, setOpenAddTask] = useState(false);
   const [activeTaskCount, setActiveTaskCount] = useState<number>(0);
   const availableRoutes = useMemo(() => getSearchRoutesByRole(role), [role]);
+  const roleIdMap = useMemo<Record<string, number | null>>(
+    () => ({
+      Student: studentId,
+      Faculty: facultyId,
+      Admin: adminId,
+      Finance: financeManagerId,
+      FinanceManager: financeManagerId,
+      CollegeAdmin: collegeAdminId,
+      CollegeHr: collegeHrId,
+      Parent: parentId,
+      PlacementOfficer: placementEmployeeId,
+      WellbeingExecutive: wellBeingId,
+      WellbeingManager: wellBeingId,
+      SuperAdmin: userId,
+    }),
+    [
+      studentId,
+      facultyId,
+      adminId,
+      financeManagerId,
+      collegeAdminId,
+      collegeHrId,
+      parentId,
+      placementEmployeeId,
+      wellBeingId,
+      userId,
+    ],
+  );
+  const displayRoleMap: Record<string, string> = {
+    FinanceManager: "Finance Manager",
+    CollegeAdmin: "College Admin",
+    CollegeHr: "College HR",
+    PlacementOfficer: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    SuperAdmin: "Super Admin",
+  };
+  const displayRole = role ? displayRoleMap[role] ?? role : "";
+  const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
 
   // const filteredSuggestions = useMemo(() => {
   //   if (!searchValue.trim()) return [];
@@ -110,15 +157,15 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   }, [searchValue]);
 
   useEffect(() => {
-    if (!facultyId) return;
+    if (!activeFacultyId) return;
 
     const fetchTaskCount = async () => {
-      const count = await countActiveFacultyTasks(facultyId);
+      const count = await countActiveFacultyTasks(activeFacultyId);
       setActiveTaskCount(count);
     };
 
     fetchTaskCount();
-  }, [facultyId]);
+  }, [activeFacultyId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -362,8 +409,9 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               >
                 <Megaphone size={20} color="#282828" className="cursor-pointer" />
               </button>
-              <div 
-                className="flex items-center gap-2 cursor-pointer"
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
                 onClick={() => setOpenProfile(true)}
               >
                 {profilePhoto ? (
@@ -379,7 +427,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   />
                 )}
                 <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
-              </div>
+              </button>
             </div>
           </div>
           <div className="w-full h-full bg-blue-00 flex items-center justify-between">
@@ -710,7 +758,16 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   />
                 </div>
 
-                <div className={`w-full text-[#E5E5E5] ${role === "PlacementOfficer"
+                <div className="flex w-full items-center justify-between gap-2 text-xs text-[#E5E5E5]">
+                  <p className="truncate" title={displayRole || undefined}>
+                    {displayRole || "-"}
+                  </p>
+                  <p className="whitespace-nowrap shrink-0">
+                    ID - <span>{displayId || "-"}</span>
+                  </p>
+                </div>
+
+                <div className={`hidden w-full text-[#E5E5E5] ${role === "PlacementOfficer"
                   ? "flex flex-col items-start text-[11px] leading-[1.2]"
                   : "flex items-center justify-between text-xs"
                   }`}>
