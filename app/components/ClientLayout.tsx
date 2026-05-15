@@ -10,6 +10,7 @@ import ParentNavbar from "./navbar/parentNavbar";
 import FacultyNavbar from "./navbar/facultyNavbar";
 import SuperAdminNavbar from "./navbar/superAdminNavbar";
 import FinanceNavbar from "./navbar/financeNavbar";
+import FinanceManagerNavbar from "./navbar/financeManagerNavbar";
 import CollegeAdminNavbar from "./navbar/collegeAdminNavbar";
 import PlacementNavbar from "./navbar/placementNav";
 import HrNavbar from "./navbar/hrNavbar";
@@ -102,6 +103,7 @@ export default function ClientLayout({
     return null;
   }, [pathname]);
 
+<<<<<<< Updated upstream
   const renderNavbar = useCallback(
     (onClose?: () => void) => {
       // Handle profile page - render navbar based on user's role
@@ -132,8 +134,41 @@ export default function ClientLayout({
           default:
             return <StudentNavbar />;
         }
+=======
+  const renderNavbar = useCallback((onClose?: () => void) => {
+    // Handle profile page - render navbar based on user's role
+    if (pathname === "/profile" || pathname.startsWith("/profile?")) {
+      switch (role) {
+        case "Student":
+          return <StudentNavbar />;
+        case "Faculty":
+          return <FacultyNavbar onClose={onClose} />;
+        case "Admin":
+          return <AdminNavbar />;
+        case "CollegeHr":
+          return <HrNavbar />;
+        case "Finance":
+          return <FinanceNavbar />;
+        case "FinanceManager":
+          return <FinanceManagerNavbar onClose={onClose} />;
+        case "CollegeAdmin":
+          return <CollegeAdminNavbar />;
+        case "Parent":
+          return <ParentNavbar />;
+        case "SuperAdmin":
+          return <SuperAdminNavbar />;
+        case "Placement":
+          return <PlacementNavbar />;
+        case "WellbeingExecutive":
+          return <WellbeingExecutiveNavbar onClose={onClose} />;
+        case "WellbeingManager":
+          return <WellbeingManagerNavbar onClose={onClose} />;
+        default:
+          return <StudentNavbar />;
+>>>>>>> Stashed changes
       }
 
+<<<<<<< Updated upstream
       if (pathname.startsWith("/admin"))
         return <AdminNavbar onClose={onClose} />;
       if (pathname.startsWith("/faculty"))
@@ -159,6 +194,28 @@ export default function ClientLayout({
     },
     [pathname, role],
   );
+=======
+    if (pathname.startsWith("/admin")) return <AdminNavbar onClose={onClose} />;
+    if (pathname.startsWith("/faculty")) return <FacultyNavbar onClose={onClose} />;
+    if (pathname.startsWith("/parent")) return <ParentNavbar />;
+    if (pathname === "/placement" || pathname.startsWith("/placement/")) {
+      return <PlacementNavbar />;
+    }
+    if (pathname.startsWith("/stu_dashboard")) return <StudentNavbar onClose={onClose} />;
+    if (pathname.startsWith("/super-admin")) return <SuperAdminNavbar />;
+    if (pathname.startsWith("/finance-manager")) return <FinanceManagerNavbar onClose={onClose} />;
+    if (pathname.startsWith("/finance")) return <FinanceNavbar />;
+    if (pathname.startsWith("/college-admin")) return <CollegeAdminNavbar onClose={onClose} />;
+    if (pathname.startsWith("/hr")) return <HrNavbar onClose={onClose} />;
+    if (pathname.startsWith("/wellbeing-executive")) {
+      return <WellbeingExecutiveNavbar onClose={onClose} />;
+    }
+    if (pathname.startsWith("/wellbeing-manager")) {
+      return <WellbeingManagerNavbar onClose={onClose} />;
+    }
+    return <StudentNavbar />;
+  }, [pathname, role]);
+>>>>>>> Stashed changes
 
   const desktopNavbar = useMemo(() => renderNavbar(), [renderNavbar]);
 

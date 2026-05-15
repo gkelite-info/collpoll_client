@@ -339,6 +339,23 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setIdentifierId(empId ?? null);
     },
 
+    FinanceManager: async (uid, cid) => {
+      const s = settersRef.current;
+      const [financeData, financeCtx, empId] = await Promise.all([
+        supabase
+          .from("finance_manager")
+          .select("financeManagerId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        fetchFinanceManagerContext(uid),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
+      s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
+
     Faculty: async (uid, cid) => {
       const s = settersRef.current;
       const [facultyData, facultyCtx, empId] = await Promise.all([
