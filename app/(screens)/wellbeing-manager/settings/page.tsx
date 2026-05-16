@@ -1,7 +1,13 @@
-export default function SettingsPage() {
+"use client";
+import SettingsClient from "@/app/components/SharedSettings/SettingsClient";
+import { Suspense } from "react";
+
+export default function WellbeingSettings() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Settings Page</h1>
-    </div>
+    <Suspense fallback={<div className="p-4">Loading settings...</div>}>
+      <div className="md:w-[82vw] max-md:scale-[3.5] max-md:origin-top-left">
+        <SettingsClient />
+      </div>
+    </Suspense>
   );
 }
