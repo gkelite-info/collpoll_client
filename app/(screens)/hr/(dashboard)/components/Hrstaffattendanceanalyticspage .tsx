@@ -1,5 +1,5 @@
 "use client";
- 
+
 import React from "react";
 import {
   LineChart,
@@ -10,11 +10,12 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from "recharts";
 import { CaretDown, CheckSquare } from "@phosphor-icons/react";
 import { useState, useRef, useEffect } from "react";
- 
+// FIX: Import the proper internal generic type structures from Recharts
+import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface AnalyticsFacultyProfile {
   name: string;
@@ -24,7 +25,7 @@ interface AnalyticsFacultyProfile {
   leavesTaken: number;
   workingDays: number;
 }
- 
+
 interface AttendanceRecord {
   date: string;
   checkIn: string;
@@ -34,13 +35,13 @@ interface AttendanceRecord {
   lateBy: string;
   earlyOut: string;
 }
- 
+
 interface ChartDataPoint {
   month: string;
   performance: number;
   attendance: number;
 }
- 
+
 // ── Static mock data ──────────────────────────────────────────────────────────
 const mockProfile: AnalyticsFacultyProfile = {
   name: "Harsha Sharma",
@@ -50,7 +51,7 @@ const mockProfile: AnalyticsFacultyProfile = {
   leavesTaken: 2,
   workingDays: 18,
 };
- 
+
 const mockChartData: ChartDataPoint[] = [
   { month: "Jan", performance: 71, attendance: 10 },
   { month: "Feb", performance: 96, attendance: 15 },
@@ -60,7 +61,7 @@ const mockChartData: ChartDataPoint[] = [
   { month: "Jun", performance: 42, attendance: 14 },
   { month: "Jul", performance: 47, attendance: 32 },
 ];
- 
+
 const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map((_, i) => ({
   date: `${(12 - i).toString().padStart(2, "0")}/02/2026`,
   checkIn: "09:04 AM",
@@ -70,10 +71,10 @@ const mockRecords: AttendanceRecord[] = Array.from({ length: 9 }).map((_, i) => 
   lateBy: "04m",
   earlyOut: "—",
 }));
- 
-const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const YEARS = ["2024","2025","2026","2027","2028"];
- 
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const YEARS = ["2024", "2025", "2026", "2027", "2028"];
+
 // ── Faculty Info ──────────────────────────────────────────────────────────────
 function AnalyticsFacultyInfo({ profile }: { profile: AnalyticsFacultyProfile }) {
   return (
@@ -108,14 +109,15 @@ function AnalyticsFacultyInfo({ profile }: { profile: AnalyticsFacultyProfile })
     </div>
   );
 }
- 
+
 // ── Chart ─────────────────────────────────────────────────────────────────────
 function AttendancePerformanceChart({ data }: { data: ChartDataPoint[] }) {
-  const tooltipFormatter: TooltipProps<number, string>["formatter"] = (value, name) => {
-    if (name === "Performance") return [`${value}%`, name];
-    return [value, name];
+  // FIX: Converted the strict rigid type definition to standard loose ValueType generic structures
+  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (String(name) === "Performance") return [`${value}%`, name as string];
+    return [value, name as string];
   };
- 
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 w-full">
       <h3 className="text-[#282828] font-bold text-[15px] mb-6">Attendance & Performance Trend</h3>
@@ -137,7 +139,7 @@ function AttendancePerformanceChart({ data }: { data: ChartDataPoint[] }) {
     </div>
   );
 }
- 
+
 // ── Attendance Table ──────────────────────────────────────────────────────────
 function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   const [selectedMonth, setSelectedMonth] = useState("FEB");
@@ -145,7 +147,7 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
   const [isMonthOpen, setIsMonthOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
- 
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -156,7 +158,7 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
- 
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-end mb-2.5" ref={containerRef}>
@@ -228,10 +230,9 @@ function AttendanceTable({ records }: { records: AttendanceRecord[] }) {
     </div>
   );
 }
- 
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function HrStaffAttendanceAnalyticsPage({ userId }: { userId: string }) {
-  // In production, fetch data using userId. Static for now.
   return (
     <div className="flex flex-col w-full">
       <AnalyticsFacultyInfo profile={mockProfile} />

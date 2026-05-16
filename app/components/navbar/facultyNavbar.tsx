@@ -153,7 +153,7 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
       setLoading(true);
 
       const timeout = setTimeout(() => {
-        window.location.assign("/login");
+        window.location.replace("/login");
       }, 3500);
 
       const res = await logoutUser();
@@ -164,7 +164,7 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
         // onClose();
         toast.success("Loggedout successfully");
         // router.replace("/login");
-        window.location.assign("/login");
+        window.location.replace("/login");
       } else {
         toast.error("Logout failed. Please try again.");
       }

@@ -111,7 +111,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
       setIsLoggingOut(true);
 
       const timeout = setTimeout(() => {
-        window.location.assign("/login");
+        window.location.replace("/login");
       }, 3500);
 
       const res = await logoutUser();
@@ -120,7 +120,7 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
         clearTimeout(timeout);
         setShowLogoutModal(false);
         toast.success("Logged out successfully");
-        window.location.assign("/login");
+        window.location.replace("/login");
       } else {
         toast.error("Logout failed. Please try again.");
       }

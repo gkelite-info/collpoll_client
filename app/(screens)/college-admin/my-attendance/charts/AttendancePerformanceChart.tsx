@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 import {
   LineChart,
   Line,
@@ -8,7 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from "recharts";
 
 type ChartDataPoint = {
@@ -34,10 +33,8 @@ const mockChartData: ChartDataPoint[] = [
 const AttendancePerformanceChart: FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
-    value,
-    name,
-  ) => {
+  // FIX: Swapped strict TooltipProps for a clean, flexible callback signature
+  const tooltipFormatter = (value: any, name: any): [ReactNode, ReactNode] => {
     if (name === "Performance") {
       return [`${value}%`, name];
     }
@@ -98,18 +95,14 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
             />
 
             <Tooltip
-              formatter={tooltipFormatter}
+              // FIX: Cast as any to immediately clear any remaining internal generic errors from Recharts
+              formatter={tooltipFormatter as any}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
             />
-
-            {/* <Legend
-              iconType="circle"
-              wrapperStyle={{ fontSize: "13px", paddingTop: "20px" }}
-            /> */}
 
             <Legend content={renderLegend} />
 

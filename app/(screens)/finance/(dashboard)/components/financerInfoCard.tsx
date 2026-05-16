@@ -5,6 +5,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { getTodayCollectionSummary } from "@/lib/helpers/finance/dashboard/getTodayCollectionSummary";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 export type UserInfoCardProps = {
   show?: boolean;
@@ -41,7 +42,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
         setDynamicTodayCollection(todayTotal);
       } catch (error) {
-        // optionally handle error
+        toast.error("Failed to load today's collection");
       }
     };
 
@@ -50,27 +51,27 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
 
   return (
     <div
-      className="w-full relative rounded-2xl h-[170px] shadow-sm"
+      className="w-full relative rounded-2xl h-[170px] landscape:h-[180px] lg:h-[170px] shadow-sm mt-2 md:mt-0 lg:mt-0"
       style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
     >
       {cardProps.map((item, index) => (
         <div
-          className="relative z-10 flex h-full items-center px-8"
+          className="relative z-10 flex h-full items-center px-5 lg:px-8"
           key={index}
         >
           <div className="bg-blue-00 flex flex-col max-w-[65%] gap-2">
-            <p className="text-lg text-[#282828] leading-tight mt-3">
+            <p className="text-sm md:text-lg lg:text-lg text-[#282828] leading-tight mt-3">
               Welcome Back, {""}
-              <span className="text-lg font-semibold text-[#089144] leading-tight">
+              <span className="text-sm landscape:text-lg md:text-lg lg:text-lg font-semibold text-[#089144] leading-tight">
                 {fullName || "User"}
               </span>
             </p>
 
-            <p className="text-md text-[#454545] mt-0">
+            <p className="text-sm md:text-base lg:text-base text-[#454545] mt-0">
               Here’s a summary of fee collections & student payments
             </p>
 
-            <p className="text-md text-[#454545] mt-0 font-medium">
+            <p className="text-sm md:text-base lg:text-base text-[#454545] mt-0 font-medium">
               Today’s Collections,
               <span className="text-[#089144] font-bold">
                 {` ₹${dynamicTodayCollection.toLocaleString("en-IN")}`}
@@ -88,7 +89,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
             />
           )} */}
           {item.image &&
-            <div className="absolute md:-right-3 lg:right-10 bottom-0 h-[105%] w-[180px]">
+            <div className="absolute -right-3 landscape:-right-0 md:-right-3 lg:right-10 bottom-0 h-[95%] w-[180px] md:h-[100%] md:w-[180px] lg:h-[105%] lg:w-[180px]">
               <Image
                 src={item.image}
                 alt="Avatar"

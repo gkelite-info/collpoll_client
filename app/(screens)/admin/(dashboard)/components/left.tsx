@@ -144,7 +144,7 @@ export default function AdminDashLeft({
         </div>
 
         <div>
-          <div className="overflow-hidden bg-gray-100 mt-3 md:mt-5 lg:mt-5">
+          <div className="overflow-hidden bg-gray-100 mt-3 md:mt-5 lg:mt-5 pb-5">
             <DashboardGrid data={dashboardData} />
           </div>
         </div>

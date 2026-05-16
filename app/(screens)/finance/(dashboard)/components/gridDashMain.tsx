@@ -89,27 +89,46 @@ const Header = ({
     })) || [];
 
   return (
-    <div className="flex justify-between items-center mb-3 px-1">
-      <h1 className="text-[#1e293b] text-base font-bold">
-        {educationType} - {branch} - {year}
-      </h1>
+    <>
+      <div className="hidden lg:flex justify-between items-center mb-3 px-1">
+        <h1 className="text-[#1e293b] text-base font-bold">
+          {educationType} - {branch} - {year}
+        </h1>
 
-      <div className="flex gap-4 text-[10px] font-semibold text-gray-500">
-        {/* Education Type */}
-        <Dropdown label="Education Type" value={educationType} disabled />
-
-        {/* Branch */}
-        <Dropdown
-          label="Branch"
-          value={branch}
-          options={branchOptions}
-          onChange={onBranchChange}
-        />
-
-        {/* Year */}
-        <Dropdown label="Year" value={year} onClick={onYearClick} isYear />
+        <div className="flex gap-4 text-[10px] font-semibold text-gray-500">
+          <Dropdown label="Education Type" value={educationType} disabled />
+          <Dropdown
+            label="Branch"
+            value={branch}
+            options={branchOptions}
+            onChange={onBranchChange}
+          />
+          <Dropdown label="Year" value={year} onClick={onYearClick} isYear />
+        </div>
       </div>
-    </div>
+
+      {/* Mobile View */}
+      <div className="bg-red-00 flex flex-col md:flex lg:hidden justify-between items-start gap-2 mb-3 px-1 overflow-x-auto">
+        <div className="overflow-hidden bg-yellow-00">
+          <h1 className="text-[#1e293b] text-base font-bold">
+            {educationType} - {branch} - {year}
+          </h1>
+        </div>
+
+        <div className="bg-blue-00 flex gap-4 text-[10px] font-semibold text-gray-500 overflow-x-auto">
+          <Dropdown label="Education Type" value={educationType} disabled />
+          <Dropdown
+            label="Branch"
+            value={branch}
+            options={branchOptions}
+            onChange={onBranchChange}
+          />
+          <Dropdown label="Year" value={year} onClick={onYearClick} isYear />
+        </div>
+      </div>
+      {/* Mobile View */}
+
+    </>
   );
 };
 
@@ -159,10 +178,9 @@ const Dropdown = ({
           <div
             onClick={disabled ? undefined : onClick}
             className={`relative bg-[#E5F6EC] text-[#43C17A] px-3 py-1 pr-8 rounded-full text-xs font-semibold
-              ${
-                disabled
-                  ? "cursor-not-allowed opacity-70"
-                  : "cursor-pointer hover:bg-green-100"
+              ${disabled
+                ? "cursor-not-allowed opacity-70"
+                : "cursor-pointer hover:bg-green-100"
               }
             `}
           >
@@ -233,9 +251,8 @@ const TopStat = ({
       `}
     >
       <div
-        className={`w-7 h-7 rounded ${
-          isP ? "bg-white/20" : "bg-white"
-        } flex items-center justify-center mb-2`}
+        className={`w-7 h-7 rounded ${isP ? "bg-white/20" : "bg-white"
+          } flex items-center justify-center mb-2`}
       >
         <Icon
           size={16}
@@ -247,9 +264,8 @@ const TopStat = ({
       <div>
         <div className="text-lg font-bold leading-tight">{val}</div>
         <div
-          className={`text-[10px] font-medium ${
-            isP ? "text-purple-200" : "text-blue-800/70"
-          }`}
+          className={`text-[10px] font-medium ${isP ? "text-purple-200" : "text-blue-800/70"
+            }`}
         >
           {label}
         </div>
@@ -443,6 +459,7 @@ export default function DashboardPage() {
 
   const { collegeId, collegeEducationId, collegeEducationType, loading } =
     useFinanceManager();
+
   const [overallStudents, setOverallStudents] = useState<number>(0);
   const [branches, setBranches] = useState<any[]>([]);
   // const [years, setYears] = useState<AcademicYearData[]>([]);
@@ -481,7 +498,7 @@ export default function DashboardPage() {
     selectedBranch === "ALL"
       ? undefined
       : branches.find((b) => b.collegeBranchCode === selectedBranch)
-          ?.collegeBranchId;
+        ?.collegeBranchId;
 
   const selectedBranchData = branches.find(
     (b: any) => b.collegeBranchCode === selectedBranch,
@@ -590,13 +607,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadFinanceSummary = async () => {
       if (
-        loading || // ⬅ wait for context
+        loading ||
         !collegeId ||
         !collegeEducationId ||
-        !selectedBranchId || // ⬅ VERY IMPORTANT
+        !selectedBranchId ||
         !selectedYear
       ) {
-        return; // ⬅ DO NOT reset to 0
+        return;
       }
 
       try {
@@ -741,17 +758,15 @@ export default function DashboardPage() {
     value: Number((item.total / 100000).toFixed(1)),
   }));
 
-  if (!collegeEducationId) return;
 
   return (
-    <div className=" flex justify-center text-gray-900">
-      {/* Inject shimmer keyframes once */}
+    <div className="flex justify-center text-gray-900 mt-3 lg:mt-5">
       <ShimmerStyle />
 
-      <div className="w-full">
+      <div className="bg-red-00 w-full">
         <div className="relative">
           <Header
-            educationType={collegeEducationType ?? "B.Tech"}
+            educationType={collegeEducationType ?? "-"}
             branch={selectedBranch}
             year={selectedYear ?? "Year"}
             branches={branches}
@@ -781,15 +796,12 @@ export default function DashboardPage() {
                     }
                     setYearModalOpen(false);
                   }}
-                  // Custom logic to show present and future (e.g., next 10 years)
                   shouldDisableYear={(date) => {
                     const currentYear = new Date().getFullYear();
                     const year = date.getFullYear();
 
-                    // Disable any year before this year
                     if (year < currentYear) return true;
 
-                    // Optional: limit how far into the future they can go (e.g., 20 years)
                     if (year > currentYear + 20) return true;
 
                     return false;
@@ -822,10 +834,9 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-12 gap-3">
-          {/* ── TopStat: Overall Students ── */}
-          <div className="col-span-3 flex flex-col gap-3">
-            <div className="h-[95px]">
+        <div className="bg-blue-00 grid landscape:grid-cols-12 lg:grid lg:grid-cols-12 gap-3">
+          <div className="col-span-9 landscape:col-span-3 lg:col-span-3 flex flex-row landscape:flex-col justify-between lg:flex-col gap-3 w-[100%] h-full">
+            <div className="bg-green-00 h-[95px] w-[50%] landscape:w-full lg:w-full">
               {loadingStudents ? (
                 <TopStatShimmer theme="purple" />
               ) : (
@@ -843,8 +854,7 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* ── TopStat: Overall Finance ── */}
-            <div className="h-[95px]">
+            <div className="bg-blue-00 h-[95px] w-[50%] landscape:w-full lg:w-full">
               {loadingOverallFinance ? (
                 <TopStatShimmer theme="blue" />
               ) : (
@@ -858,10 +868,10 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          
+
 
           {/* ── YearCards ── */}
-          <div className="col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
+          <div className="bg-indigo-00 col-span-9 grid grid-cols-2 gap-3 overflow-y-auto overflow-x-hidden">
             {(() => {
               const selectedBranchData = branches.find(
                 (b) => b.collegeBranchCode === selectedBranch,
@@ -898,9 +908,8 @@ export default function DashboardPage() {
               }
               return (
                 <div
-                  className={`col-span-9 grid grid-cols-2 gap-3 ${
-                    enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
-                  }`}
+                  className={`col-span-9 grid grid-cols-2 gap-3 ${enableScroll ? "max-h-[203px] overflow-y-auto pr-2" : ""
+                    }`}
                 >
                   {branchYears.map((yearObj: any, index: number) => {
                     const summaryYear = financeSummary.yearWiseData.find(
@@ -934,8 +943,7 @@ export default function DashboardPage() {
             })()}
           </div>
 
-          {/* ── Fee Collection by year ── */}
-          <div className="col-span-3">
+          <div className="bg-red-00 col-span-9 landscape:col-span-3 lg:col-span-3">
             <Card className="h-[220px] flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <h3
@@ -997,7 +1005,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Trend Chart ── */}
-          <div className="col-span-5">
+          <div className="col-span-9 landscape:col-span-5 landscape:lg:col-span-5">
             <Card className="h-[220px] flex flex-col">
               <div className="flex justify-between">
                 <h3 className="text-xs font-bold text-gray-800 mb-2">
@@ -1101,14 +1109,13 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Quick Insights ── */}
-          <div className="col-span-4">
-            <Card className="h-[220px]">
+          <div className="bg-red-00 col-span-9 landscape:col-span-4 landscape:lg:col-span-4">
+            <Card className="h-[220px] overflow-auto lg:overflow-hidden">
               <h3 className="text-xs font-bold text-gray-800 mb-3">
                 Quick Insights
               </h3>
-              <div className="space-y-2">
+              <div className="bg-pink-00 space-y-2 overflow-y-auto lg:overflow-hidden">
                 {loadingInsights ? (
-                  // Shimmer rows
                   [0, 1, 2, 3].map((i) => (
                     <div key={i} className="bg-[#E5F6EC] p-2 rounded flex justify-between items-center">
                       <div className="flex items-center gap-2">
@@ -1171,8 +1178,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* ── Overall Pending + Current Semester ── */}
-          <div className="flex col-span-6 justify-around p-2 bg-white rounded-lg">
+          <div className="flex col-span-9 landscape:col-span-6 md:col-span-6 landscape:lg:col-span-6 justify-around p-2 bg-white rounded-lg gap-2">
             <div className="col-span-3">
               <div className="bg-[#E5F6EC] p-3 rounded-lg border border-green-50 h-[104px] flex flex-col justify-center">
                 <h4 className="font-bold text-gray-800 text-xs mb-1">
@@ -1218,8 +1224,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* ── Payment Reminder ── */}
-          <div className="col-span-6">
+          <div className="col-span-9 landscape:col-span-6 md:col-span-3 landscape:lg:col-span-6">
             <Card className="h-[120px] flex flex-col items-center justify-center text-center py-2">
               <h3 className="text-xs font-bold text-gray-800 mb-1">
                 Payment Reminder

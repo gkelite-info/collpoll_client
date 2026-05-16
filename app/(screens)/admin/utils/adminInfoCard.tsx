@@ -29,7 +29,7 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
   return (
     <div
       style={{ backgroundImage: `url(${bgBanner})`, backgroundRepeat: "no-repeat", backgroundSize: "cover", }}
-      className="w-full relative rounded-2xl h-[170px] landscape:h-[180px] lg:h-[170px] shadow-sm mt-2 md:mt-0 lg:mt-0"
+      className="w-full relative rounded-2xl h-[170px] landscape:h-[180px] lg:h-[170px] landscape:lg:h-[170px] shadow-sm mt-2 md:mt-0 lg:mt-0"
     >
       {cardProps.map((item, index) => (
         <div

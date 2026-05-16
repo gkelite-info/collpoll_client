@@ -10,9 +10,7 @@ export default function FinanceDashLeft() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
   const semester = searchParams.get("semester");
-
   const { gender } = useUser();
-
   const financerImage = gender && (gender === "Female" ? "/female-fe.png" : "/male-fe.png");
 
   const card = [
@@ -29,16 +27,15 @@ export default function FinanceDashLeft() {
 
   if (view === "semwise" && semester) {
     return (
-      <div className="w-[68%] p-2">
+      <div className="w-full bg-yellow-00 lg:w-[68%] p-2">
         <SemwiseDetail semester={semester} />
       </div>
     );
   }
 
   return (
-    <div className="w-[68%] p-2">
+    <div className="bg-blue-00 w-[100%] md:w-[65%] lg:w-[68%] p-1 md:p-2 lg:p-2 bg-red-00 pb-7 lg:pb-5 max-w-full overflow-x-hidden">
       <UserInfoCard cardProps={card} />
-      <div className="mt-5 rounded-lg flex gap-3 text-xs"></div>
       <DashboardPage />
     </div>
   );

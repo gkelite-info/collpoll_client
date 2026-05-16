@@ -17,8 +17,11 @@ import {
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
+import { useUser } from "@/app/utils/context/UserContext";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const { userId, role, refreshUserContext } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +30,31 @@ export default function LoginPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [showMobileLogin, setShowMobileLogin] = useState(false);
+  const router = useRouter()
+
+  useEffect(() => {
+    if (userId || role) {
+      const roleRouteMap: Record<string, string> = {
+        admin: "/admin",
+        student: "/stu_dashboard",
+        parent: "/parent",
+        faculty: "/faculty",
+        superadmin: "/super-admin",
+        finance: "/finance",
+        collegeadmin: "/college-admin",
+        collegehr: "/hr",
+        placementofficer: "/placement",
+      };
+
+      const redirectPath = roleRouteMap[role?.toLowerCase() || ""] || "/login";
+
+      if (redirectPath !== "/login") {
+        window.history.replaceState(null, "", redirectPath);
+        router.replace(redirectPath);
+        return
+      }
+    }
+  }, [userId, role, router]);
 
   type Slide = {
     heading: string;
@@ -162,7 +190,9 @@ export default function LoginPage() {
       const redirectPath = roleRouteMap[role] || "/login";
 
       toast.success("Login successful!");
-      window.location.href = redirectPath;
+      await refreshUserContext();
+      router.refresh();
+      router.replace(redirectPath);
     } catch (error) {
       console.error("Login Error:", error);
       toast.error("Something went wrong");
@@ -245,8 +275,9 @@ export default function LoginPage() {
             return (
               <div
                 key={idx}
-                className="absolute left-1/2 top-1/2 w-[90%] sm:w-[85%] md:w-[75%] max-w-[360px] sm:max-w-[500px] md:max-w-[560px] xl:max-w-[500px] 2xl:max-w-[560px] transition-all duration-900 ease-in-out origin-center pointer-events-none"
+                className="absolute mt-33 md:mt-65 xl:mt-33 left-1/2 top-1/2 w-[90%] sm:w-[85%] md:w-[75%] max-w-[360px] sm:max-w-[500px] md:max-w-[560px] xl:max-w-[500px] 2xl:max-w-[560px] transition-all duration-900 ease-in-out origin-center pointer-events-none"
                 style={{
+                  top: "0px",
                   transform: transformValue,
                   opacity,
                   zIndex: position === "center" ? 10 : 0,
@@ -383,7 +414,7 @@ export default function LoginPage() {
                     handleLogin();
                   }
                 }}
-                className="w-full h-12 pl-11 pr-4 text-[14px] text-white placeholder:text-white/60 rounded-xl bg-white/10 border border-white/20 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] focus:outline-none focus:bg-white/20 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all duration-300"
+                className="w-full h-12 pl-11 pr-4 text-[14px] text-white placeholder:text-white/60 rounded-lg bg-white/10 border border-white/20 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] focus:outline-none focus:bg-white/20 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all duration-300"
               />
             </div>
           </div>
@@ -408,7 +439,7 @@ export default function LoginPage() {
                     handleLogin();
                   }
                 }}
-                className="w-full h-12 pl-11 pr-12 text-[14px] text-white placeholder:text-white/60 rounded-xl bg-white/10 border border-white/20 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] focus:outline-none focus:bg-white/20 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all duration-300"
+                className="w-full h-12 pl-11 pr-12 text-[14px] text-white placeholder:text-white/60 rounded-lg bg-white/10 border border-white/20 backdrop-blur-md shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] focus:outline-none focus:bg-white/20 focus:border-white/40 focus:ring-2 focus:ring-white/20 transition-all duration-300"
               />
               <button
                 type="button"

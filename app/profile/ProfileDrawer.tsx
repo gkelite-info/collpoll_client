@@ -133,7 +133,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
       setLoading(true);
 
       const timeout = setTimeout(() => {
-        window.location.assign("/login");
+        window.location.replace("/login");
       }, 3500);
 
       const res = await logoutUser();
@@ -144,7 +144,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
         onClose();
         toast.success("Loggedout successfully");
         // router.replace("/login");
-        window.location.assign("/login");
+        window.location.replace("/login");
       } else {
         toast.error("Logout failed. Please try again.");
       }
@@ -162,9 +162,6 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
           <button onClick={onClose} className="cursor-pointer text-[#282828]">
             <ArrowLeft size={22} />
           </button>
-          {/* <button className="cursor-pointer text-[#282828]">
-                        <PencilSimple size={22} />
-                    </button> */}
         </div>
         <h2 className="text-base font-medium pl-4 text-[#282828]">Profile</h2>
         <div
@@ -173,7 +170,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             onClose();
             router.push("/profile?profile=profile&Step=1");
           }}
-          className="m-4 p-4 cursor-pointer rounded-xl bg-[#43C17A26] flex gap-3 items-center"
+          className="m-4 p-4 cursor-pointer rounded-lg bg-[#43C17A26] flex gap-3 items-center"
         >
           {profilePhoto ? (
             <img

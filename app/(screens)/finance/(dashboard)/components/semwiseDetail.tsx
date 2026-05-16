@@ -66,9 +66,8 @@ const TableSkeleton = ({
                 {columns.map((_, colIdx) => (
                   <td key={colIdx} className="px-6 py-4">
                     <div
-                      className={`h-4 bg-gray-200 rounded ${
-                        colIdx === 0 ? "w-3/4" : "w-1/2"
-                      }`}
+                      className={`h-4 bg-gray-200 rounded ${colIdx === 0 ? "w-3/4" : "w-1/2"
+                        }`}
                     />
                   </td>
                 ))}
@@ -101,7 +100,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     "all" | "paid" | "pending" | "partial"
   >("all");
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState(""); // 🟢 ADDED DEBOUNCE STATE
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showFilter, setShowFilter] = useState(false);
 
   const [loadingTable, setLoadingTable] = useState(true);
@@ -119,9 +118,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   });
   const { collegeId, collegeEducationId, loading } = useFinanceManager();
   const router = useRouter();
-
   const searchParams = useSearchParams();
-
   const branchIdParam = searchParams.get("branchId");
   const academicYearParam = searchParams.get("academicYearId");
   const academicYear = searchParams.get("academicYear");
@@ -141,11 +138,11 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     label: string;
     value: "all" | "paid" | "pending" | "partial";
   }[] = [
-    { label: "All", value: "all" },
-    { label: "Paid", value: "paid" },
-    { label: "Pending", value: "pending" },
-    { label: "Partial", value: "partial" },
-  ];
+      { label: "All", value: "all" },
+      { label: "Paid", value: "paid" },
+      { label: "Pending", value: "pending" },
+      { label: "Partial", value: "partial" },
+    ];
 
   const columns = [
     { title: "Student Name", key: "studentNameElement" },
@@ -169,11 +166,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     });
   };
 
-  // 🟢 DEBOUNCER EFFECT
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // Reset page to 1 when a new search triggers
+      setCurrentPage(1);
     }, 400);
     return () => clearTimeout(timer);
   }, [search]);
@@ -181,7 +177,6 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
   const processedData = useMemo(() => {
     let data = [...students];
 
-    // 🟢 REMOVED CLIENT-SIDE SEARCH FILTER (Now handled by backend)
 
     data.sort((a: any, b: any) => {
       const aVal = a[sortKey];
@@ -219,23 +214,21 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       paymentStatusElement: (
         <div className="flex items-center justify-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${
-              item.paymentStatus === "Paid"
-                ? "bg-green-600"
-                : item.paymentStatus === "Partial"
-                  ? "bg-orange-500"
-                  : "bg-red-600"
-            }`}
+            className={`h-2 w-2 rounded-full ${item.paymentStatus === "Paid"
+              ? "bg-green-600"
+              : item.paymentStatus === "Partial"
+                ? "bg-orange-500"
+                : "bg-red-600"
+              }`}
           />
 
           <span
-            className={`${
-              item.paymentStatus === "Paid"
-                ? "text-green-600"
-                : item.paymentStatus === "Partial"
-                  ? "text-orange-500"
-                  : "text-red-600"
-            }`}
+            className={`${item.paymentStatus === "Paid"
+              ? "text-green-600"
+              : item.paymentStatus === "Partial"
+                ? "text-orange-500"
+                : "text-red-600"
+              }`}
           >
             {item.paymentStatus}
           </span>
@@ -284,14 +277,13 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       setLoadingTable(true);
 
       try {
-        const response = await getSemesterFinanceSummary(
-          {
-            collegeId,
-            collegeEducationId,
-            collegeBranchId: branchId,
-            collegeAcademicYearId: academicYearId,
-            collegeSemesterId: semesterId,
-          },
+        const response = await getSemesterFinanceSummary({
+          collegeId,
+          collegeEducationId,
+          collegeBranchId: branchId,
+          collegeAcademicYearId: academicYearId,
+          collegeSemesterId: semesterId,
+        },
           currentPage,
           rowsPerPage,
           debouncedSearch,
@@ -337,13 +329,13 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
     semesterId,
     statusFilter,
     currentPage,
-    debouncedSearch, // 🟢 TRIGGER RE-FETCH WHEN SEARCH CHANGES
+    debouncedSearch,
   ]);
 
   const isPageLoading = loading || loadingTable;
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="bg-red-00 flex flex-col h-auto pb-7 lg:pb-0">
       <div className="flex items-center gap-2 mb-3">
         <CaretLeftIcon
           size={20}
@@ -354,11 +346,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         <h2 className="text-lg font-semibold text-[#2E7D32]">{breadcrumb}</h2>
       </div>
 
-      {/* --- SUMMARY AREA --- */}
       {isPageLoading ? (
         <SummarySkeleton />
       ) : (
-        <div className="bg-[#E2DAFF] rounded-lg p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 text-sm font-medium">
+        <div className="bg-[#E2DAFF] rounded-lg p-4 grid grid-cols-2 landscape:grid-cols-3 sm:grid-cols-2 md:grid-cols-5 landscape:lg:grid-cols-5 xl:grid-cols-5 gap-6 text-sm font-medium">
           <div>
             <p className="text-[#3E18CB] font-semibold text-md">
               {year ? `${year}-${String(Number(year) + 1).slice(-2)}` : ""}
@@ -392,8 +383,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         </div>
       )}
 
-      {/* --- CARDS AREA --- */}
-      <div className="flex gap-4 mt-6">
+      <div className="grid grid-cols-2 landscape:grid-cols-4 md:grid-cols-4 gap-3 mt-6">
         {isPageLoading ? (
           <>
             <CardSkeleton />
@@ -404,25 +394,25 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         ) : (
           <>
             <CardComponent
-              style="bg-[#CEE6FF] h-[120px] w-[220px]"
+              style="bg-[#CEE6FF] h-[120px]"
               icon={<CurrencyInr size={28} weight="fill" color="#60AEFF" />}
               value={`₹ ${summary.collected.toLocaleString("en-IN")}`}
               label="Collected"
             />
             <CardComponent
-              style="bg-[#FFE2E2] h-[120px] w-[220px]"
+              style="bg-[#FFE2E2] h-[120px]"
               icon={<CurrencyInr size={28} weight="fill" color="#FF0000" />}
               value={`₹ ${summary.pending.toLocaleString("en-IN")}`}
               label="Pending"
             />
             <CardComponent
-              style="bg-[#E6FBEA] h-[120px] w-[220px]"
+              style="bg-[#E6FBEA] h-[120px]"
               icon={<UsersThree size={28} weight="fill" color="#43C17A" />}
               value={summary.paidStudents.toString()}
               label="Paid Students"
             />
             <CardComponent
-              style="bg-[#FFEDDA] h-[120px] w-[220px]"
+              style="bg-[#FFEDDA] h-[120px]"
               icon={<UsersThree size={28} weight="fill" color="#FFBB70" />}
               value={summary.pendingStudents.toString()}
               label="Pending Students"
@@ -432,11 +422,11 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
       </div>
 
       <div className="flex justify-between items-center mt-6 mb-3 ">
-        <div className="w-[55%] bg-[#EAEAEA] px-2 rounded-2xl flex items-center justify-center">
+        <div className="w-[55%] bg-[#EAEAEA] px-2 rounded-full flex items-center justify-center">
           <input
             type="text"
             placeholder="Search by Student Name or ID"
-            className="w-full p-2 outline-none rounded-lg text-sm text-[#282828]"
+            className="w-full p-2 outline-none rounded-full text-sm text-[#282828]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -457,7 +447,7 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           >
             <Faders size={20} className="text-[#00A94A]" />
             {showFilter && (
-              <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-white shadow-lg rounded-lg text-sm w-36 z-50">
+              <div className="absolute top-10 -left-9 -translate-x-1/2 bg-white shadow-lg rounded-lg text-sm w-36 z-50">
                 {filterOptions.map((option) => {
                   const getTextColor = () => {
                     if (option.value === "paid") return "text-green-600";
@@ -476,11 +466,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                   return (
                     <div
                       key={option.value}
-                      className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${
-                        statusFilter === option.value
-                          ? "bg-gray-100 font-semibold"
-                          : ""
-                      }`}
+                      className={`px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center gap-2 ${statusFilter === option.value
+                        ? "bg-gray-100 font-semibold"
+                        : ""
+                        }`}
                       onClick={() => {
                         setStatusFilter(option.value);
                         setShowFilter(false);
@@ -501,7 +490,6 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
         </div>
       </div>
 
-      {/* --- TABLE AREA --- */}
       <div className="flex-1">
         {isPageLoading ? (
           <TableSkeleton columns={columns} height="69vh" />
@@ -513,18 +501,16 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
           />
         )}
 
-        {/* Pagination only shown if not loading and has data */}
         {!isPageLoading && totalPages > 1 && (
           <div className="flex justify-end items-center gap-3 mt-6 mb-4">
             <button
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === 1
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === 1
+                  ? "border-gray-200 text-gray-300"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
             >
               <CaretLeftIcon size={18} weight="bold" />
             </button>
@@ -534,11 +520,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
                 key={i}
                 onClick={() => setCurrentPage(i + 1)}
                 className={`w-10 h-10 rounded-lg font-semibold
-        ${
-          currentPage === i + 1
-            ? "bg-[#16284F] text-white"
-            : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === i + 1
+                    ? "bg-[#16284F] text-white"
+                    : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                  }`}
               >
                 {i + 1}
               </button>
@@ -548,11 +533,10 @@ export default function SemwiseDetail({ semester }: { semester: string }) {
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className={`w-10 h-10 flex items-center justify-center rounded-lg border
-      ${
-        currentPage === totalPages
-          ? "border-gray-200 text-gray-300"
-          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-      }`}
+      ${currentPage === totalPages
+                  ? "border-gray-200 text-gray-300"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
             >
               <CaretRight size={18} weight="bold" />
             </button>
