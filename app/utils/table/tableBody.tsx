@@ -45,7 +45,7 @@ export default function TableBody({ columns, tableData, isLoading = false }: Tab
             colSpan={columns.length}
             className="py-20 text-center text-gray-400 italic font-medium"
           >
-            No data available to display.
+            No data available.
           </td>
         </tr>
       )}

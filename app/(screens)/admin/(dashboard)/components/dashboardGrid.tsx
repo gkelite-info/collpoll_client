@@ -22,7 +22,7 @@ const Card: React.FC<{ children: React.ReactNode; className?: string }> = ({
   className = "",
 }) => (
   <div
-    className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col ${className}`}
+    className={`bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex flex-col ${className}`}
   >
     {children}
   </div>
@@ -105,7 +105,7 @@ const ActiveAutomations: React.FC<{
   };
 
   return (
-    <Card className="flex-grow">
+    <Card className="flex-grow rounded-lg">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold text-gray-800">Active Automations</h2>
         <CaretRight size={14} className="text-gray-400" />
@@ -135,8 +135,8 @@ const ActiveAutomations: React.FC<{
 const BackupRetention: React.FC<{ data: typeof dashboardData.backup }> = ({
   data,
 }) => (
-  <Card>
-    <div className="mb-3.5">
+  <Card className="rounded-lg">
+    <div className="mb-3.5 rounded-md">
       <h2 className="text-sm font-bold text-gray-800">
         Backup & Data Retention
       </h2>
@@ -176,7 +176,7 @@ const RolesPermissions: React.FC<{
   data: typeof dashboardData.roles;
   onConfigure: () => void;
 }> = ({ data, onConfigure }) => (
-  <Card className="flex-grow">
+  <Card className="flex-grow rounded-lg">
     <div className="mb-4">
       <h2 className="text-sm font-bold text-gray-800">Roles & Permissions</h2>
     </div>
@@ -219,7 +219,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ data }) => {
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full items-stretch">
-      <div className="flex flex-col gap-3">
+      <div className="bg-red-00 flex flex-col gap-3">
         <ActiveAutomations data={data.automations} />
         <BackupRetention data={data.backup} />
       </div>

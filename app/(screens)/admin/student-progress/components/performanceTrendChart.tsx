@@ -14,7 +14,7 @@ import {
 
 import type { Formatter } from "recharts/types/component/DefaultTooltipContent";
 
-const performanceFormatter: Formatter<number, string> = (value, name) => [
+const performanceFormatter = (value: any, name: any) => [
   `${value ?? 0}%`,
   name,
 ];

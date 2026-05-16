@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Pagination } from "./pagination";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import ConfirmDeleteModal from "../../calendar/components/ConfirmDeleteModal";
 
 export type SubjectViewData = {
   id: number;
@@ -63,6 +64,9 @@ export default function ViewSubjects({
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { collegeEducationType, collegeEducationId } = useAdmin();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -100,30 +104,35 @@ export default function ViewSubjects({
       setCurrentPage(1);
     } catch (error: unknown) {
       toast.error(
-        getErrorMessage(error) || "Something went wrong while loading subjects.",
+        getErrorMessage("Something went wrong while loading subjects.")
       );
     } finally {
+      setIsDeleting(false);
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (subjectId: number) => {
-    if (!window.confirm("Are you sure you want to delete this subject?"))
-      return;
+  const handleDelete = (subjectId: number) => {
+    setSelectedSubjectId(subjectId);
+    setOpenDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedSubjectId) return;
 
     try {
-      setIsLoading(true);
-      const res = await deleteAcademicSubject(subjectId);
+      setIsDeleting(true);
+      const res = await deleteAcademicSubject(selectedSubjectId);
       if (res.success) {
         toast.success("Subject deleted successfully!");
         loadSubjects();
       } else {
         toast.error("Failed to delete subject.");
-        setIsLoading(false);
+        setIsDeleting(false);
       }
     } catch {
       toast.error("Failed to delete subject.");
-      setIsLoading(false);
+      setIsDeleting(false);
     }
   };
 
@@ -237,6 +246,21 @@ export default function ViewSubjects({
           onPageChange={setCurrentPage}
         />
       )}
+
+      <ConfirmDeleteModal
+        open={openDeleteModal}
+        onCancel={() => {
+          setOpenDeleteModal(false);
+          setSelectedSubjectId(null);
+        }}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        title="Delete"
+        name="subject"
+        confirmText="Yes, Delete"
+        loadingText="Deleting..."
+        actionType="remove"
+      />
     </div>
   );
 }

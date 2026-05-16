@@ -215,7 +215,6 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
     if (result.error) {
       console.error("Supabase operation error:", result.error);
 
-      // 🟢 Catch Postgres unique constraint violation for duplicate subject code
       let errorMessage = result.error.message;
       if (
         result.error.code === "23505" ||
@@ -238,12 +237,11 @@ export const upsertAcademicSubject = async (payload: SubjectDBPayload) => {
   }
 };
 
-// 🟢 NEW: Function to delete subject
 export const deleteAcademicSubject = async (collegeSubjectId: number) => {
   try {
     const { error } = await supabase
       .from("college_subjects")
-      .update({ deletedAt: new Date().toISOString() }) // Soft delete
+      .update({ deletedAt: new Date().toISOString() })
       .eq("collegeSubjectId", collegeSubjectId);
 
     if (error) throw error;

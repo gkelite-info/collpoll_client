@@ -41,14 +41,14 @@ export default function ConfirmLogoutModal({
 
                 <div className="flex gap-3 mt-6">
                     <button
-                        className="flex-1 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-colors duration-200"
+                        className="flex-1 cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-lg transition-colors duration-200"
                         onClick={onCancel}
                     >
                         Stay Logged In
                     </button>
 
                     <button
-                        className="flex-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-xl shadow-sm shadow-orange-200 transition-colors duration-200"
+                        className="flex-1 cursor-pointer bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg shadow-sm shadow-orange-200 transition-colors duration-200"
                         onClick={onConfirm}
                         disabled={loading}
                     >

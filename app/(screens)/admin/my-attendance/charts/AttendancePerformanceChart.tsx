@@ -1,4 +1,4 @@
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 import {
   LineChart,
   Line,
@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   TooltipProps,
 } from "recharts";
+
 
 type ChartDataPoint = {
   month: string;
@@ -34,10 +35,17 @@ const mockChartData: ChartDataPoint[] = [
 const AttendancePerformanceChart: FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
-    value,
-    name,
-  ) => {
+  // const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
+  //   value,
+  //   name,
+  // ) => {
+  //   if (name === "Performance") {
+  //     return [`${value}%`, name];
+  //   }
+  //   return [value, name];
+  // };
+
+  const tooltipFormatter = (value: any, name: any): [ReactNode, ReactNode] => {
     if (name === "Performance") {
       return [`${value}%`, name];
     }
@@ -95,7 +103,7 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
             />
 
             <Tooltip
-              formatter={tooltipFormatter}
+              formatter={tooltipFormatter as any}
               contentStyle={{
                 borderRadius: "8px",
                 border: "none",

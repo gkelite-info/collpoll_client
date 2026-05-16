@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Header from "./header/header";
 import { Toaster } from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -25,6 +25,16 @@ import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 import TaskPanelModal from "../utils/taskPanelModal";
 import WellbeingExecutiveDashboardShimmer from "../(screens)/wellbeing-executive/(dashboard)/components/DashboardShimmer";
 import WellbeingManagerDashboardShimmer from "../(screens)/wellbeing-manager/(dashboard)/components/DashboardShimmer";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  getLandingPageForRole,
+  isAuthProtectedRoute,
+  isAuthOnlyRoute,
+  isExemptedRoute,
+  isLegacyStudentRoute,
+  isPublicRoute,
+  normalizeRole,
+} from "@/lib/constants/routes";
 
 export default function ClientLayout({
   children,
@@ -32,7 +42,8 @@ export default function ClientLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { role, facultyId, studentId } = useUser();
+  const router = useRouter();
+  const { role, facultyId, studentId, refreshUserContext } = useUser();
   const { subjectIds } = useFaculty();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -41,13 +52,21 @@ export default function ClientLayout({
   const [openTaskPanelModal, setOpenTaskPanelModal] = useState(false);
   const [isWellbeingRouteLoading, setIsWellbeingRouteLoading] = useState(false);
 
-  const handleMenuClick = useCallback(() => {
-    setIsSidebarOpen((prev) => !prev);
-  }, []);
+  const matchesRouteSegment = useCallback(
+    (route: string) => pathname === route || pathname.startsWith(route + "/"),
+    [pathname],
+  );
+
+  const handleMenuClick = () => {
+    setIsSidebarOpen(prev => !prev);
+  };
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsSidebarOpen(false);
+    const timeoutId = window.setTimeout(() => {
+      setIsSidebarOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [pathname]);
 
   useEffect(() => {
@@ -79,6 +98,7 @@ export default function ClientLayout({
   }, [isWellbeingRouteLoading, pathname]);
 
   const hideLayoutRoutes = [
+    "/landing_page",
     "/login",
     "/signup",
     "/verify-email",
@@ -87,9 +107,112 @@ export default function ClientLayout({
     "/construction",
   ];
 
-  const shouldHideLayout = hideLayoutRoutes.some((route) =>
-    pathname.startsWith(route),
-  );
+  const shouldHideLayout = hideLayoutRoutes.some((route) => matchesRouteSegment(route));
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const resolveRoleDashboard = (rawRole: string | null) => {
+      const normalizedRole = normalizeRole(rawRole);
+      return normalizedRole ? getLandingPageForRole(normalizedRole) : null;
+    };
+
+    const redirectForAuthState = async () => {
+      if (isExemptedRoute(pathname)) return;
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!isMounted) return;
+
+      if (!user) {
+        if (!isPublicRoute(pathname)) {
+          router.replace("/login");
+          router.refresh();
+        }
+        return;
+      }
+
+      if (isAuthOnlyRoute(pathname) || pathname === "/") {
+        let dashboardPath = resolveRoleDashboard(role);
+
+        if (!dashboardPath) {
+          await refreshUserContext();
+          const { data: profile } = await supabase
+            .from("users")
+            .select("role")
+            .eq("auth_id", user.id)
+            .maybeSingle();
+
+          if (!isMounted) return;
+
+          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
+        }
+
+        if (dashboardPath && pathname !== dashboardPath) {
+          router.replace(dashboardPath);
+          router.refresh();
+        }
+        return;
+      }
+
+      if (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname)) {
+        let dashboardPath = resolveRoleDashboard(role);
+
+        if (!dashboardPath) {
+          await refreshUserContext();
+          const { data: profile } = await supabase
+            .from("users")
+            .select("role")
+            .eq("auth_id", user.id)
+            .maybeSingle();
+
+          if (!isMounted) return;
+
+          dashboardPath = resolveRoleDashboard(profile?.role ?? null);
+        }
+
+        const isStudentLegacyPath =
+          dashboardPath === "/stu_dashboard" && isLegacyStudentRoute(pathname);
+
+        if (
+          dashboardPath &&
+          !matchesRouteSegment(dashboardPath) &&
+          !isStudentLegacyPath
+        ) {
+          router.replace(dashboardPath);
+          router.refresh();
+        }
+      }
+    };
+
+    const handlePageShow = () => {
+      redirectForAuthState();
+    };
+
+    const handleFocus = () => {
+      redirectForAuthState();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        redirectForAuthState();
+      }
+    };
+
+    redirectForAuthState();
+    window.addEventListener("pageshow", handlePageShow);
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("pageshow", handlePageShow);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
 
   const wellbeingRouteShimmer = useMemo(() => {
     if (pathname.startsWith("/wellbeing-manager")) {
@@ -284,7 +407,7 @@ export default function ClientLayout({
             </div>
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
-            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F4F4F4] px-2 overscroll-contain">
               {isWellbeingRouteLoading && wellbeingRouteShimmer
                 ? wellbeingRouteShimmer
                 : children}
