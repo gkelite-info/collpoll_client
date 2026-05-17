@@ -73,6 +73,10 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
           className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5"
         />
       ),
+      onClick: () => {
+        onClose();
+        router.push("/profile/support");
+      },
     },
     {
       id: "change-password",
