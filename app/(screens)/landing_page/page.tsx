@@ -176,13 +176,7 @@ const Navbar = () => {
           <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
         </div>
 
-        <div className="hidden md:flex items-center gap-4">
-          {/* <button
-            onClick={scrollToContact}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-2.5 rounded-full text-sm font-semibold hover-glow flex items-center gap-2 cursor-pointer"
-          >
-            Log In
-          </button> */}
+        <div className="hidden md:hidden lg:flex items-center gap-4">
           <button
             onClick={handleLogin}
             className="bg-[#00d2ff]/10 border border-[#00d2ff]/60 text-[#00d2ff] px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#00d2ff]/20 transition-all duration-300 shadow-[0_0_15px_-3px_rgba(0,210,255,0.4)] flex items-center gap-2 cursor-pointer"
@@ -201,24 +195,35 @@ const Navbar = () => {
           </button>
         </div>
 
-        <button className="md:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+        <button className="md:block lg:hidden text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X /> : <Menu />}
         </button>
       </div>
 
       {mobileMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-background border-b border-border p-6 flex flex-col gap-4 md:hidden">
+        <div className="absolute top-full left-0 w-full bg-background border-b border-border p-6 flex flex-col gap-4 md:flex md:flex-col">
           <a href="#features" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Modules</a>
           <a href="#portals" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Portals</a>
           <a href="#testimonials" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Testimonials</a>
           <a href="#contact" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Contact</a>
           <div className="h-px bg-border my-2" />
-          <button
-            onClick={() => { scrollToContact(); setMobileMenuOpen(false); }}
-            className="bg-primary text-primary-foreground px-5 py-3 rounded-xl font-semibold w-full"
-          >
-            Request Demo
-          </button>
+          <div className="grid grid-cols-2">
+            <button
+              onClick={handleLogin}
+              className="bg-[#00d2ff]/10 w-fit border border-[#00d2ff]/60 text-[#00d2ff] px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#00d2ff]/20 transition-all duration-300 shadow-[0_0_15px_-3px_rgba(0,210,255,0.4)] flex items-center gap-2 cursor-pointer"
+              style={{
+                filter: "drop-shadow(0px 0px 5px rgba(0, 210, 255, 0.5))"
+              }}
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => { scrollToContact(); setMobileMenuOpen(false); }}
+              className="bg-primary text-primary-foreground px-5 py-3 rounded-xl font-semibold w-full"
+            >
+              Request Demo
+            </button>
+          </div>
         </div>
       )}
     </nav>
