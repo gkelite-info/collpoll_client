@@ -49,7 +49,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   const [unreadEmailCount, setUnreadEmailCount] = useState<number>(0);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [emailInitialView, setEmailInitialView] = useState<{ tab?: "all" | "inbox" | "sent"; compose?: boolean }>({});
+  const [emailInitialView, setEmailInitialView] = useState<{
+    tab?: "all" | "inbox" | "sent";
+    compose?: boolean;
+  }>({});
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -61,11 +64,18 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     userId,
     profilePhoto,
     parentId,
+    studentId,
+    adminId,
+    financeManagerId,
+    facultyId,
+    collegeAdminId,
+    collegeHrId,
+    placementEmployeeId,
+    wellBeingId,
     identifierId,
-    loading
+    loading,
   } = useUser();
-  const { facultyId } = useFaculty();
-
+  const { facultyId: activeFacultyId } = useFaculty();
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -73,6 +83,45 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   const [openAddTask, setOpenAddTask] = useState(false);
   const [activeTaskCount, setActiveTaskCount] = useState<number>(0);
   const availableRoutes = useMemo(() => getSearchRoutesByRole(role), [role]);
+  const roleIdMap = useMemo<Record<string, number | null>>(
+    () => ({
+      Student: studentId,
+      Faculty: facultyId,
+      Admin: adminId,
+      Finance: financeManagerId,
+      FinanceManager: financeManagerId,
+      CollegeAdmin: collegeAdminId,
+      CollegeHr: collegeHrId,
+      Parent: parentId,
+      PlacementOfficer: placementEmployeeId,
+      WellbeingExecutive: wellBeingId,
+      WellbeingManager: wellBeingId,
+      SuperAdmin: userId,
+    }),
+    [
+      studentId,
+      facultyId,
+      adminId,
+      financeManagerId,
+      collegeAdminId,
+      collegeHrId,
+      parentId,
+      placementEmployeeId,
+      wellBeingId,
+      userId,
+    ],
+  );
+  const displayRoleMap: Record<string, string> = {
+    FinanceManager: "Finance Manager",
+    CollegeAdmin: "College Admin",
+    CollegeHr: "College HR",
+    PlacementOfficer: "Placement Officer",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    SuperAdmin: "Super Admin",
+  };
+  const displayRole = role ? (displayRoleMap[role] ?? role) : "";
+  const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
 
   // const filteredSuggestions = useMemo(() => {
   //   if (!searchValue.trim()) return [];
@@ -87,17 +136,28 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     if (!searchValue.trim()) return [];
     const query = searchValue.toLowerCase().trim();
 
-    const scoredRoutes = availableRoutes.map((route) => {
-      let score = 0;
-      const labelLower = route.label.toLowerCase();
+    const scoredRoutes = availableRoutes
+      .map((route) => {
+        let score = 0;
+        const labelLower = route.label.toLowerCase();
 
-      if (labelLower.startsWith(query)) { score = 100 }
-      else if (labelLower.includes(query)) { score = 50 }
-      else if (route.keywords?.some((kw) => kw.toLowerCase().startsWith(query))) { score = 30 }
-      else if (route.keywords?.some((kw) => kw.toLowerCase().includes(query))) { score = 10 }
+        if (labelLower.startsWith(query)) {
+          score = 100;
+        } else if (labelLower.includes(query)) {
+          score = 50;
+        } else if (
+          route.keywords?.some((kw) => kw.toLowerCase().startsWith(query))
+        ) {
+          score = 30;
+        } else if (
+          route.keywords?.some((kw) => kw.toLowerCase().includes(query))
+        ) {
+          score = 10;
+        }
 
-      return { ...route, score };
-    }).filter((route) => route.score > 0);
+        return { ...route, score };
+      })
+      .filter((route) => route.score > 0);
 
     return scoredRoutes.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
@@ -110,15 +170,15 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   }, [searchValue]);
 
   useEffect(() => {
-    if (!facultyId) return;
+    if (!activeFacultyId) return;
 
     const fetchTaskCount = async () => {
-      const count = await countActiveFacultyTasks(facultyId);
+      const count = await countActiveFacultyTasks(activeFacultyId);
       setActiveTaskCount(count);
     };
 
     fetchTaskCount();
-  }, [facultyId]);
+  }, [activeFacultyId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,7 +204,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
       setSelectedIndex((prev) => (prev + 1) % filteredSuggestions.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+      setSelectedIndex(
+        (prev) =>
+          (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length,
+      );
     } else if (e.key === "Enter") {
       e.preventDefault();
       const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
@@ -180,7 +243,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
           if (subAction === "compose") {
             setEmailInitialView({ compose: true, tab: "all" });
           } else if (subAction === "inbox" || subAction === "sent") {
-            setEmailInitialView({ compose: false, tab: subAction as "inbox" | "sent" });
+            setEmailInitialView({
+              compose: false,
+              tab: subAction as "inbox" | "sent",
+            });
           } else {
             setEmailInitialView({ compose: false, tab: "all" });
           }
@@ -303,23 +369,29 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
           </div>
         </div> */}
 
-
         {/* mobile view */}
         {/* <div className="bg-yellow-00 w-[100%] md:w-[100%] flex flex-col gap-2 md:flex lg:hidden"> */}
         <div className="bg-yellow-00 w-full flex flex-col gap-2 md:flex lg:hidden pb-0">
           <div className="bg-red-00 flex items-center justify-between w-full">
             <div className="flex gap-4 md:gap-10 items-center">
-              <ListIcon weight="bold" className="text-2xl text-black w-6 h-6 md:w-8 md:h-8" onClick={() => {
-                if (typeof onMenuClick === "function") {
-                  onMenuClick();
-                }
-              }}
+              <ListIcon
+                weight="bold"
+                className="text-2xl text-black w-6 h-6 md:w-8 md:h-8"
+                onClick={() => {
+                  if (typeof onMenuClick === "function") {
+                    onMenuClick();
+                  }
+                }}
               />
               {/* <p className="text-[#282828] font-medium text-xl md:text-2xl">Tekton Campus</p> */}
             </div>
             <div className="flex items-center gap-3">
               <button onClick={() => setIsNewsOpen(true)} className="relative">
-                <Newspaper size={21} color="#282828" className="cursor-pointer" />
+                <Newspaper
+                  size={21}
+                  color="#282828"
+                  className="cursor-pointer"
+                />
               </button>
               <button
                 //  onClick={() => setIsEmailOpen(true)}
@@ -327,7 +399,8 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   setEmailInitialView({ compose: false, tab: "all" });
                   setIsEmailOpen(true);
                 }}
-                className="relative">
+                className="relative"
+              >
                 <EnvelopeSimple
                   size={21}
                   color="#282828"
@@ -360,10 +433,15 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 onClick={() => setIsAnnouncementOpen(true)}
                 className="relative"
               >
-                <Megaphone size={20} color="#282828" className="cursor-pointer" />
+                <Megaphone
+                  size={20}
+                  color="#282828"
+                  className="cursor-pointer"
+                />
               </button>
-              <div 
-                className="flex items-center gap-2 cursor-pointer"
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
                 onClick={() => setOpenProfile(true)}
               >
                 {profilePhoto ? (
@@ -373,23 +451,23 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                     className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover shrink-0"
                   />
                 ) : (
-                  <Avatar
-                    alt=""
-                    sizes="w-8 h-8 md:w-10 md:h-10"
-                  />
+                  <Avatar alt="" sizes="w-8 h-8 md:w-10 md:h-10" />
                 )}
-                <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
-              </div>
+                <p className="text-xs text-[#282828] font-medium">
+                  ID - {identifierId}
+                </p>
+              </button>
             </div>
           </div>
           <div className="w-full h-full bg-blue-00 flex items-center justify-between">
             {/* <div ref={searchContainerRef} className="relative w-[60%] h-[100%] md:w-[70%] md:h-[100%]"> */}
             <div
               ref={searchContainerRef}
-              className={`relative h-[100%] md:h-[100%] ${["Faculty", "Admin", "Student"].includes(role!)
-                ? "w-[60%] md:w-[70%]"
-                : "w-full"
-                }`}
+              className={`relative h-[100%] md:h-[100%] ${
+                ["Faculty", "Admin", "Student"].includes(role!)
+                  ? "w-[60%] md:w-[70%]"
+                  : "w-full"
+              }`}
             >
               <input
                 type="text"
@@ -403,10 +481,11 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   loading ? "Loading modules..." : "What do you want to find?"
                 }
                 // className="rounded-full w-full h-full bg-[#EAEAEA] text-[#282828] lg:text-sm pl-5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#43C17A]/40 transition-all shadow-inner"
-                className={`rounded-full w-full h-full lg:text-sm p-1 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
-                  ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
-                  : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
-                  }`}
+                className={`rounded-full w-full h-full lg:text-sm p-1 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${
+                  loading || !role
+                    ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
+                    : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
+                }`}
               />
               {loading ? (
                 <CircleNotch
@@ -424,70 +503,90 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
               )}
 
               <AnimatePresence>
-                {!loading && role && isSearchFocused && searchValue.trim().length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute top-[120%] z-100 mt-1 w-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden py-2"
-                  >
-                    {filteredSuggestions.length > 0 ? (
-                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                        {filteredSuggestions.map((item, index) => {
-                          const isSelected = selectedIndex === index;
-                          return (
-                            <div
-                              key={item.path}
-                              onClick={() => handleSuggestionClick(item.path)}
-                              onMouseEnter={() => setSelectedIndex(index)}
-                              className={`px-4 py-3 mx-2 my-1 rounded-xl text-sm cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                                ? "bg-[#43C17A] text-white shadow-md"
-                                : "text-gray-700 hover:bg-[#43C17A]/10"
+                {!loading &&
+                  role &&
+                  isSearchFocused &&
+                  searchValue.trim().length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute top-[120%] z-100 mt-1 w-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden py-2"
+                    >
+                      {filteredSuggestions.length > 0 ? (
+                        <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                          {filteredSuggestions.map((item, index) => {
+                            const isSelected = selectedIndex === index;
+                            return (
+                              <div
+                                key={item.path}
+                                onClick={() => handleSuggestionClick(item.path)}
+                                onMouseEnter={() => setSelectedIndex(index)}
+                                className={`px-4 py-3 mx-2 my-1 rounded-xl text-sm cursor-pointer transition-all flex items-center justify-between group ${
+                                  isSelected
+                                    ? "bg-[#43C17A] text-white shadow-md"
+                                    : "text-gray-700 hover:bg-[#43C17A]/10"
                                 }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <MagnifyingGlass
-                                  size={16}
-                                  weight="bold"
-                                  className={`transition-colors ${isSelected ? "text-white" : "text-[#43C17A]"}`}
-                                />
-                                {/* <span className="font-semibold">{item.label}</span> */}
-                                <div className="flex flex-col leading-tight">
-                                  <span className="font-semibold">{item.label}</span>
-                                  {item.subLabel && (
-                                    <span className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}>
-                                      {item.subLabel}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <MagnifyingGlass
+                                    size={16}
+                                    weight="bold"
+                                    className={`transition-colors ${isSelected ? "text-white" : "text-[#43C17A]"}`}
+                                  />
+                                  {/* <span className="font-semibold">{item.label}</span> */}
+                                  <div className="flex flex-col leading-tight">
+                                    <span className="font-semibold">
+                                      {item.label}
                                     </span>
-                                  )}
+                                    {item.subLabel && (
+                                      <span
+                                        className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}
+                                      >
+                                        {item.subLabel}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
 
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${isSelected
-                                ? "bg-white/20 text-white"
-                                : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
-                                }`}>
-                                {item.category}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="px-6 py-10 text-center flex flex-col items-center justify-center gap-3">
-                        <div className="bg-[#43C17A]/10 p-4 rounded-full mb-1">
-                          <MagnifyingGlass size={32} className="text-[#43C17A]" weight="duotone" />
+                                <span
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${
+                                    isSelected
+                                      ? "bg-white/20 text-white"
+                                      : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
+                                  }`}
+                                >
+                                  {item.category}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
-                        <p className="text-[15px] text-gray-700 font-medium">
-                          No matches found for "<span className="font-bold text-black">{searchValue}</span>"
-                        </p>
-                        <p className="text-xs text-gray-400 max-w-[250px]">
-                          Try checking for typos or searching with different keywords like 'fees', 'grades', or 'schedule'.
-                        </p>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
+                      ) : (
+                        <div className="px-6 py-10 text-center flex flex-col items-center justify-center gap-3">
+                          <div className="bg-[#43C17A]/10 p-4 rounded-full mb-1">
+                            <MagnifyingGlass
+                              size={32}
+                              className="text-[#43C17A]"
+                              weight="duotone"
+                            />
+                          </div>
+                          <p className="text-[15px] text-gray-700 font-medium">
+                            No matches found for "
+                            <span className="font-bold text-black">
+                              {searchValue}
+                            </span>
+                            "
+                          </p>
+                          <p className="text-xs text-gray-400 max-w-[250px]">
+                            Try checking for typos or searching with different
+                            keywords like 'fees', 'grades', or 'schedule'.
+                          </p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
               </AnimatePresence>
             </div>
             {["Faculty", "Student"].includes(role!) ? (
@@ -496,9 +595,11 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   onClick={() => onAddTaskClick?.()}
                   className="p-2 md:px-3 h-[80%] md:h-[70%] bg-[#43C17A] rounded-md flex items-center"
                 >
-                  <p className="text-white text-xs md:text-sm font-medium">Add task +</p>
+                  <p className="text-white text-xs md:text-sm font-medium">
+                    Add task +
+                  </p>
                 </button>
-                {typeof activeTaskCount === 'number' ? (
+                {typeof activeTaskCount === "number" ? (
                   <div className="bg-[#EED5D5] h-6 w-6 md:h-8 md:w-8 rounded-full flex items-center justify-center">
                     <p className="text-[#FF2A2A] font-medium text-sm md:text-base">
                       {activeTaskCount > 99 ? "99+" : activeTaskCount}
@@ -511,16 +612,20 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 onClick={() => onAddUserClick?.()}
                 className="p-2 md:px-3 h-[80%] md:h-[70%] bg-[#43C17A] rounded-md flex items-center"
               >
-                <p className="text-white text-xs md:text-sm font-medium">+ Add User</p>
+                <p className="text-white text-xs md:text-sm font-medium">
+                  + Add User
+                </p>
               </button>
             ) : null}
           </div>
         </div>
         {/* mobile view */}
 
-
         <div className="hidden md:hidden lg:flex w-[59%] flex justify-end items-center">
-          <div ref={searchContainerRef} className="relative w-[80%] h-[60%] lg:w-[80%] lg:h-[60%]">
+          <div
+            ref={searchContainerRef}
+            className="relative w-[80%] h-[60%] lg:w-[80%] lg:h-[60%]"
+          >
             <input
               type="text"
               disabled={loading || !role}
@@ -533,10 +638,11 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 loading ? "Loading modules..." : "What do you want to find?"
               }
               // className="rounded-full w-full h-full bg-[#EAEAEA] text-[#282828] lg:text-sm pl-5 pr-10 focus:outline-none focus:ring-2 focus:ring-[#43C17A]/40 transition-all shadow-inner"
-              className={`rounded-full w-full h-full lg:text-sm p-2 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${loading || !role
-                ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
-                : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
-                }`}
+              className={`rounded-full w-full h-full lg:text-sm p-2 pl-5 pr-10 focus:outline-none transition-all shadow-inner ${
+                loading || !role
+                  ? "bg-[#EAEAEA]/60 text-gray-400 cursor-not-allowed"
+                  : "bg-[#EAEAEA] text-[#282828] focus:ring-2 focus:ring-[#43C17A]/40"
+              }`}
             />
             {loading ? (
               <CircleNotch
@@ -554,70 +660,90 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
             )}
 
             <AnimatePresence>
-              {!loading && role && isSearchFocused && searchValue.trim().length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  className="absolute top-[120%] z-100 mt-1 w-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden py-2"
-                >
-                  {filteredSuggestions.length > 0 ? (
-                    <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-                      {filteredSuggestions.map((item, index) => {
-                        const isSelected = selectedIndex === index;
-                        return (
-                          <div
-                            key={item.path}
-                            onClick={() => handleSuggestionClick(item.path)}
-                            onMouseEnter={() => setSelectedIndex(index)}
-                            className={`px-4 py-3 mx-2 my-1 rounded-xl text-sm cursor-pointer transition-all flex items-center justify-between group ${isSelected
-                              ? "bg-[#43C17A] text-white shadow-md"
-                              : "text-gray-700 hover:bg-[#43C17A]/10"
+              {!loading &&
+                role &&
+                isSearchFocused &&
+                searchValue.trim().length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute top-[120%] z-100 mt-1 w-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-2xl overflow-hidden py-2"
+                  >
+                    {filteredSuggestions.length > 0 ? (
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {filteredSuggestions.map((item, index) => {
+                          const isSelected = selectedIndex === index;
+                          return (
+                            <div
+                              key={item.path}
+                              onClick={() => handleSuggestionClick(item.path)}
+                              onMouseEnter={() => setSelectedIndex(index)}
+                              className={`px-4 py-3 mx-2 my-1 rounded-xl text-sm cursor-pointer transition-all flex items-center justify-between group ${
+                                isSelected
+                                  ? "bg-[#43C17A] text-white shadow-md"
+                                  : "text-gray-700 hover:bg-[#43C17A]/10"
                               }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <MagnifyingGlass
-                                size={16}
-                                weight="bold"
-                                className={`transition-colors ${isSelected ? "text-white" : "text-[#43C17A]"}`}
-                              />
-                              {/* <span className="font-semibold">{item.label}</span> */}
-                              <div className="flex flex-col leading-tight">
-                                <span className="font-semibold">{item.label}</span>
-                                {item.subLabel && (
-                                  <span className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}>
-                                    {item.subLabel}
+                            >
+                              <div className="flex items-center gap-3">
+                                <MagnifyingGlass
+                                  size={16}
+                                  weight="bold"
+                                  className={`transition-colors ${isSelected ? "text-white" : "text-[#43C17A]"}`}
+                                />
+                                {/* <span className="font-semibold">{item.label}</span> */}
+                                <div className="flex flex-col leading-tight">
+                                  <span className="font-semibold">
+                                    {item.label}
                                   </span>
-                                )}
+                                  {item.subLabel && (
+                                    <span
+                                      className={`text-[11px] opacity-80 ${isSelected ? "text-white" : "text-gray-500"}`}
+                                    >
+                                      {item.subLabel}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
 
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
-                              }`}>
-                              {item.category}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="px-6 py-10 text-center flex flex-col items-center justify-center gap-3">
-                      <div className="bg-[#43C17A]/10 p-4 rounded-full mb-1">
-                        <MagnifyingGlass size={32} className="text-[#43C17A]" weight="duotone" />
+                              <span
+                                className={`text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider uppercase transition-colors ${
+                                  isSelected
+                                    ? "bg-white/20 text-white"
+                                    : "bg-gray-100 text-gray-400 group-hover:bg-[#43C17A]/20 group-hover:text-[#43C17A]"
+                                }`}
+                              >
+                                {item.category}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <p className="text-[15px] text-gray-700 font-medium">
-                        No matches found for "<span className="font-bold text-black">{searchValue}</span>"
-                      </p>
-                      <p className="text-xs text-gray-400 max-w-[250px]">
-                        Try checking for typos or searching with different keywords like 'fees', 'grades', or 'schedule'.
-                      </p>
-                    </div>
-                  )}
-                </motion.div>
-              )}
+                    ) : (
+                      <div className="px-6 py-10 text-center flex flex-col items-center justify-center gap-3">
+                        <div className="bg-[#43C17A]/10 p-4 rounded-full mb-1">
+                          <MagnifyingGlass
+                            size={32}
+                            className="text-[#43C17A]"
+                            weight="duotone"
+                          />
+                        </div>
+                        <p className="text-[15px] text-gray-700 font-medium">
+                          No matches found for "
+                          <span className="font-bold text-black">
+                            {searchValue}
+                          </span>
+                          "
+                        </p>
+                        <p className="text-xs text-gray-400 max-w-[250px]">
+                          Try checking for typos or searching with different
+                          keywords like 'fees', 'grades', or 'schedule'.
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
             </AnimatePresence>
           </div>
         </div>
@@ -634,7 +760,8 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 setEmailInitialView({ compose: false, tab: "all" });
                 setIsEmailOpen(true);
               }}
-              className="relative">
+              className="relative"
+            >
               <EnvelopeSimple
                 size={21}
                 color="#282828"
@@ -699,7 +826,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
 
               <div className="w-[75%] flex flex-col justify-center px-2 gap-[2px] text-[#282828] font-semibold min-w-0">
                 <div className="flex items-center justify-between w-full">
-                  <p className="text-sm text-[#ffffff] truncate leading-none" title={fullName || ""}>
+                  <p
+                    className="text-sm text-[#ffffff] truncate leading-none"
+                    title={fullName || ""}
+                  >
                     {fullName}
                   </p>
                   <CaretDown
@@ -710,10 +840,22 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   />
                 </div>
 
-                <div className={`w-full text-[#E5E5E5] ${role === "PlacementOfficer"
-                  ? "flex flex-col items-start text-[11px] leading-[1.2]"
-                  : "flex items-center justify-between text-xs"
-                  }`}>
+                <div className="flex w-full items-center justify-between gap-2 text-xs text-[#E5E5E5]">
+                  <p className="truncate" title={displayRole || undefined}>
+                    {displayRole || "-"}
+                  </p>
+                  <p className="whitespace-nowrap shrink-0">
+                    ID - <span>{displayId || "-"}</span>
+                  </p>
+                </div>
+
+                <div
+                  className={`hidden w-full text-[#E5E5E5] ${
+                    role === "PlacementOfficer"
+                      ? "flex flex-col items-start text-[11px] leading-[1.2]"
+                      : "flex items-center justify-between text-xs"
+                  }`}
+                >
                   {role === "Student" && (
                     <>
                       <p className="truncate">
@@ -777,14 +919,17 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
 
                   {role === "PlacementOfficer" && (
                     <>
-                      <p className="truncate w-full" title={role}>{role}</p>
+                      <p className="truncate w-full" title={role}>
+                        {role}
+                      </p>
                       <p className="whitespace-nowrap shrink-0 text-white/90">
                         ID - <span>{identifierId}</span>
                       </p>
                     </>
                   )}
 
-                  {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+                  {(role === "WellbeingExecutive" ||
+                    role === "WellbeingManager") && (
                     <>
                       <p className="truncate w-full" title={role}>
                         {role}
@@ -946,7 +1091,9 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
         <AnnouncementModal
           isOpen={isAnnouncementOpen}
           onClose={() => setIsAnnouncementOpen(false)}
-          highlightedPostId={highlightedPostId ? Number(highlightedPostId) : null}
+          highlightedPostId={
+            highlightedPostId ? Number(highlightedPostId) : null
+          }
         />
       ) : null}
 
@@ -973,11 +1120,14 @@ type HeaderProps = {
   onAddUserClick?: () => void;
 };
 
-
 function Header({ onMenuClick, onAddTaskClick, onAddUserClick }: HeaderProps) {
   return (
     <Suspense>
-      <HeaderContent onMenuClick={onMenuClick} onAddTaskClick={onAddTaskClick} onAddUserClick={onAddUserClick} />
+      <HeaderContent
+        onMenuClick={onMenuClick}
+        onAddTaskClick={onAddTaskClick}
+        onAddUserClick={onAddUserClick}
+      />
     </Suspense>
   );
 }

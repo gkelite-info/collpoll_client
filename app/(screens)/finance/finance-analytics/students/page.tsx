@@ -78,9 +78,8 @@ const TableSkeleton = ({
                 {columns.map((_, colIdx) => (
                   <td key={colIdx} className="px-6 py-4">
                     <div
-                      className={`h-4 bg-gray-200 rounded ${
-                        colIdx === 0 ? "w-3/4" : "w-1/2"
-                      }`}
+                      className={`h-4 bg-gray-200 rounded ${colIdx === 0 ? "w-3/4" : "w-1/2"
+                        }`}
                     />
                   </td>
                 ))}
@@ -374,7 +373,7 @@ function OverallStudentsOverview() {
   }, [loading, collegeId, collegeEducationId]);
 
   return (
-    <div className="p-2 min-h-screen space-y-6">
+    <div className="p-2 min-h-screen space-y-6 pb-7">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-1 cursor-pointer">
           <CaretLeftIcon
@@ -383,7 +382,7 @@ function OverallStudentsOverview() {
             className="cursor-pointer"
             onClick={() => router.back()}
           />
-          <h2 className="text-lg font-semibold text-[#282828]">
+          <h2 className="text-sm md:text-base lg:text-lg font-semibold text-[#282828]">
             Overall Students Overview
           </h2>
         </div>
@@ -391,42 +390,41 @@ function OverallStudentsOverview() {
           onClick={handleDownload}
           disabled={downloadLoading}
           className={`bg-[#16284F] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 transition-all cursor-pointer
-    ${
-      downloadLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#1E3A8A]"
-    }`}
+    ${downloadLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-[#1E3A8A]"
+            }`}
         >
           {downloadLoading ? "Downloading Report..." : "Download Report"}
           {!downloadLoading && <DownloadSimple size={18} />}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-3">
         {cardsLoading || loading
-          ? /* Render 4 Skeletons while loading */
-            [1, 2, 3, 4].map((i) => <CardSkeleton key={i} />)
-          : /* Render actual cards once data is loaded */
-            cardsData.map((card, index) => (
-              <CardComponent
-                key={index}
-                style={card.style}
-                icon={card.icon}
-                value={card.value}
-                label={card.label}
-              />
-            ))}
+          ?
+          [1, 2, 3, 4].map((i) => <CardSkeleton key={i} />)
+          :
+          cardsData.map((card, index) => (
+            <CardComponent
+              key={index}
+              style={card.style}
+              icon={card.icon}
+              value={card.value}
+              label={card.label}
+            />
+          ))}
       </div>
 
-      <div className="flex items-center gap-6">
-        <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-[300px] flex-shrink-0">
+      <div className="flex flex-col items-start lg:flex lg:flex-row lg:items-center gap-2 md:gap-6 lg:gap-6">
+        <div className="flex items-center bg-[#EAEAEA] rounded-full px-4 py-2 w-full lg:w-[300px] flex-shrink-0">
           <input
             placeholder="Search by student name / roll no."
-            className="bg-transparent outline-none text-sm w-full text-[#282828]"
+            className="bg-transparent outline-none text-sm w-full text-[#282828] pr-2 md:pr-0 lg:pr-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
           <MagnifyingGlass size={24} className="text-[#22A55D]" />
         </div>
-        <div className="overflow-x-auto w-full">
+        <div className="overflow-x-auto w-full custom-scrollbar pb-3 md:pb-2 lg:pb-1 mt-1 md:mt-0 lg:mt-0">
           <div className="flex items-center gap-6 min-w-max">
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#282828] font-semibold">
@@ -600,11 +598,10 @@ function OverallStudentsOverview() {
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${
-          currentPage === 1
-            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-            : "border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === 1
+                ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <CaretLeft size={18} weight="bold" />
           </button>
@@ -614,11 +611,10 @@ function OverallStudentsOverview() {
               key={i}
               onClick={() => setCurrentPage(i + 1)}
               className={`w-10 h-10 rounded-lg font-semibold transition-all
-          ${
-            currentPage === i + 1
-              ? "bg-[#16284F] text-white shadow-md"
-              : "border border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
+          ${currentPage === i + 1
+                  ? "bg-[#16284F] text-white shadow-md"
+                  : "border border-gray-300 text-gray-600 hover:bg-gray-100"
+                }`}
             >
               {i + 1}
             </button>
@@ -628,11 +624,10 @@ function OverallStudentsOverview() {
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className={`w-10 h-10 flex items-center justify-center rounded-lg border transition-all
-        ${
-          currentPage === totalPages
-            ? "border-gray-200 text-gray-300 cursor-not-allowed"
-            : "border-gray-300 text-gray-600 hover:bg-gray-100"
-        }`}
+        ${currentPage === totalPages
+                ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
           >
             <CaretRight size={18} weight="bold" />
           </button>

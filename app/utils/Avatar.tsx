@@ -60,7 +60,6 @@ interface AvatarProps {
   src?: string | null;
   alt: string;
   size?: number;
-
   sizes?: string;
 }
 

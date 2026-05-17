@@ -179,7 +179,7 @@ export default function AnnouncementModal({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="fixed z-[1000] top-[50px] md:top-[80px] lg:top-[80px] right-10 w-[342px] md:w-[500px] lg:w-[500px] h-[80vh] bg-white translate-x-6 rounded-xl shadow-xl flex flex-col"
+              className="fixed z-[1000] top-[50px] md:top-[80px] lg:top-[80px] right-10 w-[342px] md:w-[500px] lg:w-[500px] h-[80vh] bg-white translate-x-6 rounded-md shadow-xl flex flex-col"
             >
               <div className="px-[20px] pt-[20px] shrink-0 ">
                 <div className="flex items-center justify-between w-full">

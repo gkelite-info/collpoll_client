@@ -1,3 +1,5 @@
+"use client";
+
 import { FC } from "react";
 import {
   LineChart,
@@ -8,8 +10,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from "recharts";
+// FIX: Import the generic primitives directly to keep Recharts' internal type architecture happy
+import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 type ChartDataPoint = {
   month: string;
@@ -34,14 +37,12 @@ const mockChartData: ChartDataPoint[] = [
 const AttendancePerformanceChart: FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
-    value,
-    name,
-  ) => {
-    if (name === "Performance") {
-      return [`${value}%`, name];
+  // FIX: Swapped TooltipProps lookups for the clean global Formatter generic type
+  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (String(name) === "Performance") {
+      return [`${value}%`, name as string];
     }
-    return [value, name];
+    return [value, name as string];
   };
 
   const renderLegend = (props: any) => {
@@ -105,11 +106,6 @@ const AttendancePerformanceChart: FC<Props> = ({ data }) => {
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
               }}
             />
-
-            {/* <Legend
-              iconType="circle"
-              wrapperStyle={{ fontSize: "13px", paddingTop: "20px" }}
-            /> */}
 
             <Legend content={renderLegend} />
 

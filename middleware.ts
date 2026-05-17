@@ -13,11 +13,28 @@ import {
     isPublicRoute
 } from "@/lib/constants/routes";
 
-type MiddlewareUserProfile = {
-    userId?: number;
-    collegeId?: number;
-    role?: string | null;
-    colleges?: { collegeCode?: string | null } | null;
+function applyNoStoreHeaders(response: NextResponse) {
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    return response;
+}
+
+function redirectNoStore(request: NextRequest, pathname: string, search?: string) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname;
+    url.search = search ?? "";
+    return applyNoStoreHeaders(NextResponse.redirect(url));
+}
+
+type UserRouteProfile = {
+    userId?: number
+    role: string | null;
+    collegeId?: number | null;
+    colleges?: {
+        collegeCode?: string | null;
+    } | null;
 };
 
 export async function middleware(request: NextRequest) {
@@ -65,6 +82,8 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
+    applyNoStoreHeaders(response);
+
 
     // if (!user) {
     //     const isLegacyStudentRoute = LEGACY_STUDENT_ROUTES.some(
@@ -87,7 +106,7 @@ export async function middleware(request: NextRequest) {
             const url = request.nextUrl.clone();
             url.pathname = "/login";
             url.searchParams.set("from", pathname);
-            return NextResponse.redirect(url);
+            return applyNoStoreHeaders(NextResponse.redirect(url));
         }
         
         // If it IS a public route, let them through
@@ -105,20 +124,19 @@ export async function middleware(request: NextRequest) {
             .eq('auth_id', user.id)
             .single();
 
-        const profileData = profile as MiddlewareUserProfile | null;
+        const userProfile = profile as UserRouteProfile | null;
 
-        if (!profileData || profileError || profileData.role !== 'Student') {
-            if (profileData?.role) {
-                const normalizedRole = normalizeRole(profileData.role);
+        if (!userProfile || profileError || userProfile.role !== 'Student') {
+            if (userProfile?.role) {
+                const normalizedRole = normalizeRole(userProfile.role);
                 if (normalizedRole && isValidRole(normalizedRole)) {
                     const url = request.nextUrl.clone();
                     url.pathname = getLandingPageForRole(normalizedRole);
-                    return NextResponse.redirect(url);
+                    url.search = '';
+                    return applyNoStoreHeaders(NextResponse.redirect(url));
                 }
             }
-            const url = request.nextUrl.clone();
-            url.pathname = "/login";
-            return NextResponse.redirect(url);
+            return redirectNoStore(request, "/login");
         }
         return response;
     }
@@ -138,14 +156,12 @@ export async function middleware(request: NextRequest) {
             .single();
 
         if (!profile || profileError) {
-            const url = request.nextUrl.clone();
-            url.pathname = "/login";
-            return NextResponse.redirect(url);
+            return redirectNoStore(request, "/login");
         }
 
-        const profileData = profile as MiddlewareUserProfile;
-        const rawCollegeCode = profileData.colleges?.collegeCode;
-        const userRole = profileData.role;
+        const userProfile = profile as UserRouteProfile;
+        const rawCollegeCode = userProfile.colleges?.collegeCode;
+        const userRole = userProfile.role;
 
         const userCode = (rawCollegeCode || "").trim().toUpperCase();
         const urlCode = (currentUrlCode || "").trim().toUpperCase();
@@ -155,7 +171,7 @@ export async function middleware(request: NextRequest) {
                 const url = request.nextUrl.clone();
                 url.pathname = '/login';
                 url.searchParams.set('error', 'portal_mismatch');
-                return NextResponse.redirect(url);
+                return applyNoStoreHeaders(NextResponse.redirect(url));
             }
         }
 
@@ -167,7 +183,7 @@ export async function middleware(request: NextRequest) {
                     const url = request.nextUrl.clone();
                     url.pathname = landingPage;
                     url.search = '';
-                    return NextResponse.redirect(url);
+                    return applyNoStoreHeaders(NextResponse.redirect(url));
                 }
             }
             return response;
@@ -175,16 +191,12 @@ export async function middleware(request: NextRequest) {
 
         if (needsRolePortalProtection(pathname)) {
             if (!userRole) {
-                const url = request.nextUrl.clone();
-                url.pathname = "/login";
-                return NextResponse.redirect(url);
+                return redirectNoStore(request, "/login");
             }
 
             const normalizedRole = normalizeRole(userRole ?? null);
             if (!normalizedRole || !isValidRole(normalizedRole)) {
-                const url = request.nextUrl.clone();
-                url.pathname = "/login";
-                return NextResponse.redirect(url);
+                return redirectNoStore(request, "/login");
             }
 
             const userLandingPage = getLandingPageForRole(normalizedRole);
@@ -198,8 +210,8 @@ export async function middleware(request: NextRequest) {
                 const { data: wellbeingRows, error: wellbeingError } = await supabase
                     .from("well_beings")
                     .select("wellBeingId")
-                    .eq("userId", profileData.userId)
-                    .eq("collegeId", profileData.collegeId)
+                    .eq("userId", userProfile.userId)
+                    .eq("collegeId", userProfile.collegeId)
                     .eq("roleType", wellbeingRoleTypes)
                     .eq("isActive", true)
                     .eq("is_deleted", false)
@@ -218,7 +230,7 @@ export async function middleware(request: NextRequest) {
                 const url = request.nextUrl.clone();
                 url.pathname = userLandingPage;
                 url.search = '';
-                return NextResponse.redirect(url);
+                return applyNoStoreHeaders(NextResponse.redirect(url));
             }
             return response;
         }
@@ -233,20 +245,18 @@ export async function middleware(request: NextRequest) {
                 .single();
 
             if (profile && !profileError) {
-                const profileData = profile as MiddlewareUserProfile;
-                const userRole = profileData.role;
-                const normalizedRole = normalizeRole(userRole ?? null);
+                const userRole = (profile as UserRouteProfile).role;
+                const normalizedRole = normalizeRole(userRole);
 
                 if (normalizedRole && isValidRole(normalizedRole)) {
                     const landingPage = getLandingPageForRole(normalizedRole);
                     const url = request.nextUrl.clone();
                     url.pathname = `${landingPage}/settings`;
-                    return NextResponse.redirect(url);
+                    url.search = '';
+                    return applyNoStoreHeaders(NextResponse.redirect(url));
                 }
             }
-            const url = request.nextUrl.clone();
-            url.pathname = '/login';
-            return NextResponse.redirect(url);
+            return redirectNoStore(request, "/login");
         }
 
 

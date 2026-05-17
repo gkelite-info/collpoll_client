@@ -17,7 +17,7 @@ export default function TermsModal({ open, onClose }: Props) {
                 className="fixed inset-0 z-210 flex items-center justify-center"
             >
                 <div
-                    className="bg-white w-[70%] h-[90vh] rounded-xl py-2 shadow-xl overflow-y-auto"
+                    className="bg-white w-[90%] md:w-[70%] h-[90vh] rounded-xl py-2 shadow-xl overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <div className="flex items-center gap-3 px-5 py-4 text-[#282828]">
@@ -30,7 +30,7 @@ export default function TermsModal({ open, onClose }: Props) {
                     </div>
 
                     <div className="p-6 pt-2 overflow-y-auto text-sm text-[#525252] leading-relaxed max-h-[90vh]">
-                        <ol className="list-decimal pl-12 space-y-4 text-[#525252] w-[90%]">
+                        <ol className="list-decimal pl-12 space-y-4 text-[#525252] w-full md:w-[90%]">
                             <li>
                                 You shall abide by all terms and conditions of service
                                 as shall be applicable from time to time.

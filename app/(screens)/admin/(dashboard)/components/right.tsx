@@ -35,12 +35,9 @@ export default function AdminDashRight() {
   const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] = useState(false);
   const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
   const { collegeId, userId, role } = useUser();
-
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [view, setView] = useState<"my" | "others">("my");
-
   const searchParams = useSearchParams();
-
   const isAutomationsPage = searchParams.get("view") === "automations";
   const isPolicyPage = searchParams.get("view") === "policy-setup";
 

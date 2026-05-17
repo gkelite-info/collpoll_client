@@ -40,7 +40,7 @@ export const FinanceManagerProvider = ({
         const loadFinanceManager = async () => {
             if (userLoading) return;
 
-            if (!userId || role !== "Finance") {
+            if (!userId || (role !== "Finance" && role !== "FinanceManager")) {
                 setState((s) => ({ ...s, loading: false }));
                 return;
             }

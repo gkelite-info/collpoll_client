@@ -846,7 +846,7 @@ export default function InternshipForm({
     <div className="mt-4 space-y-4">
 
       {/* Row 1: Organization | Role */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <FieldLabel label="Organization Name" required />
           <input
@@ -880,7 +880,7 @@ export default function InternshipForm({
       </div>
 
       {/* Row 2: Start Date | End Date */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <FieldLabel label="Start Date" required />
           <input
@@ -906,7 +906,7 @@ export default function InternshipForm({
       </div>
 
       {/* Row 3: Project Name | Project URL */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <FieldLabel label="Project Name" required />
           <input
@@ -931,7 +931,7 @@ export default function InternshipForm({
       </div>
 
       {/* Row 4: Location | Domain */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <FieldLabel label="Location" required />
           <SelectWithCustomBadge

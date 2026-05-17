@@ -459,7 +459,7 @@ export default function ProjectItem({
       </div>
 
       {/* Row 1: Project Name | Domain */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col">
           <FieldLabel label="Project Name" required />
           <input

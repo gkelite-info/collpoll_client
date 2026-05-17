@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import {
   LineChart,
@@ -8,8 +10,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  TooltipProps,
 } from "recharts";
+// FIX: Import the proper internal generic type structures from Recharts
+import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
 type ChartDataPoint = {
   month: string;
@@ -34,14 +37,12 @@ const mockChartData: ChartDataPoint[] = [
 const AttendancePerformanceChart: React.FC<Props> = ({ data }) => {
   const chartData = data ?? mockChartData;
 
-  const tooltipFormatter: TooltipProps<number, string>["formatter"] = (
-    value,
-    name,
-  ) => {
-    if (name === "Performance") {
-      return [`${value}%`, name];
+  // FIX: Converted strict TooltipProps generic parameters into standard loose ValueType primitives
+  const tooltipFormatter: Formatter<ValueType, NameType> = (value, name) => {
+    if (String(name) === "Performance") {
+      return [`${value}%`, name as string];
     }
-    return [value, name];
+    return [value, name as string];
   };
 
   return (

@@ -77,9 +77,6 @@ export async function createStudentFeeObligation(
     .eq("collegeSessionId", payload.collegeSessionId)
     .single();
 
-  console.log("What is sessionData", sessionData);
-  console.log("Is this here", sessionError);
-
   if (sessionError) {
     console.error("Failed to fetch session total fee amount", sessionError);
     throw new Error("Failed to fetch session total fee amount");

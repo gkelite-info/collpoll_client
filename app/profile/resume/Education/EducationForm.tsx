@@ -124,7 +124,7 @@ function SearchableSelect({
   const isCustomValue = !!value && !allOptions.includes(value);
 
   return (
-    <div className="space-y-1 w-[85%]" ref={ref}>
+    <div className="space-y-1 w-full lg:w-[85%]" ref={ref}>
       <label className="text-sm font-medium text-[#282828]">
         {label}
         {required && <span className="text-red-500 ml-[2px]">*</span>}
@@ -260,7 +260,7 @@ function ControlledInput({
   suffix?: string;
 }) {
   return (
-    <div className="space-y-1 w-[85%]">
+    <div className="space-y-1 w-full lg:w-[85%]">
       <label className="text-sm font-medium text-[#282828]">
         {label}
         {required && <span className="text-red-500 ml-[2px]">*</span>}
@@ -298,7 +298,7 @@ function ControlledSelect({
   required?: boolean;
 }) {
   return (
-    <div className="space-y-1 w-[85%]">
+    <div className="space-y-1 w-full lg:w-[85%]">
       <label className="text-sm font-medium text-[#282828]">
         {label}
         {required && <span className="text-red-500 ml-[2px]">*</span>}
@@ -463,7 +463,7 @@ function PercentageInput({
   };
 
   return (
-    <div className="space-y-1 w-[85%]">
+    <div className="space-y-1 w-full lg:w-[85%]">
       <label className="text-sm font-medium text-[#282828]">
         Percentage
         {required && <span className="text-red-500 ml-[2px]">*</span>}
@@ -580,7 +580,7 @@ export default function ResumeEducationForm({
         isDeleting={isDeleting}
         name={TITLES[type]}
       />
-      <div className="flex justify-between items-center w-[85%] mb-3">
+      <div className="flex justify-between items-center w-full lg:w-[85%] mb-3">
         <h3 className="text-[#43C17A] font-medium">{TITLES[type]}</h3>
         {/* ✅ FIXED: same logic as reference — recordId decides, not formDirty */}
         <button
@@ -754,7 +754,7 @@ function PrimaryFields({
         options={MEDIUM_OPTIONS}
         placeholder="Select medium"
       />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <YearSelect
           label="Year Of Passing"
           required
@@ -914,7 +914,7 @@ function SecondaryFields({ studentId, collegeId, onSaveRef, onRecordSaved }: Fie
         options={SECONDARY_SPECIALIZATIONS}
         placeholder="Select specialization"
       />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <DateInput
           label="Start Date"
           required
@@ -1075,7 +1075,7 @@ function UndergraduateFields({ studentId, collegeId, onSaveRef, onRecordSaved }:
         value={form.cgpa}
         onChange={(e) => handleChange("cgpa", e.target.value)}
       />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <DateInput
           label="Start Date"
           required
@@ -1232,7 +1232,7 @@ function MastersFields({ studentId, collegeId, onSaveRef, onRecordSaved }: Field
         value={form.cgpa}
         onChange={(e) => handleChange("cgpa", e.target.value)}
       />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <DateInput
           label="Start Date"
           required
@@ -1364,7 +1364,7 @@ function PhdFields({ studentId, collegeId, onSaveRef, onRecordSaved }: FieldProp
         value={form.supervisorName}
         onChange={(e) => handleChange("supervisorName", e.target.value)}
       />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <DateInput
           label="Start Date"
           required

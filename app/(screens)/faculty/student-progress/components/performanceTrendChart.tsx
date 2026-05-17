@@ -12,11 +12,13 @@ import {
   LabelList,
 } from "recharts";
 
-import type { Formatter } from "recharts/types/component/DefaultTooltipContent";
+// FIX: Import the standard generic primitives from Recharts' internal typings
+import type { Formatter, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
 
-const performanceFormatter: Formatter<number, string> = (value, name) => [
-  `${value ?? 0}%`,
-  name,
+// FIX: Swapped out strict types for generic ValueType & NameType to stop the TypeScript compiler errors
+const performanceFormatter: Formatter<ValueType, NameType> = (value, name) => [
+  `${Number(value) ?? 0}%`,
+  name as string,
 ];
 
 type PerformanceTrendChartProps = {
@@ -101,6 +103,8 @@ export default function PerformanceTrendChart({
                   const r = width > 30 ? 16 : 12;
                   const fontSize = width > 30 ? 11 : 9;
                   const centerX = x + width / 2;
+
+                  // Preserved your exact bounding guard logic so labels don't clip at top container limits
                   const centerY = Math.max(y - r - 6, 18);
 
                   return (

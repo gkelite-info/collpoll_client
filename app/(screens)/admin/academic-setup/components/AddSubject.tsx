@@ -225,9 +225,9 @@ export default function AddSubject({
     if (!form.subjectCode.trim())
       return toast.error("Please enter Subject Code");
     if (!form.subjectKey.trim()) return toast.error("Please enter Subject Key");
-    if (!form.image && !imageFile && !imagePreview) {
-      return toast.error("Please upload Subject Image");
-    }
+    // if (!form.image && !imageFile && !imagePreview) {
+    //   return toast.error("Please upload Subject Image");
+    // }
 
     if (!["Inter"].includes(collegeEducationType!)) {
       if (!form.credits) return toast.error("Please enter Credits");
@@ -413,7 +413,7 @@ export default function AddSubject({
           </div>
           <div>
             <label className="block text-sm font-medium text-[#16284F] mb-1">
-              Subject Image <span className="text-red-500">*</span>
+              Subject Image
             </label>
             <input
               id="subjectImageInput"

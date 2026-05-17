@@ -12,7 +12,7 @@ export default function ResumeProjectsShimmer() {
       {[1, 2].map((i) => (
         <div key={i} className="mb-12">
           <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-4" />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((j) => (
               <div key={j} className="flex flex-col gap-1">
                 <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
@@ -20,7 +20,7 @@ export default function ResumeProjectsShimmer() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div className="flex flex-col gap-1">
               <div className="h-4 w-36 bg-gray-200 rounded animate-pulse" />
               <div className="h-10 w-full bg-gray-200 rounded animate-pulse" />

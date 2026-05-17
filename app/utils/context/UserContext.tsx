@@ -7,6 +7,7 @@ import {
   useState,
   useMemo,
   useRef,
+  useCallback,
 } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudentId } from "@/lib/helpers/studentAPI";
@@ -48,6 +49,7 @@ type UserContextType = {
   dateOfJoining: string | null;
   professionalExperienceYears: number | null;
   identifierId: string | null;
+  refreshUserContext: () => Promise<void>;
 };
 
 type RoleLoaderMap = Record<string, (userId: number, collegeId: number) => Promise<void>>;
@@ -106,6 +108,7 @@ const UserContext = createContext<UserContextType>({
   dateOfJoining: null,
   professionalExperienceYears: null,
   identifierId: null,
+  refreshUserContext: async () => { },
 });
 
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
@@ -140,6 +143,8 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   const lastAuthUserId = useRef<string | null>(null);
   const isContextLoaded = useRef(false);
+  const isLoadingRef = useRef(false);
+  const loadUserContextRef = useRef<() => Promise<void>>(async () => { });
 
   const settersRef = useRef({
     setUserId,
@@ -339,6 +344,23 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       s.setIdentifierId(empId ?? null);
     },
 
+    FinanceManager: async (uid, cid) => {
+      const s = settersRef.current;
+      const [financeData, financeCtx, empId] = await Promise.all([
+        supabase
+          .from("finance_manager")
+          .select("financeManagerId")
+          .eq("userId", uid)
+          .eq("is_deleted", false)
+          .maybeSingle(),
+        fetchFinanceManagerContext(uid),
+        getEmployeeEmpId(uid, cid),
+      ]);
+      s.setFinanceManagerId(financeData.data?.financeManagerId ?? null);
+      s.setCollegeEducationType(financeCtx?.collegeEducationType ?? null);
+      s.setIdentifierId(empId ?? null);
+    },
+
     Faculty: async (uid, cid) => {
       const s = settersRef.current;
       const [facultyData, facultyCtx, empId] = await Promise.all([
@@ -466,16 +488,19 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const loadUserContext = async () => {
-      if (!isContextLoaded.current) {
-        settersRef.current.setLoading(true);
-      }
+      if (isLoadingRef.current) return;
+      isLoadingRef.current = true;
+
+      settersRef.current.setLoading(true);
       try {
         const {
           data: { user },
           error: userError,
         } = await supabase.auth.getUser();
         if (userError || !user) {
-          if (!isContextLoaded.current) resetStateRef.current();
+          resetStateRef.current();
+          isContextLoaded.current = false;
+          lastAuthUserId.current = null;
           return;
         }
         const authId = user.id;
@@ -519,16 +544,30 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Failed to load context");
       } finally {
         settersRef.current.setLoading(false);
+        isLoadingRef.current = false;
       }
     };
 
-    loadUserContext();
+    loadUserContextRef.current = loadUserContext;
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserContext();
+      } else {
+        resetStateRef.current();
+        isContextLoaded.current = false;
+        lastAuthUserId.current = null;
+        settersRef.current.setLoading(false);
+      }
+    });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN") {
         const incomingAuthId = session?.user?.id ?? null;
+
+
         if (
           isContextLoaded.current &&
           lastAuthUserId.current === incomingAuthId
@@ -543,6 +582,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
         resetStateRef.current();
         isContextLoaded.current = false;
         lastAuthUserId.current = null;
+        isLoadingRef.current = false;
         settersRef.current.setLoading(false);
       }
     });
@@ -550,6 +590,12 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
+  }, []);
+
+  const refreshUserContext = useCallback(async () => {
+    isContextLoaded.current = false;
+    lastAuthUserId.current = null;
+    await loadUserContextRef.current();
   }, []);
 
   const contextValue = useMemo<UserContextType>(
@@ -584,6 +630,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       dateOfJoining,
       professionalExperienceYears,
       identifierId,
+      refreshUserContext,
     }),
     [
       userId,
@@ -614,6 +661,7 @@ export const UserProvider = ({ children }: { children: React.ReactNode }) => {
       dateOfJoining,
       professionalExperienceYears,
       identifierId,
+      refreshUserContext,
     ]
   );
 

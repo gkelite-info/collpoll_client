@@ -167,7 +167,7 @@ export function UserInfoCard({ cardProps }: UserInfoProps) {
           className="relative z-10 grid md:grid-cols-[70%_30%] lg:grid-cols-[70%_30%] h-full items-center justify-between px-2 lg:px-8"
           key={index}
         >
-          <div className="bg-blue-00 flex flex-col w-full lg:max-w-[65%] gap-2">
+          <div className="bg-blue-00 flex flex-col w-full lg:max-w-[75%] gap-2">
             <p className="text-xs text-[#282828] leading-tight">
               {item.show && t("StudentID:")} {item.studentId}
               {item.show && ", "} {item.studentBranch}

@@ -102,7 +102,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       setIsLoggingOut(true);
 
       const timeout = setTimeout(() => {
-        window.location.assign("/login");
+        window.location.replace("/login");
       }, 3500);
 
       const res = await logoutUser();
@@ -114,7 +114,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
 
         toast.success("Loggedout successfully");
 
-        window.location.assign("/login");
+        window.location.replace("/login");
       } else {
         toast.error("Logout failed. Please try again.");
       }

@@ -53,6 +53,7 @@ const getRegistrationIdByRole = ({
     SuperAdmin: userId,
     CollegeAdmin: collegeAdminId,
     Finance: financeManagerId,
+    FinanceManager: financeManagerId,
     CollegeHr: collegeHrId,
     WellbeingExecutive: wellBeingId,
     WellbeingManager: wellBeingId,

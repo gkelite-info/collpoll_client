@@ -26,7 +26,6 @@ import {
 } from "./shimmer/TableShimmer";
 import { useUser } from "@/app/utils/context/UserContext";
 
-// 🟢 PDF IMPORTS
 import jsPDF from "jspdf";
 import toast from "react-hot-toast";
 import {
@@ -210,7 +209,6 @@ const Page = () => {
     setTimeout(() => setIsHistoryLoading(false), 400);
   };
 
-  // 🟢 DYNAMIC PDF GENERATOR FUNCTION
   const handleDownloadStatement = async () => {
     if (!profile || !feePlan || !obligationId) {
       toast.error("Data is still loading. Please try again in a moment.");
@@ -220,14 +218,12 @@ const Page = () => {
     const toastId = toast.loading("Generating Statement PDF...");
 
     try {
-      // Fetch up to 100 recent offline payments for the report
       const result = await fetchRecentOfflinePayments(obligationId, 1, 100);
       const offlinePayments = result.success ? result.data : [];
 
       const doc = new jsPDF();
       let yPos = 20;
 
-      // 1. Header (Emerald Green theme)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(22);
       doc.setTextColor(67, 193, 122);
@@ -241,12 +237,10 @@ const Page = () => {
       });
       yPos += 12;
 
-      // Divider Line
       doc.setDrawColor(220, 220, 220);
       doc.line(14, yPos, 196, yPos);
       yPos += 10;
 
-      // 2. Student Details Section
       doc.setFontSize(14);
       doc.setTextColor(40, 40, 40);
       doc.text("Student Details", 14, yPos);
@@ -268,7 +262,6 @@ const Page = () => {
       doc.line(14, yPos, 196, yPos);
       yPos += 10;
 
-      // 3. Fee Plan Summary Section
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(40, 40, 40);
@@ -288,7 +281,7 @@ const Page = () => {
         yPos,
       );
 
-      doc.setTextColor(239, 68, 68); // Red text for pending amount
+      doc.setTextColor(239, 68, 68);
       doc.setFont("helvetica", "bold");
       doc.text(
         `Pending: INR ${feePlan.pendingAmount.toLocaleString("en-IN")}`,
@@ -301,14 +294,12 @@ const Page = () => {
       doc.line(14, yPos, 196, yPos);
       yPos += 10;
 
-      // 4. Offline Payments Data Table
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(40, 40, 40);
       doc.text("Recent Offline Payments", 14, yPos);
       yPos += 8;
 
-      // Table Header Background
       doc.setFillColor(243, 244, 246);
       doc.rect(14, yPos, 182, 10, "F");
 
@@ -319,7 +310,6 @@ const Page = () => {
       doc.text("Amount Received (INR)", 140, yPos + 6);
       yPos += 15;
 
-      // Table Rows
       doc.setFont("helvetica", "normal");
       if (offlinePayments!.length > 0) {
         offlinePayments!.forEach((payment: any) => {
@@ -334,7 +324,6 @@ const Page = () => {
           doc.text(amtStr, 140, yPos);
           yPos += 8;
 
-          // Prevent spilling off the page
           if (yPos > 270) {
             doc.addPage();
             yPos = 20;
@@ -344,7 +333,6 @@ const Page = () => {
         doc.text("No offline payments found for this student.", 20, yPos);
       }
 
-      // 5. Footer Signature
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       const timestamp = new Date().toLocaleString("en-IN");
@@ -352,19 +340,17 @@ const Page = () => {
         align: "center",
       });
 
-      // Save the PDF
       const safeName = profile.name.replace(/[^a-zA-Z0-9]/g, "_");
       doc.save(`${safeName}_Financial_Statement.pdf`);
 
       toast.success("Statement downloaded successfully!", { id: toastId });
     } catch (error) {
-      console.error("PDF Generation Error:", error);
       toast.error("Failed to generate statement.", { id: toastId });
     }
   };
 
   return (
-    <div className="p-4 lg:p-6 bg-[#F5F5F7] min-h-screen">
+    <div className="p-4 lg:p-6 bg-[#F5F5F7] min-h-screen pb-7">
       <div className="flex items-center gap-1 text-black mb-6">
         <CaretLeftIcon
           onClick={() => router.back()}
@@ -388,7 +374,7 @@ const Page = () => {
             ) : (
               <QuickActions
                 onSendEmail={() => setIsComposeEmailOpen(true)}
-                onDownloadStatement={handleDownloadStatement} // 🟢 ATTACHED PDF GENERATOR
+                onDownloadStatement={handleDownloadStatement}
               />
             )}
           </div>
