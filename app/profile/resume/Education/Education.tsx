@@ -173,9 +173,9 @@ export default function EducationSection() {
                     <div className="h-5 w-24 rounded bg-gray-200" />
                     <div className="h-8 w-20 rounded-md bg-gray-200" />
                 </div>
-                <div className="space-y-4 rounded-xl p-6 w-[85%] mx-auto">
+                <div className="space-y-4 rounded-xl p-6 w-full lg:w-[85%] mx-auto">
                     {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="space-y-1 w-[85%]">
+                        <div key={i} className="space-y-1 w-full lg:w-[85%]">
                             <div className="h-3 w-28 rounded bg-gray-200" />
                             <div className="h-10 w-full rounded-md bg-gray-100" />
                         </div>
@@ -231,7 +231,7 @@ export default function EducationSection() {
                 </div>
             </div>
 
-            <div className="space-y-8 rounded-xl p-6 w-[85%] mx-auto">
+            <div className="space-y-8 rounded-xl p-6 w-full lg:w-[85%] mx-auto">
                 {EDUCATION_ORDER.map(
                     (type) =>
                         addedForms.includes(type) && (

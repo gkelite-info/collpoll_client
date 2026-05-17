@@ -342,7 +342,7 @@ export default function CompetetiveExams() {
                     </div>
 
                     {checked && (
-                      <div className="mt-2 w-1/2 mb-4 flex flex-col">
+                      <div className="mt-2 w-full md:w-1/2 mb-4 flex flex-col">
                         <input
                           placeholder="Enter Score"
                           value={scores[exam] || ""}

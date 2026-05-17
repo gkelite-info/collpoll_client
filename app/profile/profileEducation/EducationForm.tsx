@@ -45,7 +45,7 @@ function ControlledInput({
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
-    <div className="space-y-1 w-[85%]">
+    <div className="space-y-1 w-full lg:w-[85%]">
       <label className="text-sm font-medium text-[#282828]">{label}</label>
       <input
         value={value}
@@ -146,7 +146,7 @@ export default function ProfileEducationForm({
         name={TITLES[type]}
       />
 
-      <div className="flex justify-between items-center w-[85%] mb-3">
+      <div className="flex justify-between items-center w-full lg:w-[85%] mb-3">
         <h3 className="text-[#43C17A] font-medium">{TITLES[type]}</h3>
         <button
           onClick={() => {
@@ -511,7 +511,7 @@ function UndergraduateFields({ userId, collegeId, onSaveRef, onRecordSaved }: Fi
       <ControlledInput label="Specialization" value={form.specialization} onChange={(e) => handleChange("specialization", e.target.value)} />
       <ControlledInput label="College Name" value={form.collegeName} onChange={(e) => handleChange("collegeName", e.target.value)} />
       <ControlledInput label="CGPA (out of 10)" value={form.CGPA} onChange={(e) => handleChange("CGPA", e.target.value)} />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <ControlledInput label="Start Year" value={form.startYear} onChange={(e) => handleChange("startYear", e.target.value)} />
         <ControlledInput label="End Year" value={form.endYear} onChange={(e) => handleChange("endYear", e.target.value)} />
       </div>
@@ -613,7 +613,7 @@ function PhdFields({ userId, collegeId, onSaveRef, onRecordSaved }: FieldProps) 
       <ControlledInput label="University Name" value={form.universityName} onChange={(e) => handleChange("universityName", e.target.value)} />
       <ControlledInput label="Research Area" value={form.researchArea} onChange={(e) => handleChange("researchArea", e.target.value)} />
       <ControlledInput label="Supervisor Name" value={form.supervisorName} onChange={(e) => handleChange("supervisorName", e.target.value)} />
-      <div className="flex gap-5 w-[85%]">
+      <div className="flex flex-col md:flex-row gap-5 w-full lg:w-[85%]">
         <ControlledInput label="Start Year" value={form.startYear} onChange={(e) => handleChange("startYear", e.target.value)} />
         <ControlledInput label="End Year" value={form.endYear} onChange={(e) => handleChange("endYear", e.target.value)} />
       </div>

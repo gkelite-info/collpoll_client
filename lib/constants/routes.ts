@@ -159,7 +159,7 @@ export const isProtectedRoute = (pathname: string): boolean => {
   if (isPublicRoute(pathname)) return false;
   if (isExemptedRoute(pathname)) return false;
 
-  return true
+  return true;
 };
 
 export const isLegacyStudentRoute = (pathname: string): boolean => {
@@ -238,7 +238,11 @@ export const needsRolePortalProtection = (pathname: string): boolean => {
   const isSpecificPortal = ROLE_PROTECTED_PORTALS.some((portal) => matchesRouteSegment(pathname, portal));
   const isLegacyRoute = isLegacyStudentRoute(pathname);
 
-  return isSpecificPortal || isLegacyRoute || (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname));
+  return (
+    isSpecificPortal ||
+    isLegacyRoute ||
+    (!isPublicRoute(pathname) && !isAuthProtectedRoute(pathname))
+  );
 };
 
 

@@ -107,6 +107,10 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
           className="rounded-full bg-[#43C17A1F] text-[#43C17A] p-1.5"
         />
       ),
+      onClick: () => {
+        onClose();
+        router.push("/profile/support");
+      },
     },
     {
       id: "change-password",
@@ -210,7 +214,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                   </span>
                 )}
                 {role === "Admin" && (
-                  <span className="text-xs text-[#282828]">ID - {identifierId}</span>
+                  <span className="text-xs text-[#282828]">
+                    ID - {identifierId}
+                  </span>
                 )}
                 {role === "Finance" && (
                   <span className="text-xs text-[#282828]">
@@ -232,7 +238,8 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                     ID - {identifierId || parentId}
                   </span>
                 )}
-                {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
+                {(role === "WellbeingExecutive" ||
+                  role === "WellbeingManager") && (
                   <span className="text-xs text-[#282828]">
                     ID - {identifierId}
                   </span>
@@ -397,6 +404,3 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     </>
   );
 }
-
-
-
