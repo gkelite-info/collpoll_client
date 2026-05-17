@@ -56,7 +56,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     collegeAdminId,
     collegeHrId,
     placementEmployeeId,
-    wellBeingId,
+    wellBeingId
   } = useUser();
   const { college_branch, faculty_edu_type } = useFaculty();
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
     WellbeingManager: "Wellbeing Manager",
     SuperAdmin: "Super Admin",
   };
-  const displayRole = role ? (displayRoleMap[role] ?? role) : "";
+  const displayRole = role ? displayRoleMap[role] ?? role : "";
   const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
   const profileOptions: ProfileOptions[] = [
     {
@@ -194,14 +194,9 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
             </div>
           )}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <p
-                className="font-semibold text-md text-[#282828] truncate"
-                title={fullName || ""}
-              >
-                {fullName}
-              </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-semibold text-md text-[#282828] truncate" title={fullName || ""}>{fullName}</p>
               <div className="flex gap-2 items-center shrink-0">
                 <span className="text-xs text-[#282828] whitespace-nowrap">
                   ID - {displayId || "-"}
@@ -287,17 +282,13 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
               <p className="text-xs text-[#282828] font-medium">{role}</p>
             )}
             {role === "FinanceManager" && (
-              <p className="text-xs text-[#282828] font-medium">
-                Finance Manager
-              </p>
+              <p className="text-xs text-[#282828] font-medium">Finance Manager</p>
             )}
             {role === "Admin" && (
               <p className="text-xs text-[#282828] font-medium">Admin</p>
             )}
             {role === "CollegeAdmin" && (
-              <p className="text-xs text-[#282828] font-medium">
-                College Admin
-              </p>
+              <p className="text-xs text-[#282828] font-medium">College Admin</p>
             )}
             {role === "CollegeHr" && (
               <p className="text-xs text-[#282828] font-medium">College HR</p>
@@ -306,9 +297,7 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
               <p className="text-xs text-[#282828] font-medium">Parent</p>
             )}
             {role === "PlacementOfficer" && (
-              <p className="text-xs text-[#282828] font-medium">
-                Placement Officer
-              </p>
+              <p className="text-xs text-[#282828] font-medium">Placement Officer</p>
             )}
             {(role === "WellbeingExecutive" || role === "WellbeingManager") && (
               <p className="text-xs text-[#282828] font-medium">

@@ -19,6 +19,8 @@ const matchesRouteSegment = (pathname: string, route: string): boolean => {
   return pathname === route || pathname.startsWith(route + "/");
 };
 
+
+
 export const PUBLIC_ROUTES = [
   "/",
   "/landing_page",
@@ -26,6 +28,7 @@ export const PUBLIC_ROUTES = [
   "/forgot-password",
   "/reset-password",
 ];
+
 
 export const AUTH_ONLY_ROUTES = [
   "/",
@@ -36,6 +39,8 @@ export const AUTH_ONLY_ROUTES = [
   "/reset-password",
   "/verify-email",
 ];
+
+
 
 export const PROTECTED_ROUTES = [
   "/student",
@@ -53,7 +58,15 @@ export const PROTECTED_ROUTES = [
   "/profile",
 ];
 
-export const EXEMPTED_ROUTES = ["/construction", "/api", "/_next"];
+
+
+export const EXEMPTED_ROUTES = [
+  "/construction",
+  "/api",
+  "/_next",
+];
+
+
 
 export const ROLE_PROTECTED_PORTALS = [
   "/admin",
@@ -68,6 +81,8 @@ export const ROLE_PROTECTED_PORTALS = [
   "/wellbeing-executive",
   "/wellbeing-manager",
 ];
+
+
 
 export const LEGACY_STUDENT_ROUTES = [
   "/stu_dashboard",
@@ -86,12 +101,16 @@ export const LEGACY_STUDENT_ROUTES = [
   "/leaveRequests",
 ];
 
+
+
 export const AUTH_PROTECTED_ROUTES = [
   "/profile",
   "/settings",
   "/notifications",
   "/help",
 ];
+
+
 
 export const ROLE_LANDING_PAGES: Record<UserRole, string> = {
   [ROLES.STUDENT]: "/stu_dashboard",
@@ -108,7 +127,11 @@ export const ROLE_LANDING_PAGES: Record<UserRole, string> = {
   [ROLES.WELLBEING_MANAGER]: "/wellbeing-manager",
 };
 
+
+
 export const ROLE_PORTALS = Object.values(ROLE_LANDING_PAGES);
+
+
 
 // export const isPublicRoute = (pathname: string): boolean => {
 //   return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
@@ -123,9 +146,13 @@ export const isPublicRoute = (pathname: string): boolean => {
   });
 };
 
+
+
 export const isAuthOnlyRoute = (pathname: string): boolean => {
   return AUTH_ONLY_ROUTES.some((route) => matchesRouteSegment(pathname, route));
 };
+
+
 
 export const isProtectedRoute = (pathname: string): boolean => {
   // return PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
@@ -142,16 +169,22 @@ export const isLegacyStudentRoute = (pathname: string): boolean => {
   });
 };
 
+
+
 export const isExemptedRoute = (pathname: string): boolean => {
   const staticFileRegex = /\.(png|jpe?g|gif|svg|webp|ico|woff2?|ttf|css|js)$/i;
   if (staticFileRegex.test(pathname)) return true;
   return EXEMPTED_ROUTES.some((route) => pathname.includes(route));
 };
 
+
+
 export const isRolePortalPath = (pathname: string, role: UserRole): boolean => {
   const landingPage = ROLE_LANDING_PAGES[role];
   return matchesRouteSegment(pathname, landingPage);
 };
+
+
 
 export const getLandingPageForRole = (role: UserRole | null): string => {
   if (!role || !ROLE_LANDING_PAGES[role]) {
@@ -159,6 +192,8 @@ export const getLandingPageForRole = (role: UserRole | null): string => {
   }
   return ROLE_LANDING_PAGES[role];
 };
+
+
 
 export const normalizeRole = (role: string | null): UserRole | null => {
   if (!role) return null;
@@ -190,15 +225,17 @@ export const normalizeRole = (role: string | null): UserRole | null => {
   return roleMap[role.toLowerCase().trim()] || null;
 };
 
+
+
 export const isValidRole = (role: unknown): role is UserRole => {
   return Object.values(ROLES).includes(role as UserRole);
 };
 
+
+
 export const needsRolePortalProtection = (pathname: string): boolean => {
   // return ROLE_PROTECTED_PORTALS.some((portal) => pathname.startsWith(portal));
-  const isSpecificPortal = ROLE_PROTECTED_PORTALS.some((portal) =>
-    matchesRouteSegment(pathname, portal),
-  );
+  const isSpecificPortal = ROLE_PROTECTED_PORTALS.some((portal) => matchesRouteSegment(pathname, portal));
   const isLegacyRoute = isLegacyStudentRoute(pathname);
 
   return (
@@ -208,8 +245,8 @@ export const needsRolePortalProtection = (pathname: string): boolean => {
   );
 };
 
+
+
 export const isAuthProtectedRoute = (pathname: string): boolean => {
-  return AUTH_PROTECTED_ROUTES.some((route) =>
-    matchesRouteSegment(pathname, route),
-  );
+  return AUTH_PROTECTED_ROUTES.some((route) => matchesRouteSegment(pathname, route));
 };

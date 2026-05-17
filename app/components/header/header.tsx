@@ -77,6 +77,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
   } = useUser();
   const { facultyId: activeFacultyId } = useFaculty();
 
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const highlightedPostId = searchParams.get("post");
@@ -120,7 +121,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
     WellbeingManager: "Wellbeing Manager",
     SuperAdmin: "Super Admin",
   };
-  const displayRole = role ? (displayRoleMap[role] ?? role) : "";
+  const displayRole = role ? displayRoleMap[role] ?? role : "";
   const displayId = identifierId || (role ? roleIdMap[role] : null) || userId;
 
   // const filteredSuggestions = useMemo(() => {
@@ -453,9 +454,7 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 ) : (
                   <Avatar alt="" sizes="w-8 h-8 md:w-10 md:h-10" />
                 )}
-                <p className="text-xs text-[#282828] font-medium">
-                  ID - {identifierId}
-                </p>
+                <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
               </button>
             </div>
           </div>
@@ -849,13 +848,10 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   </p>
                 </div>
 
-                <div
-                  className={`hidden w-full text-[#E5E5E5] ${
-                    role === "PlacementOfficer"
-                      ? "flex flex-col items-start text-[11px] leading-[1.2]"
-                      : "flex items-center justify-between text-xs"
-                  }`}
-                >
+                <div className={`hidden w-full text-[#E5E5E5] ${role === "PlacementOfficer"
+                  ? "flex flex-col items-start text-[11px] leading-[1.2]"
+                  : "flex items-center justify-between text-xs"
+                  }`}>
                   {role === "Student" && (
                     <>
                       <p className="truncate">
