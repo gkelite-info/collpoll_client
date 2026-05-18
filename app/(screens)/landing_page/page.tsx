@@ -1,5 +1,6 @@
 "use client";
 
+import { InstagramLogoIcon, WhatsappLogoIcon } from "@phosphor-icons/react";
 import { motion, useInView } from "framer-motion";
 import {
   Building2,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
+import { toast } from 'sonner';
 import {
   AreaChart,
   Area,
@@ -42,12 +44,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// --- Helpers ---
 const scrollToContact = () => {
   document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
 };
 
-// --- Animated Counter ---
 function useCountUp(target: number, duration = 2000) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
@@ -72,7 +72,6 @@ function useCountUp(target: number, duration = 2000) {
   return { count, ref };
 }
 
-// --- Data ---
 const stats = [
   { numericValue: 60, suffix: "+", label: "Institutions" },
   { numericValue: 96, suffix: "K+", label: "Active Students" },
@@ -139,16 +138,23 @@ const chartData = [
   { name: "Jun", value: 820 },
 ];
 
-// --- Components ---
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
 
+  const handleNavClick = (sectionId: string) => {
+    router.push(`/landing_page`);
+    setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+    setMobileMenuOpen(false);
+  };
+
   const handleLogin = () => {
     router.push('/login');
-  }
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -164,16 +170,21 @@ const Navbar = () => {
       <div className="container mx-auto px-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src="/Tt_logo.png" alt="TEKTON CAMPUS" className="h-9 w-9 object-contain" />
-          <a href="#"><span className="text-xl font-bold tracking-tight text-white">
+          <span
+            className="text-xl font-bold tracking-tight text-white cursor-pointer"
+            onClick={() => {
+              router.push('/landing_page');
+              window.scrollTo(0, 0)
+            }}
+          >
             TEKTON<span className="text-primary">CAMPUS</span>
-          </span></a>
+          </span>
         </div>
-
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#features" className="hover:text-primary transition-colors">Modules</a>
-          <a href="#portals" className="hover:text-primary transition-colors">Portals</a>
-          <a href="#testimonials" className="hover:text-primary transition-colors">Testimonials</a>
-          <a href="#contact" className="hover:text-primary transition-colors">Contact</a>
+          <button onClick={() => handleNavClick("features")} className="hover:text-primary transition-colors cursor-pointer">Modules</button>
+          <button onClick={() => handleNavClick("portals")} className="hover:text-primary transition-colors cursor-pointer">Portals</button>
+          <button onClick={() => handleNavClick("testimonials")} className="hover:text-primary transition-colors cursor-pointer">Testimonials</button>
+          <button onClick={() => handleNavClick("contact")} className="hover:text-primary transition-colors cursor-pointer">Contact</button>
         </div>
 
         <div className="hidden md:hidden lg:flex items-center gap-4">
@@ -200,45 +211,45 @@ const Navbar = () => {
         </button>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="absolute top-full left-0 w-full bg-background border-b border-border p-6 flex flex-col gap-4 md:flex md:flex-col">
-          <a href="#features" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Modules</a>
-          <a href="#portals" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Portals</a>
-          <a href="#testimonials" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Testimonials</a>
-          <a href="#contact" className="text-lg font-medium" onClick={() => setMobileMenuOpen(false)}>Contact</a>
-          <div className="h-px bg-border my-2" />
-          <div className="grid grid-cols-2">
-            <button
-              onClick={handleLogin}
-              className="bg-[#00d2ff]/10 w-fit border border-[#00d2ff]/60 text-[#00d2ff] px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#00d2ff]/20 transition-all duration-300 shadow-[0_0_15px_-3px_rgba(0,210,255,0.4)] flex items-center gap-2 cursor-pointer"
-              style={{
-                filter: "drop-shadow(0px 0px 5px rgba(0, 210, 255, 0.5))"
-              }}
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => { scrollToContact(); setMobileMenuOpen(false); }}
-              className="bg-primary text-primary-foreground px-5 py-3 rounded-xl font-semibold w-full"
-            >
-              Request Demo
-            </button>
+      {
+        mobileMenuOpen && (
+          <div className="absolute top-full left-0 w-full bg-background border-b border-border p-6 flex flex-col gap-4 md:flex md:flex-col">
+            <button onClick={() => handleNavClick("features")} className="text-lg font-medium">Modules</button>
+            <button onClick={() => handleNavClick("portals")} className="text-lg font-medium">Portals</button>
+            <button onClick={() => handleNavClick("testimonials")} className="text-lg font-medium">Testimonials</button>
+            <button onClick={() => handleNavClick("contact")} className="text-lg font-medium">Contact</button>
+            <div className="h-px bg-border my-2" />
+            <div className="grid grid-cols-2">
+              <button
+                onClick={handleLogin}
+                className="bg-[#00d2ff]/10 w-fit border border-[#00d2ff]/60 text-[#00d2ff] px-5 py-2.5 rounded-full text-sm font-bold hover:bg-[#00d2ff]/20 transition-all duration-300 shadow-[0_0_15px_-3px_rgba(0,210,255,0.4)] flex items-center gap-2 cursor-pointer"
+                style={{
+                  filter: "drop-shadow(0px 0px 5px rgba(0, 210, 255, 0.5))"
+                }}
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => { scrollToContact(); setMobileMenuOpen(false); }}
+                className="bg-primary text-primary-foreground px-5 py-3 rounded-xl font-semibold w-full"
+              >
+                Request Demo
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    </nav>
+        )
+      }
+    </nav >
   );
 };
 
 const Hero = () => {
   return (
     <section className="relative min-h-[100dvh] pt-32 pb-20 flex items-center overflow-hidden bg-[#0a0a0a]">
-      {/* Background Glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] mix-blend-screen pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[30rem] h-[30rem] bg-secondary/20 rounded-full blur-[120px] mix-blend-screen pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-        {/* Left Content */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -274,14 +285,12 @@ const Hero = () => {
           </div>
         </motion.div>
 
-        {/* Right Content - Visual Elements */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
           className="relative h-[600px] w-full hidden lg:block"
         >
-          {/* Main Revenue Card (Lower Layer) */}
           <motion.div
             animate={{ y: [0, -10, 0] }}
             transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
@@ -336,7 +345,6 @@ const Hero = () => {
             </div>
           </motion.div>
 
-          {/* Attendance Sync Card (Top Layer) */}
           <motion.div
             animate={{ y: [0, 15, 0] }}
             transition={{ repeat: Infinity, duration: 7, ease: "easeInOut", delay: 1 }}
@@ -421,7 +429,7 @@ const Modules = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="glass-panel p-8 rounded-2xl hover:-translate-y-2 hover-glow group cursor-pointer"
+              className="glass-panel p-8 rounded-2xl hover:-translate-y-2 transition-transform duration-200 hover-glow group"
             >
               <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-6 group-hover:bg-primary transition-colors duration-300">
                 <mod.icon className="w-7 h-7 text-primary group-hover:text-primary-foreground transition-colors duration-300" />
@@ -482,7 +490,7 @@ const Portals = () => {
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className="p-6 rounded-[28px] bg-[#0f172a]/40 border border-white/5 backdrop-blur-md transition-all duration-300 cursor-pointer group hover:bg-[#0f172a]/60 hover:border-primary/20"
+              className="p-6 rounded-[28px] bg-[#0f172a]/40 border border-white/5 backdrop-blur-md transition-all duration-300 group hover:bg-[#0f172a]/60 hover:border-primary/20"
             >
               <div className={`w-12 h-12 rounded-2xl ${portal.bg} border border-white/10 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500`}>
                 <portal.icon className={`w-6 h-6 ${portal.color}`} />
@@ -523,7 +531,6 @@ const Testimonials = () => {
   return (
     <section id="testimonials" className="py-32 relative overflow-hidden">
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/5 rounded-full blur-[150px] pointer-events-none" />
-
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center max-w-2xl mx-auto mb-20">
           <motion.div
@@ -602,6 +609,13 @@ const Contact = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
+
+      if (res.status === 409) {
+        setStatus("error");
+        setMessage("A demo request with this email already exists. We'll be in touch soon!");
+        return;
+      }
+
       if (res.ok) {
         setStatus("success");
         setMessage("Thank you! We'll reach out within 24 hours to schedule your personalized demo.");
@@ -616,7 +630,7 @@ const Contact = () => {
   };
 
   return (
-    <section id="contact" className="py-32 relative">
+    <section id="contact" className="py-32 relative -scroll-mt-16 lg:-scroll-mt-24">
       <div className="container mx-auto px-6">
         <div className="glass-panel rounded-3xl p-8 md:p-16 max-w-5xl mx-auto relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
@@ -672,13 +686,13 @@ const Contact = () => {
                   <p className="text-sm text-muted-foreground">{message}</p>
                   <button
                     onClick={() => setStatus("idle")}
-                    className="text-primary text-sm underline-offset-4 hover:underline"
+                    className="text-primary text-sm underline-offset-4 hover:underline cursor-pointer"
                   >
                     Submit another request
                   </button>
                 </motion.div>
               ) : (
-                <form className="space-y-4" onSubmit={handleSubmit}>
+                <form className="space-y-4 flex flex-col" onSubmit={handleSubmit}>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-muted-foreground">First Name</label>
@@ -686,7 +700,13 @@ const Contact = () => {
                         data-testid="input-first-name"
                         type="text"
                         value={form.firstName}
-                        onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          const onlyLetters = inputValue.replace(/[^A-Za-z]/g, "");
+                          const capitalized = onlyLetters.charAt(0).toUpperCase() + onlyLetters.slice(1);
+
+                          setForm((f) => ({ ...f, firstName: capitalized }));
+                        }}
                         className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
@@ -696,7 +716,13 @@ const Contact = () => {
                         data-testid="input-last-name"
                         type="text"
                         value={form.lastName}
-                        onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          const onlyLetters = inputValue.replace(/[^A-Za-z]/g, "");
+                          const capitalized = onlyLetters.charAt(0).toUpperCase() + onlyLetters.slice(1);
+
+                          setForm((f) => ({ ...f, lastName: capitalized }));
+                        }}
                         className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors"
                       />
                     </div>
@@ -707,7 +733,12 @@ const Contact = () => {
                       data-testid="input-institution"
                       type="text"
                       value={form.institution}
-                      onChange={(e) => setForm((f) => ({ ...f, institution: e.target.value }))}
+                      onChange={(e) => {
+                        const inputValue = e.target.value;
+                        const cleanValue = inputValue.replace(/[^A-Za-z0-9\s'\-安定.&]/g, "");
+
+                        setForm((f) => ({ ...f, institution: cleanValue }));
+                      }}
                       className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
@@ -718,6 +749,19 @@ const Contact = () => {
                       type="email"
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                      onBlur={(e) => {
+                        const emailValue = e.target.value;
+
+                        if (!emailValue) return;
+
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                        if (!emailRegex.test(emailValue)) {
+                          toast.error("Invalid Email Address", {
+                            description: "Please enter a valid email (e.g., name@example.com).",
+                          });
+                        }
+                      }}
                       className="w-full bg-muted/50 border border-border rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary transition-colors"
                     />
                   </div>
@@ -728,7 +772,7 @@ const Contact = () => {
                     data-testid="button-submit-demo"
                     type="submit"
                     disabled={status === "loading"}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-lg font-semibold mt-4 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-lg font-semibold mt-4 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 cursor-pointer"
                   >
                     {status === "loading" ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
@@ -760,20 +804,17 @@ const Footer = () => {
               The enterprise-grade digital campus management platform that brings precision engineering to higher education.
             </p>
             <div className="flex gap-4">
-              {/* X (Twitter) — inline SVG replaces react-icons/si SiX */}
-              <a href="#" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
+              <a href="https://wa.me/9000266832"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
+                <WhatsappLogoIcon size={22} />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
+              <a href="https://www.linkedin.com/company/tekton-campus/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
                 <Linkedin className="w-4 h-4" />
               </a>
-              {/* GitHub — inline SVG replaces react-icons/si SiGithub */}
-              <a href="#" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" aria-hidden="true">
-                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                </svg>
+              <a href="https://www.instagram.com/tektoncampus/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary hover:text-white transition-colors">
+                <InstagramLogoIcon size={22} />
               </a>
             </div>
           </div>
@@ -794,14 +835,14 @@ const Footer = () => {
               <li><a href="https://www.gkeliteinfo.com/about" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">About Us</a></li>
               <li><a href="https://www.gkeliteinfo.com/services" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Services</a></li>
               <li><a href="https://www.gkeliteinfo.com/contact" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Contact</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a></li>
+              <li><a href="https://www.gkeliteinfo.com/review" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Write a review</a></li>
             </ul>
           </div>
         </div>
 
         <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TEKTON CAMPUS (A product of GK Elite Info). All rights reserved.
+            © {new Date().getFullYear()} TEKTON CAMPUS (A product of GK Elite-Info). All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <a href="mailto:business@tektoncampus.com" className="hover:text-primary transition-colors">business@tektoncampus.com</a>
@@ -814,6 +855,23 @@ const Footer = () => {
 };
 
 export default function Page() {
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const el = document.querySelector(hash);
+        el?.scrollIntoView({ behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden selection:bg-primary/30 selection:text-white">
       <Navbar />
