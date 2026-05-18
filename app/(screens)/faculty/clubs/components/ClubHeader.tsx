@@ -1,6 +1,6 @@
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 
-export default function ClubHeader() {
+export default function ClubHeader({isVisible=true}:{isVisible?:boolean}) {
     return (
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -8,7 +8,7 @@ export default function ClubHeader() {
                 <p className="text-[#282828] mt-1">Review student requests and manage club members efficiently</p>
             </div>
             <div className="w-[320px]">
-                <CourseScheduleCard />
+                <CourseScheduleCard isVisibile={isVisible}/>
             </div>
         </div>
     );

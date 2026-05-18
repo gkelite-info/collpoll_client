@@ -26,49 +26,51 @@ export default function ResolvedIssuesList() {
 
   return (
     <div className="flex flex-col gap-4 shrink-0 mb-4">
-      <h2 className="text-[18px] mt-2 -mb-2 font-bold text-[#16284F]">Resolved Issues</h2>
-      
+      <h2 className="text-[18px] mt-2 -mb-2 font-bold text-[#282828]">Resolved Issues</h2>
+
       <div className="flex flex-col gap-6">
         {issues.map((issue) => (
           <div key={issue.id} className="bg-white rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 p-6 flex flex-col">
-            
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b border-gray-50 pb-5">
-              <div className="flex items-center gap-3 bg-[#E8F8EF] px-3.5 py-2 rounded-lg">
-                <ListDashes size={20} color="#43C17A" weight="bold" />
-                <span className="text-[14px] font-extrabold text-[#16284F]">Issue Details</span>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b border-gray-50 pb-2">
+              <div className="flex items-center gap-3 py-2 rounded-lg">
+                <span className="bg-[#43C17A24] p-2 rounded-full">
+                  <ListDashes size={20} color="#43C17A" weight="bold" />
+                </span>
+                <span className="text-[14px] font-extrabold text-[#282828]">Issue Details</span>
               </div>
               <button className="flex justify-center items-center gap-1.5 bg-[#43C17A] text-white text-[13px] font-bold px-4 py-2 rounded-lg shadow-sm hover:bg-[#34A362] transition-colors w-full sm:w-auto">
                 Resolved <CaretDown size={16} weight="bold" />
               </button>
             </div>
 
-            <h3 className="text-[18px] font-bold text-[#16284F] mb-4">{issue.title}</h3>
-            
+            <h3 className="text-[18px] font-bold text-[#282828] mb-4">{issue.title}</h3>
+
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-5">
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-bold text-[#16284F]">Category :</span>
-                <span className="px-3 py-1 rounded-[6px] bg-gray-50 font-bold text-gray-600 border border-gray-200 text-[12px]">{issue.category}</span>
+                <span className="px-3 py-1 rounded-[6px] font-bold text-[#282828] border border-[#D7D7D7] text-[12px]">{issue.category}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-bold text-[#16284F]">Priority :</span>
-                <span className="px-3 py-1 rounded-[6px] bg-white border border-gray-200 font-bold text-gray-600 shadow-sm text-[12px]">{issue.priority}</span>
+                <span className="px-3 py-1 rounded-[6px] font-bold text-[#282828] border border-[#D7D7D7]  text-[12px]">{issue.priority}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-bold text-[#16284F]">Date Reported :</span>
-                <span className="px-3 py-1 rounded-[6px] bg-white border border-gray-200 font-bold text-gray-600 shadow-sm text-[12px]">{issue.date}</span>
+                <span className="px-3 py-1 rounded-[6px] font-bold text-[#282828] border border-[#D7D7D7] text-[12px]">{issue.date}</span>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-4 mb-5">
-              <span className="text-[13px] font-bold text-[#16284F] flex-shrink-0 pt-0.5">Description :</span>
-              <p className="text-[13px] font-medium text-gray-500 leading-relaxed">
+              <span className="text-[13px] font-bold text-[#282828] flex-shrink-0 pt-0.5">Description :</span>
+              <p className="text-[13px] font-medium text-[#767676] leading-relaxed">
                 {issue.desc}
               </p>
             </div>
 
             {issue.attachments.length > 0 && (
               <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-4">
-                <span className="text-[13px] font-bold text-[#16284F] flex-shrink-0 pt-3">Attachments :</span>
+                <span className="text-[13px] font-bold text-[#282828] flex-shrink-0 pt-3">Attachments :</span>
                 <div className="flex flex-wrap gap-3 w-full">
                   {issue.attachments.map((file, i) => (
                     <div key={i} className="bg-white border border-gray-200 rounded-[10px] p-2 flex items-center gap-3 w-full sm:w-[200px] shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:shadow-md transition-shadow cursor-pointer">
@@ -76,15 +78,15 @@ export default function ResolvedIssuesList() {
                         <FilePdf size={24} weight="fill" />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <p className="text-[13px] font-bold text-[#16284F] truncate">{file.name}</p>
-                        <p className="text-[11px] font-bold text-gray-400 mt-0.5">{file.size}</p>
+                        <p className="text-[13px] font-medium text-[#111827] truncate">{file.name}</p>
+                        <p className="text-[11px] font-bold text-[#454545] mt-0.5">{file.size}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            
+
           </div>
         ))}
       </div>
