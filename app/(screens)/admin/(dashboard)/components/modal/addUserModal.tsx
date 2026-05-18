@@ -684,6 +684,9 @@ const AddUserModal: React.FC<{
     }
 
     if (isWellbeing) {
+      if (!basicData.dateOfJoining) {
+        return toast.error("Date of Joining is required.");
+      }
       if (!selectedWellbeingRegistrationTypes.length) {
         return toast.error("Select at least one Registration Type.");
       }
@@ -941,6 +944,7 @@ const AddUserModal: React.FC<{
               : "wellbeingExecutive",
           gender: basicData.gender,
           employeeId: basicData.identifierValue,
+          dateOfJoining: normalizedDateOfJoining,
           createdBy: basicData.adminId,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -1102,6 +1106,8 @@ const AddUserModal: React.FC<{
   };
   const showEmploymentFields =
     !isStudent && !isParent && !isWellbeing && basicData.role !== "";
+  const showDateOfJoiningField =
+    !isStudent && !isParent && basicData.role !== "";
 
   const showRollNoField = isStudent;
   const showEmployeeIdField =
@@ -1949,7 +1955,7 @@ const AddUserModal: React.FC<{
               </>
             )}
 
-            {showEmploymentFields && (
+            {showDateOfJoiningField && (
               <div className="grid grid-cols-2 gap-5 bg-pink-00">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
@@ -1965,23 +1971,25 @@ const AddUserModal: React.FC<{
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-[#2D3748]">
-                    Experience (Years) <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    name="professionalExperienceYears"
-                    min={0}
-                    max={60}
-                    step="0.1"
-                    placeholder="e.g. 3.5"
-                    value={basicData.professionalExperienceYears || ""}
-                    onChange={handleBasicChange}
-                    onWheel={(e) => e.currentTarget.blur()}
-                    className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
-                  />
-                </div>
+                {showEmploymentFields && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#2D3748]">
+                      Experience (Years) <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="professionalExperienceYears"
+                      min={0}
+                      max={60}
+                      step="0.1"
+                      placeholder="e.g. 3.5"
+                      value={basicData.professionalExperienceYears || ""}
+                      onChange={handleBasicChange}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
+                    />
+                  </div>
+                )}
               </div>
             )}
 

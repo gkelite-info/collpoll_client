@@ -15,7 +15,19 @@ const summaryIcons = [
   <UserSound key="executives" size={22} weight="fill" />,
 ];
 
-export default function FinanceSummaryCards() {
+type FinanceSummaryCardsProps = {
+  onRevenueClick?: () => void;
+  onPendingClick?: () => void;
+  onStudentsClick?: () => void;
+  onExecutivesClick?: () => void;
+};
+
+export default function FinanceSummaryCards({
+  onRevenueClick,
+  onPendingClick,
+  onStudentsClick,
+  onExecutivesClick,
+}: FinanceSummaryCardsProps) {
   return (
     <section className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-4">
       {financeSummaryCards.map((card, index) => (
@@ -28,6 +40,17 @@ export default function FinanceSummaryCards() {
           label={card.label}
           iconBgColor={card.iconBgColor}
           iconColor={card.iconColor}
+          onClick={
+            index === 0
+              ? onRevenueClick
+              : index === 1
+                ? onPendingClick
+                : index === 2
+                  ? onStudentsClick
+                  : index === 3
+                    ? onExecutivesClick
+                  : undefined
+          }
         />
       ))}
     </section>

@@ -28,6 +28,7 @@ export type CreateWellbeingPayload = {
   roleType: WellbeingRoleType;
   gender: string;
   employeeId?: string;
+  dateOfJoining?: string | null;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -102,6 +103,21 @@ const formatSupabaseError = (action: string, error: PostgrestError) => {
 export const createWellbeing = async (payload: CreateWellbeingPayload) => {
   if (!payload.gender?.trim()) {
     throw new Error("Gender is required for wellbeing registration");
+  }
+
+  if (payload.dateOfJoining !== undefined) {
+    const { error } = await supabase
+      .from("users")
+      .update({
+        dateOfJoining: payload.dateOfJoining,
+        updatedAt: payload.updatedAt,
+      })
+      .eq("userId", payload.userId)
+      .in("role", ["WellbeingExecutive", "WellbeingManager"]);
+
+    if (error) {
+      throw new Error(formatSupabaseError("updateWellbeingUserJoiningDate", error));
+    }
   }
 
   const createdWellBeingIds: number[] = [];
