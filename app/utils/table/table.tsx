@@ -55,7 +55,10 @@ export default function TableComponent({
   return (
     <div className="mt-2 w-full">
       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-auto" style={{ maxHeight: height || "55vh" }}>
+        <div
+          className="custom-scrollbar overflow-auto"
+          style={{ maxHeight: height || "55vh" }}
+        >
           <table className="w-full border-collapse">
             <TableHead columns={columns} stickyHeader={stickyHeader} />
             <TableBody

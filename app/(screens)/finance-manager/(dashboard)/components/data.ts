@@ -121,3 +121,74 @@ export const financeAnnouncements = [
     time: "Just now",
   },
 ];
+
+export const revenueTrendData = [
+  {
+    program: "B.Tech",
+    collected: 5.8,
+    pending: 3.0,
+    collectedColor: "#43C17A",
+    pendingColor: "#D5F3E2",
+  },
+  {
+    program: "Degree",
+    collected: 8.9,
+    pending: 3.0,
+    collectedColor: "#60AEFF",
+    pendingColor: "#DDEEFF",
+  },
+  {
+    program: "Inter",
+    collected: 7.2,
+    pending: 1.6,
+    collectedColor: "#E6B75F",
+    pendingColor: "#FFF2D8",
+  },
+  {
+    program: "MBA",
+    collected: 11.4,
+    pending: 1.7,
+    collectedColor: "#16284F",
+    pendingColor: "#E3DAFF",
+  },
+  {
+    program: "MBBS",
+    collected: 5.0,
+    pending: 0.8,
+    collectedColor: "#7654E8",
+    pendingColor: "#DCCFFF",
+  },
+];
+
+export const revenueProgramCards = [
+  {
+    title: "B.Tech",
+    amount: "₹ 1.2 Cr",
+    collected: "₹ 1,20,000",
+    pending: "₹ 30L",
+  },
+  {
+    title: "Degree",
+    amount: "₹ 1.2 Cr",
+    collected: "₹ 1,20,000",
+    pending: "₹ 30L",
+  },
+  {
+    title: "Inter",
+    amount: "₹ 1.2 Cr",
+    collected: "₹ 1,20,000",
+    pending: "₹ 30L",
+  },
+  {
+    title: "MBA",
+    amount: "₹ 1.2 Cr",
+    collected: "₹ 1,20,000",
+    pending: "₹ 30L",
+  },
+  {
+    title: "MBBS",
+    amount: "₹ 1.2 Cr",
+    collected: "₹ 1,20,000",
+    pending: "₹ 30L",
+  },
+];
