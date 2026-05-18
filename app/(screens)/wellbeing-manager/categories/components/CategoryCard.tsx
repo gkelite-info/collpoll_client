@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { Trash } from "@phosphor-icons/react";
+import { Trash, TrashSimpleIcon } from "@phosphor-icons/react";
 
 type Executive = {
   id: number;
@@ -30,8 +30,8 @@ export default function CategoryCard({
       
       <div className="flex flex-col md:flex-row gap-2 justify-between items-start mb-5">
         <div className="flex flex-col gap-0.5 order-2 md:order-1">
-          <h2 className="text-[20px] font-bold text-[#16284F] leading-tight">{title}</h2>
-          <p className="text-[13px] font-medium text-gray-500">{executivesAssigned} Executives Assigned</p>
+          <h2 className="text-[20px] font-bold text-[#282828] leading-tight">{title}</h2>
+          <p className="text-[13px] font-medium text-[#282828]">{executivesAssigned} Executives Assigned</p>
         </div>
         
         <div className="flex items-center gap-2 order-1 md:order-2 w-full md:w-auto">
@@ -43,9 +43,9 @@ export default function CategoryCard({
           </button>
           <button
             onClick={onDelete}
-            className="flex cursor-pointer items-center justify-center w-7 h-7 rounded-[6px] bg-[#FFE4E4] text-[#EF4444] shadow-sm shrink-0"
+            className="flex cursor-pointer items-center justify-center w-7 h-7 rounded-full bg-[#FF00001A] text-[#FF0000] shadow-sm shrink-0"
           >
-            <Trash size={16} weight="fill" className="md:w-4 md:h-4"/>
+            <TrashSimpleIcon  size={16} weight="fill" className="md:w-4 md:h-4"/>
           </button>
         </div>
       </div>
@@ -65,8 +65,8 @@ export default function CategoryCard({
             
             <div className="flex flex-col min-w-0">
               <div className="flex items-baseline gap-2">
-                <p className="text-[14px] font-bold text-[#16284F] truncate">{exec.name}</p>
-                <p className="text-[12px] font-bold text-gray-500 shrink-0">{exec.staffId}</p>
+                <p className="text-[14px] font-bold text-[#282828] truncate">{exec.name}</p>
+                <p className="text-[12px] font-bold text-[#282828] shrink-0">{exec.staffId}</p>
               </div>
               <p className="text-[12px] font-bold text-[#43C17A] truncate mt-[1px]">{exec.role}</p>
             </div>

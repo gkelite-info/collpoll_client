@@ -1,8 +1,12 @@
 "use client";
+import { useState } from "react";
 import WellbeingRight from "../components/WellbeingRight";
 import CategoryCard from "./components/CategoryCard";
+import { CaretDown } from "@phosphor-icons/react";
+import CreateCategoryModal from "../components/CreateCategoryModal";
 
 export default function CategoriesPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const categories = [
     {
       title: "Medical",
@@ -53,10 +57,20 @@ export default function CategoriesPage() {
 
   return (
     <main className="flex flex-col lg:flex-row w-full min-h-screen overflow-x-hidden">
-      
-      <div className="w-full lg:w-[68%] xl:w-[70%] p-4 md:p-6 lg:p-2 lg:pb-4 flex flex-col lg:h-screen lg:overflow-y-auto custom-scrollbar">
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start">
+
+      <div className="w-full lg:w-[68%] p-4 md:p-6 lg:p-2 lg:pb-4 flex flex-col lg:h-screen">
+        <div className="mb-4 mt-4 flex">
+          <div className="relative inline-flex items-center">
+            <select className="cursor-pointer appearance-none bg-[#16284F] text-[#ffffff] py-1.5 pl-3 pr-8 rounded-md outline-none text-[13px] md:text-sm font-medium h-[34px]">
+              <option value="">College</option>
+              <option value="engineering">Engineering</option>
+              <option value="medical">Medical</option>
+              <option value="arts">Arts</option>
+            </select>
+            <CaretDown size={14} weight="bold" color="#ffffff" className="absolute right-2.5 pointer-events-none" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 items-start lg:overflow-y-auto custom-scrollbar pr-1">
           {categories.map((cat, idx) => (
             <CategoryCard
               key={idx}
@@ -70,8 +84,17 @@ export default function CategoriesPage() {
         </div>
 
       </div>
-      
-      <WellbeingRight />
+
+      <WellbeingRight
+        button={true}
+        headerActionLabel="Create Category"
+        onHeaderActionClick={() => setIsModalOpen(true)}
+      />
+
+      <CreateCategoryModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </main>
   );
 }

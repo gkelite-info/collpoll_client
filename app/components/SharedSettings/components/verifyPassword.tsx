@@ -15,7 +15,7 @@ import {
 export default function CurrentPassword() {
   const router = useRouter();
   const pathname = usePathname();
-  const { email } = useUser();
+  const { email, role } = useUser();
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,6 +58,8 @@ export default function CurrentPassword() {
     }
   };
 
+  const isNotVisible = !['WellbeingManager'].includes(role!)
+
   return (
     <main className="min-h-screen p-2 max-md:p-0 max-md:bg-[#F4F5F6]">
       <div className="flex justify-between mb-6 max-md:p-4 max-md:pb-2">
@@ -76,7 +78,7 @@ export default function CurrentPassword() {
           </p>
         </div>
         <div className="w-[32%] max-md:hidden">
-          <CourseScheduleCard />
+          <CourseScheduleCard isVisibile={isNotVisible}/>
         </div>
       </div>
       <div className="mx-auto max-w-3xl w-full max-md:px-4">

@@ -60,16 +60,14 @@ export default function PerformancePage() {
   );
 
   return (
-    <main className="flex w-full min-h-screen overflow-x-hidden relative">
-
-      <div className="w-full lg:w-[68%] xl:w-[70%] p-4 md:p-6 lg:p-2 flex flex-col gap-6 lg:h-screen lg:overflow-y-auto  pb-6">
-
+    <main className="flex w-full overflow-x-hidden relative">
+      <div className="w-full lg:w-[68%] p-4 md:p-6 lg:p-2 flex flex-col gap-6 lg:h-[130vh] pb-6">
         <div className="flex items-center justify-between mt-2 shrink-0">
           <div className="flex flex-col gap-1">
-            <h1 className="text-[#16284F] text-[22px] md:text-[26px] font-bold leading-tight">
+            <h1 className="text-[#282828] md:text-lg font-bold leading-tight">
               Performance
             </h1>
-            <p className="text-[#4D6285] text-[13px] md:text-sm font-medium">
+            <p className="text-[#282828] text-[13px] md:text-sm font-medium">
               Monitor and track performance of well-being executives
             </p>
           </div>
@@ -90,7 +88,6 @@ export default function PerformancePage() {
       </div>
 
       <WellbeingRight
-        showCalendar={false}
         button={false}
         isMobileDrawerOpen={isMobileDrawerOpen}
         onCloseDrawer={() => setIsMobileDrawerOpen(false)}

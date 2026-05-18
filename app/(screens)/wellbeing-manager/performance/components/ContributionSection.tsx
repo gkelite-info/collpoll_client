@@ -26,12 +26,12 @@ export default function ContributionSection() {
 
   return (
     <div className="flex flex-col gap-4 shrink-0">
-      <h2 className="text-[18px] font-bold text-[#16284F] mt-2 -mb-2">
+      <h2 className="text-[18px] font-bold text-[#282828] mt-2 -mb-2">
         Contribution : <span className="text-[#43C17A]">Infrastructure</span>
       </h2>
-      
+
       <div className="bg-white rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 p-6 flex flex-col sm:flex-row items-center gap-8">
-        
+
         <div className="relative w-[140px] h-[140px] flex items-center justify-center flex-shrink-0">
           <svg
             width={size}
@@ -43,7 +43,7 @@ export default function ContributionSection() {
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="#D3F1E0"
+              stroke="#CBDAC9"
               strokeWidth={strokeWidth}
               fill="transparent"
             />
@@ -51,7 +51,7 @@ export default function ContributionSection() {
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="#43C17A"
+              stroke="#437E66"
               strokeWidth={strokeWidth}
               fill="transparent"
               strokeDasharray={circumference}
@@ -60,36 +60,36 @@ export default function ContributionSection() {
               className="transition-all duration-1000 ease-out"
             />
           </svg>
-          
+
           <div className="absolute flex flex-col items-center justify-center pointer-events-none">
             <span className="text-[26px] font-extrabold text-[#16284F] leading-none mb-0.5">
               {resolvedIssues}
             </span>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight text-center px-4 leading-tight">
+            <span className="text-[10px] font-bold text-[#16284F] uppercase tracking-tight text-center px-4 leading-tight">
               Issues<br />Resolved
             </span>
           </div>
         </div>
-        
+
         <div className="flex-1 w-full flex flex-col justify-center mt-2 sm:mt-0">
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-[32px] font-extrabold text-[#16284F] leading-none">
+            <span className="text-[32px] font-extrabold text-[#282828] leading-none">
               {totalIssues}
             </span>
-            <span className="text-[14px] text-gray-500 font-bold">Total Issues</span>
+            <span className="text-[14px] text-[#16284F] font-bold">Total Issues</span>
           </div>
-          
+
           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-3">
-            <div 
-              className="bg-[#43C17A] h-2.5 rounded-full transition-all duration-1000 ease-out" 
+            <div
+              className="bg-[#437E66] h-2.5 rounded-full transition-all duration-1000 ease-out"
               style={{ width: `${barWidth}%` }}
             ></div>
           </div>
-          
+
           <div className="flex justify-between items-center text-[13px] font-bold">
             <span className="text-gray-500">Issues Resolved</span>
             <span className="text-[#16284F]">
-              Contribution Share <span className="text-[#16284F] ml-0.5 text-[14px]">{contributionShare}%</span>
+              Contribution Share <span className="text-[#282828] ml-0.5 text-[14px]">{contributionShare}%</span>
             </span>
           </div>
         </div>
