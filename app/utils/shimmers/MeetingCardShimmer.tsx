@@ -11,6 +11,7 @@ export default function MeetingCardShimmer({
     type?: string;
     count?: number;
 }) {
+    const isEditable = ["Wellbeing Manager", "Finance"].includes(role!)
     return (
         <>
             {Array.from({ length: count }).map((_, index) => (
@@ -24,7 +25,7 @@ export default function MeetingCardShimmer({
                             <div className="h-5 w-32 bg-[#43C17A] rounded-md opacity-40"></div>
                         </div>
 
-                        {(type === "upcoming" && role === "Finance") && (
+                        {(type === "upcoming" && isEditable) && (
                             <div className="flex gap-2 items-center justify-center">
                                 <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center shadow-sm">
                                 </div>

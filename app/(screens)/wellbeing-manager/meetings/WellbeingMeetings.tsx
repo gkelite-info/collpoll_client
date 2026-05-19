@@ -1,70 +1,50 @@
 'use client'
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import MeetingCard from "../../finance/meetings/components/MeetingCard";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
+import CreateMeetingModal from "./components/CreateMeetingModal";
+import SelectExecutiveModal from "./components/SelectExecutiveModal";
+import { Pagination } from "../../admin/academic-setup/components/pagination";
+import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
 
 type MeetingType = 'upcoming' | 'previous';
 
-const MOCK_MEETINGS = [
-    {
-        id: "1",
-        financeMeetingId: 101,
-        financeMeetingSectionsId: 201,
-        category: "Faculty",
-        title: "Wellbeing Sync Up",
-        timeRange: "10:00  - 11:30 ",
-        educationType: "UG",
-        branch: "Computer Science",
-        description: "Monthly discussion on student wellbeing initiatives and progress tracking.",
-        date: "24 Nov 2024",
-        participants: 12,
-        year: "2nd Year",
-        section: "A, B",
-        tags: "Mental Health, Planning",
-        type: "upcoming",
-        meetingLink: "https://meet.google.com/abc-defg-hij"
-    },
-    {
-        id: "2",
-        financeMeetingId: 102,
-        financeMeetingSectionsId: 202,
-        category: "Faculty",
-        title: "Counseling Orientation",
-        timeRange: "02:00 - 03:00",
-        educationType: "UG",
-        branch: "Electronics",
-        description: "Orientation for new counselors and mentors.",
-        date: "25 Nov 2024",
-        participants: 8,
-        year: "1st Year",
-        section: "C",
-        tags: "Orientation, Guidance",
-        type: "upcoming",
-        meetingLink: "https://meet.google.com/xyz-uvwx-yz"
-    },
-    {
-        id: "3",
-        financeMeetingId: 103,
-        financeMeetingSectionsId: 203,
-        category: "Faculty",
-        title: "Past Wellbeing Review",
-        timeRange: "04:00 - 05:00",
-        educationType: "PG",
-        branch: "Management",
-        description: "Review of last month's counseling sessions and feedback.",
-        date: "10 Nov 2024",
-        participants: 15,
-        year: "Final Year",
-        section: "All",
-        tags: "Review, Feedback",
-        type: "previous",
-        meetingLink: "https://meet.google.com/qwe-rtyu-iop"
-    }
-];
+const MOCK_MEETINGS = Array.from({ length: 30 }).map((_, i) => ({
+    id: String(i + 1),
+    financeMeetingId: 100 + i,
+    financeMeetingSectionsId: 200 + i,
+    category: "Faculty",
+    title: i < 15 ? "Hostel Issues Review Meeting" : "Safety Drill Coordination",
+    timeRange: "08:00 - 09:00",
+    educationType: "UG",
+    branch: "CSE",
+    description: i < 15
+        ? "Weekly discussion pending hostel complaints..."
+        : "Planning and coordination for upcoming safety drill...",
+    date: i < 15 ? "20 Feb 2026" : "15 Jan 2026",
+    participants: Math.floor(Math.random() * 20) + 1,
+    year: "2nd Year",
+    section: "A, B",
+    tags: "Review",
+    type: i < 15 ? "upcoming" : "previous",
+    meetingLink: "https://meet.google.com/abc-defg-hij",
+    hostName: "Sare ali khan",
+    hostImage: "https://i.pravatar.cc/150?img=" + (i % 50)
+}));
+
+export type Executive = {
+    id: string;
+    name: string;
+    department: string;
+    empId: string;
+    avatar: string;
+};
+
+const ITEMS_PER_PAGE = 10;
 
 export default function WellbeingMeetingsPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -73,8 +53,15 @@ export default function WellbeingMeetingsPage() {
     const router = useRouter();
     const pathname = usePathname();
     const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
     const currentType = (searchParams.get('type') as MeetingType) || 'upcoming';
     const [meetings, setMeetings] = useState<any[]>([]);
+
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isSelectExecutiveModalOpen, setIsSelectExecutiveModalOpen] = useState(false);
+    const [selectedExecutives, setSelectedExecutives] = useState<Executive[]>([]);
+    const [meetingToEdit, setMeetingToEdit] = useState<any>(null);
+    const [meetingToDelete, setMeetingToDelete] = useState<any>(null);
 
     const updateFilter = (key: string, value: string) => {
         setIsLoading(true);
@@ -97,10 +84,53 @@ export default function WellbeingMeetingsPage() {
         setIsLoading(true);
         setTimeout(() => {
             const filtered = MOCK_MEETINGS.filter(m => m.type === currentType);
-            setMeetings(filtered);
-            setTotalPages(1);
+            const simulatedServerResponse = filtered.slice(
+                (page - 1) * ITEMS_PER_PAGE,
+                page * ITEMS_PER_PAGE
+            );
+            setMeetings(simulatedServerResponse);
+            setTotalItems(filtered.length);
             setIsLoading(false);
         }, 800);
+    };
+
+    const handleOpenExecutiveSelect = () => {
+        setIsCreateModalOpen(false);
+        setIsSelectExecutiveModalOpen(true);
+    };
+
+    const handleCloseExecutiveSelect = () => {
+        setIsSelectExecutiveModalOpen(false);
+        setIsCreateModalOpen(true);
+    };
+
+    const handleEditMeeting = (meetingId: number) => {
+        const meeting = meetings.find(m => m.meetingId === meetingId);
+        if (meeting) {
+            setMeetingToEdit(meeting);
+            setSelectedExecutives([{
+                id: "mock-1",
+                name: meeting.hostName,
+                department: "Faculty",
+                empId: "12345",
+                avatar: meeting.hostImage
+            }]);
+            setIsCreateModalOpen(true);
+        }
+    };
+
+    const handleConfirmDelete = () => {
+        if (meetingToDelete) {
+            setMeetings(prev => prev.filter(m => m.id !== meetingToDelete.id));
+            setTotalItems(prev => prev - 1);
+            setMeetingToDelete(null);
+        }
+    };
+
+    const handleCloseCreateModal = () => {
+        setIsCreateModalOpen(false);
+        setMeetingToEdit(null);
+        setSelectedExecutives([]);
     };
 
     return (
@@ -117,7 +147,8 @@ export default function WellbeingMeetingsPage() {
                 </div>
             </div>
             <div className="bg-red-00">
-                <div className="flex items-center justify-center w-full">
+                <div className="flex items-center justify-between w-full relative mb-4 max-md:flex-col max-md:gap-4">
+                    <div className="hidden md:block w-32"></div>
                     <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">
                         {typeTabs.map((tab) => {
                             const isActive = currentType === tab.id;
@@ -146,19 +177,34 @@ export default function WellbeingMeetingsPage() {
                             )
                         })}
                     </div>
+                    <div className="flex justify-end  max-md:w-full">
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="bg-[#16284F] text-white px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 hover:bg-[#0f1c38] transition-colors cursor-pointer w-full justify-center md:w-auto"
+                        >
+                            <Plus size={16} weight="bold" />
+                            Create Meeting
+                        </button>
+                    </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {isLoading ? (
                             <MeetingCardShimmer
                                 role="Wellbeing Manager"
                                 category="Faculty"
                                 type={currentType}
-                                count={4}
+                                count={8}
                             />
                         ) : meetings.length > 0 ? (
                             meetings.map((meeting) => (
-                                <MeetingCard key={meeting.id} data={meeting} role="Wellbeing Manager" />
+                                <MeetingCard
+                                    key={meeting.id}
+                                    data={meeting}
+                                    role="Wellbeing Manager"
+                                    onDelete={() => setMeetingToDelete(meeting)}
+                                    onEdit={() => handleEditMeeting(meeting.meetingId)}
+                                />
                             ))
                         ) : (
                             <div className="col-span-full py-20 text-center text-gray-500 bg-white rounded-xl border border-dashed border-gray-300">
@@ -168,50 +214,47 @@ export default function WellbeingMeetingsPage() {
                             </div>
                         )}
                     </div>
+                    {!isLoading && totalItems > 0 && (
+                        <Pagination
+                            currentPage={page}
+                            totalItems={totalItems}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setPage}
+                            roundedBottom="rounded-b-xl pb-4"
+                        />
+                    )}
                 </div>
-                {totalPages > 1 && (
-                    <div className="flex justify-center pb-4">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                className={`p-2 rounded-md ${page === 1
-                                    ? 'bg-gray-100 text-gray-400'
-                                    : 'bg-gray-200 hover:bg-gray-300'
-                                    }`}
-                            >
-                                <CaretLeft size={16} weight="bold" />
-                            </button>
 
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                                (p) => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPage(p)}
-                                        className={`px-3 py-1 rounded-md text-sm font-medium ${page === p
-                                            ? 'bg-[#16284F] text-white'
-                                            : 'bg-gray-200 hover:bg-gray-300'
-                                            }`}
-                                    >
-                                        {p}
-                                    </button>
-                                )
-                            )}
-
-                            <button
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                className={`p-2 rounded-md ${page === totalPages
-                                    ? 'bg-gray-100 text-gray-400'
-                                    : 'bg-gray-200 hover:bg-gray-300'
-                                    }`}
-                            >
-                                <CaretRight size={16} weight="bold" />
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
+            <AnimatePresence>
+                {isCreateModalOpen && (
+                    <CreateMeetingModal
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onOpenExecutiveSelect={handleOpenExecutiveSelect}
+                        selectedExecutives={selectedExecutives}
+                        onRemoveExecutive={(id) => setSelectedExecutives(prev => prev.filter(e => e.id !== id))}
+                        editData={meetingToEdit}
+                    />
+                )}
+                {isSelectExecutiveModalOpen && (
+                    <SelectExecutiveModal
+                        onClose={handleCloseExecutiveSelect}
+                        selectedExecutives={selectedExecutives}
+                        setSelectedExecutives={setSelectedExecutives}
+                    />
+                )}
+
+                {meetingToDelete && (
+                    <ConfirmDeleteModal
+                        open={!!meetingToDelete}
+                        onConfirm={handleConfirmDelete}
+                        onCancel={() => setMeetingToDelete(null)}
+                        title="Delete"
+                        name={`"${meetingToDelete.title}"`}
+                        actionType="remove"
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 };
