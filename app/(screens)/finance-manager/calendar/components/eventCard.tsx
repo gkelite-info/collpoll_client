@@ -10,14 +10,10 @@ import {
 } from "@phosphor-icons/react";
 import type { CalendarEvent } from "../types";
 
-type EventCardEvent = CalendarEvent & {
-  participantAvatar?: string;
-};
-
 const EVENT_STYLES = {
   meeting: {
-    solidBg: "#E2DAFF",
-    lightBg: "#E2DAFF8F",
+    solidBg: "#6C20CA",
+    lightBg: "#EEE7FF",
     text: "#6C20CA",
     Icon: VideoConference,
   },
@@ -47,7 +43,7 @@ const EventCard = ({
   onEdit,
   onClick,
 }: {
-  event: EventCardEvent;
+  event: CalendarEvent;
   onDelete?: () => void;
   onEdit?: () => void;
   onClick?: () => void;
@@ -74,7 +70,7 @@ const EventCard = ({
   return (
     <div
       onClick={onClick}
-      className="group relative inset-x-0.5 z-20 flex h-full cursor-pointer flex-col overflow-hidden rounded-sm transition-shadow hover:shadow-lg"
+      className="group relative inset-x-0.5 z-20 h-full min-h-[110px] cursor-pointer overflow-auto rounded-md transition-shadow hover:shadow-lg custom-scrollbar"
       style={{ backgroundColor: style.lightBg }}
     >
       {/* DELETE BUTTON */}
@@ -102,51 +98,57 @@ const EventCard = ({
         </button>
       )}
 
-      <div
-        className="flex shrink-0 items-center gap-2 border-b border-dashed px-3 py-2 text-xs font-semibold"
-        style={{ borderColor: style.text, color: style.text }}
-      >
-        <span
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white"
-          style={{ backgroundColor: style.text }}
-        >
-          <Icon size={15} weight="fill" />
-        </span>
-        <span className="truncate">{timeStr}</span>
-      </div>
-
-      <div
-        className="truncate px-3 pt-2 text-sm font-semibold"
-        style={{ color: style.text }}
-      >
-        {event.title}
-      </div>
-
-      {event.participantName && (
+      <div className="flex h-full min-w-[220px] flex-col">
         <div
-          className="flex items-center gap-2 px-3 pb-2 pt-1 text-xs font-medium"
+          className="flex shrink-0 items-center gap-3 border-b-2 border-dashed px-4 py-3 font-semibold"
+          style={{ borderColor: style.text, color: style.text }}
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
+            style={{ backgroundColor: style.solidBg }}
+          >
+            <Icon size={19} weight="fill" />
+          </span>
+          <span className="whitespace-nowrap text-sm leading-none md:text-base">
+            {timeStr}
+          </span>
+        </div>
+
+        <div
+          className="whitespace-nowrap px-4 pt-3 text-base font-semibold leading-tight"
           style={{ color: style.text }}
         >
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/70 text-[10px] font-bold">
-            {event.participantAvatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={event.participantAvatar}
-                alt=""
-                className="h-full w-full rounded-full object-cover"
-              />
-            ) : (
-              event.participantName.charAt(0)
+          {event.title}
+        </div>
+
+        {event.participantName && (
+          <div
+            className="flex items-center gap-3 px-4 pb-3 pt-2 text-sm font-medium"
+            style={{ color: style.text }}
+          >
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/70 text-xs font-bold">
+              {event.participantAvatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={event.participantAvatar}
+                  alt=""
+                  className="h-full w-full rounded-full object-cover"
+                />
+              ) : (
+                event.participantName.charAt(0)
+              )}
+            </div>
+            <span className="whitespace-nowrap text-base font-medium">
+              {event.participantName}
+            </span>
+            {event.participantId && (
+              <span className="ml-auto shrink-0 whitespace-nowrap pr-1 text-sm text-[#282828]">
+                ID : {event.participantId}
+              </span>
             )}
           </div>
-          <span className="truncate font-semibold">{event.participantName}</span>
-          {event.participantId && (
-            <span className="ml-auto shrink-0 text-[10px] text-[#282828]">
-              ID : {event.participantId}
-            </span>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

@@ -14,9 +14,10 @@ export interface CalendarEvent {
   branch?: string;
   section?: string;
   day: string;
-  rawFormData?: any;
+  rawFormData?: unknown;
   participantName?: string;
   participantId?: string;
+  participantAvatar?: string;
 }
 
 export interface WeekDay {

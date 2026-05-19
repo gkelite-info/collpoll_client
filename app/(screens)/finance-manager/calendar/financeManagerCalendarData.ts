@@ -86,6 +86,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "MON 11",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "2",
@@ -100,6 +102,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "MON 11",
     participantName: "Dr. Anil Kumar",
     participantId: "43270",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "3",
@@ -114,6 +118,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "TUE 12",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "4",
@@ -128,6 +134,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "TUE 12",
     participantName: "Dr. Anil Kumar",
     participantId: "43270",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "5",
@@ -142,6 +150,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "WED 13",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "6",
@@ -156,6 +166,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "WED 13",
     participantName: "Dr. Anil Kumar",
     participantId: "43270",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "7",
@@ -170,6 +182,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "THU 14",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "8",
@@ -184,6 +198,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "THU 14",
     participantName: "Dr. Anil Kumar",
     participantId: "43270",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "9",
@@ -198,6 +214,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "FRI 15",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "10",
@@ -212,6 +230,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "SAT 16",
     participantName: "Dr. Anil Kumar",
     participantId: "43270",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "11",
@@ -226,6 +246,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "SAT 16",
     participantName: "Shravani",
     participantId: "43269",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
   {
     id: "12",
@@ -240,6 +262,8 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "SAT 16",
     participantName: "Rohan Sharma",
     participantId: "5478246",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop",
   },
   {
     id: "13",
@@ -254,5 +278,7 @@ export const STATIC_CALENDAR_EVENTS: CalendarEvent[] = [
     day: "SAT 16",
     participantName: "Aishwarya Kulkarni",
     participantId: "5478246",
+    participantAvatar:
+      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop",
   },
 ];

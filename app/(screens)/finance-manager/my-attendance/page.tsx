@@ -1,5 +1,13 @@
-import FinanceManagerPlaceholderPage from "../components/FinanceManagerPlaceholderPage";
+import MyAttendanceLeft from "./left";
+import MyAttendanceRight from "./right";
 
-export default function Page() {
-  return <FinanceManagerPlaceholderPage title="My Attendance Page" />;
+export default function Assignments() {
+  return (
+    <>
+      <div className="flex items-start justify-between">
+        <MyAttendanceLeft />
+        <MyAttendanceRight />
+      </div>
+    </>
+  );
 }
