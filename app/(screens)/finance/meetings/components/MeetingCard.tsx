@@ -24,7 +24,8 @@ export default function MeetingCard({
   category,
   onEdit,
 }: {
-  data: Meeting;
+  // data: Meeting;
+  data: any;
   onDelete?: (meeting: Meeting) => void;
   role: string | null;
   category?: string | null;
@@ -34,6 +35,8 @@ export default function MeetingCard({
   const [fromTime, toTime] = data.timeRange.split(" - ");
   const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const isEditable = ["Wellbeing Manager", "Finance"].includes(role!)
 
   return (
     <>
@@ -55,7 +58,7 @@ export default function MeetingCard({
             {data.date}
           </div>
 
-          {data.type === "upcoming" && role === "Finance" && (
+          {data.type === "upcoming" && isEditable && (
             <div className="flex gap-1.5 items-center justify-center max-md:hidden">
               <button
                 className="w-6 h-6 cursor-pointer flex items-center justify-center rounded-full bg-white"
@@ -96,10 +99,10 @@ export default function MeetingCard({
 
             {((category && category !== "Admin") ||
               (role && !["Admin", "Finance"].includes(role))) && (
-              <span className="bg-[#22c55e] text-[#ffffff] px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap max-md:hidden">
-                {data.branch} - {data.section}
-              </span>
-            )}
+                <span className="bg-[#22c55e] text-[#ffffff] px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap max-md:hidden">
+                  {data.branch} - {data.section}
+                </span>
+              )}
           </div>
 
           {/* Desktop Content Only */}
@@ -122,21 +125,48 @@ export default function MeetingCard({
                   <PillTag label={data.date} />
                 </div>
               </div>
-              <button
-                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  data.type === "previous"
+              {role !== "Wellbeing Manager" &&
+                <button
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${data.type === "previous"
                     ? "bg-[#CDCDCD] text-[#414141]"
                     : "bg-[#16284F] text-white"
-                }`}
-                onClick={(e: any) => {
-                  e.stopPropagation();
-                  data.type !== "previous" &&
-                    window.open(data.meetingLink, "_blank");
-                }}
-              >
-                {data.type === "previous" ? t("Completed") : t("Join Meeting")}
-              </button>
+                    }`}
+                  onClick={(e: any) => {
+                    e.stopPropagation();
+                    data.type !== "previous" &&
+                      window.open(data.meetingLink, "_blank");
+                  }}
+                >
+                  {data.type === "previous" ? t("Completed") : t("Join Meeting")}
+                </button>
+              }
             </div>
+            {role === "Wellbeing Manager" &&
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    src={(data as any).hostImage || null}
+                    alt={(data as any).hostName || "host"}
+                    size={28}
+                  />
+                  <span className="text-sm font-medium text-[#282828]">
+                    {(data as any).hostName || "Sare ali khan"}
+                  </span>
+                </div>
+                <button
+                   className={`px-3 py-1 rounded-full text-xs font-medium ${data.type === "previous"
+                    ? "bg-[#CDCDCD] text-[#414141]"
+                    : "bg-[#16284F] text-white cursor-pointer"
+                    }`}
+                  onClick={(e: any) => {
+                    e.stopPropagation();
+                    window.open(data.meetingLink, "_blank");
+                  }}
+                >
+                 {data.type === "previous" ? t("Completed") : t("Join Meeting")}
+                </button>
+              </div>
+            }
           </div>
 
           {/* Mobile Content Only (image_1d4161.png) */}
@@ -233,28 +263,28 @@ export default function MeetingCard({
                 </div>
                 {((category && category !== "Admin") ||
                   (role && !["Admin", "Finance"].includes(role))) && (
-                  <div className="flex gap-y-3 flex-col">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#303030] font-medium text-sm">
-                        {t("Branch :")}
-                      </span>
-                      <PillTag label={data.branch || t("NA")} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#303030] font-medium text-sm">
-                        {t("Year :")}
-                      </span>
-                      <PillTag label={data.year || t("NA")} />
-                    </div>
+                    <div className="flex gap-y-3 flex-col">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#303030] font-medium text-sm">
+                          {t("Branch :")}
+                        </span>
+                        <PillTag label={data.branch || t("NA")} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#303030] font-medium text-sm">
+                          {t("Year :")}
+                        </span>
+                        <PillTag label={data.year || t("NA")} />
+                      </div>
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-[#303030] font-medium text-sm">
-                        {t("Section :")}
-                      </span>
-                      <PillTag label={data.section || t("NA")} />
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#303030] font-medium text-sm">
+                          {t("Section :")}
+                        </span>
+                        <PillTag label={data.section || t("NA")} />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             </motion.div>
           </motion.div>

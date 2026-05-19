@@ -93,20 +93,16 @@ export default function WellbeingExecutiveNavbar({
         label: "Calendar",
         path: `${base}/calendar`,
       },
-      ...(showLeaveRequest
-        ? [
-            {
-              icon: (isActive: boolean) => (
-                <CalendarCheck
-                  size={iconSize}
-                  weight={isActive ? "fill" : "regular"}
-                />
-              ),
-              label: "Leave Request",
-              path: `${base}/leave-request`,
-            },
-          ]
-        : []),
+      {
+        icon: (isActive: boolean) => (
+          <CalendarCheck
+            size={iconSize}
+            weight={isActive ? "fill" : "regular"}
+          />
+        ),
+        label: "Leave Request",
+        path: `${base}/leaveRequests`,
+      },
       {
         icon: (isActive) => (
           <UsersThree size={iconSize} weight={isActive ? "fill" : "regular"} />
@@ -221,16 +217,14 @@ export default function WellbeingExecutiveNavbar({
                 onFocus={() => prefetchRoute(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
-                className={`group relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${
-                  active
+                className={`group relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${active
                     ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                     : "text-white hover:bg-white/10"
-                }`}
+                  }`}
               >
                 <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center ${
-                    active ? "text-[#43C17A]" : "text-white"
-                  }`}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
+                    }`}
                 >
                   {item.icon(active)}
                 </span>
@@ -256,9 +250,8 @@ export default function WellbeingExecutiveNavbar({
                 <CaretDown
                   size={16}
                   weight="bold"
-                  className={`transition-transform duration-200 ${
-                    showExecutiveMenu ? "rotate-180" : ""
-                  }`}
+                  className={`transition-transform duration-200 ${showExecutiveMenu ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               {showExecutiveMenu ? (
@@ -268,11 +261,10 @@ export default function WellbeingExecutiveNavbar({
                   onFocus={() => prefetchRoute(`${base}/executives`)}
                   onMouseEnter={() => prefetchRoute(`${base}/executives`)}
                   onTouchStart={() => prefetchRoute(`${base}/executives`)}
-                  className={`mt-1 flex min-h-[34px] w-full items-center rounded-md px-8 text-[13px] font-semibold transition-all duration-200 ${
-                    pathname.startsWith(`${base}/executives`)
+                  className={`mt-1 flex min-h-[34px] w-full items-center rounded-md px-8 text-[13px] font-semibold transition-all duration-200 ${pathname.startsWith(`${base}/executives`)
                       ? "bg-[#F4F4F4] text-[#43C17A]"
                       : "text-white hover:bg-white/10"
-                  }`}
+                    }`}
                 >
                   All Executives
                 </Link>
