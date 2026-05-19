@@ -54,12 +54,17 @@ export default function SelectParticipantsModal({
     onClose();
   };
 
+  const handleClose = () => {
+    setLocalSelected(selectedParticipants.map((p) => p.id));
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
-      <div className="w-[480px] max-h-[80vh] rounded-xl bg-white shadow-xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-gray-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[82vh] w-[520px] flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between px-6 pb-3 pt-5">
           <h2 className="text-lg font-semibold text-gray-900">
             Select Participants
           </h2>
@@ -71,7 +76,7 @@ export default function SelectParticipantsModal({
               Select All
             </button>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="flex items-center justify-center h-8 w-8 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 cursor-pointer transition-colors"
             >
               <X size={18} weight="bold" />
@@ -79,39 +84,34 @@ export default function SelectParticipantsModal({
           </div>
         </div>
 
-        <div className="p-4 border-b border-gray-200">
+        <div className="px-6 pb-3">
           <div className="relative">
             <MagnifyingGlass
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={21}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#43C17A]"
             />
             <input
               type="text"
               placeholder="Search by Faculty Name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-full border-0 bg-[#F0F0F0] py-2.5 pl-5 pr-12 text-sm text-[#282828] outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <div className="p-4 space-y-3">
+          <div className="px-6 pb-4">
             {filteredParticipants.map((participant) => (
               <label
                 key={participant.id}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition"
+                className="flex cursor-pointer items-center gap-3 rounded-lg py-1.5 transition hover:bg-gray-50"
               >
-                <input
-                  type="checkbox"
-                  checked={localSelected.includes(participant.id)}
-                  onChange={() => toggleParticipant(participant.id)}
-                  className="w-4 h-4 cursor-pointer accent-slate-800"
-                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={participant.avatar || `https://via.placeholder.com/40`}
                   alt={participant.name}
-                  className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  className="h-9 w-9 flex-shrink-0 rounded-full object-cover"
                 />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-gray-900">
@@ -121,6 +121,12 @@ export default function SelectParticipantsModal({
                     ID - {participant.participantId}
                   </div>
                 </div>
+                <input
+                  type="checkbox"
+                  checked={localSelected.includes(participant.id)}
+                  onChange={() => toggleParticipant(participant.id)}
+                  className="h-5 w-5 cursor-pointer accent-slate-800"
+                />
               </label>
             ))}
 
@@ -134,7 +140,7 @@ export default function SelectParticipantsModal({
 
         <div className="p-4 border-t border-gray-200 flex gap-3">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 py-2.5 bg-gray-100 text-gray-800 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
           >
             Cancel

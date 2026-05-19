@@ -87,40 +87,43 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[50] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col relative">
-          <div className="flex justify-between items-center p-5 pb-2">
-            <h2 className="text-lg font-semibold text-gray-800">Add Event</h2>
-            <button onClick={onClose} className="cursor-pointer">
-              <X size={20} className="text-gray-500 hover:text-gray-800" />
-            </button>
-          </div>
-          <div className="p-5 pt-0 space-y-2 overflow-y-auto">
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">
-                Event Title<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter title"
-                className={INPUT}
-                value={eventTitle}
-                onChange={(e) => setEventTitle(TextOnly(e))}
-              />
+      {!isParticipantsModalOpen && (
+        <div className="fixed inset-0 z-[50] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white w-[480px] max-h-[90vh] rounded-xl flex flex-col relative">
+            <div className="flex justify-between items-center p-5 pb-2">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Add Event
+              </h2>
+              <button onClick={onClose} className="cursor-pointer">
+                <X size={20} className="text-gray-500 hover:text-gray-800" />
+              </button>
             </div>
+            <div className="p-5 pt-0 space-y-2 overflow-y-auto">
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-700">
+                  Event Title<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter title"
+                  className={INPUT}
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(TextOnly(e))}
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Event Topic<span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Enter topic"
-                className={INPUT}
-                value={eventTopic}
-                onChange={(e) => setEventTopic(TextOnly(e))}
-              />
-            </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Event Topic<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter topic"
+                  className={INPUT}
+                  value={eventTopic}
+                  onChange={(e) => setEventTopic(TextOnly(e))}
+                />
+              </div>
 
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">
@@ -315,9 +318,10 @@ export default function AddEventModal({ isOpen, onClose }: AddEventModalProps) {
             >
               Save
             </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <SelectParticipantsModal
         isOpen={isParticipantsModalOpen}

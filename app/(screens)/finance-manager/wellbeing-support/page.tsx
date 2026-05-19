@@ -1,5 +1,5 @@
-import FinanceManagerPlaceholderPage from "../components/FinanceManagerPlaceholderPage";
+import WellbeingSupportPage from "./components/WellbeingSupportPage";
 
 export default function Page() {
-  return <FinanceManagerPlaceholderPage title="Well being / Support Page" />;
+  return <WellbeingSupportPage />;
 }
