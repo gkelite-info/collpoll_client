@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export const upsertUser = async (payload: {
-  auth_id?: string;
+  auth_id?: string | null;
   fullName: string;
   email: string;
   mobile: string;

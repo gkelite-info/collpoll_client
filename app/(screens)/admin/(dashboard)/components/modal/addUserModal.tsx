@@ -882,20 +882,28 @@ const AddUserModal: React.FC<{
       }
 
       if (isHR && targetUserId) {
-        await upsertCollegeHR({
+        const hrRes = await upsertCollegeHR({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
           isActive: true,
         });
+        if (!hrRes.success) {
+          throw new Error(hrRes.error?.message || "College HR creation failed");
+        }
       }
 
       if (isPlacement && targetUserId) {
-        await upsertPlacementEmployee({
+        const placementRes = await upsertPlacementEmployee({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
         });
+        if (!placementRes.success) {
+          throw new Error(
+            placementRes.error?.message || "Placement officer creation failed",
+          );
+        }
       }
 
       if (isWellbeing && !user) {
@@ -1046,12 +1054,15 @@ const AddUserModal: React.FC<{
       }
 
       if (isParent && targetUserId) {
-        await upsertParentEntry({
+        const parentRes = await upsertParentEntry({
           userId: targetUserId,
           studentId: parseInt(basicData.studentId),
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
         });
+        if (!parentRes.success) {
+          throw new Error(parentRes.error || "Parent creation failed");
+        }
       }
 
       if (basicData.identifierValue && !isWellbeing) {

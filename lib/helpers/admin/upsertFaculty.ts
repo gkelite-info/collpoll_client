@@ -12,8 +12,9 @@ export type UserBasicData = {
   collegeCode: string;
   password?: string;
   adminId: number;
-  dateOfJoining?: string;
-  professionalExperienceYears?: number;
+  dateOfJoining?: string | null;
+  professionalExperienceYears?: number | null;
+  identifierValue?: string | null;
 };
 
 export async function fetchAdminContext(userId: number) {
@@ -125,6 +126,25 @@ export const persistFaculty = async (
 
   if (facultyError)
     throw new Error(`Faculty Profile Error: ${facultyError.message}`);
+
+  if (basicData.identifierValue?.trim()) {
+    const employeeIdPayload = {
+      userId: userId,
+      collegeId: basicData.collegeIntId,
+      employeeId: basicData.identifierValue.trim(),
+      employeeType: "Faculty", // Matches your enum type context
+      isActive: true,
+      updatedAt: timestamp,
+      ...(isEditMode ? {} : { createdAt: timestamp }) // Only add createdAt on initial insert
+    };
+
+    const { error: idError } = await supabase
+      .from("employee_ids")
+      .upsert(employeeIdPayload, { onConflict: "userId" }); // Leverages your unique index
+
+    if (idError)
+      throw new Error(`Employee ID Saving Error: ${idError.message}`);
+  }
 
   if (selections.sectionIds.length > 0) {
     const sectionPayloads = selections.sectionIds.map((sectionId) => ({
