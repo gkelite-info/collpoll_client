@@ -319,17 +319,17 @@ export default function ClientLayout({
     };
   }, [matchesRouteSegment, pathname, refreshUserContext, role, router]);
 
-  const wellbeingRouteShimmer = useMemo(() => {
-    if (pathname.startsWith("/wellbeing-manager")) {
-      return <WellbeingManagerDashboardShimmer />;
-    }
+  // const wellbeingRouteShimmer = useMemo(() => {
+  //   if (pathname.startsWith("/wellbeing-manager")) {
+  //     return <WellbeingManagerDashboardShimmer />;
+  //   }
 
-    if (pathname.startsWith("/wellbeing-executive")) {
-      return <WellbeingExecutiveDashboardShimmer />;
-    }
+  //   if (pathname.startsWith("/wellbeing-executive")) {
+  //     return <WellbeingExecutiveDashboardShimmer />;
+  //   }
 
-    return null;
-  }, [pathname]);
+  //   return null;
+  // }, [pathname]);
 
   const renderNavbar = useCallback(
     (onClose?: () => void) => {
@@ -512,10 +512,8 @@ export default function ClientLayout({
             </div>
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F4F4F4] px-2 overscroll-contain">
-              {isWellbeingRouteLoading && wellbeingRouteShimmer
-                ? wellbeingRouteShimmer
-                : children}
+            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain">
+              {children}
             </div>
           </div>
           {isAddTaskOpen && (

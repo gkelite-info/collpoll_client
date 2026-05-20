@@ -119,24 +119,25 @@ export default function FinanceManagerNavbar({
 
   return (
     <div className="flex h-full w-full flex-col items-center rounded-tr-3xl bg-[#43C17A] text-white shadow-md">
-      <div className="flex h-[10%] min-h-[78px] w-full items-center justify-center rounded-br-3xl text-lg font-bold">
+      <div className="flex h-[10%] min-h-19.5 w-full items-center justify-center rounded-br-3xl text-lg font-bold">
         College Logo
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col items-start gap-[11px] overflow-y-auto pt-4 pl-4 pb-5">
+      <div className="flex min-h-0 flex-1 flex-col items-start gap-2.75 overflow-y-auto w-full pt-4 pl-4 pb-5">
         {items.map((item) => {
           const active = isActivePath(item.path);
+          const isWellBeing = item.label === "Well being / Support";
 
           return (
             <Link
               key={item.path}
               href={item.path}
               onClick={() => onClose?.()}
-              className={`relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 md:text-base lg:text-sm ${
+              className={`relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:transition-all md:text-base lg:text-sm ${
                 active
                   ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                   : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-              }`}
+              } ${isWellBeing ? "pr-4" : ""}`}
             >
               <span
                 className={`flex h-5 w-5 shrink-0 items-center justify-center ${
@@ -145,7 +146,9 @@ export default function FinanceManagerNavbar({
               >
                 {item.icon(active)}
               </span>
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              <span className={`min-w-0 flex-1 ${isWellBeing ? "whitespace-normal wrap-break-word leading-tight" : "truncate"}`}>
+                {item.label}
+              </span>
             </Link>
           );
         })}

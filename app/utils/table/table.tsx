@@ -43,6 +43,7 @@ type TableComponentProps = {
   height?: string;
   isLoading?: boolean;
   stickyHeader?: boolean;
+  fillHeight?: boolean;
 };
 
 export default function TableComponent({
@@ -51,11 +52,22 @@ export default function TableComponent({
   height,
   isLoading = false,
   stickyHeader = true,
+  fillHeight = false,
 }: TableComponentProps) {
   return (
     <div className="mt-2 w-full">
-      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        <div className="overflow-auto" style={{ maxHeight: height || "55vh" }}>
+      <div
+        className="w-full bg-white shadow-md rounded-lg overflow-hidden"
+        style={fillHeight && height ? { height } : undefined}
+      >
+        <div
+          className="custom-scrollbar overflow-auto"
+          style={
+            fillHeight && height
+              ? { height, maxHeight: height }
+              : { maxHeight: height || "55vh" }
+          }
+        >
           <table className="w-full border-collapse">
             <TableHead columns={columns} stickyHeader={stickyHeader} />
             <TableBody

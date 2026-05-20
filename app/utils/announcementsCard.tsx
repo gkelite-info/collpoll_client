@@ -228,6 +228,7 @@ export default function AnnouncementsCard({
   const isFacultyDashboard = pathname.startsWith("/faculty");
   const isHrDashboard = pathname.startsWith("/hr");
   const isPlacementDashboard = pathname.startsWith("/placement");
+  const isWellbeingManagerDashboard = pathname.startsWith("/wellbeing-manager")
 
   const isReadOnlyUser = readOnly ?? (isStudentDashboard || isParentDashboard);
   const canManageAnnouncements =
@@ -237,7 +238,9 @@ export default function AnnouncementsCard({
       isAdminDashboard ||
       isFacultyDashboard ||
       isHrDashboard ||
-      isPlacementDashboard);
+      isPlacementDashboard ||
+      isWellbeingManagerDashboard
+    );
 
   const [localView, setLocalView] = useState<"others" | "my">("others");
   const activeView = currentView || localView;

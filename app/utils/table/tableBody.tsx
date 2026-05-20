@@ -29,7 +29,7 @@ export default function TableBody({ columns, tableData, isLoading = false }: Tab
                 key={col.key}
                 className={`px-4 py-2 whitespace-nowrap ${col.key === "notes" || col.key === "actions"
                   ? "text-center"
-                  : col.key === "subject"
+                  : col.key === "subject" || col.key === "image"
                     ? "text-left"
                     : "text-center"
                   }`}

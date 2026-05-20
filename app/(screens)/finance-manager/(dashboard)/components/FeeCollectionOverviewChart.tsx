@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
 import {
   AllCommunityModule,
@@ -12,6 +13,7 @@ import { feeCollectionOverview } from "./data";
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export default function FeeCollectionOverviewChart() {
+  const router = useRouter();
   const maxStackValue = useMemo(
     () =>
       Math.max(
@@ -112,6 +114,7 @@ export default function FeeCollectionOverviewChart() {
         <button
           type="button"
           className="cursor-pointer text-[#282828] transition-transform hover:translate-x-1"
+          onClick={() => router.push("?view=fee-collection-overview")}
         >
           <svg
             width="24"
@@ -128,11 +131,7 @@ export default function FeeCollectionOverviewChart() {
         </button>
       </div>
 
-      <div
-        className={`custom-scrollbar max-h-64 overflow-x-auto pb-2 ${
-          shouldShowVerticalScroll ? "overflow-y-auto" : "overflow-y-hidden"
-        }`}
-      >
+      <div className="custom-scrollbar overflow-x-auto overflow-y-hidden pb-2">
         <div style={{ width: chartWidth, height: chartHeight }}>
           <AgCharts options={options} style={{ height: "100%", width: "100%" }} />
         </div>
