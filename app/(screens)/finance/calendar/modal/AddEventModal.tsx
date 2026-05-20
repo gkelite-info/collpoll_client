@@ -12,14 +12,24 @@ import { saveFinanceCalendarEvent } from "@/lib/helpers/finance/calendar/finance
 import {
   saveFinanceCalendarSection,
   fetchFinanceCalendarSections,
+  deactivateFinanceCalendarSection,
 } from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
 
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editData?: any;
+  editData?: EditableCalendarEvent | null;
   onSuccess?: () => void;
 }
+
+type EditableCalendarEvent = {
+  calendarEventId: number;
+  title?: string;
+  rawTopic?: string;
+  date?: string;
+  fromTime?: string;
+  toTime?: string;
+};
 
 type Branch = {
   collegeBranchId: number;
@@ -101,20 +111,20 @@ export default function AddEventModal({
 
       const parseTime = (timeStr: string) => {
         if (!timeStr) return { h: "08", m: "00", a: "AM" };
-        let [hours, mins] = timeStr.split(":");
+        const [hours, mins] = timeStr.split(":");
         let h = parseInt(hours, 10);
-        let a = h >= 12 ? "PM" : "AM";
+        const a = h >= 12 ? "PM" : "AM";
         if (h > 12) h -= 12;
         if (h === 0) h = 12;
         return { h: h.toString().padStart(2, "0"), m: mins, a };
       };
 
-      const fromP = parseTime(editData.fromTime);
+      const fromP = parseTime(editData.fromTime || "");
       setFromHour(fromP.h);
       setFromMinute(fromP.m);
       setFromAmPm(fromP.a);
 
-      const toP = parseTime(editData.toTime);
+      const toP = parseTime(editData.toTime || "");
       setToHour(toP.h);
       setToMinute(toP.m);
       setToAmPm(toP.a);
@@ -386,6 +396,21 @@ export default function AddEventModal({
         throw new Error("Failed to save the core event data.");
       }
 
+      if (editData) {
+        const existingSections = await fetchFinanceCalendarSections(
+          eventRes.financeCalendarId as number,
+        );
+        const removedSections = existingSections.filter(
+          (section) => !selectedSectionIds.includes(section.collegeSectionsId),
+        );
+
+        await Promise.all(
+          removedSections.map((section) =>
+            deactivateFinanceCalendarSection(section.financeCalendarSectionId),
+          ),
+        );
+      }
+
       const sectionPromises = selectedSectionIds.map((secId) =>
         saveFinanceCalendarSection(
           {
@@ -592,6 +617,7 @@ export default function AddEventModal({
                 <select
                   className={`${INPUT} cursor-pointer`}
                   value={selectedBranchId ?? ""}
+                  disabled={loadingBranches}
                   onChange={(e) => {
                     setSelectedBranchId(Number(e.target.value));
                     setAcademicYears([]);
@@ -599,7 +625,9 @@ export default function AddEventModal({
                     setSelectedSectionIds([]);
                   }}
                 >
-                  <option value="">Select Branch</option>
+                  <option value="">
+                    {loadingBranches ? "Loading..." : "Select Branch"}
+                  </option>
                   {branches.map((b) => (
                     <option key={b.collegeBranchId} value={b.collegeBranchId}>
                       {b.collegeBranchCode}

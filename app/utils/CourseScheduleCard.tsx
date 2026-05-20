@@ -22,7 +22,13 @@ export default function CourseScheduleCard({
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
 
-  const { collegeEducationType, collegeBranchCode, collegeAcademicYear, role } = useUser();
+  const {
+    collegeEducationType,
+    collegeBranchCode,
+    collegeAcademicYear,
+    role,
+    loading,
+  } = useUser();
   const academicYearNumber = extractAcademicYearNumber(collegeAcademicYear);
   const { college_branch } = useFaculty();
 
@@ -51,23 +57,27 @@ export default function CourseScheduleCard({
     >
       {isVisibile && (
         <div className="bg-[#43C17A] w-[49%] h-[54px] shadow-md rounded-lg p-3 flex items-center justify-center">
-          {role === "Student" && (
+          {loading ? (
+            <div className="flex w-full flex-col items-center gap-2">
+              <div className="h-3.5 w-24 animate-pulse rounded bg-white/40" />
+              <div className="h-2.5 w-14 animate-pulse rounded bg-white/30" />
+            </div>
+          ) : role === "Student" ? (
             <p className="text-[#EFEFEF] text-sm font-medium">
               {collegeEducationType && collegeBranchCode
                 ? `${collegeEducationType} ${collegeBranchCode}`
                 : "—"} – {academicYearNumber ? `${academicYearNumber}` : "—"}
             </p>
-          )}
-          {role === "Faculty" && (
+          ) : role === "Faculty" ? (
             <p className="text-[#EFEFEF] text-md font-medium">
               {college_branch ? `${college_branch}` : "—"}
             </p>
-          )}
-
-          {role === "Finance" && (
+          ) : role === "Finance" || role === "FinanceManager" ? (
             <p className="text-[#EFEFEF] text-md font-medium">
-              {college_branch ? `${college_branch}` : "B Tech"}
+              {collegeEducationType ? `${collegeEducationType}` : "—"}
             </p>
+          ) : (
+            <div className="h-3.5 w-20 rounded bg-white/30" />
           )}
         </div>
       )}
@@ -77,12 +87,25 @@ export default function CourseScheduleCard({
           }`}
       >
         <div className="w-[30%] h-full flex flex-col justify-center items-center rounded-l-lg bg-[#16284F]">
-          <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
-          <p className="text-xs text-[#FFFFFF]">{month}</p>
+          {day && month ? (
+            <>
+              <p className="text-xs text-[#EFEFEF] font-medium">{day}</p>
+              <p className="text-xs text-[#FFFFFF]">{month}</p>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="h-3 w-5 animate-pulse rounded bg-white/40" />
+              <div className="h-2.5 w-7 animate-pulse rounded bg-white/30" />
+            </div>
+          )}
         </div>
 
         <div className="w-[70%] rounded-r-lg flex items-center justify-center">
-          <p className="text-[#16284F] text-md font-semibold">{time}</p>
+          {time ? (
+            <p className="text-[#16284F] text-md font-semibold">{time}</p>
+          ) : (
+            <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+          )}
         </div>
       </div>
     </div>

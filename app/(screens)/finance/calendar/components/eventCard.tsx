@@ -9,6 +9,16 @@ import {
   PencilSimple,
 } from "@phosphor-icons/react";
 
+type FinanceCalendarCardEvent = {
+  title: string;
+  type?: string;
+  startTime: string;
+  endTime: string;
+  branch?: string;
+  year?: string;
+  section?: string;
+};
+
 const EVENT_STYLES = {
   meeting: {
     solidBg: "#E2DAFF",
@@ -42,12 +52,12 @@ const EventCard = ({
   onEdit,
   onClick,
 }: {
-  event: any;
+  event: FinanceCalendarCardEvent;
   onDelete?: () => void;
   onEdit?: () => void;
   onClick?: () => void;
 }) => {
-  const rawType = event.type?.toLowerCase();
+  const rawType = event.type?.toLowerCase() ?? "meeting";
 
   const eventType = (
     rawType in EVENT_STYLES ? rawType : "meeting"
