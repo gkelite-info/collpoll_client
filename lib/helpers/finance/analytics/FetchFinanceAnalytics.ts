@@ -1,5 +1,27 @@
 import { supabase } from "@/lib/supabaseClient";
 
+type FilterOption = {
+  id: number;
+  label: string;
+  branchId?: number;
+  academicYearId?: number;
+};
+
+const formatCleanShortCurrency = (value: number) => {
+  if (value >= 10000000) return `\u20B9 ${(value / 10000000).toFixed(1)} Cr`;
+  if (value >= 100000) return `\u20B9 ${(value / 100000).toFixed(1)} L`;
+  if (value >= 1000) return `\u20B9 ${(value / 1000).toFixed(1)} K`;
+  return `\u20B9 ${value.toLocaleString("en-IN")}`;
+};
+
+const formatCleanCurrency = (value: number) =>
+  `\u20B9 ${Math.round(value).toLocaleString("en-IN")}`;
+
+const getFirst = <T,>(value: T | T[] | null | undefined): T | null => {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+};
+
 export const formatShortCurrency = (value: number) => {
   if (value >= 10000000) return `₹ ${(value / 10000000).toFixed(1)} Cr`;
   if (value >= 100000) return `₹ ${(value / 100000).toFixed(1)} L`;
@@ -658,6 +680,783 @@ export async function fetchRecentOfflinePayments(
     console.error("fetchRecentOfflinePayments error:", error);
     return { success: false, error };
   }
+}
+
+export async function getFinanceAnalyticsOverview(
+  collegeId: number,
+  collegeEducationId: number,
+) {
+  const [
+    { data: education },
+    { data: obligations, error: obligationError },
+    { count: studentCount },
+    { count: managerCount },
+  ] = await Promise.all([
+    supabase
+      .from("college_education")
+      .select("collegeEducationType")
+      .eq("collegeEducationId", collegeEducationId)
+      .maybeSingle(),
+    supabase
+      .from("student_fee_obligation")
+      .select(
+        `
+        totalAmount,
+        studentId,
+        student_fee_collection ( collectedAmount )
+      `,
+      )
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+    supabase
+      .from("students")
+      .select("studentId", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+    supabase
+      .from("users")
+      .select("userId", { count: "exact", head: true })
+      .eq("collegeId", collegeId)
+      .eq("role", "FinanceManager")
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null),
+  ]);
+
+  if (obligationError) throw obligationError;
+
+  let totalFees = 0;
+  let collected = 0;
+  const obligatedStudents = new Set<number>();
+
+  obligations?.forEach((ob: any) => {
+    totalFees += Number(ob.totalAmount) || 0;
+    if (ob.studentId) obligatedStudents.add(ob.studentId);
+    ob.student_fee_collection?.forEach((collection: any) => {
+      collected += Number(collection.collectedAmount) || 0;
+    });
+  });
+
+  const pending = Math.max(totalFees - collected, 0);
+  const educationType = education?.collegeEducationType || "Education";
+
+  return {
+    summaryCards: [
+      { label: "Total Revenue Collected", value: formatCleanShortCurrency(collected) },
+      { label: "Total Pending Fees", value: formatCleanShortCurrency(pending) },
+      {
+        label: "Total Students",
+        value: (studentCount ?? obligatedStudents.size).toLocaleString("en-IN"),
+      },
+      {
+        label: "Active Finance Managers",
+        value: String(managerCount ?? 0).padStart(2, "0"),
+      },
+    ],
+    programCards: [
+      {
+        title: educationType,
+        educationId: collegeEducationId,
+        amount: formatCleanShortCurrency(totalFees),
+        collected: formatCleanShortCurrency(collected),
+        pending: formatCleanShortCurrency(pending),
+      },
+    ],
+    chartData: [{ program: educationType, collected, pending }],
+  };
+}
+
+export async function getBranchWiseCollectionDynamic(
+  collegeId: number,
+  collegeEducationId: number,
+  academicYearId?: number | null,
+  semesterId?: number | null,
+) {
+  const [
+    { data: branches, error: branchError },
+    { data: academicYears, error: yearError },
+    { data: semesters, error: semesterError },
+  ] = await Promise.all([
+    supabase
+      .from("college_branch")
+      .select("collegeBranchId, collegeBranchCode, collegeBranchType")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+    supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear, collegeBranchId")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+    supabase
+      .from("college_semester")
+      .select("collegeSemesterId, collegeSemester, collegeAcademicYearId")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+  ]);
+
+  if (branchError) throw branchError;
+  if (yearError) throw yearError;
+  if (semesterError) throw semesterError;
+
+  const branchIds = (branches ?? []).map((branch) => branch.collegeBranchId);
+  if (branchIds.length === 0) {
+    return {
+      chartData: [],
+      gridData: [],
+      tableData: [],
+      academicYears: [] as FilterOption[],
+      semesters: [] as FilterOption[],
+    };
+  }
+
+  const selectedYearLabel = academicYearId
+    ? academicYears?.find((year) => year.collegeAcademicYearId === academicYearId)
+        ?.collegeAcademicYear
+    : null;
+  const selectedYearIds = new Set(
+    (academicYears ?? [])
+      .filter((year) =>
+        selectedYearLabel ? year.collegeAcademicYear === selectedYearLabel : true,
+      )
+      .map((year) => year.collegeAcademicYearId),
+  );
+  const selectedSemesterNumber = semesterId
+    ? semesters?.find((semester) => semester.collegeSemesterId === semesterId)
+        ?.collegeSemester
+    : null;
+  const selectedSemesterIds = new Set(
+    (semesters ?? [])
+      .filter((semester) =>
+        selectedSemesterNumber
+          ? semester.collegeSemester === selectedSemesterNumber &&
+            (selectedYearIds.size
+              ? selectedYearIds.has(semester.collegeAcademicYearId)
+              : true)
+          : false,
+      )
+      .map((semester) => semester.collegeSemesterId),
+  );
+
+  let obligationQuery = supabase
+    .from("student_fee_obligation")
+    .select(
+      `
+      studentFeeObligationId,
+      totalAmount,
+      collegeBranchId,
+      collegeAcademicYearId,
+      student_fee_collection (
+        collectedAmount,
+        collegeSemesterId
+      )
+    `,
+    )
+    .eq("collegeEducationId", collegeEducationId)
+    .in("collegeBranchId", branchIds)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (selectedYearLabel && selectedYearIds.size > 0) {
+    obligationQuery = obligationQuery.in(
+      "collegeAcademicYearId",
+      Array.from(selectedYearIds),
+    );
+  }
+
+  const { data: obligations, error: obligationError } = await obligationQuery;
+  if (obligationError) throw obligationError;
+
+  const branchMap = new Map<
+    number,
+    { branch: string; branchId: number; total: number; collected: number }
+  >();
+
+  (branches ?? []).forEach((branch) => {
+    branchMap.set(branch.collegeBranchId, {
+      branch: branch.collegeBranchCode || branch.collegeBranchType,
+      branchId: branch.collegeBranchId,
+      total: 0,
+      collected: 0,
+    });
+  });
+
+  const semesterCountByYear = new Map<number, number>();
+  (semesters ?? []).forEach((semester) => {
+    semesterCountByYear.set(
+      semester.collegeAcademicYearId,
+      (semesterCountByYear.get(semester.collegeAcademicYearId) ?? 0) + 1,
+    );
+  });
+
+  obligations?.forEach((ob: any) => {
+    const metric = branchMap.get(ob.collegeBranchId);
+    if (!metric) return;
+
+    const totalAmount = Number(ob.totalAmount) || 0;
+    const semesterCount = semesterCountByYear.get(ob.collegeAcademicYearId) || 2;
+    const expectedAmount = semesterId ? totalAmount / semesterCount : totalAmount;
+    let collectedAmount = 0;
+
+    ob.student_fee_collection?.forEach((collection: any) => {
+      if (semesterId && !selectedSemesterIds.has(collection.collegeSemesterId)) {
+        return;
+      }
+      collectedAmount += Number(collection.collectedAmount) || 0;
+    });
+
+    metric.total += expectedAmount;
+    metric.collected += collectedAmount;
+  });
+
+  const rows = Array.from(branchMap.values()).map((metric) => ({
+    ...metric,
+    pending: Math.max(metric.total - metric.collected, 0),
+  }));
+
+  const sortedYears = Array.from(
+    new Map(
+      (academicYears ?? []).map((year) => [
+        year.collegeAcademicYear,
+        {
+          id: year.collegeAcademicYearId,
+          label: year.collegeAcademicYear,
+          branchId: year.collegeBranchId,
+        },
+      ]),
+    ).values(),
+  )
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+  const filteredSemesters = Array.from(
+    new Map(
+      (semesters ?? [])
+    .filter((semester) =>
+      selectedYearLabel && selectedYearIds.size > 0
+        ? selectedYearIds.has(semester.collegeAcademicYearId)
+        : true,
+    )
+    .map((semester) => [
+      semester.collegeSemester,
+      {
+        id: semester.collegeSemesterId,
+        label: `Semester ${semester.collegeSemester}`,
+        academicYearId: semester.collegeAcademicYearId,
+      },
+    ]),
+    ).values(),
+  )
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+  return {
+    chartData: rows.map((row) => ({
+      branch: row.branch,
+      collected: row.collected,
+      pending: row.pending,
+    })),
+    gridData: rows.map((row) => ({
+      branch: row.branch,
+      totalFeesShort: formatCleanShortCurrency(row.total),
+      collectedShort: formatCleanShortCurrency(row.collected),
+      pendingShort: formatCleanShortCurrency(row.pending),
+    })),
+    tableData: rows.map((row) => ({
+      branch: row.branch,
+      branchId: row.branchId,
+      collected: formatCleanCurrency(row.collected),
+      pending: formatCleanCurrency(row.pending),
+      totalFees: formatCleanCurrency(row.total),
+    })),
+    academicYears: sortedYears,
+    semesters: filteredSemesters,
+  };
+}
+
+export async function getYearWiseDetailsDynamic(
+  collegeId: number,
+  collegeEducationId: number,
+  branchCode: string,
+  academicYearId?: number | null,
+  semesterId?: number | null,
+  page: number = 1,
+  limit: number = 10,
+  searchQuery?: string,
+  options: { includeCharts?: boolean } = {},
+) {
+  const includeCharts = options.includeCharts ?? true;
+  const { data: branchData, error: branchError } = await supabase
+    .from("college_branch")
+    .select("collegeBranchId, collegeBranchCode")
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("collegeBranchCode", branchCode)
+    .maybeSingle();
+
+  if (branchError) throw branchError;
+  if (!branchData) return null;
+
+  const [{ data: academicYears }, { data: semesters }] = await Promise.all([
+    supabase
+      .from("college_academic_year")
+      .select("collegeAcademicYearId, collegeAcademicYear")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("collegeBranchId", branchData.collegeBranchId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+    supabase
+      .from("college_semester")
+      .select("collegeSemesterId, collegeSemester, collegeAcademicYearId")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("isActive", true)
+      .is("deletedAt", null),
+  ]);
+
+  const availableYears = (academicYears ?? [])
+    .map((year) => ({
+      id: year.collegeAcademicYearId,
+      label: year.collegeAcademicYear,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+  const branchAcademicYearIds = new Set(
+    (academicYears ?? []).map((year) => year.collegeAcademicYearId),
+  );
+
+  const availableSemesters = Array.from(
+    new Map(
+      (semesters ?? [])
+        .filter((semester) =>
+          academicYearId
+            ? semester.collegeAcademicYearId === academicYearId
+            : branchAcademicYearIds.has(semester.collegeAcademicYearId),
+        )
+        .map((semester) => [
+          semester.collegeSemester,
+          {
+            id: semester.collegeSemesterId,
+            label: `Semester ${semester.collegeSemester}`,
+            academicYearId: semester.collegeAcademicYearId,
+          },
+        ]),
+    ).values(),
+  )
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
+  const selectedSemesterNumber = semesterId
+    ? semesters?.find((semester) => semester.collegeSemesterId === semesterId)
+        ?.collegeSemester
+    : null;
+
+  const selectedSemesterIds = new Set(
+    (semesters ?? [])
+      .filter((semester) =>
+        selectedSemesterNumber
+          ? semester.collegeSemester === selectedSemesterNumber &&
+            (academicYearId
+              ? semester.collegeAcademicYearId === academicYearId
+              : branchAcademicYearIds.has(semester.collegeAcademicYearId))
+          : false,
+      )
+      .map((semester) => semester.collegeSemesterId),
+  );
+
+  let validStudentIds: number[] | null = null;
+  if (searchQuery) {
+    const [{ data: usersMatch }, { data: pinsMatch }] = await Promise.all([
+      supabase
+        .from("users")
+        .select("userId")
+        .eq("collegeId", collegeId)
+        .eq("role", "Student")
+        .eq("isActive", true)
+        .eq("is_deleted", false)
+        .is("deletedAt", null)
+        .ilike("fullName", `%${searchQuery}%`),
+      supabase
+        .from("student_pins")
+        .select("studentId")
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .ilike("pinNumber", `%${searchQuery}%`),
+    ]);
+
+    const userIds = usersMatch?.map((user) => user.userId) ?? [];
+    const pinStudentIds = pinsMatch?.map((pin) => pin.studentId) ?? [];
+
+    let studentQuery = supabase
+      .from("students")
+      .select("studentId")
+      .eq("collegeId", collegeId)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("collegeBranchId", branchData.collegeBranchId);
+
+    if (userIds.length || pinStudentIds.length) {
+      studentQuery = studentQuery.or(
+        `userId.in.(${userIds.length ? userIds.join(",") : "0"}),studentId.in.(${pinStudentIds.length ? pinStudentIds.join(",") : "0"})`,
+      );
+    } else {
+      studentQuery = studentQuery.in("studentId", [0]);
+    }
+
+    const { data: matchedStudents } = await studentQuery;
+    validStudentIds = matchedStudents?.map((student) => student.studentId) ?? [];
+  }
+
+  if (selectedSemesterNumber) {
+    let semesterStudentQuery = supabase
+      .from("student_academic_history")
+      .select("studentId, college_semester!inner(collegeSemester)")
+      .eq("isCurrent", true)
+      .is("deletedAt", null)
+      .eq("college_semester.collegeSemester", selectedSemesterNumber);
+
+    if (academicYearId) {
+      semesterStudentQuery = semesterStudentQuery.eq(
+        "collegeAcademicYearId",
+        academicYearId,
+      );
+    } else if (branchAcademicYearIds.size > 0) {
+      semesterStudentQuery = semesterStudentQuery.in(
+        "collegeAcademicYearId",
+        Array.from(branchAcademicYearIds),
+      );
+    }
+
+    const { data: semesterStudents } = await semesterStudentQuery;
+    const semesterStudentIds =
+      semesterStudents?.map((student) => student.studentId) ?? [];
+
+    validStudentIds =
+      validStudentIds === null
+        ? semesterStudentIds
+        : validStudentIds.filter((studentId) =>
+            semesterStudentIds.includes(studentId),
+          );
+  }
+
+  const obligationSelect = `
+      studentFeeObligationId,
+      studentId,
+      totalAmount,
+      collegeAcademicYearId,
+      college_academic_year ( collegeAcademicYear ),
+      students!inner (
+        studentId,
+        student_pins ( pinNumber ),
+        users ( fullName, email ),
+        student_academic_history (
+          isCurrent,
+          collegeSemesterId,
+          college_semester ( collegeSemester )
+        )
+      ),
+      student_fee_collection (
+        collectedAmount,
+        collegeSemesterId
+      )
+    `;
+
+  let chartObligations: any[] = [];
+  if (includeCharts) {
+    let chartQuery = supabase
+      .from("student_fee_obligation")
+      .select(obligationSelect)
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("collegeBranchId", branchData.collegeBranchId)
+      .eq("isActive", true)
+      .is("deletedAt", null);
+
+    if (academicYearId) chartQuery = chartQuery.eq("collegeAcademicYearId", academicYearId);
+
+    const { data, error: chartError } = await chartQuery;
+    if (chartError) throw chartError;
+    chartObligations = data ?? [];
+  }
+
+  const studentSelect = `
+      studentId,
+      collegeSessionId,
+      users!inner (
+        fullName,
+        email,
+        role,
+        collegeId,
+        is_deleted,
+        isActive,
+        deletedAt
+      ),
+      student_pins ( pinNumber ),
+      student_academic_history!inner (
+        isCurrent,
+        collegeAcademicYearId,
+        collegeSemesterId,
+        college_academic_year ( collegeAcademicYear ),
+        college_semester ( collegeSemester )
+      )
+    `;
+
+  let tableQuery = supabase
+    .from("students")
+    .select(studentSelect, { count: "exact" })
+    .eq("collegeId", collegeId)
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("collegeBranchId", branchData.collegeBranchId)
+    .eq("isActive", true)
+    .is("deletedAt", null)
+    .eq("users.collegeId", collegeId)
+    .eq("users.role", "Student")
+    .eq("users.isActive", true)
+    .eq("users.is_deleted", false)
+    .is("users.deletedAt", null)
+    .eq("student_academic_history.isCurrent", true);
+
+  if (academicYearId) {
+    tableQuery = tableQuery.eq(
+      "student_academic_history.collegeAcademicYearId",
+      academicYearId,
+    );
+  } else if (branchAcademicYearIds.size > 0) {
+    tableQuery = tableQuery.in(
+      "student_academic_history.collegeAcademicYearId",
+      Array.from(branchAcademicYearIds),
+    );
+  }
+
+  if (validStudentIds !== null) {
+    tableQuery = tableQuery.in(
+      "studentId",
+      validStudentIds.length ? validStudentIds : [0],
+    );
+  }
+
+  const from = (Math.max(1, page) - 1) * limit;
+  const to = from + limit - 1;
+  const { data: pagedStudents, count, error: studentError } =
+    await tableQuery.range(from, to);
+  if (studentError) throw studentError;
+
+  const pagedStudentIds = pagedStudents?.map((student) => student.studentId) ?? [];
+
+  let tableObligationsQuery = supabase
+    .from("student_fee_obligation")
+    .select(
+      `
+      studentFeeObligationId,
+      studentId,
+      totalAmount,
+      collegeAcademicYearId,
+      student_fee_collection (
+        collectedAmount,
+        collegeSemesterId
+      )
+    `,
+    )
+    .eq("collegeEducationId", collegeEducationId)
+    .eq("collegeBranchId", branchData.collegeBranchId)
+    .eq("isActive", true)
+    .is("deletedAt", null);
+
+  if (pagedStudentIds.length > 0) {
+    tableObligationsQuery = tableObligationsQuery.in("studentId", pagedStudentIds);
+  } else {
+    tableObligationsQuery = tableObligationsQuery.in("studentId", [0]);
+  }
+
+  if (academicYearId) {
+    tableObligationsQuery = tableObligationsQuery.eq(
+      "collegeAcademicYearId",
+      academicYearId,
+    );
+  } else if (branchAcademicYearIds.size > 0) {
+    tableObligationsQuery = tableObligationsQuery.in(
+      "collegeAcademicYearId",
+      Array.from(branchAcademicYearIds),
+    );
+  }
+
+  const { data: tableObligations, error: tableObligationError } =
+    await tableObligationsQuery;
+  if (tableObligationError) throw tableObligationError;
+
+  const obligationByStudentYear = new Map<string, any>();
+  tableObligations?.forEach((obligation: any) => {
+    obligationByStudentYear.set(
+      `${obligation.studentId}-${obligation.collegeAcademicYearId}`,
+      obligation,
+    );
+  });
+
+  const semesterCountByYear = new Map<number, number>();
+  (semesters ?? []).forEach((semester) => {
+    semesterCountByYear.set(
+      semester.collegeAcademicYearId,
+      (semesterCountByYear.get(semester.collegeAcademicYearId) ?? 0) + 1,
+    );
+  });
+
+  const formatYearShortLabel = (year: string) =>
+    year.replace(/\s*Year$/i, " yr");
+
+  const getYearOrdinal = (year: string) => {
+    const number = Number(year.match(/\d+/)?.[0] ?? 0);
+    return Number.isFinite(number) && number > 0 ? number : 0;
+  };
+
+  const buildSemesterChartLabel = (year: string, semesterNumber: number) => {
+    const yearNumber = getYearOrdinal(year);
+    return yearNumber ? `${yearNumber}-${semesterNumber}` : `Sem ${semesterNumber}`;
+  };
+
+  const chartAcademicYears = Array.from(
+    new Map(
+      (academicYears ?? [])
+        .filter((year) =>
+          academicYearId ? year.collegeAcademicYearId === academicYearId : true,
+        )
+        .map((year) => [year.collegeAcademicYear, year]),
+    ).values(),
+  );
+
+  const buildEmptyChartRows = (semesterNumber: number) =>
+    chartAcademicYears
+      .map((year) => ({
+        year: formatYearShortLabel(year.collegeAcademicYear),
+        sortOrder: getYearOrdinal(year.collegeAcademicYear),
+        label: buildSemesterChartLabel(year.collegeAcademicYear, semesterNumber),
+        collected: 0,
+        pending: 0,
+      }));
+
+  const leftChartMap = new Map(
+    buildEmptyChartRows(1).map((row) => [row.sortOrder || row.year, row]),
+  );
+  const rightChartMap = new Map(
+    buildEmptyChartRows(2).map((row) => [row.sortOrder || row.year, row]),
+  );
+
+  const tableData: any[] = [];
+
+  if (includeCharts) chartObligations.forEach((ob: any) => {
+    const yearObj: any = getFirst(ob.college_academic_year);
+    const academicYearLabel = yearObj?.collegeAcademicYear || "N/A";
+    const yearOrder = getYearOrdinal(academicYearLabel);
+    const studentObj: any = getFirst(ob.students);
+    const activeHistory = studentObj?.student_academic_history?.find(
+      (history: any) => history.isCurrent,
+    );
+    const currentSemesterObj: any = getFirst(activeHistory?.college_semester);
+    const currentSemesterNumber = Number(currentSemesterObj?.collegeSemester);
+
+    if (![1, 2].includes(currentSemesterNumber)) return;
+
+    const semesterBuckets = new Map<number, number>();
+    ob.student_fee_collection?.forEach((collection: any) => {
+      const semesterNumber =
+        semesters?.find(
+          (semester) => semester.collegeSemesterId === collection.collegeSemesterId,
+        )?.collegeSemester ?? 0;
+
+      if (!semesterNumber) return;
+
+      semesterBuckets.set(
+        semesterNumber,
+        (semesterBuckets.get(semesterNumber) ?? 0) +
+          (Number(collection.collectedAmount) || 0),
+      );
+    });
+
+    const targetMap = currentSemesterNumber === 1 ? leftChartMap : rightChartMap;
+    const chartRow = targetMap.get(yearOrder || formatYearShortLabel(academicYearLabel));
+    if (!chartRow) return;
+
+    const collected = semesterBuckets.get(currentSemesterNumber) ?? 0;
+    const totalAmount = Number(ob.totalAmount) || 0;
+    chartRow.collected += collected;
+    chartRow.pending += Math.max(totalAmount - collected, 0);
+  });
+
+  pagedStudents?.forEach((student: any) => {
+    const activeHistory = student.student_academic_history?.find(
+      (history: any) => history.isCurrent,
+    );
+    const yearObj: any = getFirst(activeHistory?.college_academic_year);
+    const semesterObj: any = getFirst(activeHistory?.college_semester);
+    const academicYearIdForStudent = activeHistory?.collegeAcademicYearId;
+    const obligation = obligationByStudentYear.get(
+      `${student.studentId}-${academicYearIdForStudent}`,
+    );
+    const academicYearLabel = yearObj?.collegeAcademicYear || "N/A";
+    const semCount = semesterCountByYear.get(academicYearIdForStudent) || 2;
+    const expected = semesterId
+      ? (Number(obligation?.totalAmount) || 0) / semCount
+      : Number(obligation?.totalAmount) || 0;
+
+    let paid = 0;
+    obligation?.student_fee_collection?.forEach((collection: any) => {
+      if (semesterId && !selectedSemesterIds.has(collection.collegeSemesterId)) {
+        return;
+      }
+      paid += Number(collection.collectedAmount) || 0;
+    });
+
+    const semesterLabel = semesterId
+      ? availableSemesters.find((semester) => semester.id === semesterId)?.label ||
+        "N/A"
+      : semesterObj?.collegeSemester
+        ? `Semester ${semesterObj.collegeSemester}`
+        : "N/A";
+
+    const userObj: any = getFirst(student.users);
+    const pinObj: any = getFirst(student.student_pins);
+    tableData.push({
+      studentId: student.studentId,
+      studentName: userObj?.fullName || "Unknown Student",
+      rollNo: pinObj?.pinNumber || "N/A",
+      branch: branchCode,
+      year: academicYearLabel,
+      semester: semesterLabel,
+      paidAmount: paid,
+      pendingAmount: Math.max(expected - paid, 0),
+      feeAssigned: Boolean(obligation),
+    });
+  });
+
+  const sortChartRows = (
+    rows: Array<{
+      year: string;
+      sortOrder: number;
+      label: string;
+      collected: number;
+      pending: number;
+    }>,
+  ) =>
+    rows
+      .sort((a, b) => b.sortOrder - a.sortOrder)
+      .map((row) => ({
+        year: row.year,
+        label: row.label,
+        collected: row.collected,
+        pending: row.pending,
+      }));
+
+  return {
+    leftChart: includeCharts ? sortChartRows(Array.from(leftChartMap.values())) : [],
+    rightChart: includeCharts ? sortChartRows(Array.from(rightChartMap.values())) : [],
+    tableData,
+    availableYears,
+    availableSemesters,
+    totalCount: count ?? 0,
+  };
 }
 
 export async function getStudentFinanceDetails(
