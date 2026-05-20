@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabaseClient";
 
 export const upsertParentEntry = async (payload: {
   userId: number;
-  studentId: number;
+  studentId: string | number;
   collegeId: number;
   createdBy: number;
 }) => {
