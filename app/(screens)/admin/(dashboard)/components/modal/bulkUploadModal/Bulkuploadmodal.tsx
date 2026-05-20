@@ -79,7 +79,7 @@ interface BulkRow {
     // faculty (subject can be comma-separated for multiple subjects)
     subject?: string;
     // parent
-    studentId?: number;
+    studentId?: string;
     // wellbeing
     wellbeingType?: string; // "Hostel" | "College" | "Hostel,College"
     hostelBlock?: string;
@@ -349,7 +349,10 @@ function parseExcelToRows(file: File): Promise<{ rows: BulkRow[]; columnMapping:
                         entryType: String(r.entryType || "").trim() || undefined,
                         batch: String(r.batch || "").trim() || undefined,
                         sessionLabel: String(r.sessionLabel || "").trim() || undefined,
-                        studentId: r.studentId ? Number(r.studentId) : undefined,
+                        // studentId: r.studentId ? Number(r.studentId) : undefined,
+                        studentId: r.studentId
+                            ? String(r.studentId).trim()
+                            : undefined,
                         wellbeingType: String(r.wellbeingType || "").trim() || undefined,
                         hostelBlock: String(r.hostelBlock || "").trim() || undefined,
                         buildingNumber: String(r.buildingNumber || "").trim() || undefined,
@@ -477,9 +480,25 @@ async function dispatchRoleHandler(
 
     // ── Parent ──
     if (row.role === "Parent") {
+
+        const pinNumber = String(row.studentId).trim();
+
+        const { data: studentPinData, error: studentPinError } = await supabase
+            .from("student_pins")
+            .select("studentId")
+            .eq("pinNumber", pinNumber)
+            .eq("collegeId", adminContext.collegeId)
+            .single();
+
+        if (studentPinError || !studentPinData) {
+            throw new Error(
+                `Student not found for pinNumber "${pinNumber}"`
+            );
+        }
+
         await upsertParentEntry({
             userId: targetUserId,
-            studentId: row.studentId!,
+            studentId: studentPinData.studentId,
             collegeId: adminContext.collegeId,
             createdBy: adminContext.adminId,
         });
@@ -502,32 +521,82 @@ async function dispatchRoleHandler(
                 y.collegeBranchId === branch?.collegeBranchId,
         );
 
-        // Support comma-separated subjects e.g. "Math,Physics"
-        const subjectNames = row.subject
+        const subjectCodes = row.subject
             ? row.subject.split(",").map((s) => s.trim())
             : [];
 
-        for (const subjectName of subjectNames) {
+        for (const subjectCode of subjectCodes) {
+
             const subject = dbData.subjects.find(
                 (s: any) =>
-                    s.subjectName.toLowerCase() === subjectName.toLowerCase() &&
+                    s.subjectCode.toLowerCase() === subjectCode.toLowerCase() &&
                     s.collegeAcademicYearId === year?.collegeAcademicYearId,
             );
+
+            // const sectionNames = row.section
+            //     ? row.section.split(",").map((s) => s.trim())
+            //     : [];
+
+            // const sectionIds = dbData.sections
+            //     .filter(
+            //         (s: any) =>
+            //             s.collegeAcademicYearId === year?.collegeAcademicYearId &&
+            //             sectionNames.includes(s.collegeSections),
+            //     )
+            //     .map((s: any) => s.collegeSectionsId);
 
             const sectionNames = row.section
                 ? row.section.split(",").map((s) => s.trim())
                 : [];
+
             const sectionIds = dbData.sections
-                .filter(
-                    (s: any) =>
-                        s.collegeAcademicYearId === year?.collegeAcademicYearId &&
-                        sectionNames.includes(s.collegeSections),
-                )
+                .filter((s: any) => {
+
+                    // Section must belong to same academic year
+                    if (s.collegeAcademicYearId !== year?.collegeAcademicYearId) {
+                        return false;
+                    }
+
+                    // Match section name
+                    if (!sectionNames.includes(s.collegeSections)) {
+                        return false;
+                    }
+
+                    // Extra safety:
+                    // Verify academic year belongs to same branch
+                    const matchedYear = dbData.years.find(
+                        (y: any) =>
+                            y.collegeAcademicYearId === s.collegeAcademicYearId
+                    );
+
+                    if (
+                        !matchedYear ||
+                        matchedYear.collegeBranchId !== branch?.collegeBranchId
+                    ) {
+                        return false;
+                    }
+
+                    // Extra safety:
+                    // Verify branch belongs to same education
+                    const matchedBranch = dbData.branches.find(
+                        (b: any) =>
+                            b.collegeBranchId === matchedYear.collegeBranchId
+                    );
+
+                    if (
+                        !matchedBranch ||
+                        matchedBranch.collegeEducationId !== education?.collegeEducationId
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                })
                 .map((s: any) => s.collegeSectionsId);
 
             if (!education || !branch || !year || !subject) {
                 throw new Error(
-                    `Faculty academic data not found (branch: ${row.branchCode}, year: ${row.year}, subject: ${subjectName})`,
+                    `Faculty academic data not found (branch: ${row.branchCode}, year: ${row.year}, subjectCode: ${subjectCode})`,
                 );
             }
 
