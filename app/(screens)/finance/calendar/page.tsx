@@ -8,31 +8,109 @@ import CalendarHeader from "./components/calenderHeader";
 import AddEventModal from "./modal/AddEventModal";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { Trash } from "@phosphor-icons/react";
-import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 import {
   fetchFinanceCalendarEvents,
   deactivateFinanceCalendarEvent,
 } from "@/lib/helpers/finance/calendar/financeCalendarAPI";
-import { fetchFinanceCalendarSectionsWithDetails } from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
+import {
+  deactivateFinanceCalendarSection,
+  fetchFinanceCalendarSections,
+  fetchFinanceCalendarSectionsWithDetails,
+} from "@/lib/helpers/finance/calendar/financeCalendarSectionsAPI";
 import toast from "react-hot-toast";
 import EventDetailsModal from "./components/eventDetailsModal";
+
+type FinanceCalendarEvent = {
+  id: string;
+  calendarEventId: number;
+  financeCalendarSectionId?: number;
+  title: string;
+  type: string;
+  rawTopic: string;
+  date: string;
+  fromTime: string;
+  toTime: string;
+  startTime: string;
+  endTime: string;
+  branch: string;
+  year: string;
+  section: string;
+};
+
+type FinanceCalendarSectionDetails = {
+  financeCalendarSectionId?: number;
+  college_branch?:
+    | { collegeBranchCode?: string }
+    | { collegeBranchCode?: string }[]
+    | null;
+  college_academic_year?:
+    | { collegeAcademicYear?: string }
+    | { collegeAcademicYear?: string }[]
+    | null;
+  college_sections?:
+    | { collegeSections?: string }
+    | { collegeSections?: string }[]
+    | null;
+};
+
+const CalendarShimmer = () => (
+  <div className="h-[600px] lg:h-[700px] xl:h-[750px] 2xl:h-[850px] animate-pulse bg-white">
+    <div className="flex min-h-[60px] border-b border-gray-200">
+      <div className="w-20 min-w-20 border-r border-gray-200 p-3">
+        <div className="h-8 rounded bg-gray-200" />
+      </div>
+      <div className="grid flex-1 grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center justify-center border-r border-gray-200 p-4 last:border-r-0"
+          >
+            <div className="h-4 w-14 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+    <div className="flex min-h-[720px]">
+      <div className="w-20 min-w-20 border-r border-gray-200">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <div key={index} className="h-[120px] border-b border-gray-100 p-3">
+            <div className="mx-auto h-3 w-12 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+      <div className="grid flex-1 grid-cols-6">
+        {Array.from({ length: 6 }).map((_, columnIndex) => (
+          <div key={columnIndex} className="relative border-r border-gray-100 last:border-r-0">
+            <div className="absolute left-3 right-3 top-10 h-36 rounded bg-gray-200" />
+            {columnIndex % 2 === 0 && (
+              <div className="absolute left-3 right-3 top-64 h-28 rounded bg-gray-100" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 export default function FinanceCalendarPage() {
   const [activeTab, setActiveTab] = useState("All Scheduled");
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [eventToEdit, setEventToEdit] = useState<any>(null);
+  const [eventToEdit, setEventToEdit] =
+    useState<FinanceCalendarEvent | null>(null);
 
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] =
+    useState<FinanceCalendarEvent | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  const [eventToDelete, setEventToDelete] = useState<any>(null);
+  const [eventToDelete, setEventToDelete] =
+    useState<FinanceCalendarEvent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<FinanceCalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const { financeManagerId, loading: fmLoading } = useFinanceManager();
@@ -50,8 +128,8 @@ export default function FinanceCalendarPage() {
       const createdBy = financeManagerId;
       const fetchedEvents = await fetchFinanceCalendarEvents(createdBy);
 
-      const formattedEvents = await Promise.all(
-        fetchedEvents.map(async (ev) => {
+      const eventGroups = await Promise.all(
+        fetchedEvents.map(async (ev): Promise<FinanceCalendarEvent[]> => {
           const sections = await fetchFinanceCalendarSectionsWithDetails(
             ev.financeCalendarId,
           );
@@ -60,7 +138,7 @@ export default function FinanceCalendarPage() {
             section = "All";
 
           if (sections.length > 0) {
-            const firstSec = sections[0] as any;
+            const firstSec = sections[0] as FinanceCalendarSectionDetails;
 
             const branchData = Array.isArray(firstSec.college_branch)
               ? firstSec.college_branch[0]
@@ -72,21 +150,21 @@ export default function FinanceCalendarPage() {
               : firstSec.college_academic_year;
             year = yearData?.collegeAcademicYear || "All";
 
-            const sectionList = sections
-              .map((sec: any) => {
-                const secData = Array.isArray(sec.college_sections)
-                  ? sec.college_sections[0]
-                  : sec.college_sections;
-                return secData?.collegeSections;
-              })
-              .filter(Boolean);
-
-            section = sectionList.length > 0 ? sectionList.join(", ") : "All";
+            const secData = Array.isArray(firstSec.college_sections)
+              ? firstSec.college_sections[0]
+              : firstSec.college_sections;
+            section = secData?.collegeSections || "All";
           }
 
-          return {
-            id: ev.financeCalendarId.toString(),
+          const createEvent = (
+            sectionName: string,
+            financeCalendarSectionId?: number,
+          ): FinanceCalendarEvent => ({
+            id: financeCalendarSectionId
+              ? `${ev.financeCalendarId}-${financeCalendarSectionId}`
+              : ev.financeCalendarId.toString(),
             calendarEventId: ev.financeCalendarId,
+            financeCalendarSectionId,
             title: ev.eventTitle,
             type: ev.eventTopic.toLowerCase() || "meeting",
             rawTopic: ev.eventTopic,
@@ -97,11 +175,26 @@ export default function FinanceCalendarPage() {
             endTime: `${ev.date}T${ev.toTime}`,
             branch,
             year,
-            section,
-          };
+            section: sectionName,
+          });
+
+          if (sections.length === 0) {
+            return [createEvent(section)];
+          }
+
+          return sections.map((sec: FinanceCalendarSectionDetails, index) => {
+            const secData = Array.isArray(sec.college_sections)
+              ? sec.college_sections[0]
+              : sec.college_sections;
+
+            return createEvent(
+              secData?.collegeSections || `Section ${index + 1}`,
+              sec.financeCalendarSectionId,
+            );
+          });
         }),
       );
-      setEvents(formattedEvents);
+      setEvents(eventGroups.flat());
     } catch (error) {
       console.error("Error loading calendar events:", error);
     } finally {
@@ -132,7 +225,25 @@ export default function FinanceCalendarPage() {
 
     setIsDeleting(true);
     try {
-      await deactivateFinanceCalendarEvent(eventToDelete.calendarEventId);
+      const result = eventToDelete.financeCalendarSectionId
+        ? await deactivateFinanceCalendarSection(
+            eventToDelete.financeCalendarSectionId,
+          )
+        : await deactivateFinanceCalendarEvent(eventToDelete.calendarEventId);
+
+      if (!result.success) {
+        throw new Error("Failed to delete event");
+      }
+
+      if (eventToDelete.financeCalendarSectionId) {
+        const remainingSections = await fetchFinanceCalendarSections(
+          eventToDelete.calendarEventId,
+        );
+
+        if (remainingSections.length === 0) {
+          await deactivateFinanceCalendarEvent(eventToDelete.calendarEventId);
+        }
+      }
 
       toast.success("Event removed successfully");
       setDeleteSuccess(true);
@@ -143,7 +254,7 @@ export default function FinanceCalendarPage() {
         setDeleteSuccess(false);
         loadEvents(); // SEAMLESS REFRESH
       }, 1500);
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete event");
       setIsDeleting(false);
       setDeleteSuccess(false);
@@ -181,9 +292,7 @@ export default function FinanceCalendarPage() {
 
       <div className="bg-white shadow-xl shadow-slate-200/50 border border-slate-200 overflow-hidden relative">
         {isLoading || fmLoading ? (
-          <div className="flex flex-col items-center justify-center h-[600px] lg:h-[700px] xl:h-[750px] 2xl:h-[850px] text-emerald-600 font-medium animate-pulse">
-            <Loader />
-          </div>
+          <CalendarShimmer />
         ) : (
           <CalendarGrid
             events={events}

@@ -155,7 +155,6 @@ export default function AssignmentTable({
   const filtered =
     filter === "All" ? rows : rows.filter((r) => r.status === filter);
 
-  // --- SHIMMER LOADING STATE ---
   if (loading) {
     return (
       <div className="w-full animate-pulse">

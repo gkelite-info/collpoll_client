@@ -12,8 +12,8 @@ import type { CalendarEvent } from "../types";
 
 const EVENT_STYLES = {
   meeting: {
-    solidBg: "#6C20CA",
-    lightBg: "#EEE7FF",
+    solidBg: "#E2DAFF",
+    lightBg: "#E2DAFF8F",
     text: "#6C20CA",
     Icon: VideoConference,
   },
@@ -70,8 +70,7 @@ const EventCard = ({
   return (
     <div
       onClick={onClick}
-      className="group relative inset-x-0.5 z-20 h-full min-h-[110px] cursor-pointer overflow-auto rounded-md transition-shadow hover:shadow-lg custom-scrollbar"
-      style={{ backgroundColor: style.lightBg }}
+      className="relative inset-x-0.5 h-full rounded-xs transition-shadow hover:shadow-lg cursor-pointer overflow-hidden z-20 flex flex-col group"
     >
       {/* DELETE BUTTON */}
       {onDelete && (
@@ -98,27 +97,48 @@ const EventCard = ({
         </button>
       )}
 
-      <div className="flex h-full min-w-[220px] flex-col">
+      <div
+        className="flex items-center p-2.5 space-x-2 text-xs font-semibold border-b border-dashed shrink-0"
+        style={{
+          backgroundColor: style.solidBg,
+          color: style.text,
+          borderColor: style.text,
+        }}
+      >
         <div
-          className="flex shrink-0 items-center gap-3 border-b-2 border-dashed px-4 py-3 font-semibold"
-          style={{ borderColor: style.text, color: style.text }}
+          className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+          style={{ backgroundColor: style.text }}
         >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
-            style={{ backgroundColor: style.solidBg }}
+          <Icon size={14} weight="fill" color="#ffffff" />
+        </div>
+
+        <span className="tracking-wide uppercase">{timeStr}</span>
+      </div>
+
+      <div
+        className="flex-1 min-h-0 pt-3 flex flex-col overflow-y-auto"
+        style={{ backgroundColor: style.lightBg }}
+      >
+        <div className="px-3 shrink-0">
+          <p
+            className="text-base font-semibold leading-snug mb-3"
+            style={{ color: style.text }}
           >
-            <Icon size={19} weight="fill" />
-          </span>
-          <span className="whitespace-nowrap text-sm leading-none md:text-base">
-            {timeStr}
-          </span>
+            {event.title}
+          </p>
         </div>
 
         <div
-          className="whitespace-nowrap px-4 pt-3 text-base font-semibold leading-tight"
-          style={{ color: style.text }}
-        >
-          {event.title}
+          className="w-full border-t shrink-0"
+          style={{ borderColor: style.text }}
+        />
+
+        <div className="px-3 py-2 shrink-0">
+          <p className="text-sm font-medium" style={{ color: style.text }}>
+            {[event.branch, event.year, event.section]
+              .filter(Boolean)
+              .join(" - ")}
+          </p>
         </div>
 
         {event.participantName && (

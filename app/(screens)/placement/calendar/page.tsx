@@ -110,9 +110,7 @@ export default function Page() {
             setShowDetails(true);
           }}
         />
-      </div>
-
-      {/* --- ALL MODALS (STATIC VERSION) --- */}
+      </div>   
 
       <EventDetailsModal
         open={showDetails}
