@@ -73,7 +73,7 @@ export default function ParentRight() {
   }, [collegeId, userId, role]);
 
   return (
-    <div className="w-[32%] px-1 flex min-h-full flex-col">
+    <div className="w-[32%] px-1 flex min-h-full flex-col max-md:hidden">
       <CourseScheduleCard isVisibile={false} />
       <WorkWeekCalendar />
 

@@ -183,7 +183,7 @@ export default function AttendanceClient() {
         ? `${dashboardData.todayStats.attended}/${dashboardData.todayStats.total}`
         : "0/0",
       label: t("Today Total Classes"),
-      style: "bg-[#FFEDDA] w-44 max-md:bg-[#FFEDDA]",
+      style: "bg-[#FFEDDA] w-44",
       iconBgColor: "#FFBB70",
       iconColor: "#EFEFEF",
     },
@@ -194,7 +194,7 @@ export default function AttendanceClient() {
         ? `${dashboardData.cards.attended}/${dashboardData.cards.totalClasses}`
         : "0/0",
       label: t("Sem Attendance"),
-      style: "bg-[#CEE6FF] w-44 max-md:bg-[#FFEDDA]",
+      style: "bg-[#CEE6FF] w-44",
       iconBgColor: "#7764FF",
       iconColor: "#EFEFEF",
       totalPercentage: dashboardData
