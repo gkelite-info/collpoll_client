@@ -1,65 +1,19 @@
 "use client";
 
 import TableComponent from "@/app/utils/table/table";
-import { CaretDown, CaretLeft, CaretRight } from "@phosphor-icons/react";
-import { useRouter } from "next/navigation";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { getBranchWiseCollectionDynamic } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
 import {
   AllCommunityModule,
   ModuleRegistry,
   type AgCartesianChartOptions,
 } from "ag-charts-community";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
-
-const rupee = "\u20B9";
-
-const branchData = [
-  {
-    branch: "CSE",
-    collected: 5.8,
-    pending: 3,
-    title: "CSE",
-  },
-  {
-    branch: "EEE",
-    collected: 8.8,
-    pending: 3,
-    title: "EEE",
-  },
-  {
-    branch: "IT",
-    collected: 7.1,
-    pending: 1.7,
-    title: "IT",
-  },
-  {
-    branch: "ME",
-    collected: 11.4,
-    pending: 1.8,
-    title: "ME",
-  },
-  {
-    branch: "CIVIL",
-    collected: 5,
-    pending: 0.8,
-    title: "CIVIL",
-  },
-  {
-    branch: "ECE",
-    collected: 7.2,
-    pending: 1.8,
-    title: "ECE",
-  },
-];
-
-const branchCards = branchData.map((item) => ({
-  title: item.title,
-  amount: `${rupee} 1.2 Cr`,
-  collected: `${rupee} 1,20,000`,
-  pending: `${rupee} 30L`,
-}));
 
 const branchOverviewColumns = [
   { title: "Branch", key: "branch" },
@@ -69,10 +23,42 @@ const branchOverviewColumns = [
   { title: "Action", key: "actions" },
 ];
 
-function BranchCollectionChart() {
+type FilterOption = {
+  id: number;
+  label: string;
+};
+
+type BranchCard = {
+  branch: string;
+  totalFeesShort: string;
+  collectedShort: string;
+  pendingShort: string;
+};
+
+type BranchTableRow = {
+  branch: string;
+  collected: string;
+  pending: string;
+  totalFees: string;
+};
+
+function BranchCollectionChart({
+  data,
+}: {
+  data: { branch: string; collected: number; pending: number }[];
+}) {
+  const maxValue = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...data.map((item) => Number(item.collected) + Number(item.pending)),
+      ),
+    [data],
+  );
+
   const options = useMemo<AgCartesianChartOptions>(
     () => ({
-      data: branchData,
+      data,
       background: { fill: "transparent" },
       padding: { top: 12, right: 16, bottom: 0, left: 0 },
       series: [
@@ -105,13 +91,18 @@ function BranchCollectionChart() {
         left: {
           type: "number",
           min: 0,
-          max: 14,
-          nice: false,
-          interval: { step: 2 },
+          max: maxValue,
+          nice: true,
           label: {
             color: "#525252",
             fontSize: 12,
-            formatter: ({ value }) => (value >= 10 ? `${value / 10}Cr` : `${value}.0L`),
+            formatter: ({ value }) => {
+              const numericValue = Number(value) || 0;
+              if (numericValue >= 10000000) return `${(numericValue / 10000000).toFixed(1)}Cr`;
+              if (numericValue >= 100000) return `${(numericValue / 100000).toFixed(1)}L`;
+              if (numericValue >= 1000) return `${(numericValue / 1000).toFixed(0)}K`;
+              return `${numericValue}`;
+            },
           },
           gridLine: { stroke: "#E4E4E4" },
           line: { enabled: false },
@@ -119,7 +110,7 @@ function BranchCollectionChart() {
       },
       legend: { enabled: false },
     }),
-    [],
+    [data, maxValue],
   );
 
   return <AgCharts options={options} style={{ height: "100%", width: "100%" }} />;
@@ -135,19 +126,90 @@ export default function BranchWiseCollectionView({
   yearWiseView?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { collegeId, collegeEducationId, loading: contextLoading } =
+    useFinanceManager();
   const title = program || "B-Tech";
-  const branchOverviewRows = branchData.map((item) => ({
+  const [isLoading, setIsLoading] = useState(true);
+  const [chartData, setChartData] = useState<
+    { branch: string; collected: number; pending: number }[]
+  >([]);
+  const [gridData, setGridData] = useState<BranchCard[]>([]);
+  const [rawTableData, setRawTableData] = useState<BranchTableRow[]>([]);
+  const [academicYears, setAcademicYears] = useState<FilterOption[]>([]);
+  const [semesters, setSemesters] = useState<FilterOption[]>([]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState<number | null>(
+    Number(searchParams.get("academicYearId")) || null,
+  );
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(
+    Number(searchParams.get("semesterId")) || null,
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadBranchWise() {
+      if (contextLoading || !collegeId || !collegeEducationId) return;
+
+      setIsLoading(true);
+      try {
+        const result = await getBranchWiseCollectionDynamic(
+          collegeId,
+          collegeEducationId,
+          selectedAcademicYearId,
+          selectedSemesterId,
+        );
+        if (!isMounted) return;
+        setChartData(result.chartData);
+        setGridData(result.gridData);
+        setRawTableData(result.tableData);
+        setAcademicYears(result.academicYears);
+        setSemesters(result.semesters);
+      } catch (error) {
+        console.error("Branch wise analytics error:", error);
+        if (!isMounted) return;
+        setChartData([]);
+        setGridData([]);
+        setRawTableData([]);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    loadBranchWise();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    collegeId,
+    collegeEducationId,
+    contextLoading,
+    selectedAcademicYearId,
+    selectedSemesterId,
+  ]);
+
+  const updateFilterParams = (academicYearId: number | null, semesterId: number | null) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (academicYearId) params.set("academicYearId", String(academicYearId));
+    else params.delete("academicYearId");
+    if (semesterId) params.set("semesterId", String(semesterId));
+    else params.delete("semesterId");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  const branchOverviewRows = rawTableData.map((item) => ({
     branch: item.branch,
-    collected: `${rupee} 1,20,00,000`,
-    pending: `${rupee} 30,0000`,
-    totalFees: `${rupee} 1,50,00,000`,
+    collected: item.collected,
+    pending: item.pending,
+    totalFees: item.totalFees,
     actions: (
       <button
         type="button"
         className="inline-flex cursor-pointer items-center gap-1 font-semibold text-[#22A55D] underline decoration-2 underline-offset-4"
         onClick={() =>
           router.push(
-            `?view=${yearWiseView}&program=${encodeURIComponent(title)}&branch=${encodeURIComponent(item.branch)}`,
+            `?view=${yearWiseView}&program=${encodeURIComponent(title)}&branch=${encodeURIComponent(item.branch)}${selectedAcademicYearId ? `&academicYearId=${selectedAcademicYearId}` : ""}${selectedSemesterId ? `&semesterId=${selectedSemesterId}` : ""}`,
           )
         }
       >
@@ -155,6 +217,10 @@ export default function BranchWiseCollectionView({
       </button>
     ),
   }));
+  const isPageLoading = contextLoading || isLoading;
+  const displayedBranchCards: Array<BranchCard | null> = isPageLoading
+    ? Array.from({ length: 6 }, () => null)
+    : gridData;
 
   return (
     <div className="min-h-screen w-full bg-[#F4F4F4] p-2 pb-7 lg:pb-5">
@@ -181,12 +247,44 @@ export default function BranchWiseCollectionView({
           <div className="flex flex-wrap items-center gap-5 text-sm text-[#525252]">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-[#282828]">Academic Year</span>
-              <button
-                type="button"
-                className="flex items-center gap-1 rounded-full bg-[#E9D8FF] px-3 py-1 font-semibold text-[#714EF2]"
+              <select
+                value={selectedAcademicYearId ?? ""}
+                onChange={(event) => {
+                  const nextYearId = event.target.value ? Number(event.target.value) : null;
+                  setSelectedAcademicYearId(nextYearId);
+                  setSelectedSemesterId(null);
+                  updateFilterParams(nextYearId, null);
+                }}
+                className="rounded-full bg-[#E9D8FF] px-3 py-1 font-semibold text-[#714EF2] outline-none"
               >
-                2026 <CaretDown size={14} weight="bold" />
-              </button>
+                <option value="">All</option>
+                {academicYears.map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#282828]">Semester</span>
+              <select
+                value={selectedSemesterId ?? ""}
+                onChange={(event) => {
+                  const nextSemesterId = event.target.value
+                    ? Number(event.target.value)
+                    : null;
+                  setSelectedSemesterId(nextSemesterId);
+                  updateFilterParams(selectedAcademicYearId, nextSemesterId);
+                }}
+                className="rounded-full bg-[#D9F4E4] px-3 py-1 font-semibold text-[#43C17A] outline-none"
+              >
+                <option value="">All</option>
+                {semesters.map((semester) => (
+                  <option key={semester.id} value={semester.id}>
+                    {semester.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-sm bg-[#43C17A]" />
@@ -201,35 +299,49 @@ export default function BranchWiseCollectionView({
 
         <div className="custom-scrollbar overflow-x-auto overflow-y-hidden pb-2">
           <div className="h-56 min-w-[115%]">
-            <BranchCollectionChart />
+            {isPageLoading ? (
+              <div className="h-full animate-pulse rounded-md bg-[#F2F2F2]" />
+            ) : (
+              <BranchCollectionChart data={chartData} />
+            )}
           </div>
         </div>
 
         <div className="custom-scrollbar mt-4 overflow-x-auto pb-2">
           <div className="grid min-w-[115%] grid-cols-6 gap-3">
-            {branchCards.map((card) => (
+            {displayedBranchCards.map((card, index) => (
               <article
-                key={card.title}
+                key={card?.branch ?? index}
                 className="rounded-md bg-[#F2F2F2] p-3 shadow-sm"
               >
-                <h3 className="text-sm font-semibold text-[#43C17A]">
-                  {card.title}
-                </h3>
-                <p className="mt-2 rounded bg-[#16284F] px-2 py-1 text-sm font-semibold text-white">
-                  {card.amount}
-                </p>
-                <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-[#16284F]">
-                    {card.collected}
-                  </span>
-                  <span className="text-[#43C17A]">Collected</span>
-                </div>
-                <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-                  <span className="font-semibold text-[#16284F]">
-                    {card.pending}
-                  </span>
-                  <span className="text-[#43C17A]">Pending</span>
-                </div>
+                {!card ? (
+                  <div className="space-y-3">
+                    <div className="h-4 w-12 animate-pulse rounded bg-[#D8D8D8]" />
+                    <div className="h-8 animate-pulse rounded bg-[#D8D8D8]" />
+                    <div className="h-3 animate-pulse rounded bg-[#D8D8D8]" />
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-semibold text-[#43C17A]">
+                      {card.branch}
+                    </h3>
+                    <p className="mt-2 rounded bg-[#16284F] px-2 py-1 text-sm font-semibold text-white">
+                      {card.totalFeesShort}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-[#16284F]">
+                        {card.collectedShort}
+                      </span>
+                      <span className="text-[#43C17A]">Collected</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                      <span className="font-semibold text-[#16284F]">
+                        {card.pendingShort}
+                      </span>
+                      <span className="text-[#43C17A]">Pending</span>
+                    </div>
+                  </>
+                )}
               </article>
             ))}
           </div>
@@ -246,6 +358,7 @@ export default function BranchWiseCollectionView({
               columns={branchOverviewColumns}
               tableData={branchOverviewRows}
               height="auto"
+              isLoading={isPageLoading}
               stickyHeader={false}
             />
           </div>
