@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BarChart,
   Bar,
@@ -28,21 +26,27 @@ export default function AcademicPerformance({
     data && data.length ? data : [{ subject: "N/A", value: 0, full: 100 }];
 
   return (
-    <div className="bg-white rounded-lg shadow-md px-2 pt-5 w-full max-w-6xl mx-auto">
-      <h2 className="text-xl font-semibold ml-3 text-[#282828]">
+    <div className="bg-white rounded-2xl md:rounded-[20px] shadow-sm p-4 md:p-6 w-full h-full flex flex-col">
+      <h2 className="text-[16px] md:text-xl font-bold text-[#282828] mb-4">
         Academic Performance
       </h2>
 
-      <div className="w-full h-70 bg-green-00">
+      <div className="w-full flex-1 min-h-[220px] md:min-h-[260px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            margin={{ top: 40, right: 30, left: 0, bottom: 0 }}
+            margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
             barGap={-50}
             barCategoryGap={0}
           >
             <defs>
-              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient
+                id="academicBarGradient"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
                 <stop offset="0%" stopColor="#A8E089" />
                 <stop offset="100%" stopColor="#9ACC7D" />
               </linearGradient>
@@ -50,17 +54,21 @@ export default function AcademicPerformance({
 
             <YAxis
               domain={[0, 100]}
-              tick={{ fontSize: 12, fill: "#888" }}
+              tick={{ fontSize: 10, fill: "#888", fontWeight: 500 }}
               tickFormatter={(v) => `${v}%`}
+              axisLine={false}
+              tickLine={false}
             />
 
             <XAxis
               dataKey="subject"
-              tick={{ fontSize: 8.5, fill: "#000" }}
+              tick={{ fontSize: 9, fill: "#444", fontWeight: 600 }}
               interval={0}
               angle={0}
               textAnchor="middle"
-              height={60}
+              height={40}
+              axisLine={false}
+              tickLine={false}
             />
 
             <Tooltip
@@ -68,52 +76,60 @@ export default function AcademicPerformance({
               contentStyle={{
                 backgroundColor: "#ffffff",
                 color: "#000000",
-                border: "1px solid #ccc",
-                borderRadius: "10px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                border: "1px solid #E5E7EB",
+                borderRadius: "8px",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
               }}
               labelStyle={{
                 color: "#000000",
-                fontWeight: 600,
+                fontWeight: 700,
+                fontSize: 12,
               }}
               itemStyle={{
-                color: "#000000",
-                fontSize: 13,
+                color: "#43C17A",
+                fontSize: 12,
+                fontWeight: 600,
               }}
             />
 
             <Bar
               dataKey="full"
-              barSize={50}
-              fill="rgba(233, 245, 230, 0.7)"
-              radius={[10, 10, 10, 10]}
+              maxBarSize={50}
+              fill="rgba(233, 245, 230, 0.5)"
+              radius={[8, 8, 8, 8]}
             />
 
-            <Bar dataKey="value" barSize={50} radius={[10, 10, 10, 10]}>
+            <Bar dataKey="value" maxBarSize={50} radius={[8, 8, 8, 8]}>
               <LabelList
                 dataKey="value"
                 content={(props: any) => {
                   const { x, y, width, value } = props;
                   const numericValue =
                     typeof value === "number" ? value : Number(value ?? 0);
+
+                  if (!numericValue && numericValue !== 0) return null;
+
                   const centerX = x + width / 2;
+                  const r = width > 30 ? 11.5 : 8;
+                  const fontSize = width > 30 ? 8 : 6;
+
                   const centerY =
-                    numericValue === 0 ? y - 12 : numericValue < 15 ? y + 2 : y + 12;
+                    numericValue === 0
+                      ? y - 10
+                      : numericValue < 15
+                        ? y + 2
+                        : y + 10;
+
                   return (
                     <g>
-                      <circle
-                        cx={centerX}
-                        cy={centerY}
-                        r={11.5}
-                        fill="#E8F6E2"
-                      />
+                      <circle cx={centerX} cy={centerY} r={r} fill="#E8F6E2" />
                       <text
                         x={centerX}
-                        y={centerY + 4}
+                        y={centerY + fontSize * 0.35}
                         textAnchor="middle"
-                        fill="#7CD24C"
-                        fontSize={8}
-                        fontWeight="bold"
+                        fill="#6DB951"
+                        fontSize={fontSize}
+                        fontWeight="800"
                       >
                         {`${numericValue}%`}
                       </text>
@@ -123,7 +139,7 @@ export default function AcademicPerformance({
               />
 
               {chartData.map((_, i) => (
-                <Cell key={i} fill="url(#barGradient)" />
+                <Cell key={i} fill="url(#academicBarGradient)" />
               ))}
             </Bar>
           </BarChart>

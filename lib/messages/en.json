@@ -222,7 +222,8 @@
       "Next Exam Date": "Next Exam Date",
       "Date :": "Date :",
       "NA": "N/A",
-      "Subject -": "Subject -"
+      "Subject -": "Subject -",
+      "Next Due:": "Next Due:"
     }
   },
   "Calendar": {
@@ -363,7 +364,9 @@
       "Faculty :": "Faculty :",
       "Attendance :": "Attendance :",
       "Subject Name": "Subject Name",
-      "Sem Attendance": "Sem Attendance"
+      "Sem Attendance": "Sem Attendance",
+      "Semester Attendance": "Semester Attendance",
+      "Classes Held": "Classes Held"
     }
   },
   "Assignment": {

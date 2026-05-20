@@ -136,7 +136,7 @@ export default function SubjectAttendanceDetailsClient() {
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.total ?? 0,
       label: t("Total Classes"),
-      style: "bg-[#E2DAFF] w-[182px]",
+      style: "bg-[#E2DAFF] w-full h-full",
       iconBgColor: "#714EF2",
       iconColor: "#EFEFEF",
     },
@@ -145,7 +145,7 @@ export default function SubjectAttendanceDetailsClient() {
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.attended ?? 0,
       label: t("Attended"),
-      style: "bg-[#FFEDDA] w-[182px]",
+      style: "bg-[#FFEDDA] w-full h-full",
       iconBgColor: "#FFBC72",
       iconColor: "#EFEFEF",
     },
@@ -154,7 +154,7 @@ export default function SubjectAttendanceDetailsClient() {
       icon: <Chalkboard size={30} weight="fill" />,
       value: data?.headerStats.leave ?? 0,
       label: t("Leave"),
-      style: "bg-[#E2DAFF] w-[182px]",
+      style: "bg-[#E2DAFF] w-full h-full",
       iconBgColor: "#F62D2D",
       iconColor: "#EFEFEF",
     },
@@ -163,7 +163,7 @@ export default function SubjectAttendanceDetailsClient() {
       icon: <Percent size={30} weight="fill" />,
       value: `${data?.headerStats.percentage ?? 0}%`,
       label: t("Attendance"),
-      style: "bg-[#CEE6FF] w-[182px]",
+      style: "bg-[#CEE6FF] w-full h-full",
       iconBgColor: "#60AEFF",
       iconColor: "#EFEFEF",
     },
@@ -241,8 +241,8 @@ export default function SubjectAttendanceDetailsClient() {
         </div>
       </div>
 
-      <div className="w-full mt-4 grid lg:grid-cols-[68%_32%] gap-3 max-md:flex max-md:flex-col">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2 max-md:grid-cols-2 max-md:gap-3 w-full">
+      <div className="w-full mt-4 flex flex-col md:flex-row md:justify-between gap-4 overflow-hidden">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 max-md:gap-3 w-full md:flex-1 md:min-w-0">
           {cards.map((card, index) => {
             return (
               <div
@@ -268,7 +268,9 @@ export default function SubjectAttendanceDetailsClient() {
             );
           })}
         </div>
-        <WorkWeekCalendar style="mt-0 w-[360px] max-md:hidden" />
+        <div className="hidden md:block md:w-[280px] lg:w-[320px] xl:w-[360px] shrink-0">
+          <WorkWeekCalendar style="mt-0 w-full" />
+        </div>
       </div>
 
       <div className="my-2 w-[68%] max-md:w-full">

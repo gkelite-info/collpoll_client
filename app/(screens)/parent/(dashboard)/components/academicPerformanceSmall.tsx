@@ -43,7 +43,7 @@ export default function AcademicPerformanceSmall({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md flex items-center justify-center">
+      <div className="bg-white rounded-lg p-3 w-full lg:w-[66%] h-[220px] shadow-md flex items-center justify-center">
         <p className="text-gray-500 animate-pulse text-xs">
           {t("Calculating performance")}
         </p>
@@ -52,7 +52,8 @@ export default function AcademicPerformanceSmall({
   }
 
   return (
-    <div className="bg-white rounded-lg p-3 w-[66%] h-[220px] shadow-md">
+    /* FIXED: Adjusted width mapping to take full width by default and lock to 66% only on desktop layouts */
+    <div className="bg-white rounded-lg p-3 w-full lg:w-[66%] h-[220px] shadow-md">
       <div className="bg-red-00 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#282828]">
           {t("Academic Performance")}

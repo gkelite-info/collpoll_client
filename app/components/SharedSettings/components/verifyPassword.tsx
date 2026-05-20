@@ -62,16 +62,16 @@ export default function CurrentPassword() {
 
   return (
     <main className="min-h-screen p-2 max-md:p-0 max-md:bg-[#F4F5F6]">
-      <div className="flex justify-between mb-6 max-md:p-4 max-md:pb-2">
+      <div className="flex justify-between items-center mb-6 max-md:p-4 max-md:pb-2">
         <div className="text-xl font-semibold flex flex-col">
-          <div className="flex justify-start items-center gap-2 text-[#282828] max-md:text-[22px]">
+          <div className="flex justify-start items-center gap-2 text-[#282828] max-md:text-[20px]">
             <Link
               href={`${pathname}`}
-              className="hover:bg-gray-200 p-1 rounded-full transition-colors -ml-1"
+              className="hover:bg-gray-200 p-1 rounded-full transition-colors -ml-1 shrink-0"
             >
               <CaretLeft size={24} className="text-[#282828]" weight="bold" />
             </Link>
-            Current Password
+            <span className="truncate">Current Password</span>
           </div>
           <p className="text-gray-500 text-sm ml-9 max-md:hidden">
             Verify Your Current Account Password
@@ -101,7 +101,7 @@ export default function CurrentPassword() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 disabled:opacity-50 cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 disabled:opacity-50 cursor-pointer p-1"
                 disabled={isProcessing}
                 onClick={() => setShow((s) => !s)}
               >
@@ -114,11 +114,11 @@ export default function CurrentPassword() {
             </p>
           </label>
 
-          <div className="text-center mb-4">
+          <div className="text-center mb-6">
             <button
               type="button"
               onClick={handleForgotPassword}
-              className="text-sm text-[#10B981] hover:underline cursor-pointer"
+              className="text-sm text-[#10B981] hover:underline cursor-pointer font-medium"
             >
               Forgot your password?
             </button>
@@ -128,7 +128,7 @@ export default function CurrentPassword() {
             <button
               onClick={handleContinue}
               disabled={isProcessing}
-              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] w-full sm:w-auto justify-center cursor-pointer text-white px-6 py-2.5 rounded-lg shadow font-semibold flex items-center gap-2 transition-colors"
+              className="bg-[#43C17A] hover:bg-[#3ba869] disabled:bg-[#a1e0bd] w-full md:w-auto md:min-w-[140px] justify-center cursor-pointer text-white px-6 py-2.5 rounded-lg shadow font-semibold flex items-center gap-2 transition-colors"
             >
               {isProcessing && (
                 <CircleNotch size={18} className="animate-spin" />
