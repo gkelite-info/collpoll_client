@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 type UpsertIdentifierParams = {
-  userId: number;
+  userId: number | null;
   studentId?: number;
   collegeId: number;
   role: string;
@@ -95,7 +95,7 @@ export async function upsertIdentifier({
   if (role !== "Parent") {
     const employeeType = getEmployeeIdentifierType(role);
     const existing = await getExistingEmployeeId(
-      userId,
+      userId!,
       collegeId
     );
 

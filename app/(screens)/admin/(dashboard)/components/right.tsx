@@ -10,6 +10,7 @@ import AddAutomationModal from "./modal/addAutomationModal";
 import AddPolicyModal from "./modal/addPolicyModal";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchCollegeAnnouncements } from "@/lib/helpers/announcements/announcementAPI";
+import BulkUploadModal from "./modal/bulkUploadModal/Bulkuploadmodal";
 
 const typeIcons: Record<string, string> = {
   class: "/class.png",
@@ -33,6 +34,7 @@ const formatRole = (role: string) =>
 export default function AdminDashRight() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isAddAutomationModalOpen, setIsAddAutomationModalOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [isAddPolicyModalOpen, setIsAddPolicyModalOpen] = useState(false);
   const { collegeId, userId, role } = useUser();
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -117,15 +119,21 @@ export default function AdminDashRight() {
               label="Add Policy"
             />
           ) : (
-            <span
-              onClick={() => setIsAddUserModalOpen(true)}
-              className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around text-[#EFEFEF] px-4"
-            >
-              <Plus className="h-10 w-10 md:h-6 md:w-6 lg:h-5 lg:w-5" />
-              <p className="text-sm md:text-base lg:text-lg">Add User</p>
-            </span>
+            <>
+              <span
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="bg-[#3EAD6F] font-medium cursor-pointer rounded-lg h-[54px] flex items-center justify-around text-[#EFEFEF] px-4"
+              >
+                <Plus className="h-10 w-10 md:h-6 md:w-6 lg:h-5 lg:w-5" />
+                <p className="text-sm md:text-base lg:text-lg">Add User</p>
+              </span>
+              <NavyActionButton
+                onClick={() => setIsBulkUploadModalOpen(true)}
+                label="Bulk Import"
+              />
+            </>
           )}
-          <CourseScheduleCard isVisibile={false} fullWidth={true} />
+          {/* <CourseScheduleCard isVisibile={false} fullWidth={true} /> */}
         </div>
 
         <WorkWeekCalendar />
@@ -140,6 +148,11 @@ export default function AdminDashRight() {
       <AddUserModal
         isOpen={isAddUserModalOpen}
         onClose={() => setIsAddUserModalOpen(false)}
+      />
+
+      <BulkUploadModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
       />
 
       <AddAutomationModal

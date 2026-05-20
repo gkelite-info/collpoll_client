@@ -339,8 +339,8 @@ const Hero = () => {
               </div>
               <div className="bg-white/5 rounded-2xl p-5 border border-white/5 backdrop-blur-sm">
                 <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">Pending Fees</p>
-                <p className="text-2xl font-black text-white">₹850K</p>
-                <p className="text-xs text-red-400 mt-2 font-medium">-5% vs last month</p>
+                <p className="text-2xl font-black text-white">₹0</p>
+                <p className="text-xs text-red-400 mt-2 font-medium">0% vs last month</p>
               </div>
             </div>
           </motion.div>
