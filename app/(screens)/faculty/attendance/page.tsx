@@ -240,35 +240,39 @@ function AttendanceContent() {
   }
 
   return (
-    <main className="px-4 py-4 min-h-screen">
+    <main className="px-3 md:px-4 py-4 min-h-screen w-full overflow-x-hidden">
       <Toaster position="top-right" />
 
-      <section className="mb-4 flex items-center justify-between">
-        <div className="flex w-fit">
-          {urlClassId && (
-            <CaretLeft
-              size={20}
-              weight="bold"
-              onClick={handleCancel}
-              className="text-[#2D3748] cursor-pointer mt-1.5 hover:-translate-x-1 transition-transform"
-            />
-          )}
-          <div>
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+      <section className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+        <div className="flex w-full md:w-fit justify-between min-w-0">
+          <div className="flex w-full min-w-0">
+            {urlClassId && (
+              <CaretLeft
+                size={20}
+                weight="bold"
+                onClick={handleCancel}
+                className="text-[#2D3748] cursor-pointer mt-1.5 hover:-translate-x-1 transition-transform mr-1 shrink-0"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate w-full">
+                  Attendance
+                </h1>
+              </div>
+              <p className="text-xs sm:text-sm text-[#282828] mt-1 truncate w-full">
+                Track, verify, and manage attendance.
+              </p>
             </div>
-            <p className="text-sm text-[#282828] mt-1">
-              Track, verify, and manage attendance.
-            </p>
           </div>
         </div>
         {classData && (
-          <div className="flex items-center gap-3">
-            <div className="bg-[#1E2952] text-white px-4 py-4 rounded-lg shadow-sm text-sm font-medium">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
+            <div className="bg-[#1E2952] text-white px-4 py-3 sm:py-4 rounded-lg shadow-sm text-sm font-medium whitespace-nowrap">
               Class Time : <span className="text-gray-200">{classTime}</span>
             </div>
             <CourseScheduleCard
-              style="w-[320px]"
+              style="w-full sm:w-[320px] max-md:hidden shrink-0"
               department={`${classData.department?.map((item: any) => item.name).join(", ") || ""}`}
               year={String(classData.year)}
               degree={classData.degree}
@@ -277,25 +281,27 @@ function AttendanceContent() {
         )}
       </section>
 
-      <section className="flex flex-row items-stretch gap-4 w-full mb-3">
-        {baseCardData.map((item, index) => (
-          <div key={index} className="flex-1">
-            <CardComponent {...item} />
-          </div>
-        ))}
-        <div className="flex-[1.6]">
+      <section className="flex flex-col lg:flex-row items-stretch gap-4 w-full max-md:mb-[-15px]">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:flex-[2.5] gap-3 sm:gap-4 w-full min-w-0">
+          {baseCardData.map((item, index) => (
+            <div key={index} className="flex-1 min-w-0">
+              <CardComponent {...item} />
+            </div>
+          ))}
+        </div>
+        <div className="hidden lg:block lg:flex-[1] shrink-0 min-w-0">
           <WorkWeekCalendar style="h-full bg-white rounded-xl shadow-sm" />
         </div>
       </section>
 
-      <section className="flex items-center justify-between py-4 min-h-[50px]">
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between py-2 sm:py-4 min-h-[50px] gap-3 w-full min-w-0">
         {urlClassId ? (
-          <div className="text-lg font-bold text-gray-800">
+          <div className="text-base sm:text-lg font-bold text-gray-800 truncate min-w-0 flex-1 pr-2">
             <span className="text-[#43C17A]">Topic : </span>
-            {topicName}
+            <span className="truncate">{topicName}</span>
           </div>
         ) : (
-          <div></div>
+          <div className="flex-1"></div>
         )}
 
         {isEditing &&
@@ -306,30 +312,30 @@ function AttendanceContent() {
                 setCancelReason("");
                 setIsCancellingMode(true);
               }}
-              className="flex items-center gap-2 bg-[#FFBB70] text-white cursor-pointer hover:bg-[#FFBB70]/90 px-4 py-2 rounded-lg text-sm font-medium border border-red-100 transition-colors"
+              className="flex items-center justify-center gap-2 bg-[#FFBB70] text-white cursor-pointer hover:bg-[#FFBB70]/90 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium border border-red-100 transition-colors w-full sm:w-max shrink-0"
             >
-              <Prohibit size={18} weight="bold" />
+              <Prohibit size={16} weight="bold" />
               Mark Class Cancel
             </button>
           ) : (
-            <div className="flex text-black items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300">
+            <div className="flex text-black items-center gap-2 animate-in fade-in slide-in-from-right-4 duration-300 w-full sm:w-auto overflow-x-auto pb-1 shrink-0">
               <input
                 type="text"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Reason..."
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:outline-none focus:border-red-400"
+                className="border border-gray-300 rounded-lg px-3 py-1.5 sm:py-2 text-sm w-40 sm:w-64 focus:outline-none focus:border-red-400 flex-shrink-0"
                 autoFocus
               />
               <button
                 onClick={confirmClassCancel}
-                className="bg-green-500 text-white cursor-pointer p-2 rounded-lg"
+                className="bg-green-500 text-white cursor-pointer p-1.5 sm:p-2 rounded-lg flex-shrink-0"
               >
                 <Check size={18} weight="bold" />
               </button>
               <button
                 onClick={() => setIsCancellingMode(false)}
-                className="bg-gray-200 text-gray-600 p-2 cursor-pointer rounded-lg"
+                className="bg-gray-200 text-gray-600 p-1.5 sm:p-2 cursor-pointer rounded-lg flex-shrink-0"
               >
                 <X size={18} weight="bold" />
               </button>
@@ -337,35 +343,11 @@ function AttendanceContent() {
           ))}
       </section>
 
-      {/* <section>
-        {urlClassId || classOptions.length > 0 || sectionOptions.length > 0 ? (
-          <StuAttendanceTable
-            students={studentsList}
-            setStudents={setStudentsList}
-            handleSaveAttendance={handleSaveAttendance}
-            saving={saving}
-            isTopicMode={isTopicMode}
-            classes={classOptions}
-            sections={sectionOptions}
-            selectedClass={selectedClassId}
-            selectedSection={selectedSectionId}
-            onFilterChange={urlClassId ? undefined : handleFilterChange}
-            loadingFilters={tableLoading}
-            isEditing={isEditing}
-            onEditClick={() => setIsEditing(true)}
-          />
-        ) : (
-          <div className="flex justify-center items-center py-16 text-gray-500">
-            No students found
-          </div>
-        )}
-      </section> */}
-
-      <section>
+      <section className="w-full min-w-0">
         {tableLoading ||
-          urlClassId ||
-          classOptions.length > 0 ||
-          sectionOptions.length > 0 ? (
+        urlClassId ||
+        classOptions.length > 0 ||
+        sectionOptions.length > 0 ? (
           <StuAttendanceTable
             students={studentsList}
             setStudents={setStudentsList}

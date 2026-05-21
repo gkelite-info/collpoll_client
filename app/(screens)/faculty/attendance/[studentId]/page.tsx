@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
-import StudentProfileCard from "../components/stuProfileCard";
 import SubjectWiseAttendance from "../components/subjectWiseTable";
-import AiBotCard from "../components/aiBotCard";
 import { getStudentAttendanceDetails } from "@/lib/helpers/faculty/attendance/getStudentAttendanceDetails";
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { CaretLeft } from "@phosphor-icons/react";
+import StudentProfileCard from "../components/stuProfileCard";
+import AiBotCard from "../components/aiBotCard";
 
 type StudentAttendanceDetails = NonNullable<
   Awaited<ReturnType<typeof getStudentAttendanceDetails>>
@@ -59,42 +59,39 @@ export default function StudentAttendanceDetailsPage() {
   }
 
   return (
-    <main className="p-4 space-y-6 min-h-screen">
-      <section className="flex items-center justify-between">
-        <div className="flex text-black items-start gap-2">
+    <main className="p-3 md:p-4 space-y-4 md:space-y-6 min-h-screen w-full max-w-full overflow-x-hidden">
+      <section className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex text-black items-start md:items-center gap-2">
           <button
             onClick={() => router.back()}
-            className="mt-1 text-gray-600 cursor-pointer hover:text-black"
+            className="mt-1 md:mt-0 text-gray-600 cursor-pointer hover:text-black shrink-0"
           >
-            <CaretLeft size={25} weight="bold" />
+            <CaretLeft
+              size={24}
+              className="md:w-[25px] md:h-[25px]"
+              weight="bold"
+            />
           </button>
-
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
-            <p className="text-sm text-gray-500 mt-1">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">
+              Attendance
+            </h1>
+            <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1 truncate">
               Track, Verify and Manage Attendance Records.
             </p>
           </div>
         </div>
-      </section>
-      <section className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Info label="Education Type" value={student.degree} />
-          <Info label="Branch" value={student.department} />
-          <Info label="Year" value={student.year?.toString()} />
-          <Info label="Section" value={student.section} />
-        </div>
 
         <CourseScheduleCard
-          style="w-[320px]"
+          style="w-full md:w-[320px] max-md:hidden shrink-0"
           department={student.department}
           degree={student.degree}
           year={String(student.year)}
         />
       </section>
 
-      <section className="grid grid-cols-2 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 items-stretch w-full min-w-0">
+        <div className="lg:col-span-2 min-w-0">
           <StudentProfileCard
             name={student.fullName}
             department={student.department}
@@ -109,8 +106,7 @@ export default function StudentAttendanceDetailsPage() {
             attendancePercentage={student.attendancePercentage}
           />
         </div>
-
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 min-w-0">
           <AiBotCard
             response={
               student.attendancePrompt ||
@@ -120,7 +116,7 @@ export default function StudentAttendanceDetailsPage() {
         </div>
       </section>
 
-      <section className="w-full">
+      <section className="w-full min-w-0">
         <SubjectWiseAttendance
           studentId={studentId || ""}
           data={student.subjectAttendance}

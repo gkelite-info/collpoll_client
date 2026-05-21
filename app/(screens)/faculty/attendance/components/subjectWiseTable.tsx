@@ -35,7 +35,7 @@ export default function SubjectWiseAttendance({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-separate border-spacing-0">
+        <table className="w-full text-left border-separate border-spacing-0 min-w-max">
           <thead>
             <tr className="bg-[#F5F5F5]">
               <th className="px-4 py-2.5 text-xs font-semibold text-[#333333] whitespace-nowrap rounded-tl-lg">
