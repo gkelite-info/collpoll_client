@@ -3,10 +3,18 @@
 interface Props {
   open: boolean;
   onClose: () => void;
-  conflictDetails: { title: string; role: string } | null; 
+  conflictDetails: { title: string; role: string } | null;
+  isConfirming?: boolean;
+  onConfirm?: () => void;
 }
 
-export default function ConflictErrorModal({ open, onClose, conflictDetails }: Props) {
+export default function ConflictErrorModal({
+  open,
+  onClose,
+  conflictDetails,
+  isConfirming = false,
+  onConfirm,
+}: Props) {
   if (!open) return null;
 
   return (
@@ -19,7 +27,7 @@ export default function ConflictErrorModal({ open, onClose, conflictDetails }: P
         <p className="text-sm text-[#525252] mb-4">
           You already have a meeting scheduled during this time slot.
           <br />
-          Please choose a different time to avoid overlaps.
+          Please choose a different time, or schedule anyway if this meeting is urgent.
         </p>
 
         {conflictDetails && (
@@ -30,13 +38,23 @@ export default function ConflictErrorModal({ open, onClose, conflictDetails }: P
           </div>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-6 py-2 cursor-pointer text-sm rounded-lg bg-[#14234B] text-white hover:bg-[#0f1b3a] transition-colors"
+            disabled={isConfirming}
+            className="px-6 py-2 cursor-pointer text-sm rounded-lg bg-gray-100 text-[#282828] hover:bg-gray-200 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
-            OK
+            Change Time
           </button>
+          {onConfirm && (
+            <button
+              onClick={onConfirm}
+              disabled={isConfirming}
+              className="px-6 py-2 cursor-pointer text-sm rounded-lg bg-[#14234B] text-white hover:bg-[#0f1b3a] transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isConfirming ? "Scheduling..." : "Schedule Anyway"}
+            </button>
+          )}
         </div>
       </div>
     </div>
