@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { CalendarBlank, CaretDown, ListChecks, Siren } from "@phosphor-icons/react";
+import { useRouter, usePathname } from "next/navigation";
+import { CalendarBlank, CalendarDotsIcon, CaretDown, ListChecks, Siren } from "@phosphor-icons/react";
 import TableComponent from "@/app/utils/table/table";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
@@ -55,7 +56,7 @@ function DatePill({ label }: { label: string }) {
   return (
     <button className="flex h-8 items-center gap-2 rounded-full bg-[#43C17A] px-3 text-[12px] font-bold text-white shadow-sm">
       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#43C17A]">
-        <CalendarBlank size={12} weight="fill" />
+        <CalendarDotsIcon size={12} weight="fill" />
       </span>
       <span>{label}</span>
       <CaretDown size={14} weight="bold" />
@@ -96,9 +97,8 @@ function WelcomePanel() {
 
         {gender ? (
           <div
-            className={`absolute bottom-0 md:-right-3 lg:right-10 ${
-              gender === "Male" ? "h-[105%]" : "h-[107%]"
-            } z-10 w-[180px]`}
+            className={`absolute bottom-0 md:-right-3 lg:right-10 ${gender === "Male" ? "h-[105%]" : "h-[107%]"
+              } z-10 w-[180px]`}
           >
             <Image
               src={avatarImage}
@@ -132,10 +132,14 @@ function WelcomePanel() {
 }
 
 function IssueStatTile({ item }: { item: (typeof managerIssueStats)[number] }) {
+  const router = useRouter()
+  const pathname = usePathname()
   const Icon = item.icon;
 
   return (
-    <div className={`rounded-md p-3 ${toneClasses[item.tone as keyof typeof toneClasses]}`}>
+    <div
+      onClick={() => router.push(`${pathname}?view=issues&type=${item.route}`)}
+      className={`rounded-md p-3 cursor-pointer ${toneClasses[item.tone as keyof typeof toneClasses]}`}>
       <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white">
         <Icon size={17} weight="fill" />
       </span>
@@ -201,7 +205,9 @@ function UrgentIssues() {
             </p>
           </div>
         </div>
-        <button className="text-[12px] font-bold text-[#16284F] underline underline-offset-2">
+        <button
+          className="text-[12px] font-bold text-[#16284F] underline underline-offset-2"
+        >
           View All
         </button>
       </div>
@@ -258,6 +264,9 @@ function UrgentIssues() {
 }
 
 function RecentIssuesTable() {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const columns = [
     { title: "Student", key: "subject" },
     { title: "Issue", key: "issue" },
@@ -319,7 +328,9 @@ function RecentIssuesTable() {
             </p>
           </div>
         </div>
-        <button className="text-[12px] font-bold text-[#16284F] underline underline-offset-2">
+        <button
+          className="text-[12px] font-bold text-[#16284F] underline underline-offset-2"
+        >
           View All
         </button>
       </div>
