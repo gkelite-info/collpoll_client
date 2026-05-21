@@ -373,8 +373,8 @@ export default function StuAttendanceTable({
       {/* 🟢 Ensures the custom dropdown menu isn't clipped by the container */}
       <div className="overflow-visible rounded-xl border border-gray-100 bg-white shadow-sm">
         {isEditing && selectedIds.length > 0 && !loadingFilters && (
-          <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-4 py-2 shadow-sm animate-in fade-in slide-in-from-top-2">
-            <span className="text-xs font-bold text-gray-500 mr-2 border-r pr-3 whitespace-nowrap">
+          <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-100 px-4 py-2 shadow-sm animate-in fade-in slide-in-from-top-2 overflow-x-auto whitespace-nowrap hide-scrollbar">
+            <span className="text-xs font-bold text-gray-500 mr-2 border-r pr-3 whitespace-nowrap flex-shrink-0">
               {selectedIds.length} Selected
             </span>
             <button
@@ -398,7 +398,7 @@ export default function StuAttendanceTable({
           </div>
         )}
 
-        <div className="overflow-visible">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-sm">
             <thead className="bg-[#FAFAFA] text-[#282828] border-b border-gray-100">
               <tr>

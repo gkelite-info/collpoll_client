@@ -16,12 +16,13 @@ import StudentSubmissions from "./submissions";
 import { decodeId, encodeId } from "@/app/utils/crypto";
 import toast from "react-hot-toast";
 
-
 const Page = () => {
-  const [selectedProject, setSelectedProject] = useState<ProjectCardProps | null>(null);
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectCardProps | null>(null);
   const [projects, setProjects] = useState<ProjectCardProps[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { college_branch, collegeAcademicYear, faculty_edu_type, facultyId } = useFaculty();
+  const { college_branch, collegeAcademicYear, faculty_edu_type, facultyId } =
+    useFaculty();
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab");
@@ -57,7 +58,9 @@ const Page = () => {
         const enriched = await fetchEnrichedProjectsByFaculty(facultyId);
 
         const mapped: ProjectCardProps[] = enriched.map((p) => {
-          const isPast = p.endDate ? new Date(p.endDate).getTime() < new Date().getTime() : false;
+          const isPast = p.endDate
+            ? new Date(p.endDate).getTime() < new Date().getTime()
+            : false;
 
           return {
             projectId: p.projectId,
@@ -89,7 +92,9 @@ const Page = () => {
       const decodedModalId = decodeId(rawModalId);
 
       if (decodedModalId) {
-        const projectToOpen = projects.find(p => String(p.projectId) === String(decodedModalId));
+        const projectToOpen = projects.find(
+          (p) => String(p.projectId) === String(decodedModalId),
+        );
         if (projectToOpen) {
           setSelectedProject(projectToOpen);
           router.replace(window.location.pathname, { scroll: false });
@@ -112,7 +117,9 @@ const Page = () => {
     const encryptedId = encodeId(String(project.projectId));
     const encryptedTitle = encodeURIComponent(project.title);
 
-    router.push(`?tab=submissions&projectId=${encryptedId}&title=${encryptedTitle}`);
+    router.push(
+      `?tab=submissions&projectId=${encryptedId}&title=${encryptedTitle}`,
+    );
   };
 
   if (tab === "new_project") {
@@ -140,7 +147,10 @@ const Page = () => {
           }}
           className="mb-4 text-sm font-medium flex items-center gap-2 text-[#282828]"
         >
-          <CaretLeft size={20} className="cursor-pointer active:scale-90 text-[#282828]" />
+          <CaretLeft
+            size={20}
+            className="cursor-pointer active:scale-90 text-[#282828]"
+          />
           Back to Details
         </button>
 
@@ -160,7 +170,7 @@ const Page = () => {
             Create, manage, and track student projects effortlessly.
           </p>
         </div>
-        <article className="flex justify-end w-[32%]">
+        <article className="flex justify-end w-[32%] max-md:hidden">
           <CourseScheduleCard style="w-[320px]" />
         </article>
       </section>
@@ -180,15 +190,21 @@ const Page = () => {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id as ProjectTab)}
-              className={`relative px-6 py-2 text-sm font-semibold z-10 transition-colors ${activeTab === t.id ? "text-white" : "text-gray-500 hover:text-gray-700 cursor-pointer"
-                }`}
+              className={`relative px-6 py-2 text-sm font-semibold z-10 transition-colors ${
+                activeTab === t.id
+                  ? "text-white"
+                  : "text-gray-500 hover:text-gray-700 cursor-pointer"
+              }`}
             >
               {t.label}
               {activeTab === t.id && (
                 <motion.div
                   layoutId="project-pill"
                   className="absolute inset-0 rounded-full -z-10 shadow-[0_2px_8px_rgba(16,185,129,0.4)]"
-                  style={{ background: "linear-gradient(180deg, #34D399 0%, #10B981 100%)" }}
+                  style={{
+                    background:
+                      "linear-gradient(180deg, #34D399 0%, #10B981 100%)",
+                  }}
                   transition={{ type: "spring", stiffness: 350, damping: 28 }}
                 />
               )}
@@ -199,13 +215,17 @@ const Page = () => {
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[...Array(4)].map((_, i) => <ProjectCardShimmer key={i} />)}
+          {[...Array(4)].map((_, i) => (
+            <ProjectCardShimmer key={i} />
+          ))}
         </div>
       ) : filteredProjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-3xl border border-dashed border-gray-200">
           <p className="text-lg font-semibold">No {activeTab} projects found</p>
           <p className="text-sm mt-1">
-            {activeTab === "active" ? "Click 'Add Project' to get started!" : "Projects will appear here once they are completed."}
+            {activeTab === "active"
+              ? "Click 'Add Project' to get started!"
+              : "Projects will appear here once they are completed."}
           </p>
         </div>
       ) : (
@@ -221,7 +241,8 @@ const Page = () => {
           project={selectedProject}
           onClose={() => {
             setSelectedProject(null);
-            if (searchParams.get("modalId")) router.push(window.location.pathname);
+            if (searchParams.get("modalId"))
+              router.push(window.location.pathname);
           }}
           onViewSubmissions={handleViewSubmissions}
         />
@@ -231,30 +252,35 @@ const Page = () => {
 };
 
 const PageWithSuspense = () => (
-  <Suspense fallback={
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 pr-4">
-              <div className="h-6 bg-gray-200 rounded-full w-3/4 mb-3" />
-              <div className="h-4 bg-gray-200 rounded-full w-full mb-2" />
-              <div className="h-4 bg-gray-200 rounded-full w-5/6" />
-            </div>
-            <div className="h-9 w-24 bg-gray-200 rounded-full shrink-0" />
-          </div>
-          <div className="space-y-4 mt-5">
-            {[...Array(5)].map((_, j) => (
-              <div key={j} className="flex gap-4 items-center">
-                <div className="h-4 bg-gray-200 rounded-full w-24 shrink-0" />
-                <div className="h-4 bg-gray-200 rounded-full w-40" />
+  <Suspense
+    fallback={
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-[26px] shadow-sm border border-gray-100 px-5 py-6 md:px-7 md:py-7 animate-pulse"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1 pr-4">
+                <div className="h-6 bg-gray-200 rounded-full w-3/4 mb-3" />
+                <div className="h-4 bg-gray-200 rounded-full w-full mb-2" />
+                <div className="h-4 bg-gray-200 rounded-full w-5/6" />
               </div>
-            ))}
+              <div className="h-9 w-24 bg-gray-200 rounded-full shrink-0" />
+            </div>
+            <div className="space-y-4 mt-5">
+              {[...Array(5)].map((_, j) => (
+                <div key={j} className="flex gap-4 items-center">
+                  <div className="h-4 bg-gray-200 rounded-full w-24 shrink-0" />
+                  <div className="h-4 bg-gray-200 rounded-full w-40" />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-  }>
+        ))}
+      </div>
+    }
+  >
     <Page />
   </Suspense>
 );

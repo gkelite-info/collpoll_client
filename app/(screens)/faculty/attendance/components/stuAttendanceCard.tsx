@@ -20,24 +20,27 @@ export default function CardComponent({
   iconColor,
 }: CardProps) {
   const styledIcon = React.cloneElement(icon, {
-    size: 20,
     className: iconColor,
     weight: "fill",
   } as IconProps);
 
   return (
     <div
-      className={`rounded-md shadow-sm p-3 flex flex-col gap-6 text-gray-900 h-full ${bgColor}`}
+      className={`rounded-xl shadow-sm px-3 md:px-4 py-3 md:py-4 flex items-center md:flex-col md:items-start justify-start md:justify-between h-[80px] md:h-[130px] w-full text-gray-900 ${bgColor}`}
     >
       <div
-        className={`w-10 h-10 shrink-0 rounded-lg flex items-center justify-center  ${iconBgColor}`}
+        className={`w-10 h-10 md:w-10 md:h-10 shrink-0 rounded-lg flex items-center justify-center ${iconBgColor} mr-3 md:mr-0 md:mb-4`}
       >
-        {styledIcon}
+        {React.cloneElement(styledIcon, {
+          className: `w-5 h-5 ${iconColor}`,
+        })}
       </div>
 
-      <div>
-        <div className="text-xl font-semibold leading-none mb-2">{value}</div>
-        <div className="text-[14px] font-medium text-gray-700 mt-1 leading-tight">
+      <div className="flex flex-col justify-center text-left">
+        <div className="text-[17px] md:text-2xl font-bold leading-none mb-0.5 md:mb-2">
+          {value}
+        </div>
+        <div className="text-[11px] md:text-sm font-medium text-gray-700 leading-tight truncate">
           {label}
         </div>
       </div>

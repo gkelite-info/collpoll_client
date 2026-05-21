@@ -51,10 +51,7 @@ export async function loginUser(email: string, password: string) {
     // Fetch Current Portal
     // ─────────────────────────────────────────────────────────────
 
-    const {
-      data: currentPortal,
-      error: portalError,
-    } = await supabase
+    const { data: currentPortal, error: portalError } = await supabase
       .from("colleges")
       .select("collegeId")
       .ilike("collegeCode", subdomain)
@@ -71,13 +68,11 @@ export async function loginUser(email: string, password: string) {
     // Authenticate User
     // ─────────────────────────────────────────────────────────────
 
-    const {
-      data: authData,
-      error: authError,
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     if (authError || !authData.user) {
       return {
@@ -90,10 +85,7 @@ export async function loginUser(email: string, password: string) {
     // Fetch User Profile
     // ─────────────────────────────────────────────────────────────
 
-    const {
-      data: userProfile,
-      error: profileError,
-    } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from("users")
       .select("userId, fullName, role, collegeId, isActive")
       .eq("auth_id", authData.user.id)
@@ -112,10 +104,7 @@ export async function loginUser(email: string, password: string) {
     // Validate College Access
     // ─────────────────────────────────────────────────────────────
 
-    if (
-      Number(userProfile.collegeId) !==
-      Number(currentPortal.collegeId)
-    ) {
+    if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
       await supabase.auth.signOut();
 
       return {
@@ -151,10 +140,7 @@ export async function loginUser(email: string, password: string) {
           ? "wellbeingManager"
           : "wellbeingExecutive";
 
-      const {
-        data: wellbeingAccess,
-        error: wellbeingError,
-      } = await supabase
+      const { data: wellbeingAccess, error: wellbeingError } = await supabase
         .from("well_beings")
         .select("wellBeingId")
         .eq("userId", userProfile.userId)
@@ -170,8 +156,7 @@ export async function loginUser(email: string, password: string) {
 
         return {
           success: false,
-          error:
-            "Access denied: your wellbeing assignment is inactive.",
+          error: "Access denied: your wellbeing assignment is inactive.",
         };
       }
     }
