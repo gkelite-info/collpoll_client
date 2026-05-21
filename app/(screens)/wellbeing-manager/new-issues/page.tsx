@@ -30,8 +30,9 @@ export default function NewIssuesPage() {
       style: "bg-[#FFEDDA] border border-black/5 hover:shadow-md transition-all h-[130px]",
       icon: <Warning size={22} weight="fill" color="#F59E0B" />,
       value: (
-        <span className="flex items-baseline gap-1">
-          Infrastructure <span className="text-[18px]">(10)</span>
+        <span className="flex flex-col md:flex-row gap-1">
+          <span className="truncate text-[9px] sm:text-xs md:text-sm" title="Infrastructure">Infrastructure</span>
+          <span className="text-[18px]">(10)</span>
         </span>
       ),
       label: "Highest Category",
@@ -166,8 +167,8 @@ export default function NewIssuesPage() {
   }));
 
   return (
-    <main className="flex flex-col lg:flex-row w-full min-h-screen overflow-x-hidden">
-      <div className="w-full lg:w-[68%] p-4 md:p-6 lg:p-2 flex flex-col gap-6 lg:gap-8 lg:h-screen">
+    <main className="flex flex-col lg:flex-row w-full min-h-screen">
+      <div className="w-full lg:w-[68%] p-2 md:p-2 lg:p-2 flex flex-col gap-6 lg:gap-8 lg:h-screen">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
           <div className="flex flex-col gap-1">
             <h1 className="text-[#16284F] text-lg md:text-[26px] font-bold leading-tight">
@@ -223,14 +224,14 @@ export default function NewIssuesPage() {
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 md:gap-6 mt-4">
+          <div className="flex flex-wrap items-center gap-4 mt-4">
             {dropdowns.map((dropdown, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <span className="text-[#16284F] text-[13px] md:text-sm font-bold whitespace-nowrap">
                   {dropdown.label} :
                 </span>
                 <div className="relative flex items-center">
-                  <select className="appearance-none border border-[#D7D7D7] shadow-sm text-[#282828] text-[13px] md:text-sm font-bold outline-none cursor-pointer hover:border-gray-400 py-1.5 pl-3 pr-8 rounded-md transition-all focus:ring-2 focus:ring-[#43C17A]/20 min-w-[100px] h-[34px]">
+                  <select className="appearance-none border border-[#D7D7D7] text-[#282828] text-[13px] md:text-sm font-bold outline-none cursor-pointer hover:border-gray-400 py-1.5 pl-3 pr-8 rounded-md transition-all focus:ring-2 focus:ring-[#43C17A]/20 min-w-[100px] h-[34px]">
                     {dropdown.options.map((opt) => (
                       <option key={opt} value={opt}>
                         {opt}

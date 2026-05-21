@@ -1,8 +1,8 @@
 import {
   CheckCircle,
-  ClockCountdown,
-  Siren,
   Warning,
+  ListChecksIcon,
+  ClockCountdownIcon,
 } from "@phosphor-icons/react";
 
 export const managerFilters = {
@@ -15,25 +15,29 @@ export const managerIssueStats = [
     label: "This month total issues",
     value: 140,
     tone: "violet",
-    icon: Warning,
+    icon: ListChecksIcon,
+    route: "total"
   },
   {
     label: "High Priority",
     value: 20,
     tone: "rose",
-    icon: Siren,
+    icon: ClockCountdownIcon,
+    route: "high"
   },
   {
     label: "Pending",
     value: 20,
     tone: "amber",
-    icon: ClockCountdown,
+    icon: Warning,
+    route:"pending"
   },
   {
     label: "Resolved",
     value: 100,
     tone: "emerald",
     icon: CheckCircle,
+    route:"resolved"
   },
 ];
 
@@ -101,7 +105,7 @@ export const managerRecentIssues = [
     issue: "Projector not working in CR-2",
     description: "The project has not been working since morning.",
     category: "Infrastructure",
-    priority: "Medium",
+    priority: "High",
     studentImage: "/student-m.png",
   },
   {
