@@ -54,14 +54,23 @@ export async function saveFinanceMeetingSection(
   financeManagerId: number,
 ) {
   const now = new Date().toISOString();
+  const sectionPayload = {
+    financeMeetingId: payload.financeMeetingId,
+    collegeEducationId: payload.collegeEducationId,
+    collegeBranchId: payload.collegeBranchId ?? null,
+    collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
+    collegeSectionsId: payload.collegeSectionsId ?? null,
+  };
+
   if (payload.id) {
     const { data, error } = await supabase
       .from("finance_meetings_sections")
       .update({
-        collegeEducationId: payload.collegeEducationId,
-        collegeBranchId: payload.collegeBranchId ?? null,
-        collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
-        collegeSectionsId: payload.collegeSectionsId ?? null,
+        collegeEducationId: sectionPayload.collegeEducationId,
+        collegeBranchId: sectionPayload.collegeBranchId,
+        collegeAcademicYearId: sectionPayload.collegeAcademicYearId,
+        collegeSectionsId: sectionPayload.collegeSectionsId,
+        deletedAt: null,
         updatedAt: now,
       })
       .eq("financeMeetingSectionsId", payload.id)
@@ -78,14 +87,72 @@ export async function saveFinanceMeetingSection(
       financeMeetingSectionsId: data.financeMeetingSectionsId,
     };
   } else {
+    let existingQuery = supabase
+      .from("finance_meetings_sections")
+      .select("financeMeetingSectionsId, deletedAt")
+      .eq("financeMeetingId", sectionPayload.financeMeetingId)
+      .eq("collegeEducationId", sectionPayload.collegeEducationId)
+      .order("financeMeetingSectionsId", { ascending: false })
+      .limit(1);
+
+    existingQuery =
+      sectionPayload.collegeBranchId === null
+        ? existingQuery.is("collegeBranchId", null)
+        : existingQuery.eq("collegeBranchId", sectionPayload.collegeBranchId);
+    existingQuery =
+      sectionPayload.collegeAcademicYearId === null
+        ? existingQuery.is("collegeAcademicYearId", null)
+        : existingQuery.eq(
+            "collegeAcademicYearId",
+            sectionPayload.collegeAcademicYearId,
+          );
+    existingQuery =
+      sectionPayload.collegeSectionsId === null
+        ? existingQuery.is("collegeSectionsId", null)
+        : existingQuery.eq("collegeSectionsId", sectionPayload.collegeSectionsId);
+
+    const { data: existing, error: existingError } =
+      await existingQuery.maybeSingle();
+
+    if (existingError) {
+      console.error("findFinanceMeetingSection error:", existingError);
+      return { success: false, error: existingError };
+    }
+
+    if (existing) {
+      if (existing.deletedAt) {
+        const { data, error } = await supabase
+          .from("finance_meetings_sections")
+          .update({
+            createdBy: financeManagerId,
+            deletedAt: null,
+            updatedAt: now,
+          })
+          .eq("financeMeetingSectionsId", existing.financeMeetingSectionsId)
+          .select("financeMeetingSectionsId")
+          .single();
+
+        if (error) {
+          console.error("restoreFinanceMeetingSection error:", error);
+          return { success: false, error };
+        }
+
+        return {
+          success: true,
+          financeMeetingSectionsId: data.financeMeetingSectionsId,
+        };
+      }
+
+      return {
+        success: true,
+        financeMeetingSectionsId: existing.financeMeetingSectionsId,
+      };
+    }
+
     const { data, error } = await supabase
       .from("finance_meetings_sections")
       .insert({
-        financeMeetingId: payload.financeMeetingId,
-        collegeEducationId: payload.collegeEducationId,
-        collegeBranchId: payload.collegeBranchId ?? null,
-        collegeAcademicYearId: payload.collegeAcademicYearId ?? null,
-        collegeSectionsId: payload.collegeSectionsId ?? null,
+        ...sectionPayload,
         createdBy: financeManagerId,
         createdAt: now,
         updatedAt: now,
@@ -93,7 +160,12 @@ export async function saveFinanceMeetingSection(
       .select("financeMeetingSectionsId")
       .single();
     if (error) {
-      console.error("insertFinanceMeetingSection error:", error);
+      console.error("insertFinanceMeetingSection error:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return { success: false, error };
     }
     return {
@@ -167,7 +239,52 @@ export async function syncFinanceMeetingParticipantsAndEmails(
     .limit(1)
     .maybeSingle();
 
-  if (!colMeeting) return { success: false };
+  let collegeMeetingId = colMeeting?.collegeMeetingId;
+
+  if (!collegeMeetingId) {
+    const { data: financeManager, error: financeManagerError } = await supabase
+      .from("finance_manager")
+      .select("userId")
+      .eq("financeManagerId", meeting.createdBy)
+      .maybeSingle();
+
+    if (financeManagerError || !financeManager?.userId) {
+      console.error(
+        "syncFinanceMeetingParticipantsAndEmails finance manager lookup error:",
+        financeManagerError,
+      );
+      return { success: false };
+    }
+
+    const { data: createdMeeting, error: createMeetingError } = await supabase
+      .from("college_meetings")
+      .insert({
+        collegeId,
+        title: meeting.title,
+        description: meeting.description,
+        date: meeting.date,
+        fromTime: meeting.fromTime,
+        toTime: meeting.toTime,
+        meetingLink: meeting.meetingLink,
+        createdBy: financeManager.userId,
+        isActive: true,
+        is_deleted: false,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .select("collegeMeetingId")
+      .single();
+
+    if (createMeetingError || !createdMeeting) {
+      console.error(
+        "syncFinanceMeetingParticipantsAndEmails college_meetings insert error:",
+        createMeetingError,
+      );
+      return { success: false };
+    }
+
+    collegeMeetingId = createdMeeting.collegeMeetingId;
+  }
 
   let userIdsToSync: number[] = [];
 
@@ -214,7 +331,7 @@ export async function syncFinanceMeetingParticipantsAndEmails(
   if (userIdsToSync.length === 0) return { success: true };
 
   const participantRows = userIdsToSync.map((uid) => ({
-    collegeMeetingId: colMeeting.collegeMeetingId,
+    collegeMeetingId,
     userId: uid,
     role: meeting.role,
     notifiedInApp: inAppNotification,

@@ -1026,6 +1026,7 @@ import {
   fetchSections,
 } from "@/lib/helpers/admin/academics/academicDropdowns";
 import {
+  deleteFinanceMeetingSection,
   fetchFinanceMeetingSections,
   saveFinanceMeetingSection,
   syncFinanceMeetingParticipantsAndEmails,
@@ -1331,14 +1332,25 @@ const CreateMeetingModal = ({
             await fetchFinanceMeetingSections(editingMeetingId);
           const specificSection = existingSections.find(
             (s) => s.financeMeetingSectionsId === editingSectionId,
-          );
+          ) ?? existingSections[0];
 
           if (specificSection) {
             setBranch(specificSection.collegeBranchId);
             setYear(specificSection.collegeAcademicYearId);
-            if (specificSection.collegeSectionsId) {
-              setSectionsSelected([specificSection.collegeSectionsId]);
-            }
+            const selectedSectionIds = existingSections
+              .filter(
+                (section) =>
+                  section.collegeBranchId === specificSection.collegeBranchId &&
+                  section.collegeAcademicYearId ===
+                    specificSection.collegeAcademicYearId &&
+                  section.collegeSectionsId,
+              )
+              .map((section) => section.collegeSectionsId!)
+              .filter(
+                (sectionId, index, sectionIds) =>
+                  sectionIds.indexOf(sectionId) === index,
+              );
+            setSectionsSelected(selectedSectionIds);
             if (specificSection.collegeBranchId) {
               const yearData = await fetchAcademicYears(
                 collegeId,
@@ -1434,7 +1446,7 @@ const CreateMeetingModal = ({
     return true;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (forceSave = false) => {
     try {
       if (!validateTitle(title)) return;
       if (!description.trim()) {
@@ -1525,20 +1537,22 @@ const CreateMeetingModal = ({
       const dbFromTime = formatTimeForDB(startHour, startMinute, startPeriod);
       const dbToTime = formatTimeForDB(endHour, endMinute, endPeriod);
 
-      const { hasConflict, conflictData: existingMeetingInfo } =
-        await checkFinanceMeetingConflict(
-          financeManagerId,
-          date,
-          dbFromTime,
-          dbToTime,
-          isEditMode ? editingMeetingId! : undefined,
-        );
+      if (!forceSave) {
+        const { hasConflict, conflictData: existingMeetingInfo } =
+          await checkFinanceMeetingConflict(
+            financeManagerId,
+            date,
+            dbFromTime,
+            dbToTime,
+            isEditMode ? editingMeetingId! : undefined,
+          );
 
-      if (hasConflict) {
-        setIsLoading(false);
-        setConflictData(existingMeetingInfo);
-        setShowConflictModal(true);
-        return;
+        if (hasConflict) {
+          setIsLoading(false);
+          setConflictData(existingMeetingInfo);
+          setShowConflictModal(true);
+          return;
+        }
       }
 
       const meetingRes = await saveFinanceMeeting(
@@ -1567,22 +1581,61 @@ const CreateMeetingModal = ({
       if (role !== "Admin" && collegeEducationId) {
         try {
           if (isEditMode && editingSectionId) {
-            await saveFinanceMeetingSection(
-              {
-                id: editingSectionId,
-                financeMeetingId: meetingRes.financeMeetingId,
-                collegeEducationId,
-                collegeBranchId: branch,
-                collegeAcademicYearId: year,
-                collegeSectionsId: sectionsSelected[0],
-              },
-              financeManagerId,
+            const existingSections = await fetchFinanceMeetingSections(
+              meetingRes.financeMeetingId,
+            );
+            const matchingExistingSections = existingSections.filter(
+              (section) =>
+                section.collegeBranchId === branch &&
+                section.collegeAcademicYearId === year,
             );
 
-            if (sectionsSelected.length > 1) {
-              const additionalSections = sectionsSelected.slice(1);
-              await Promise.all(
-                additionalSections.map((sectionId) =>
+            await Promise.all(
+              matchingExistingSections
+                .filter(
+                  (section) =>
+                    section.collegeSectionsId &&
+                    !sectionsSelected.includes(section.collegeSectionsId),
+                )
+                .map((section) =>
+                  deleteFinanceMeetingSection(section.financeMeetingSectionsId),
+                ),
+            );
+
+            await Promise.all(
+              sectionsSelected.map((sectionId) => {
+                const existingSection = matchingExistingSections.find(
+                  (section) => section.collegeSectionsId === sectionId,
+                );
+
+                return saveFinanceMeetingSection(
+                  {
+                    id: existingSection?.financeMeetingSectionsId,
+                    financeMeetingId: meetingRes.financeMeetingId!,
+                    collegeEducationId,
+                    collegeBranchId: branch,
+                    collegeAcademicYearId: year,
+                    collegeSectionsId: sectionId,
+                  },
+                  financeManagerId,
+                );
+              }),
+            );
+
+            await Promise.all(
+              existingSections
+                .filter(
+                  (section) =>
+                    section.collegeBranchId !== branch ||
+                    section.collegeAcademicYearId !== year,
+                )
+                .map((section) =>
+                  deleteFinanceMeetingSection(section.financeMeetingSectionsId),
+                ),
+            );
+          } else {
+            await Promise.all(
+              sectionsSelected.map((sectionId) =>
                   saveFinanceMeetingSection(
                     {
                       financeMeetingId: meetingRes.financeMeetingId!,
@@ -1593,22 +1646,6 @@ const CreateMeetingModal = ({
                     },
                     financeManagerId,
                   ),
-                ),
-              );
-            }
-          } else {
-            await Promise.all(
-              sectionsSelected.map((sectionId) =>
-                saveFinanceMeetingSection(
-                  {
-                    financeMeetingId: meetingRes.financeMeetingId!,
-                    collegeEducationId,
-                    collegeBranchId: branch,
-                    collegeAcademicYearId: year,
-                    collegeSectionsId: sectionId,
-                  },
-                  financeManagerId,
-                ),
               ),
             );
           }
@@ -1634,9 +1671,13 @@ const CreateMeetingModal = ({
       }
 
       toast.success(
-        isEditMode
-          ? "Meeting updated successfully"
-          : "Meeting scheduled successfully",
+        forceSave
+          ? isEditMode
+            ? "Meeting updated despite conflict"
+            : "Meeting scheduled despite conflict"
+          : isEditMode
+            ? "Meeting updated successfully"
+            : "Meeting scheduled successfully",
       );
       onSuccess();
       onClose();
@@ -1655,6 +1696,11 @@ const CreateMeetingModal = ({
         open={showConflictModal}
         conflictDetails={conflictData}
         onClose={() => setShowConflictModal(false)}
+        isConfirming={isLoading}
+        onConfirm={() => {
+          setShowConflictModal(false);
+          handleSubmit(true);
+        }}
       />
       <motion.div
         initial={{ opacity: 0 }}
@@ -2129,7 +2175,7 @@ const CreateMeetingModal = ({
               Cancel
             </button>
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit(false)}
               className="px-8 py-2 rounded-md bg-[#43C17A] text-white font-medium w-full md:w-auto shadow-sm cursor-pointer disabled:opacity-70 transition-colors"
               disabled={isLoading}
             >

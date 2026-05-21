@@ -1,13 +1,22 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import MeetingCard from "./components/MeetingCard";
 import CreateMeetingModal from "./components/CreateMeetingModal";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import ConfirmDeleteModal from "../../admin/calendar/components/ConfirmDeleteModal";
+import { Loader } from "../../(student)/calendar/right/timetable";
+import MeetingCardShimmer from "@/app/utils/shimmers/MeetingCardShimmer";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import {
+  deactivateFinanceMeeting,
+  fetchFinanceMeetings,
+} from "@/lib/helpers/finance/meetings/meetingsAPI";
+import { deleteFinanceMeetingSection } from "@/lib/helpers/finance/meetings/meetingsSectionsAPI";
 
 type MeetingType = "upcoming" | "previous";
 type MeetingCategory = "Parent" | "Student" | "Faculty" | "Admin";
@@ -34,131 +43,36 @@ export interface Meeting {
   subject?: string;
 }
 
-const staticMeetings: Meeting[] = [
-  {
-    id: "fm-meet-1",
-    financeMeetingId: 101,
-    financeMeetingSectionsId: null,
-    title: "Fee Collection Review",
-    timeRange: "09:00:00 - 10:00:00",
-    educationType: "B.Tech",
-    branch: "CSE",
-    date: "18 May 2026",
-    description: "Review pending dues and payment follow-ups for the week.",
-    participants: 18,
-    year: "2nd Year",
-    section: "A",
-    tags: "Finance",
-    category: "Parent",
-    type: "upcoming",
-    meetingLink: "https://meet.google.com/static-finance-review",
-    hostName: "Anuv Shetty",
-    hostImage:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop",
-    subject: "Fee Review",
-  },
-  {
-    id: "fm-meet-2",
-    financeMeetingId: 102,
-    financeMeetingSectionsId: 202,
-    title: "Student Payment Discussion",
-    timeRange: "11:30:00 - 12:15:00",
-    educationType: "Degree",
-    branch: "EEE",
-    date: "19 May 2026",
-    description: "Discuss installment requests and fee concession cases.",
-    participants: 24,
-    year: "1st Year",
-    section: "B",
-    tags: "Student",
-    category: "Student",
-    type: "upcoming",
-    meetingLink: "https://meet.google.com/static-student-payment",
-    hostName: "Miyav",
-    hostImage:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop",
-    subject: "Payments",
-  },
-  {
-    id: "fm-meet-3",
-    financeMeetingId: 103,
-    financeMeetingSectionsId: null,
-    title: "Faculty Reimbursement Sync",
-    timeRange: "14:00:00 - 15:00:00",
-    educationType: "MBA",
-    branch: "Finance",
-    date: "20 May 2026",
-    description: "Coordinate reimbursement approvals and document gaps.",
-    participants: 12,
-    year: "All",
-    section: "All",
-    tags: "Faculty",
-    category: "Faculty",
-    type: "upcoming",
-    meetingLink: "https://meet.google.com/static-faculty-sync",
-    hostName: "Stephen Jones",
-    hostImage:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop",
-    subject: "Reimbursement",
-  },
-  {
-    id: "fm-meet-4",
-    financeMeetingId: 104,
-    financeMeetingSectionsId: null,
-    title: "Admin Budget Planning",
-    timeRange: "10:00:00 - 11:00:00",
-    educationType: "All",
-    branch: "Admin",
-    date: "15 May 2026",
-    description: "Monthly administrative budget planning and approvals.",
-    participants: 8,
-    year: "All",
-    section: "All",
-    tags: "Admin",
-    category: "Admin",
-    type: "previous",
-    meetingLink: "https://meet.google.com/static-admin-budget",
-    hostName: "Admin Team",
-    hostImage: null,
-    subject: "Budget",
-  },
-  {
-    id: "fm-meet-5",
-    financeMeetingId: 105,
-    financeMeetingSectionsId: 205,
-    title: "Parent Fee Clarification",
-    timeRange: "16:00:00 - 16:45:00",
-    educationType: "Inter",
-    branch: "MPC",
-    date: "14 May 2026",
-    description: "Clarify term fee structure and due dates for parents.",
-    participants: 30,
-    year: "1st Year",
-    section: "C",
-    tags: "Parent",
-    category: "Parent",
-    type: "previous",
-    meetingLink: "https://meet.google.com/static-parent-fee",
-    hostName: "Finance Desk",
-    hostImage: null,
-    subject: "Fee Structure",
-  },
-];
+const formatMeetingDate = (dateStr: string) => {
+  if (!dateStr) return "";
+  const [year, month, day] = dateStr.split("-");
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 function MeetingListContent() {
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editingMeetingId, setEditingMeetingId] = useState<number | null>(null);
   const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
   const currentType = (searchParams.get("type") as MeetingType) || "upcoming";
   const currentCategory =
     (searchParams.get("category") as MeetingCategory) || "Parent";
-  const itemsPerPage = 4;
+  const { financeManagerId } = useFinanceManager();
+  const itemsPerPage = 10;
 
   const updateFilter = (key: string, value: string) => {
     setPage(1);
@@ -167,20 +81,53 @@ function MeetingListContent() {
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  const filteredMeetings = useMemo(
-    () =>
-      staticMeetings.filter(
-        (meeting) =>
-          meeting.type === currentType && meeting.category === currentCategory,
-      ),
-    [currentCategory, currentType],
-  );
+  const loadMeetings = useCallback(async () => {
+    if (!financeManagerId) {
+      setIsLoading(false);
+      return;
+    }
 
-  const totalPages = Math.max(1, Math.ceil(filteredMeetings.length / itemsPerPage));
-  const paginatedMeetings = filteredMeetings.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage,
-  );
+    try {
+      setIsLoading(true);
+      const now = new Date();
+      const currentDate = `${now.getFullYear()}-${String(
+        now.getMonth() + 1,
+      ).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(
+        now.getMinutes(),
+      ).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+
+      const res = await fetchFinanceMeetings({
+        createdBy: financeManagerId,
+        role: currentCategory,
+        type: currentType,
+        page,
+        limit: itemsPerPage,
+        currentDate,
+        currentTime,
+      });
+
+      setMeetings(
+        res.data.map((meeting: Meeting) => ({
+          ...meeting,
+          date: formatMeetingDate(meeting.date),
+        })),
+      );
+      setTotalPages(res.totalPages || 1);
+    } catch {
+      toast.error(`Failed to fetch ${currentCategory} in ${currentType}.`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentCategory, currentType, financeManagerId, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [currentType, currentCategory]);
+
+  useEffect(() => {
+    loadMeetings();
+  }, [loadMeetings]);
 
   const typeTabs = [
     { id: "upcoming", label: "Upcoming Meetings" },
@@ -193,6 +140,34 @@ function MeetingListContent() {
     { id: "Faculty", label: "Faculty Meetings" },
     { id: "Admin", label: "Admin Meetings" },
   ];
+
+  const handleDeleteClick = (meeting: Meeting) => {
+    setMeetingToDelete(meeting);
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!meetingToDelete) return;
+    setIsDeleting(true);
+    try {
+      if (meetingToDelete.financeMeetingSectionsId) {
+        await deleteFinanceMeetingSection(
+          meetingToDelete.financeMeetingSectionsId,
+        );
+      } else {
+        await deactivateFinanceMeeting(meetingToDelete.financeMeetingId);
+      }
+
+      toast.success("Meeting deleted successfully");
+      setDeleteModalOpen(false);
+      setMeetingToDelete(null);
+      await loadMeetings();
+    } catch {
+      toast.error("Failed to delete meeting");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleEditClick = (
     financeMeetingId: number,
@@ -284,15 +259,19 @@ function MeetingListContent() {
 
       <div className="flex-1 overflow-y-auto p-2 pt-2">
         <div className="grid grid-cols-1 gap-3 pb-6 md:grid-cols-2">
-          {paginatedMeetings.length > 0 ? (
-            paginatedMeetings.map((meeting) => (
+          {isLoading ? (
+            <MeetingCardShimmer
+              role="Finance"
+              category={currentCategory}
+              type={currentType}
+              count={8}
+            />
+          ) : meetings.length > 0 ? (
+            meetings.map((meeting, index) => (
               <MeetingCard
-                key={meeting.id}
+                key={meeting.id || `meeting-card-${index}`}
                 data={meeting}
-                onDelete={(item) => {
-                  setMeetingToDelete(item);
-                  setDeleteModalOpen(true);
-                }}
+                onDelete={handleDeleteClick}
                 role="Finance"
                 category={currentCategory}
                 onEdit={handleEditClick}
@@ -314,7 +293,11 @@ function MeetingListContent() {
             <button
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={page === 1}
-              className="rounded-md bg-gray-200 p-2 text-gray-700 disabled:cursor-not-allowed disabled:text-gray-400"
+              className={`flex items-center justify-center rounded-md p-2 transition-colors ${
+                page === 1
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "cursor-pointer bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
             >
               <CaretLeft size={16} weight="bold" />
             </button>
@@ -322,10 +305,10 @@ function MeetingListContent() {
               <button
                 key={item}
                 onClick={() => setPage(item)}
-                className={`rounded-md px-3 py-1 text-sm font-medium ${
+                className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                   page === item
                     ? "bg-[#16284F] text-white"
-                    : "bg-gray-200 text-gray-700"
+                    : "cursor-pointer bg-gray-200 text-gray-700 hover:bg-gray-300"
                 }`}
               >
                 {item}
@@ -336,7 +319,11 @@ function MeetingListContent() {
                 setPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={page === totalPages}
-              className="rounded-md bg-gray-200 p-2 text-gray-700 disabled:cursor-not-allowed disabled:text-gray-400"
+              className={`flex items-center justify-center rounded-md p-2 transition-colors ${
+                page === totalPages
+                  ? "cursor-not-allowed bg-gray-100 text-gray-400"
+                  : "cursor-pointer bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
             >
               <CaretRight size={16} weight="bold" />
             </button>
@@ -351,22 +338,20 @@ function MeetingListContent() {
           setEditingMeetingId(null);
           setEditingSectionId(null);
         }}
+        onSuccess={loadMeetings}
         editingMeetingId={editingMeetingId}
         editingSectionId={editingSectionId}
       />
 
       <ConfirmDeleteModal
         open={deleteModalOpen}
-        isDeleting={false}
+        isDeleting={isDeleting}
         onCancel={() => {
           setDeleteModalOpen(false);
           setMeetingToDelete(null);
         }}
-        onConfirm={() => {
-          setDeleteModalOpen(false);
-          setMeetingToDelete(null);
-        }}
-        name={meetingToDelete?.title || "meeting"}
+        onConfirm={handleConfirmDelete}
+        name="meeting"
       />
     </div>
   );
@@ -374,7 +359,7 @@ function MeetingListContent() {
 
 export default function MeetingsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-[#282828]">Loading...</div>}>
+    <Suspense fallback={<div><Loader /></div>}>
       <MeetingListContent />
     </Suspense>
   );

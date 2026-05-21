@@ -1139,6 +1139,12 @@ export async function saveFinanceMeeting(
   const now = new Date().toISOString();
 
   if (payload.id) {
+    const { data: oldMeeting } = await supabase
+      .from("finance_meetings")
+      .select("*")
+      .eq("financeMeetingId", payload.id)
+      .single();
+
     const { data, error } = await supabase
       .from("finance_meetings")
       .update({
@@ -1159,13 +1165,8 @@ export async function saveFinanceMeeting(
 
     if (error) return { success: false, error };
 
-    const { data: oldMeeting } = await supabase
-      .from("finance_meetings")
-      .select("*")
-      .eq("financeMeetingId", payload.id)
-      .single();
     if (oldMeeting) {
-      await supabase
+      const { error: colError } = await supabase
         .from("college_meetings")
         .update({
           title: payload.title.trim(),
@@ -1181,6 +1182,10 @@ export async function saveFinanceMeeting(
           date: oldMeeting.date,
           fromTime: oldMeeting.fromTime,
         });
+
+      if (colError) {
+        console.error("Finance college_meetings update error:", colError);
+      }
     }
     return { success: true, financeMeetingId: data.financeMeetingId };
   } else {
@@ -1206,7 +1211,7 @@ export async function saveFinanceMeeting(
     if (error) return { success: false, error };
 
     if (userId) {
-      await supabase.from("college_meetings").insert({
+      const { error: colError } = await supabase.from("college_meetings").insert({
         collegeId: payload.collegeId,
         title: payload.title.trim(),
         description: payload.description.trim(),
@@ -1220,10 +1225,90 @@ export async function saveFinanceMeeting(
         createdAt: now,
         updatedAt: now,
       });
+
+      if (colError) {
+        console.error("Finance college_meetings insert error:", colError);
+      }
     }
 
     return { success: true, financeMeetingId: data.financeMeetingId };
   }
+}
+
+async function ensureFinanceCollegeMeeting(financeMeetingId: number) {
+  const { data: meeting, error: meetingError } = await supabase
+    .from("finance_meetings")
+    .select(
+      `
+        financeMeetingId,
+        title,
+        description,
+        date,
+        fromTime,
+        toTime,
+        meetingLink,
+        createdBy
+      `,
+    )
+    .eq("financeMeetingId", financeMeetingId)
+    .maybeSingle();
+
+  if (meetingError || !meeting) {
+    return { data: null, error: meetingError ?? new Error("Meeting not found") };
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from("college_meetings")
+    .select("collegeMeetingId")
+    .match({
+      meetingLink: meeting.meetingLink,
+      date: meeting.date,
+      fromTime: meeting.fromTime,
+    })
+    .order("createdAt", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError || existing) {
+    return { data: existing, error: existingError };
+  }
+
+  const { data: financeManager, error: financeManagerError } = await supabase
+    .from("finance_manager")
+    .select("collegeId, userId")
+    .eq("financeManagerId", meeting.createdBy)
+    .maybeSingle();
+
+  if (financeManagerError || !financeManager?.collegeId || !financeManager?.userId) {
+    return {
+      data: null,
+      error:
+        financeManagerError ??
+        new Error("Finance manager context not found for college meeting"),
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await supabase
+    .from("college_meetings")
+    .insert({
+      collegeId: financeManager.collegeId,
+      title: meeting.title,
+      description: meeting.description,
+      date: meeting.date,
+      fromTime: meeting.fromTime,
+      toTime: meeting.toTime,
+      meetingLink: meeting.meetingLink,
+      createdBy: financeManager.userId,
+      isActive: true,
+      is_deleted: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .select("collegeMeetingId")
+    .single();
+
+  return { data: created, error: createError };
 }
 
 export async function deactivateFinanceMeeting(financeMeetingId: number) {
@@ -1272,21 +1357,11 @@ export async function scheduleFinanceMeetingReminder(
     return { success: false };
   }
 
-  const { data: colMeeting, error: colError } = await supabase
-    .from("college_meetings")
-    .select("collegeMeetingId")
-    .match({
-      meetingLink: fmMeeting.meetingLink,
-      date: fmMeeting.date,
-      fromTime: fmMeeting.fromTime,
-    })
-    .order("createdAt", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
+  const { data: colMeeting, error: colError } =
+    await ensureFinanceCollegeMeeting(financeMeetingId);
   if (colError || !colMeeting) {
     console.error(
-      " Schedule Reminder: Universal college_meetings record not found.",
+      " Schedule Reminder: Universal college_meetings record unavailable.",
       colError,
     );
     return { success: false };
