@@ -13,6 +13,27 @@ export type FinanceMeetingSectionRow = {
   deletedAt: string | null;
 };
 
+const STAFF_ROLE_FILTERS: Record<string, string[]> = {
+  Admin: ["Admin"],
+  CollegeAdmin: ["CollegeAdmin"],
+  Finance: ["Finance", "FinanceManager"],
+  CollegeHr: ["CollegeHr"],
+  WellbeingExecutive: ["WellbeingExecutive"],
+  WellbeingManager: ["WellbeingManager"],
+  PlacementOfficer: ["PlacementOfficer"],
+};
+
+const STAFF_ROLE_META_REGEX = /\s*\[\[staffRole:([A-Za-z]+)\]\]\s*$/;
+
+const parseStaffRoleMetadata = (value: string | null | undefined) => {
+  const description = value ?? "";
+  const match = description.match(STAFF_ROLE_META_REGEX);
+  return {
+    description: description.replace(STAFF_ROLE_META_REGEX, "").trim(),
+    staffRole: match?.[1] ?? null,
+  };
+};
+
 export async function fetchFinanceMeetingSections(financeMeetingId: number) {
   const { data, error } = await supabase
     .from("finance_meetings_sections")
@@ -226,6 +247,8 @@ export async function syncFinanceMeetingParticipantsAndEmails(
     .single();
 
   if (!meeting) return { success: false };
+  const parsedDescription = parseStaffRoleMetadata(meeting.description);
+  const targetRole = parsedDescription.staffRole ?? meeting.role;
 
   const { data: colMeeting } = await supabase
     .from("college_meetings")
@@ -261,7 +284,7 @@ export async function syncFinanceMeetingParticipantsAndEmails(
       .insert({
         collegeId,
         title: meeting.title,
-        description: meeting.description,
+        description: parsedDescription.description,
         date: meeting.date,
         fromTime: meeting.fromTime,
         toTime: meeting.toTime,
@@ -288,7 +311,17 @@ export async function syncFinanceMeetingParticipantsAndEmails(
 
   let userIdsToSync: number[] = [];
 
-  if (meeting.role === "Admin") {
+  if (STAFF_ROLE_FILTERS[targetRole]) {
+    const { data: staffUsers } = await supabase
+      .from("users")
+      .select("userId")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .in("role", STAFF_ROLE_FILTERS[targetRole]);
+
+    if (staffUsers) userIdsToSync = staffUsers.map((user) => user.userId);
+  } else if (meeting.role === "Admin") {
     const { data: admins } = await supabase
       .from("admins")
       .select("userId")
@@ -333,7 +366,7 @@ export async function syncFinanceMeetingParticipantsAndEmails(
   const participantRows = userIdsToSync.map((uid) => ({
     collegeMeetingId,
     userId: uid,
-    role: meeting.role,
+    role: targetRole,
     notifiedInApp: inAppNotification,
     notifiedEmail: emailNotification,
     createdAt: now,
@@ -355,7 +388,7 @@ export async function syncFinanceMeetingParticipantsAndEmails(
       const emailHtmlBody = `
                 <h3>Meeting Invitation: ${meeting.title}</h3>
                 <p>You have been invited to a meeting scheduled on <strong>${meeting.date}</strong> at <strong>${meeting.fromTime.slice(0, 5)}</strong>.</p>
-                <p><strong>Agenda:</strong> ${meeting.description}</p>
+                <p><strong>Agenda:</strong> ${parsedDescription.description}</p>
                 <p><strong>Join here:</strong> <a href="${meeting.meetingLink}">${meeting.meetingLink}</a></p>
             `;
 
