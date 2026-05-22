@@ -52,8 +52,8 @@ export const formatDate = (isoDate?: string | null) => {
 
 const AttendancePage = () => {
 
-  const { wellBeingId, identifierId, email, profilePhoto, mobile, fullName, dateOfJoining,
-    professionalExperienceYears, collegeEducationType, userId } = useUser();
+  const { financeManagerId, email, profilePhoto, mobile, fullName, dateOfJoining,
+    professionalExperienceYears, collegeEducationType, userId, identifierId } = useUser()
   const [profile, setProfile] = useState<AdminProfile | null>(null);
   const [infoLoading, setInfoLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -137,7 +137,7 @@ const AttendancePage = () => {
   }, [userId, selectedMonth, selectedYear, currentPage]);
 
   useEffect(() => {
-    if (!wellBeingId) {
+    if (!financeManagerId) {
       setInfoLoading(false);
       return;
     }
@@ -147,7 +147,7 @@ const AttendancePage = () => {
         ...mockProfile,
         name: fullName!,
         mobile: mobile!,
-        adminId: identifierId || wellBeingId,
+        adminId: identifierId || financeManagerId,
         EducationType: collegeEducationType!,
         email: email ?? mockProfile.email,
         joiningDate: formatDate(dateOfJoining),
@@ -159,7 +159,7 @@ const AttendancePage = () => {
     } finally {
       setInfoLoading(false);
     }
-  }, [wellBeingId, identifierId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears]);
+  }, [financeManagerId, collegeEducationType, email, profilePhoto, fullName, dateOfJoining, mobile, professionalExperienceYears, identifierId]);
 
 
   return (

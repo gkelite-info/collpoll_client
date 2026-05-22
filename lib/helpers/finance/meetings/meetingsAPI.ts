@@ -18,6 +18,26 @@ export type FinanceMeetingRow = {
   deletedAt: string | null;
 };
 
+const STAFF_MEETING_ROLES = [
+  "Admin",
+  "CollegeAdmin",
+  "Finance",
+  "CollegeHr",
+  "PlacementOfficer",
+  "WellbeingManager",
+  "WellbeingExecutive",
+];
+const STAFF_ROLE_META_REGEX = /\s*\[\[staffRole:([A-Za-z]+)\]\]\s*$/;
+
+const parseStaffRoleMetadata = (value: string | null | undefined) => {
+  const description = value ?? "";
+  const match = description.match(STAFF_ROLE_META_REGEX);
+  return {
+    description: description.replace(STAFF_ROLE_META_REGEX, "").trim(),
+    staffRole: match?.[1] ?? null,
+  };
+};
+
 // export async function fetchFinanceMeetings(params: {
 //   createdBy: number;
 //   role?: string;
@@ -571,6 +591,8 @@ export async function fetchFinanceMeetings(params: {
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
+  const isStaffRole = role === "Staff";
+  const roleFilters = isStaffRole ? STAFF_MEETING_ROLES : [role];
   const isSectionedRole =
     role === "Parent" || role === "Student" || role === "Faculty";
 
@@ -637,7 +659,7 @@ export async function fetchFinanceMeetings(params: {
             ?.collegeBranchType ??
           "",
         date: row.date,
-        description: row.description,
+        description: parseStaffRoleMetadata(row.description).description,
         participants: 0,
         year:
           row.finance_meetings_sections?.[0]?.college_academic_year
@@ -656,8 +678,12 @@ export async function fetchFinanceMeetings(params: {
       .select("*", { count: "exact" })
       .eq("createdBy", createdBy)
       .eq("isActive", true)
-      .is("deletedAt", null)
-      .eq("role", role);
+      .is("deletedAt", null);
+
+    query =
+      roleFilters.length === 1
+        ? query.eq("role", roleFilters[0])
+        : query.in("role", roleFilters);
 
     if (type === "upcoming") {
       query = query.or(
@@ -676,24 +702,27 @@ export async function fetchFinanceMeetings(params: {
       .range(from, to);
 
     if (error) throw error;
-    const formattedData = (data as any[]).map((row) => ({
-      id: String(row.financeMeetingId),
-      financeMeetingId: row.financeMeetingId,
-      financeMeetingSectionsId: null,
-      title: row.title,
-      timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
-      educationType: "",
-      branch: "",
-      date: row.date,
-      description: row.description,
-      participants: 0,
-      year: "",
-      section: "",
-      tags: "",
-      category: role as any,
-      type: type as any,
-      meetingLink: row.meetingLink ?? "",
-    }));
+    const formattedData = (data as any[]).map((row) => {
+      const parsedDescription = parseStaffRoleMetadata(row.description);
+      return {
+        id: String(row.financeMeetingId),
+        financeMeetingId: row.financeMeetingId,
+        financeMeetingSectionsId: null,
+        title: row.title,
+        timeRange: `${row.fromTime.slice(0, 5)} - ${row.toTime.slice(0, 5)}`,
+        educationType: "",
+        branch: "",
+        date: row.date,
+        description: parsedDescription.description,
+        participants: 0,
+        year: "",
+        section: "",
+        tags: "",
+        category: (parsedDescription.staffRole ?? row.role) as any,
+        type: type as any,
+        meetingLink: row.meetingLink ?? "",
+      };
+    });
     return { data: formattedData, totalPages: Math.ceil((count ?? 0) / limit) };
   }
 }
@@ -1137,6 +1166,7 @@ export async function saveFinanceMeeting(
   userId: number,
 ) {
   const now = new Date().toISOString();
+  const cleanDescription = parseStaffRoleMetadata(payload.description).description;
 
   if (payload.id) {
     const { data: oldMeeting } = await supabase
@@ -1170,7 +1200,7 @@ export async function saveFinanceMeeting(
         .from("college_meetings")
         .update({
           title: payload.title.trim(),
-          description: payload.description.trim(),
+          description: cleanDescription,
           date: payload.date,
           fromTime: payload.fromTime,
           toTime: payload.toTime,
@@ -1214,7 +1244,7 @@ export async function saveFinanceMeeting(
       const { error: colError } = await supabase.from("college_meetings").insert({
         collegeId: payload.collegeId,
         title: payload.title.trim(),
-        description: payload.description.trim(),
+        description: cleanDescription,
         date: payload.date,
         fromTime: payload.fromTime,
         toTime: payload.toTime,
@@ -1289,12 +1319,13 @@ async function ensureFinanceCollegeMeeting(financeMeetingId: number) {
   }
 
   const now = new Date().toISOString();
+  const cleanDescription = parseStaffRoleMetadata(meeting.description).description;
   const { data: created, error: createError } = await supabase
     .from("college_meetings")
     .insert({
       collegeId: financeManager.collegeId,
       title: meeting.title,
-      description: meeting.description,
+      description: cleanDescription,
       date: meeting.date,
       fromTime: meeting.fromTime,
       toTime: meeting.toTime,
@@ -1414,7 +1445,12 @@ export async function checkFinanceMeetingConflict(
     if (fromTime < meeting.toTime && toTime > meeting.fromTime) {
       return {
         hasConflict: true,
-        conflictData: { title: meeting.title, role: meeting.role },
+        conflictData: {
+          title: meeting.title,
+          role: meeting.role,
+          fromTime: meeting.fromTime,
+          toTime: meeting.toTime,
+        },
       };
     }
   }

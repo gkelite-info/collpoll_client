@@ -1,15 +1,16 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export const HR_ROLE_PILLS = [
-  { label: "College Admin", value: "collegeAdmin" },
-  { label: "Admin", value: "admin" },
-  { label: "Faculty", value: "faculty" },
-  { label: "Finance Executive", value: "finance" },
-  { label: "HR Manager", value: "collegeHr" },
-  { label: "Placement", value: "placement" },
+  { label: "All Staff", value: "All" },
+  { label: "College Admin", value: "CollegeAdmin" },
+  { label: "Admin", value: "Admin" },
+  { label: "Faculty", value: "Faculty" },
+  { label: "Finance Executive", value: "Finance" },
+  { label: "HR Manager", value: "CollegeHr" },
+  { label: "Placement", value: "Placement" },
 ];
 
-export const DEFAULT_ROLE = "Faculty";
+export const DEFAULT_ROLE = "All";
 
 const EXCLUDED_ROLES = ["Student", "Parent", "SuperAdmin"];
 const MONTH_LABELS = [
@@ -88,14 +89,32 @@ export type PaginatedResult<T> = {
 
 // ── Helper: get userIds for a role in a college (with optional pagination) ────
 async function getUsersForRole(collegeId: number, role: string) {
-  const { data } = await supabase
+  const roleFilter = getDbRolesForDashboardRole(role);
+  let query = supabase
     .from("users")
     .select("userId, fullName")
     .eq("collegeId", collegeId)
-    .eq("role", role)
     .eq("isActive", true)
     .eq("is_deleted", false);
+
+  if (roleFilter.length > 0) {
+    query =
+      roleFilter.length === 1
+        ? query.eq("role", roleFilter[0])
+        : query.in("role", roleFilter);
+  } else {
+    query = query.not("role", "in", `(${EXCLUDED_ROLES.join(",")})`);
+  }
+
+  const { data } = await query;
   return data ?? [];
+}
+
+function getDbRolesForDashboardRole(role: string) {
+  if (role === "All") return [];
+  if (role === "Finance") return ["Finance", "FinanceManager"];
+  if (role === "Placement") return ["Placement", "PlacementOfficer"];
+  return [role];
 }
 
 async function getUsersForRolePaginated(
@@ -110,14 +129,25 @@ async function getUsersForRolePaginated(
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, count } = await supabase
+  const roleFilter = getDbRolesForDashboardRole(role);
+  let query = supabase
     .from("users")
     .select("userId, fullName", { count: "exact" })
     .eq("collegeId", collegeId)
-    .eq("role", role)
     .eq("isActive", true)
     .eq("is_deleted", false)
-    .range(from, to);
+    .order("userId", { ascending: true });
+
+  if (roleFilter.length > 0) {
+    query =
+      roleFilter.length === 1
+        ? query.eq("role", roleFilter[0])
+        : query.in("role", roleFilter);
+  } else {
+    query = query.not("role", "in", `(${EXCLUDED_ROLES.join(",")})`);
+  }
+
+  const { data, count } = await query.range(from, to);
 
   return { users: data ?? [], totalCount: count ?? 0 };
 }

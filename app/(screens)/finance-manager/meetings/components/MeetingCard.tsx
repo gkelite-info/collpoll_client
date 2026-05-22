@@ -17,11 +17,29 @@ const formatToAMPM = (timeStr: string) => {
   return `${String(hour).padStart(2, "0")}:${minuteStr} ${ampm}`;
 };
 
+const sectionMeetingRoles = ["Parent", "Student", "Faculty"];
+
+const formatRoleLabel = (meetingRole?: string | null) => {
+  const labels: Record<string, string> = {
+    Parent: "Parent",
+    Student: "Student",
+    Faculty: "Faculty",
+    Admin: "Admin",
+    CollegeAdmin: "College Admin",
+    Finance: "Finance Executive",
+    CollegeHr: "College HR",
+    WellbeingExecutive: "Wellbeing Executive",
+    WellbeingManager: "Wellbeing Manager",
+    PlacementOfficer: "Placement Officer",
+  };
+
+  return meetingRole ? labels[meetingRole] || meetingRole : "NA";
+};
+
 export default function MeetingCard({
   data,
   onDelete,
   role,
-  category,
   onEdit,
 }: {
   data: Meeting;
@@ -34,6 +52,7 @@ export default function MeetingCard({
   const [fromTime, toTime] = data.timeRange.split(" - ");
   const formattedTimeRange = `${formatToAMPM(fromTime)} - ${formatToAMPM(toTime)}`;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isSectionMeeting = sectionMeetingRoles.includes(data.category);
 
   return (
     <>
@@ -94,10 +113,13 @@ export default function MeetingCard({
               </h2>
             </div>
 
-            {((category && category !== "Admin") ||
-              (role && !["Admin", "Finance"].includes(role))) && (
+            {isSectionMeeting ? (
               <span className="bg-[#22c55e] text-[#ffffff] px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap max-md:hidden">
                 {data.branch} - {data.section}
+              </span>
+            ) : (
+              <span className="bg-[#16284F] text-white px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap max-md:hidden">
+                {formatRoleLabel(data.category)}
               </span>
             )}
           </div>
@@ -216,7 +238,7 @@ export default function MeetingCard({
                     <span className="text-[#303030] font-medium text-sm">
                       {t("Role :")}
                     </span>
-                    <PillTag label={t(data.category) || t("NA")} />
+                    <PillTag label={formatRoleLabel(data.category)} />
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -232,8 +254,7 @@ export default function MeetingCard({
                     <PillTag label={formattedTimeRange} />
                   </div>
                 </div>
-                {((category && category !== "Admin") ||
-                  (role && !["Admin", "Finance"].includes(role))) && (
+                {isSectionMeeting && (
                   <div className="flex gap-y-3 flex-col">
                     <div className="flex items-center justify-between">
                       <span className="text-[#303030] font-medium text-sm">

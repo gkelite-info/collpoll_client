@@ -3,10 +3,24 @@
 interface Props {
   open: boolean;
   onClose: () => void;
-  conflictDetails: { title: string; role: string } | null;
+  conflictDetails: {
+    title: string;
+    role: string;
+    fromTime?: string;
+    toTime?: string;
+  } | null;
   isConfirming?: boolean;
   onConfirm?: () => void;
 }
+
+const formatToAMPM = (time?: string) => {
+  if (!time) return "";
+  const [hourValue, minute = "00"] = time.split(":");
+  let hour = Number(hourValue);
+  const period = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${String(hour).padStart(2, "0")}:${minute} ${period}`;
+};
 
 export default function ConflictErrorModal({
   open,
@@ -35,6 +49,11 @@ export default function ConflictErrorModal({
             <p className="text-xs text-red-800 font-semibold mb-1 uppercase tracking-wider">Conflicting Meeting</p>
             <p className="text-sm text-red-900 mb-0.5"><strong>Title:</strong> {conflictDetails.title}</p>
             <p className="text-sm text-red-900"><strong>Role:</strong> {conflictDetails.role}</p>
+            {conflictDetails.fromTime && conflictDetails.toTime && (
+              <p className="text-sm text-red-900 mt-0.5">
+                <strong>Time:</strong> {formatToAMPM(conflictDetails.fromTime)} - {formatToAMPM(conflictDetails.toTime)}
+              </p>
+            )}
           </div>
         )}
 
