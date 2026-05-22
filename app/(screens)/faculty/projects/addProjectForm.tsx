@@ -469,7 +469,7 @@ const AddProjectForm = ({
         )}
       </div>
 
-      <div className="max-w-5xl mx-auto mb-4 flex justify-start items-center gap-6">
+      <div className="max-w-5xl mx-auto mb-4 flex flex-col md:flex-row justify-start items-start md:items-center gap-4 md:gap-6">
         <div className="flex items-center gap-3">
           <label className="text-sm font-semibold text-[#282828]">Year:</label>
           <select
@@ -544,7 +544,7 @@ const AddProjectForm = ({
       </div>
 
       <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto">
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div className="col-span-1">
             <label className="block text-sm font-semibold mb-2 text-[#282828]">
               Project Title <span className="text-red-500">*</span>
@@ -605,7 +605,7 @@ const AddProjectForm = ({
             </div>
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-semibold mb-2 text-[#282828]">
               Description <span className="text-red-500">*</span>
             </label>
@@ -766,7 +766,7 @@ const AddProjectForm = ({
             />
           </div>
 
-          <div className="col-span-2">
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-semibold mb-2 text-[#282828]">
               Upload Your File
             </label>

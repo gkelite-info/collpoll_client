@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { DotsThreeOutlineVertical, Folder } from "@phosphor-icons/react";
-import { FolderItemProps } from "../page";
 import { useTranslations } from "next-intl";
+import { FolderItemProps } from "../DriveClient";
 
 type Props = FolderItemProps & {
   onRename: () => void;
