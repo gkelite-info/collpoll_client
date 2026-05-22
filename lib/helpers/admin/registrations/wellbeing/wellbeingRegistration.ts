@@ -7,13 +7,16 @@ export type WellbeingRoleType =
   | "wellbeingManager"
   | "WellbeingExecutive"
   | "WellbeingManager";
+
 export type WellbeingRegistrationType =
   | "college"
   | "hostel"
   | "College"
-  | "Hostel"
-  | "both";
-export type WellbeingHostelType = "boyshostel" | "girlshostel";
+  | "Hostel";
+
+export type WellbeingHostelType =
+  | "boyshostel"
+  | "girlshostel";
 
 export type CreateWellbeingCollegeDetail = {
   collegeEducationId: number;
@@ -47,7 +50,23 @@ const toWellbeingRoleType = (roleType: WellbeingRoleType) =>
 
 const toWellbeingRegistrationType = (
   registrationType: WellbeingRegistrationType,
-) => (registrationType === "hostel" || registrationType === "Hostel" ? "hostel" : "college");
+) => (registrationType.toLowerCase().trim() === "hostel" ? "hostel" : "college");
+
+const toEmployeeType = (roleType: WellbeingRoleType) =>
+  roleType === "wellbeingManager" || roleType === "WellbeingManager"
+    ? "WellbeingManager"
+    : "WellbeingExecutive";
+
+const formatSupabaseError = (action: string, error: PostgrestError) =>
+  [
+    `${action} failed`,
+    error?.message,
+    error?.details,
+    error?.hint,
+    error?.code ? `code: ${error.code}` : null,
+  ]
+    .filter(Boolean)
+    .join(" - ");
 
 const createWellbeingBase = async (payload: {
   userId: number;
@@ -58,21 +77,19 @@ const createWellbeingBase = async (payload: {
   createdAt: string;
   updatedAt: string;
 }) => {
-  const row = {
-    userId: payload.userId,
-    collegeId: payload.collegeId,
-    roleType: toWellbeingRoleType(payload.roleType),
-    registrationType: toWellbeingRegistrationType(payload.registrationType),
-    createdBy: payload.createdBy,
-    isActive: true,
-    is_deleted: false,
-    createdAt: payload.createdAt,
-    updatedAt: payload.updatedAt,
-  };
-
   const { data, error } = await supabase
     .from("well_beings")
-    .insert(row)
+    .insert({
+      userId: payload.userId,
+      collegeId: payload.collegeId,
+      roleType: toWellbeingRoleType(payload.roleType),
+      registrationType: toWellbeingRegistrationType(payload.registrationType),
+      createdBy: payload.createdBy,
+      isActive: true,
+      is_deleted: false,
+      createdAt: payload.createdAt,
+      updatedAt: payload.updatedAt,
+    })
     .select("wellBeingId")
     .single();
 
@@ -83,26 +100,15 @@ const createWellbeingBase = async (payload: {
   return data.wellBeingId as number;
 };
 
-const toEmployeeType = (roleType: WellbeingRoleType) =>
-  roleType === "wellbeingManager" || roleType === "WellbeingManager"
-    ? "WellbeingManager"
-    : "WellbeingExecutive";
-
-const formatSupabaseError = (action: string, error: PostgrestError) => {
-  return [
-    `${action} failed`,
-    error?.message,
-    error?.details,
-    error?.hint,
-    error?.code ? `code: ${error.code}` : null,
-  ]
-    .filter(Boolean)
-    .join(" - ");
-};
-
-export const createWellbeing = async (payload: CreateWellbeingPayload) => {
+export const createWellbeing = async (
+  payload: CreateWellbeingPayload,
+) => {
   if (!payload.gender?.trim()) {
     throw new Error("Gender is required for wellbeing registration");
+  }
+
+  if (!payload.collegeDetails?.length && !payload.hostelDetails) {
+    throw new Error("Select at least one wellbeing registration detail");
   }
 
   if (payload.dateOfJoining !== undefined) {
@@ -121,6 +127,7 @@ export const createWellbeing = async (payload: CreateWellbeingPayload) => {
   }
 
   const createdWellBeingIds: number[] = [];
+
   if (payload.collegeDetails?.length) {
     const wellBeingId = await createWellbeingBase({
       userId: payload.userId,
@@ -146,17 +153,19 @@ export const createWellbeing = async (payload: CreateWellbeingPayload) => {
       ).values(),
     );
 
-    const { error } = await supabase.from("wellbeing_college_details").insert(
-      uniqueRows.map((detail) => ({
-        wellBeingId,
-        collegeEducationId: detail.collegeEducationId,
-        collegeBranchId: detail.collegeBranchId,
-        collegeAcademicYearId: detail.collegeAcademicYearId,
-        collegeSectionsId: detail.collegeSectionsId,
-        createdAt: payload.createdAt,
-        updatedAt: payload.updatedAt,
-      })),
-    );
+    const { error } = await supabase
+      .from("wellbeing_college_details")
+      .insert(
+        uniqueRows.map((detail) => ({
+          wellBeingId,
+          collegeEducationId: detail.collegeEducationId,
+          collegeBranchId: detail.collegeBranchId,
+          collegeAcademicYearId: detail.collegeAcademicYearId,
+          collegeSectionsId: detail.collegeSectionsId,
+          createdAt: payload.createdAt,
+          updatedAt: payload.updatedAt,
+        })),
+      );
 
     if (error) {
       throw new Error(formatSupabaseError("createWellbeingCollegeDetails", error));
@@ -164,6 +173,7 @@ export const createWellbeing = async (payload: CreateWellbeingPayload) => {
 
     createdWellBeingIds.push(wellBeingId);
   }
+
   if (payload.hostelDetails) {
     const wellBeingId = await createWellbeingBase({
       userId: payload.userId,
@@ -175,16 +185,18 @@ export const createWellbeing = async (payload: CreateWellbeingPayload) => {
       updatedAt: payload.updatedAt,
     });
 
-    const { error } = await supabase.from("wellbeing_hostel_details").insert({
-      wellBeingId,
-      block: payload.hostelDetails.block.trim(),
-      buildingNumber: payload.hostelDetails.buildingNumber.trim(),
-      hostelType: payload.hostelDetails.hostelType,
-      isActive: true,
-      is_deleted: false,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
-    });
+    const { error } = await supabase
+      .from("wellbeing_hostel_details")
+      .insert({
+        wellBeingId,
+        block: payload.hostelDetails.block.trim(),
+        buildingNumber: payload.hostelDetails.buildingNumber.trim(),
+        hostelType: payload.hostelDetails.hostelType,
+        isActive: true,
+        is_deleted: false,
+        createdAt: payload.createdAt,
+        updatedAt: payload.updatedAt,
+      });
 
     if (error) {
       throw new Error(formatSupabaseError("createWellbeingHostelDetails", error));

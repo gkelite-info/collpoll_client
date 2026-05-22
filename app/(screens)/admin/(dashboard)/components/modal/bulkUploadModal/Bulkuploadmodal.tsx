@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import * as XLSX from "xlsx";
 import {
     X,
     UploadSimple,
@@ -11,820 +10,23 @@ import {
     Warning,
     ArrowLeft,
     DownloadSimple,
-    SpinnerGap,
     UserPlus,
 } from "@phosphor-icons/react";
 import toast, { Toaster } from "react-hot-toast";
 import { supabase } from "@/lib/supabaseClient";
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-import { persistFaculty } from "@/lib/helpers/admin/upsertFaculty";
-import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
-import { upsertParentEntry } from "@/lib/helpers/parent/createParent";
-import {
-    createStudent,
-    createStudentFeeObligation,
-} from "@/lib/helpers/admin/registrations/student/studentRegistration";
-import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
-import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
-import {
-    upsertAdminEntry,
-    upsertCollegeHR,
-    upsertUser,
-} from "@/lib/helpers/upsertUser";
-import { createCollegeHR } from "@/lib/helpers/admin/registrations/collegeHr/hrRegistration";
+import { upsertUser } from "@/lib/helpers/upsertUser";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
-import { upsertPlacementEmployee } from "@/lib/helpers/admin/registrations/placement/placementregistration";
-import { createWellbeing, WellbeingHostelType } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
 import { fetchSessionOptions } from "@/lib/helpers/collegeSessionAPI";
 import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { BulkRow, BulkUploadModalProps, formatDateOnly, ROLE_OPTIONS, RowResult, Step } from "./splits/types";
+import validateRow from "./splits/rowValidations";
+import { parseExcelToRows } from "./splits/parseExcelToRows";
+import downloadTemplate from "./splits/downloadTemplate";
+import dispatchRoleHandler from "./splits/dispatchRoleHandler";
+import { processWithConcurrency } from "./splits/processWithConcurrency";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-type BulkRole =
-    | "Admin"
-    | "Faculty"
-    | "Student"
-    | "Parent"
-    | "Finance"
-    | "FinanceManager"
-    | "CollegeHr"
-    | "PlacementOfficer"
-    | "WellbeingExecutive"
-    | "WellbeingManager";
-
-interface BulkRow {
-    // universal
-    fullName: string;
-    email: string;
-    mobileCode: string;
-    mobileNumber: string;
-    role: BulkRole;
-    gender: "Male" | "Female";
-    password: string;
-    identifierValue?: string;
-    dateOfJoining?: string;
-    professionalExperienceYears?: number;
-    // student / faculty
-    educationType?: string;
-    branchCode?: string;
-    year?: string;
-    semester?: string;
-    section?: string;
-    entryType?: string;
-    batch?: string;
-    sessionLabel?: string;
-    // faculty (subject can be comma-separated for multiple subjects)
-    subject?: string;
-    // parent
-    studentId?: string;
-    // wellbeing
-    wellbeingType?: string; // "Hostel" | "College" | "Hostel,College"
-    hostelBlock?: string;
-    buildingNumber?: string;
-    hostelType?: string;
-    wellbeingEducationType?: string;
-    wellbeingBranch?: string;
-    wellbeingYear?: string;
-    wellbeingSection?: string;
-}
-
-interface RowResult {
-    rowIndex: number;
-    email: string;
-    role: string;
-    status: "success" | "skipped";
-    reason?: string;
-}
-
-type Step = "upload" | "preview" | "processing" | "summary";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const REQUIRED_COLUMNS = ["fullName", "email", "role", "gender", "password"];
-
-const ROLE_OPTIONS: BulkRole[] = [
-    "Admin",
-    "Faculty",
-    "Student",
-    "Parent",
-    "Finance",
-    "FinanceManager",
-    "CollegeHr",
-    "PlacementOfficer",
-    "WellbeingExecutive",
-    "WellbeingManager",
-];
-
-const TEMPLATE_HEADERS = [
-    "fullName",
-    "email",
-    "mobileCode",
-    "mobileNumber",
-    "role",
-    "gender",
-    "password",
-    "identifierValue",
-    "dateOfJoining",
-    "professionalExperienceYears",
-    "educationType",
-    "branchCode",
-    "year",
-    "semester",
-    "section",
-    "subject",
-    "entryType",
-    "batch",
-    "sessionLabel",
-    "studentId",
-    "wellbeingType",
-    "hostelBlock",
-    "buildingNumber",
-    "hostelType",
-    "wellbeingEducationType",
-    "wellbeingBranch",
-    "wellbeingYear",
-    "wellbeingSection",
-];
-
-// ─── Validation ───────────────────────────────────────────────────────────────
-
-const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+){0,2}$/;
-
-function validateRow(row: BulkRow, index: number): string | null {
-    if (!row.fullName?.trim()) return `Row ${index}: fullName is required.`;
-    if (!row.email?.trim()) return `Row ${index}: email is required.`;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email))
-        return `Row ${index}: Invalid email format.`;
-    if (!row.role || !ROLE_OPTIONS.includes(row.role))
-        return `Row ${index}: Invalid role "${row.role}". Must be one of: ${ROLE_OPTIONS.join(", ")}.`;
-    if (!row.gender || !["Male", "Female"].includes(row.gender))
-        return `Row ${index}: gender must be "Male" or "Female".`;
-    if (!row.password?.trim()) return `Row ${index}: password is required.`;
-    if (row.password.length < 8)
-        return `Row ${index}: password must be at least 8 characters.`;
-
-    const isWellbeing =
-        row.role === "WellbeingExecutive" || row.role === "WellbeingManager";
-
-    if (!isWellbeing) {
-        if (!row.mobileNumber?.trim())
-            return `Row ${index}: mobileNumber is required for role "${row.role}".`;
-        if (!/^[0-9]{10}$/.test(row.mobileNumber))
-            return `Row ${index}: mobileNumber must be exactly 10 digits.`;
-    }
-
-    if ((row.role || "").trim() === "Student") {
-        if (!row.branchCode) return `Row ${index}: branchCode required for Student.`;
-        if (!row.year) return `Row ${index}: year required for Student.`;
-        if (!row.section) return `Row ${index}: section required for Student.`;
-        if (!row.entryType) return `Row ${index}: entryType required for Student.`;
-    }
-
-    if (row.role === "Faculty") {
-        if (!row.branchCode) return `Row ${index}: branchCode required for Faculty.`;
-        if (!row.year) return `Row ${index}: year required for Faculty.`;
-        if (!row.subject) return `Row ${index}: subject required for Faculty.`;
-        if (!row.section) return `Row ${index}: section required for Faculty.`;
-    }
-
-    if ((row.role || "").trim() === "Parent") {
-        if (!row.studentId) return `Row ${index}: studentId required for Parent.`;
-    }
-
-    if (
-        row.role !== "Student" &&
-        row.role !== "Parent" &&
-        row.identifierValue
-    ) {
-        if (
-            row.identifierValue.length < 6 ||
-            row.identifierValue.length > 15 ||
-            !IDENTIFIER_REGEX.test(row.identifierValue)
-        ) {
-            return `Row ${index}: identifierValue must be 6–15 chars, include at least one number, letters/numbers/hyphens only.`;
-        }
-    }
-
-    return null;
-}
-
-// ─── Excel Parser ─────────────────────────────────────────────────────────────
-
-// ─── Column Normalization Engine ──────────────────────────────────────────────
-//
-// Maps ANY column name variant (case-insensitive, spaces/underscores/hyphens
-// stripped) to the internal BulkRow key.
-//
-// How to add more aliases: just append to the array for that key.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const COLUMN_ALIAS_MAP: Record<string, string> = (() => {
-    // Each entry: [internalKey, ...aliases]
-    // All values are lowercased + stripped of spaces/underscores/hyphens at match time.
-    const definitions: [string, ...string[]][] = [
-        // ── Universal ──
-        ["fullName", "full name", "fullname", "name", "student name", "faculty name", "employee name", "staff name", "candidate name"],
-        ["email", "email", "email id", "email address", "mail", "mail id", "emailid"],
-        ["mobileCode", "mobile code", "mobilecode", "country code", "countrycode", "isd code", "isdcode", "phone code", "phonecode", "dial code", "dialcode"],
-        ["mobileNumber", "mobile number", "mobilenumber", "mobile", "phone", "phone number", "phonenumber", "contact", "contact number", "contactnumber", "cell", "cell number", "cellnumber", "mob", "mob no", "mobno"],
-        ["role", "role", "user role", "userrole", "designation", "type", "user type", "usertype", "account type", "accounttype"],
-        ["gender", "gender", "sex", "gender identity"],
-        ["password", "password", "pass", "passwd", "pwd", "login password", "loginpassword"],
-        // ── Identity / Employment ──
-        ["identifierValue", "identifier value", "identifiervalue", "identifier", "roll no", "rollno", "roll number", "rollnumber", "employee id", "employeeid", "emp id", "empid", "employee number", "employeenumber", "emp no", "empno", "staff id", "staffid", "id", "reg no", "regno", "registration number", "registrationnumber"],
-        ["dateOfJoining", "date of joining", "dateofjoining", "joining date", "joiningdate", "doj", "start date", "startdate", "date joined", "datejoined"],
-        ["professionalExperienceYears", "professional experience years", "professionalexperienceyears", "experience", "experience years", "experienceyears", "exp", "exp years", "expyears", "years of experience", "yearsofexperience", "work experience", "workexperience"],
-        // ── Student / Faculty Academic ──
-        ["educationType", "education type", "educationtype", "edu type", "edutype", "education", "degree", "degree type", "degreetype", "program type", "programtype", "course type", "coursetype", "level", "level type", "leveltype"],
-        ["branchCode", "branch code", "branchcode", "branch", "department", "dept", "department code", "deptcode", "course", "course code", "coursecode", "program", "programme", "stream", "group", "group type", "grouptype", "group code", "groupcode"],
-        ["year", "year", "academic year", "academicyear", "class", "class year", "classyear", "study year", "studyyear", "year of study", "yeaeofstudy"],
-        ["semester", "semester", "sem", "sem no", "semno", "semester number", "semesternumber", "term"],
-        ["section", "section", "sec", "class section", "classsection", "division", "div", "batch section", "batchsection"],
-        ["subject", "subject", "sub", "subject name", "subjectname", "course name", "coursename", "paper", "paper name", "papername"],
-        ["entryType", "entry type", "entrytype", "admission type", "admissiontype", "joining type", "joiningtype", "category", "intake type", "intaketype"],
-        ["batch", "batch", "batch code", "batchcode", "batch name", "batchname", "set"],
-        ["sessionLabel", "session label", "sessionlabel", "session", "academic session", "academicsession", "session period", "sessionperiod", "academic year session", "year session", "yearsession"],
-        // ── Parent ──
-        ["studentId", "student id", "studentid", "student number", "studentnumber", "ward id", "wardid", "child id", "childid", "ward student id"],
-        // ── Wellbeing ──
-        ["wellbeingType", "wellbeing type", "wellbeingtype", "registration type", "registrationtype", "wb type", "wbtype"],
-        ["hostelBlock", "hostel block", "hostelblock", "block", "block name", "blockname", "hostel block name"],
-        ["buildingNumber", "building number", "buildingnumber", "building no", "buildingno", "building", "building name", "buildingname", "floor", "room block"],
-        ["hostelType", "hostel type", "hosteltype", "hostel category", "hostelcategory", "boys hostel", "girls hostel"],
-        ["wellbeingEducationType", "wellbeing education type", "wellbeingeducationtype", "wb education type", "wb edu type", "wb education", "wb edu"],
-        ["wellbeingBranch", "wellbeing branch", "wellbeingbranch", "wb branch", "wbbranch"],
-        ["wellbeingYear", "wellbeing year", "wellbeingyear", "wb year", "wbyear"],
-        ["wellbeingSection", "wellbeing section", "wellbeingsection", "wb section", "wbsection"],
-    ];
-
-    const map: Record<string, string> = {};
-    for (const [internalKey, ...aliases] of definitions) {
-        for (const alias of aliases) {
-            // Normalize alias: lowercase, strip all spaces / underscores / hyphens
-            const normalized = alias.toLowerCase().replace(/[\s_\-]/g, "");
-            map[normalized] = internalKey;
-        }
-    }
-    return map;
-})();
-
-/**
- * Normalize a raw column header from Excel to its internal BulkRow key.
- * Returns null if no match found.
- */
-function normalizeColumnName(raw: string): string | null {
-    const key = raw.toLowerCase().replace(/[\s_\-]/g, "");
-    return COLUMN_ALIAS_MAP[key] ?? null;
-}
-
-/**
- * Takes a raw JSON row from XLSX (with whatever column names the user used)
- * and returns a new object keyed by internal BulkRow keys.
- * Unknown columns are silently dropped.
- */
-function normalizeRow(raw: Record<string, any>): Record<string, any> {
-    const normalized: Record<string, any> = {};
-    for (const [rawKey, value] of Object.entries(raw)) {
-        const internalKey = normalizeColumnName(rawKey);
-        if (internalKey) normalized[internalKey] = value;
-    }
-    return normalized;
-}
-
-/**
- * Returns a human-readable preview of how columns were mapped.
- * Used in the Preview step so admins can verify the mapping.
- */
-function detectColumnMapping(
-    rawHeaders: string[],
-): { raw: string; mapped: string | null }[] {
-    return rawHeaders.map((h) => ({ raw: h, mapped: normalizeColumnName(h) }));
-}
-
-// ─── Excel Parser (uses normalization engine) ─────────────────────────────────
-
-function parseExcelToRows(file: File): Promise<{ rows: BulkRow[]; columnMapping: { raw: string; mapped: string | null }[] }> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = new Uint8Array(e.target!.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: "array" });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-                // Get raw headers from first row for column mapping preview
-                const rawJson: any[] = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
-                const rawHeaders = rawJson.length ? Object.keys(rawJson[0]) : [];
-                const columnMapping = detectColumnMapping(rawHeaders);
-
-                const rows: BulkRow[] = rawJson.map((rawRow) => {
-                    const r = normalizeRow(rawRow); // ← all keys are now internal names
-
-                    return {
-                        fullName: String(r.fullName || "").trim(),
-                        email: String(r.email || "").trim().toLowerCase(),
-                        mobileCode: (() => {
-                            const raw = String(r.mobileCode || "91").trim();
-                            return raw.startsWith("+") ? raw : `+${raw}`;
-                        })(),
-                        mobileNumber: String(r.mobileNumber || "").trim(),
-                        // role: String(r.role || "").trim() as BulkRole,
-                        role: String(r.role || "")
-                            .replace(/\s+/g, " ")
-                            .trim() as BulkRole,
-                        gender: String(r.gender || "").trim() as "Male" | "Female",
-                        password: String(r.password || "").trim(),
-                        identifierValue: String(r.identifierValue || "").trim().toUpperCase() || undefined,
-                        dateOfJoining: String(r.dateOfJoining || "").trim() || undefined,
-                        professionalExperienceYears: r.professionalExperienceYears ? Number(r.professionalExperienceYears) : undefined,
-                        educationType: String(r.educationType || "").trim() || undefined,
-                        branchCode: String(r.branchCode || "").trim() || undefined,
-                        year: String(r.year || "").trim() || undefined,
-                        semester: String(r.semester || "").trim() || undefined,
-                        section: String(r.section || "").trim() || undefined,
-                        subject: String(r.subject || "").trim() || undefined,
-                        entryType: String(r.entryType || "").trim() || undefined,
-                        batch: String(r.batch || "").trim() || undefined,
-                        sessionLabel: String(r.sessionLabel || "").trim() || undefined,
-                        // studentId: r.studentId ? Number(r.studentId) : undefined,
-                        studentId: r.studentId
-                            ? String(r.studentId).trim()
-                            : undefined,
-                        wellbeingType: String(r.wellbeingType || "").trim() || undefined,
-                        hostelBlock: String(r.hostelBlock || "").trim() || undefined,
-                        buildingNumber: String(r.buildingNumber || "").trim() || undefined,
-                        hostelType: String(r.hostelType || "").trim() || undefined,
-                        wellbeingEducationType: String(r.wellbeingEducationType || "").trim() || undefined,
-                        wellbeingBranch: String(r.wellbeingBranch || "").trim() || undefined,
-                        wellbeingYear: String(r.wellbeingYear || "").trim() || undefined,
-                        wellbeingSection: String(r.wellbeingSection || "").trim() || undefined,
-                    };
-                });
-
-                resolve({ rows, columnMapping });
-            } catch (err) { reject(err); }
-        };
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(file);
-    });
-}
-
-// ─── Template Download ────────────────────────────────────────────────────────
-
-function downloadTemplate() {
-    const sampleRows = [
-        {
-            fullName: "John Doe",
-            email: "john@example.com",
-            mobileCode: "+91",
-            mobileNumber: "9876543210",
-            role: "Student",
-            gender: "Male",
-            password: "Pass@123",
-            identifierValue: "STU001",
-            dateOfJoining: "",
-            professionalExperienceYears: "",
-            educationType: "B.Tech", branchCode: "CSE",
-            year: "1st Year",
-            semester: "1",
-            section: "A",
-            subject: "",
-            entryType: "Regular",
-            batch: "LU",
-            sessionLabel: "2024-25",
-            studentId: "",
-            wellbeingType: "",
-            hostelBlock: "",
-            buildingNumber: "",
-            hostelType: "",
-            wellbeingEducationType: "",
-            wellbeingBranch: "",
-            wellbeingYear: "",
-            wellbeingSection: "",
-        },
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(sampleRows, { header: TEMPLATE_HEADERS });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "BulkUsers");
-    XLSX.writeFile(wb, "bulk_registration_template.xlsx");
-}
-
-// ─── Role Dispatcher ──────────────────────────────────────────────────────────
-
-async function dispatchRoleHandler(
-    row: BulkRow,
-    targetUserId: number,
-    adminContext: any,
-    dbData: any,
-    sessionOptions: any[],
-    timestamp: string,
-) {
-    const isWellbeing =
-        row.role === "WellbeingExecutive" || row.role === "WellbeingManager";
-
-    // ── Finance ──
-    if (row.role === "Finance" || row.role === "FinanceManager") {
-        await createFinanceManager({
-            userId: targetUserId,
-            collegeId: adminContext.collegeId,
-            collegeEducationId: adminContext.collegeEducationId,
-            createdBy: adminContext.adminId,
-            type: row.role === "FinanceManager" ? "manager" : "executive",
-            isActive: true,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-        });
-        return;
-    }
-
-    // ── College HR ──
-    if (row.role === "CollegeHr") {
-        await upsertCollegeHR({
-            userId: targetUserId,
-            collegeId: adminContext.collegeId,
-            createdBy: adminContext.adminId,
-            isActive: true,
-        });
-        return;
-    }
-
-    // ── Placement Officer ──
-    if (row.role === "PlacementOfficer") {
-        await upsertPlacementEmployee({
-            userId: targetUserId,
-            collegeId: adminContext.collegeId,
-            createdBy: adminContext.adminId,
-        });
-        return;
-    }
-
-    // ── Admin ──
-    if (row.role === "Admin") {
-        await upsertAdminEntry({
-            userId: targetUserId,
-            fullName: row.fullName,
-            email: row.email,
-            collegeEducationId: adminContext.collegeEducationId,
-            mobile: `${row.mobileCode}${row.mobileNumber}`,
-            gender: row.gender,
-            collegeId: adminContext.collegePublicId,
-            collegePublicId: adminContext.collegePublicId,
-            collegeCode: adminContext.collegeCode,
-        });
-        return;
-    }
-
-    // ── Parent ──
-    if (row.role === "Parent") {
-
-        const pinNumber = String(row.studentId).trim();
-
-        const { data: studentPinData, error: studentPinError } = await supabase
-            .from("student_pins")
-            .select("studentId")
-            .eq("pinNumber", pinNumber)
-            .eq("collegeId", adminContext.collegeId)
-            .single();
-
-        if (studentPinError || !studentPinData) {
-            throw new Error(
-                `Student not found for pinNumber "${pinNumber}"`
-            );
-        }
-
-        await upsertParentEntry({
-            userId: targetUserId,
-            studentId: studentPinData.studentId,
-            collegeId: adminContext.collegeId,
-            createdBy: adminContext.adminId,
-        });
-        return;
-    }
-
-    // ── Faculty ──
-    if (row.role === "Faculty") {
-        const education = dbData.educations.find(
-            (e: any) => e.collegeEducationType === adminContext.collegeEducationType,
-        );
-        const branch = dbData.branches.find(
-            (b: any) =>
-                b.collegeBranchCode === row.branchCode &&
-                b.collegeEducationId === education?.collegeEducationId,
-        );
-        const year = dbData.years.find(
-            (y: any) =>
-                y.collegeAcademicYear === row.year &&
-                y.collegeBranchId === branch?.collegeBranchId,
-        );
-
-        const subjectCodes = row.subject
-            ? row.subject.split(",").map((s) => s.trim())
-            : [];
-
-        for (const subjectCode of subjectCodes) {
-
-            const subject = dbData.subjects.find(
-                (s: any) =>
-                    s.subjectCode.toLowerCase() === subjectCode.toLowerCase() &&
-                    s.collegeAcademicYearId === year?.collegeAcademicYearId,
-            );
-
-            // const sectionNames = row.section
-            //     ? row.section.split(",").map((s) => s.trim())
-            //     : [];
-
-            // const sectionIds = dbData.sections
-            //     .filter(
-            //         (s: any) =>
-            //             s.collegeAcademicYearId === year?.collegeAcademicYearId &&
-            //             sectionNames.includes(s.collegeSections),
-            //     )
-            //     .map((s: any) => s.collegeSectionsId);
-
-            const sectionNames = row.section
-                ? row.section.split(",").map((s) => s.trim())
-                : [];
-
-            const sectionIds = dbData.sections
-                .filter((s: any) => {
-
-                    // Section must belong to same academic year
-                    if (s.collegeAcademicYearId !== year?.collegeAcademicYearId) {
-                        return false;
-                    }
-
-                    // Match section name
-                    if (!sectionNames.includes(s.collegeSections)) {
-                        return false;
-                    }
-
-                    // Extra safety:
-                    // Verify academic year belongs to same branch
-                    const matchedYear = dbData.years.find(
-                        (y: any) =>
-                            y.collegeAcademicYearId === s.collegeAcademicYearId
-                    );
-
-                    if (
-                        !matchedYear ||
-                        matchedYear.collegeBranchId !== branch?.collegeBranchId
-                    ) {
-                        return false;
-                    }
-
-                    // Extra safety:
-                    // Verify branch belongs to same education
-                    const matchedBranch = dbData.branches.find(
-                        (b: any) =>
-                            b.collegeBranchId === matchedYear.collegeBranchId
-                    );
-
-                    if (
-                        !matchedBranch ||
-                        matchedBranch.collegeEducationId !== education?.collegeEducationId
-                    ) {
-                        return false;
-                    }
-
-                    return true;
-                })
-                .map((s: any) => s.collegeSectionsId);
-
-            if (!education || !branch || !year || !subject) {
-                throw new Error(
-                    `Faculty academic data not found (branch: ${row.branchCode}, year: ${row.year}, subjectCode: ${subjectCode})`,
-                );
-            }
-
-            await persistFaculty(
-                targetUserId,
-                {
-                    collegePublicId: adminContext.collegePublicId,
-                    collegeIntId: adminContext.collegeId,
-                    collegeCode: adminContext.collegeCode,
-                    adminId: adminContext.adminId,
-                    fullName: row.fullName,
-                    email: row.email,
-                    mobileCode: row.mobileCode,
-                    mobileNumber: row.mobileNumber,
-                    gender: row.gender,
-                    role: "Faculty",
-                    identifierValue: row.identifierValue ?? "",
-                },
-                {
-                    educationId: education.collegeEducationId,
-                    branchId: branch.collegeBranchId,
-                    yearId: year.collegeAcademicYearId,
-                    subjectId: subject.collegeSubjectId,
-                    sectionIds,
-                },
-                timestamp,
-                false,
-            );
-        }
-        return;
-    }
-
-    // ── Student ──
-    if (row.role === "Student") {
-        const education = dbData.educations.find(
-            (e: any) => e.collegeEducationId === adminContext.collegeEducationId,
-        );
-        const branch = dbData.branches.find(
-            (b: any) =>
-                b.collegeBranchCode === row.branchCode &&
-                b.collegeEducationId === education?.collegeEducationId,
-        );
-        const year = dbData.years.find(
-            (y: any) =>
-                y.collegeAcademicYear === row.year &&
-                y.collegeBranchId === branch?.collegeBranchId,
-        );
-        const semester = row.semester
-            ? dbData.semesters.find(
-                (s: any) =>
-                    s.collegeSemester.toString() === row.semester &&
-                    s.collegeAcademicYearId === year?.collegeAcademicYearId,
-            )
-            : null;
-        const section = dbData.sections.find(
-            (s: any) =>
-                s.collegeSections === row.section &&
-                s.collegeAcademicYearId === year?.collegeAcademicYearId,
-        );
-        const session = sessionOptions.find((s) => s.label === row.sessionLabel);
-
-        if (!education || !branch || !year || !section) {
-            throw new Error(
-                `Student academic data not found (branch: ${row.branchCode}, year: ${row.year}, section: ${row.section})`,
-            );
-        }
-
-        const studentId = await createStudent(
-            {
-                userId: targetUserId,
-                collegeEducationId: education.collegeEducationId,
-                collegeBranchId: branch.collegeBranchId,
-                collegeId: adminContext.collegeId,
-                collegeSessionId: session?.id ?? null,
-                createdBy: adminContext.adminId,
-                entryType: row.entryType as any,
-                status: "Active",
-                batch: row.batch || null,
-            },
-            timestamp,
-        );
-
-        await createStudentAcademicHistory({
-            studentId,
-            collegeAcademicYearId: year.collegeAcademicYearId,
-            collegeSemesterId: semester?.collegeSemesterId ?? null,
-            collegeSectionsId: section.collegeSectionsId,
-            promotedBy: adminContext.adminId,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            isCurrent: true,
-        });
-
-        if (session?.id) {
-            await createStudentFeeObligation(
-                {
-                    studentId,
-                    collegeSessionId: session.id,
-                    collegeAcademicYearId: year.collegeAcademicYearId,
-                    collegeEducationId: education.collegeEducationId,
-                    collegeBranchId: branch.collegeBranchId,
-                    createdBy: adminContext.adminId,
-                },
-                timestamp,
-            );
-        }
-
-        // Store studentId on row for identifier upsert later
-        (row as any).__studentId = studentId;
-        return;
-    }
-
-    // ── Wellbeing ──
-    if (isWellbeing) {
-        const registrationTypes = (row.wellbeingType || "")
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean);
-
-        const isHostel = registrationTypes.includes("Hostel");
-        const isCollege = registrationTypes.includes("College");
-
-        let collegeDetails: any[] = [];
-
-        if (isCollege && row.wellbeingEducationType && row.wellbeingBranch && row.wellbeingYear && row.wellbeingSection) {
-            const eduTypes = row.wellbeingEducationType.split(",").map((t) => t.trim());
-            const branchCodes = row.wellbeingBranch.split(",").map((t) => t.trim());
-            const years = row.wellbeingYear.split(",").map((t) => t.trim());
-            const sections = row.wellbeingSection.split(",").map((t) => t.trim());
-
-            for (const eduType of eduTypes) {
-                const edu = dbData.educations.find(
-                    (e: any) => e.collegeEducationType === eduType,
-                );
-                if (!edu) continue;
-                for (const branchCode of branchCodes) {
-                    const branch = dbData.branches.find(
-                        (b: any) =>
-                            b.collegeBranchCode === branchCode &&
-                            b.collegeEducationId === edu.collegeEducationId,
-                    );
-                    if (!branch) continue;
-                    for (const year of years) {
-                        const yearRow = dbData.years.find(
-                            (y: any) =>
-                                y.collegeAcademicYear === year &&
-                                y.collegeBranchId === branch.collegeBranchId,
-                        );
-                        if (!yearRow) continue;
-                        for (const sectionName of sections) {
-                            const sectionRow = dbData.sections.find(
-                                (s: any) =>
-                                    s.collegeSections === sectionName &&
-                                    s.collegeAcademicYearId === yearRow.collegeAcademicYearId,
-                            );
-                            if (!sectionRow) continue;
-                            collegeDetails.push({
-                                collegeEducationId: edu.collegeEducationId,
-                                collegeBranchId: branch.collegeBranchId,
-                                collegeAcademicYearId: yearRow.collegeAcademicYearId,
-                                collegeSectionsId: sectionRow.collegeSectionsId,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        await createWellbeing({
-            userId: targetUserId,
-            collegeId: adminContext.collegeId,
-            roleType:
-                row.role === "WellbeingManager"
-                    ? "wellbeingManager"
-                    : "wellbeingExecutive",
-            gender: row.gender,
-            employeeId: row.identifierValue ?? "",
-            dateOfJoining: row.dateOfJoining ?? null,
-            createdBy: adminContext.adminId,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-            collegeDetails,
-            hostelDetails: isHostel
-                ? {
-                    block: row.hostelBlock ?? "",
-                    buildingNumber: row.buildingNumber ?? "",
-                    hostelType: (row.hostelType ?? "") as WellbeingHostelType,
-                }
-                : undefined,
-        });
-    }
-}
-
-// ─── Concurrency Queue ────────────────────────────────────────────────────────
-
-async function processWithConcurrency<T, R>(
-    items: T[],
-    concurrency: number,
-    handler: (item: T, index: number) => Promise<R>,
-    onProgress: (completed: number) => void,
-): Promise<R[]> {
-    const results: R[] = new Array(items.length);
-    let currentIndex = 0;
-    let completed = 0;
-
-    async function worker() {
-        while (currentIndex < items.length) {
-            const i = currentIndex++;
-            results[i] = await handler(items[i], i);
-            completed++;
-            onProgress(completed);
-        }
-    }
-
-    const workers = Array.from(
-        { length: Math.min(concurrency, items.length) },
-        () => worker(),
-    );
-    await Promise.all(workers);
-    return results;
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-interface BulkUploadModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
 
 const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
     isOpen,
@@ -861,7 +63,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         onClose();
     };
 
-    // ── File handling ──
     const handleFileAccepted = async (f: File) => {
         if (
             !f.name.endsWith(".xlsx") &&
@@ -879,7 +80,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                 return;
             }
 
-            // Warn if any columns couldn't be mapped
             const unmapped = mapping.filter((m) => m.mapped === null);
             if (unmapped.length > 0) {
                 toast(`⚠️ ${unmapped.length} column(s) not recognized and ignored: ${unmapped.map((u) => `"${u.raw}"`).join(", ")}`, { duration: 5000 });
@@ -922,7 +122,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         [],
     );
 
-    // ── Processing ──
     const handleStartImport = async () => {
         setStep("processing");
         setProgress(0);
@@ -978,12 +177,9 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         : `+${row.mobileCode?.trim() || "91"}`;
 
                     const normalizedDateOfJoining = row.dateOfJoining
-                        ? new Date(row.dateOfJoining).toISOString().split("T")[0]
+                        ? formatDateOnly(row.dateOfJoining)
                         : null;
 
-                    // ── Step 1: Invite auth user via secure API route
-                    // The API route uses the service role key server-side.
-                    // Supabase Admin createUser does not send email; inviteUserByEmail does.
                     const { data: { session } } = await supabase.auth.getSession();
                     const accessToken = session?.access_token;
                     if (!accessToken) throw new Error("No active session");
@@ -1003,10 +199,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             emailRedirectTo: `https://${adminContext.collegeCode?.toLowerCase()}.tektoncampus.com/`,
                         }),
                     });
-
-                    // const createJson = await createRes.json();
-                    // if (!createRes.ok)
-                    //     throw new Error(createJson.error || "Auth user creation failed");
 
                     let createJson: any = {};
 
@@ -1030,12 +222,15 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
 
                     createdAuthId = createJson.authId;
 
-                    // ── Step 2: Insert into users table
                     const userRes = await upsertUser({
                         auth_id: createdAuthId,
                         fullName: row.fullName,
                         email: row.email,
-                        mobile: `${mobileCode}${row.mobileNumber}`,
+                        // mobile: `${mobileCode}${row.mobileNumber}`,
+                        mobile:
+                            row.mobileNumber?.trim()
+                                ? `${mobileCode}${row.mobileNumber}`
+                                : null,
                         role: row.role,
                         collegeId: adminContext.collegeId,
                         collegePublicId: adminContext.collegePublicId,
@@ -1049,7 +244,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
 
                     createdUserId = userRes.data.userId;
 
-                    // ── Step 3: Role-specific handler
                     await dispatchRoleHandler(
                         row,
                         createdUserId!,
@@ -1059,10 +253,15 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         timestamp,
                     );
 
-                    // ── Step 4: Identifier
+                    const normalizedRole = String(row.role)
+                        .replace(/[\s_\-]/g, "")
+                        .toLowerCase();
+
                     const isWellbeing =
-                        row.role === "WellbeingExecutive" ||
-                        row.role === "WellbeingManager";
+                        normalizedRole === "wellbeingexecutive" ||
+                        normalizedRole === "wellbeingmanager";
+
+                    
                     if (row.identifierValue && !isWellbeing) {
                         await upsertIdentifier({
                             userId: createdUserId,
@@ -1080,7 +279,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         status: "success",
                     });
                 } catch (e: any) {
-                    // Rollback: delete DB row first, then auth user via API route
                     if (createdUserId) {
                         await supabase.from("users").delete().eq("userId", createdUserId);
                     }
@@ -1130,7 +328,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
         results.filter((r) => r.status === "skipped").length +
         preValidationErrors.length;
 
-    // ─────────────────────────────────────────────────────────────────────────────
     return (
         <>
             <Toaster position="top-right" />
@@ -1164,7 +361,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         />
                     </div>
 
-                    {/* Step indicator */}
                     <div className="flex gap-0 px-6 py-3 border-b border-gray-50 shrink-0">
                         {(["upload", "preview", "processing", "summary"] as Step[]).map(
                             (s, i) => {
@@ -1211,12 +407,9 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         )}
                     </div>
 
-                    {/* Body */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                        {/* ── STEP 1: Upload ── */}
                         {step === "upload" && (
                             <div className="flex flex-col gap-5">
-                                {/* Drop zone */}
                                 <div
                                     onDragOver={(e) => {
                                         e.preventDefault();
@@ -1256,7 +449,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     />
                                 </div>
 
-                                {/* Template download */}
                                 <div className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
                                     <div className="flex items-center gap-3">
                                         <FileCsv size={22} className="text-green-500" />
@@ -1278,7 +470,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </button>
                                 </div>
 
-                                {/* Column guide */}
                                 <div className="rounded-lg border border-gray-100 overflow-hidden">
                                     <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
                                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -1327,10 +518,8 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             </div>
                         )}
 
-                        {/* ── STEP 2: Preview ── */}
                         {step === "preview" && (
                             <div className="flex flex-col gap-4">
-                                {/* Summary chips */}
                                 <div className="flex gap-3">
                                     <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-lg px-4 py-2">
                                         <CheckCircle
@@ -1370,7 +559,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Column mapping preview */}
                                 {columnMapping.length > 0 && (
                                     <div className="rounded-lg border border-gray-100 overflow-hidden">
                                         <div className="bg-gray-50 px-4 py-2 border-b border-gray-100 flex items-center justify-between">
@@ -1423,7 +611,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </div>
                                 )}
 
-                                {/* Valid rows table */}
                                 {validRows.length > 0 && (
                                     <div className="rounded-lg border border-gray-100 overflow-hidden">
                                         <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
@@ -1478,7 +665,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </div>
                                 )}
 
-                                {/* Invalid rows */}
                                 {preValidationErrors.length > 0 && (
                                     <div className="rounded-lg border border-red-100 overflow-hidden">
                                         <div className="bg-red-50 px-4 py-2 border-b border-red-100">
@@ -1540,7 +726,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             </div>
                         )}
 
-                        {/* ── STEP 3: Processing ── */}
                         {step === "processing" && (
                             <div className="flex flex-col items-center justify-center gap-6 py-10">
                                 <div className="relative w-20 h-20">
@@ -1579,12 +764,10 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             </div>
                         )}
 
-                        {/* ── STEP 4: Summary ── */}
                         {step === "summary" && (
                             <div className="flex flex-col gap-4">
-                                {/* Big stats */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-green-50 border border-green-100 rounded-xl p-5 flex flex-col items-center gap-1">
+                                    <div className="bg-green-50 border border-green-100 rounded-xl p-5 flex flex-col items-center gap-1 text-center">
                                         <CheckCircle
                                             size={32}
                                             weight="fill"
@@ -1598,7 +781,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                         </p>
                                     </div>
                                     <div
-                                        className={`border rounded-xl p-5 flex flex-col items-center gap-1 ${skippedCount > 0
+                                        className={`border rounded-xl p-5 flex flex-col items-center gap-1 text-center ${skippedCount > 0
                                             ? "bg-red-50 border-red-100"
                                             : "bg-gray-50 border-gray-100"
                                             }`}
@@ -1623,7 +806,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </div>
                                 </div>
 
-                                {/* Per-role breakdown */}
                                 {successCount > 0 && (
                                     <div className="rounded-lg border border-gray-100 overflow-hidden">
                                         <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
@@ -1677,7 +859,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                     </div>
                                 )}
 
-                                {/* Skipped rows */}
                                 {(results.filter((r) => r.status === "skipped").length > 0 ||
                                     preValidationErrors.length > 0) && (
                                         <div className="rounded-lg border border-red-100 overflow-hidden">
@@ -1738,7 +919,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         )}
                     </div>
 
-                    {/* Footer */}
                     <div className="px-6 py-4 border-t border-gray-50 flex gap-3 shrink-0 bg-white">
                         {step === "upload" && (
                             <button

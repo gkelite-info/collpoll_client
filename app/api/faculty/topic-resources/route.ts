@@ -12,19 +12,19 @@ const supabaseAdmin = createServiceClient(
 
 type AuthorizedActor =
   | {
-      role: "Faculty";
-      userId: number;
-      collegeId: number;
-      facultyId: number;
-      adminId: null;
-    }
+    role: "Faculty";
+    userId: number;
+    collegeId: number;
+    facultyId: number;
+    adminId: null;
+  }
   | {
-      role: "Admin";
-      userId: number;
-      collegeId: number;
-      facultyId: null;
-      adminId: number;
-    };
+    role: "Admin";
+    userId: number;
+    collegeId: number;
+    facultyId: null;
+    adminId: number;
+  };
 
 function sanitizeFileName(fileName: string) {
   return fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
@@ -169,18 +169,7 @@ export async function GET(req: Request) {
       );
     }
 
-    console.log("[topic-resources][GET] Request received", {
-      topicId,
-      role: actor.role,
-      userId: actor.userId,
-      facultyId: actor.facultyId,
-      adminId: actor.adminId,
-      collegeId: actor.collegeId,
-    });
-
-    const topic = await getTopicInCollege(topicId, actor.collegeId);
-
-    console.log("[topic-resources][GET] Topic authorized", topic);
+    await getTopicInCollege(topicId, actor.collegeId);
 
     const { data, error } = await supabaseAdmin
       .from("college_subject_unit_topic_resources")
@@ -204,23 +193,11 @@ export async function GET(req: Request) {
       .order("createdAt", { ascending: false });
 
     if (error) {
-      console.log("[topic-resources][GET] DB read failed", {
-        topicId,
-        error: error.message,
-      });
       throw new Error(error.message);
     }
 
-    console.log("[topic-resources][GET] Resources fetched", {
-      topicId,
-      count: data?.length ?? 0,
-    });
-
     return NextResponse.json({ resources: data ?? [] });
   } catch (error: any) {
-    console.log("[topic-resources][GET] Request failed", {
-      error: error?.message ?? error,
-    });
     const status =
       error?.message === "Unauthorized"
         ? 401
@@ -258,53 +235,27 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("[topic-resources][POST] Upload request received", {
-      role: actor.role,
-      userId: actor.userId,
-      facultyId: actor.facultyId,
-      adminId: actor.adminId,
-      collegeId: actor.collegeId,
-      topicId,
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: file.size,
-      replaceExisting,
-    });
-
     const topic = await getTopicInCollege(topicId, actor.collegeId);
 
     const { data: existingResources, error: existingResourcesError } =
       replaceExisting
         ? await supabaseAdmin
-            .from("college_subject_unit_topic_resources")
-            .select(
-              `
+          .from("college_subject_unit_topic_resources")
+          .select(
+            `
               collegeSubjectUnitTopicResourceId,
               resourceUrl
             `,
-            )
-            .eq("collegeSubjectUnitTopicId", topicId)
-            .eq("resourceName", file.name)
-            .eq("resourceType", "PDF")
-            .eq("isActive", true)
+          )
+          .eq("collegeSubjectUnitTopicId", topicId)
+          .eq("resourceName", file.name)
+          .eq("resourceType", "PDF")
+          .eq("isActive", true)
         : { data: [], error: null };
 
     if (existingResourcesError) {
-      console.log("[topic-resources][POST] Existing resource lookup failed", {
-        topicId,
-        fileName: file.name,
-        error: existingResourcesError.message,
-      });
       throw new Error(`Existing resource lookup failed: ${existingResourcesError.message}`);
     }
-
-    console.log("[topic-resources][POST] Topic lookup result", topic);
-    console.log("[topic-resources][POST] Derived storage metadata", {
-      collegeId: actor.collegeId,
-      collegeSubjectId: topic.collegeSubjectId,
-      unitNumber: topic.college_subject_units.unitNumber,
-      topicId,
-    });
 
     const storagePath = buildStoragePath({
       collegeId: actor.collegeId,
@@ -312,10 +263,6 @@ export async function POST(req: Request) {
       unitNumber: topic.college_subject_units.unitNumber,
       topicId,
       fileName: file.name,
-    });
-
-    console.log("[topic-resources][POST] Storage path prepared", {
-      storagePath,
     });
 
     const arrayBuffer = await file.arrayBuffer();
@@ -327,24 +274,12 @@ export async function POST(req: Request) {
       });
 
     if (uploadError) {
-      console.log("[topic-resources][POST] Storage upload failed", {
-        storagePath,
-        error: uploadError.message,
-      });
       throw new Error(`Storage upload failed: ${uploadError.message}`);
     }
-
-    console.log("[topic-resources][POST] Storage upload succeeded", {
-      storagePath,
-    });
 
     const { data: publicUrlData } = supabaseAdmin.storage
       .from(TOPIC_RESOURCES_BUCKET)
       .getPublicUrl(storagePath);
-
-    console.log("[topic-resources][POST] Public URL generated", {
-      publicUrl: publicUrlData.publicUrl,
-    });
 
     const now = new Date().toISOString();
     const insertPayload = {
@@ -359,13 +294,6 @@ export async function POST(req: Request) {
       createdAt: now,
       updatedAt: now,
     };
-
-    console.log("[topic-resources][POST] Insert payload prepared", {
-      role: actor.role,
-      createdBy: insertPayload.createdBy,
-      isAdmin: insertPayload.isAdmin,
-      note: "Uses actor-based null handling: faculty => createdBy only, admin => isAdmin only.",
-    });
 
     const { data, error } = await supabaseAdmin
       .from("college_subject_unit_topic_resources")
@@ -388,10 +316,6 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      console.log("[topic-resources][POST] DB insert failed", {
-        storagePath,
-        error: error.message,
-      });
       await supabaseAdmin.storage.from(TOPIC_RESOURCES_BUCKET).remove([storagePath]);
       throw new Error(`DB insert failed: ${error.message}`);
     }
@@ -416,39 +340,16 @@ export async function POST(req: Request) {
         })
         .in("collegeSubjectUnitTopicResourceId", oldResourceIds);
 
-      if (deactivateError) {
-        console.log("[topic-resources][POST] Existing resource deactivate failed", {
-          topicId,
-          fileName: file.name,
-          error: deactivateError.message,
-        });
-      }
-
       if (oldStoragePaths.length) {
         const { error: removeOldError } = await supabaseAdmin.storage
           .from(TOPIC_RESOURCES_BUCKET)
           .remove(oldStoragePaths);
 
-        if (removeOldError) {
-          console.log("[topic-resources][POST] Existing storage cleanup failed", {
-            topicId,
-            fileName: file.name,
-            error: removeOldError.message,
-          });
-        }
       }
     }
 
-    console.log("[topic-resources][POST] DB insert succeeded", {
-      resourceId: data.collegeSubjectUnitTopicResourceId,
-      storagePath,
-    });
-
     return NextResponse.json({ resource: data });
   } catch (error: any) {
-    console.log("[topic-resources][POST] Request failed", {
-      error: error?.message ?? error,
-    });
     const status =
       error?.message === "Unauthorized"
         ? 401
@@ -476,15 +377,6 @@ export async function DELETE(req: Request) {
       );
     }
 
-    console.log("[topic-resources][DELETE] Request received", {
-      role: actor.role,
-      userId: actor.userId,
-      facultyId: actor.facultyId,
-      adminId: actor.adminId,
-      collegeId: actor.collegeId,
-      resourceId,
-    });
-
     const { data: resource, error: resourceError } = await supabaseAdmin
       .from("college_subject_unit_topic_resources")
       .select(
@@ -500,37 +392,18 @@ export async function DELETE(req: Request) {
       .maybeSingle();
 
     if (resourceError || !resource) {
-      console.log("[topic-resources][DELETE] Resource lookup failed", {
-        resourceId,
-        error: resourceError?.message,
-      });
       throw new Error("Resource not found");
     }
 
     const storagePath = getStoragePathFromUrl(resource.resourceUrl);
-
-    console.log("[topic-resources][DELETE] Storage path resolved", {
-      resourceId,
-      storagePath,
-    });
 
     const { error: storageError } = await supabaseAdmin.storage
       .from(TOPIC_RESOURCES_BUCKET)
       .remove([storagePath]);
 
     if (storageError) {
-      console.log("[topic-resources][DELETE] Storage delete failed", {
-        resourceId,
-        storagePath,
-        error: storageError.message,
-      });
       throw new Error(`Storage delete failed: ${storageError.message}`);
     }
-
-    console.log("[topic-resources][DELETE] Storage delete succeeded", {
-      resourceId,
-      storagePath,
-    });
 
     const { error: dbError } = await supabaseAdmin
       .from("college_subject_unit_topic_resources")
@@ -539,22 +412,11 @@ export async function DELETE(req: Request) {
       .eq("collegeId", actor.collegeId);
 
     if (dbError) {
-      console.log("[topic-resources][DELETE] DB delete failed", {
-        resourceId,
-        error: dbError.message,
-      });
       throw new Error(`DB delete failed: ${dbError.message}`);
     }
 
-    console.log("[topic-resources][DELETE] DB delete succeeded", {
-      resourceId,
-    });
-
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.log("[topic-resources][DELETE] Request failed", {
-      error: error?.message ?? error,
-    });
     const status =
       error?.message === "Unauthorized"
         ? 401

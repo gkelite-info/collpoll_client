@@ -128,7 +128,6 @@ function YearWiseFeeCollectionContent() {
     loading: fmLoading,
   } = useFinanceManager();
 
-  // 🟢 CLEAN DEBOUNCER: Only updates state after typing completely stops for 400ms
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search);
@@ -140,7 +139,6 @@ function YearWiseFeeCollectionContent() {
     return () => clearTimeout(handler);
   }, [search, debouncedSearch]);
 
-  // 🟢 API FETCH CALL
   useEffect(() => {
     async function fetchYearData() {
       if (fmLoading || !collegeId || !collegeEducationId || !branchCode) return;

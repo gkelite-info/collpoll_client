@@ -1,4 +1,5 @@
-export default async function processWithConcurrency<T, R>(
+
+export async function processWithConcurrency<T, R>(
     items: T[],
     concurrency: number,
     handler: (item: T, index: number) => Promise<R>,

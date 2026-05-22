@@ -4,7 +4,7 @@ export const upsertUser = async (payload: {
   auth_id?: string | null;
   fullName: string;
   email: string;
-  mobile: string;
+  mobile: string | null;
   linkedIn?: string;
   collegeId?: number | null;
   currentCity?: string;

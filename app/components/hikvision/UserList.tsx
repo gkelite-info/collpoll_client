@@ -40,7 +40,6 @@ export default function UserList() {
                 });
 
                 const result: ApiResponse = await res.json();
-                console.log("Data from local API:", result);
 
                 if (!res.ok) {
                     throw new Error(result.errorMsg || result.statusString || "Failed to fetch");
@@ -63,10 +62,6 @@ export default function UserList() {
     const users = data?.UserInfoSearch?.UserInfo ?? [];
     const total = data?.UserInfoSearch?.totalMatches ?? 0;
 
-    console.log("What is users ramu", users);
-    console.log("What is total ramu", total);
-    
-    
     return (
         <div style={{ padding: "20px" }}>
             <h2 className="text-black">Hikvision Users ({total} total)</h2>

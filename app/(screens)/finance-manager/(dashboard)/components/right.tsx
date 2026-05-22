@@ -14,13 +14,11 @@ export default function FinanceManagerDashRight() {
       </div>
 
       <WorkWeekCalendar style="mt-3 max-w-full" />
-      <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto">
         <AnnouncementsCard
           announceCard={financeAnnouncements}
           height="80vh"
           currentView="others"
         />
-      </div>
     </aside>
   );
 }

@@ -28,8 +28,6 @@ export default function AddAcademicSetup({
 }) {
   const { userId, loading: userLoading, adminId, collegeId } = useUser();
 
-  console.log("edit data check child", editData)
-
   const [form, setForm] = useState<AcademicData>({
     degree: "",
     branch: "",

@@ -163,9 +163,6 @@ export async function createPlacementCompany(payload: CreatePlacementCompanyPayl
         companyCertificate: certificateUrl,
     }));
 
-    console.log("🗄️ Insert payload to Supabase:", JSON.stringify(insertPayload, null, 2));
-
-    // 3. Insert into placement_companies
     const { data, error } = await supabase
         .from("placement_companies")
         .insert(insertPayload)

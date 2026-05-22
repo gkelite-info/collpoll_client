@@ -55,17 +55,17 @@ function getErrorMessage(error: unknown) {
 
 export type GeneratedTopicNotesResult =
   | {
-      success: true;
-      collegeSubjectUnitTopicId: number;
-      topicTitle: string;
-      notes: TopicNotes;
-    }
+    success: true;
+    collegeSubjectUnitTopicId: number;
+    topicTitle: string;
+    notes: TopicNotes;
+  }
   | {
-      success: false;
-      collegeSubjectUnitTopicId: number;
-      topicTitle: string;
-      error: string;
-    };
+    success: false;
+    collegeSubjectUnitTopicId: number;
+    topicTitle: string;
+    error: string;
+  };
 
 export async function generateTopicNotesBatchAction(
   params: BatchParams,
@@ -74,12 +74,6 @@ export async function generateTopicNotesBatchAction(
 
   for (const topic of params.topics) {
     try {
-      console.log("[generateTopicNotesBatchAction] Generating notes", {
-        topicId: topic.collegeSubjectUnitTopicId,
-        topicTitle: topic.topicTitle,
-        subjectName: params.subjectName,
-        unitName: params.unitName,
-      });
 
       const notes = await generateTopicNotes({
         topicTitle: topic.topicTitle,

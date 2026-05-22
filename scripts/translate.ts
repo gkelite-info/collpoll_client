@@ -61,8 +61,6 @@ function chunkObject(obj: Record<string, string>, size: number) {
 }
 
 async function run() {
-  console.log("🔍 Reading English source file...");
-
   const enData = JSON.parse(fs.readFileSync(EN_PATH, "utf-8"));
   const flatEn = flattenObj(enData);
 
@@ -88,13 +86,8 @@ async function run() {
     const missingCount = Object.keys(missingKeys).length;
 
     if (missingCount === 0) {
-      console.log(`✅ ${target.name} is already up to date.`);
       continue;
     }
-
-    console.log(
-      `🚀 Found ${missingCount} missing keys for ${target.name}. Translating...`,
-    );
 
     const chunks = chunkObject(missingKeys, CHUNK_SIZE);
 
@@ -102,8 +95,6 @@ async function run() {
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
-
-      console.log(`🔹 Chunk ${i + 1}/${chunks.length}`);
 
       try {
         const { text } = await generateText({
@@ -158,7 +149,6 @@ ${JSON.stringify(chunk, null, 2)}
 
     fs.writeFileSync(targetPath, JSON.stringify(finalJson, null, 2));
 
-    console.log(`🎉 ${target.name} updated successfully`);
   }
 }
 

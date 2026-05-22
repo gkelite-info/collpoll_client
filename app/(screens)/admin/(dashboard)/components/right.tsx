@@ -1,6 +1,5 @@
 "use client";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
-import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Plus } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -129,7 +128,7 @@ export default function AdminDashRight() {
               </span>
               <NavyActionButton
                 onClick={() => setIsBulkUploadModalOpen(true)}
-                label="Bulk Import"
+                label="Bulk Insert"
               />
             </>
           )}

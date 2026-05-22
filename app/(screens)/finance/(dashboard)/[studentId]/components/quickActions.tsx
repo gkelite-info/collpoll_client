@@ -4,7 +4,7 @@ import { EnvelopeSimple, DownloadSimple, Plus } from "@phosphor-icons/react";
 
 interface QuickActionsProps {
   onSendEmail?: () => void;
-  onDownloadStatement?: () => void; // 🟢 NEW PROP
+  onDownloadStatement?: () => void;
 }
 
 const QuickActions: React.FC<QuickActionsProps> = ({
@@ -23,13 +23,12 @@ const QuickActions: React.FC<QuickActionsProps> = ({
       label: "Download Statement",
       icon: DownloadSimple,
       onClick: () => {
-        if (onDownloadStatement) onDownloadStatement(); // 🟢 TRIGGER ATTACHED
+        if (onDownloadStatement) onDownloadStatement();
       },
     },
     {
       label: "Add Note",
       icon: Plus,
-      onClick: () => console.log("Note clicked"),
     },
   ];
 

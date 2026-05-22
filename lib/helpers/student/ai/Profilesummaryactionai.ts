@@ -228,7 +228,6 @@ Return ONLY this exact JSON:
 }`;
 
     const raw = await callGroq(systemPrompt, userPrompt, 1000);
-    console.log("suggestSkillsFromJDWithDemand raw:", raw);
 
     const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
