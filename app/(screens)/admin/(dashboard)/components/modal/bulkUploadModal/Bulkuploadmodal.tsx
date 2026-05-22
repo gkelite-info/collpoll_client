@@ -153,6 +153,191 @@ const TEMPLATE_HEADERS = [
 
 const IDENTIFIER_REGEX = /^(?=.*\d)[A-Za-z0-9]+(?:-[A-Za-z0-9]+){0,2}$/;
 
+
+const ROLE_ALIAS_MAP: Record<string, BulkRole> = {
+
+    // ── Admin ──
+    admin: "Admin",
+    administrator: "Admin",
+    superadmin: "Admin",
+    superadministrator: "Admin",
+
+    // ── Faculty ──
+    faculty: "Faculty",
+    teacher: "Faculty",
+    lecturer: "Faculty",
+    professor: "Faculty",
+    staff: "Faculty",
+    teachingstaff: "Faculty",
+
+    // ── Student ──
+    student: "Student",
+    students: "Student",
+    learner: "Student",
+
+    // ── Parent ──
+    parent: "Parent",
+    parents: "Parent",
+    guardian: "Parent",
+    father: "Parent",
+    mother: "Parent",
+
+    // ── College HR ──
+    hr: "CollegeHr",
+    collegehr: "CollegeHr",
+    college_hr: "CollegeHr",
+    College_hr: "CollegeHr",
+    college_Hr: "CollegeHr",
+    College_Hr: "CollegeHr",
+    humanresource: "CollegeHr",
+    humanresources: "CollegeHr",
+    humanresourcemanager: "CollegeHr",
+
+    // ── Finance ──
+    finance: "Finance",
+    financeexecutive: "Finance",
+    accounts: "Finance",
+    accountant: "Finance",
+    financeemployee: "Finance",
+    financeofficer: "Finance",
+
+    // ── Finance Manager ──
+    financemanager: "FinanceManager",
+    accountsmanager: "FinanceManager",
+    headoffinance: "FinanceManager",
+    financehead: "FinanceManager",
+
+    // ── Placement Officer ──
+    placement: "PlacementOfficer",
+    placementofficer: "PlacementOfficer",
+    placementcoordinator: "PlacementOfficer",
+    placementstaff: "PlacementOfficer",
+    trainingandplacement: "PlacementOfficer",
+    tpo: "PlacementOfficer",
+
+    // ── Wellbeing Executive ──
+    wellbeingexecutive: "WellbeingExecutive",
+    wellbeingstaff: "WellbeingExecutive",
+    hostelwarden: "WellbeingExecutive",
+    warden: "WellbeingExecutive",
+    wellbeingofficer: "WellbeingExecutive",
+
+    // ── Wellbeing Manager ──
+    wellbeingmanager: "WellbeingManager",
+    chiefwarden: "WellbeingManager",
+    hostelmanager: "WellbeingManager",
+    wellbeinghead: "WellbeingManager",
+};
+
+function normalizeRole(role: string): {
+    role: BulkRole;
+    financeType?: "executive" | "manager";
+} | null {
+
+    const normalized = role
+        .toLowerCase()
+        .replace(/[\s_\-]/g, "");
+
+    // ── Finance Manager ──
+    if (
+        [
+            "financemanager",
+            "accountsmanager",
+            "financehead",
+            "headoffinance",
+        ].includes(normalized)
+    ) {
+        return {
+            role: "FinanceManager",
+        };
+    }
+
+    // ── Finance Executive ──
+    if (
+        [
+            "finance",
+            "financeexecutive",
+            "accountant",
+            "accounts",
+            "financeofficer",
+        ].includes(normalized)
+    ) {
+        return {
+            role: "Finance",
+        };
+    }
+
+    // ── Other Roles ──
+    const ROLE_ALIAS_MAP: Record<string, BulkRole> = {
+        admin: "Admin",
+        administrator: "Admin",
+
+        faculty: "Faculty",
+        teacher: "Faculty",
+        lecturer: "Faculty",
+        professor: "Faculty",
+
+        student: "Student",
+
+        parent: "Parent",
+        guardian: "Parent",
+
+        hr: "CollegeHr",
+        collegehr: "CollegeHr",
+        humanresource: "CollegeHr",
+
+        placement: "PlacementOfficer",
+        placementofficer: "PlacementOfficer",
+        tpo: "PlacementOfficer",
+
+        wellbeingexecutive: "WellbeingExecutive",
+        wellbeingmanager: "WellbeingManager",
+    };
+
+    const mappedRole = ROLE_ALIAS_MAP[normalized];
+
+    if (!mappedRole) return null;
+
+    return {
+        role: mappedRole,
+    };
+}
+
+function normalizeGender(
+    gender: string
+): "Male" | "Female" | null {
+
+    const normalized = gender
+        .toLowerCase()
+        .trim();
+
+    if (
+        [
+            "male",
+            "m",
+            "boy",
+            "man",
+        ].includes(normalized)
+    ) {
+        return "Male";
+    }
+
+    if (
+        [
+            "female",
+            "f",
+            "girl",
+            "woman",
+        ].includes(normalized)
+    ) {
+        return "Female";
+    }
+
+    return null;
+}
+
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#()_\-+=])[A-Za-z\d@$!%*?&^#()_\-+=]{8,}$/;
+
 function validateRow(row: BulkRow, index: number): string | null {
     if (!row.fullName?.trim()) return `Row ${index}: fullName is required.`;
     if (!row.email?.trim()) return `Row ${index}: email is required.`;
@@ -163,11 +348,24 @@ function validateRow(row: BulkRow, index: number): string | null {
     if (!row.gender || !["Male", "Female"].includes(row.gender))
         return `Row ${index}: gender must be "Male" or "Female".`;
     if (!row.password?.trim()) return `Row ${index}: password is required.`;
-    if (row.password.length < 8)
-        return `Row ${index}: password must be at least 8 characters.`;
+    if (!PASSWORD_REGEX.test(row.password)) {
+        return `Row ${index}: password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one number, and one special character.`;
+    }
+
+    const normalizedRole = String(row.role)
+        .replace(/[\s_\-]/g, "")
+        .toLowerCase();
+
+    console.log("ROLE DEBUG", {
+        originalRole: row.role,
+        normalizedRole,
+    });
 
     const isWellbeing =
-        row.role === "WellbeingExecutive" || row.role === "WellbeingManager";
+        normalizedRole === "wellbeingexecutive" ||
+        normalizedRole === "wellbeingmanager";
+
+    console.log("IS WELLBEING:", isWellbeing);
 
     if (!isWellbeing) {
         if (!row.mobileNumber?.trim())
@@ -209,6 +407,16 @@ function validateRow(row: BulkRow, index: number): string | null {
     }
 
     return null;
+}
+
+function formatDateOnly(dateValue: string) {
+    const date = new Date(dateValue);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
 }
 
 // ─── Excel Parser ─────────────────────────────────────────────────────────────
@@ -323,6 +531,16 @@ function parseExcelToRows(file: File): Promise<{ rows: BulkRow[]; columnMapping:
                 const rows: BulkRow[] = rawJson.map((rawRow) => {
                     const r = normalizeRow(rawRow); // ← all keys are now internal names
 
+                    const normalizedRoleData = normalizeRole(
+                        String(r.role || "").trim()
+                    );
+
+                    if (!normalizedRoleData) {
+                        throw new Error(
+                            `Invalid role "${r.role}"`
+                        );
+                    }
+
                     return {
                         fullName: String(r.fullName || "").trim(),
                         email: String(r.email || "").trim().toLowerCase(),
@@ -332,10 +550,12 @@ function parseExcelToRows(file: File): Promise<{ rows: BulkRow[]; columnMapping:
                         })(),
                         mobileNumber: String(r.mobileNumber || "").trim(),
                         // role: String(r.role || "").trim() as BulkRole,
-                        role: String(r.role || "")
-                            .replace(/\s+/g, " ")
-                            .trim() as BulkRole,
-                        gender: String(r.gender || "").trim() as "Male" | "Female",
+                        // role: normalizedRoleData?.role as BulkRole,
+                        role: normalizedRoleData.role,
+                        // gender: String(r.gender || "").trim() as "Male" | "Female",
+                        gender: normalizeGender(
+                            String(r.gender || "").trim()
+                        ) as "Male" | "Female",
                         password: String(r.password || "").trim(),
                         identifierValue: String(r.identifierValue || "").trim().toUpperCase() || undefined,
                         dateOfJoining: String(r.dateOfJoining || "").trim() || undefined,
@@ -415,6 +635,42 @@ function downloadTemplate() {
 
 // ─── Role Dispatcher ──────────────────────────────────────────────────────────
 
+function normalizeHostelType(
+    hostelType: string
+): WellbeingHostelType | null {
+
+    const normalized = hostelType
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .trim();
+
+    if (
+        [
+            "boys",
+            "boyshostel",
+            "boys_hostel",
+            "male",
+            "menshostel",
+        ].includes(normalized)
+    ) {
+        return "boyshostel";
+    }
+
+    if (
+        [
+            "girls",
+            "girlshostel",
+            "girls_hostel",
+            "female",
+            "womenshostel",
+        ].includes(normalized)
+    ) {
+        return "girlshostel";
+    }
+
+    return null;
+}
+
 async function dispatchRoleHandler(
     row: BulkRow,
     targetUserId: number,
@@ -423,8 +679,26 @@ async function dispatchRoleHandler(
     sessionOptions: any[],
     timestamp: string,
 ) {
-    const isWellbeing =
-        row.role === "WellbeingExecutive" || row.role === "WellbeingManager";
+    const normalizedRole = row.role?.toLowerCase().replace(/[\s_\-]/g, "");
+    const isWellbeing = normalizedRole === "wellbeingexecutive" || normalizedRole === "wellbeingmanager";
+
+    function normalizeHostelType(hostelType: string): WellbeingHostelType | null {
+        const normalized = hostelType.toLowerCase().replace(/\s+/g, "").trim();
+        if (["boys", "boyshostel", "boys_hostel", "male", "menshostel"].includes(normalized))
+            return "boyshostel";
+        if (["girls", "girlshostel", "girls_hostel", "female", "womenshostel"].includes(normalized))
+            return "girlshostel";
+        return null;
+    }
+
+
+    console.log(
+        "DISPATCH ROLE HANDLER START",
+        {
+            role: row.role,
+            fullRow: row,
+        }
+    );
 
     // ── Finance ──
     if (row.role === "Finance" || row.role === "FinanceManager") {
@@ -433,7 +707,9 @@ async function dispatchRoleHandler(
             collegeId: adminContext.collegeId,
             collegeEducationId: adminContext.collegeEducationId,
             createdBy: adminContext.adminId,
-            type: row.role === "FinanceManager" ? "manager" : "executive",
+            type: row.role === "FinanceManager"
+                ? "manager"
+                : "executive",
             isActive: true,
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -709,15 +985,20 @@ async function dispatchRoleHandler(
         return;
     }
 
+    console.log("BEFORE WELLBEING BLOCK");
     // ── Wellbeing ──
     if (isWellbeing) {
+        console.log("INSIDE WELLBEING BLOCK", { wellbeingType: row.wellbeingType });
+
         const registrationTypes = (row.wellbeingType || "")
             .split(",")
-            .map((t) => t.trim())
+            .map((t) => t.trim().toLowerCase())
             .filter(Boolean);
 
-        const isHostel = registrationTypes.includes("Hostel");
-        const isCollege = registrationTypes.includes("College");
+        const isHostel = registrationTypes.includes("hostel");
+        const isCollege = registrationTypes.includes("college");
+
+        console.log("WELLBEING REG TYPES", { registrationTypes, isHostel, isCollege });
 
         let collegeDetails: any[] = [];
 
@@ -747,48 +1028,125 @@ async function dispatchRoleHandler(
                         );
                         if (!yearRow) continue;
                         for (const sectionName of sections) {
-                            const sectionRow = dbData.sections.find(
-                                (s: any) =>
-                                    s.collegeSections === sectionName &&
-                                    s.collegeAcademicYearId === yearRow.collegeAcademicYearId,
-                            );
+                            // const sectionRow = dbData.sections.find(
+                            //     (s: any) =>
+                            //         s.collegeSections === sectionName &&
+                            //         s.collegeAcademicYearId === yearRow.collegeAcademicYearId,
+                            // );
+
+                            const sectionRow = dbData.sections.find((s: any) => {
+
+                                if (
+                                    s.collegeSections !== sectionName ||
+                                    s.collegeAcademicYearId !== yearRow.collegeAcademicYearId
+                                ) {
+                                    return false;
+                                }
+
+                                const matchedYear = dbData.years.find(
+                                    (y: any) =>
+                                        y.collegeAcademicYearId === s.collegeAcademicYearId
+                                );
+
+                                if (
+                                    !matchedYear ||
+                                    matchedYear.collegeBranchId !== branch.collegeBranchId
+                                ) {
+                                    return false;
+                                }
+
+                                return true;
+                            });
+
                             if (!sectionRow) continue;
+                            console.log("ADDING COLLEGE DETAIL", {
+                                eduType,
+                                branchCode,
+                                year,
+                                sectionName,
+                                sectionRow,
+                            });
                             collegeDetails.push({
                                 collegeEducationId: edu.collegeEducationId,
                                 collegeBranchId: branch.collegeBranchId,
                                 collegeAcademicYearId: yearRow.collegeAcademicYearId,
                                 collegeSectionsId: sectionRow.collegeSectionsId,
                             });
+                            console.log(
+                                "FINAL COLLEGE DETAILS",
+                                collegeDetails
+                            );
                         }
                     }
                 }
             }
         }
 
-        await createWellbeing({
-            userId: targetUserId,
-            collegeId: adminContext.collegeId,
-            roleType:
-                row.role === "WellbeingManager"
-                    ? "wellbeingManager"
-                    : "wellbeingExecutive",
-            gender: row.gender,
-            employeeId: row.identifierValue ?? "",
-            dateOfJoining: row.dateOfJoining ?? null,
-            createdBy: adminContext.adminId,
-            createdAt: timestamp,
-            updatedAt: timestamp,
+        const normalizedHostelType = isHostel ? normalizeHostelType(row.hostelType ?? "") : null;
+
+        console.log("WELLBEING DEBUG", {
+            registrationTypes,
+            isHostel,
+            isCollege,
             collegeDetails,
             hostelDetails: isHostel
                 ? {
                     block: row.hostelBlock ?? "",
                     buildingNumber: row.buildingNumber ?? "",
-                    hostelType: (row.hostelType ?? "") as WellbeingHostelType,
+                    hostelType: normalizeHostelType(
+                        row.hostelType ?? ""
+                    ),
                 }
                 : undefined,
         });
+
+
+        if (isHostel && !normalizedHostelType) {
+            throw new Error(`Invalid hostelType "${row.hostelType}". Use: boys/girls/boyshostel/girlshostel`);
+        }
+
+        if (isCollege && collegeDetails.length === 0) {
+            throw new Error(
+                `No matching college details found for wellbeing registration. ` +
+                `Check wellbeingEducationType="${row.wellbeingEducationType}", ` +
+                `wellbeingBranch="${row.wellbeingBranch}", wellbeingYear="${row.wellbeingYear}", ` +
+                `wellbeingSection="${row.wellbeingSection}"`
+            );
+        }
+
+        try {
+            await createWellbeing({
+                userId: targetUserId,
+                collegeId: adminContext.collegeId,
+                roleType: row.role === "WellbeingManager" ? "wellbeingManager" : "wellbeingExecutive",
+                gender: row.gender,
+                employeeId: row.identifierValue ?? "",
+                dateOfJoining: row.dateOfJoining ?? null,
+                createdBy: adminContext.adminId,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+                collegeDetails,
+                hostelDetails: isHostel
+                    ? { block: row.hostelBlock ?? "", buildingNumber: row.buildingNumber ?? "", hostelType: normalizedHostelType as WellbeingHostelType }
+                    : undefined,
+            });
+            console.log("WELLBEING CREATED SUCCESSFULLY", { userId: targetUserId });
+        } catch (wellbeingError: any) {
+            console.error("CREATE WELLBEING FAILED", { error: wellbeingError?.message, stack: wellbeingError?.stack });
+            throw wellbeingError; // re-throw so the outer catch can rollback
+        }
+        return;
     }
+
+    console.error("NO ROLE HANDLER MATCHED", row.role, normalizedRole);
+    throw new Error(`No handler for role "${row.role}"`);
+
+    console.error(
+        "NO ROLE HANDLER MATCHED",
+        row.role
+    );
 }
+
 
 // ─── Concurrency Queue ────────────────────────────────────────────────────────
 
@@ -978,7 +1336,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         : `+${row.mobileCode?.trim() || "91"}`;
 
                     const normalizedDateOfJoining = row.dateOfJoining
-                        ? new Date(row.dateOfJoining).toISOString().split("T")[0]
+                        ? formatDateOnly(row.dateOfJoining)
                         : null;
 
                     // ── Step 1: Invite auth user via secure API route
@@ -1035,7 +1393,11 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                         auth_id: createdAuthId,
                         fullName: row.fullName,
                         email: row.email,
-                        mobile: `${mobileCode}${row.mobileNumber}`,
+                        // mobile: `${mobileCode}${row.mobileNumber}`,
+                        mobile:
+                            row.mobileNumber?.trim()
+                                ? `${mobileCode}${row.mobileNumber}`
+                                : null,
                         role: row.role,
                         collegeId: adminContext.collegeId,
                         collegePublicId: adminContext.collegePublicId,
@@ -1060,9 +1422,23 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                     );
 
                     // ── Step 4: Identifier
+                    const normalizedRole = String(row.role)
+                        .replace(/[\s_\-]/g, "")
+                        .toLowerCase();
+
                     const isWellbeing =
-                        row.role === "WellbeingExecutive" ||
-                        row.role === "WellbeingManager";
+                        normalizedRole === "wellbeingexecutive" ||
+                        normalizedRole === "wellbeingmanager";
+
+                    console.log(
+                        "WELLBEING CHECK",
+                        {
+                            role: row.role,
+                            isWellbeing,
+                        }
+                    );
+
+
                     if (row.identifierValue && !isWellbeing) {
                         await upsertIdentifier({
                             userId: createdUserId,
@@ -1584,7 +1960,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                             <div className="flex flex-col gap-4">
                                 {/* Big stats */}
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-green-50 border border-green-100 rounded-xl p-5 flex flex-col items-center gap-1">
+                                    <div className="bg-green-50 border border-green-100 rounded-xl p-5 flex flex-col items-center gap-1 text-center">
                                         <CheckCircle
                                             size={32}
                                             weight="fill"
@@ -1598,7 +1974,7 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                                         </p>
                                     </div>
                                     <div
-                                        className={`border rounded-xl p-5 flex flex-col items-center gap-1 ${skippedCount > 0
+                                        className={`border rounded-xl p-5 flex flex-col items-center gap-1 text-center ${skippedCount > 0
                                             ? "bg-red-50 border-red-100"
                                             : "bg-gray-50 border-gray-100"
                                             }`}

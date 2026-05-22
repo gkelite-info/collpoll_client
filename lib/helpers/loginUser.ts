@@ -7,49 +7,39 @@ export async function loginUser(email: string, password: string) {
   try {
     const supabase = await createClient();
 
-    // ─────────────────────────────────────────────────────────────
-    // Domain / Subdomain Detection
-    // ─────────────────────────────────────────────────────────────
-
     const host = (await headers()).get("host") || "";
 
-    // Remove localhost port if present
     const cleanHost = host.replace(":3000", "");
 
-    // Split hostname
     const parts = cleanHost.split(".");
 
-    // Default college portal
     let subdomain = "GKELITE";
 
     const isLocalhost = cleanHost.includes("localhost");
 
-    // Detect root domain
     const isRootDomain =
       cleanHost === "tektoncampus.com" ||
       cleanHost === "www.tektoncampus.com" ||
       cleanHost === "localhost";
 
-    // Only extract subdomain if NOT root domain
     if (!isRootDomain) {
       if (isLocalhost) {
-        // Example:
-        // abc.localhost => abc
         if (parts.length >= 2 && parts[0] !== "localhost") {
           subdomain = parts[0];
         }
       } else {
-        // Example:
-        // abc.tektoncampus.com => abc
         if (parts.length >= 3 && parts[0] !== "www") {
           subdomain = parts[0];
         }
       }
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Fetch Current Portal
-    // ─────────────────────────────────────────────────────────────
+    if (
+      cleanHost === "tektoncampus.com" ||
+      cleanHost === "www.tektoncampus.com"
+    ) {
+      subdomain = "GKELITE";
+    }
 
     const { data: currentPortal, error: portalError } = await supabase
       .from("colleges")
@@ -64,15 +54,13 @@ export async function loginUser(email: string, password: string) {
       };
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Authenticate User
-    // ─────────────────────────────────────────────────────────────
-
-    const { data: authData, error: authError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    const {
+      data: authData,
+      error: authError,
+    } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     if (authError || !authData.user) {
       return {
@@ -81,11 +69,10 @@ export async function loginUser(email: string, password: string) {
       };
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Fetch User Profile
-    // ─────────────────────────────────────────────────────────────
-
-    const { data: userProfile, error: profileError } = await supabase
+    const {
+      data: userProfile,
+      error: profileError,
+    } = await supabase
       .from("users")
       .select("userId, fullName, role, collegeId, isActive")
       .eq("auth_id", authData.user.id)
@@ -100,11 +87,10 @@ export async function loginUser(email: string, password: string) {
       };
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Validate College Access
-    // ─────────────────────────────────────────────────────────────
-
-    if (Number(userProfile.collegeId) !== Number(currentPortal.collegeId)) {
+    if (
+      Number(userProfile.collegeId) !==
+      Number(currentPortal.collegeId)
+    ) {
       await supabase.auth.signOut();
 
       return {
@@ -114,10 +100,6 @@ export async function loginUser(email: string, password: string) {
       };
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Validate Active Status
-    // ─────────────────────────────────────────────────────────────
-
     if (!userProfile.isActive) {
       await supabase.auth.signOut();
 
@@ -126,10 +108,6 @@ export async function loginUser(email: string, password: string) {
         error: "Your account is inactive.",
       };
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Wellbeing Validation
-    // ─────────────────────────────────────────────────────────────
 
     if (
       userProfile.role === "WellbeingExecutive" ||
@@ -160,10 +138,6 @@ export async function loginUser(email: string, password: string) {
         };
       }
     }
-
-    // ─────────────────────────────────────────────────────────────
-    // Success
-    // ─────────────────────────────────────────────────────────────
 
     return {
       success: true,

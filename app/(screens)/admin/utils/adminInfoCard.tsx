@@ -22,7 +22,8 @@ type UserInfoProps = {
 };
 
 export function AdminInfoCard({ cardProps }: UserInfoProps) {
-  const { gender } = useUser()
+  const { gender } = useUser();
+
   const bgBanner = '/dashboard-banner-bg.png'
   const adminImage = gender && (gender === "Female" ? "/female-admin.png" : "/male-admin2.png");
 
@@ -42,7 +43,7 @@ export function AdminInfoCard({ cardProps }: UserInfoProps) {
                 Welcome Back,
               </span>
               <span className="text-sm landscape:text-lg md:text-lg lg:text-lg font-semibold text-[#089144] leading-tight">
-                {!item.show && " Mr."} {item.user}
+                {!item.show && `${gender === "Male" ? " Mr." : " Ms. "}`} {item.user}
               </span>
             </div>
             <div className="bg-red-00 flex items-baseline flex-wrap gap-2">

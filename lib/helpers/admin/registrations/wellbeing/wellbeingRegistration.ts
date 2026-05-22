@@ -7,13 +7,18 @@ export type WellbeingRoleType =
   | "wellbeingManager"
   | "WellbeingExecutive"
   | "WellbeingManager";
+
 export type WellbeingRegistrationType =
   | "college"
   | "hostel"
+  | "both"
   | "College"
   | "Hostel"
-  | "both";
-export type WellbeingHostelType = "boyshostel" | "girlshostel";
+  | "Both";
+
+export type WellbeingHostelType =
+  | "boyshostel"
+  | "girlshostel";
 
 export type CreateWellbeingCollegeDetail = {
   collegeEducationId: number;
@@ -32,7 +37,9 @@ export type CreateWellbeingPayload = {
   createdBy: number;
   createdAt: string;
   updatedAt: string;
+
   collegeDetails?: CreateWellbeingCollegeDetail[];
+
   hostelDetails?: {
     block: string;
     buildingNumber: string;
@@ -40,14 +47,31 @@ export type CreateWellbeingPayload = {
   };
 };
 
-const toWellbeingRoleType = (roleType: WellbeingRoleType) =>
-  roleType === "wellbeingManager" || roleType === "WellbeingManager"
+const toWellbeingRoleType = (
+  roleType: WellbeingRoleType,
+) =>
+  roleType === "wellbeingManager" ||
+    roleType === "WellbeingManager"
     ? "wellbeingManager"
     : "wellbeingExecutive";
 
 const toWellbeingRegistrationType = (
   registrationType: WellbeingRegistrationType,
-) => (registrationType === "hostel" || registrationType === "Hostel" ? "hostel" : "college");
+) => {
+  const normalized = registrationType
+    .toLowerCase()
+    .trim();
+
+  if (normalized === "hostel") {
+    return "hostel";
+  }
+
+  if (normalized === "both") {
+    return "both";
+  }
+
+  return "college";
+};
 
 const createWellbeingBase = async (payload: {
   userId: number;
@@ -58,14 +82,25 @@ const createWellbeingBase = async (payload: {
   createdAt: string;
   updatedAt: string;
 }) => {
+
   const row = {
     userId: payload.userId,
     collegeId: payload.collegeId,
-    roleType: toWellbeingRoleType(payload.roleType),
-    registrationType: toWellbeingRegistrationType(payload.registrationType),
+
+    roleType: toWellbeingRoleType(
+      payload.roleType,
+    ),
+
+    registrationType:
+      toWellbeingRegistrationType(
+        payload.registrationType,
+      ),
+
     createdBy: payload.createdBy,
+
     isActive: true,
     is_deleted: false,
+
     createdAt: payload.createdAt,
     updatedAt: payload.updatedAt,
   };
@@ -77,130 +112,269 @@ const createWellbeingBase = async (payload: {
     .single();
 
   if (error) {
-    throw new Error(formatSupabaseError("createWellbeingBase", error));
+    throw new Error(
+      formatSupabaseError(
+        "createWellbeingBase",
+        error,
+      ),
+    );
   }
 
   return data.wellBeingId as number;
 };
 
-const toEmployeeType = (roleType: WellbeingRoleType) =>
-  roleType === "wellbeingManager" || roleType === "WellbeingManager"
+const toEmployeeType = (
+  roleType: WellbeingRoleType,
+) =>
+  roleType === "wellbeingManager" ||
+    roleType === "WellbeingManager"
     ? "WellbeingManager"
     : "WellbeingExecutive";
 
-const formatSupabaseError = (action: string, error: PostgrestError) => {
+const formatSupabaseError = (
+  action: string,
+  error: PostgrestError,
+) => {
   return [
     `${action} failed`,
     error?.message,
     error?.details,
     error?.hint,
-    error?.code ? `code: ${error.code}` : null,
+    error?.code
+      ? `code: ${error.code}`
+      : null,
   ]
     .filter(Boolean)
     .join(" - ");
 };
 
-export const createWellbeing = async (payload: CreateWellbeingPayload) => {
+export const createWellbeing = async (
+  payload: CreateWellbeingPayload,
+) => {
+
+  // ─────────────────────────────────────────────
+  // Validation
+  // ─────────────────────────────────────────────
+
   if (!payload.gender?.trim()) {
-    throw new Error("Gender is required for wellbeing registration");
+    throw new Error(
+      "Gender is required for wellbeing registration",
+    );
   }
 
-  if (payload.dateOfJoining !== undefined) {
+  // ─────────────────────────────────────────────
+  // Update User Joining Date
+  // ─────────────────────────────────────────────
+
+  if (
+    payload.dateOfJoining !== undefined
+  ) {
+
     const { error } = await supabase
       .from("users")
       .update({
-        dateOfJoining: payload.dateOfJoining,
-        updatedAt: payload.updatedAt,
+        dateOfJoining:
+          payload.dateOfJoining,
+
+        updatedAt:
+          payload.updatedAt,
       })
-      .eq("userId", payload.userId)
-      .in("role", ["WellbeingExecutive", "WellbeingManager"]);
+      .eq(
+        "userId",
+        payload.userId,
+      )
+      .in("role", [
+        "WellbeingExecutive",
+        "WellbeingManager",
+      ]);
 
     if (error) {
-      throw new Error(formatSupabaseError("updateWellbeingUserJoiningDate", error));
+      throw new Error(
+        formatSupabaseError(
+          "updateWellbeingUserJoiningDate",
+          error,
+        ),
+      );
     }
   }
 
-  const createdWellBeingIds: number[] = [];
-  if (payload.collegeDetails?.length) {
-    const wellBeingId = await createWellbeingBase({
+  // ─────────────────────────────────────────────
+  // Determine Registration Type
+  // ─────────────────────────────────────────────
+
+  const hasCollege =
+    !!payload.collegeDetails?.length;
+
+  const hasHostel =
+    !!payload.hostelDetails;
+
+  let registrationType:
+    WellbeingRegistrationType =
+    "college";
+
+  if (hasCollege && hasHostel) {
+
+    registrationType = "both";
+
+  } else if (hasHostel) {
+
+    registrationType = "hostel";
+  }
+
+  // ─────────────────────────────────────────────
+  // Create ONE Wellbeing Base Entry
+  // ─────────────────────────────────────────────
+
+  const wellBeingId =
+    await createWellbeingBase({
       userId: payload.userId,
-      collegeId: payload.collegeId,
-      roleType: payload.roleType,
-      registrationType: "college",
-      createdBy: payload.createdBy,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
+
+      collegeId:
+        payload.collegeId,
+
+      roleType:
+        payload.roleType,
+
+      registrationType,
+
+      createdBy:
+        payload.createdBy,
+
+      createdAt:
+        payload.createdAt,
+
+      updatedAt:
+        payload.updatedAt,
     });
+
+  // ─────────────────────────────────────────────
+  // College Details
+  // ─────────────────────────────────────────────
+
+  if (payload.collegeDetails?.length) {
 
     const uniqueRows = Array.from(
       new Map(
-        payload.collegeDetails.map((detail) => [
-          [
-            detail.collegeEducationId,
-            detail.collegeBranchId,
-            detail.collegeAcademicYearId,
-            detail.collegeSectionsId,
-          ].join("-"),
-          detail,
-        ]),
+        payload.collegeDetails.map(
+          (detail) => [
+            [
+              detail.collegeEducationId,
+              detail.collegeBranchId,
+              detail.collegeAcademicYearId,
+              detail.collegeSectionsId,
+            ].join("-"),
+            detail,
+          ],
+        ),
       ).values(),
     );
 
-    const { error } = await supabase.from("wellbeing_college_details").insert(
-      uniqueRows.map((detail) => ({
-        wellBeingId,
-        collegeEducationId: detail.collegeEducationId,
-        collegeBranchId: detail.collegeBranchId,
-        collegeAcademicYearId: detail.collegeAcademicYearId,
-        collegeSectionsId: detail.collegeSectionsId,
-        createdAt: payload.createdAt,
-        updatedAt: payload.updatedAt,
-      })),
-    );
+    const { error } =
+      await supabase
+        .from(
+          "wellbeing_college_details",
+        )
+        .insert(
+          uniqueRows.map(
+            (detail) => ({
+              wellBeingId,
+
+              collegeEducationId:
+                detail.collegeEducationId,
+
+              collegeBranchId:
+                detail.collegeBranchId,
+
+              collegeAcademicYearId:
+                detail.collegeAcademicYearId,
+
+              collegeSectionsId:
+                detail.collegeSectionsId,
+
+              createdAt:
+                payload.createdAt,
+
+              updatedAt:
+                payload.updatedAt,
+            }),
+          ),
+        );
 
     if (error) {
-      throw new Error(formatSupabaseError("createWellbeingCollegeDetails", error));
+      throw new Error(
+        formatSupabaseError(
+          "createWellbeingCollegeDetails",
+          error,
+        ),
+      );
     }
-
-    createdWellBeingIds.push(wellBeingId);
   }
+
+  // ─────────────────────────────────────────────
+  // Hostel Details
+  // ─────────────────────────────────────────────
+
   if (payload.hostelDetails) {
-    const wellBeingId = await createWellbeingBase({
-      userId: payload.userId,
-      collegeId: payload.collegeId,
-      roleType: payload.roleType,
-      registrationType: "hostel",
-      createdBy: payload.createdBy,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
-    });
 
-    const { error } = await supabase.from("wellbeing_hostel_details").insert({
-      wellBeingId,
-      block: payload.hostelDetails.block.trim(),
-      buildingNumber: payload.hostelDetails.buildingNumber.trim(),
-      hostelType: payload.hostelDetails.hostelType,
-      isActive: true,
-      is_deleted: false,
-      createdAt: payload.createdAt,
-      updatedAt: payload.updatedAt,
-    });
+    const { error } =
+      await supabase
+        .from(
+          "wellbeing_hostel_details",
+        )
+        .insert({
+          wellBeingId,
+
+          block:
+            payload.hostelDetails.block.trim(),
+
+          buildingNumber:
+            payload.hostelDetails.buildingNumber.trim(),
+
+          hostelType:
+            payload.hostelDetails.hostelType,
+
+          isActive: true,
+          is_deleted: false,
+
+          createdAt:
+            payload.createdAt,
+
+          updatedAt:
+            payload.updatedAt,
+        });
 
     if (error) {
-      throw new Error(formatSupabaseError("createWellbeingHostelDetails", error));
+      throw new Error(
+        formatSupabaseError(
+          "createWellbeingHostelDetails",
+          error,
+        ),
+      );
     }
-
-    createdWellBeingIds.push(wellBeingId);
   }
 
-  if (payload.employeeId?.trim()) {
+  // ─────────────────────────────────────────────
+  // Employee Identifier
+  // ─────────────────────────────────────────────
+
+  if (
+    payload.employeeId?.trim()
+  ) {
+
     await upsertIdentifier({
       userId: payload.userId,
-      collegeId: payload.collegeId,
-      role: toEmployeeType(payload.roleType),
-      identifierValue: payload.employeeId,
+
+      collegeId:
+        payload.collegeId,
+
+      role: toEmployeeType(
+        payload.roleType,
+      ),
+
+      identifierValue:
+        payload.employeeId,
     });
   }
 
-  return createdWellBeingIds;
+  return [wellBeingId];
 };

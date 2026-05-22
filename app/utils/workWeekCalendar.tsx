@@ -141,7 +141,7 @@ export default function WorkWeekCalendar({
                 setMonthOpen(!monthOpen);
                 setYearOpen(false);
               }}
-              className="px-3 py-1 cursor-pointer rounded hover:bg-gray-100"
+              className="px-3 py-1 cursor-pointer rounded-lg hover:bg-gray-100"
             >
               {months[currentMonth]}
             </button>
@@ -171,7 +171,7 @@ export default function WorkWeekCalendar({
               {currentYear}
             </button>
             {yearOpen && (
-              <div className="absolute  top-full left-0 bg-white rounded shadow-md z-10 max-h-40 overflow-y-auto">
+              <div className="absolute top-full left-0 bg-white rounded shadow-md z-10 max-h-40 overflow-y-auto">
                 {years.map((year) => (
                   <div
                     key={year}
@@ -213,7 +213,7 @@ export default function WorkWeekCalendar({
             <div
               key={day}
               onClick={() => !isSaturday && handleDateChange(dateObj)}
-              className="flex flex-col items-center justify-center gap-2 h-16 rounded cursor-pointer"
+              className="flex flex-col items-center justify-center gap-2 h-16 rounded-sm cursor-pointer"
               style={
                 isActive
                   ? {

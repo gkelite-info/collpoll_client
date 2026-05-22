@@ -254,7 +254,6 @@ export default function AnnouncementsCard({
     useState<AnnouncementDetails | null>(null);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  // Dynamic Time Formatting with Translations
   const formatRelativeTime = (createdAt?: string) => {
     if (!createdAt) return "";
     const created = new Date(createdAt);
@@ -395,7 +394,7 @@ export default function AnnouncementsCard({
             <div className="flex items-center gap-1 text-sm font-semibold mt-2 lg:mt-2">
               <button
                 onClick={() => handleTabChange("others")}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 cursor-pointer ${
+                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${
                   activeView === "others"
                     ? "bg-[#43C17A] text-white shadow-sm"
                     : "text-gray-400 hover:text-[#16284F]"
@@ -408,7 +407,7 @@ export default function AnnouncementsCard({
 
               <button
                 onClick={() => handleTabChange("my")}
-                className={`px-3 py-1 text-sm rounded-md transition-all duration-200 cursor-pointer ${
+                className={`px-3 py-1 text-sm rounded-sm transition-all duration-200 cursor-pointer ${
                   activeView === "my"
                     ? "bg-[#43C17A] text-white shadow-sm"
                     : "text-gray-400 hover:text-[#16284F]"

@@ -289,11 +289,11 @@ const YearCardShimmer = () => (
       <div className="shimmer h-4 w-16 rounded-full" />
     </div>
     <div className="flex gap-2">
-      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1">
+      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded-sm flex-1">
         <div className="shimmer h-3 w-10 mb-1" />
         <div className="shimmer h-3 w-14" />
       </div>
-      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1">
+      <div className="bg-[#E5F6EC] py-1.5 px-2 rounded-sm flex-1">
         <div className="shimmer h-3 w-10 mb-1" />
         <div className="shimmer h-3 w-14" />
       </div>
@@ -425,7 +425,7 @@ const SemBox = ({
   return (
     <div
       onClick={handleClick}
-      className="bg-[#E5F6EC] py-1.5 px-2 rounded flex-1 cursor-pointer"
+      className="bg-[#E5F6EC] py-1.5 px-2 rounded-sm flex-1 cursor-pointer"
     >
       <div className="text-xs text-[#282828]">{label}</div>
       <div className="text-xs font-bold text-[#43C17A]">₹ {val}</div>
