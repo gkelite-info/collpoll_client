@@ -19,7 +19,7 @@ import {
 import { deleteFinanceMeetingSection } from "@/lib/helpers/finance/meetings/meetingsSectionsAPI";
 
 type MeetingType = "upcoming" | "previous";
-type MeetingCategory = "Parent" | "Student" | "Faculty" | "Admin";
+type MeetingCategory = "Parent" | "Student" | "Faculty" | "Staff";
 
 export interface Meeting {
   id: string;
@@ -35,7 +35,7 @@ export interface Meeting {
   year: string;
   section: string;
   tags: string;
-  category: MeetingCategory;
+  category: string;
   type: MeetingType;
   meetingLink: string;
   hostName?: string;
@@ -138,7 +138,7 @@ function MeetingListContent() {
     { id: "Parent", label: "Parent Meetings" },
     { id: "Student", label: "Student Meetings" },
     { id: "Faculty", label: "Faculty Meetings" },
-    { id: "Admin", label: "Admin Meetings" },
+    { id: "Staff", label: "Staff Meetings" },
   ];
 
   const handleDeleteClick = (meeting: Meeting) => {

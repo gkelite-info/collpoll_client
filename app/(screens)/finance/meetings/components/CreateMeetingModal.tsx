@@ -1078,6 +1078,72 @@ const MIN_TIME = 8 * 60;
 const MAX_TIME = 22 * 60;
 const MAX_MEETING_DURATION = 4 * 60; // 🟢 4 hours max
 
+const SECTION_MEETING_ROLES = ["Parent", "Student", "Faculty"];
+const DB_MEETING_ROLES = [
+  "Parent",
+  "Student",
+  "Faculty",
+  "Admin",
+  "CollegeAdmin",
+  "Finance",
+  "CollegeHr",
+  "PlacementOfficer",
+  "WellbeingManager",
+  "WellbeingExecutive",
+];
+
+const isSectionMeetingRole = (meetingRole: string) =>
+  SECTION_MEETING_ROLES.includes(meetingRole);
+
+const ROLE_OPTIONS = [
+  { value: "Select Role", label: "Select Role", disabled: true },
+  { value: "Parent", label: "Parent" },
+  { value: "Student", label: "Student" },
+  { value: "Faculty", label: "Faculty" },
+  { value: "Admin", label: "Admin" },
+  { value: "CollegeAdmin", label: "College Admin" },
+  { value: "Finance", label: "Finance Executive" },
+  { value: "CollegeHr", label: "College HR" },
+  { value: "WellbeingExecutive", label: "Wellbeing Executive" },
+  { value: "WellbeingManager", label: "Wellbeing Manager" },
+  { value: "PlacementOfficer", label: "Placement Officer" },
+];
+
+const getRoleLabel = (roleValue: string) =>
+  ROLE_OPTIONS.find((option) => option.value === roleValue)?.label ?? roleValue;
+
+const normalizeMeetingRole = (meetingRole: string) =>
+  ROLE_OPTIONS.find(
+    (option) => option.value === meetingRole || option.label === meetingRole,
+  )?.value ?? meetingRole;
+
+const getFinanceMeetingDbRole = (meetingRole: string) =>
+  DB_MEETING_ROLES.includes(normalizeMeetingRole(meetingRole))
+    ? normalizeMeetingRole(meetingRole)
+    : "Admin";
+
+const STAFF_ROLE_META_PREFIX = "[[staffRole:";
+const STAFF_ROLE_META_REGEX = /\s*\[\[staffRole:([A-Za-z]+)\]\]\s*$/;
+
+const parseStaffRoleMetadata = (value: string) => {
+  const match = value.match(STAFF_ROLE_META_REGEX);
+  return {
+    description: value.replace(STAFF_ROLE_META_REGEX, "").trim(),
+    staffRole: match?.[1] ?? null,
+  };
+};
+
+const buildMeetingDescriptionForDb = (value: string, meetingRole: string) => {
+  const normalizedRole = normalizeMeetingRole(meetingRole);
+  const cleanDescription = parseStaffRoleMetadata(value).description;
+  if (DB_MEETING_ROLES.includes(normalizedRole)) {
+    return cleanDescription;
+  }
+
+  const metadata = `${STAFF_ROLE_META_PREFIX}${normalizedRole}]]`;
+  return `${cleanDescription.slice(0, 255 - metadata.length - 1)} ${metadata}`.trim();
+};
+
 const validateTimeRange = (
   sHour: string,
   sMinute: string,
@@ -1182,6 +1248,7 @@ const CreateMeetingModal = ({
   const [meetingLink, setMeetingLink] = useState("");
   const [inAppNotification, setInAppNotification] = useState(false);
   const [emailNotification, setEmailNotification] = useState(false);
+  const [isRoleOpen, setIsRoleOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
@@ -1192,7 +1259,10 @@ const CreateMeetingModal = ({
   const [conflictData, setConflictData] = useState<{
     title: string;
     role: string;
+    fromTime?: string;
+    toTime?: string;
   } | null>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
   const sectionDropdownRef = useRef<HTMLDivElement>(null);
   const { collegeId, collegeEducationId, financeManagerId } =
     useFinanceManager();
@@ -1221,6 +1291,7 @@ const CreateMeetingModal = ({
     setYear(null);
     setSections([]);
     setSectionsSelected([]);
+    setIsRoleOpen(false);
     setIsSectionOpen(false);
     setInAppNotification(false);
     setEmailNotification(false);
@@ -1278,6 +1349,13 @@ const CreateMeetingModal = ({
     if (!isOpen) return;
     const handleDropdownClose = (e: MouseEvent) => {
       if (
+        isRoleOpen &&
+        roleDropdownRef.current &&
+        !roleDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsRoleOpen(false);
+      }
+      if (
         isSectionOpen &&
         sectionDropdownRef.current &&
         !sectionDropdownRef.current.contains(e.target as Node)
@@ -1287,7 +1365,7 @@ const CreateMeetingModal = ({
     };
     document.addEventListener("mousedown", handleDropdownClose);
     return () => document.removeEventListener("mousedown", handleDropdownClose);
-  }, [isOpen, isSectionOpen]);
+  }, [isOpen, isRoleOpen, isSectionOpen]);
 
   useEffect(() => {
     if (!isOpen || !collegeId || !collegeEducationId) return;
@@ -1310,9 +1388,10 @@ const CreateMeetingModal = ({
       try {
         setIsLoading(true);
         const meeting = await fetchFinanceMeetingById(editingMeetingId);
+        const parsedDescription = parseStaffRoleMetadata(meeting.description);
         setTitle(meeting.title);
-        setDescription(meeting.description);
-        setRole(meeting.role);
+        setDescription(parsedDescription.description);
+        setRole(parsedDescription.staffRole ?? meeting.role);
         setDate(meeting.date);
         setMeetingLink(meeting.meetingLink);
         setInAppNotification(meeting.inAppNotification);
@@ -1327,7 +1406,7 @@ const CreateMeetingModal = ({
         setEndHour(String(toHour % 12 || 12).padStart(2, "0"));
         setEndMinute(toMinute);
         setEndPeriod(toHour >= 12 ? "PM" : "AM");
-        if (meeting.role !== "Admin" && editingSectionId) {
+        if (isSectionMeetingRole(meeting.role) && editingSectionId) {
           const existingSections =
             await fetchFinanceMeetingSections(editingMeetingId);
           const specificSection = existingSections.find(
@@ -1490,7 +1569,7 @@ const CreateMeetingModal = ({
       }
       setIsPastTimeError(false);
 
-      if (role !== "Admin") {
+      if (isSectionMeetingRole(role)) {
         if (!branch) {
           toast.error("Please select branch");
           return;
@@ -1559,8 +1638,8 @@ const CreateMeetingModal = ({
         {
           id: isEditMode ? editingMeetingId! : undefined,
           title: title.trim(),
-          description: description.trim(),
-          role,
+          description: buildMeetingDescriptionForDb(description.trim(), role),
+          role: getFinanceMeetingDbRole(role),
           date,
           fromTime: dbFromTime,
           toTime: dbToTime,
@@ -1578,7 +1657,7 @@ const CreateMeetingModal = ({
         return;
       }
 
-      if (role !== "Admin" && collegeEducationId) {
+      if (isSectionMeetingRole(role) && collegeEducationId) {
         try {
           if (isEditMode && editingSectionId) {
             const existingSections = await fetchFinanceMeetingSections(
@@ -1762,19 +1841,66 @@ const CreateMeetingModal = ({
                 <label className="text-sm text-[#282828]">
                   Role <span className="text-red-500">*</span>
                 </label>
-                <div className="relative">
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm appearance-none bg-white text-gray-500 cursor-pointer"
+                <div className="relative" ref={roleDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsRoleOpen((prev) => !prev)}
+                    className="w-full px-3 py-2 border border-[#CCCCCC] rounded-md focus:outline-none focus:ring-1 focus:ring-[#43C17A] text-sm bg-white text-left text-gray-500 cursor-pointer flex items-center justify-between"
                   >
-                    <option disabled>Select Role</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Student">Student</option>
-                    <option value="Faculty">Faculty</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#282828]">
+                    <span>{getRoleLabel(role)}</span>
+                    <span className="pointer-events-none text-[#282828]">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                    </span>
+                  </button>
+                  {isRoleOpen && (
+                    <div className="absolute z-30 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-[#CCCCCC] bg-white shadow-lg">
+                      {ROLE_OPTIONS.map((option) => {
+                        const isSelected = option.value === role;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            disabled={option.disabled}
+                            onClick={() => {
+                              if (option.disabled) return;
+                              const nextRole = option.value;
+                              setRole(nextRole);
+                              setIsRoleOpen(false);
+                              if (!isSectionMeetingRole(nextRole)) {
+                                setBranch(null);
+                                setYear(null);
+                                setSections([]);
+                                setSectionsSelected([]);
+                                setIsSectionOpen(false);
+                              }
+                            }}
+                            className={`block w-full px-3 py-2 text-left text-sm transition-colors ${
+                              option.disabled
+                                ? "cursor-not-allowed bg-[#C9C9C9] text-white"
+                                : isSelected
+                                  ? "bg-[#16284F] text-white"
+                                  : "text-gray-600 hover:bg-[#43C17A1A]"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="hidden absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#282828]">
                     <svg
                       className="w-4 h-4"
                       fill="none"
@@ -1952,7 +2078,7 @@ const CreateMeetingModal = ({
                 </div>
               </div>
             </div>
-            {role !== "Admin" && (
+            {isSectionMeetingRole(role) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-sm text-[#282828]">
@@ -2035,7 +2161,7 @@ const CreateMeetingModal = ({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {role !== "Admin" && (
+              {isSectionMeetingRole(role) && (
                 <div className="space-y-1" ref={sectionDropdownRef}>
                   <label className="text-sm text-[#282828]">
                     Section <span className="text-red-500">*</span>

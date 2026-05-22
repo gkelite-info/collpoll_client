@@ -1,10 +1,10 @@
 "use client";
 
-import { useAdmin } from "@/app/utils/context/admin/useAdmin";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
-import { Avatar } from "@/app/utils/Avatar";
 import { fetchStaffOnboardingSummary } from "@/lib/helpers/staffOnBoarding/onboardingSummaryAPI";
 import { useEffect, useState } from "react";
+import { Avatar } from "@/app/utils/Avatar";
 
 const InfoRow = ({
   label,
@@ -54,29 +54,26 @@ const SummaryShimmer = () => (
 );
 
 export default function SummaryPage() {
+  const { financeManagerId, collegeEducationType } = useFinanceManager();
+
   const {
     userId,
     fullName,
     profilePhoto,
-    identifierId,
     role,
     dateOfJoining,
     mobile,
     email,
     professionalExperienceYears,
-    wellBeingId,
-    collegeEducationType
+    identifierId,
   } = useUser();
 
   const [onboardingData, setOnboardingData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) {
-      setIsLoading(false);
-      return;
-    }
     const loadData = async () => {
+      if (!userId) return;
       setIsLoading(true);
       const data = await fetchStaffOnboardingSummary(userId);
       setOnboardingData(data);
@@ -101,12 +98,12 @@ export default function SummaryPage() {
 
   const isInter = ["Inter"].includes(role);
 
-  const systemId = identifierId || (wellBeingId ? `ID-${wellBeingId}` : `ID-${userId}`);
+  const systemId = identifierId || (financeManagerId ? `ID-${financeManagerId}` : `ID-${userId}`);
   return (
     <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
       <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
-          <div className="mb-3">
+          <div className="mb-3 shadow-sm rounded-full">
             <Avatar src={profilePhoto} alt={fullName || "Profile"} size={84} />
           </div>
           <h2 className="text-[17px] font-bold text-gray-800 text-center">
