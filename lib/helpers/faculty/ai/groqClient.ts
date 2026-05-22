@@ -55,7 +55,6 @@ export async function generateRawWithGroqFallback({
         continue;
       }
 
-      console.log(`[groqClient] Raw from ${model}:`, raw);
       return raw;
     } catch (error: any) {
       lastError = error;
@@ -131,7 +130,6 @@ EXAMPLE INVALID OUTPUT:
         typeof parsed[0] === "string" &&
         parsed[0].trim() === INVALID_UNIT_MESSAGE
       ) {
-        console.log(`[groqClient] Subject/unit mismatch from ${model}`);
         return JSON.stringify([INVALID_UNIT_MESSAGE]);
       }
 
@@ -147,7 +145,6 @@ EXAMPLE INVALID OUTPUT:
         continue;
       }
 
-      console.log(`[groqClient] Returning ${valid.length} topics from ${model}`);
       return JSON.stringify(valid.slice(0, 8));
     } catch (error: any) {
       lastError = error;

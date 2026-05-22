@@ -270,7 +270,7 @@ const Page = () => {
                     sortBy={sortBy}
                     onSort={(val) => setSortBy(val as SortOption)}
                     onNew={() => setIsNewFolderOpen(true)}
-                    onFilters={() => console.log("Filters")}
+                    onFilters={() => console.log("")}
                     isVisible={false}
                 />
             </div>

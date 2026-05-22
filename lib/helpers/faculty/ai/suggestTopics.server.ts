@@ -11,12 +11,6 @@ export async function suggestTopicsAction(
   educationType?: string,
   branch?: string
 ): Promise<string[]> {
-  console.log("🟡 [suggestTopicsAction] Called with:", {
-    subject,
-    unitName,
-    educationType,
-    branch,
-  });
 
   if (!subject || !unitName) {
     console.warn("🔴 [suggestTopicsAction] Missing subject or unitName");
@@ -50,27 +44,20 @@ STRICT RULES:
 - Use precise academic terminology
 `;
 
-  console.log("🟡 [suggestTopicsAction] Prompt:\n", prompt);
-
   try {
     const rawText = await generateWithGroqFallback(prompt);
-    console.log("🟢 [suggestTopicsAction] Raw response:", rawText);
-
     const cleaned = rawText.replace(/```json|```/gi, "").trim();
     const parsed = JSON.parse(cleaned);
 
     if (!Array.isArray(parsed)) {
-      console.warn("🔴 [suggestTopicsAction] Not an array:", parsed);
       return [];
     }
 
-    // Allow exact invalid message through
     if (
       parsed.length === 1 &&
       typeof parsed[0] === "string" &&
       parsed[0].trim() === INVALID_UNIT_MESSAGE
     ) {
-      console.log("🟡 [suggestTopicsAction] Subject/unit mismatch detected");
       return [INVALID_UNIT_MESSAGE];
     }
 
@@ -81,10 +68,9 @@ STRICT RULES:
         t.trim() !== INVALID_UNIT_MESSAGE
     );
 
-    console.log("🟢 [suggestTopicsAction] Final topics:", filtered);
     return filtered.slice(0, 8);
   } catch (err) {
-    console.error("🔴 [suggestTopicsAction] Failed:", err);
+    console.error("[suggestTopicsAction] Failed:", err);
     throw new Error("AI topic generation failed. Please try again.");
   }
 }

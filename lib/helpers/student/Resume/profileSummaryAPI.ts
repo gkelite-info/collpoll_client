@@ -21,8 +21,6 @@ export async function insertProfileSummary(
 ): Promise<{ resumeSummaryId: number }> {
     const now = new Date().toISOString();
 
-    console.log("Inserting summary for studentId:", studentId);
-
     const { data, error } = await supabase
         .from("resume_profile_summary")
         .insert({
@@ -44,7 +42,6 @@ export async function insertProfileSummary(
         throw error;
     }
 
-    console.log("Insert success:", data);
     return data;
 }
 
@@ -53,8 +50,6 @@ export async function upsertProfileSummary(
     summary: string
 ): Promise<{ resumeSummaryId: number }> {
     const now = new Date().toISOString();
-
-    console.log("Upserting summary for studentId:", studentId);
 
     const { data, error } = await supabase
         .from("resume_profile_summary")
@@ -81,13 +76,10 @@ export async function upsertProfileSummary(
         throw error;
     }
 
-    console.log("Upsert success:", data);
     return data;
 }
 
 export async function updateProfileSummary(studentId: number, summary: string) {
-    console.log("Updating summary for studentId:", studentId);
-
     const { error } = await supabase
         .from("resume_profile_summary")
         .update({
@@ -103,8 +95,6 @@ export async function updateProfileSummary(studentId: number, summary: string) {
         console.error("message:", error.message);
         throw error;
     }
-
-    console.log("Update success for studentId:", studentId);
 }
 
 export async function deleteProfileSummary(studentId: number) {

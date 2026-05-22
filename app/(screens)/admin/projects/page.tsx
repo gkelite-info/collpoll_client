@@ -207,10 +207,6 @@ function ProjectsOverview() {
           fetchAdminPendingStats(Number(yearId), collegeId)
         ]);
 
-        console.log("projectStats:", projectStats);
-        console.log("courseList sample item:", data[0]);
-
-
         const enrichedCourses = data.map((item: any) => {
           const key = `${Number(item.subjectId)}_${Number(item.facultyId)}`;
           const stats = projectStats ? projectStats[key] : null;

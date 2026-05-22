@@ -30,7 +30,6 @@ export async function POST() {
         });
 
         const text = await response.text();
-        console.log("Raw response from device:", text);
 
         let result;
         try {
@@ -41,8 +40,6 @@ export async function POST() {
                 { status: 500 }
             );
         }
-
-        console.log("Parsed result:", JSON.stringify(result, null, 2));
 
         if (result?.ResponseStatus || result?.statusCode) {
             return NextResponse.json({
