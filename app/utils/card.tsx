@@ -142,6 +142,7 @@ type CardProps = {
   totalPercentage?: string | number;
   to?: string;
   onClick?: () => void;
+  iconStyle?: string;
 };
 
 export default function CardComponent({
@@ -158,6 +159,8 @@ export default function CardComponent({
   underlineValue = false,
   totalPercentage,
   onClick,
+  iconStyle
+
 }: CardProps) {
   const router = useRouter();
 

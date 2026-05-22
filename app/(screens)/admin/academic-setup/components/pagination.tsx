@@ -37,7 +37,7 @@ export function Pagination({
 
   return (
     <div className={`flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-auto ${roundedBottom}`}>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 mx-auto items-center sm:flex-row sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700">
             Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
@@ -75,8 +75,8 @@ export function Pagination({
                 key={page}
                 onClick={() => onPageChange(page)}
                 className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20 cursor-pointer ${currentPage === page
-                    ? "z-10 bg-[#16284F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43C17A]"
-                    : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
+                  ? "z-10 bg-[#16284F] text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#43C17A]"
+                  : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"
                   }`}
               >
                 {page}
