@@ -161,31 +161,30 @@ const Page = () => {
 
   return (
     <main className="p-4 relative overflow-hidden">
-      <section className="flex justify-between items-center mb-4">
+      <section className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-5">
         <div className="flex flex-col">
-          <h1 className="text-black text-2xl font-semibold">
+          <h1 className="text-black text-2xl font-bold">
             Projects - {college_branch ?? "..."} {collegeAcademicYear}
           </h1>
-          <p className="text-[#282828] text-sm">
+          <p className="text-gray-500 text-sm mt-1">
             Create, manage, and track student projects effortlessly.
           </p>
         </div>
-        <article className="flex justify-end w-[32%] max-md:hidden">
-          <CourseScheduleCard style="w-[320px]" />
-        </article>
+        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+          <button
+            className="flex items-center gap-2 bg-[#43C17A] hover:bg-[#3ba869] text-white px-4 py-2 rounded-lg shadow-sm transition-colors cursor-pointer font-semibold text-sm whitespace-nowrap"
+            onClick={handleAddProject}
+          >
+            <FaPlus className="text-white" /> Add Project
+          </button>
+          <article className="hidden xl:flex justify-end w-[320px]">
+            <CourseScheduleCard style="w-[320px]" />
+          </article>
+        </div>
       </section>
 
-      <div className="w-full flex justify-start items-center lg:mb-4">
-        <button
-          className="flex items-center gap-1 bg-[#43C17A] text-white w-fit px-3 py-1 lg:rounded-md cursor-pointer font-medium"
-          onClick={handleAddProject}
-        >
-          <FaPlus className="text-white" /> Add Project
-        </button>
-      </div>
-
-      <div className="flex justify-center mb-6">
-        <div className="relative flex items-center bg-white p-1.5 rounded-full">
+      <div className="flex justify-center mb-6 w-full">
+        <div className="relative flex items-center bg-gray-50 p-1.5 rounded-full border border-gray-100 max-w-full overflow-x-auto scrollbar-hide">
           {tabs.map((t) => (
             <button
               key={t.id}

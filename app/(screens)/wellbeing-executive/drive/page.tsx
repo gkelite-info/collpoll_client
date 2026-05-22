@@ -1,7 +1,12 @@
-export default function DrivePage() {
+import DriveClient from "@/app/components/SharedDrive/DriveClient";
+import { Suspense } from "react";
+
+export default function WellbeingExecutiveDrive() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Drive Page</h1>
-    </div>
+    <Suspense fallback={<div className="p-4">Loading drive...</div>}>
+      <div className="w-full h-full">
+        <DriveClient />
+      </div>
+    </Suspense>
   );
 }

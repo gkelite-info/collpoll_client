@@ -1,12 +1,12 @@
-"use client";
+import DriveClient from "@/app/components/SharedDrive/DriveClient";
+import { Suspense } from "react";
 
-import PageUnderConstruction from "@/app/utils/PageUnderConstruction";
-
-export default function DrivePage() {
-
-    return (
-        <div className="w-full h-full dark:bg-slate-950 flex flex-col">
-            <PageUnderConstruction />
-        </div>
-    );
+export default function PlacementDrive() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading drive...</div>}>
+      <div className="w-full h-full">
+        <DriveClient />
+      </div>
+    </Suspense>
+  );
 }
