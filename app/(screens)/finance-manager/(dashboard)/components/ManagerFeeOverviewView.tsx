@@ -1,27 +1,16 @@
 "use client";
 
 import TableComponent from "@/app/utils/table/table";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import {
+  fetchFeeCollectionOverview,
+  type FeeCollectionOverviewRow,
+} from "@/lib/helpers/finance-manager/dashboard/FetchFeeCollectionOverview";
 import { CaretDown, CaretLeft } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const rupee = "\u20B9";
-
-const educationOverviewData = [
-  ["B.Tech", "2540", "6.2 Cr", "80 L", "7 Cr"],
-  ["Degree", "1800", "4.8 Cr", "65 L", "5.45 Cr"],
-  ["Inter", "900", "2.1 Cr", "20 L", "2.3 Cr"],
-  ["MBA", "320", "1.8 Cr", "10 L", "1.9 Cr"],
-  ["MBBS", "450", "2.5 Cr", "35 L", "2.85 Cr"],
-];
-
-const branchOverviewData = [
-  ["CSE", "2540", "6.2 Cr", "80 L", "7 Cr"],
-  ["EEE", "1800", "4.8 Cr", "65 L", "5.45 Cr"],
-  ["IT", "900", "2.1 Cr", "20 L", "2.3 Cr"],
-  ["Mech", "320", "1.8 Cr", "10 L", "1.9 Cr"],
-  ["ECE", "450", "2.5 Cr", "35 L", "2.85 Cr"],
-];
 
 const educationColumns = [
   { title: "Education Type", key: "name" },
@@ -39,29 +28,36 @@ const branchColumns = [
   { title: "Total Fees", key: "totalFees" },
 ];
 
-function buildRows(rows: string[][]) {
-  return rows.map(([name, students, collected, pending, totalFees]) => ({
-    name,
-    students,
-    collected: `${rupee} ${collected}`,
+const formatCurrency = (value: number) =>
+  `${rupee} ${Math.round(value).toLocaleString("en-IN")}`;
+
+function buildRows(rows: FeeCollectionOverviewRow[]) {
+  return rows.map((row) => ({
+    name: row.name,
+    students: row.students.toLocaleString("en-IN"),
+    collected: formatCurrency(row.collected),
     pending: (
       <span className="font-semibold text-[#FF2525]">
-        {rupee} {pending}
+        {formatCurrency(row.pending)}
       </span>
     ),
     totalFees: (
       <span className="font-semibold text-[#43C17A]">
-        {rupee} {totalFees}
+        {formatCurrency(row.totalFees)}
       </span>
     ),
   }));
 }
 
 function SelectableEducationTable({
+  rows,
   selectedEducation,
+  loading,
   onSelectEducation,
 }: {
+  rows: FeeCollectionOverviewRow[];
   selectedEducation: string | null;
+  loading: boolean;
   onSelectEducation: (education: string) => void;
 }) {
   return (
@@ -81,25 +77,46 @@ function SelectableEducationTable({
             </tr>
           </thead>
           <tbody className="bg-white text-[#525252]">
-            {buildRows(educationOverviewData).map((row) => {
-              const isSelected = selectedEducation === row.name;
-
-              return (
-                <tr
-                  key={row.name as string}
-                  className={`cursor-pointer border-b border-[#DBDBDB] transition-colors hover:bg-[#E8F8EF] ${
-                    isSelected ? "bg-[#D9F4E4] text-[#282828]" : ""
-                  }`}
-                  onClick={() => onSelectEducation(row.name as string)}
-                >
-                  <td className="px-4 py-3 font-semibold">{row.name}</td>
-                  <td className="px-4 py-3">{row.students}</td>
-                  <td className="px-4 py-3">{row.collected}</td>
-                  <td className="px-4 py-3">{row.pending}</td>
-                  <td className="px-4 py-3">{row.totalFees}</td>
+            {loading ? (
+              Array.from({ length: 3 }).map((_, index) => (
+                <tr key={index} className="border-b border-[#DBDBDB]">
+                  {educationColumns.map((column) => (
+                    <td key={column.key} className="px-4 py-3">
+                      <div className="mx-auto h-4 w-24 animate-pulse rounded bg-[#F2F2F2]" />
+                    </td>
+                  ))}
                 </tr>
-              );
-            })}
+              ))
+            ) : rows.length === 0 ? (
+              <tr>
+                <td
+                  className="px-4 py-8 text-center text-sm text-[#525252]"
+                  colSpan={educationColumns.length}
+                >
+                  No fee collection data available
+                </td>
+              </tr>
+            ) : (
+              buildRows(rows).map((row) => {
+                const isSelected = selectedEducation === row.name;
+
+                return (
+                  <tr
+                    key={row.name as string}
+                    className={`cursor-pointer border-b border-[#DBDBDB] transition-colors hover:bg-[#E8F8EF] ${
+                      isSelected ? "bg-[#D9F4E4] text-[#282828]" : ""
+                    }`}
+                    onClick={() => onSelectEducation(row.name as string)}
+                  >
+                    <td className="px-4 py-3 font-semibold">{row.name}</td>
+                    <td className="px-4 py-3">{row.students}</td>
+                    <td className="px-4 py-3">{row.collected}</td>
+                    <td className="px-4 py-3">{row.pending}</td>
+                    <td className="px-4 py-3">{row.totalFees}</td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -107,17 +124,36 @@ function SelectableEducationTable({
   );
 }
 
-function AcademicYearPill({ className = "" }: { className?: string }) {
+function AcademicYearPill({
+  years,
+  selectedYear,
+  onChange,
+}: {
+  years: string[];
+  selectedYear: string;
+  onChange: (year: string) => void;
+}) {
   return (
-    <div className={`flex items-center gap-2 text-sm text-[#282828] ${className}`}>
+    <div className="flex items-center gap-2 text-sm text-[#282828]">
       <span>Academic Year :</span>
-      <button
-        type="button"
-        className="flex items-center gap-2 rounded-full bg-[#43C17A] px-3 py-1 text-xs font-semibold text-white"
-      >
-        2026
-        <CaretDown size={12} weight="bold" />
-      </button>
+      <div className="relative">
+        <select
+          className="appearance-none rounded-full bg-[#43C17A] py-1 pr-8 pl-3 text-xs font-semibold text-white outline-none"
+          value={selectedYear}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {years.map((year) => (
+            <option key={year} value={year} className="bg-white text-[#282828]">
+              {year}
+            </option>
+          ))}
+        </select>
+        <CaretDown
+          className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-white"
+          size={12}
+          weight="bold"
+        />
+      </div>
     </div>
   );
 }
@@ -126,10 +162,12 @@ function OverviewTable({
   title,
   columns,
   rows,
+  loading,
 }: {
   title: string;
   columns: { title: string; key: string }[];
   rows: Record<string, React.ReactNode>[];
+  loading: boolean;
 }) {
   return (
     <section className="rounded-lg bg-white p-4 shadow-sm">
@@ -138,6 +176,7 @@ function OverviewTable({
         columns={columns}
         tableData={rows}
         height="auto"
+        isLoading={loading}
         stickyHeader={false}
       />
     </section>
@@ -146,11 +185,73 @@ function OverviewTable({
 
 export default function ManagerFeeOverviewView() {
   const router = useRouter();
+  const { collegeId, collegeEducationId, loading: contextLoading } =
+    useFinanceManager();
+  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
+  const [availableYears, setAvailableYears] = useState([selectedYear]);
+  const [educationRows, setEducationRows] = useState<FeeCollectionOverviewRow[]>([]);
+  const [branchRows, setBranchRows] = useState<FeeCollectionOverviewRow[]>([]);
   const [selectedEducation, setSelectedEducation] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOverview() {
+      if (contextLoading || !collegeId || !collegeEducationId) return;
+
+      setLoading(true);
+      try {
+        const result = await fetchFeeCollectionOverview(
+          collegeId,
+          collegeEducationId,
+          selectedYear,
+        );
+        if (!isMounted) return;
+
+        setAvailableYears(result.years);
+        setEducationRows(result.educationRows);
+        setBranchRows(result.branchRows);
+
+        const nextSelectedYear = result.years.includes(selectedYear)
+          ? selectedYear
+          : result.years[0];
+        if (nextSelectedYear && nextSelectedYear !== selectedYear) {
+          setSelectedYear(nextSelectedYear);
+        }
+
+        if (
+          selectedEducation &&
+          !result.educationRows.some((row) => row.name === selectedEducation)
+        ) {
+          setSelectedEducation(null);
+        }
+      } catch {
+        if (!isMounted) return;
+        setEducationRows([]);
+        setBranchRows([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    collegeEducationId,
+    collegeId,
+    contextLoading,
+    selectedEducation,
+    selectedYear,
+  ]);
+
+  const branchTableRows = useMemo(() => buildRows(branchRows), [branchRows]);
   const selectedBranchTitle = selectedEducation
     ? `${selectedEducation} Fee Collection Overview`
     : "";
-  const branchRows = useMemo(() => buildRows(branchOverviewData), []);
 
   return (
     <div className="w-full p-2 pb-7 lg:pb-5">
@@ -163,19 +264,26 @@ export default function ManagerFeeOverviewView() {
         >
           <CaretLeft size={24} weight="bold" />
         </button>
-        <AcademicYearPill />
+        <AcademicYearPill
+          years={availableYears}
+          selectedYear={selectedYear}
+          onChange={setSelectedYear}
+        />
       </div>
 
       <div className="flex flex-col gap-4">
         <SelectableEducationTable
+          rows={educationRows}
           selectedEducation={selectedEducation}
+          loading={contextLoading || loading}
           onSelectEducation={setSelectedEducation}
         />
         {selectedEducation && (
           <OverviewTable
             title={selectedBranchTitle}
             columns={branchColumns}
-            rows={branchRows}
+            rows={branchTableRows}
+            loading={contextLoading || loading}
           />
         )}
       </div>
