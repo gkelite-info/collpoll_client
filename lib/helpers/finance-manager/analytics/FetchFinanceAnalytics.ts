@@ -711,16 +711,37 @@ export async function getFinanceAnalyticsOverview(
       .is("deletedAt", null),
     supabase
       .from("students")
-      .select("studentId", { count: "exact", head: true })
+      .select(
+        `
+        studentId,
+        users!inner (
+          role,
+          collegeId,
+          isActive,
+          is_deleted,
+          deletedAt
+        ),
+        student_academic_history!inner ( isCurrent )
+      `,
+        { count: "exact", head: true },
+      )
       .eq("collegeId", collegeId)
       .eq("collegeEducationId", collegeEducationId)
+      .eq("status", "Active")
       .eq("isActive", true)
-      .is("deletedAt", null),
+      .is("deletedAt", null)
+      .eq("users.role", "Student")
+      .eq("users.collegeId", collegeId)
+      .eq("users.isActive", true)
+      .eq("users.is_deleted", false)
+      .is("users.deletedAt", null)
+      .eq("student_academic_history.isCurrent", true),
     supabase
-      .from("users")
-      .select("userId", { count: "exact", head: true })
+      .from("finance_manager")
+      .select("financeManagerId", { count: "exact", head: true })
       .eq("collegeId", collegeId)
-      .eq("role", "FinanceManager")
+      .eq("collegeEducationId", collegeEducationId)
+      .eq("type", "executive")
       .eq("isActive", true)
       .eq("is_deleted", false)
       .is("deletedAt", null),
@@ -1356,9 +1377,6 @@ export async function getYearWiseDetailsDynamic(
     );
     const currentSemesterObj: any = getFirst(activeHistory?.college_semester);
     const currentSemesterNumber = Number(currentSemesterObj?.collegeSemester);
-
-    if (![1, 2].includes(currentSemesterNumber)) return;
-
     const semesterBuckets = new Map<number, number>();
     ob.student_fee_collection?.forEach((collection: any) => {
       const semesterNumber =
@@ -1375,11 +1393,19 @@ export async function getYearWiseDetailsDynamic(
       );
     });
 
-    const targetMap = currentSemesterNumber === 1 ? leftChartMap : rightChartMap;
+    const paidSemesterNumbers = Array.from(semesterBuckets.keys()).filter(
+      (semesterNumber) => [1, 2].includes(semesterNumber),
+    );
+    const pendingSemesterNumber = paidSemesterNumbers[0] ??
+      ([1, 2].includes(currentSemesterNumber) ? currentSemesterNumber : 1);
+    const targetMap = pendingSemesterNumber === 1 ? leftChartMap : rightChartMap;
     const chartRow = targetMap.get(yearOrder || formatYearShortLabel(academicYearLabel));
     if (!chartRow) return;
 
-    const collected = semesterBuckets.get(currentSemesterNumber) ?? 0;
+    const collected = paidSemesterNumbers.reduce(
+      (sum, semesterNumber) => sum + (semesterBuckets.get(semesterNumber) ?? 0),
+      0,
+    );
     const totalAmount = Number(ob.totalAmount) || 0;
     chartRow.collected += collected;
     chartRow.pending += Math.max(totalAmount - collected, 0);

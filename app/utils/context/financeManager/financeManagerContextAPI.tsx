@@ -6,6 +6,7 @@ type FinanceManagerJoin = {
     collegeId: number;
     collegeEducationId: number;
     isActive: boolean;
+    type: "executive" | "manager";
 
     college: {
         collegeName: string;
@@ -25,6 +26,7 @@ export async function fetchFinanceManagerContext(userId: number) {
       collegeId,
       collegeEducationId,
       isActive,
+      type,
       college:collegeId!inner (
         collegeName
       ),
@@ -47,5 +49,6 @@ export async function fetchFinanceManagerContext(userId: number) {
         collegeName: data.college.collegeName,
         collegeEducationType: data.college_education.collegeEducationType,
         isActive: data.isActive,
+        type: data.type,
     };
 }

@@ -4,7 +4,7 @@ import { CaretDown, CaretRight } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-import { getFinanceAnalyticsOverview } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getFinanceAnalyticsOverview } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import FinanceAnalyticsSummaryCards from "./FinanceAnalyticsSummaryCards";
 
 type ProgramCard = {
@@ -171,8 +171,7 @@ export default function FinanceAnalyticsView() {
         setSummaryCards(result.summaryCards);
         setProgramCards(result.programCards);
         setChartData(result.chartData);
-      } catch (error) {
-        console.error("Finance analytics overview error:", error);
+      } catch {
         if (!isMounted) return;
         setSummaryCards([]);
         setProgramCards([]);

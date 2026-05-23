@@ -2,7 +2,7 @@
 
 import TableComponent from "@/app/utils/table/table";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-import { getYearWiseDetailsDynamic } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getYearWiseDetailsDynamic } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import {
   CaretLeft,
   CaretRight,
@@ -414,8 +414,7 @@ export default function YearWiseFeeCollectionView({
           setStudentData(result.tableData);
           setTotalRecords(result.totalCount);
         }
-      } catch (error) {
-        console.error("Year wise analytics error:", error);
+      } catch {
         if (!isMounted) return;
         setLeftChart([]);
         setRightChart([]);
@@ -478,8 +477,7 @@ export default function YearWiseFeeCollectionView({
         if (tableRequestId !== tableRequestIdRef.current) return;
         setStudentData(result.tableData);
         setTotalRecords(result.totalCount);
-      } catch (error) {
-        console.error("Year wise student table error:", error);
+      } catch {
         if (!isMounted) return;
         if (tableRequestId !== tableRequestIdRef.current) return;
         setStudentData([]);

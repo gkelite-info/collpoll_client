@@ -2,7 +2,7 @@
 
 import TableComponent from "@/app/utils/table/table";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
-import { getBranchWiseCollectionDynamic } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getBranchWiseCollectionDynamic } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
@@ -127,9 +127,14 @@ export default function BranchWiseCollectionView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { collegeId, collegeEducationId, loading: contextLoading } =
+  const {
+    collegeId,
+    collegeEducationId,
+    collegeEducationType,
+    loading: contextLoading,
+  } =
     useFinanceManager();
-  const title = program || "B-Tech";
+  const title = collegeEducationType || program || "Education";
   const [isLoading, setIsLoading] = useState(true);
   const [chartData, setChartData] = useState<
     { branch: string; collected: number; pending: number }[]
@@ -165,8 +170,7 @@ export default function BranchWiseCollectionView({
         setRawTableData(result.tableData);
         setAcademicYears(result.academicYears);
         setSemesters(result.semesters);
-      } catch (error) {
-        console.error("Branch wise analytics error:", error);
+      } catch {
         if (!isMounted) return;
         setChartData([]);
         setGridData([]);
