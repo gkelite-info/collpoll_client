@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AgCharts } from "ag-charts-react";
 import {
@@ -8,29 +8,94 @@ import {
   ModuleRegistry,
   type AgCartesianChartOptions,
 } from "ag-charts-community";
-import { feeCollectionOverview } from "./data";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { getFinanceAnalyticsOverview } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+type FeeCollectionChartRow = {
+  program: string;
+  collected: number;
+  pending: number;
+};
+
+type ChartDatum = FeeCollectionChartRow & {
+  pendingValue: number;
+};
+
+const formatShortAmount = (value: number) => {
+  const amount = Number(value) || 0;
+  if (amount >= 10000000) return `\u20B9 ${(amount / 10000000).toFixed(1)} Cr`;
+  if (amount >= 100000) return `\u20B9 ${(amount / 100000).toFixed(1)} L`;
+  if (amount >= 1000) return `\u20B9 ${Math.round(amount / 1000)} K`;
+  return `\u20B9 ${Math.round(amount).toLocaleString("en-IN")}`;
+};
+
 export default function FeeCollectionOverviewChart() {
   const router = useRouter();
+  const { collegeId, collegeEducationId, loading: contextLoading } =
+    useFinanceManager();
+  const [chartData, setChartData] = useState<FeeCollectionChartRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOverview() {
+      if (contextLoading || !collegeId || !collegeEducationId) return;
+
+      setLoading(true);
+      try {
+        const result = await getFinanceAnalyticsOverview(
+          collegeId,
+          collegeEducationId,
+        );
+        if (!isMounted) return;
+        setChartData(result.chartData);
+      } catch {
+        if (!isMounted) return;
+        setChartData([]);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadOverview();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [collegeEducationId, collegeId, contextLoading]);
+
+  const data = useMemo<ChartDatum[]>(
+    () =>
+      chartData.map((item) => ({
+        program: item.program,
+        collected: Number(item.collected) || 0,
+        pending: Number(item.pending) || 0,
+        pendingValue: Number(item.pending) || 0,
+      })),
+    [chartData],
+  );
+
   const maxStackValue = useMemo(
     () =>
       Math.max(
-        ...feeCollectionOverview.map(
-          (item) => item.collected + item.pending,
-        ),
+        1,
+        ...data.map((item) => Number(item.collected) + Number(item.pending)),
       ),
-    [],
+    [data],
   );
-  const shouldShowVerticalScroll = maxStackValue > 8;
-  const axisMax = shouldShowVerticalScroll
-    ? Math.ceil(maxStackValue / 2) * 2
-    : 8;
+  const lakh = 100000;
+  const axisStep = 2 * lakh;
+  const axisMax = Math.max(
+    axisStep,
+    Math.ceil((maxStackValue * 1.15) / axisStep) * axisStep,
+  );
 
   const options = useMemo<AgCartesianChartOptions>(
     () => ({
-      data: feeCollectionOverview,
+      data,
       background: { fill: "transparent" },
       padding: { top: 6, right: 6, bottom: 0, left: 0 },
       series: [
@@ -43,7 +108,7 @@ export default function FeeCollectionOverviewChart() {
           fill: "#3BAE64",
           strokeWidth: 0,
           cornerRadius: 0,
-          maxWidth: 28,
+          width: 50,
         },
         {
           type: "bar",
@@ -54,12 +119,13 @@ export default function FeeCollectionOverviewChart() {
           fill: "#16284F",
           strokeWidth: 0,
           cornerRadius: 6,
-          maxWidth: 28,
+          width: 50,
           label: {
             enabled: true,
             color: "#FFFFFF",
             fontSize: 11,
-            formatter: ({ datum }) => `₹ ${datum.pendingLabel}r`,
+            formatter: ({ datum }) =>
+              formatShortAmount(Number(datum.pendingValue) || 0),
           },
         },
       ],
@@ -80,11 +146,11 @@ export default function FeeCollectionOverviewChart() {
           min: 0,
           max: axisMax,
           nice: false,
-          interval: { step: 2 },
+          interval: { step: axisStep },
           label: {
             color: "#282828",
             fontSize: 13,
-            formatter: ({ value }) => `₹ ${value} Cr`,
+            formatter: ({ value }) => formatShortAmount(Number(value)),
           },
           gridLine: { enabled: false },
           line: { stroke: "#B3B3B3" },
@@ -92,18 +158,17 @@ export default function FeeCollectionOverviewChart() {
       },
       legend: { enabled: false },
     }),
-    [axisMax],
+    [axisMax, axisStep, data],
   );
 
-  // Each bar slot = ~80px (5 bars) + ~70px for the left Y-axis labels = ~470px total
-  // maxWidth:44 only fires when the natural bar width > 44px
-  // So we fix the chart width so natural bar width ≈ 44px
-  const BAR_SLOT_WIDTH = 68; // px per category
-  const Y_AXIS_WIDTH = 70; // px for left axis labels
-  const chartWidth = feeCollectionOverview.length * BAR_SLOT_WIDTH + Y_AXIS_WIDTH;
-  const chartHeight = shouldShowVerticalScroll
-    ? Math.ceil((axisMax / 8) * 256)
-    : 256;
+  const BAR_SLOT_WIDTH = 110;
+  const Y_AXIS_WIDTH = 70;
+  const chartWidth = Math.max(
+    Math.max(data.length, 1) * BAR_SLOT_WIDTH + Y_AXIS_WIDTH,
+    200,
+  );
+  const chartHeight = 256;
+  const isLoading = contextLoading || loading;
 
   return (
     <div className="w-full rounded-lg bg-white p-4 shadow-sm">
@@ -131,9 +196,20 @@ export default function FeeCollectionOverviewChart() {
         </button>
       </div>
 
-      <div className="custom-scrollbar overflow-x-auto overflow-y-hidden pb-2">
+      <div className="custom-scrollbar overflow-x-scroll overflow-y-hidden pb-2">
         <div style={{ width: chartWidth, height: chartHeight }}>
-          <AgCharts options={options} style={{ height: "100%", width: "100%" }} />
+          {isLoading ? (
+            <div className="h-full animate-pulse rounded-md bg-[#F2F2F2]" />
+          ) : data.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-[#525252]">
+              No fee collection data available
+            </div>
+          ) : (
+            <AgCharts
+              options={options}
+              style={{ height: "100%", width: "100%" }}
+            />
+          )}
         </div>
       </div>
     </div>

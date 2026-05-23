@@ -14,7 +14,7 @@ import TableComponent from "@/app/utils/table/table";
 import { useRouter, useSearchParams } from "next/navigation";
 import YearWiseFeeCollection from "../(dashboard)/components/yearWiseFeeCollection";
 import { Loader } from "../../(student)/calendar/right/timetable";
-import { getBranchWiseCollection } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getBranchWiseCollection } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 
 const VerticalChartSkeleton = () => (

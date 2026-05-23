@@ -1,6 +1,6 @@
 "use client";
 
-import { getStudentFinanceDetails } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getStudentFinanceDetails } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import { CaretLeftIcon, CurrencyInrIcon } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
@@ -31,7 +31,7 @@ import toast from "react-hot-toast";
 import {
   fetchActiveObligationByStudent,
   fetchRecentOfflinePayments,
-} from "@/lib/helpers/finance/analytics/studentPaymentHelpers";
+} from "@/lib/helpers/finance-manager/analytics/studentPaymentHelpers";
 import ComposeEmailModal from "@/app/components/modals/ComposeEmailModal";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 

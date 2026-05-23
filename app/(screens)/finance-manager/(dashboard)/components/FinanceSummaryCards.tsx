@@ -16,6 +16,10 @@ const summaryIcons = [
 ];
 
 type FinanceSummaryCardsProps = {
+  cards?: {
+    label: string;
+    value: string;
+  }[];
   onRevenueClick?: () => void;
   onPendingClick?: () => void;
   onStudentsClick?: () => void;
@@ -23,14 +27,20 @@ type FinanceSummaryCardsProps = {
 };
 
 export default function FinanceSummaryCards({
+  cards,
   onRevenueClick,
   onPendingClick,
   onStudentsClick,
   onExecutivesClick,
 }: FinanceSummaryCardsProps) {
+  const displayCards = financeSummaryCards.map((card, index) => ({
+    ...card,
+    ...(cards?.[index] ?? {}),
+  }));
+
   return (
     <section className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-4">
-      {financeSummaryCards.map((card, index) => (
+      {displayCards.map((card, index) => (
         <CardComponent
           key={card.label}
           style={`${card.style} w-full !h-[92px] py-3 [&>div:nth-of-type(2)]:!text-sm [&>span]:!text-xs`}

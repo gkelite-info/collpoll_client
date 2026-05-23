@@ -3,7 +3,7 @@
 import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import TableComponent from "@/app/utils/table/table";
-import { getYearWiseDetails } from "@/lib/helpers/finance/analytics/FetchFinanceAnalytics";
+import { getYearWiseDetails } from "@/lib/helpers/finance-manager/analytics/FetchFinanceAnalytics";
 import {
   CaretLeftIcon,
   MagnifyingGlass,

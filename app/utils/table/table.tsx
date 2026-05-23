@@ -44,6 +44,7 @@ type TableComponentProps = {
   isLoading?: boolean;
   stickyHeader?: boolean;
   fillHeight?: boolean;
+  tableClassName?: string;
 };
 
 export default function TableComponent({
@@ -53,6 +54,7 @@ export default function TableComponent({
   isLoading = false,
   stickyHeader = true,
   fillHeight = false,
+  tableClassName = "",
 }: TableComponentProps) {
   return (
     <div className="mt-2 w-full">
@@ -68,7 +70,7 @@ export default function TableComponent({
               : { maxHeight: height || "55vh" }
           }
         >
-          <table className="w-full border-collapse">
+          <table className={`w-full border-collapse ${tableClassName}`}>
             <TableHead columns={columns} stickyHeader={stickyHeader} />
             <TableBody
               columns={columns}

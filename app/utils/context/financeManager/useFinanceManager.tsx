@@ -13,6 +13,7 @@ export type FinanceManagerContextType = {
     collegeName: string | null;
     collegeEducationType: string | null;
     isActive: boolean | null;
+    type: "executive" | "manager" | null;
 };
 
 const FinanceManagerContext =
@@ -34,6 +35,7 @@ export const FinanceManagerProvider = ({
         collegeName: null,
         collegeEducationType: null,
         isActive: null,
+        type: null,
     });
 
     useEffect(() => {
@@ -57,9 +59,9 @@ export const FinanceManagerProvider = ({
                     collegeName: fm.collegeName,
                     collegeEducationType: fm.collegeEducationType,
                     isActive: fm.isActive,
+                    type: fm.type,
                 });
-            } catch (err) {
-                console.error("Failed to load finance manager context", err);
+            } catch {
                 setState((s) => ({ ...s, loading: false }));
             }
         };

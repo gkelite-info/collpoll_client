@@ -7,7 +7,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import {
   fetchRecentOfflinePayments,
   fetchStudentFeeDetails,
-} from "@/lib/helpers/finance/analytics/studentPaymentHelpers";
+} from "@/lib/helpers/finance-manager/analytics/studentPaymentHelpers";
 
 interface UseRecordPaymentProps {
   studentFeeObligationId: number;
