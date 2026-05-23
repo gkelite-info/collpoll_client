@@ -420,7 +420,10 @@ export default function AnnouncementsCard({
         )}
       </div>
 
-      <div className={`flex flex-col text-center gap-2 overflow-y-auto max-h-[${height}]`}>
+      <div
+        className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto text-center"
+        style={height ? { maxHeight: height } : undefined}
+      >
         {isLoading ? (
           <AnnouncementListShimmer />
         ) : announceCard.length === 0 ? (

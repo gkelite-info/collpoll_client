@@ -76,7 +76,7 @@ function ReassignedIssuesContent() {
     }
 
     return (
-        <main className="flex flex-col lg:flex-row w-full min-h-screen overflow-auto">
+        <main className="flex flex-col lg:flex-row w-full min-h-screen overflow-auto pb-5">
             <div className="w-full p-2 flex flex-col gap-2 lg:h-screen lg:overflow-y-auto custom-scrollbar">
                 <div className="flex flex-col sm:flex-row justify-between gap-4   mt-1">
                     <div className="flex flex-col justify-between gap-2 flex-wrap">

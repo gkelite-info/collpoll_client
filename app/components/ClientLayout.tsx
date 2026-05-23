@@ -23,8 +23,6 @@ import { useFaculty } from "../utils/context/faculty/useFaculty";
 import AddUserModal from "../(screens)/admin/(dashboard)/components/modal/addUserModal";
 import { saveStudentTask } from "@/lib/helpers/student/studentTaskAPI";
 import TaskPanelModal from "../utils/taskPanelModal";
-import WellbeingExecutiveDashboardShimmer from "../(screens)/wellbeing-executive/(dashboard)/components/DashboardShimmer";
-import WellbeingManagerDashboardShimmer from "../(screens)/wellbeing-manager/(dashboard)/components/DashboardShimmer";
 import { supabase } from "@/lib/supabaseClient";
 import {
   getLandingPageForRole,
@@ -512,7 +510,7 @@ export default function ClientLayout({
             </div>
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
-            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain">
+            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 custom-scrollbar">
               {children}
             </div>
           </div>

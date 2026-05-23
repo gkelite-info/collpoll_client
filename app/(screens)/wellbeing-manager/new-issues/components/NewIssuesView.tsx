@@ -171,7 +171,7 @@ export default function NewIssuesPageContent() {
     }));
 
     return (
-        <main className="flex flex-col lg:flex-row w-full min-h-screen">
+        <main className="flex flex-col lg:flex-row w-full min-h-screen pb-5">
             <div className="w-full lg:w-[68%] p-2 md:p-2 lg:p-2 flex flex-col gap-6 lg:gap-8 lg:h-screen">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
                     <div className="flex flex-col gap-1">

@@ -3,8 +3,7 @@
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
-import { CalendarBlank, CalendarDotsIcon, CaretDown, ListChecks, Siren } from "@phosphor-icons/react";
-import TableComponent from "@/app/utils/table/table";
+import { CalendarDotsIcon, CaretDown } from "@phosphor-icons/react";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useUser } from "@/app/utils/context/UserContext";
@@ -13,10 +12,9 @@ import {
   managerCategories,
   managerFilters,
   managerIssueStats,
-  managerRecentIssues,
-  urgentIssues,
 } from "../data";
 import ManagerDashboardCard from "./ManagerDashboardCard";
+import DashboardIssueTables from "./DashboardIssueTables";
 
 const ManagerIssueDonut = dynamic(() => import("./ManagerIssueDonut"), {
   ssr: false,
@@ -97,7 +95,7 @@ function WelcomePanel() {
 
         {gender ? (
           <div
-            className={`absolute bottom-0 md:-right-3 lg:right-10 ${gender === "Male" ? "h-[105%]" : "h-[107%]"
+            className={`absolute bottom-0 md:-right-3 lg:right-10 ${gender === "Male" ? "h-[105%]" : "h-[105%]"
               } z-10 w-[180px]`}
           >
             <Image
@@ -112,7 +110,7 @@ function WelcomePanel() {
         ) : null}
       </div>
 
-      <svg
+      {/* <svg
         className="absolute bottom-0 right-0 z-0 h-full w-auto"
         width="186"
         height="170"
@@ -126,7 +124,7 @@ function WelcomePanel() {
           d="M173.532 0C180.146 0 185.512 5.35094 185.532 11.9644L185.955 154.896C185.98 163.197 179.257 169.94 170.955 169.94H51.5453C46.2115 169.775 40.1483 169.848 34.1023 169.92C7.43518 170.24 -18.9265 170.556 18.8128 150.447C28.6823 144.861 52.2795 137.844 67.7118 154.469C74.142 158.938 101.032 145.673 130.82 112.96C139.793 102.681 157.737 73.8116 157.737 40.5622C156.99 31.1773 155.943 10.7256 157.737 0H171.9H173.532Z"
           fill="#BCE6D0"
         />
-      </svg>
+      </svg> */}
     </div>
   );
 }
@@ -190,167 +188,9 @@ function CategoryBreakdown() {
   );
 }
 
-function UrgentIssues() {
-  return (
-    <ManagerDashboardCard>
-      <div className="mb-3 flex items-start justify-between">
-        <div className="flex gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#FFE8E8] text-[#FF1F1F]">
-            <Siren size={18} weight="fill" />
-          </span>
-          <div>
-            <h3 className="text-sm font-bold text-[#282828]">Urgent Issues</h3>
-            <p className="text-[12px] font-medium text-[#4B5563]">
-              Immediate Action Required
-            </p>
-          </div>
-        </div>
-        <button
-          className="text-[12px] font-bold text-[#16284F] underline underline-offset-2"
-        >
-          View All
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        {urgentIssues.map((issue) => (
-          <div
-            key={issue.student}
-            className="flex items-center gap-3 rounded-md border-l-4 border-[#FF1F1F] bg-[#FFECEC] p-3"
-          >
-            <Image
-              src={issue.studentImage}
-              alt={issue.student}
-              width={44}
-              height={44}
-              className="h-11 w-11 rounded-full object-cover"
-            />
-            <div className="min-w-0 flex-[1.2]">
-              <p className="text-[12px] font-bold text-[#282828]">
-                {issue.student}
-              </p>
-              <p className="text-[10px] font-medium text-[#282828]">
-                {issue.meta}
-              </p>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12px] font-bold text-[#282828]">
-                {issue.issue}
-              </p>
-              <span className="mt-1 inline-flex rounded-full bg-[#DCEBFF] px-3 py-0.5 text-[10px] font-semibold text-[#2563EB]">
-                {issue.category}
-              </span>
-            </div>
-            <div className="flex flex-col gap-2 text-[10px]">
-              <span className="w-fit rounded bg-[#FFCDD2] px-2 py-0.5 font-bold text-[#FF1F1F]">
-                {issue.priority}
-              </span>
-              <span className="text-[#4B5563]">{issue.time}</span>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <button className="text-[11px] font-bold text-[#16284F] underline underline-offset-2">
-                View
-              </button>
-              <button className="flex h-7 items-center gap-1 rounded-md bg-[#FDBA74] px-3 text-[11px] font-bold text-white">
-                {issue.status}
-                <CaretDown size={12} weight="bold" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </ManagerDashboardCard>
-  );
-}
-
-function RecentIssuesTable() {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const columns = [
-    { title: "Student", key: "subject" },
-    { title: "Issue", key: "issue" },
-    { title: "Category", key: "category" },
-    { title: "Priority", key: "priority" },
-  ];
-
-  const tableData = managerRecentIssues.map((issue) => ({
-    subject: (
-      <div className="flex min-w-[185px] items-center gap-2 text-left">
-        <Image
-          src={issue.studentImage}
-          alt={issue.student}
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover"
-        />
-        <div>
-          <p className="text-[12px] font-bold text-[#111827]">
-            {issue.student}
-          </p>
-          <p className="text-[10px] font-medium text-[#4B5563]">
-            {issue.meta}
-          </p>
-        </div>
-      </div>
-    ),
-    issue: (
-      <div className="min-w-[260px] text-left">
-        <p className="text-[12px] font-bold text-[#111827]">{issue.issue}</p>
-        <p className="text-[10px] font-medium text-[#4B5563]">
-          {issue.description}
-        </p>
-      </div>
-    ),
-    category: (
-      <span className="rounded-full bg-[#E8F8EF] px-3 py-1 text-[10px] font-semibold text-[#3E8F61]">
-        {issue.category}
-      </span>
-    ),
-    priority: (
-      <span className="rounded-full bg-[#FFF7E6] px-3 py-1 text-[10px] font-semibold text-[#F59E0B]">
-        {issue.priority}
-      </span>
-    ),
-  }));
-
-  return (
-    <ManagerDashboardCard className="px-4 py-4">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E8F8EF] text-[#43C17A]">
-            <ListChecks size={18} weight="fill" />
-          </span>
-          <div>
-            <h3 className="text-sm font-bold text-[#282828]">Recent Issues</h3>
-            <p className="text-[12px] font-medium text-[#4B5563]">
-              Latest reported complaints across campus
-            </p>
-          </div>
-        </div>
-        <button
-          className="text-[12px] font-bold text-[#16284F] underline underline-offset-2"
-        >
-          View All
-        </button>
-      </div>
-      <div className="overflow-x-auto">
-        <div className="min-w-[820px]">
-          <TableComponent
-            columns={columns}
-            tableData={tableData}
-            height="310px"
-            stickyHeader={false}
-          />
-        </div>
-      </div>
-    </ManagerDashboardCard>
-  );
-}
-
 export default function WellbeingManagerLeft() {
   return (
-    <div className="w-full p-1 md:w-[68%] md:p-2 lg:w-[68%]">
+    <div className="w-full p-2 lg:w-[68%]">
       <WelcomePanel />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -382,21 +222,9 @@ export default function WellbeingManagerLeft() {
       </div>
 
       <div className="mt-3">
-        <UrgentIssues />
+        <DashboardIssueTables />
       </div>
-
-      <div className="mt-3">
-        <RecentIssuesTable />
-      </div>
-
-      <div className="mt-3 grid gap-3 md:hidden">
-        <WorkWeekCalendar style="" />
-        <AnnouncementsCard
-          announceCard={managerAnnouncements}
-          height="60vh"
-          readOnly
-        />
-      </div>
+      
     </div>
   );
 }
