@@ -146,7 +146,7 @@ export default function WellbeingMeetingsPage() {
                     <CourseScheduleCard isVisibile={false} />
                 </div>
             </div>
-            <div className="bg-red-00">
+            <div className="bg-red-00 pb-5">
                 <div className="flex items-center justify-between w-full relative mb-4 max-md:flex-col max-md:gap-4">
                     <div className="hidden md:block w-32"></div>
                     <div className="bg-white/80 p-2 rounded-full inline-flex gap-2 mx-auto self-center">

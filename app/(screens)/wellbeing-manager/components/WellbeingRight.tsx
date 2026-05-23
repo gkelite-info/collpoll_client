@@ -4,7 +4,7 @@ import AnnouncementsCard from "@/app/utils/announcementsCard";
 import CourseScheduleCard from "@/app/utils/CourseScheduleCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { Plus, X } from "@phosphor-icons/react";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 type WellbeingRightProps = {
   button?: boolean;
@@ -27,8 +27,6 @@ export default function WellbeingRight({
   onCloseDrawer,
   hideDefaultMobileContent = false,
 }: WellbeingRightProps) {
-  const [view, setView] = useState<"my" | "others">("my");
-
   useEffect(() => {
     if (isMobileDrawerOpen) {
       document.body.style.overflow = "hidden";
@@ -83,7 +81,7 @@ export default function WellbeingRight({
   ];
 
   const SidebarContent = (
-    <div>
+    <div className="flex h-full min-h-0 flex-col">
       <div className="grid grid-cols-2 gap-4 w-full items-center justify-center shrink-0">
         {button ? (
           <button 
@@ -103,15 +101,14 @@ export default function WellbeingRight({
 
       {showCalendar && <div className="shrink-0"><WorkWeekCalendar /></div>}
 
-      <div className={`flex flex-col gap-4 shrink-0 ${children && 'mb-12'} mt-4`}>
+      <div className={`flex flex-col gap-4 shrink-0 ${children ? "mb-6 mt-3" : ""}`}>
          {children}
       </div>
 
-      <div className={`flex-1 min-h-0 shrink-0 ${children ? '' :'-mt-5'}`}>
+      <div className="min-h-[360px] flex-1">
         <AnnouncementsCard
           announceCard={staticAnnouncements}
-          height="50vh"
-          onViewChange={(v) => setView(v)}
+          height="100%"
           refreshAnnouncements={async () => { }}
           currentView="my"
         />
@@ -121,7 +118,7 @@ export default function WellbeingRight({
 
   return (
     <>
-      <aside className="hidden lg:flex lg:h-full w-[32%] lg:py-5 lg:pl-2 flex-col gap-6 shrink-0 h-screen lg:overflow-y-auto custom-scrollbar">
+      <aside className="hidden lg:flex lg:min-h-screen w-[32%] lg:py-5 lg:pl-2 flex-col gap-6 shrink-0 overflow-hidden">
         {SidebarContent}
       </aside>
 

@@ -56,18 +56,18 @@ export default function CategoriesPage() {
   ];
 
   return (
-    <main className="flex flex-col lg:flex-row w-full min-h-screen overflow-x-hidden">
+    <main className="flex flex-col lg:flex-row w-full min-h-screen pb-5">
 
       <div className="w-full lg:w-[68%] p-4 md:p-6 lg:p-2 lg:pb-4 flex flex-col lg:h-screen">
         <div className="mb-4 mt-4 flex flex-col gap-4 justify-between">
-          <div className="relative inline-flex items-center">
+          <div className="relative inline-flex items-center w-fit">
             <select className="cursor-pointer appearance-none bg-[#16284F] text-[#ffffff] py-1.5 pl-3 pr-8 rounded-md outline-none text-[13px] md:text-sm font-medium h-[34px]">
               <option value="">College</option>
               <option value="engineering">Engineering</option>
               <option value="medical">Medical</option>
               <option value="arts">Arts</option>
             </select>
-            <CaretDown size={14} weight="bold" color="#ffffff" className="absolute right-2.5 pointer-events-none" />
+            <CaretDown size={14} weight="bold"  className="absolute right-2.5 text-white pointer-events-none" />
           </div>
           <button
             onClick={() => setIsModalOpen(true)}

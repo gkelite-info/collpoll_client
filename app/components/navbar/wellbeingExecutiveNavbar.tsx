@@ -4,7 +4,6 @@ import { ReactNode, useCallback, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDots,
-  CaretDown,
   ChartBarHorizontal,
   CheckCircle,
   FolderOpen,
@@ -29,6 +28,7 @@ type NavItem = {
   label: string;
   path: string;
   badge?: string;
+  hidden?: boolean;
 };
 
 type WellbeingExecutiveNavbarProps = {
@@ -50,10 +50,9 @@ export default function WellbeingExecutiveNavbar({
   const iconSize = 18;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [showExecutiveMenu, setShowExecutiveMenu] = useState(false);
 
-  const items: NavItem[] = useMemo(
-    () => [
+  const items: NavItem[] = useMemo(() => {
+    const navItems: NavItem[] = [
       {
         icon: (isActive) => (
           <House size={iconSize} weight={isActive ? "fill" : "regular"} />
@@ -102,6 +101,7 @@ export default function WellbeingExecutiveNavbar({
         ),
         label: "Leave Request",
         path: `${base}/leaveRequests`,
+        hidden: !showLeaveRequest,
       },
       {
         icon: (isActive) => (
@@ -145,9 +145,10 @@ export default function WellbeingExecutiveNavbar({
         label: "Settings",
         path: `${base}/settings`,
       },
-    ],
-    [base, showLeaveRequest],
-  );
+    ];
+
+    return navItems.filter((item) => !item.hidden);
+  }, [base, showLeaveRequest]);
 
   const prefetchRoute = useCallback(
     (path: string) => {
@@ -217,7 +218,7 @@ export default function WellbeingExecutiveNavbar({
                 onFocus={() => prefetchRoute(item.path)}
                 onMouseEnter={() => prefetchRoute(item.path)}
                 onTouchStart={() => prefetchRoute(item.path)}
-                className={`group relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${active
+                className={`group relative flex w-full cursor-pointer items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${active
                     ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                     : "text-white hover:bg-white/10"
                   }`}
@@ -239,37 +240,29 @@ export default function WellbeingExecutiveNavbar({
           })}
 
           {showExecutives ? (
-            <div className="w-full pr-4">
-              <button
-                type="button"
-                onClick={() => setShowExecutiveMenu((prev) => !prev)}
-                className="flex min-h-[42px] w-full items-center gap-3 rounded-md bg-[#16395B] px-3 text-[15px] font-semibold text-white transition-all duration-300 hover:bg-[#12314F]"
+            <Link
+              href={`${base}/executives`}
+              onClick={() => handleNavigate(`${base}/executives`)}
+              onFocus={() => prefetchRoute(`${base}/executives`)}
+              onMouseEnter={() => prefetchRoute(`${base}/executives`)}
+              onTouchStart={() => prefetchRoute(`${base}/executives`)}
+              className={`group relative flex w-full cursor-pointer items-center gap-3  py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:duration-300 sm:text-sm md:text-base lg:text-sm ${
+                pathname.startsWith(`${base}/executives`)
+                  ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none rounded-l-full"
+                  : "bg-[#16395B] text-white hover:bg-[#12314F] max-w-[95%] py-2.5 rounded-sm"
+              }`}
+            >
+              <span
+                className={`flex h-5 w-5 shrink-0 items-center justify-center ${
+                  pathname.startsWith(`${base}/executives`)
+                    ? "text-[#43C17A]"
+                    : "text-white"
+                }`}
               >
                 <UsersThree size={18} weight="fill" />
-                <span className="min-w-0 flex-1 truncate text-left">Executives</span>
-                <CaretDown
-                  size={16}
-                  weight="bold"
-                  className={`transition-transform duration-200 ${showExecutiveMenu ? "rotate-180" : ""
-                    }`}
-                />
-              </button>
-              {showExecutiveMenu ? (
-                <Link
-                  href={`${base}/executives`}
-                  onClick={() => handleNavigate(`${base}/executives`)}
-                  onFocus={() => prefetchRoute(`${base}/executives`)}
-                  onMouseEnter={() => prefetchRoute(`${base}/executives`)}
-                  onTouchStart={() => prefetchRoute(`${base}/executives`)}
-                  className={`mt-1 flex min-h-[34px] w-full items-center rounded-md px-8 text-[13px] font-semibold transition-all duration-200 ${pathname.startsWith(`${base}/executives`)
-                      ? "bg-[#F4F4F4] text-[#43C17A]"
-                      : "text-white hover:bg-white/10"
-                    }`}
-                >
-                  All Executives
-                </Link>
-              ) : null}
-            </div>
+              </span>
+              <span className="min-w-0 flex-1 truncate">Executives</span>
+            </Link>
           ) : null}
 
           <button

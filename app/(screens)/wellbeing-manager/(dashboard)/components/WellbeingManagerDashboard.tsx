@@ -1,19 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import WellbeingManagerLeft from "./left";
-import WellbeingManagerRight from "./right";
 import DashboardShimmer from "./DashboardShimmer";
 import { useUser } from "@/app/utils/context/UserContext";
 import AllIssuesView from "./AllIssuesViewNew";
 import WellbeingRight from "../../components/WellbeingRight";
+import TicketDetailsView from "../../new-issues/components/TicketDetailsView";
+import DashboardAllIssueListView from "./DashboardAllIssueListView";
+
+function DashboardRouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] w-full items-center justify-center text-sm font-semibold text-[#667085]">
+      Loading issues...
+    </div>
+  );
+}
 
 
 export default function WellbeingManagerDashboard() {
   const { loading } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
+  const ticketId = searchParams.get("ticketId");
   const [mounted, setMounted] = useState(false);
   const [stage, setStage] = useState(0);
 
@@ -43,6 +55,23 @@ export default function WellbeingManagerDashboard() {
 
   if (view === "issues") {
     return <AllIssuesView stage={stage} />;
+  }
+
+  if (view === "issue-list") {
+    return (
+      <Suspense fallback={<DashboardRouteFallback />}>
+        <DashboardAllIssueListView stage={stage} />
+      </Suspense>
+    );
+  }
+
+  if (ticketId) {
+    return (
+      <TicketDetailsView
+        ticketId={ticketId}
+        onBack={() => router.push(pathname)}
+      />
+    );
   }
 
   return (

@@ -75,7 +75,7 @@ export default function ReassignTicketModal({ isOpen, onClose, ticketId = "#4828
                                     <div className="flex flex-col gap-2">
                                         <span className="text-[12px] font-extrabold text-gray-500 tracking-wider uppercase">Share Ticket</span>
                                         <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-                                            <div className="flex justify-between items-start mb-4">
+                                            <div className="flex justify-between items-center mb-4">
                                                 <span className="bg-[#FFF4E5] text-[#D97706] text-[11px] font-bold px-3 py-1 rounded-full">
                                                     Ticket Summary
                                                 </span>
