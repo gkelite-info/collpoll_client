@@ -4,8 +4,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { CalendarDotsIcon, CaretDown } from "@phosphor-icons/react";
-import AnnouncementsCard from "@/app/utils/announcementsCard";
-import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
+
 import { useUser } from "@/app/utils/context/UserContext";
 import {
   managerAnnouncements,
