@@ -12,6 +12,7 @@ import {
   UsersThreeIcon,
   X,
   SignOut,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -90,6 +91,11 @@ export default function CollegeAdminNavbar({ onClose }: CollegeAdminNavbarProps)
       ),
       label: t("My Attendance"),
       path: "/college-admin/my-attendance",
+    },
+    {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: "/college-admin/wellbeing",
     },
     {
       icon: (isActive) => (

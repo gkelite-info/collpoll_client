@@ -9,6 +9,7 @@ import {
   Gear,
   House,
   Laptop,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -76,6 +77,11 @@ export default function PlacementNavbar() {
       path: `${BASE}/my-attendance`,
     },
     {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: `${BASE}/wellbeing`,
+    },
+    {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
@@ -104,11 +110,10 @@ export default function PlacementNavbar() {
               key={item.path}
               href={item.path}
               className={`flex relative items-center gap-3 w-full pl-4 py-2 rounded-l-full cursor-pointer transition-all duration-300
-                                    ${
-                                      active
-                                        ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                                        : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-                                    }`}
+                                    ${active
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                  : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                }`}
             >
               <div className={active ? "text-[#43C17A]" : "text-white"}>
                 {item.icon(active)}

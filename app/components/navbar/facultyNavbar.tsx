@@ -15,6 +15,7 @@ import {
   UsersThreeIcon,
   X,
   SignOut,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -133,6 +134,11 @@ export default function FacultyNavbar({ onClose }: FacultyNavbarProps) {
       ),
       label: t("My Attendance"),
       path: "/faculty/my-attendance",
+    },
+    {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: "/faculty/wellbeing",
     },
     {
       icon: (isActive) => (
