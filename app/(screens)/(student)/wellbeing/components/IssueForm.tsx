@@ -6,6 +6,7 @@ import { wellbeingCategories, wellbeingSubCategories } from "../data";
 
 export default function IssueForm() {
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedVisibility, setSelectedVisibility] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -87,16 +88,24 @@ export default function IssueForm() {
 
           <Field label="Issue Visibility">
             <div className="grid grid-cols-2 gap-2">
-              {["Executive", "Manager"].map((visibility) => (
-                <button
-                  key={visibility}
-                  type="button"
-                  className="flex h-10 items-center justify-center gap-1.5 sm:gap-2 rounded border border-[#D0D0D0] text-xs sm:text-sm text-[#555555] transition-colors hover:bg-black/5"
-                >
-                  <CheckCircle size={16} />
-                  {visibility}
-                </button>
-              ))}
+              {["Executive", "Manager"].map((visibility) => {
+                const isSelected = selectedVisibility === visibility;
+                return (
+                  <button
+                    key={visibility}
+                    type="button"
+                    onClick={() => setSelectedVisibility(visibility)}
+                    className={`flex h-10 cursor-pointer items-center justify-center gap-1.5 sm:gap-2 rounded border transition-colors text-xs sm:text-sm ${
+                      isSelected
+                        ? "bg-[#16284F] border-[#16284F] text-white hover:bg-[#0f1c38]"
+                        : "border-[#D0D0D0] text-[#555555] hover:bg-black/5"
+                    }`}
+                  >
+                    <CheckCircle size={16} weight={isSelected ? "fill" : "regular"} />
+                    {visibility}
+                  </button>
+                );
+              })}
             </div>
           </Field>
 
@@ -182,25 +191,19 @@ export default function IssueForm() {
           </div>
         </div>
 
-        <div className="mx-auto mt-6 sm:mt-8 flex w-full sm:max-w-xs items-center justify-center gap-3 rounded-sm bg-[#0083E80D] px-4 py-3">
-          <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-sm bg-[#0090FF24] text-[#0084E8]">
+        <div className="mt-6 sm:mt-8 flex w-full items-center gap-3 rounded-lg bg-[#0083E80D] px-4 py-3 border border-[#0090FF24]">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-md bg-[#0090FF24] text-[#0084E8]">
             <ClockCountdownIcon size={20} className="sm:w-[22px] sm:h-[22px]" />
           </div>
-          <p className="text-[11px] text-center sm:text-xs font-semibold leading-snug text-[#0585D9]">
+          <p className="text-[11px] sm:text-xs font-semibold leading-snug text-[#0585D9]">
             Our team will review your complaint and respond within 24-48 hours.
           </p>
         </div>
 
-        <div className="mt-6 mb-2 grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="mt-8 mb-4 flex justify-center">
           <button
             type="button"
-            className="h-10 cursor-pointer sm:h-12 rounded-md bg-[#D0D0D0] text-sm sm:text-base font-semibold text-[#282828] transition-colors hover:bg-[#D0D0D0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="h-10 cursor-pointer sm:h-12 rounded-md bg-[#16284F] text-sm sm:text-base font-semibold text-white transition-colors hover:bg-[#0f1c38]"
+            className="h-12 w-full max-w-sm sm:h-14 cursor-pointer rounded-lg bg-[#16284F] text-base sm:text-lg font-semibold text-white transition-colors hover:bg-[#0f1c38] shadow-sm"
           >
             Submit
           </button>

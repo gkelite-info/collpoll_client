@@ -11,6 +11,7 @@ import {
   Headset,
   House,
   Laptop,
+  SmileyIcon,
   UsersThree,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
@@ -102,6 +103,11 @@ export default function FinanceManagerNavbar({
         path: `${base}/wellbeing-support`,
       },
       {
+        icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+        label: "Wellbeing",
+        path: `${base}/wellbeing`,
+      },
+      {
         icon: (isActive) => (
           <Gear size={iconSize} weight={isActive ? "fill" : "regular"} />
         ),
@@ -133,16 +139,14 @@ export default function FinanceManagerNavbar({
               key={item.path}
               href={item.path}
               onClick={() => onClose?.()}
-              className={`relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:transition-all md:text-base lg:text-sm ${
-                active
+              className={`relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:transition-all md:text-base lg:text-sm ${active
                   ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
                   : "text-white hover:bg-[#50D689]/30 focus:outline-none"
-              } ${isWellBeing ? "pr-4" : ""}`}
+                } ${isWellBeing ? "pr-4" : ""}`}
             >
               <span
-                className={`flex h-5 w-5 shrink-0 items-center justify-center ${
-                  active ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center ${active ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.icon(active)}
               </span>

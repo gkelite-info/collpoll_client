@@ -5,7 +5,7 @@ import { mockIssues } from "../data";
 import IssueCard from "./IssueCard";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useEffect, useState } from "react";
-import { Loader } from "../../calendar/right/timetable";
+import IssueCardShimmer from "@/app/utils/shimmers/IssueCardShimmer";
 
 export default function IssueList() {
   const searchParams = useSearchParams();
@@ -50,14 +50,6 @@ export default function IssueList() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedIssues = allIssues.slice(startIndex, startIndex + itemsPerPage);
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <Loader />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col mt-6 w-full max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-4 px-2">
@@ -75,27 +67,35 @@ export default function IssueList() {
         </button>
       </div>
 
-      <div className="flex-1 min-h-[500px]">
-        {paginatedIssues.length > 0 ? (
-          paginatedIssues.map((issue) => (
-            <IssueCard key={issue.id} issue={issue} />
-          ))
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            No issues found.
+      {loading ? (
+        <div className="flex-1 mt-2">
+          <IssueCardShimmer />
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 min-h-[500px]">
+            {paginatedIssues.length > 0 ? (
+              paginatedIssues.map((issue) => (
+                <IssueCard key={issue.id} issue={issue} />
+              ))
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No issues found.
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="mt-4">
-        <Pagination
-          currentPage={currentPage}
-          totalItems={totalItems}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          // roundedBottom="rounded-xl"
-        />
-      </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              // roundedBottom="rounded-xl"
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   Gear,
   House,
   Laptop,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import { CurrencyCircleDollar } from "@phosphor-icons/react/dist/ssr";
@@ -80,6 +81,11 @@ export default function FinanceNavbar() {
       path: "/finance/my-attendance",
     },
     {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: `/finance/wellbeing`,
+    },
+    {
       icon: (isActive) => (
         <Gear size={18} weight={isActive ? "fill" : "regular"} />
       ),
@@ -133,10 +139,9 @@ export default function FinanceNavbar() {
               className={`flex relative items-center gap-3 w-full pl-4  py-2 rounded-l-full cursor-pointer transition-all duration-300
                 before:transition-all before:duration-300
                 after:transition-all after:duration-300
-                ${
-                  isActive
-                    ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
-                    : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                ${isActive
+                  ? "bg-[#F4F4F4] text-[#43C17A] activeNav focus:outline-none"
+                  : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                 }
               `}
             >
@@ -145,9 +150,8 @@ export default function FinanceNavbar() {
               </div>
 
               <p
-                className={`text-sm font-medium ${
-                  isActive ? "text-[#43C17A]" : "text-white"
-                }`}
+                className={`text-sm font-medium ${isActive ? "text-[#43C17A]" : "text-white"
+                  }`}
               >
                 {item.label}
               </p>

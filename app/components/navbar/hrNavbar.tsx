@@ -9,6 +9,7 @@ import {
   House,
   Laptop,
   SignOut,
+  SmileyIcon,
   X,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
@@ -79,6 +80,11 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       ),
       label: t("My Attendance"),
       path: "/hr/MyAttendance",
+    },
+    {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: `/hr/wellbeing`,
     },
     {
       icon: (isActive) => (

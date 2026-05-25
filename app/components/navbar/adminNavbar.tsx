@@ -16,6 +16,7 @@ import {
   UsersThreeIcon,
   X,
   SignOut,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -107,6 +108,11 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
       icon: (isActive) => <CheckCircle size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("My Attendance"),
       path: "/admin/my-attendance",
+    },
+    {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: "/admin/wellbeing",
     },
     {
       icon: (isActive) => <Gear size={18} weight={isActive ? "fill" : "regular"} />,
