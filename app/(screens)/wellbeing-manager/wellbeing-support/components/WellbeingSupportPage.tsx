@@ -5,6 +5,7 @@ import {
   CaretDown,
   CheckCircle,
   Clock,
+  ClockCountdownIcon,
   UploadSimple,
   Warning,
   X,
@@ -155,30 +156,28 @@ export default function WellbeingSupportPage() {
                     <div
                       onDragOver={handleDragOver}
                       onDrop={handleDrop}
-                      className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-[#43C17A] bg-[#F3F3F3] text-center transition-colors hover:bg-[#43C17A]/5 ${
-                        files.length > 0 ? 'w-full sm:w-1/2 p-4 min-h-[120px] sm:min-h-0' : 'w-full min-h-32 p-6'
-                      }`}
+                      className={`flex flex-col items-center justify-center rounded-xl border border-dashed border-[#43C17A] bg-[#F3F3F3] text-center transition-colors hover:bg-[#43C17A]/5 ${files.length > 0 ? 'w-full sm:w-1/2 p-4 min-h-[120px] sm:min-h-0' : 'w-full min-h-32 p-6'
+                        }`}
                     >
-                      <UploadSimple 
-                        size={files.length > 0 ? 32 : 42} 
-                        className="text-[#8A8A8A]" 
+                      <UploadSimple
+                        size={files.length > 0 ? 32 : 42}
+                        className="text-[#8A8A8A]"
                       />
                       <p className={`text-[#8A8A8A] ${files.length > 0 ? 'mt-1.5 text-xs hidden sm:block' : 'mt-2 text-sm'}`}>
                         Drag & Drop Your File here or
                       </p>
-                      <input 
-                        type="file" 
-                        multiple 
-                        ref={fileInputRef} 
-                        onChange={handleFileSelect} 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        multiple
+                        ref={fileInputRef}
+                        onChange={handleFileSelect}
+                        className="hidden"
                       />
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className={`cursor-pointer rounded bg-[#43C17A] px-4 py-1.5 font-semibold text-white transition-colors hover:bg-[#38a869] ${
-                          files.length > 0 ? 'mt-2 text-[11px]' : 'mt-2 text-xs sm:text-sm'
-                        }`}
+                        className={`cursor-pointer rounded bg-[#43C17A] px-4 py-1.5 font-semibold text-white transition-colors hover:bg-[#38a869] ${files.length > 0 ? 'mt-2 text-[11px]' : 'mt-2 text-xs sm:text-sm'
+                          }`}
                       >
                         Browse Files
                       </button>
@@ -187,8 +186,8 @@ export default function WellbeingSupportPage() {
                     {files.length > 0 && (
                       <div className="w-full sm:w-1/2 h-36 sm:h-full overflow-y-auto custom-scrollbar flex flex-col gap-2.5 sm:pr-1.5">
                         {files.map((file, index) => (
-                          <div 
-                            key={`${file.name}-${index}`} 
+                          <div
+                            key={`${file.name}-${index}`}
                             className="flex items-center justify-between rounded-lg border border-[#E0E0E0] bg-white p-2.5 shadow-sm transition-all hover:shadow-md hover:border-[#CCCCCC]"
                           >
                             <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden">
@@ -204,7 +203,7 @@ export default function WellbeingSupportPage() {
                                 </span>
                               </div>
                             </div>
-                            
+
                             <button
                               type="button"
                               onClick={() => removeFile(index)}
@@ -222,11 +221,11 @@ export default function WellbeingSupportPage() {
               </div>
             </div>
 
-            <div className="mx-auto mt-6 sm:mt-8 flex w-full sm:max-w-md items-center justify-center gap-3 rounded bg-[#DFF0FF] px-4 py-3">
-              <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded bg-[#46A5EA] text-white">
-                <Clock size={20} className="sm:w-[22px] sm:h-[22px]" />
+            <div className="mx-auto mt-6 sm:mt-8 flex w-full sm:max-w-xs items-center justify-center gap-3 rounded-sm bg-[#0083E80D] px-4 py-3">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 items-center justify-center rounded-sm bg-[#0090FF24] text-[#0084E8]">
+                <ClockCountdownIcon size={20} className="sm:w-[22px] sm:h-[22px]" />
               </div>
-              <p className="text-[11px] sm:text-xs font-semibold leading-snug text-[#0585D9]">
+              <p className="text-[11px] text-center sm:text-xs font-semibold leading-snug text-[#0585D9]">
                 Our team will review your complaint and respond within 24-48 hours.
               </p>
             </div>
@@ -234,13 +233,13 @@ export default function WellbeingSupportPage() {
             <div className="mt-6 mb-2 grid grid-cols-2 gap-3 sm:gap-4">
               <button
                 type="button"
-                className="h-10 sm:h-12 rounded-md bg-[#E2E2E2] text-sm sm:text-base font-semibold text-[#282828] transition-colors hover:bg-[#D0D0D0]"
+                className="h-10 cursor-pointer sm:h-12 rounded-md bg-[#D0D0D0] text-sm sm:text-base font-semibold text-[#282828] transition-colors hover:bg-[#D0D0D0]"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="h-10 sm:h-12 rounded-md bg-[#16284F] text-sm sm:text-base font-semibold text-white transition-colors hover:bg-[#0f1c38]"
+                className="h-10 cursor-pointer sm:h-12 rounded-md bg-[#16284F] text-sm sm:text-base font-semibold text-white transition-colors hover:bg-[#0f1c38]"
               >
                 Submit
               </button>

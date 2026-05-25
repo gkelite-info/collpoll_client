@@ -135,7 +135,7 @@ type CardProps = {
   textSize?: string;
   icon: ReactNode;
   value: React.ReactNode;
-  label: string;
+  label: string | ReactNode;
   iconBgColor?: string;
   iconColor?: string;
   underlineValue?: boolean;
