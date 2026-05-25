@@ -2,18 +2,26 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { CalendarBlank, CaretDown, ListChecks } from "@phosphor-icons/react";
+import { useState } from "react";
+import { BuildingIcon, CalendarBlank, CaretDown } from "@phosphor-icons/react";
+import { MdPictureAsPdf } from "react-icons/md";
 import TableComponent from "@/app/utils/table/table";
 import AnnouncementsCard from "@/app/utils/announcementsCard";
 import WorkWeekCalendar from "@/app/utils/workWeekCalendar";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
   categories,
+  collegeIssues,
   executives,
+  hostelIssues,
   issueStats,
-  recentIssues,
+  registeredIssueScopes,
   wellbeingAnnouncements,
   wellbeingFilters,
+} from "../data";
+import type {
+  WellbeingExecutiveIssue,
+  WellbeingExecutiveIssueScope,
 } from "../data";
 import WellbeingDashboardCard from "./WellbeingDashboardCard";
 
@@ -76,7 +84,7 @@ function WelcomePanel() {
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
-      className="relative h-[170px] w-full rounded-2xl shadow-sm"
+      className="relative h-42.5 w-full rounded-2xl shadow-sm"
     >
       <div className="relative z-10 flex h-full items-center px-8">
         <div className="flex max-w-[65%] flex-col gap-2">
@@ -235,99 +243,201 @@ function ExecutiveStrip() {
   );
 }
 
-function RecentIssuesTable() {
-  const columns = [
-    { title: "Student", key: "subject" },
-    { title: "Issue", key: "issue" },
-    { title: "Handled By", key: "handledBy" },
-  ];
+const priorityOptions: WellbeingExecutiveIssue["priority"][] = [
+  "High",
+  "Urgent",
+  "Medium",
+  "Low",
+];
 
-  const tableData = recentIssues.map((issue) => ({
-    subject: (
-      <div className="flex min-w-[185px] items-center gap-2 text-left">
-        <Image
-          src={issue.studentImage}
-          alt={issue.student}
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover"
-        />
-        <div>
-          <p className="text-[12px] font-bold text-[#111827]">
-            {issue.student}
-          </p>
-          <p className="text-[10px] font-medium text-[#4B5563]">
-            {issue.meta}
-          </p>
-        </div>
-      </div>
-    ),
-    issue: (
-      <div className="min-w-[260px] text-left">
-        <p className="text-[12px] font-bold text-[#111827]">{issue.issue}</p>
-        <p className="text-[10px] font-medium text-[#4B5563]">
-          {issue.description}
+function StudentIssueCell({ issue }: { issue: WellbeingExecutiveIssue }) {
+  return (
+    <div className="flex min-w-[220px] items-center gap-4 text-left">
+      <Image
+        src={issue.studentImage}
+        alt={issue.student}
+        width={48}
+        height={48}
+        className="h-12 w-12 shrink-0 rounded-full object-cover"
+      />
+      <div className="min-w-0">
+        <p className="truncate text-[14px] font-bold text-[#282828]">
+          {issue.student}
+        </p>
+        <p className="mt-1 truncate text-[12px] font-medium text-[#282828]">
+          {issue.meta}
         </p>
       </div>
+    </div>
+  );
+}
+
+function IssueTextCell({ issue }: { issue: WellbeingExecutiveIssue }) {
+  return (
+    <div className="min-w-[290px] max-w-[360px] text-left">
+      <p className="truncate text-[14px] font-bold text-[#282828]">
+        {issue.issue}
+      </p>
+      <p className="mt-2 truncate text-[12px] font-medium text-[#282828]">
+        {issue.description}
+      </p>
+    </div>
+  );
+}
+
+function CategoryPill({ label }: { label: string }) {
+  return (
+    <span className="inline-flex min-w-[150px] max-w-full justify-center rounded-full bg-[#E8F3EC] px-3 py-1 text-[12px] font-bold text-[#557064]">
+      <span className="truncate">{label}</span>
+    </span>
+  );
+}
+
+function EvidencePill({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      title={label}
+      className="inline-flex min-w-[150px] items-center justify-center gap-2 rounded-full bg-[#E8F3EC] px-3 py-1 text-[12px] font-bold text-[#16284F]"
+    >
+      <MdPictureAsPdf className="shrink-0 text-[20px] text-[#FF2525]" />
+      <span className="whitespace-nowrap">View PDF</span>
+    </button>
+  );
+}
+
+function EmptyIssueState({ scope }: { scope: WellbeingExecutiveIssueScope }) {
+  return (
+    <div className="flex h-[170px] items-center justify-center rounded-lg border border-dashed border-[#D6DED9] bg-white text-center">
+      <p className="max-w-[260px] text-[13px] font-semibold text-[#667085]">
+        No {scope} issues need attention right now.
+      </p>
+    </div>
+  );
+}
+
+function ExecutiveIssueTableCard({
+  scope,
+  rows,
+}: {
+  scope: WellbeingExecutiveIssueScope;
+  rows: WellbeingExecutiveIssue[];
+}) {
+  const [selectedPriority, setSelectedPriority] =
+    useState<WellbeingExecutiveIssue["priority"]>("High");
+  const title = scope === "college" ? "College Issues" : "Hostel Issues";
+  const visibleRows = rows.filter((row) => row.priority === selectedPriority);
+  const columns =
+    scope === "college"
+      ? [
+          { title: "Student", key: "subject" },
+          { title: "Issue", key: "issue" },
+          { title: "Category", key: "category" },
+          { title: "Evidence", key: "evidence" },
+        ]
+      : [
+          { title: "Student", key: "subject" },
+          { title: "Issue", key: "issue" },
+          { title: "Block", key: "block" },
+          { title: "Building / Room", key: "room" },
+          { title: "Category", key: "category" },
+          { title: "Evidence", key: "evidence" },
+        ];
+  const tableData = visibleRows.map((issue) => ({
+    subject: <StudentIssueCell issue={issue} />,
+    issue: <IssueTextCell issue={issue} />,
+    block: (
+      <span className="block min-w-[70px] text-[14px] font-bold text-[#282828]">
+        {issue.block}
+      </span>
     ),
-    handledBy: (
-      <div className="flex min-w-[145px] items-center justify-center gap-2">
-        <Image
-          src={issue.handlerImage}
-          alt={issue.handledBy}
-          width={32}
-          height={32}
-          className="h-8 w-8 rounded-full object-cover"
-        />
-        <span className="text-[12px] font-bold text-[#111827]">
-          {issue.handledBy}
-        </span>
-      </div>
+    room: (
+      <span className="block min-w-[130px] text-[14px] font-bold text-[#282828]">
+        {issue.room}
+      </span>
     ),
+    category: <CategoryPill label={issue.category} />,
+    evidence: <EvidencePill label={issue.evidence} />,
   }));
 
   return (
     <WellbeingDashboardCard className="px-4 py-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E8F8EF] text-[#43C17A]">
-            <ListChecks size={18} weight="fill" />
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8F8EF] text-[#43C17A]">
+            <BuildingIcon size={20} weight="fill" />
           </span>
-          <div>
-            <h3 className="text-sm font-bold text-[#282828]">Recent Issues</h3>
-            <p className="text-[12px] font-medium text-[#4B5563]">
-              Latest reported complaints across hostel
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-bold text-[#282828]">{title}</h3>
+            <p className="mt-1 text-[12px] font-medium text-[#282828]">
+              Latest reported complaints across {scope === "college" ? "College" : "Hostel"}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-[12px]">
-          <button className="flex h-8 items-center gap-1 rounded-md bg-[#16284F] px-3 font-semibold text-white">
-            Hostel
-            <CaretDown size={13} weight="bold" />
-          </button>
-          <span className="font-semibold text-[#4B5563]">
-            Status :{" "}
-            <span className="rounded-full bg-[#E8F8EF] px-3 py-1 font-bold text-[#43C17A]">
-              Pending
+
+        <div className="flex shrink-0 items-center gap-5 self-end sm:self-auto">
+          <label className="flex items-center gap-3">
+            <span className="text-[13px] font-bold text-[#282828]">Priority</span>
+            <span className="relative">
+              <select
+                value={selectedPriority}
+                onChange={(event) =>
+                  setSelectedPriority(
+                    event.target.value as WellbeingExecutiveIssue["priority"],
+                  )
+                }
+                className="h-8 cursor-pointer appearance-none rounded-full bg-[#E1F6EA] py-0 pl-4 pr-9 text-[13px] font-bold text-[#43C17A] outline-none"
+              >
+                {priorityOptions.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {priority}
+                  </option>
+                ))}
+              </select>
+              <CaretDown
+                size={16}
+                weight="bold"
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#43C17A]"
+              />
             </span>
-          </span>
-          <button className="font-bold text-[#16284F] underline underline-offset-2">
+          </label>
+          <button className="text-[13px] font-bold text-[#16284F] underline underline-offset-2 hover:text-[#43C17A]">
             View All
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[700px]">
-          <TableComponent
-            columns={columns}
-            tableData={tableData}
-            height="315px"
-            stickyHeader={false}
-          />
-        </div>
-      </div>
+      {visibleRows.length === 0 ? (
+        <EmptyIssueState scope={scope} />
+      ) : (
+        <TableComponent
+          columns={columns}
+          tableData={tableData}
+          height="360px"
+          stickyHeader={false}
+          tableClassName={scope === "college" ? "min-w-[900px]" : "min-w-[1100px]"}
+        />
+      )}
     </WellbeingDashboardCard>
+  );
+}
+
+function RecentIssuesTables() {
+  const rowsByScope = {
+    college: collegeIssues,
+    hostel: hostelIssues,
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      {registeredIssueScopes.map((scope) => (
+        <ExecutiveIssueTableCard
+          key={scope}
+          scope={scope}
+          rows={rowsByScope[scope]}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -368,7 +478,7 @@ export default function WellbeingExecutiveLeft() {
       </div>
 
       <div className="mt-3">
-        <RecentIssuesTable />
+        <RecentIssuesTables />
       </div>
 
       <div className="mt-3 grid gap-3 md:hidden">
