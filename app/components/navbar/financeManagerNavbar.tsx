@@ -96,13 +96,6 @@ export default function FinanceManagerNavbar({
         path: `${base}/my-attendance`,
       },
       {
-        icon: (isActive) => (
-          <Headset size={iconSize} weight={isActive ? "fill" : "regular"} />
-        ),
-        label: "Well being / Support",
-        path: `${base}/wellbeing-support`,
-      },
-      {
         icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
         label: "Wellbeing",
         path: `${base}/wellbeing`,
@@ -140,8 +133,8 @@ export default function FinanceManagerNavbar({
               href={item.path}
               onClick={() => onClose?.()}
               className={`relative flex w-full items-center gap-3 rounded-l-full py-2 pl-4 text-sm font-medium transition-all duration-300 before:transition-all before:duration-300 after:transition-all after:transition-all md:text-base lg:text-sm ${active
-                  ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
-                  : "text-white hover:bg-[#50D689]/30 focus:outline-none"
+                ? "activeNav bg-[#F4F4F4] text-[#43C17A] focus:outline-none"
+                : "text-white hover:bg-[#50D689]/30 focus:outline-none"
                 } ${isWellBeing ? "pr-4" : ""}`}
             >
               <span
