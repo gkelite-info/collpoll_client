@@ -99,6 +99,7 @@ export const LEGACY_STUDENT_ROUTES = [
   "/settings",
   "/clubs",
   "/leaveRequests",
+  "/wellbeing"
 ];
 
 

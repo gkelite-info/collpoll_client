@@ -19,6 +19,7 @@ import {
   X,
   SignOut,
   CalendarCheck as CalendarCheckIcon,
+  SmileyIcon,
 } from "@phosphor-icons/react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -109,6 +110,11 @@ export default function Navbar({ onClose }: StudentNavbarProps) {
       icon: (isActive) => <Laptop size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("Meetings"),
       path: "/meetings",
+    },
+    {
+      icon: (isActive) => <SmileyIcon size={18} weight={isActive ? "fill" : "regular"} />,
+      label: t("Wellbeing"),
+      path: "/wellbeing",
     },
     {
       icon: (isActive) => <Gear size={18} weight={isActive ? "fill" : "regular"} />,
