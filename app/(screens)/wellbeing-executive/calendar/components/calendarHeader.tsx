@@ -10,10 +10,10 @@ export default function CalendarHeader({ onAddClick }: Props) {
   return (
     <button
       onClick={onAddClick}
-      className="mb-2 flex h-10 items-center gap-1 rounded-xl bg-[#06C681] px-3 text-base text-white shadow-lg hover:bg-[#05b875] cursor-pointer"
+      className="mb-2 flex h-9 items-center gap-1 rounded-md bg-[#43C17A] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#39a868] active:scale-95 cursor-pointer"
     >
-      <Plus size={20} weight="regular" />
-      Add Event
+      <Plus size={18} weight="bold" />
+      Add New
     </button>
   );
 }

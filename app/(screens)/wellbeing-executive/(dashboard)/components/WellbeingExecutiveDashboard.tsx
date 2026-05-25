@@ -39,7 +39,7 @@ export default function WellbeingExecutiveDashboard() {
     <main className="flex min-h-full w-full gap-2 overflow-x-hidden pb-5">
       <WellbeingExecutiveLeft />
       {stage >= 3 ? (
-        <WellbeingExecutiveRight />
+        <WellbeingExecutiveRight button headerActionLabel="Alerts"/>
       ) : (
         <aside className="hidden w-[32%] flex-col p-2 pr-0 md:flex lg:w-[32%]">
           <div className="h-[54px] animate-pulse rounded-lg bg-gray-200" />

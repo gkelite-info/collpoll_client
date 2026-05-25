@@ -17,6 +17,9 @@ type WellbeingExecutiveRightProps = {
   onCloseDrawer?: () => void;
   hideDefaultMobileContent?: boolean;
   bounded?: boolean;
+  announcementHeight?: string;
+  showHeaderCards?: boolean;
+  showCourseScheduleCard?: boolean;
 };
 
 function AlertIcon() {
@@ -37,6 +40,9 @@ export default function WellbeingExecutiveRight({
   onCloseDrawer,
   hideDefaultMobileContent = false,
   bounded = false,
+  announcementHeight = "360px",
+  showHeaderCards = true,
+  showCourseScheduleCard = false,
 }: WellbeingExecutiveRightProps) {
   useEffect(() => {
     if (isMobileDrawerOpen) {
@@ -50,7 +56,7 @@ export default function WellbeingExecutiveRight({
     };
   }, [isMobileDrawerOpen]);
 
-  const HeaderAction = button ? (
+  const HeaderAction = (button && headerActionLabel !== "Alerts") ? (
     <button
       onClick={onHeaderActionClick}
       className="group flex h-[54px] w-[95%] cursor-pointer items-center justify-center gap-2 rounded-full bg-[#43C17A] py-2 text-sm font-bold text-white shadow-[0_2px_10px_rgba(67,193,122,0.25)] transition-all hover:bg-[#34A362] active:scale-95"
@@ -60,19 +66,29 @@ export default function WellbeingExecutiveRight({
       </span>
       {headerActionLabel}
     </button>
-  ) : (
-    <button className="flex h-[54px] items-center justify-center gap-2 rounded-lg bg-[#FFE8E8] text-sm font-bold text-[#FF1F1F] shadow-sm">
-      <AlertIcon />
-      ALERTS
-    </button>
-  );
+  )
+    : button && headerActionLabel === "Alerts" && (
+      <button className="flex h-[54px] items-center justify-center gap-2 rounded-lg bg-[#FFE8E8] text-sm font-bold text-[#FF1F1F] shadow-sm">
+        <AlertIcon />
+        ALERTS
+      </button>
+    );
+
+  const isFullWidth = button ? true : false
 
   const SidebarContent = (
     <div className="flex min-h-full flex-col">
-      <div className="grid w-full shrink-0 grid-cols-2 items-center justify-center gap-3">
-        {HeaderAction}
-        <CourseScheduleCard isVisibile={false} fullWidth />
-      </div>
+      {showHeaderCards ? (
+        <div className={`grid w-full shrink-0 items-end justify-end ${button ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+          {HeaderAction || '  '} 
+          <CourseScheduleCard isVisibile={false} fullWidth={isFullWidth} />
+        </div>
+      ) : showCourseScheduleCard ? (
+        <div className="grid w-full shrink-0 grid-cols-2 gap-3">
+          <div />
+          <CourseScheduleCard isVisibile={false} fullWidth />
+        </div>
+      ) : null}
 
       {showCalendar ? (
         <div className="shrink-0">
@@ -81,17 +97,21 @@ export default function WellbeingExecutiveRight({
       ) : null}
 
       <div
-        className={`flex shrink-0 flex-col gap-4 ${
-          children ? "mb-6 mt-3" : ""
-        }`}
+        className={`flex shrink-0 flex-col gap-4 ${children
+            ? `${showHeaderCards || showCalendar || showCourseScheduleCard ? "mt-3" : ""}`
+            : ""
+          }`}
       >
         {children}
       </div>
 
-      <div className={bounded ? "min-h-[360px] shrink-0" : "min-h-[360px] flex-1"}>
+      <div
+        className={children ? "-mt-2 shrink-0" : bounded ? "shrink-0" : "min-h-[360px] flex-1"}
+        style={bounded ? { minHeight: announcementHeight } : undefined}
+      >
         <AnnouncementsCard
           announceCard={wellbeingAnnouncements}
-          height={bounded ? "360px" : "100%"}
+          height={bounded ? announcementHeight : "100%"}
           readOnly
         />
       </div>
@@ -101,11 +121,10 @@ export default function WellbeingExecutiveRight({
   return (
     <>
       <aside
-        className={`hidden w-[32%] shrink-0 flex-col pb-2 pl-2 pr-0 pt-0 md:flex lg:w-[32%] ${
-          bounded
-            ? "-mt-3 h-full min-h-0 overflow-y-auto custom-scrollbar"
+        className={`hidden w-[32%] shrink-0 flex-col p-2 md:flex lg:w-[32%] pb-7 ${bounded
+            ? "h-full min-h-0 overflow-y-auto custom-scrollbar"
             : "min-h-screen"
-        }`}
+          }`}
       >
         {SidebarContent}
       </aside>
@@ -118,9 +137,8 @@ export default function WellbeingExecutiveRight({
       ) : null}
 
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-[100vh] w-[85%] transform flex-col overflow-y-auto bg-[#F8F9FB] p-6 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out sm:w-[400px] lg:hidden ${
-          isMobileDrawerOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed right-0 top-0 z-50 flex h-[100vh] w-[85%] transform flex-col overflow-y-auto bg-[#F8F9FB] p-6 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out sm:w-[400px] lg:hidden ${isMobileDrawerOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="mb-6 flex shrink-0 items-center justify-between">
           <h2 className="text-[20px] font-bold text-[#16284F]">

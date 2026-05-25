@@ -10,7 +10,7 @@ type Props = {
 };
 
 const inputClass =
-  "h-11 w-full rounded-md border border-[#C9C9C9] px-3 text-sm text-[#282828] placeholder:text-[#9CA3AF] outline-none transition focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A]";
+  "h-10 w-full rounded-md border border-[#C9C9C9] px-3 text-sm text-[#282828] placeholder:text-[#9CA3AF] outline-none transition focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A]";
 
 const timeInputClass =
   "h-10 min-w-0 flex-1 rounded-md border border-[#C9C9C9] px-3 text-sm text-[#282828] placeholder:text-[#9CA3AF] outline-none transition focus:border-[#43C17A] focus:ring-1 focus:ring-[#43C17A]";
@@ -84,9 +84,9 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/45 px-4">
-      <div className="flex max-h-[90vh] w-full max-w-120 flex-col rounded-xl bg-white shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between px-6 pt-6 pb-4">
-          <h2 className="text-xl font-semibold text-[#282828]">Add Event</h2>
+      <div className="flex max-h-[90vh] w-full max-w-[540px] flex-col rounded-xl bg-white shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between px-6 pb-3 pt-6">
+          <h2 className="text-lg font-semibold text-[#282828]">Add Event</h2>
           <button
             type="button"
             aria-label="Close"
@@ -100,10 +100,9 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
         <div className="space-y-4 overflow-y-auto px-6 pb-6 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-[#F3F4F6] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#43C17A]">
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-[#282828]">
-              Event Title <span className="text-red-500">*</span>
+              Event Title
             </span>
             <input
-              placeholder="Enter event title"
               className={inputClass}
             />
           </label>
@@ -111,13 +110,13 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#282828]">
-                Event Topic <span className="text-red-500">*</span>
+                Event Topic
               </span>
-              <input placeholder="Enter event topic" className={inputClass} />
+              <input className={inputClass} />
             </label>
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-[#282828]">
-                Date <span className="text-red-500">*</span>
+                Date
               </span>
               <input
                 type="date"
@@ -135,7 +134,7 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <span className="mb-1 block text-xs text-[#4B5563]">
-                  From <span className="text-red-500">*</span>
+                  From
                 </span>
                 <div className="flex items-center gap-2">
                   <select
@@ -170,7 +169,7 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
               </div>
               <div>
                 <span className="mb-1 block text-xs text-[#4B5563]">
-                  To <span className="text-red-500">*</span>
+                  To
                 </span>
                 <div className="flex items-center gap-2">
                   <select
@@ -208,11 +207,11 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
 
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-[#282828]">
-              Participants <span className="text-red-500">*</span>
+              Participants
             </span>
             <button
               type="button"
-              className="flex h-11 w-full items-center justify-between rounded-md border border-[#C9C9C9] px-4 text-sm text-[#282828] transition hover:border-[#43C17A] focus:border-[#43C17A] focus:outline-none focus:ring-1 focus:ring-[#43C17A]"
+              className="flex h-10 w-full items-center justify-between rounded-md border border-[#C9C9C9] px-4 text-sm text-[#282828] transition hover:border-[#43C17A] focus:border-[#43C17A] focus:outline-none focus:ring-1 focus:ring-[#43C17A]"
             >
               Select Participants
               <CaretDown size={18} />
@@ -222,7 +221,7 @@ export default function AddEventModal({ isOpen, onClose }: Props) {
           <button
             type="button"
             onClick={handleSave}
-            className="h-10 w-full rounded-md bg-[#43C17A] text-base font-semibold text-white hover:bg-[#35ad68] cursor-pointer"
+            className="h-11 w-full rounded-md bg-[#43C17A] text-base font-semibold text-white hover:bg-[#35ad68] cursor-pointer"
           >
             Save
           </button>

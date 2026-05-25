@@ -51,6 +51,15 @@ export default function CalendarPage() {
     setCurrentDate(next);
   };
 
+  const handleMonthYearChange = (month: number, year: number) => {
+    setCurrentDate((previousDate) => {
+      const nextDate = new Date(previousDate);
+      nextDate.setFullYear(year);
+      nextDate.setMonth(month);
+      return nextDate;
+    });
+  };
+
   return (
     <main className="min-h-full bg-[#F4F4F4] p-2 md:p-4">
       <section className="mb-3 flex flex-wrap items-start justify-between gap-4">
@@ -67,7 +76,12 @@ export default function CalendarPage() {
       </section>
 
       <div className="-mt-1 flex items-end justify-between">
-        <CalendarToolbar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <CalendarToolbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentDate={currentDate}
+          onMonthYearChange={handleMonthYearChange}
+        />
         <CalendarHeader onAddClick={() => setIsModalOpen(true)} />
       </div>
 
