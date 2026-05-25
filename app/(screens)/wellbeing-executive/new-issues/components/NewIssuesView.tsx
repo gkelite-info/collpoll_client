@@ -9,6 +9,7 @@ import WellbeingExecutiveRight from "../../components/WellbeingExecutiveRight";
 
 type IssueView = "all" | "my" | "urgent";
 type IssueStatus = "Pending" | "Resolved";
+type IssueScope = "college" | "hostel";
 
 type ExecutiveIssue = {
   id: string;
@@ -22,6 +23,9 @@ type ExecutiveIssue = {
   status: IssueStatus;
   time: string;
   dateReported: string;
+  block: string;
+  room: string;
+  evidence: string;
   assignedToMe: boolean;
   attachments: { name: string; size: string }[];
 };
@@ -45,6 +49,9 @@ const issues: ExecutiveIssue[] = [
     status: "Resolved",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "A",
+    room: "A-206",
+    evidence: "projector-evidence.pdf",
     assignedToMe: true,
     attachments: [
       { name: "Project_error.jpg", size: "60 KB" },
@@ -63,6 +70,9 @@ const issues: ExecutiveIssue[] = [
     status: "Pending",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "B",
+    room: "A-205",
+    evidence: "wifi-evidence.pdf",
     assignedToMe: true,
     attachments: [
       { name: "Project_error.jpg", size: "60 KB" },
@@ -81,6 +91,9 @@ const issues: ExecutiveIssue[] = [
     status: "Pending",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "A",
+    room: "A-203",
+    evidence: "noise-evidence.pdf",
     assignedToMe: true,
     attachments: [
       { name: "Project_error.jpg", size: "60 KB" },
@@ -99,6 +112,9 @@ const issues: ExecutiveIssue[] = [
     status: "Pending",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "C",
+    room: "B-118",
+    evidence: "ground-evidence.pdf",
     assignedToMe: false,
     attachments: [],
   },
@@ -114,6 +130,9 @@ const issues: ExecutiveIssue[] = [
     status: "Pending",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "A",
+    room: "C-310",
+    evidence: "ground-evidence.pdf",
     assignedToMe: false,
     attachments: [],
   },
@@ -129,6 +148,9 @@ const issues: ExecutiveIssue[] = [
     status: "Pending",
     time: "10:45 AM",
     dateReported: "25/03/2025",
+    block: "B",
+    room: "A-210",
+    evidence: "ground-evidence.pdf",
     assignedToMe: false,
     attachments: [],
   },
@@ -146,7 +168,37 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-function SelectPill({ label }: { label: string }) {
+function ScopeSelectPill({
+  value,
+  onChange,
+}: {
+  value: IssueScope;
+  onChange: (scope: IssueScope) => void;
+}) {
+  return (
+    <label className="relative flex h-9 min-w-[118px] items-center rounded-md bg-[#16284F] px-3.5 text-[14px] font-bold text-white">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value as IssueScope)}
+        className="h-full w-full cursor-pointer appearance-none bg-transparent pr-7 font-bold text-white outline-none"
+      >
+        <option className="text-[#16284F]" value="college">
+          College
+        </option>
+        <option className="text-[#16284F]" value="hostel">
+          Hostel
+        </option>
+      </select>
+      <CaretDown
+        size={15}
+        weight="bold"
+        className="pointer-events-none absolute right-3"
+      />
+    </label>
+  );
+}
+
+function StaticSelectPill({ label }: { label: string }) {
   return (
     <button className="flex h-9 min-w-[118px] items-center justify-between gap-3 rounded-md bg-[#16284F] px-3.5 text-[14px] font-bold text-white">
       <span>{label}</span>
@@ -158,9 +210,13 @@ function SelectPill({ label }: { label: string }) {
 function IssuesHeader({
   activeView,
   onChange,
+  selectedScope,
+  onScopeChange,
 }: {
   activeView: IssueView;
   onChange: (view: IssueView) => void;
+  selectedScope: IssueScope;
+  onScopeChange: (scope: IssueScope) => void;
 }) {
   return (
     <div className="flex shrink-0 flex-col gap-3">
@@ -189,8 +245,8 @@ function IssuesHeader({
           ))}
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-3">
-          <SelectPill label="College" />
-          <SelectPill label="Student" />
+          <ScopeSelectPill value={selectedScope} onChange={onScopeChange} />
+          <StaticSelectPill label="Student" />
         </div>
       </div>
     </div>
@@ -248,30 +304,24 @@ function CategoryBadge({ label }: { label: string }) {
   );
 }
 
-function PriorityBadge({ priority }: { priority: ExecutiveIssue["priority"] }) {
-  const isHigh = priority === "High" || priority === "Urgent";
+function EvidencePill({ label }: { label: string }) {
+  return (
+    <button
+      type="button"
+      title={label}
+      className="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-full bg-[#E8F3EC] px-3 py-1 text-[13px] font-bold text-[#16284F]"
+    >
+      <FilePdf size={18} weight="fill" className="text-[#FF2525]" />
+      <span className="whitespace-nowrap">View PDF</span>
+    </button>
+  );
+}
 
+function TextCell({ value, className = "" }: { value: string; className?: string }) {
   return (
     <span
-      className={`inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-[13px] font-bold ${isHigh ? "bg-[#FFE0E0] text-[#FF1F1F]" : "bg-[#FFF3E2] text-[#FFB45C]"
-        }`}
+      className={`block text-[14px] font-bold text-[#282828] ${className}`}
     >
-      {priority === "Urgent" ? "High" : priority}
-    </span>
-  );
-}
-
-function TimeCell({ value }: { value: string }) {
-  return (
-    <span className="block min-w-[115px] text-[14px] font-medium text-[#282828]">
-      {value}
-    </span>
-  );
-}
-
-function DateCell({ value }: { value: string }) {
-  return (
-    <span className="block min-w-[130px] text-[14px] font-medium text-[#282828]">
       {value}
     </span>
   );
@@ -281,28 +331,36 @@ function IssuesTable({
   title,
   description,
   rows,
+  scope,
 }: {
   title: string;
   description: string;
   rows: ExecutiveIssue[];
+  scope: IssueScope;
 }) {
-  const columns = [
-    { title: "Student", key: "subject" },
-    { title: "Issue", key: "issue" },
-    { title: "Category", key: "category" },
-    { title: "Priority", key: "priority" },
-    { title: "Time", key: "time" },
-    { title: "Date", key: "date" },
-    { title: "Status", key: "status" },
-  ];
+  const columns =
+    scope === "college"
+      ? [
+          { title: "Student", key: "subject" },
+          { title: "Issue", key: "issue" },
+          { title: "Category", key: "category" },
+          { title: "Evidence", key: "evidence" },
+        ]
+      : [
+          { title: "Student", key: "subject" },
+          { title: "Issue", key: "issue" },
+          { title: "Block", key: "block" },
+          { title: "Building / Room", key: "room" },
+          { title: "Category", key: "category" },
+          { title: "Evidence", key: "evidence" },
+        ];
   const tableData = rows.map((issue) => ({
     subject: <StudentCell issue={issue} />,
     issue: <IssueCell issue={issue} />,
+    block: <TextCell value={issue.block} className="min-w-[70px]" />,
+    room: <TextCell value={issue.room} className="min-w-[130px]" />,
     category: <CategoryBadge label={issue.category} />,
-    priority: <PriorityBadge priority={issue.priority} />,
-    time: <TimeCell value={issue.time} />,
-    date: <DateCell value={issue.dateReported} />,
-    status: <StatusPill status={issue.status} />,
+    evidence: <EvidencePill label={issue.evidence} />,
   }));
 
   return (
@@ -325,7 +383,7 @@ function IssuesTable({
           height="100%"
           stickyHeader={false}
           fillHeight
-          tableClassName="min-w-[1380px]"
+          tableClassName={scope === "college" ? "min-w-[980px]" : "min-w-[1180px]"}
         />
       </div>
     </section>
@@ -377,7 +435,13 @@ function AttachmentPill({
   );
 }
 
-function IssueDetailsCard({ issue }: { issue: ExecutiveIssue }) {
+function IssueDetailsCard({
+  issue,
+  scope,
+}: {
+  issue: ExecutiveIssue;
+  scope: IssueScope;
+}) {
   return (
     <article className="rounded-lg bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -393,6 +457,12 @@ function IssueDetailsCard({ issue }: { issue: ExecutiveIssue }) {
       </div>
       <h2 className="text-[18px] font-bold text-[#282828]">{issue.title}</h2>
       <div className="mt-3 flex flex-wrap gap-8">
+        {scope === "hostel" ? (
+          <>
+            <DetailMeta label="Block" value={issue.block} />
+            <DetailMeta label="Building / Room" value={issue.room} />
+          </>
+        ) : null}
         <DetailMeta label="Category" value={issue.category} />
         <DetailMeta label="Priority" value={issue.priority} />
         <DetailMeta label="Date Reported" value={issue.dateReported} />
@@ -429,12 +499,10 @@ function IssuesTableShimmer({
   rows,
   titleWidth,
   subtitleWidth,
-  highlightLastColumn = false,
 }: {
   rows: number;
   titleWidth: string;
   subtitleWidth: string;
-  highlightLastColumn?: boolean;
 }) {
   return (
     <section className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-4 shadow-sm">
@@ -450,7 +518,7 @@ function IssuesTableShimmer({
         {Array.from({ length: rows }).map((_, index) => (
           <div
             key={index}
-            className="grid grid-cols-[1.1fr_1.6fr_.7fr_.6fr_.6fr_.6fr_.6fr] gap-6"
+            className="grid grid-cols-[1.1fr_1.6fr_.6fr_.7fr_.7fr_.7fr] gap-6"
           >
             <SkeletonBlock className="h-10" />
             <SkeletonBlock className="h-10" />
@@ -458,9 +526,6 @@ function IssuesTableShimmer({
             <SkeletonBlock className="h-7" />
             <SkeletonBlock className="h-7" />
             <SkeletonBlock className="h-7" />
-            <SkeletonBlock
-              className={`h-7 ${highlightLastColumn ? "bg-orange-100" : ""}`}
-            />
           </div>
         ))}
       </div>
@@ -474,7 +539,6 @@ function AllIssuesShimmer() {
       rows={8}
       titleWidth="w-28"
       subtitleWidth="w-64"
-      highlightLastColumn
     />
   );
 }
@@ -526,9 +590,11 @@ function MyIssuesShimmer() {
 function IssuesContent({
   activeView,
   loading,
+  selectedScope,
 }: {
   activeView: IssueView;
   loading: boolean;
+  selectedScope: IssueScope;
 }) {
   const urgentIssues = useMemo(
     () => issues.filter((issue) => issue.priority === "Urgent"),
@@ -550,7 +616,11 @@ function IssuesContent({
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="flex flex-col gap-3">
           {myIssues.map((issue) => (
-            <IssueDetailsCard key={issue.id} issue={issue} />
+            <IssueDetailsCard
+              key={issue.id}
+              issue={issue}
+              scope={selectedScope}
+            />
           ))}
         </div>
       </div>
@@ -561,17 +631,23 @@ function IssuesContent({
     return (
       <IssuesTable
         title="Urgent Issues"
-        description="Latest reported complaints across campus"
+        description={`Latest reported complaints across ${
+          selectedScope === "college" ? "College" : "Hostel"
+        }`}
         rows={urgentIssues}
+        scope={selectedScope}
       />
     );
   }
 
   return (
     <IssuesTable
-      title="Recent Issues"
-      description="Latest reported complaints across campus"
+      title={selectedScope === "college" ? "College Issues" : "Hostel Issues"}
+      description={`Latest reported complaints across ${
+        selectedScope === "college" ? "College" : "Hostel"
+      }`}
       rows={issues}
+      scope={selectedScope}
     />
   );
 }
@@ -582,6 +658,7 @@ function NewIssuesBody() {
   const [activeView, setActiveView] = useState<IssueView>(() =>
     getView(searchParams.get("issueView")),
   );
+  const [selectedScope, setSelectedScope] = useState<IssueScope>("college");
   const [loadingView, setLoadingView] = useState(true);
 
   useEffect(() => {
@@ -603,10 +680,22 @@ function NewIssuesBody() {
   }, [loadingView, activeView]);
 
   return (
-    <main className="flex w-full flex-col gap-2 lg:h-[calc(100vh-84px)] lg:min-h-0 lg:overflow-hidden lg:flex-row">
+    <main className="flex w-full flex-col gap-2 lg:min-h-screen lg:flex-row">
       <section className="flex min-h-0 w-full flex-col gap-4 p-2 lg:h-full lg:w-[68%]">
-        <IssuesHeader activeView={activeView} onChange={handleViewChange} />
-        <IssuesContent activeView={activeView} loading={loadingView} />
+        <IssuesHeader
+          activeView={activeView}
+          onChange={handleViewChange}
+          selectedScope={selectedScope}
+          onScopeChange={(scope) => {
+            setSelectedScope(scope);
+            setLoadingView(true);
+          }}
+        />
+        <IssuesContent
+          activeView={activeView}
+          loading={loadingView}
+          selectedScope={selectedScope}
+        />
       </section>
       <WellbeingExecutiveRight bounded />
     </main>
