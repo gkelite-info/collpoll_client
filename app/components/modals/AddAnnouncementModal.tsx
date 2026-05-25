@@ -5,22 +5,26 @@ import { X } from "@phosphor-icons/react";
 import toast from "react-hot-toast";
 import { useTranslations } from "next-intl";
 import { useUser } from "@/app/utils/context/UserContext";
+import { saveAnnouncementRole } from "@/lib/helpers/announcements/announcementRoles";
 import {
-  fetchAnnouncementRoles,
-  saveAnnouncementRole,
-} from "@/lib/helpers/announcements/announcementRoles";
-import {
-  deactivateCollegeAnnouncement,
   saveCollegeAnnouncement,
   updateCollegeAnnouncement,
 } from "@/lib/helpers/announcements/announcementAPI";
 import { supabase } from "@/lib/supabaseClient";
 
+type AnnouncementEditData = {
+  collegeAnnouncementId?: number;
+  title?: string;
+  date?: string;
+  type?: string;
+  targetRoles?: string[];
+};
+
 type Props = {
   open: boolean;
   onClose: () => void;
   refreshAnnouncements?: () => Promise<void>;
-  editData?: any;
+  editData?: AnnouncementEditData | null;
 };
 
 const typeIcons: Record<string, string> = {
@@ -39,7 +43,30 @@ const typeIcons: Record<string, string> = {
 };
 
 const roleOptionsMap: Record<string, string[]> = {
-  Finance: ["CollegeAdmin", "Faculty", "Admin", "Student", "Parent"],
+  Finance: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "Finance",
+    "CollegeHr",
+    "WellbeingExecutive",
+    "WellbeingManager",
+    "PlacementOfficer",
+  ],
+  FinanceManager: [
+    "CollegeAdmin",
+    "Admin",
+    "Faculty",
+    "Student",
+    "Parent",
+    "Finance",
+    "CollegeHr",
+    "WellbeingExecutive",
+    "WellbeingManager",
+    "PlacementOfficer",
+  ],
   CollegeAdmin: [
     "Admin",
     "Faculty",
@@ -74,7 +101,18 @@ const roleOptionsMap: Record<string, string[]> = {
   ],
 };
 
+const roleLabels: Record<string, string> = {
+  CollegeAdmin: "College Admin",
+  Finance: "Finance Executive",
+  FinanceManager: "Finance Manager",
+  PlacementOfficer: "Placement Officer",
+  CollegeHr: "College HR",
+  WellbeingExecutive: "Wellbeing Executive",
+  WellbeingManager: "Wellbeing Manager",
+};
+
 const formatRole = (role: string) =>
+  roleLabels[role] ||
   role
     ?.replace(/([A-Z])/g, " $1")
     .replace(/_/g, " ")
@@ -91,15 +129,12 @@ export default function AddAnnouncementModal({
   const [date, setDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [targetRoles, setTargetRoles] = useState<string[]>([]);
-  const [customType, setCustomType] = useState("");
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [type, setType] = useState<string>("notice");
   const { userId, collegeId, role } = useUser();
   const availableRoles = role ? roleOptionsMap[role] || [] : [];
 
   const t = useTranslations("Dashboard.student");
-
-  const selectedIcon = typeIcons[type];
 
   useEffect(() => {
     if (open && editData) {
@@ -135,6 +170,11 @@ export default function AddAnnouncementModal({
     try {
       setSaving(true);
       if (editData) {
+        if (!editData.collegeAnnouncementId) {
+          toast.error(t("Failed to update announcement"));
+          return;
+        }
+
         const updateRes = await updateCollegeAnnouncement(
           editData.collegeAnnouncementId,
           {
@@ -203,7 +243,7 @@ export default function AddAnnouncementModal({
 
       resetForm();
       await refreshAnnouncements?.();
-    } catch (error) {
+    } catch {
       toast.error(t("Something went wrong"));
     } finally {
       setSaving(false);
@@ -216,7 +256,6 @@ export default function AddAnnouncementModal({
       setDate("");
       setType("");
       setTargetRoles([]);
-      setCustomType("");
     }
   }, [open]);
 
@@ -225,7 +264,6 @@ export default function AddAnnouncementModal({
     setDate("");
     setTargetRoles([]);
     setType("");
-    setCustomType("");
     onClose();
   };
 
@@ -359,7 +397,7 @@ export default function AddAnnouncementModal({
                 >
                   <span className="truncate">
                     {targetRoles.length > 0
-                      ? targetRoles.map((r) => t(formatRole(r))).join(", ")
+                      ? targetRoles.map(formatRole).join(", ")
                       : t("Select Roles")}
                   </span>
 
@@ -416,7 +454,7 @@ export default function AddAnnouncementModal({
                           onChange={() => handleRoleToggle(r)}
                           className="accent-[#43C17A] cursor-pointer"
                         />
-                        {t(formatRole(r))}
+                        {formatRole(r)}
                       </label>
                     ))}
                   </div>
