@@ -16,6 +16,63 @@ export type CollegeAnnouncementRow = {
   targetRoles?: string[];
 };
 
+type AnnouncementRoleRelation = {
+  role: string;
+};
+
+type CollegeAnnouncementListRow = {
+  collegeAnnouncementId: number;
+  announcementTitle: string;
+  date: string;
+  type: string;
+  createdBy: number;
+  createdByRole: string;
+  createdAt: string;
+  college_announcements_roles?: AnnouncementRoleRelation[] | null;
+};
+
+type FormattedCollegeAnnouncement = {
+  id: number;
+  collegeAnnouncementId: number;
+  title: string;
+  date: string;
+  formattedDate: string;
+  type: string;
+  createdBy: number;
+  createdByRole: string;
+  targetRoles: string[];
+  createdAt: string;
+};
+
+type ExistingAnnouncementRole = {
+  collegeAnnouncementRolesId: number;
+  role: string;
+};
+
+type AnnouncementCreatorProfile = {
+  profileUrl?: string | null;
+};
+
+type AnnouncementCreatorUser = {
+  fullName?: string | null;
+  user_profile?: AnnouncementCreatorProfile | AnnouncementCreatorProfile[] | null;
+};
+
+type AnnouncementDetailsRow = {
+  collegeAnnouncementId: number;
+  announcementTitle: string;
+  date: string;
+  type: string;
+  createdByRole: string;
+  createdAt: string;
+  college_announcements_roles?: AnnouncementRoleRelation[] | null;
+  users?: AnnouncementCreatorUser | AnnouncementCreatorUser[] | null;
+};
+
+const normalizeAnnouncementCreatorRole = (role: string) => {
+  return role;
+};
+
 /* =====================================================
    FETCH ANNOUNCEMENTS (STRICT SEPARATION)
 ===================================================== */
@@ -35,7 +92,7 @@ export async function fetchCollegeAnnouncements({
   page?: number;
   limit?: number;
 }): Promise<{
-  data: any[];
+  data: FormattedCollegeAnnouncement[];
   totalPages: number;
 }> {
   const from = (page - 1) * limit;
@@ -45,7 +102,7 @@ export async function fetchCollegeAnnouncements({
   const now = new Date().toISOString();
   const numericUserId = Number(userId);
 
-  const { error: deactivateError } = await supabase
+  await supabase
     .from("college_announcements")
     .update({
       isActive: false,
@@ -55,10 +112,6 @@ export async function fetchCollegeAnnouncements({
     .eq("isActive", true)
     .is("is_deleted", false)
     .lt("date", today);
-
-  if (deactivateError) {
-    console.error("auto deactivate announcements error:", deactivateError);
-  }
 
   let query = supabase
     .from("college_announcements")
@@ -103,10 +156,12 @@ export async function fetchCollegeAnnouncements({
 
   const targetContextRole = normalizeRoleForMatch(role);
 
-  const formatted = (data ?? [])
-    .map((item: any) => {
+  const rows = (data ?? []) as CollegeAnnouncementListRow[];
+
+  const formatted = rows
+    .map((item) => {
       const targetRoles =
-        item.college_announcements_roles?.map((r: any) => r.role) || [];
+        item.college_announcements_roles?.map((roleRow) => roleRow.role) || [];
 
       const formattedDate = new Date(item.date).toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -127,7 +182,7 @@ export async function fetchCollegeAnnouncements({
         createdAt: item.createdAt,
       };
     })
-    .filter((item: any) => {
+    .filter((item) => {
       if (view === "my") return true;
 
       return item.targetRoles.some(
@@ -167,7 +222,7 @@ export async function saveCollegeAnnouncement(
       type: payload.type,
       collegeId: payload.collegeId,
       createdBy: userId,
-      createdByRole: role,
+      createdByRole: normalizeAnnouncementCreatorRole(role),
       is_deleted: false,  
       isActive: true,
       createdAt: now,
@@ -177,8 +232,6 @@ export async function saveCollegeAnnouncement(
     .single();
 
   if (error) {
-    console.error("saveCollegeAnnouncement error:", error);
-
     return {
       success: false,
       message: "Failed to create announcement",
@@ -212,18 +265,16 @@ export async function updateCollegeAnnouncement(
     updatedAt: new Date().toISOString(),
   };
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("college_announcements")
     .update(updatePayload)
     .eq("collegeAnnouncementId", collegeAnnouncementId)
     .select();
 
   if (error) {
-    console.error("updateCollegeAnnouncement error:", error);
     return {
       success: false,
       message: "Failed to update announcement",
-      error,
     };
   }
 
@@ -233,15 +284,15 @@ export async function updateCollegeAnnouncement(
     .eq("collegeAnnouncementId", collegeAnnouncementId);
 
   if (fetchError) {
-    console.error("fetch existing roles error:", fetchError);
     return { success: false, message: "Failed to fetch existing roles" };
   }
 
-  const existingRoleNames = existingRoles.map((r: any) => r.role);
+  const existingRoleRows = (existingRoles ?? []) as ExistingAnnouncementRole[];
+  const existingRoleNames = existingRoleRows.map((roleRow) => roleRow.role);
   const incomingRoles = payload.targetRoles;
 
-  const rolesToDelete = existingRoles.filter(
-    (r: any) => !incomingRoles.includes(r.role),
+  const rolesToDelete = existingRoleRows.filter(
+    (roleRow) => !incomingRoles.includes(roleRow.role),
   );
 
   const rolesToInsert = incomingRoles.filter(
@@ -250,7 +301,7 @@ export async function updateCollegeAnnouncement(
 
   if (rolesToDelete.length > 0) {
     const idsToDelete = rolesToDelete.map(
-      (r: any) => r.collegeAnnouncementRolesId,
+      (roleRow) => roleRow.collegeAnnouncementRolesId,
     );
 
     const { error: deleteError } = await supabase
@@ -259,7 +310,6 @@ export async function updateCollegeAnnouncement(
       .in("collegeAnnouncementRolesId", idsToDelete);
 
     if (deleteError) {
-      console.error("delete roles error:", deleteError);
       return { success: false, message: "Failed to remove roles" };
     }
   }
@@ -279,7 +329,6 @@ export async function updateCollegeAnnouncement(
       );
 
     if (insertError) {
-      console.error("insert roles error:", insertError);
       return { success: false, message: "Failed to add new roles" };
     }
   }
@@ -304,7 +353,6 @@ export async function deactivateCollegeAnnouncement(
     .eq("collegeAnnouncementId", collegeAnnouncementId);
 
   if (error) {
-    console.error("deactivateCollegeAnnouncement error:", error);
     return { success: false };
   }
 
@@ -338,43 +386,41 @@ export async function fetchAnnouncementDetails(announcementId: number) {
     .single();
 
   if (error) {
-    console.error("fetchAnnouncementDetails error:", error);
     throw error;
   }
 
+  const detail = data as unknown as AnnouncementDetailsRow;
   const targetRoles =
-    data.college_announcements_roles?.map((r: any) => r.role) || [];
+    detail.college_announcements_roles?.map((roleRow) => roleRow.role) || [];
 
-  const userObj = Array.isArray(data.users) ? data.users[0] : data.users;
+  const userObj = Array.isArray(detail.users) ? detail.users[0] : detail.users;
   const creatorName = userObj?.fullName || "Unknown User";
 
-  let profileUrl = null;
+  let profileUrl: string | null | undefined = null;
   const up = userObj?.user_profile;
   if (up) {
-    profileUrl = Array.isArray(up)
-      ? up[0]?.profileUrl
-      : (up as any)?.profileUrl;
+    profileUrl = Array.isArray(up) ? up[0]?.profileUrl : up.profileUrl;
   }
 
   const creatorImage =
     profileUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(creatorName)}&background=e2f6ea&color=43C17A&size=128&bold=true`;
 
-  const formattedDate = new Date(data.date).toLocaleDateString("en-GB", {
+  const formattedDate = new Date(detail.date).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 
   return {
-    id: data.collegeAnnouncementId,
-    title: data.announcementTitle,
-    date: data.date,
+    id: detail.collegeAnnouncementId,
+    title: detail.announcementTitle,
+    date: detail.date,
     formattedDate,
-    type: data.type,
-    createdAt: data.createdAt,
+    type: detail.type,
+    createdAt: detail.createdAt,
     creatorName,
-    creatorRole: data.createdByRole,
+    creatorRole: detail.createdByRole,
     creatorImage,
     targetRoles,
   };
