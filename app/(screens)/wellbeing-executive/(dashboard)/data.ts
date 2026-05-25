@@ -70,51 +70,109 @@ export const executives = [
   },
 ];
 
-export const recentIssues = [
+export type WellbeingExecutiveIssueScope = "college" | "hostel";
+
+export type WellbeingExecutiveIssue = {
+  id: string;
+  scope: WellbeingExecutiveIssueScope;
+  student: string;
+  meta: string;
+  issue: string;
+  description: string;
+  category: string;
+  priority: "Urgent" | "High" | "Medium" | "Low";
+  evidence: string;
+  studentImage: string;
+  block?: string;
+  room?: string;
+};
+
+export const registeredIssueScopes: WellbeingExecutiveIssueScope[] = [
+  "college",
+  "hostel",
+];
+
+export const collegeIssues: WellbeingExecutiveIssue[] = [
   {
+    id: "CLG-28939",
+    scope: "college",
     student: "Ankitha Sharma",
     meta: "B.Tech CSE  |  ID-28939",
     issue: "Projector not working in CR-2",
     description: "The project has not been working since morning.",
-    handledBy: "Priya Sharma",
+    category: "Infrastructure",
+    priority: "High",
+    evidence: "classroom-projector-report.pdf",
     studentImage: "/female-student.png",
-    handlerImage: "/female-faculty.png",
   },
   {
+    id: "CLG-28940",
+    scope: "college",
     student: "Shreya Patel",
     meta: "B.Tech CSE  |  ID-28939",
     issue: "Projector not working in CR-2",
     description: "The project has not been working since morning.",
-    handledBy: "Aarav Guptha",
+    category: "Infrastructure",
+    priority: "High",
+    evidence: "classroom-projector-report.pdf",
     studentImage: "/student-m.png",
-    handlerImage: "/male-faculty.png",
   },
   {
+    id: "CLG-28941",
+    scope: "college",
     student: "Rahul Sharma",
     meta: "B.Tech CSE  |  ID-28939",
-    issue: "Projector not working in CR-2",
-    description: "The project has not been working since morning.",
-    handledBy: "Shivansh Shripat",
+    issue: "Lab system display flickering",
+    description: "The display has been flickering during practical sessions.",
+    category: "IT Support",
+    priority: "Medium",
+    evidence: "lab-display-issue.pdf",
     studentImage: "/rahul.png",
-    handlerImage: "/male-student.png",
   },
+];
+
+export const hostelIssues: WellbeingExecutiveIssue[] = [
   {
-    student: "Priya Sharma",
-    meta: "B.Tech CSE  |  ID-28939",
-    issue: "Projector not working in CR-2",
-    description: "The project has not been working since morning.",
-    handledBy: "Koushik Reddy",
-    studentImage: "/female-student.png",
-    handlerImage: "/male-hr.png",
-  },
-  {
+    id: "HST-28939",
+    scope: "hostel",
     student: "Ankitha Sharma",
     meta: "B.Tech CSE  |  ID-28939",
-    issue: "Projector not working in CR-2",
-    description: "The project has not been working since morning.",
-    handledBy: "Priya Sharma",
+    issue: "WiFi not working in Hostel Floor 3",
+    description: "Internet connectivity is very poor or unavailable.",
+    category: "Infrastructure",
+    priority: "High",
+    evidence: "hostel-wifi-report.pdf",
     studentImage: "/female-student.png",
-    handlerImage: "/female-faculty.png",
+    block: "A",
+    room: "A-206",
+  },
+  {
+    id: "HST-28940",
+    scope: "hostel",
+    student: "Shreya Patel",
+    meta: "B.Tech CSE  |  ID-28939",
+    issue: "WiFi not working in Hostel Floor 3",
+    description: "Internet connectivity is very poor or unavailable.",
+    category: "Infrastructure",
+    priority: "High",
+    evidence: "hostel-wifi-report.pdf",
+    studentImage: "/student-m.png",
+    block: "B",
+    room: "A-205",
+  },
+  {
+    id: "HST-28941",
+    scope: "hostel",
+    student: "Rahul Sharma",
+    meta: "B.Tech CSE  |  ID-28939",
+    issue: "WiFi not working in Hostel Floor 3",
+    description: "Internet connectivity is very poor or unavailable.",
+    category: "Infrastructure",
+    priority: "High",
+    evidence: "hostel-wifi-report.pdf",
+    studentImage: "/rahul.png",
+    block: "A",
+    room: "A-203",
   },
 ];
 
