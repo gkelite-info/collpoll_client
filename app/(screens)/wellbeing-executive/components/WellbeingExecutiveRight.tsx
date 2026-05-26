@@ -68,7 +68,7 @@ export default function WellbeingExecutiveRight({
     </button>
   )
     : button && headerActionLabel === "Alerts" && (
-      <button className="flex h-[54px] items-center justify-center gap-2 rounded-lg bg-[#FFE8E8] text-sm font-bold text-[#FF1F1F] shadow-sm">
+      <button className="flex h-13.5 items-center justify-center gap-2 rounded-lg bg-[#FFE8E8] text-sm font-bold text-[#FF1F1F] shadow-sm">
         <AlertIcon />
         ALERTS
       </button>
@@ -137,7 +137,7 @@ export default function WellbeingExecutiveRight({
       ) : null}
 
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-[100vh] w-[85%] transform flex-col overflow-y-auto bg-[#F8F9FB] p-6 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out sm:w-[400px] lg:hidden ${isMobileDrawerOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed right-0 top-0 z-50 flex h-screen w-[85%] transform flex-col overflow-y-auto bg-[#F8F9FB] p-6 shadow-[-4px_0_24px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out sm:w-[400px] lg:hidden ${isMobileDrawerOpen ? "translate-x-0" : "translate-x-full"
           }`}
       >
         <div className="mb-6 flex shrink-0 items-center justify-between">
@@ -159,3 +159,5 @@ export default function WellbeingExecutiveRight({
     </>
   );
 }
+
+ 

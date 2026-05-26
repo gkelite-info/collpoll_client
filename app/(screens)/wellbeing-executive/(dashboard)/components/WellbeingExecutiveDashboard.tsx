@@ -13,7 +13,6 @@ export default function WellbeingExecutiveDashboard() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMounted(true), 0);
-
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -42,9 +41,9 @@ export default function WellbeingExecutiveDashboard() {
         <WellbeingExecutiveRight button headerActionLabel="Alerts"/>
       ) : (
         <aside className="hidden w-[32%] flex-col p-2 pr-0 md:flex lg:w-[32%]">
-          <div className="h-[54px] animate-pulse rounded-lg bg-gray-200" />
-          <div className="mt-5 h-[170px] animate-pulse rounded-lg bg-gray-200" />
-          <div className="mt-5 h-[420px] animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-13.5 animate-pulse rounded-lg bg-gray-200" />
+          <div className="mt-5 h-42.5 animate-pulse rounded-lg bg-gray-200" />
+          <div className="mt-5 h-105 animate-pulse rounded-lg bg-gray-200" />
         </aside>
       )}
     </main>
