@@ -76,6 +76,10 @@ export default function CourseScheduleCard({
             <p className="text-[#EFEFEF] text-md font-medium">
               {collegeEducationType ? `${collegeEducationType}` : "—"}
             </p>
+          ) : role === "CollegeHr" ? (
+            <p className="text-[#EFEFEF] text-md font-medium">
+              {collegeEducationType ? `${collegeEducationType}` : "College HR"}
+            </p>
           ) : (
             <div className="h-3.5 w-20 rounded bg-white/30" />
           )}

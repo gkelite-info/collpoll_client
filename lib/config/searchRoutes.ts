@@ -112,6 +112,7 @@ export const ROLE_BASED_ROUTES: Record<string, SearchRoute[]> = {
     { label: "Home", path: "/hr", category: "Dashboard", keywords: [] },
     { label: "Calendar", path: "/hr/calendar", category: "Academics", keywords: [] },
     { label: "Attendance", path: "/hr/attendance", category: "Management", keywords: ["staff attendance"] },
+    { label: "Leave Requests", path: "/hr/leaveRequests", category: "Requests", keywords: ["leave", "permission"] },
     { label: "Drive", path: "/hr/drive", category: "Resources", keywords: ["files", "documents", "storage"] },
     { label: "Meetings", subLabel: "Upcoming Meetings", path: "/hr/meetings?type=upcoming", category: "Collaboration", keywords: ["upcoming meetings", "new meetings"] },
     { label: "Meetings", subLabel: "Previous Meetings", path: "/hr/meetings?type=previous", category: "Collaboration", keywords: ["previous meetings", "old meetings"] },
