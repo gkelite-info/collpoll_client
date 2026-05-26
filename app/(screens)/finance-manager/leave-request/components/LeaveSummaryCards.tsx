@@ -5,6 +5,32 @@ import { UsersThree } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { leaveSummaryCards } from "../data";
 
+const cardPalette: Record<
+  string,
+  { active: string; inactive: string; iconBg: string }
+> = {
+  total: {
+    active: "bg-[#5C98FF]",
+    inactive: "bg-[#EBF2FF]",
+    iconBg: "#5C98FF",
+  },
+  approved: {
+    active: "bg-[#48C37C]",
+    inactive: "bg-[#E7F8EE]",
+    iconBg: "#48C37C",
+  },
+  pending: {
+    active: "bg-[#FFB874]",
+    inactive: "bg-[#FFF4EB]",
+    iconBg: "#FFB874",
+  },
+  rejected: {
+    active: "bg-[#FF4242]",
+    inactive: "bg-[#FFE5E5]",
+    iconBg: "#FF4242",
+  },
+};
+
 export default function LeaveSummaryCards() {
   const router = useRouter();
   const pathname = usePathname();
@@ -28,11 +54,7 @@ export default function LeaveSummaryCards() {
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {leaveSummaryCards.map((card) => {
         const isActive = activeStatus === card.status;
-        const activeStyleByStatus: Record<string, string> = {
-          approved: "bg-[#43C17A]",
-          rejected: "bg-[#FF2020]",
-        };
-        const activeStyle = activeStyleByStatus[card.status] || card.style;
+        const palette = cardPalette[card.status];
 
         return (
           <CardComponent
@@ -41,10 +63,12 @@ export default function LeaveSummaryCards() {
             value={card.value}
             label={card.label}
             isActive={isActive}
-            iconColor={card.iconColor}
-            iconBgColor="#FFFFFF"
-            style={`${isActive ? activeStyle : card.style} h-24 w-full rounded-sm shadow-sm`}
-            textSize="text-sm"
+            iconColor="#FFFFFF"
+            iconBgColor={
+              isActive ? "rgba(255,255,255,0.2)" : palette.iconBg
+            }
+            style={`${isActive ? palette.active : palette.inactive} h-24 w-full rounded-sm shadow-sm transition-all duration-300`}
+            textSize={isActive ? "text-white" : "text-[#282828]"}
             onClick={() => handleCardClick(card.status)}
           />
         );

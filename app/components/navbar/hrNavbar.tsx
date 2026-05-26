@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, ReactNode, useEffect } from "react";
+import { useState, ReactNode, useEffect, useMemo } from "react";
 import {
   Calendar,
+  CalendarCheck,
   CheckCircle,
   FolderOpen,
   Gear,
@@ -38,7 +39,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
 
   const t = useTranslations("Navbars");
 
-  const items: NavItem[] = [
+  const items: NavItem[] = useMemo(() => [
     {
       icon: (isActive) => (
         <House size={18} weight={isActive ? "fill" : "regular"} />
@@ -59,6 +60,13 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       ),
       label: t("Attendance"),
       path: "/hr/attendance",
+    },
+    {
+      icon: (isActive) => (
+        <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />
+      ),
+      label: t("Leave Requests"),
+      path: "/hr/leaveRequests",
     },
     {
       icon: (isActive) => (
@@ -93,7 +101,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       label: t("Settings"),
       path: "/hr/settings",
     },
-  ];
+  ], [t]);
 
   useEffect(() => {
     const current = items.find((item) => item.path === pathname);
@@ -101,7 +109,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
     if (current) {
       setActive(current.label);
     }
-  }, [pathname]);
+  }, [items, pathname]);
 
   const handleLogout = async () => {
     try {
@@ -124,7 +132,7 @@ export default function HrNavbar({ onClose }: HrNavbarProps) {
       } else {
         toast.error("Logout failed. Please try again.");
       }
-    } catch (error) {
+    } catch {
       toast.error("Logout failed");
     } finally {
       setIsLoggingOut(false);
