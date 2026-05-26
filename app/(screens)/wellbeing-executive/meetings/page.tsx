@@ -1,7 +1,16 @@
+'use client';
+import { Suspense } from "react";
+import { Loader } from "../../(student)/calendar/right/timetable";
+import WellbeingMeetingsPage from "./WellbeingMeetings";
+
 export default function MeetingsPage() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Meetings Page</h1>
-    </div>
+    <Suspense fallback={
+        <div className="h-screen w-full flex justify-center items-center">
+            <Loader />
+        </div>
+    }>
+        <WellbeingMeetingsPage />
+    </Suspense>
   );
 }

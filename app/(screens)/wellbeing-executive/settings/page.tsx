@@ -1,7 +1,12 @@
-export default function SettingsPage() {
+import SettingsClient from "@/app/components/SharedSettings/SettingsClient";
+import { Suspense } from "react";
+
+export default function StudentSettings() {
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold text-gray-900">Settings Page</h1>
-    </div>
+    <Suspense fallback={<div className="p-4">Loading settings...</div>}>
+      <div className="w-full">
+        <SettingsClient />
+      </div>
+    </Suspense>
   );
 }

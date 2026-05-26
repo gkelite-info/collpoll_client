@@ -14,7 +14,7 @@ export default function WellbeingManagerNavbar({
       onClose={onClose}
       basePath="/wellbeing-manager"
       showExecutives
-      showLeaveRequest={false}
+      showLeaveRequest={true}
     />
   );
 }
