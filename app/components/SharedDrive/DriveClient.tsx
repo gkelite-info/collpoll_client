@@ -595,7 +595,7 @@ const DriveClient = () => {
             </p>
           </div>
           <article className="flex w-[32%] justify-end max-md:hidden">
-            <CourseScheduleCard style="w-[320px]" />
+            <CourseScheduleCard style="w-[320px]" isVisibile={false}/>
           </article>
         </div>
 

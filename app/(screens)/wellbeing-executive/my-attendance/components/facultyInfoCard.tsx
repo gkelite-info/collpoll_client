@@ -18,7 +18,7 @@ const FacultyInfoCard: FC<Props> = ({ profile, loading }) => {
       </div>
 
       <div className="grid grid-cols-[140px_1fr] gap-y-2 text-[13px]">
-        <div className="text-[#282828] font-semibold">wellbeingManager Id</div>
+        <div className="text-[#282828] font-semibold">WellbeingExecutive Id</div>
         {loading === false && (
           <div className="text-gray-500">{profile.adminId}</div>
         )}
