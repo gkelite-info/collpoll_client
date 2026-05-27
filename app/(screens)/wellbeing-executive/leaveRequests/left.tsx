@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
 import { Loader } from "../../(student)/calendar/right/timetable";
 import WellbeingRequestLeaveModal from "./modal/RequestLeaveModal";
+import LeaveRequestDetailsModal from "./modal/LeaveRequestDetailsModal";
 
 const MY_LEAVES_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -22,6 +23,7 @@ const MY_LEAVES_COLUMNS = [
   { title: "Leave Type", key: "leaveType" },
   { title: "Description", key: "description" },
   { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
 ];
 
 const STATIC_MY_LEAVES = [
@@ -59,6 +61,8 @@ function WellbeingLeavesContent() {
 
   const [myData, setMyData] = useState(STATIC_MY_LEAVES);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedLeaveData, setSelectedLeaveData] = useState<any>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -152,6 +156,17 @@ function WellbeingLeavesContent() {
             {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
           </span>
         ),
+        details: (
+          <button
+            onClick={() => {
+              setSelectedLeaveData(item);
+              setIsDetailsModalOpen(true);
+            }}
+            className="text-blue-600 font-bold text-xs hover:underline cursor-pointer"
+          >
+            View Details
+          </button>
+        ),
       };
     });
   }, [paginatedData, page]);
@@ -228,10 +243,10 @@ function WellbeingLeavesContent() {
         }
       `}</style>
 
-      <div className="flex flex-col p-6 w-full max-w-[100%] mx-auto min-h-screen">
-        <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col p-2 w-full max-w-[100%] mx-auto min-h-screen">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex flex-col gap-1">
-            <div className="flex flex-col md:flex-row items-center gap-2 text-2xl font-bold">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-2xl font-bold">
               <span className="text-[#43C17A] text-lg md:text-2xl">
                 My Leave Request
               </span>
@@ -243,7 +258,7 @@ function WellbeingLeavesContent() {
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-[#16284F] text-white font-bold text-sm px-6 py-3 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer"
+            className="bg-[#16284F] text-white font-bold text-sm px-6 py-3 rounded-lg shadow-sm hover:bg-[#102040] transition-colors cursor-pointer whitespace-nowrap"
           >
             Request Leave
           </button>
@@ -269,8 +284,8 @@ function WellbeingLeavesContent() {
           })}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row justify-between items-center rounded-xl px-4 py-3 ">
-          <div className="relative w-full max-w-[300px] flex items-center ">
+        <div className="flex flex-col gap-2 sm:flex-row justify-between items-center rounded-xl md:px-4 py-3 ">
+          <div className="relative order-2 sm:order-1 w-full max-w-full sm:max-w-[300px] flex items-center ">
             <MagnifyingGlass
               size={20}
               className="absolute left-3 text-[#43C17A] pointer-events-none"
@@ -284,7 +299,7 @@ function WellbeingLeavesContent() {
             />
           </div>
 
-          <div className="flex items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md ">
+          <div className="order-1 sm:order-2 self-end flex sm:self-center w-fit items-center gap-2 bg-[#DAE9E1] px-4 py-1.5 rounded-md ">
             <CalendarIcon size={18} className="text-[#43C17A]" weight="fill" />
             <span className="text-[#43C17A] font-bold text-sm tracking-wide cursor-pointer">
               {new Date().toLocaleDateString("en-GB")}
@@ -316,6 +331,12 @@ function WellbeingLeavesContent() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSubmit={handleMyLeaveSubmit}
+        />
+
+        <LeaveRequestDetailsModal
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          leaveData={selectedLeaveData}
         />
       </div>
     </>

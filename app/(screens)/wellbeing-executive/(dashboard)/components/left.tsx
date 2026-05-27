@@ -24,6 +24,7 @@ import type {
   WellbeingExecutiveIssueScope,
 } from "../data";
 import WellbeingDashboardCard from "./WellbeingDashboardCard";
+import { Avatar } from "@/app/utils/Avatar";
 
 const IssueStatusDonut = dynamic(() => import("./IssueStatusDonut"), {
   ssr: false,
@@ -94,7 +95,7 @@ function WelcomePanel() {
               {loading ? "Executive" : displayName}
             </span>
           </h1>
-          <p className="mt-4 max-w-lg text-[12px] font-semibold leading-5 text-[#111827]">
+          <p className="mt-3 max-w-lg text-[12px] font-semibold leading-5 text-[#111827]">
             Track and manage issues effectively. Your primary responsibility is
             resolving hostel related complaints.
           </p>
@@ -102,9 +103,8 @@ function WelcomePanel() {
 
         {gender ? (
           <div
-            className={`absolute bottom-0 md:-right-3 lg:right-10 ${
-              gender === "Male" ? "h-[105%]" : "h-[107%]"
-            } z-10 w-[180px]`}
+            className={`absolute bottom-0 max-sm:-right-4 md:right-3 lg:right-10 ${gender === "Male" ? "max-sm:h-[102%] md:h-[104%]" : "h-[110%] max-[340px]:w-[50%]"
+              } z-10 w-[180px]`}
           >
             <Image
               src={avatarImage}
@@ -142,21 +142,19 @@ function IssueStatTile({ item }: { item: (typeof issueStats)[number] }) {
 
   return (
     <div
-      className={`rounded-md p-3 ${
-        item.tone === "violet"
-          ? "bg-[#E6DBFF]"
-          : item.tone === "rose"
-            ? "bg-[#FFE8E8]"
-            : item.tone === "amber"
-              ? "bg-[#FFEBD4]"
-              : "bg-[#DFF8EA]"
-      }`}
+      className={`rounded-md p-3 ${item.tone === "violet"
+        ? "bg-[#E6DBFF]"
+        : item.tone === "rose"
+          ? "bg-[#FFE8E8]"
+          : item.tone === "amber"
+            ? "bg-[#FFEBD4]"
+            : "bg-[#DFF8EA]"
+        }`}
     >
       <div className="flex items-start gap-2">
         <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white ${
-            toneClasses[item.tone as keyof typeof toneClasses]
-          }`}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white ${toneClasses[item.tone as keyof typeof toneClasses]
+            }`}
         >
           <Icon size={16} weight="fill" />
         </span>
@@ -253,13 +251,20 @@ const priorityOptions: WellbeingExecutiveIssue["priority"][] = [
 function StudentIssueCell({ issue }: { issue: WellbeingExecutiveIssue }) {
   return (
     <div className="flex min-w-[220px] items-center gap-4 text-left">
-      <Image
+      <span className="relative block h-10 w-10 shrink-0 object-cover overflow-hidden rounded-full bg-gray-100">
+        <Image
+          src={issue.studentImage}
+          alt={issue.student}
+          width={40}
+          height={40}
+          className="object-cover"
+        />
+        {/* <Avatar
         src={issue.studentImage}
         alt={issue.student}
-        width={48}
-        height={48}
-        className="h-12 w-12 shrink-0 rounded-full object-cover"
-      />
+        size={48}
+      /> */}
+      </span>
       <div className="min-w-0">
         <p className="truncate text-[14px] font-bold text-[#282828]">
           {issue.student}
@@ -330,19 +335,19 @@ function ExecutiveIssueTableCard({
   const columns =
     scope === "college"
       ? [
-          { title: "Student", key: "subject" },
-          { title: "Issue", key: "issue" },
-          { title: "Category", key: "category" },
-          { title: "Evidence", key: "evidence" },
-        ]
+        { title: "Student", key: "subject" },
+        { title: "Issue", key: "issue" },
+        { title: "Category", key: "category" },
+        { title: "Evidence", key: "evidence" },
+      ]
       : [
-          { title: "Student", key: "subject" },
-          { title: "Issue", key: "issue" },
-          { title: "Block", key: "block" },
-          { title: "Building / Room", key: "room" },
-          { title: "Category", key: "category" },
-          { title: "Evidence", key: "evidence" },
-        ];
+        { title: "Student", key: "subject" },
+        { title: "Issue", key: "issue" },
+        { title: "Block", key: "block" },
+        { title: "Building / Room", key: "room" },
+        { title: "Category", key: "category" },
+        { title: "Evidence", key: "evidence" },
+      ];
   const tableData = visibleRows.map((issue) => ({
     subject: <StudentIssueCell issue={issue} />,
     issue: <IssueTextCell issue={issue} />,
@@ -459,7 +464,7 @@ export default function WellbeingExecutiveLeft() {
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)]">
-        <WellbeingDashboardCard className="max-w-[390px]">
+        <WellbeingDashboardCard>
           <h3 className="mb-3 text-sm font-bold text-[#282828]">
             Hostel Issues
           </h3>
@@ -479,15 +484,6 @@ export default function WellbeingExecutiveLeft() {
 
       <div className="mt-3">
         <RecentIssuesTables />
-      </div>
-
-      <div className="mt-3 grid gap-3 md:hidden">
-        <WorkWeekCalendar style="" />
-        <AnnouncementsCard
-          announceCard={wellbeingAnnouncements}
-          height="60vh"
-          readOnly
-        />
       </div>
     </div>
   );
