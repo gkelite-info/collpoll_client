@@ -128,7 +128,7 @@ export default function LeaveRequestsRight({
         activeDate={activeDate}
         onDateSelect={onDateSelect}
       />
-      <div style={{ height: LEAVE_PANEL_HEIGHT }}>
+      <div className="min-h-0" style={{ height: LEAVE_PANEL_HEIGHT }}>
         <AnnouncementsCard
           announceCard={announcements}
           height="100%"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarIcon,
@@ -14,15 +14,21 @@ import toast from "react-hot-toast";
 import CardComponent from "@/app/utils/card";
 import TableComponent from "@/app/utils/table/table";
 import { Avatar } from "@/app/utils/Avatar";
-import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { ConfirmStatusModal } from "@/app/(screens)/faculty/leaveRequests/modal/ConfirmStatusModal";
 import { decryptId, encryptId } from "@/app/utils/encryption";
+import { useCollegeHr } from "@/app/utils/context/hr/useCollegeHr";
+import {
+  fetchEmployeeLeaveRequestCounts,
+  fetchPaginatedEmployeeLeaveRequests,
+  updateEmployeeLeaveRequestStatus,
+  type EmployeeLeaveRequestRecord,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import HrLeaveDetailsModal from "./HrLeaveDetailsModal";
 import LeaveRequestsRight from "./LeaveRequestsRight";
 import {
   ITEMS_PER_PAGE,
   LEAVE_TABLE_HEIGHT,
-  STATIC_LEAVE_REQUESTS,
   STATUS_BY_ROUTE_CODE,
   STATUS_ROUTE_CODES,
 } from "./data";
@@ -39,6 +45,30 @@ const ROLE_FILTERS = [
   "Wellbeing Executive",
   "Wellbeing Manager",
 ];
+
+const ROLE_FILTER_TO_DB: Record<string, string> = {
+  "College Admin": "CollegeAdmin",
+  Admin: "Admin",
+  Faculty: "Faculty",
+  "Finance Executive": "Finance",
+  "Finance Manager": "FinanceManager",
+  Placement: "PlacementOfficer",
+  "College HR": "CollegeHr",
+  "Wellbeing Executive": "WellbeingExecutive",
+  "Wellbeing Manager": "WellbeingManager",
+};
+
+const DB_ROLE_TO_LABEL: Record<string, string> = {
+  CollegeAdmin: "College Admin",
+  Admin: "Admin",
+  Faculty: "Faculty",
+  Finance: "Finance Executive",
+  FinanceManager: "Finance Manager",
+  PlacementOfficer: "Placement",
+  CollegeHr: "College HR",
+  WellbeingExecutive: "Wellbeing Executive",
+  WellbeingManager: "Wellbeing Manager",
+};
 
 const BASE_COLUMNS = [
   { title: "S.No", key: "sNo" },
@@ -77,10 +107,43 @@ const toDateKey = (date: Date) => {
 const formatDateKey = (dateKey: string) =>
   new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
 
-const isDateInsideRange = (dateKey: string, startDate: string, endDate: string) =>
-  dateKey >= startDate && dateKey <= endDate;
+const formatDbDate = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("en-GB");
+
+const titleCase = (value: string) =>
+  value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+
+const calculateDays = (fromDate: string, toDate: string) => {
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  const diff = Math.max(0, to.getTime() - from.getTime());
+  return String(Math.floor(diff / 86_400_000) + 1).padStart(2, "0");
+};
+
+const mapDbRequestToHrRow = (
+  request: EmployeeLeaveRequestRecord,
+): HrLeaveRow => ({
+  id: request.employeeLeaveRequestId,
+  employeeId: request.employee?.employeeId ?? String(request.employeeId),
+  name: request.user?.fullName ?? "Employee",
+  role: DB_ROLE_TO_LABEL[request.role] ?? titleCase(request.role),
+  photo: request.user?.profileUrl ?? null,
+  fromDate: formatDbDate(request.leaveFromDate),
+  toDate: formatDbDate(request.leaveToDate),
+  startDateIso: request.leaveFromDate,
+  endDateIso: request.leaveToDate,
+  days: calculateDays(request.leaveFromDate, request.leaveToDate),
+  leaveType: titleCase(request.leaveType),
+  description: request.description,
+  status: request.status,
+});
 
 export default function LeaveRequestsClient() {
+  const { collegeId, collegeHrId, loading: hrLoading } = useCollegeHr();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -97,8 +160,16 @@ export default function LeaveRequestsClient() {
   const [selectedDateKey, setSelectedDateKey] = useState<string>("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [tableData, setTableData] =
-    useState<HrLeaveRow[]>(STATIC_LEAVE_REQUESTS);
+  const [tableData, setTableData] = useState<HrLeaveRow[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [isCardsLoading, setIsCardsLoading] = useState(true);
+  const [counts, setCounts] = useState({
+    all: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+  });
   const [selectedLeave, setSelectedLeave] = useState<HrLeaveRow | null>(null);
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
   const [confirmModal, setConfirmModal] = useState<{
@@ -116,6 +187,85 @@ export default function LeaveRequestsClient() {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const loadCounts = useCallback(async () => {
+    if (hrLoading) return;
+
+    if (!collegeId) {
+      setCounts({ all: 0, approved: 0, pending: 0, rejected: 0 });
+      setIsCardsLoading(false);
+      return;
+    }
+
+    setIsCardsLoading(true);
+    try {
+      const nextCounts = await fetchEmployeeLeaveRequestCounts({ collegeId });
+      setCounts({
+        all: nextCounts.total,
+        approved: nextCounts.approved,
+        pending: nextCounts.pending,
+        rejected: nextCounts.rejected,
+      });
+    } catch (error) {
+      console.error("Error fetching HR leave counts:", error);
+      setCounts({ all: 0, approved: 0, pending: 0, rejected: 0 });
+    } finally {
+      setIsCardsLoading(false);
+    }
+  }, [collegeId, hrLoading]);
+
+  const loadRequests = useCallback(async () => {
+    if (hrLoading) return;
+
+    if (!collegeId) {
+      setTableData([]);
+      setTotalItems(0);
+      setIsTableLoading(false);
+      return;
+    }
+
+    setIsTableLoading(true);
+    try {
+      const status =
+        activeTab === "all"
+          ? undefined
+          : (activeTab as "approved" | "pending" | "rejected");
+      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
+        collegeId,
+        status,
+        role: activeRole ? ROLE_FILTER_TO_DB[activeRole] : undefined,
+        page,
+        pageSize: ITEMS_PER_PAGE,
+        search: debouncedSearch,
+        date: selectedDateKey,
+      });
+
+      setTableData(data.map(mapDbRequestToHrRow));
+      setTotalItems(totalCount);
+    } catch (error) {
+      console.error("Error fetching HR leave requests:", error);
+      setTableData([]);
+      setTotalItems(0);
+    } finally {
+      setIsTableLoading(false);
+    }
+  }, [
+    activeRole,
+    activeTab,
+    collegeId,
+    debouncedSearch,
+    hrLoading,
+    page,
+    selectedDateKey,
+  ]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
 
   const setRouteStatus = (status: HrLeaveStatus) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -146,62 +296,29 @@ export default function LeaveRequestsClient() {
     setEditingRows(new Set());
   };
 
-  const executeStatusChange = () => {
+  const executeStatusChange = async () => {
     const { leaveId, action } = confirmModal;
     if (!leaveId || !action) return;
 
     setConfirmModal({ isOpen: false, leaveId: null, action: null });
-    setTableData((prev) =>
-      prev.map((item) =>
-        item.id === leaveId
-          ? { ...item, status: action.toLowerCase() as HrLeaveRow["status"] }
-          : item,
-      ),
-    );
-    toast.success(`Leave ${action.toLowerCase()} successfully`);
-    setEditingRows((prev) => {
-      const next = new Set(prev);
-      next.delete(leaveId);
-      return next;
-    });
+    try {
+      await updateEmployeeLeaveRequestStatus({
+        employeeLeaveRequestId: leaveId,
+        status: action.toLowerCase() as "approved" | "rejected",
+        approvedBy: collegeHrId,
+      });
+      toast.success(`Leave ${action.toLowerCase()} successfully`);
+      setEditingRows((prev) => {
+        const next = new Set(prev);
+        next.delete(leaveId);
+        return next;
+      });
+      await Promise.all([loadRequests(), loadCounts()]);
+    } catch (error) {
+      console.error("Error updating HR leave status:", error);
+      toast.error("Unable to update leave status");
+    }
   };
-
-  const filteredData = useMemo(() => {
-    const search = debouncedSearch.trim().toLowerCase();
-
-    return tableData.filter((item) => {
-      const matchesStatus = activeTab === "all" || item.status === activeTab;
-      const matchesRole = !activeRole || item.role === activeRole;
-      const matchesDate =
-        !selectedDateKey ||
-        isDateInsideRange(selectedDateKey, item.startDateIso, item.endDateIso);
-      const matchesSearch =
-        !search ||
-        item.name.toLowerCase().includes(search) ||
-        item.employeeId.toLowerCase().includes(search) ||
-        item.role.toLowerCase().includes(search) ||
-        item.leaveType.toLowerCase().includes(search) ||
-        item.description.toLowerCase().includes(search);
-
-      return matchesStatus && matchesRole && matchesDate && matchesSearch;
-    });
-  }, [activeRole, activeTab, debouncedSearch, selectedDateKey, tableData]);
-
-  const totalItems = filteredData.length;
-  const visibleData = filteredData.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE,
-  );
-
-  const counts = useMemo(
-    () => ({
-      all: tableData.length,
-      approved: tableData.filter((item) => item.status === "approved").length,
-      pending: tableData.filter((item) => item.status === "pending").length,
-      rejected: tableData.filter((item) => item.status === "rejected").length,
-    }),
-    [tableData],
-  );
 
   const columns = useMemo(() => {
     if (activeTab === "rejected") return REJECTED_COLUMNS;
@@ -217,7 +334,7 @@ export default function LeaveRequestsClient() {
 
   const processedData = useMemo(
     () =>
-      visibleData.map((item, index) => {
+      tableData.map((item, index) => {
         const isEditing = editingRows.has(item.id);
 
         return {
@@ -324,7 +441,7 @@ export default function LeaveRequestsClient() {
             ),
         };
       }),
-    [visibleData, editingRows, page],
+    [tableData, editingRows, page],
   );
 
   const cards = [
@@ -378,8 +495,8 @@ export default function LeaveRequestsClient() {
         }
       `}</style>
 
-      <main className="flex w-full items-start gap-5 p-2 text-[#282828]">
-        <section className="flex min-h-screen w-full flex-col md:w-[68%]">
+      <main className="flex w-full items-start gap-5 p-2 pb-8 text-[#282828]">
+        <section className="flex min-h-screen w-full flex-col pb-6 md:w-[68%]">
           <div className="mb-5 flex flex-col justify-start">
             <h1 className="text-xl font-bold text-[#282828]">
                Leave Requests
@@ -393,7 +510,20 @@ export default function LeaveRequestsClient() {
             {cards.map((card) => {
               const isActive = activeTab === card.id;
 
-              return (
+              return isCardsLoading ? (
+                <div
+                  key={card.id}
+                  className="h-28 w-full animate-pulse rounded-sm bg-white shadow-sm"
+                >
+                  <div className="flex h-full flex-col justify-between p-4">
+                    <div className="h-10 w-10 rounded-md bg-gray-200" />
+                    <div>
+                      <div className="mb-2 h-6 w-12 rounded bg-gray-200" />
+                      <div className="h-4 w-24 rounded bg-gray-200" />
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <CardComponent
                   key={card.id}
                   isActive={isActive}
@@ -440,7 +570,7 @@ export default function LeaveRequestsClient() {
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by Faculty Name, ID, Role, or Leave Type"
+                placeholder="Search by Employee Name, ID, Role, or Leave Type"
                 className="w-full bg-transparent text-sm text-[#282828] outline-none placeholder:text-[#6B7280]"
               />
               <MagnifyingGlass
@@ -505,22 +635,22 @@ export default function LeaveRequestsClient() {
           <div className="hr-leave-table w-full">
             <TableComponent
               columns={columns}
-              tableData={processedData}
+              tableData={isTableLoading ? [] : processedData}
               height={LEAVE_TABLE_HEIGHT}
+              isLoading={isTableLoading}
+              fillHeight
             />
           </div>
 
-          {totalItems > ITEMS_PER_PAGE && (
-            <Pagination
-              currentPage={page}
-              totalItems={totalItems}
-              itemsPerPage={ITEMS_PER_PAGE}
-              onPageChange={(nextPage) => {
-                setPage(nextPage);
-                setEditingRows(new Set());
-              }}
-            />
-          )}
+          <Pagination
+            currentPage={page}
+            totalItems={totalItems}
+            itemsPerPage={ITEMS_PER_PAGE}
+            onPageChange={(nextPage) => {
+              setPage(nextPage);
+              setEditingRows(new Set());
+            }}
+          />
         </section>
 
         <LeaveRequestsRight
