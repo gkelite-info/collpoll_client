@@ -1,8 +1,8 @@
 import { HrLeaveRow, HrLeaveStatus } from "./types";
 
 export const ITEMS_PER_PAGE = 10;
-export const LEAVE_PANEL_HEIGHT = "min(620px, calc(100vh - 170px))";
-export const LEAVE_TABLE_HEIGHT = "min(680px, calc(100vh - 110px))";
+export const LEAVE_TABLE_HEIGHT = "clamp(460px, calc(100vh - 405px), 640px)";
+export const LEAVE_PANEL_HEIGHT = `calc(${LEAVE_TABLE_HEIGHT} + 120px)`;
 
 export const STATUS_ROUTE_CODES: Record<HrLeaveStatus, number> = {
   all: 1,

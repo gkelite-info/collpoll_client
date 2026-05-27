@@ -3,7 +3,7 @@
 import CardComponent from "@/app/utils/card";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
-import { fetchEmployeeLeaveRequests } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import { fetchEmployeeLeaveRequestCounts } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { UsersThree } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -38,6 +38,7 @@ const cardPalette: Record<
 export default function LeaveSummaryCards() {
   const { userId, loading: userLoading } = useUser();
   const { collegeId, loading: financeLoading } = useFinanceManager();
+  const [isLoading, setIsLoading] = useState(true);
   const [counts, setCounts] = useState({
     total: 0,
     approved: 0,
@@ -54,24 +55,18 @@ export default function LeaveSummaryCards() {
 
     if (!userId || !collegeId) {
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
+      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
-      const requests = await fetchEmployeeLeaveRequests({ userId, collegeId });
-
-      setCounts({
-        total: requests.length,
-        approved: requests.filter((request) => request.status === "approved")
-          .length,
-        pending: requests.filter((request) => request.status === "pending")
-          .length,
-        rejected: requests.filter((request) => request.status === "rejected")
-          .length,
-      });
+      setCounts(await fetchEmployeeLeaveRequestCounts({ userId, collegeId }));
     } catch (error) {
       console.error("Error fetching leave summary counts:", error);
       setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
+    } finally {
+      setIsLoading(false);
     }
   }, [collegeId, financeLoading, userId, userLoading]);
 
@@ -121,7 +116,20 @@ export default function LeaveSummaryCards() {
         const isActive = activeStatus === card.status;
         const palette = cardPalette[card.status];
 
-        return (
+        return isLoading ? (
+          <div
+            key={card.label}
+            className="h-24 w-full animate-pulse rounded-sm bg-white shadow-sm"
+          >
+            <div className="flex h-full flex-col justify-between p-4">
+              <div className="h-9 w-9 rounded-md bg-gray-200" />
+              <div>
+                <div className="mb-2 h-5 w-12 rounded bg-gray-200" />
+                <div className="h-4 w-24 rounded bg-gray-200" />
+              </div>
+            </div>
+          </div>
+        ) : (
           <CardComponent
             key={card.label}
             icon={<UsersThree size={20} weight="fill" />}

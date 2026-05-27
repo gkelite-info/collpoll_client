@@ -1,17 +1,20 @@
 "use client";
 
 import TableComponent from "@/app/utils/table/table";
+import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
 import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
 import { useUser } from "@/app/utils/context/UserContext";
 import {
-  fetchEmployeeLeaveRequests,
+  fetchPaginatedEmployeeLeaveRequests,
   type EmployeeLeaveRequestRecord,
 } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { CalendarBlank, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { type FinanceLeaveRequest } from "../data";
 import LeaveRequestDetailsModal from "./LeaveRequestDetailsModal";
+
+const ITEMS_PER_PAGE = 10;
 
 const leaveRequestColumns = [
   { title: "S.No", key: "serialNo" },
@@ -32,19 +35,6 @@ const statusLabelMap: Record<string, string> = {
 const formatDateKey = (dateKey: string) =>
   new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
 
-const parseDisplayDateToKey = (date: string) => {
-  const [day, month, year] = date.split("/");
-  return `${year}-${month}-${day}`;
-};
-
-const isDateInsideRange = (dateKey: string, dateRange: string) => {
-  const [fromDate, toDate] = dateRange.split(" - ");
-  const fromDateKey = parseDisplayDateToKey(fromDate);
-  const toDateKey = parseDisplayDateToKey(toDate);
-
-  return dateKey >= fromDateKey && dateKey <= toDateKey;
-};
-
 const formatDbDate = (date: string) =>
   new Date(`${date}T00:00:00`).toLocaleDateString("en-GB");
 
@@ -64,7 +54,7 @@ const calculateDays = (fromDate: string, toDate: string) => {
 
 const mapDbRequestToFinanceRow = (
   request: EmployeeLeaveRequestRecord,
-  index: number,
+  serialNumber: number,
 ): FinanceLeaveRequest => {
   const employeeCode = request.employee?.employeeId ?? String(request.employeeId);
   const requesterName = request.user?.fullName ?? "Finance Manager";
@@ -73,11 +63,11 @@ const mapDbRequestToFinanceRow = (
   const leaveType = titleCase(request.leaveType);
 
   return {
-    serialNo: String(index + 1).padStart(2, "0"),
+    serialNo: String(serialNumber).padStart(2, "0"),
     employeeId: employeeCode,
     name: requesterName,
     role: titleCase(request.role),
-    photo: "",
+    photo: request.user?.profileUrl ?? "",
     requestedDate: formatDbDate(request.createdAt.slice(0, 10)),
     dateRange: `${fromDate} - ${toDate}`,
     days: calculateDays(request.leaveFromDate, request.leaveToDate),
@@ -134,45 +124,85 @@ export default function LeaveRequestsTable() {
   const { userId, fullName, loading: userLoading } = useUser();
   const { collegeId, loading: financeLoading } = useFinanceManager();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [requests, setRequests] = useState<FinanceLeaveRequest[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] =
     useState<FinanceLeaveRequest | null>(null);
   const [selectedDateKey, setSelectedDateKey] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const searchParams = useSearchParams();
   const activeStatus = searchParams.get("status") || "total";
   const isRejectedView = activeStatus === "rejected";
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeStatus, selectedDateKey]);
 
   const loadRequests = useCallback(async () => {
     if (userLoading || financeLoading) return;
 
     if (!userId || !collegeId) {
       setRequests([]);
+      setTotalCount(0);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const rows = await fetchEmployeeLeaveRequests({
+      const { data, totalCount } = await fetchPaginatedEmployeeLeaveRequests({
         userId,
         collegeId,
+        status:
+          activeStatus === "total"
+            ? undefined
+            : (activeStatus as "approved" | "pending" | "rejected"),
+        page,
+        pageSize: ITEMS_PER_PAGE,
+        search: debouncedQuery,
+        date: selectedDateKey,
       });
 
       setRequests(
-        rows.map((request, index) => ({
-          ...mapDbRequestToFinanceRow(request, index),
+        data.map((request, index) => ({
+          ...mapDbRequestToFinanceRow(
+            request,
+            (page - 1) * ITEMS_PER_PAGE + index + 1,
+          ),
           name: request.user?.fullName ?? fullName ?? "Finance Manager",
         })),
       );
+      setTotalCount(totalCount);
     } catch (error) {
       console.error("Error fetching employee leave requests:", error);
       setRequests([]);
+      setTotalCount(0);
     } finally {
       setIsLoading(false);
     }
-  }, [collegeId, financeLoading, fullName, userId, userLoading]);
+  }, [
+    activeStatus,
+    collegeId,
+    debouncedQuery,
+    financeLoading,
+    fullName,
+    page,
+    selectedDateKey,
+    userId,
+    userLoading,
+  ]);
 
   useEffect(() => {
     loadRequests();
@@ -198,39 +228,7 @@ export default function LeaveRequestsTable() {
       ]
     : leaveRequestColumns;
 
-  const filteredRequests = useMemo(() => {
-    const search = query.trim().toLowerCase();
-    const statusFiltered =
-      activeStatus === "total"
-        ? requests
-        : requests.filter((request) => request.status === activeStatus);
-    const dateFiltered = selectedDateKey
-      ? statusFiltered.filter((request) =>
-          isDateInsideRange(selectedDateKey, request.dateRange),
-        )
-      : statusFiltered;
-
-    if (!search) return dateFiltered;
-
-    return dateFiltered.filter((request) =>
-      [
-        request.serialNo,
-        request.dateRange,
-        request.days,
-        request.leaveType,
-        request.description,
-        request.name,
-        request.employeeId,
-        request.role,
-        statusLabelMap[request.status] ?? request.status,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(search),
-    );
-  }, [activeStatus, query, requests, selectedDateKey]);
-
-  const tableData = filteredRequests.map((request) => ({
+  const tableData = requests.map((request) => ({
     serialNo: request.serialNo,
     dateRange: request.dateRange,
     days: request.days,
@@ -269,7 +267,7 @@ export default function LeaveRequestsTable() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search"
+            placeholder="Search By From - To"
             className="h-full w-full bg-transparent text-sm text-[#282828] outline-none placeholder:text-[#282828]"
           />
         </label>
@@ -333,25 +331,20 @@ export default function LeaveRequestsTable() {
       <div className="min-h-0 flex-1">
         <TableComponent
           columns={tableColumns}
-          tableData={
-            isLoading
-              ? [
-                  {
-                    serialNo: "",
-                    dateRange: "Loading leave requests...",
-                    days: "",
-                    leaveType: "",
-                    description: "",
-                    action: "",
-                    details: "",
-                  },
-                ]
-              : tableData
-          }
+          tableData={isLoading ? [] : tableData}
           height="calc(100vh - 10rem)"
+          isLoading={isLoading}
           fillHeight
         />
       </div>
+
+      <Pagination
+        currentPage={page}
+        totalItems={totalCount}
+        itemsPerPage={ITEMS_PER_PAGE}
+        onPageChange={setPage}
+        roundedBottom="rounded-b-lg"
+      />
 
       <LeaveRequestDetailsModal
         request={selectedRequest}
