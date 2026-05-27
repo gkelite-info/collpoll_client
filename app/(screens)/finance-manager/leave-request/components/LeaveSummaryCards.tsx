@@ -1,8 +1,12 @@
 "use client";
 
 import CardComponent from "@/app/utils/card";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { useUser } from "@/app/utils/context/UserContext";
+import { fetchEmployeeLeaveRequests } from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
 import { UsersThree } from "@phosphor-icons/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { leaveSummaryCards } from "../data";
 
 const cardPalette: Record<
@@ -32,10 +36,71 @@ const cardPalette: Record<
 };
 
 export default function LeaveSummaryCards() {
+  const { userId, loading: userLoading } = useUser();
+  const { collegeId, loading: financeLoading } = useFinanceManager();
+  const [counts, setCounts] = useState({
+    total: 0,
+    approved: 0,
+    pending: 0,
+    rejected: 0,
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeStatus = searchParams.get("status") || "total";
+
+  const loadCounts = useCallback(async () => {
+    if (userLoading || financeLoading) return;
+
+    if (!userId || !collegeId) {
+      setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
+      return;
+    }
+
+    try {
+      const requests = await fetchEmployeeLeaveRequests({ userId, collegeId });
+
+      setCounts({
+        total: requests.length,
+        approved: requests.filter((request) => request.status === "approved")
+          .length,
+        pending: requests.filter((request) => request.status === "pending")
+          .length,
+        rejected: requests.filter((request) => request.status === "rejected")
+          .length,
+      });
+    } catch (error) {
+      console.error("Error fetching leave summary counts:", error);
+      setCounts({ total: 0, approved: 0, pending: 0, rejected: 0 });
+    }
+  }, [collegeId, financeLoading, userId, userLoading]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadCounts();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadCounts]);
+
+  useEffect(() => {
+    const handleCreated = () => loadCounts();
+    window.addEventListener("employee-leave-request-created", handleCreated);
+    return () =>
+      window.removeEventListener("employee-leave-request-created", handleCreated);
+  }, [loadCounts]);
+
+  const cards = useMemo(
+    () =>
+      leaveSummaryCards.map((card) => ({
+        ...card,
+        value: String(counts[card.status as keyof typeof counts] ?? 0).padStart(
+          2,
+          "0",
+        ),
+      })),
+    [counts],
+  );
 
   const handleCardClick = (status: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -52,7 +117,7 @@ export default function LeaveSummaryCards() {
 
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {leaveSummaryCards.map((card) => {
+      {cards.map((card) => {
         const isActive = activeStatus === card.status;
         const palette = cardPalette[card.status];
 
