@@ -31,7 +31,6 @@ export function FolderCard({
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center justify-center">
-          {/* Responsive Icon Sizes */}
           <div className="hidden md:block">
             <Folder size={60} weight="fill" color={color} />
           </div>

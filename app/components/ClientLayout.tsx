@@ -56,7 +56,7 @@ export default function ClientLayout({
   );
 
   const handleMenuClick = () => {
-    setIsSidebarOpen(prev => !prev);
+    setIsSidebarOpen((prev) => !prev);
   };
 
   useEffect(() => {
@@ -105,7 +105,9 @@ export default function ClientLayout({
     "/construction",
   ];
 
-  const shouldHideLayout = hideLayoutRoutes.some((route) => matchesRouteSegment(route));
+  const shouldHideLayout = hideLayoutRoutes.some((route) =>
+    matchesRouteSegment(route),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -510,7 +512,7 @@ export default function ClientLayout({
             </div>
 
             {/* <div className="h-full lg:h-[87%] overflow-auto bg-[#F4F4F4] px-2"> */}
-            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto bg-[#F4F4F4] px-2 overscroll-contain custom-scrollbar max-md:scrollbar-hide">
               {children}
             </div>
           </div>

@@ -14,12 +14,12 @@ const InfoRow = ({
   label: string;
   value: string | number | null;
 }) => (
-  <div className="flex items-start py-1.5 text-[14px] text-left w-full">
-    <span className="w-[140px] sm:w-[180px] font-semibold text-[#333333]">
+  <div className="flex max-md:flex-col items-start py-1.5 max-md:py-2 text-[14px] text-left w-full">
+    <span className="w-[140px] sm:w-[180px] max-md:w-full max-md:mb-0.5 font-semibold text-[#333333]">
       {label}
     </span>
     <span
-      className={`break-words flex-1 ${value && value !== "Not Provided" ? "text-[#666666]" : "text-gray-400 italic"}`}
+      className={`break-words flex-1 max-md:w-full ${value && value !== "Not Provided" ? "text-[#666666]" : "text-gray-400 italic"}`}
     >
       {value || "Not Provided"}
     </span>
@@ -31,7 +31,7 @@ const SummaryShimmer = () => (
     {[...Array(4)].map((_, i) => (
       <div
         key={i}
-        className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50"
+        className="bg-white rounded-2xl p-6 max-md:p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50"
       >
         {i === 0 ? (
           <div className="flex flex-col items-center mb-6 mt-2">
@@ -91,8 +91,8 @@ export default function SummaryPage() {
   const systemId = identifierId ? `ID-${identifierId}` : `ID-${userId}`;
 
   return (
-    <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left">
-      <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
+    <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-4 text-left max-md:px-2">
+      <div className="bg-white rounded-2xl p-6 max-md:p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex flex-col items-center mb-6 mt-2">
           <Avatar
             src={profilePhoto}
@@ -126,7 +126,7 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
+      <div className="bg-white rounded-2xl p-6 max-md:p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 pb-4 border-b border-gray-100 text-left">
           Payment Information
         </h2>
@@ -158,7 +158,7 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
+      <div className="bg-white rounded-2xl p-6 max-md:p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <h2 className="text-[16px] font-bold text-gray-800 mb-4 text-left">
           Identity Information
         </h2>
@@ -189,7 +189,7 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
+      <div className="bg-white rounded-2xl p-6 max-md:p-4 shadow-[0px_4px_20px_rgba(0,0,0,0.03)] border border-gray-50">
         <div className="flex items-center justify-start space-x-2.5 mb-5 mt-1">
           <img
             src="/india.png"

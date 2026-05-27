@@ -136,7 +136,7 @@ function MyPayPage() {
   ];
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col h-[550px] text-left">
+    <div className="w-full max-w-5xl mx-auto flex flex-col h-[550px] max-md:h-[calc(100vh-200px)] max-md:px-2 text-left">
       <div className="flex-shrink-0 text-[14px] font-bold mb-4">
         <span
           onClick={() => handleTabSwitch("salary")}
