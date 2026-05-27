@@ -65,6 +65,7 @@ function WelcomePanel() {
   const { fullName, gender, loading } = useUser();
   const displayName = fullName || "Sameeksha";
   const avatarImage = gender === "Male" ? "/w-m-m.png" : "/w-m-f.png";
+  const isMale = gender === "Male"
   const bgBanner = "/dashboard-banner-bg.png";
 
   return (
@@ -78,7 +79,7 @@ function WelcomePanel() {
       }}
     >
       <div className="relative z-10 flex h-full flex-col justify-start gap-5 rounded-l-lg p-3 max-md:gap-3 max-md:p-4">
-        <div className="my-auto flex max-w-[65%] flex-col gap-2 lg:pl-5 max-md:max-w-[65%] max-md:gap-1.5">
+        <div className="my-auto flex max-w-[65%] flex-col gap-2 lg:pl-5 max-md:max-w-[55%] max-md:gap-1.5">
           <h1 className="mt-3 text-lg font-medium leading-tight text-[#111827] max-md:mt-0 max-md:text-[15px]">
             Welcome back,{" "}
             <span className="text-lg font-bold leading-tight text-[#19A65F] max-md:text-[15px] md:inline">
@@ -94,7 +95,7 @@ function WelcomePanel() {
         </div>
 
         {gender ? (
-          <div className="absolute bottom-0 md:-right-3 lg:right-10 z-10 h-[105%] w-[180px] max-md:-right-0 max-md:h-[105%] max-md:w-[150px]">
+          <div className={`absolute bottom-0 md:-right-3 lg:right-10 z-10 ${isMale ? 'h-[110%]' : 'h-[105%]'} w-[180px] max-md:right-2 max-md:w-[120px]`}>
             <Image
               src={avatarImage}
               alt="Wellbeing manager"
