@@ -118,7 +118,7 @@ const AttendanceAnalyticsPage = () => {
   }, [userId, selectedYear]);
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full max-md:px-2">
       <div className="p-1 w-full">
         {infoLoading || workingDaysLoading || !profile ? (
           <AnalyticsFacultyInfoShimmer />

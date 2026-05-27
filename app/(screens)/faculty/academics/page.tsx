@@ -81,18 +81,21 @@ export default function Academics() {
 
   return (
     <div className="p-2 flex flex-col h-[calc(100vh-80px)] lg:pb-5">
-      <div className="flex justify-between items-center mb-5">
-        <div className="flex flex-col w-[50%]">
-          <h1 className="text-[#282828] font-semibold text-2xl mb-1">
+      <div className="flex justify-between items-center mb-5 max-md:flex-col max-md:items-start max-md:mb-4">
+        <div className="flex flex-col w-[50%] max-md:w-full">
+          <h1 className="text-[#282828] font-semibold text-2xl max-md:text-[28px] max-md:font-bold mb-1">
             My Classes
           </h1>
-          <p className="text-[#282828] text-sm">
+          <p className="text-[#282828] text-sm hidden lg:block">
             Track progress, add lessons and manage course content across all
             your batches.
           </p>
+          <p className="text-[#282828] text-sm lg:hidden">
+            Track progress, add lessons and manage course content
+          </p>
         </div>
 
-        <div className="flex justify-end w-[32%]">
+        <div className="flex justify-end w-[32%] max-md:hidden">
           <CourseScheduleCard style="w-[320px]" />
         </div>
       </div>

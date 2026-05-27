@@ -166,7 +166,7 @@ export default function MyAttendanceRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 flex flex-col">
+      <div className="w-[32%] p-2 flex flex-col max-md:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar />
 
@@ -176,7 +176,7 @@ export default function MyAttendanceRight() {
           loading={loading}
           collegeSubjectId={collegeSubjectId ?? undefined}
           facultyId={facultyId ?? undefined}
-          onAddTask={()=>{}}
+          onAddTask={() => { }}
           onSaveTask={handleSave}
           onDeleteTask={async () => {
             await loadTasks();

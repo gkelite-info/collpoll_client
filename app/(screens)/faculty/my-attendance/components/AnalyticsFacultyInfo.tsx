@@ -13,7 +13,7 @@ const AnalyticsFacultyInfo: FC<Props> = ({ profile }) => {
         Faculty Information
       </h2>
 
-      <div className="grid grid-cols-3 gap-y-3.5 w-full">
+      <div className="grid grid-cols-3 max-md:grid-cols-1 max-md:gap-y-2 gap-y-3.5 w-full">
         <div>
           <span className="font-semibold text-[#282828]">Name : </span>
           <span className="text-[#525252]">{profile.name}</span>

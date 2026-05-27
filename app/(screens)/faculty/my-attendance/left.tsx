@@ -68,20 +68,19 @@ const MyAttendanceLeft = () => {
   }, []);
 
   return (
-    <div className="w-full flex-1 min-w-0 font-sans min-h-150 pt-4 px-2.5">
-      <div className="flex justify-center mb-8 w-full px-20">
+    <div className="w-full flex-1 min-w-0 min-h-150 pt-4 px-2.5 max-md:px-0">
+      <div className="flex justify-center mb-8 w-full px-20 max-md:px-2 max-md:mb-4">
         <div className="relative flex items-center bg-[#E5E5E5] p-1 rounded-full w-full max-w-[700px] justify-between">
           {mainTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleMainTabClick(tab.id as any)}
-              className={`relative z-10 w-1/3 py-1.5 text-[15px] cursor-pointer transition-colors duration-300 ${
-                activeMainTab === tab.id
+              className={`relative z-10 w-1/3 py-1.5 text-[15px] max-md:text-[11px] max-md:px-1 max-md:leading-tight cursor-pointer transition-colors duration-300 ${activeMainTab === tab.id
                   ? "text-white font-medium delay-100"
                   : "text-[#5A5A5A] hover:text-gray-800"
-              }`}
+                }`}
             >
-              <span className="relative z-10">{tab.label}</span>
+              <span className="relative z-10 max-md:whitespace-normal">{tab.label}</span>
               {activeMainTab === tab.id && (
                 <motion.div
                   layoutId="active-main-pill"
@@ -94,25 +93,24 @@ const MyAttendanceLeft = () => {
         </div>
       </div>
 
-      <div className="transition-opacity duration-300 mt-4">
+      <div className="transition-opacity duration-300 mt-4 max-md:mt-2">
         {activeMainTab === "attendance" && (
-          <div className=" w-full">
+          <div className="w-full">
             <AttendancePage />
           </div>
         )}
 
         {activeMainTab === "payroll" && (
-          <div className="flex flex-col items-center w-full p-2">
-            <div className="flex justify-center mb-4 gap-12 w-full">
+          <div className="flex flex-col items-center w-full p-2 max-md:p-0">
+            <div className="flex justify-center mb-4 gap-12 max-md:gap-4 max-md:justify-around w-full">
               {payrollSubTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleSubTabClick(tab.id as any)}
-                  className={`text-[15px] cursor-pointer pb-1.5 transition-all duration-300 ${
-                    activePayrollTab === tab.id
+                  className={`text-[15px] max-md:text-[13px] cursor-pointer pb-1.5 transition-all duration-300 ${activePayrollTab === tab.id
                       ? "text-[#43C17A] border-b-[2px] border-[#43C17A]"
                       : "text-[#5A5A5A] font-medium border-b-[2px] border-transparent hover:text-gray-800"
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>

@@ -115,7 +115,7 @@ export default function FacultyQuizSubmissions({
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex items-center justify-center">
-                  <Avatar src={submission.students.profileImage} size={40} alt={submission.students?.fullName}/>
+                  <Avatar src={submission.students.profileImage} size={40} alt={submission.students?.fullName} />
                 </div>
 
                 <div className="flex flex-col gap-0.5">

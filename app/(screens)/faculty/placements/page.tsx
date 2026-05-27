@@ -91,7 +91,7 @@ function PlacementDetailsModal({
       onClick={onClose}
     >
       <div
-        className="relative max-h-[82vh] w-full max-w-[640px] overflow-y-auto rounded-[10px] bg-white px-9 py-8 shadow-2xl"
+        className="relative max-h-[82vh] max-md:max-h-[90vh] w-full max-w-[640px] overflow-y-auto rounded-[10px] bg-white px-9 py-8 max-md:px-4 max-md:py-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -203,27 +203,27 @@ function PlacementDetailsModal({
 
 function FacultyPlacementHeaderShimmer() {
   return (
-    <div className="shrink-0 space-y-4">
+    <div className="shrink-0 space-y-4 mt-2 mb-2 max-md:mt-0 max-md:mb-0">
       <div className="space-y-2">
         <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
         <div className="h-5 w-96 max-w-full animate-pulse rounded bg-gray-100" />
       </div>
-      <div className="flex w-full flex-nowrap items-center gap-6 overflow-hidden pb-3">
+      <div className="flex w-full flex-nowrap items-center gap-6 overflow-hidden pb-3 mt-2">
         {[0, 1, 2, 3].map((item) => (
           <div key={item} className="flex shrink-0 items-center gap-2">
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
-            <div className="h-8 w-36 animate-pulse rounded-md bg-gray-200" />
+            <div className="h-4 w-16 animate-pulse rounded bg-gray-100" />
+            <div className="h-[26px] w-24 animate-pulse rounded-full bg-gray-200" />
           </div>
         ))}
       </div>
-      <div className="h-4 w-24 animate-pulse rounded bg-gray-100" />
+      <div className="h-4 w-24 animate-pulse rounded bg-[#43C17A]/30 mt-2" />
     </div>
   );
 }
 
 function FacultyPlacementRightShimmer() {
   return (
-    <div className="w-[32%] shrink-0 p-1 pt-0 pr-0">
+    <div className="w-[32%] shrink-0 p-1 pt-0 pr-0 max-md:hidden">
       <div className="mb-3 h-[86px] animate-pulse rounded-xl bg-gray-200" />
       <div className="mb-3 h-[220px] animate-pulse rounded-xl bg-gray-200" />
       <div className="mb-3 h-[220px] animate-pulse rounded-xl bg-gray-200" />
@@ -476,14 +476,14 @@ export default function PlacementsPage() {
   const filterRefreshing = filterLoadingKey !== null;
 
   return (
-    <section className="flex h-screen gap-1 overflow-hidden pb-4">
-      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden pl-2 pr-1">
+    <section className="flex h-screen gap-1 overflow-hidden pb-4 max-md:p-0 max-md:bg-[#F4F5F6]">
+      <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden pl-2 pr-1 max-md:px-4 max-md:pt-4">
         {pageLoading ? (
           <FacultyPlacementHeaderShimmer />
         ) : (
-          <div className="shrink-0">
-            <h1 className="text-2xl font-semibold text-black">Placements</h1>
-            <p className="text-sm text-black">
+          <div className="shrink-0 max-md:mb-2">
+            <h1 className="text-2xl font-semibold text-black max-md:text-[22px]">Placements</h1>
+            <p className="text-sm text-black max-md:hidden">
               Track, Manage, and Maintain Student Placement Status
             </p>
 
@@ -520,11 +520,10 @@ export default function PlacementsPage() {
                 type="button"
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
                 disabled={currentPage === 1}
-                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                  currentPage === 1
+                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${currentPage === 1
                     ? "cursor-not-allowed border-gray-200 text-gray-300"
                     : "cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 <CaretLeftIcon size={18} weight="bold" />
               </button>
@@ -537,11 +536,10 @@ export default function PlacementsPage() {
                     key={page}
                     type="button"
                     onClick={() => setCurrentPage(page)}
-                    className={`h-10 w-10 rounded-lg font-semibold transition ${
-                      currentPage === page
+                    className={`h-10 w-10 rounded-lg font-semibold transition ${currentPage === page
                         ? "cursor-pointer bg-[#16284F] text-white"
                         : "cursor-pointer border border-gray-300 text-gray-600 hover:bg-gray-100"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -554,11 +552,10 @@ export default function PlacementsPage() {
                   setCurrentPage((page) => Math.min(totalPages, page + 1))
                 }
                 disabled={currentPage === totalPages}
-                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                  currentPage === totalPages
+                className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${currentPage === totalPages
                     ? "cursor-not-allowed border-gray-200 text-gray-300"
                     : "cursor-pointer border-gray-300 text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
               >
                 <CaretRight size={18} weight="bold" />
               </button>
@@ -570,7 +567,7 @@ export default function PlacementsPage() {
       {pageLoading ? (
         <FacultyPlacementRightShimmer />
       ) : (
-        <div className="sticky top-0 flex h-screen w-[32%] shrink-0 flex-col gap-2 p-1 pt-0 pr-0">
+        <div className="sticky top-0 flex h-screen w-[32%] shrink-0 flex-col gap-2 p-1 pt-0 pr-0 max-md:hidden">
           <CourseScheduleCard />
           <WorkWeekCalendar />
           <div className="flex w-full flex-col gap-2 overflow-y-auto pb-4">
@@ -581,7 +578,7 @@ export default function PlacementsPage() {
               loading={tasksLoading}
               collegeSubjectId={collegeSubjectId ?? undefined}
               facultyId={facultyId ?? undefined}
-              onAddTask={() => {}}
+              onAddTask={() => { }}
               onSaveTask={handleSaveTask}
               onDeleteTask={async () => {
                 await loadTasks();

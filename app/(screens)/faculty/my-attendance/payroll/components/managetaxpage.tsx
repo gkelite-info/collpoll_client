@@ -34,8 +34,8 @@ function ManageTaxPage() {
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto flex flex-col h-[600px] text-left">
-            <div className="flex-shrink-0 text-[14px] font-bold mb-6">
+        <div className="w-full max-w-5xl mx-auto flex flex-col h-[600px] max-md:h-[calc(100vh-200px)] max-md:px-2 text-left">
+            <div className="flex-shrink-0 text-[14px] font-bold mb-6 max-md:text-[12.5px] max-md:leading-loose">
                 {["declaration", "forms", "taxFiling", "taxSaving"].map((tab, index) => (
                     <React.Fragment key={tab}>
                         <span
@@ -76,7 +76,7 @@ function ManageTaxPage() {
                                 <p className="text-[#1F2937] font-bold text-[14px]">Current windows</p>
                                 <p className="text-[#1F2937] text-[13px]">Till Aug 25, 2025</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4">
                                 <div className="bg-white rounded-md p-5 shadow-sm border border-gray-100 h-[110px] flex flex-col justify-center">
                                     <p className="text-[#333333] font-bold text-[14px] leading-tight">Total tax<br />Payable</p>
                                     <p className="text-[#43C17A] font-bold text-[24px] mt-1">INR 0</p>
@@ -92,8 +92,8 @@ function ManageTaxPage() {
                 {activeTab === "forms" && (
                     <div className="flex relative flex-col gap-4">
                         <WipOverlay />
-                        <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
+                        <div className="bg-white rounded-md p-6 max-md:p-4 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
+                            <div className="flex justify-between items-center mb-3 max-md:flex-col max-md:items-start max-md:gap-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 16</h3>
                                 <div className="flex gap-2">
                                     <div className="relative flex items-center">
@@ -122,8 +122,8 @@ function ManageTaxPage() {
                                 </button>
                             </div>
                         </div>
-                        <div className="bg-white rounded-md p-6 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
+                        <div className="bg-white rounded-md p-6 max-md:p-4 shadow-[0px_2px_10px_rgba(0,0,0,0.04)] border border-gray-100">
+                            <div className="flex justify-between items-center mb-3 max-md:flex-col max-md:items-start max-md:gap-3">
                                 <h3 className="text-[#43C17A] font-bold text-[18px]">Form 12 BB</h3>
                                 <div className="flex gap-2">
                                     <div className="relative flex items-center">
@@ -145,7 +145,7 @@ function ManageTaxPage() {
                     </div>
                 )}
                 {activeTab === "taxFiling" && (
-                    <div className="bg-white relative rounded-lg p-8 border border-gray-200 shadow-sm">
+                    <div className="bg-white relative rounded-lg p-8 max-md:p-4 border border-gray-200 shadow-sm">
                         <WipOverlay fullHeight={true} />
                         <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
                             Tax Filing
@@ -159,7 +159,7 @@ function ManageTaxPage() {
                                 <span className="text-base">September 15, 2025</span>
                             </p>
                         </div>
-                        <div className="border border-gray-300 rounded-md p-6 bg-white">
+                        <div className="border border-gray-300 rounded-md p-6 max-md:p-4 bg-white">
                             <h4 className="text-[#1F2937] font-semibold text-lg mb-2">
                                 GK's Choice
                             </h4>
@@ -210,7 +210,7 @@ function ManageTaxPage() {
                     </div>
                 )}
                 {activeTab === "taxSaving" && (
-                    <div className="bg-white relative rounded-lg p-8 border border-gray-200 shadow-sm flex flex-col gap-6">
+                    <div className="bg-white relative rounded-lg p-8 max-md:p-4 border border-gray-200 shadow-sm flex flex-col gap-6 max-md:gap-4">
                         <WipOverlay fullHeight={true} />
                         <div>
                             <h3 className="text-[#43C17A] font-bold text-[20px] mb-2">
@@ -221,7 +221,7 @@ function ManageTaxPage() {
                                 Grow your savings smartly while reducing your taxable income.
                             </p>
                         </div>
-                        <div className="border border-black rounded-md p-6 bg-white">
+                        <div className="border border-black rounded-md p-6 max-md:p-4 bg-white">
                             <h4 className="text-[#1F2937] font-semibold text-base mb-4">
                                 Wondering how to save tax and build wealth together?
                             </h4>
@@ -242,7 +242,7 @@ function ManageTaxPage() {
                                 ))}
                             </ul>
                         </div>
-                        <div className="border border-black rounded-md p-6 bg-white">
+                        <div className="border border-black rounded-md p-6 max-md:p-4 bg-white">
                             <h4 className="text-[#1F2937] font-semibold text-base mb-4">
                                 Grow Your Financial Wellness
                             </h4>

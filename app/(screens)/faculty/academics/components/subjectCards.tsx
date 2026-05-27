@@ -101,17 +101,17 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
 
   return (
     <>
-      <div className="bg-pink-00 flex justify-between items-start">
-        <div className="mb-6 flex flex-wrap gap-8">
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">Subject :</p>
+      <div className="bg-pink-00 flex justify-between items-start max-md:flex-col max-md:gap-3 max-md:mb-4">
+        <div className="mb-6 max-md:mb-0 flex flex-wrap max-md:flex-nowrap gap-8 max-md:gap-3 max-md:w-full max-md:overflow-x-auto max-md:no-scrollbar max-md:py-2">
+          <div className="flex items-center gap-2 max-md:shrink-0">
+            <p className="text-[#525252] text-sm max-md:text-[12px] max-md:whitespace-nowrap">Subject :</p>
             <div className="relative">
               <select
                 value={subjectId ?? ""}
                 onChange={(e) =>
                   setSubjectId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="px-3 py-0.5 focus:outline-none bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+                className="px-3 max-md:px-2 py-0.5 focus:outline-none bg-[#DCEAE2] text-[#43C17A] rounded-full text-xs max-md:text-[11px] font-medium pr-8 max-md:pr-6 appearance-none max-md:max-w-[100px] max-md:truncate"
               >
                 <option value="">All</option>
                 {Array.from(
@@ -122,19 +122,19 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
                   </option>
                 ))}
               </select>
-              <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
+              <FaChevronDown className="absolute right-2 max-md:right-2 top-1/2 -translate-y-1/2 text-xs max-md:text-[10px] text-[#43C17A]" />
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <p className="text-[#525252] text-sm">Section :</p>
+          <div className="flex items-center gap-2 max-md:shrink-0">
+            <p className="text-[#525252] text-sm max-md:text-[12px] max-md:whitespace-nowrap">Section :</p>
             <div className="relative">
               <select
                 value={sectionId ?? ""}
                 onChange={(e) =>
                   setSectionId(e.target.value ? Number(e.target.value) : null)
                 }
-                className="px-3 py-0.5 bg-[#DCEAE2] focus:outline-none text-[#43C17A] rounded-full text-xs font-medium pr-8 appearance-none"
+                className="px-3 max-md:px-2 py-0.5 bg-[#DCEAE2] focus:outline-none text-[#43C17A] rounded-full text-xs max-md:text-[11px] font-medium pr-8 max-md:pr-6 appearance-none max-md:max-w-[100px] max-md:truncate"
               >
                 <option value="">All</option>
                 {filteredSections.map((fs: FacultySection, index: number) => (
@@ -146,7 +146,7 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
                   </option>
                 ))}
               </select>
-              <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#43C17A]" />
+              <FaChevronDown className="absolute right-2 max-md:right-2 top-1/2 -translate-y-1/2 text-xs max-md:text-[10px] text-[#43C17A]" />
             </div>
           </div>
         </div>
@@ -156,9 +156,9 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
           <FilterSelect label="Semester" options={["I", "II"]} />
           <FilterSelect label="Year" options={["1st Year", "2nd Year"]} />
         </div> */}
-        <div className="bg-blue-00 flex items-center gap-3">
+        <div className="bg-blue-00 flex items-center gap-3 max-md:w-full max-md:overflow-x-auto max-md:scrollbar-hide max-md:pb-2 max-md:shrink-0">
           <button
-            className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium"
+            className="bg-[#43C17A] text-sm max-md:text-[11px] text-white px-3 max-md:px-3 py-1 max-md:py-1.5 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium max-md:whitespace-nowrap"
             onClick={() => setIsWeightageOpen(true)}
           >
             Add Weightage
@@ -166,7 +166,7 @@ export default function SubjectCard({ subjectProps, facultyCtx, role }: SubjectC
 
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-[#43C17A] text-sm text-white px-3 py-1 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium"
+            className="bg-[#43C17A] text-sm max-md:text-[11px] text-white px-3 max-md:px-3 py-1 max-md:py-1.5 rounded-md cursor-pointer hover:bg-[#3bad6d] font-medium max-md:whitespace-nowrap"
           >
             Add Unit
           </button>
@@ -263,70 +263,102 @@ const IndividualCard = ({
   const filledWidth = `calc(${percentage}% + ${ballWidthPx / 2}px)`;
 
   return (
-    <div className="bg-white rounded-2xl w-full p-6 flex flex-col shadow-sm border border-gray-100">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-[#282828] font-semibold text-xl whitespace-nowrap overflow-x-auto flex-1">
+    <div className="bg-white rounded-2xl max-md:rounded-lg w-full p-6 max-md:p-4 flex flex-col max-md:justify-between max-md:min-h-[230px] shadow-sm border border-gray-100">
+      <div className="flex justify-between items-start max-md:items-center max-md:gap-3 mb-4 max-md:mb-0">
+        <h3 className="text-[#282828] font-semibold text-xl max-md:font-medium max-md:text-[17px] max-md:truncate whitespace-nowrap overflow-x-auto max-md:overflow-hidden flex-1 max-md:min-w-0">
           {item.subjectTitle} – {item.year}
         </h3>
 
         <button
           onClick={onViewDetails}
-          className="bg-[#7051E1] px-3 py-1 text-white cursor-pointer rounded-md text-sm shrink-0"
+          className="bg-[#7051E1] px-3 py-1 max-md:px-2.5 text-white cursor-pointer rounded-md text-sm max-md:text-xs shrink-0"
         >
           View Details
         </button>
       </div>
-      <div className="space-y-3 text-[#525252] text-lg">
-        <div className="flex gap-6">
-          <p>
-            <span className="font-semibold text-[#282828]">Units : </span>
+      <div className="space-y-3 max-md:space-y-0 max-md:flex max-md:flex-col max-md:gap-2 max-md:mt-1 text-[#525252] text-lg max-md:text-[15px]">
+        <div className="flex gap-6 max-md:gap-5 max-md:items-center">
+          <p className="max-md:truncate">
+            <span className="font-semibold max-md:font-medium text-[#282828] max-md:mr-1.5">Units : </span>
             {item.units.toString().padStart(2, "0")}
           </p>
-          <p>
-            <span className="font-semibold text-[#282828]">
+          <p className="max-md:truncate">
+            <span className="font-semibold max-md:font-medium text-[#282828] max-md:mr-1.5">
               Topics Covered :{" "}
             </span>
             {item.topicsCovered}
           </p>
-          {/* <p>
-            <span className="font-semibold text-[#282828]">Section : </span>
-            {item.sectionName}
-          </p> */}
         </div>
-        <p>
-          <span className="font-semibold text-[#282828]">Next lesson : </span>
+        <p className="max-md:truncate">
+          <span className="font-semibold max-md:font-medium text-[#282828] max-md:mr-1.5">Next lesson : </span>
           {item.nextLesson}
         </p>
-        <p>
-          <span className="font-semibold text-[#282828]">Students : </span>
+        <p className="max-md:truncate">
+          <span className="font-semibold max-md:font-medium text-[#282828] max-md:mr-1.5">Students : </span>
           {item.students}
         </p>
       </div>
-      <div className="flex flex-col justify-between relative">
-        <div className="relative lg:w-full rounded-full h-[17px] bg-gray-200 mt-4 overflow-hidden">
-          <div
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#9B83F4] to-[#6D4EE0] rounded-full"
-            style={{ width: filledWidth }}
-          />
-          <div
-            className="absolute top-0 h-4 w-4 bg-white rounded-full shadow-lg"
-            style={{ left: ballLeft }}
-          />
+
+      <div className="flex flex-col justify-between max-md:mt-1 relative">
+        {/* Desktop Progress Bar */}
+        <div className="max-md:hidden">
+          <div className="relative lg:w-full rounded-full h-[17px] bg-gray-200 mt-4 overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#9B83F4] to-[#6D4EE0] rounded-full"
+              style={{ width: filledWidth }}
+            />
+            <div
+              className="absolute top-0 h-4 w-4 bg-white rounded-full shadow-lg"
+              style={{ left: ballLeft }}
+            />
+          </div>
+          <div className="relative w-full h-4">
+            <span
+              className="absolute bg-gradient-to-b from-[#7153E1] to-[#2D1A76] bg-clip-text text-transparent font-medium text-xs"
+              style={{ left: ballLeft, transform: "translateX(-10%)" }}
+            >
+              {percentage}%
+            </span>
+          </div>
         </div>
-        <div className="relative w-full h-4">
-          <span
-            className="absolute bg-gradient-to-b from-[#7153E1] to-[#2D1A76] bg-clip-text text-transparent font-medium text-xs"
-            style={{ left: ballLeft, transform: "translateX(-10%)" }}
-          >
-            {percentage}%
-          </span>
+
+        {/* Mobile Progress Bar (Student Layout Port) */}
+        <div className="hidden max-md:block">
+          <div className="relative w-full rounded-full h-3 bg-gray-200 mt-3 overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#9B83F4] to-[#6D4EE0] transition-all duration-700 ease-out rounded-full"
+              style={{
+                width: percentage > 0 ? `${percentage}%` : "0%",
+              }}
+            />
+            {percentage > 0 && (
+              <div
+                className="absolute top-1/2 -translate-y-1/2 bg-white rounded-full shadow-sm transition-all duration-700 ease-out"
+                style={{
+                  left: `calc(${percentage}% - 10px - 2px)`,
+                  height: "10px",
+                  width: "10px",
+                }}
+              />
+            )}
+          </div>
+          <div className="relative w-full h-5 mt-0.5">
+            <span
+              className="absolute bg-gradient-to-b from-[#7153E1] to-[#2D1A76] bg-clip-text text-transparent font-medium transition-all duration-700 ease-out text-xs"
+              style={{
+                left: `${percentage}%`,
+                transform:
+                  percentage > 90
+                    ? "translateX(-100%)"
+                    : percentage < 10
+                      ? "translateX(0%)"
+                      : "translateX(-50%)",
+              }}
+            >
+              {item.percentage === null ? "0%" : `${percentage}%`}
+            </span>
+          </div>
         </div>
-        {/* <div className="flex items-center gap-1">
-          <Timer size={16} weight="fill" className="text-[#9880F3]" />
-          <p className="text-[13px] text-[#7153E1]">
-            {item.fromDate} - {item.toDate}
-          </p>
-        </div> */}
       </div>
     </div>
   );

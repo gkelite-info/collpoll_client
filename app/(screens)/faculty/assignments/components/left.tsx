@@ -496,7 +496,7 @@ function AssignmentsLeftContent() {
     (action === "editDiscussion" || action === "createDiscussion")
   ) {
     return (
-      <div className="w-[68%] h-full p-2 flex flex-col">
+      <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
         <FacultyDiscussionForm
           discussionId={
             action === "editDiscussion" && discussionId
@@ -511,7 +511,7 @@ function AssignmentsLeftContent() {
 
   if (activeTab === "discussion" && action === "viewSubmissions") {
     return (
-      <div className="w-[68%] h-full p-2 flex flex-col">
+      <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
         <FacultyDiscussionSubmissions discussionId={discussionId} />
       </div>
     );
@@ -531,7 +531,7 @@ function AssignmentsLeftContent() {
     (action === "createQuiz" || action === "editQuiz")
   ) {
     return (
-      <div className="w-[68%] h-full p-2 flex flex-col">
+      <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
         <FacultyQuizForm
           onCancel={() => {
             const params = new URLSearchParams(searchParams.toString());
@@ -555,7 +555,7 @@ function AssignmentsLeftContent() {
 
   if (activeTab === "quiz" && action === "viewQuizSubmissions") {
     return (
-      <div className="w-[68%] h-full p-2 flex flex-col">
+      <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
         <FacultyQuizSubmissions
           quizId={quizId ? Number(quizId) : 0}
           onBack={() => {
@@ -571,7 +571,7 @@ function AssignmentsLeftContent() {
 
   if (activeTab === "quiz" && action === "addQuestions") {
     return (
-      <div className="w-[68%] h-full p-2 flex flex-col">
+      <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col max-md:min-h-screen">
         <FacultyAddQuestions
           quizId={quizId ? Number(quizId) : undefined}
           onBack={() => {
@@ -603,9 +603,23 @@ function AssignmentsLeftContent() {
   }
 
   return (
-    <div className="w-[68%] h-full p-2 flex flex-col">
-      <div className="mb-4">
-        <h1 className="font-bold text-2xl mb-1 flex items-center gap-2">
+    <div className="w-[68%] max-md:w-full h-full p-2 max-md:p-3 max-md:pb-20 flex flex-col">
+      <div className="mb-2 md:mb-4">
+        {/* Mobile static text */}
+        <div className="md:hidden mb-3 mt-0">
+          <h1 className="font-bold text-2xl mb-1 text-[#282828]">
+            {activeTab === "assignments" ? "Assignments" : activeTab === "quiz" ? "Quiz" : activeTab === "discussion" ? "Discussion forum" : "Lab"}
+          </h1>
+          <p className="text-[#282828] text-sm">
+            {activeTab === "assignments" && "Create, manage, and evaluate assignments for your students efficiently."}
+            {activeTab === "quiz" && "Design, organize, and publish quizzes to assess your students effectively."}
+            {activeTab === "discussion" && "Create and manage project discussions for students."}
+            {activeTab === "lab" && "Upload and manage lab manuals for your students."}
+          </p>
+        </div>
+
+        {/* Desktop Tabs */}
+        <h1 className="hidden md:flex font-bold text-2xl mb-1 items-center gap-2">
           <span
             onClick={() => handleMainTabChange("assignments")}
             className={`cursor-pointer transition-colors ${activeTab === "assignments" ? "text-[#43C17A]" : "text-[#282828]"}`}
@@ -634,7 +648,48 @@ function AssignmentsLeftContent() {
             Lab
           </span>
         </h1>
-        <p className="text-[#282828] text-sm">
+
+        {/* Mobile Tabs */}
+        <div className="md:hidden flex gap-5 overflow-x-auto scrollbar-hide pb-2 border-b border-gray-200 mt-2 mb-2 [&::-webkit-scrollbar]:hidden">
+          <span
+            onClick={() => handleMainTabChange("assignments")}
+            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "assignments"
+              ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+              : "border-b-2 border-transparent text-gray-500"
+              }`}
+          >
+            Assignments
+          </span>
+          <span
+            onClick={() => handleMainTabChange("quiz")}
+            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "quiz"
+              ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+              : "border-b-2 border-transparent text-gray-500"
+              }`}
+          >
+            Quiz
+          </span>
+          <span
+            onClick={() => handleMainTabChange("discussion")}
+            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "discussion"
+              ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+              : "border-b-2 border-transparent text-gray-500"
+              }`}
+          >
+            Discussion forum
+          </span>
+          <span
+            onClick={() => handleMainTabChange("lab")}
+            className={`whitespace-nowrap text-base font-bold pb-2 cursor-pointer ${activeTab === "lab"
+              ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+              : "border-b-2 border-transparent text-gray-500"
+              }`}
+          >
+            Lab
+          </span>
+        </div>
+
+        <p className="text-[#282828] text-sm max-md:hidden">
           {activeTab === "assignments" &&
             "Create, manage, and evaluate assignments for your students efficiently."}
           {activeTab === "quiz" &&
@@ -646,12 +701,12 @@ function AssignmentsLeftContent() {
         </p>
       </div>
 
-      <div className="w-full flex flex-col flex-1 min-h-[500px] h-full">
+      <div className="w-full flex flex-col flex-1 min-h-[500px]">
         <div className="flex flex-col gap-3 items-start h-full w-full">
-          <div className="flex justify-between w-full h-full">
+          <div className="w-full">
             {activeTab === "assignments" && (
-              <>
-                <div className="flex gap-4 pb-1">
+              <div className="flex justify-between w-full max-md:flex-col gap-2">
+                <div className="hidden md:flex gap-4 pb-1">
                   <h5
                     className={`text-sm cursor-pointer pb-1 transition-all ${activeView === "active" ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
                     onClick={() => handleAssignmentViewChange("active")}
@@ -665,51 +720,119 @@ function AssignmentsLeftContent() {
                     Evaluated Assignments
                   </h5>
                 </div>
+
+                {/* Mobile Sub-tabs */}
+                <div className="md:hidden flex overflow-x-auto scrollbar-hide gap-2 w-full border-b border-gray-200 mb-2 mt-0 [&::-webkit-scrollbar]:hidden">
+                  <div
+                    onClick={() => handleAssignmentViewChange("active")}
+                    className={`whitespace-nowrap flex-1 text-center py-2 px-2 text-sm font-bold cursor-pointer ${activeView === "active"
+                      ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                      : "text-gray-500"
+                      }`}
+                  >
+                    Active Assignments
+                  </div>
+                  <div
+                    onClick={() => handleAssignmentViewChange("previous")}
+                    className={`whitespace-nowrap flex-1 text-center py-2 px-2 text-sm font-bold cursor-pointer ${activeView === "previous"
+                      ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                      : "text-gray-500"
+                      }`}
+                  >
+                    Evaluated Assignments
+                  </div>
+                </div>
                 <button
-                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md hover:bg-[#102040] transition-colors"
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1 font-bold shrink-0"
                   onClick={() => setView("add")}
                 >
                   Add Assignment
                 </button>
-              </>
+              </div>
             )}
 
             {activeTab === "quiz" && (
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
-                <button
-                  onClick={() => handleQuizViewChange("active")}
-                  className={`lg:w-fit lg:px-6 lg:py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "active" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
-                >
-                  Active Quizzes
-                </button>
-                <button
-                  onClick={() => handleQuizViewChange("drafts")}
-                  className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "drafts" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
-                >
-                  Drafts
-                </button>
-                <button
-                  onClick={() => handleQuizViewChange("completed")}
-                  className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "completed" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
-                >
-                  Completed Quizzes
-                </button>
-                <button
-                  className="text-sm text-white cursor-pointer bg-[#16284F] lg:w-fit lg:px-3 py-2 rounded-md font-bold transition-colors"
-                  onClick={() => {
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set("action", "createQuiz");
-                    router.push(`${pathname}?${params.toString()}`);
-                  }}
-                >
-                  Create Quiz
-                </button>
+              <div className="w-full">
+                {/* Desktop View */}
+                <div className="hidden lg:grid lg:grid-cols-[1fr_1fr_1.4fr_0.7fr] w-full gap-3 mt-1 items-center">
+                  <button
+                    onClick={() => handleQuizViewChange("active")}
+                    className={`lg:w-fit lg:px-6 lg:py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "active" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
+                  >
+                    Active Quizzes
+                  </button>
+                  <button
+                    onClick={() => handleQuizViewChange("drafts")}
+                    className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "drafts" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
+                  >
+                    Drafts
+                  </button>
+                  <button
+                    onClick={() => handleQuizViewChange("completed")}
+                    className={`px-8 py-2 cursor-pointer rounded-md font-bold text-sm transition-colors ${quizView === "completed" ? "bg-[#43C17A] text-white" : "bg-[#D5FFE7] text-[#43C17A]"}`}
+                  >
+                    Completed Quizzes
+                  </button>
+                  <button
+                    className="text-sm text-white cursor-pointer bg-[#16284F] lg:w-fit lg:px-3 py-2 rounded-md font-bold transition-colors"
+                    onClick={() => {
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("action", "createQuiz");
+                      router.push(`${pathname}?${params.toString()}`);
+                    }}
+                  >
+                    Create Quiz
+                  </button>
+                </div>
+
+                {/* Mobile View */}
+                <div className="lg:hidden flex flex-col w-full gap-3 mt-1">
+                  <div className="flex overflow-x-auto scrollbar-hide gap-2 pb-1 [&::-webkit-scrollbar]:hidden w-full border-b border-gray-200">
+                    <div
+                      onClick={() => handleQuizViewChange("active")}
+                      className={`whitespace-nowrap px-4 py-2 text-sm font-bold cursor-pointer ${quizView === "active"
+                        ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                        : "text-gray-500"
+                        }`}
+                    >
+                      Active Quizzes
+                    </div>
+                    <div
+                      onClick={() => handleQuizViewChange("drafts")}
+                      className={`whitespace-nowrap px-4 py-2 text-sm font-bold cursor-pointer ${quizView === "drafts"
+                        ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                        : "text-gray-500"
+                        }`}
+                    >
+                      Drafts
+                    </div>
+                    <div
+                      onClick={() => handleQuizViewChange("completed")}
+                      className={`whitespace-nowrap px-4 py-2 text-sm font-bold cursor-pointer ${quizView === "completed"
+                        ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                        : "text-gray-500"
+                        }`}
+                    >
+                      Completed Quizzes
+                    </div>
+                  </div>
+                  <button
+                    className="w-full text-sm text-white cursor-pointer bg-[#16284F] px-4 py-2.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                    onClick={() => {
+                      const params = new URLSearchParams(searchParams.toString());
+                      params.set("action", "createQuiz");
+                      router.push(`${pathname}?${params.toString()}`);
+                    }}
+                  >
+                    Create Quiz
+                  </button>
+                </div>
               </div>
             )}
 
             {activeTab === "discussion" && (
-              <>
-                <div className="flex gap-4 pb-1">
+              <div className="flex justify-between w-full max-md:flex-col gap-2">
+                <div className="hidden md:flex gap-4 pb-1">
                   <h5
                     className={`text-sm cursor-pointer pb-1 transition-all ${discussionView === "active" ? "text-[#43C17A] font-medium border-b-2 border-[#43C17A]" : "text-[#282828]"}`}
                     onClick={() => handleDiscussionViewChange("active")}
@@ -723,8 +846,31 @@ function AssignmentsLeftContent() {
                     Completed Discussions
                   </h5>
                 </div>
+
+                {/* Mobile Sub-tabs */}
+                <div className="md:hidden flex overflow-x-auto scrollbar-hide gap-2 w-full border-b border-gray-200 mb-2 mt-0 [&::-webkit-scrollbar]:hidden">
+                  <div
+                    onClick={() => handleDiscussionViewChange("active")}
+                    className={`whitespace-nowrap flex-1 text-center py-2 px-2 text-sm font-bold cursor-pointer ${discussionView === "active"
+                      ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                      : "text-gray-500"
+                      }`}
+                  >
+                    Active Discussions
+                  </div>
+                  <div
+                    onClick={() => handleDiscussionViewChange("completed")}
+                    className={`whitespace-nowrap flex-1 text-center py-2 px-2 text-sm font-bold cursor-pointer ${discussionView === "completed"
+                      ? "border-b-2 border-[#43C17A] text-[#43C17A]"
+                      : "text-gray-500"
+                      }`}
+                  >
+                    Completed Discussions
+                  </div>
+                </div>
+
                 <button
-                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1 shrink-0"
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.set("action", "createDiscussion");
@@ -733,13 +879,13 @@ function AssignmentsLeftContent() {
                 >
                   Create Discussion
                 </button>
-              </>
+              </div>
             )}
 
             {activeTab === "lab" && (
               <div className="flex justify-end w-full">
                 <button
-                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors"
+                  className="text-sm text-white cursor-pointer bg-[#16284F] px-4 py-1.5 rounded-md font-bold hover:bg-[#102040] transition-colors w-fit max-md:w-full max-md:py-2.5 max-md:mt-1"
                   onClick={() => {
                     const params = new URLSearchParams(searchParams.toString());
                     params.set("action", "createLab");
@@ -794,8 +940,8 @@ function AssignmentsLeftContent() {
               ))}
 
             {activeTab === "quiz" && (
-              <div className="grid grid-cols-2 gap-4 pb-10 h-full">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-10 h-full">
+                <div className="md:col-span-2">
                   <FacultyQuizResumeBanner />
                 </div>
 

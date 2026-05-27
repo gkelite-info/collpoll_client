@@ -22,7 +22,7 @@ export const STATUS_COLORS: Record<string, string> = {
 
 const AttendanceStatusCard: FC<Props> = ({ stats }) => {
   return (
-    <div className="bg-white rounded-xl overflow-auto p-4 w-[30%] shadow-sm flex flex-col justify-between border border-gray-100/50 text-[12.5px]">
+    <div className="bg-white rounded-xl overflow-auto p-4 w-[30%] max-md:w-full max-md:grid max-md:grid-cols-2 max-md:gap-4 shadow-sm flex flex-col justify-between border border-gray-100/50 text-[12.5px]">
       <div>
         <p className="text-[#282828] font-medium">Attendance Status (Today)</p>
         <div className="flex items-center gap-1.5 text-gray-700 text-[13px] mb-2">
