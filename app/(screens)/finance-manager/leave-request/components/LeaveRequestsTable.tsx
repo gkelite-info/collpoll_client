@@ -1,10 +1,16 @@
 "use client";
 
 import TableComponent from "@/app/utils/table/table";
-import { CalendarBlank, MagnifyingGlass } from "@phosphor-icons/react";
+import { useFinanceManager } from "@/app/utils/context/financeManager/useFinanceManager";
+import { useUser } from "@/app/utils/context/UserContext";
+import {
+  fetchEmployeeLeaveRequests,
+  type EmployeeLeaveRequestRecord,
+} from "@/lib/helpers/employeeLeaveRequests/employeeLeaveRequestAPI";
+import { CalendarBlank, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-import { leaveRequests, type FinanceLeaveRequest } from "../data";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { type FinanceLeaveRequest } from "../data";
 import LeaveRequestDetailsModal from "./LeaveRequestDetailsModal";
 
 const leaveRequestColumns = [
@@ -21,6 +27,90 @@ const statusLabelMap: Record<string, string> = {
   approved: "Accepted",
   pending: "Pending",
   rejected: "Rejected",
+};
+
+const formatDateKey = (dateKey: string) =>
+  new Date(`${dateKey}T00:00:00`).toLocaleDateString("en-GB");
+
+const parseDisplayDateToKey = (date: string) => {
+  const [day, month, year] = date.split("/");
+  return `${year}-${month}-${day}`;
+};
+
+const isDateInsideRange = (dateKey: string, dateRange: string) => {
+  const [fromDate, toDate] = dateRange.split(" - ");
+  const fromDateKey = parseDisplayDateToKey(fromDate);
+  const toDateKey = parseDisplayDateToKey(toDate);
+
+  return dateKey >= fromDateKey && dateKey <= toDateKey;
+};
+
+const formatDbDate = (date: string) =>
+  new Date(`${date}T00:00:00`).toLocaleDateString("en-GB");
+
+const titleCase = (value: string) =>
+  value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+
+const calculateDays = (fromDate: string, toDate: string) => {
+  const from = new Date(`${fromDate}T00:00:00`);
+  const to = new Date(`${toDate}T00:00:00`);
+  const diff = Math.max(0, to.getTime() - from.getTime());
+  return String(Math.floor(diff / 86_400_000) + 1).padStart(2, "0");
+};
+
+const mapDbRequestToFinanceRow = (
+  request: EmployeeLeaveRequestRecord,
+  index: number,
+): FinanceLeaveRequest => {
+  const employeeCode = request.employee?.employeeId ?? String(request.employeeId);
+  const requesterName = request.user?.fullName ?? "Finance Manager";
+  const fromDate = formatDbDate(request.leaveFromDate);
+  const toDate = formatDbDate(request.leaveToDate);
+  const leaveType = titleCase(request.leaveType);
+
+  return {
+    serialNo: String(index + 1).padStart(2, "0"),
+    employeeId: employeeCode,
+    name: requesterName,
+    role: titleCase(request.role),
+    photo: "",
+    requestedDate: formatDbDate(request.createdAt.slice(0, 10)),
+    dateRange: `${fromDate} - ${toDate}`,
+    days: calculateDays(request.leaveFromDate, request.leaveToDate),
+    leaveType,
+    description: request.description,
+    status: request.status,
+    chat: [
+      {
+        id: `${request.employeeLeaveRequestId}-request`,
+        senderName: requesterName,
+        senderRole: titleCase(request.role),
+        message: `I submitted a ${leaveType.toLowerCase()} leave request from ${fromDate} to ${toDate}.`,
+        time: new Date(request.createdAt).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        isMe: true,
+      },
+      {
+        id: `${request.employeeLeaveRequestId}-status`,
+        senderName: "HR Desk",
+        senderRole: "HR",
+        message:
+          request.status === "pending"
+            ? "Your request is pending review."
+            : `Your request has been ${request.status}.`,
+        time: new Date(request.updatedAt).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ],
+  };
 };
 
 function StatusAction({ status }: { status: string }) {
@@ -41,12 +131,59 @@ function StatusAction({ status }: { status: string }) {
 }
 
 export default function LeaveRequestsTable() {
+  const { userId, fullName, loading: userLoading } = useUser();
+  const { collegeId, loading: financeLoading } = useFinanceManager();
   const [query, setQuery] = useState("");
+  const [requests, setRequests] = useState<FinanceLeaveRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] =
     useState<FinanceLeaveRequest | null>(null);
+  const [selectedDateKey, setSelectedDateKey] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const searchParams = useSearchParams();
   const activeStatus = searchParams.get("status") || "total";
   const isRejectedView = activeStatus === "rejected";
+
+  const loadRequests = useCallback(async () => {
+    if (userLoading || financeLoading) return;
+
+    if (!userId || !collegeId) {
+      setRequests([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const rows = await fetchEmployeeLeaveRequests({
+        userId,
+        collegeId,
+      });
+
+      setRequests(
+        rows.map((request, index) => ({
+          ...mapDbRequestToFinanceRow(request, index),
+          name: request.user?.fullName ?? fullName ?? "Finance Manager",
+        })),
+      );
+    } catch (error) {
+      console.error("Error fetching employee leave requests:", error);
+      setRequests([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [collegeId, financeLoading, fullName, userId, userLoading]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  useEffect(() => {
+    const handleCreated = () => loadRequests();
+    window.addEventListener("employee-leave-request-created", handleCreated);
+    return () =>
+      window.removeEventListener("employee-leave-request-created", handleCreated);
+  }, [loadRequests]);
 
   const tableColumns = isRejectedView
     ? [
@@ -65,12 +202,17 @@ export default function LeaveRequestsTable() {
     const search = query.trim().toLowerCase();
     const statusFiltered =
       activeStatus === "total"
-        ? leaveRequests
-        : leaveRequests.filter((request) => request.status === activeStatus);
+        ? requests
+        : requests.filter((request) => request.status === activeStatus);
+    const dateFiltered = selectedDateKey
+      ? statusFiltered.filter((request) =>
+          isDateInsideRange(selectedDateKey, request.dateRange),
+        )
+      : statusFiltered;
 
-    if (!search) return statusFiltered;
+    if (!search) return dateFiltered;
 
-    return statusFiltered.filter((request) =>
+    return dateFiltered.filter((request) =>
       [
         request.serialNo,
         request.dateRange,
@@ -86,7 +228,7 @@ export default function LeaveRequestsTable() {
         .toLowerCase()
         .includes(search),
     );
-  }, [activeStatus, query]);
+  }, [activeStatus, query, requests, selectedDateKey]);
 
   const tableData = filteredRequests.map((request) => ({
     serialNo: request.serialNo,
@@ -121,8 +263,8 @@ export default function LeaveRequestsTable() {
 
   return (
     <section className="mt-3 flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 grid grid-cols-[1fr_auto] gap-3">
-        <label className="flex h-11 items-center gap-3 bg-[#EEEEEE] px-4">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <label className="flex h-11 w-full items-center gap-3 rounded-full bg-[#EEEEEE] px-4 sm:max-w-[620px]">
           <MagnifyingGlass size={21} color="#43C17A" />
           <input
             value={query}
@@ -132,16 +274,80 @@ export default function LeaveRequestsTable() {
           />
         </label>
 
-        <button className="flex h-11 items-center justify-center gap-3 bg-[#DFF3E9] px-6 text-sm font-semibold text-[#43C17A]">
-          <CalendarBlank size={18} weight="fill" />
-          12/04/2026
-        </button>
+        <div className="relative self-start sm:self-auto">
+          {!isDatePickerOpen ? (
+            <button
+              type="button"
+              onClick={() => setIsDatePickerOpen(true)}
+              className="flex h-11 cursor-pointer items-center justify-center gap-3 rounded-md bg-[#DFF3E9] px-8 text-sm font-bold tracking-wide text-[#43C17A] transition-colors hover:bg-[#cbe6d7]"
+              title="Select date"
+            >
+              <CalendarBlank size={18} weight="fill" />
+              {selectedDateKey
+                ? formatDateKey(selectedDateKey)
+                : new Date().toLocaleDateString("en-GB")}
+            </button>
+          ) : (
+            <div className="flex h-11 items-center gap-2 rounded-lg border border-[#43C17A] bg-white p-1 shadow-sm">
+              <CalendarBlank
+                size={18}
+                className="ml-2 text-[#43C17A]"
+                weight="fill"
+              />
+              <input
+                type="date"
+                value={selectedDateKey}
+                onChange={(event) => {
+                  if (event.target.value) {
+                    setSelectedDateKey(event.target.value);
+                    setIsDatePickerOpen(false);
+                  }
+                }}
+                className="cursor-pointer rounded-md border border-gray-300 px-2 py-1 text-sm text-gray-700 outline-none focus:border-[#43C17A]"
+              />
+              {selectedDateKey && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDateKey("");
+                    setIsDatePickerOpen(false);
+                  }}
+                  className="cursor-pointer rounded px-1 text-xs font-medium text-red-500 hover:text-red-700"
+                >
+                  Clear
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsDatePickerOpen(false)}
+                className="cursor-pointer rounded-full p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                title="Close"
+              >
+                <X size={14} weight="bold" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1">
         <TableComponent
           columns={tableColumns}
-          tableData={tableData}
+          tableData={
+            isLoading
+              ? [
+                  {
+                    serialNo: "",
+                    dateRange: "Loading leave requests...",
+                    days: "",
+                    leaveType: "",
+                    description: "",
+                    action: "",
+                    details: "",
+                  },
+                ]
+              : tableData
+          }
           height="calc(100vh - 10rem)"
           fillHeight
         />

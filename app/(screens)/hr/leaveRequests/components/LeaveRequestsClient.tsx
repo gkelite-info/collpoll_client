@@ -17,6 +17,7 @@ import { Avatar } from "@/app/utils/Avatar";
 import { Pagination } from "@/app/(screens)/faculty/assignments/components/pagination";
 import { ConfirmStatusModal } from "@/app/(screens)/faculty/leaveRequests/modal/ConfirmStatusModal";
 import { decryptId, encryptId } from "@/app/utils/encryption";
+import HrLeaveDetailsModal from "./HrLeaveDetailsModal";
 import LeaveRequestsRight from "./LeaveRequestsRight";
 import {
   ITEMS_PER_PAGE,
@@ -52,6 +53,7 @@ const BASE_COLUMNS = [
 
 const ROLE_COLUMN = { title: "Role", key: "role" };
 const ACTION_COLUMN = { title: "Action", key: "action" };
+const DETAILS_COLUMN = { title: "Details", key: "details" };
 const REJECTED_COLUMNS = [
   { title: "S.No", key: "sNo" },
   { title: "Employee ID", key: "employeeId" },
@@ -62,6 +64,7 @@ const REJECTED_COLUMNS = [
   { title: "Days", key: "days" },
   { title: "Reason", key: "reason" },
   { title: "Status", key: "statusBadge" },
+  { title: "Details", key: "details" },
 ];
 
 const toDateKey = (date: Date) => {
@@ -96,6 +99,7 @@ export default function LeaveRequestsClient() {
   const [page, setPage] = useState(1);
   const [tableData, setTableData] =
     useState<HrLeaveRow[]>(STATIC_LEAVE_REQUESTS);
+  const [selectedLeave, setSelectedLeave] = useState<HrLeaveRow | null>(null);
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -207,8 +211,8 @@ export default function LeaveRequestsClient() {
       ...BASE_COLUMNS.slice(4),
     ];
     return activeTab === "approved"
-      ? columnsWithRole
-      : [...columnsWithRole, ACTION_COLUMN];
+      ? [...columnsWithRole, DETAILS_COLUMN]
+      : [...columnsWithRole, ACTION_COLUMN, DETAILS_COLUMN];
   }, [activeTab]);
 
   const processedData = useMemo(
@@ -258,6 +262,15 @@ export default function LeaveRequestsClient() {
             >
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>
+          ),
+          details: (
+            <button
+              type="button"
+              onClick={() => setSelectedLeave(item)}
+              className="cursor-pointer text-sm font-semibold text-[#006BFF] hover:underline"
+            >
+              View Details
+            </button>
           ),
           action:
             item.status === "pending" || isEditing ? (
@@ -369,7 +382,7 @@ export default function LeaveRequestsClient() {
         <section className="flex min-h-screen w-full flex-col md:w-[68%]">
           <div className="mb-5 flex flex-col justify-start">
             <h1 className="text-xl font-bold text-[#282828]">
-              Faculty Leave Requests
+               Leave Requests
             </h1>
             <p className="mt-1 text-sm text-[#525252]">
               Review, approve, and manage faculty leave applications effortlessly
@@ -527,6 +540,11 @@ export default function LeaveRequestsClient() {
           setConfirmModal({ isOpen: false, leaveId: null, action: null })
         }
         onConfirm={executeStatusChange}
+      />
+
+      <HrLeaveDetailsModal
+        leave={selectedLeave}
+        onClose={() => setSelectedLeave(null)}
       />
     </>
   );
