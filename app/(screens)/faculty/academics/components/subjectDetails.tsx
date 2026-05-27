@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, CheckCircleIcon, FilePdf, Trash } from "@phosphor-icons/react";
+import { ArrowLeft, CheckCircleIcon, FilePdf, Trash, CaretDown, Clock } from "@phosphor-icons/react";
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { TopicPdfModal } from "@/app/(screens)/faculty/academics/modal/Topicpdfmodal";
 import { getUnitsWithTopics } from "@/lib/helpers/faculty/getUnitsWithTopics";
 import { supabase } from "@/lib/supabaseClient";
@@ -236,6 +237,8 @@ function UnitCard({
     topicId?: number;
   } | null>(null);
 
+  const [isExpanded, setIsExpanded] = useState(false);
+
   useEffect(() => {
     setLocalTopics(unit.topics);
     setIsDirty(false);
@@ -262,56 +265,103 @@ function UnitCard({
   //   totalCount === 0 ? 0 : Math.round((completedCount / totalCount) * 100);
 
   return (
-    <div
-      className={`rounded-xl px-4 py-3 ${colors.cardBg} w-full h-[480px] flex flex-col`}
-    >
-      <div className="flex items-center justify-between mb-4 shrink-0">
+    <>
+      <div
+        className={`rounded-xl px-4 py-3 max-md:p-3 max-md:h-auto ${colors.cardBg} w-full h-[480px] flex flex-col relative`}
+      >
+      <div 
+        className="flex items-center justify-between mb-4 max-md:mb-2 shrink-0 max-md:cursor-pointer"
+        onClick={(e) => {
+          if (window.innerWidth < 768) setIsExpanded(!isExpanded);
+        }}
+      >
         <div className="flex items-center gap-2">
           <span className={`h-2.5 w-2.5 rounded-full ${colors.dot}`} />
-          <p className={`text-sm md:text-base font-semibold ${colors.accent}`}>
+          <p className={`text-sm md:text-base font-semibold max-md:text-[15px] max-md:!text-[#4B4B4B] ${colors.accent}`}>
             {unit.unitLabel}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setDeleteTarget({ type: "unit" })}
-          className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md cursor-pointer"
-          title="Delete Unit"
-        >
-          <Trash size={20} />
-        </button>
-      </div>
-
-      <div className="bg-[#F4F4F5] rounded-lg p-4 flex-1 flex flex-col min-h-[300px] relative overflow-hidden">
-        <h3
-          className={`text-base md:text-lg font-semibold mb-5 shrink-0 ${colors.title}`}
-        >
-          {unit.title}
-        </h3>
-
-        <div className="relative w-full h-3 rounded-full bg-gray-200 overflow-hidden shrink-0">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${percentage}%`,
-              background: `linear-gradient(to right, ${colors.fadeStart}, ${colors.solidEnd})`,
+        
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget({ type: "unit" });
             }}
-          />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 h-2.5 w-2.5 bg-white rounded-full shadow transition-all duration-700"
-            style={{ left: `calc(${percentage}% - 7px)` }}
+            className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1.5 rounded-md cursor-pointer max-md:hidden"
+            title="Delete Unit"
+          >
+            <Trash size={20} />
+          </button>
+          <CaretDown
+            className={`hidden max-md:block ${colors.title} transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
+            size={20}
+            weight="bold"
           />
         </div>
+      </div>
 
-        <div className="flex justify-end text-xs md:text-sm mt-3 mb-4 shrink-0">
+      <div className="bg-[#F4F4F5] max-md:bg-white/60 max-md:shadow-none rounded-lg max-md:rounded-2xl p-4 max-md:p-3 flex-1 flex flex-col min-h-[300px] max-md:min-h-0 relative overflow-hidden">
+        <div className="flex justify-between items-start mb-5 max-md:mb-2">
+          <h3
+            className={`text-base md:text-lg font-semibold shrink-0 max-md:text-[15px] ${colors.title}`}
+          >
+            {unit.title}
+          </h3>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteTarget({ type: "unit" });
+            }}
+            className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all p-1 rounded-md cursor-pointer hidden max-md:block -mt-1"
+            title="Delete Unit"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
+
+        <div className="relative w-full h-3 max-md:h-[8px] rounded-full bg-gray-200 overflow-hidden shrink-0 max-md:mb-0">
+          <div className="relative w-full h-full rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{
+                width: `${percentage}%`,
+                background: `linear-gradient(to right, ${colors.fadeStart}, ${colors.solidEnd})`,
+              }}
+            />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 h-2.5 w-2.5 bg-white rounded-full shadow transition-all duration-700 max-md:h-2 max-md:w-2"
+              style={{ left: `calc(${percentage}% - 7px)` }}
+            />
+          </div>
+        </div>
+
+        {/* Desktop percentage text below progress bar */}
+        <div className="flex justify-end text-xs md:text-sm mt-3 mb-4 shrink-0 max-md:hidden">
           <span className={`font-semibold ${colors.accent}`}>
             {percentage}%
           </span>
         </div>
 
-        <div className="relative flex-1 min-h-0 mb-14 overflow-hidden">
+        {/* Mobile clock / percentage bottom stats */}
+        <div className="hidden max-md:flex items-center justify-between mt-2.5">
+          <div
+            className={`flex items-center gap-1.5 text-[10px] font-semibold ${colors.title}`}
+          >
+            <Clock size={13} weight="fill" className={colors.title} />
+            <span>{unit.dateRange || "01-01-1970 - 03-17-2026"}</span>
+          </div>
+          <span className={`text-[11px] font-bold ${colors.title}`}>
+            {percentage}%
+          </span>
+        </div>
+
+        <div className="relative flex-1 min-h-0 mb-14 max-md:mb-0 max-md:pb-12 overflow-hidden flex flex-col">
+          {/* Desktop List */}
           <ul
-            className="custom-scrollbar h-[280px] space-y-2 overflow-y-auto pr-2 pb-10 text-xs text-[#3F3F3F] md:text-sm"
+            className="custom-scrollbar h-[280px] space-y-2 overflow-y-auto pr-2 pb-10 text-xs text-[#3F3F3F] md:text-sm max-md:hidden"
             style={{
               scrollbarWidth: "thin",
               scrollbarColor: `${colors.solidEnd} #f1f5f9`,
@@ -379,24 +429,105 @@ function UnitCard({
             ))}
           </ul>
 
-          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[#F4F4F5] to-transparent pointer-events-none rounded-b-md" />
+          {/* Mobile Accordion List */}
+          <AnimatePresence initial={false}>
+            {isExpanded && (
+              <motion.ul
+                initial="collapsed"
+                animate="open"
+                exit="collapsed"
+                variants={{
+                  open: { opacity: 1, height: "auto", marginTop: "16px" },
+                  collapsed: { opacity: 0, height: 0, marginTop: "0px" },
+                }}
+                transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                className="custom-scrollbar hidden max-md:block max-h-[240px] space-y-2 overflow-y-auto pr-2 text-xs text-[#3F3F3F]"
+                style={{
+                  scrollbarWidth: "thin",
+                  scrollbarColor: `${colors.solidEnd} #f1f5f9`,
+                }}
+              >
+                {localTopics.map((topic) => (
+                  <li
+                    key={topic.id}
+                    className="flex items-start justify-between gap-2"
+                  >
+                    <div className="flex items-start gap-2">
+                      <button
+                        onClick={() => {
+                          setLocalTopics(prev =>
+                            prev.map(t =>
+                              t.id === topic.id ? { ...t, isCompleted: !t.isCompleted } : t
+                            )
+                          );
+                          setIsDirty(true);
+                          setHasChanges(true);
+                        }}
+                        className="mt-[2px] flex-shrink-0"
+                      >
+                        <CheckCircleIcon
+                          size={16}
+                          weight={topic.isCompleted ? "fill" : "regular"}
+                          className={`${topic.isCompleted ? colors.accent : "text-gray-400"} transition-colors`}
+                        />
+                      </button>
+                      <span className={topic.isCompleted ? "text-gray-500" : "text-[#3F3F3F]"}>
+                        {topic.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-start gap-2 mt-[2px]">
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget({ type: "topic", topicId: topic.id })}
+                        className="text-red-500 hover:text-red-600 transition-colors"
+                        title="Delete Topic"
+                      >
+                        <Trash size={16} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onOpenTopicPdf({
+                            topicId: topic.id,
+                            topicTitle: topic.title,
+                            unitLabel: unit.unitLabel,
+                            unitTitle: unit.title,
+                          })
+                        }
+                      >
+                        <FilePdf
+                          size={16}
+                          className={`${colors.accent} flex-shrink-0`}
+                          weight="duotone"
+                        />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </motion.ul>
+            )}
+          </AnimatePresence>
+
+          <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[#F4F4F5] max-md:from-transparent to-transparent pointer-events-none rounded-b-md" />
         </div>
 
-        <div className="absolute bottom-4 right-4 flex justify-end shrink-0">
+        <div className={`absolute bottom-4 right-4 justify-end shrink-0 max-md:bottom-[8px] max-md:right-[12px] md:flex ${isExpanded ? "flex" : "hidden"}`}>
           <button
             onClick={() => onMarkComplete(unit.id, localTopics, percentage)}
             disabled={!isDirty || isSavingThisUnit}
-            className={`border px-4 py-1.5 rounded-lg cursor-pointer text-sm transition
+            className={`border px-4 py-1.5 max-md:px-3 max-md:py-1 rounded-lg cursor-pointer text-sm max-md:text-[11px] transition
     ${!isDirty || isSavingThisUnit
                 ? "border-[#43C17A] text-[#43C17A] opacity-50 cursor-not-allowed"
-                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10"
+                : "border-[#43C17A] text-[#43C17A] hover:bg-[#43C17A]/10 bg-white"
               }`}
           >
             {isSavingThisUnit ? "Saving..." : "Save Progress"}
           </button>
         </div>
       </div>
-
+    </div>
       <ConfirmDeleteModal
         isOpen={deleteTarget !== null}
         onClose={() => setDeleteTarget(null)}
@@ -421,7 +552,7 @@ function UnitCard({
           }
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -763,7 +894,7 @@ export function SubjectDetailsCard({
         </button> */}
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8">
+      <div className="flex gap-6 overflow-x-auto pb-4 snap-x mt-8 max-md:flex-col max-md:overflow-x-visible max-md:pb-0">
         {loading ? (
           <div className="flex justify-center w-full">
             <Loader />
@@ -772,7 +903,7 @@ export function SubjectDetailsCard({
           units.map((unit) => (
             <div
               key={`unit-${unit.id}`}
-              className="min-w-[320px] w-[350px] shrink-0 snap-start"
+              className="min-w-[85vw] w-[85vw] md:min-w-[320px] md:w-[350px] shrink-0 snap-start max-md:min-w-0 max-md:w-full max-md:h-auto"
             >
               <UnitCard
                 unit={unit}
