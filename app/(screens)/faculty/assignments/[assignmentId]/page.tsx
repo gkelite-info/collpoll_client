@@ -101,7 +101,7 @@ export default function AdminAssignmentDetailPage() {
   ];
 
   return (
-    <main className="px-4 py-4 min-h-screen bg-[#F3F6F9]">
+    <main className="px-4 py-4 max-md:pb-20 min-h-screen bg-[#F3F6F9]">
       <section className="mb-4 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-1">
@@ -112,40 +112,44 @@ export default function AdminAssignmentDetailPage() {
             >
               <CaretLeft size={24} weight="bold" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900">Assignments</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Assignments</h1>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs md:text-sm text-gray-500 mt-1">
             Reviewing submission stats and evaluating student work.
           </p>
         </div>
-        <CourseScheduleCard style="w-[320px]" isVisibile={false} />
+        <div className="hidden lg:block">
+          <CourseScheduleCard style="w-[320px]" isVisibile={false} />
+        </div>
       </section>
 
-      <section className="flex flex-row items-stretch gap-4 w-full mb-3">
-        {loading ? (
-          <>
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex-1 h-[142px] bg-gray-200 rounded-xl relative overflow-hidden animate-pulse"
-              >
-                <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+      <section className="flex flex-col lg:flex-row items-stretch gap-4 w-full mb-3">
+        <div className="flex flex-col md:flex-row gap-4 flex-1 w-full">
+          {loading ? (
+            <>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-[100px] md:h-[142px] bg-gray-200 rounded-xl relative overflow-hidden animate-pulse"
+                >
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                </div>
+              ))}
+            </>
+          ) : (
+            cardData.map((item, index) => (
+              <div key={index} className="flex-1 w-full">
+                <CardComponent {...item} />
               </div>
-            ))}
-          </>
-        ) : (
-          cardData.map((item, index) => (
-            <div key={index} className="flex-1">
-              <CardComponent {...item} />
-            </div>
-          ))
-        )}
-        <div className="flex-[1.6]">
+            ))
+          )}
+        </div>
+        <div className="hidden lg:block flex-[1.6]">
           <WorkWeekCalendar style="h-full" />
         </div>
       </section>
 
-      <section>
+      <section className="w-full overflow-x-auto scrollbar-hide pb-2">
         <AssignmentTable
           assignmentId={assignmentId as string}
           parentLoading={loading}

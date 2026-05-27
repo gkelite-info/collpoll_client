@@ -151,7 +151,7 @@ export default function AssignmentsRight() {
 
   return (
     <>
-      <div className="w-[32%] p-2 h-full flex flex-col">
+      <div className="w-[32%] p-2 h-full flex flex-col max-md:hidden">
         <CourseScheduleCard />
         <WorkWeekCalendar />
         <TaskPanel

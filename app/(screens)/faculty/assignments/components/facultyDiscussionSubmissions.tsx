@@ -139,7 +139,7 @@ export default function FacultyDiscussionSubmissions({
             >
               <div className="flex-shrink-0 items-center">
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative flex items-center justify-center">
-                  <Avatar src={submission.profiles.avatar_url} size={40} alt={submission.profiles.full_name}/>
+                  <Avatar src={submission.profiles.avatar_url} size={40} alt={submission.profiles.full_name} />
                 </div>
               </div>
 
@@ -150,7 +150,7 @@ export default function FacultyDiscussionSubmissions({
                   </h3>
 
                   {submission.marksObtained !== undefined &&
-                  submission.marksObtained !== null ? (
+                    submission.marksObtained !== null ? (
                     <div
                       className="bg-[#43C17A] text-white text-xs font-bold px-4 py-1.5 rounded-md min-w-[70px] text-center cursor-pointer hover:bg-[#34a362] transition-colors"
                       onClick={() => openMarksModal(submission)}

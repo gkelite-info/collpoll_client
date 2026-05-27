@@ -16,7 +16,7 @@ export default function FacultyQuizCard({
 }) {
   return (
     <div className="bg-white rounded-xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col gap-3 relative group transition-all hover:border-gray-200 hover:shadow-md">
-      <div className="absolute top-4 right-4 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-4 right-4 flex items-center gap-3 opacity-0 group-hover:opacity-100 max-md:opacity-100 transition-opacity">
         {onEdit && (
           <button
             onClick={(e) => {
