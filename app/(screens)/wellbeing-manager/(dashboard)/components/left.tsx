@@ -3,7 +3,7 @@
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, usePathname } from "next/navigation";
-import { CalendarDotsIcon, CaretDown } from "@phosphor-icons/react";
+import { CalendarDotsIcon, CaretDown, Plus } from "@phosphor-icons/react";
 
 import { useUser } from "@/app/utils/context/UserContext";
 import {
@@ -186,10 +186,27 @@ function CategoryBreakdown() {
   );
 }
 
-export default function WellbeingManagerLeft() {
+export default function WellbeingManagerLeft({
+  onAddExecutive,
+}: {
+  onAddExecutive?: () => void;
+}) {
   return (
     <div className="w-full p-2 lg:w-[68%]">
       <WelcomePanel />
+      {onAddExecutive && (
+        <div className="flex lg:hidden justify-end mt-4 mb-1 w-full">
+          <button
+            onClick={onAddExecutive}
+            className="flex cursor-pointer px-4 items-center justify-center gap-2 bg-[#43C17A] hover:bg-[#34A362] text-white py-2 rounded-full text-sm font-bold transition-all shadow-[0_2px_10px_rgba(67,193,122,0.25)] active:scale-95 group shrink-0"
+          >
+            <div className="flex items-center justify-center border-3 border-[#EFEFEF] text-[#EFEFEF] rounded-full p-[2px] group-hover:rotate-90 transition-transform duration-300">
+              <Plus size={12} weight="bold" />
+            </div>
+            Add Executive
+          </button>
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3">

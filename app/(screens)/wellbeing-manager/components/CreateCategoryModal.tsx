@@ -1,13 +1,66 @@
 "use client";
 
 import { X } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
-export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export type CategoryEditData = {
+  categoryId?: number;
+  title: string;
+  subCategories?: string[];
+  appliesTo?: string;
+} | null;
+
+export default function CreateCategoryModal({
+  isOpen,
+  onClose,
+  categoryData,
+  onSave,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  categoryData?: CategoryEditData;
+  onSave?: (title: string, subCategories: string[], appliesTo: string) => Promise<void> | void;
+}) {
+  const [categoryName, setCategoryName] = useState("");
   const [subCategoryInput, setSubCategoryInput] = useState("");
-  const [subCategories, setSubCategories] = useState<string[]>(["Emergency", "Counselling", "Health Checkup", "Medicines"]);
+  const [subCategories, setSubCategories] = useState<string[]>([]);
   const [appliesTo, setAppliesTo] = useState("College");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (categoryData) {
+        setCategoryName(categoryData.title || "");
+        setSubCategories(categoryData.subCategories || []);
+        setAppliesTo(categoryData.appliesTo || "College");
+      } else {
+        setCategoryName("");
+        setSubCategories([]);
+        setAppliesTo("College");
+      }
+      setSubCategoryInput("");
+      setIsSaving(false);
+    }
+  }, [isOpen, categoryData]);
+
+  const handleCreateOrSave = async () => {
+    if (!categoryName.trim()) {
+      toast.error("Category name is required.");
+      return;
+    }
+    if (onSave) {
+      setIsSaving(true);
+      try {
+        await onSave(categoryName.trim(), subCategories, appliesTo);
+      } catch {
+        setIsSaving(false);
+      }
+    } else {
+      onClose();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -22,6 +75,11 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
     setSubCategories(subCategories.filter(tag => tag !== tagToRemove));
   };
 
+  const isEditing = !!categoryData?.categoryId;
+  const saveBtnText = isSaving
+    ? (isEditing ? "Saving..." : "Creating...")
+    : (isEditing ? "Save Changes" : "Create Category");
+
   return (
     <AnimatePresence>
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4 font-sans">
@@ -32,10 +90,13 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
             className="bg-white w-full max-w-[550px] rounded-2xl p-5 md:p-8 shadow-2xl flex flex-col max-h-[95vh] overflow-y-auto"
         >
             <div className="flex justify-between items-start mb-6">
-                <h2 className="text-[20px] md:text-[24px] font-bold text-[#16284F] tracking-tight">Create Category</h2>
+                <h2 className="text-[20px] md:text-[24px] font-bold text-[#16284F] tracking-tight">
+                  {isEditing ? "Edit Category" : "Create Category"}
+                </h2>
                 <button 
                     onClick={onClose} 
-                    className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors mt-0.5 md:mt-1"
+                    disabled={isSaving}
+                    className="p-1 cursor-pointer hover:bg-gray-100 rounded-full transition-colors mt-0.5 md:mt-1 disabled:opacity-50"
                 >
                     <X size={20} weight="bold" className="text-gray-500" />
                 </button>
@@ -46,8 +107,11 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
                     <label className="text-[15px] md:text-[16px] font-bold text-[#16284F]">Category Name</label>
                     <input 
                         type="text" 
+                        value={categoryName}
+                        onChange={(e) => setCategoryName(e.target.value)}
                         placeholder="Enter a Category name" 
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-[14px] md:text-[15px] outline-none focus:border-[#43C17A] text-gray-700 placeholder:text-gray-400 transition-colors"
+                        disabled={isSaving}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 text-[14px] md:text-[15px] outline-none focus:border-[#43C17A] text-gray-700 placeholder:text-gray-400 transition-colors disabled:bg-gray-50 disabled:cursor-not-allowed"
                     />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -59,44 +123,47 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
                             onChange={(e) => setSubCategoryInput(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleAddSubCategory()}
                             placeholder="Enter Sub Category name" 
-                            className="flex-1 px-3 py-2 text-[14px] md:text-[15px] outline-none text-gray-700 placeholder:text-gray-400 bg-transparent min-w-0"
+                            disabled={isSaving}
+                            className="flex-1 px-3 py-2 text-[14px] md:text-[15px] outline-none text-gray-700 placeholder:text-gray-400 bg-transparent min-w-0 disabled:cursor-not-allowed"
                         />
                         <button 
                             onClick={handleAddSubCategory}
-                            className="bg-[#43C17A] hover:bg-[#39A869] transition-colors text-white font-semibold px-5 md:px-6 py-2 rounded-md text-[14px] md:text-[15px] cursor-pointer shrink-0"
+                            disabled={isSaving}
+                            className="bg-[#43C17A] hover:bg-[#39A869] transition-colors text-white font-semibold px-5 md:px-6 py-2 rounded-md text-[14px] md:text-[15px] cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Add
                         </button>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2.5 mt-2">
-                        {subCategories.map((tag, index) => (
-                            <div 
-                                key={index} 
-                                className="flex items-center gap-1.5 border border-[#43C17A]/40 bg-[#E8F8EF] text-[#34A362] px-3 py-1.5 rounded-md text-[13px] md:text-[14px] font-semibold tracking-wide"
-                            >
-                                {tag}
-                                <button onClick={() => handleRemoveSubCategory(tag)} className="hover:bg-[#43C17A]/20 rounded-full p-0.5 cursor-pointer transition-colors">
-                                    <X size={14} weight="bold" />
-                                </button>
+                    <div className="mt-2 border border-dashed border-gray-200 rounded-lg p-3 bg-gray-50/50 h-[120px] overflow-y-auto custom-scrollbar">
+                        {subCategories.length > 0 ? (
+                            <div className="flex flex-wrap gap-2.5 items-start content-start">
+                                {subCategories.map((tag, index) => (
+                                    <div 
+                                        key={index} 
+                                        className="flex items-center gap-1.5 border border-[#43C17A]/40 bg-[#E8F8EF] text-[#34A362] px-3 py-1.5 rounded-md text-[13px] md:text-[14px] font-semibold tracking-wide h-fit"
+                                    >
+                                        {tag}
+                                        <button 
+                                          onClick={() => handleRemoveSubCategory(tag)} 
+                                          disabled={isSaving}
+                                          className="hover:bg-[#43C17A]/20 rounded-full p-0.5 cursor-pointer transition-colors disabled:cursor-not-allowed"
+                                        >
+                                            <X size={14} weight="bold" />
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-center p-4">
+                                <p className="text-[13px] font-medium text-gray-400">
+                                    No sub-categories added yet. Use the field above to add them.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <label className="text-[15px] md:text-[16px] font-bold text-[#16284F]">Assign Executives</label>
-                    <div className="flex w-full border border-gray-300 rounded-lg p-1.5 focus-within:border-[#43C17A] transition-colors bg-white">
-                        <input 
-                            type="text" 
-                            placeholder="Select one or more executives" 
-                            className="flex-1 px-3 py-2 text-[14px] md:text-[15px] outline-none text-gray-700 placeholder:text-gray-400 bg-transparent min-w-0"
-                        />
-                        <button className="bg-[#43C17A] hover:bg-[#39A869] transition-colors text-white font-semibold px-4 py-2 rounded-md text-[14px] md:text-[15px] whitespace-nowrap cursor-pointer shrink-0">
-                            Add Executive
-                        </button>
-                    </div>
-                </div>
 
                 <div className="flex flex-col gap-2">
                     <label className="text-[15px] md:text-[16px] font-bold text-[#16284F]">Applies To</label>
@@ -114,6 +181,7 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
                                     value={option} 
                                     checked={appliesTo === option} 
                                     onChange={() => setAppliesTo(option)} 
+                                    disabled={isSaving}
                                     className="hidden" 
                                 />
                             </label>
@@ -125,15 +193,17 @@ export default function CreateCategoryModal({ isOpen, onClose }: { isOpen: boole
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 mt-8">
                 <button 
                     onClick={onClose} 
-                    className="w-full sm:flex-1 cursor-pointer py-2 rounded-md border border-gray-300 text-[#16284F] font-bold hover:bg-gray-50 transition-colors text-[15px] md:text-[16px]"
+                    disabled={isSaving}
+                    className="w-full sm:flex-1 cursor-pointer py-2 rounded-md border border-gray-300 text-[#16284F] font-bold hover:bg-gray-50 transition-colors text-[15px] md:text-[16px] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Cancel
                 </button>
                 <button 
-                    onClick={onClose}
-                    className="w-full sm:flex-1 cursor-pointer py-2 rounded-md bg-[#43C17A] hover:bg-[#39A869] text-white font-bold transition-colors text-[15px] md:text-[16px]"
+                    onClick={handleCreateOrSave}
+                    disabled={isSaving}
+                    className="w-full sm:flex-1 cursor-pointer py-2 rounded-md bg-[#43C17A] hover:bg-[#39A869] text-white font-bold transition-colors text-[15px] md:text-[16px] disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                    Create Category
+                    {saveBtnText}
                 </button>
             </div>
             

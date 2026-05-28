@@ -9,11 +9,13 @@ import AllIssuesView from "./AllIssuesViewNew";
 import WellbeingRight from "../../components/WellbeingRight";
 import TicketDetailsView from "../../new-issues/components/TicketDetailsView";
 import DashboardAllIssueListView from "./DashboardAllIssueListView";
+import CreateExecutiveModal from "../../components/CreateExecutiveModal";
+import { Loader } from "@/app/(screens)/(student)/calendar/right/timetable";
 
 function DashboardRouteFallback() {
   return (
-    <div className="flex min-h-[60vh] w-full items-center justify-center text-sm font-semibold text-[#667085]">
-      Loading issues...
+    <div className="flex min-h-[60vh] w-full items-center justify-center text-sm font-semibold">
+      <Loader />
     </div>
   );
 }
@@ -28,6 +30,7 @@ export default function WellbeingManagerDashboard() {
   const ticketId = searchParams.get("ticketId");
   const [mounted, setMounted] = useState(false);
   const [stage, setStage] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setMounted(true), 0);
@@ -75,11 +78,19 @@ export default function WellbeingManagerDashboard() {
   }
 
   return (
-    <main className="flex min-h-full w-full overflow-x-hidden pb-5">
-      <WellbeingManagerLeft />
+    <main className="flex min-h-full w-full pb-5">
+      <WellbeingManagerLeft onAddExecutive={() => setIsModalOpen(true)} />
       {stage >= 3 ? (
-        // <WellbeingManagerRight />
-        <WellbeingRight />
+        <>
+          <WellbeingRight
+            button={true}
+            onHeaderActionClick={() => setIsModalOpen(true)}
+          />
+          <CreateExecutiveModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+          />
+        </>
       ) : (
         <aside className="hidden w-[32%] flex-col p-2 pr-0 lg:flex lg:w-[32%]">
           <div className="h-[54px] animate-pulse rounded-lg bg-gray-200" />
