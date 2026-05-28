@@ -465,6 +465,8 @@ const AddUserModal: React.FC<{
       // formattedValue = sanitized;
       if (hyphenCount > 2 || sanitized.includes("--")) return;
       formattedValue = sanitized;
+    } else if (name === "studentId") {
+      formattedValue = value.replace(/[^A-Za-z0-9-]/g, "").toUpperCase();
     } else if (name === "batch") {
       const alphanumeric = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
       if (alphanumeric.length > 5) return;
@@ -657,6 +659,25 @@ const AddUserModal: React.FC<{
   const isWellbeingCollege =
     isWellbeing && selectedWellbeingRegistrationTypes.includes("College");
 
+  const resolveStudentIdFromPin = async (pinNumber: string) => {
+    const normalizedPin = pinNumber.trim();
+
+    const { data, error } = await supabase
+      .from("student_pins")
+      .select("studentId")
+      .eq("pinNumber", normalizedPin)
+      .eq("collegeId", basicData.collegeIntId)
+      .eq("isActive", true)
+      .is("deletedAt", null)
+      .maybeSingle();
+
+    if (error || !data?.studentId) {
+      throw new Error(`Student not found for pin number "${normalizedPin}"`);
+    }
+
+    return data.studentId as number;
+  };
+
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
@@ -751,7 +772,7 @@ const AddUserModal: React.FC<{
     }
 
     if (isParent && !basicData.studentId)
-      return toast.error("Student ID required.");
+      return toast.error("Student pin number is required.");
 
     if (showFinanceFields && !collegeEducationId)
       return toast.error("Select Education Type for Finance.");
@@ -790,6 +811,9 @@ const AddUserModal: React.FC<{
 
     try {
       const timestamp = new Date().toISOString();
+      const parentStudentId = isParent
+        ? await resolveStudentIdFromPin(basicData.studentId)
+        : null;
 
       let targetUserId: number | null = null;
 
@@ -1056,7 +1080,7 @@ const AddUserModal: React.FC<{
       if (isParent && targetUserId) {
         const parentRes = await upsertParentEntry({
           userId: targetUserId,
-          studentId: parseInt(basicData.studentId),
+          studentId: parentStudentId!,
           collegeId: basicData.collegeIntId,
           createdBy: basicData.adminId,
         });
@@ -1101,6 +1125,8 @@ const AddUserModal: React.FC<{
           message = "This email is already registered.";
         } else if (errMsg.includes("mobile")) {
           message = "This mobile number is already in use.";
+        } else if (errMsg.includes("student not found for pin number")) {
+          message = e.message;
         } else if (errMsg.includes("duplicate")) {
           message = "User already exists with provided details.";
         }
@@ -1320,14 +1346,14 @@ const AddUserModal: React.FC<{
               {isParent && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
-                    Student ID <span className="text-red-600">*</span>
+                    Student Pin Number <span className="text-red-600">*</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     name="studentId"
                     value={basicData.studentId}
                     onChange={handleBasicChange}
-                    placeholder="Enter Student ID"
+                    placeholder="Enter Student Pin Number"
                     className="w-full border border-gray-200 rounded-md px-3 py-1 text-sm outline-none focus:ring-1 focus:ring-[#48C78E]"
                   />
                 </div>

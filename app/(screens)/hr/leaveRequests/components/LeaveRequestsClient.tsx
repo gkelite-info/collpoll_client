@@ -97,6 +97,8 @@ const REJECTED_COLUMNS = [
   { title: "Details", key: "details" },
 ];
 
+const STATUS_ACTION_COLUMN = { title: "Action", key: "statusAction" };
+
 const toDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -328,7 +330,7 @@ export default function LeaveRequestsClient() {
       ...BASE_COLUMNS.slice(4),
     ];
     return activeTab === "approved"
-      ? [...columnsWithRole, DETAILS_COLUMN]
+      ? [...columnsWithRole, STATUS_ACTION_COLUMN, DETAILS_COLUMN]
       : [...columnsWithRole, ACTION_COLUMN, DETAILS_COLUMN];
   }, [activeTab]);
 
@@ -380,6 +382,19 @@ export default function LeaveRequestsClient() {
               {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
             </span>
           ),
+          statusAction: (
+            <span
+              className={`inline-flex min-w-24 items-center justify-center rounded-full px-4 py-1 text-sm font-medium ${
+                item.status === "approved"
+                  ? "bg-[#E7F8EE] text-[#43C17A]"
+                  : item.status === "rejected"
+                    ? "bg-[#FFE0E0] text-[#FF1F1F]"
+                    : "bg-[#FFF4EB] text-[#FFB874]"
+              }`}
+            >
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </span>
+          ),
           details: (
             <button
               type="button"
@@ -390,7 +405,7 @@ export default function LeaveRequestsClient() {
             </button>
           ),
           action:
-            item.status === "pending" || isEditing ? (
+            isEditing ? (
               <div className="flex items-center justify-center gap-2">
                 <button
                   onClick={() =>
@@ -420,10 +435,12 @@ export default function LeaveRequestsClient() {
             ) : (
               <div className="flex items-center justify-center gap-2">
                 <span
-                  className={`text-xs font-bold ${
+                  className={`inline-flex min-w-24 items-center justify-center rounded-full px-4 py-1 text-sm font-medium ${
                     item.status === "approved"
-                      ? "text-[#43C17A]"
-                      : "text-[#FF4B4B]"
+                      ? "bg-[#E7F8EE] text-[#43C17A]"
+                      : item.status === "rejected"
+                        ? "bg-[#FFE0E0] text-[#FF1F1F]"
+                        : "bg-[#FFF4EB] text-[#FFB874]"
                   }`}
                 >
                   {item.status.charAt(0).toUpperCase() + item.status.slice(1)}

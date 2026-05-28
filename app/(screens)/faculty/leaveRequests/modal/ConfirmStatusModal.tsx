@@ -3,7 +3,12 @@ export function ConfirmStatusModal({
   action,
   onClose,
   onConfirm,
-}: any) {
+}: {
+  isOpen: boolean;
+  action: "Approved" | "Rejected" | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
   if (!isOpen) return null;
   const isApprove = action === "Approved";
 
@@ -32,7 +37,7 @@ export function ConfirmStatusModal({
                 : "bg-[#FF4B4B] hover:bg-[#e64343]"
             }`}
           >
-            Yes, {action}
+            Yes, {isApprove ? "Approve" : "Reject"}
           </button>
         </div>
       </div>
