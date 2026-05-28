@@ -15,9 +15,13 @@ import {
   createStudentFeeObligation,
 } from "@/lib/helpers/admin/registrations/student/studentRegistration";
 import { createStudentAcademicHistory } from "@/lib/helpers/admin/registrations/student/academicHistoryRegistration";
-import { createFinanceManager } from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
+import {
+  createFinanceManager,
+  upsertFinanceManagerEducationTypes,
+} from "@/lib/helpers/admin/registrations/finance/financeManagerRegistration";
 import { fetchAdminContext } from "@/app/utils/context/admin/adminContextAPI";
 import {
+  upsertAdminEducationTypes,
   upsertAdminEntry,
   upsertCollegeHR,
   upsertUser,
@@ -137,6 +141,8 @@ const AddUserModal: React.FC<{
   const [selectedSemester, setSelectedSemester] = useState<string[]>([]);
   const [selectedEntryType, setSelectedEntryType] = useState<string[]>([]);
   const [selectedSessionType, setSelectedSessionType] = useState<string[]>([]);
+  const [selectedFinanceEducationTypes, setSelectedFinanceEducationTypes] =
+    useState<string[]>([]);
   const [selectedWellbeingEducationTypes, setSelectedWellbeingEducationTypes] =
     useState<string[]>([]);
   const [selectedWellbeingBranches, setSelectedWellbeingBranches] = useState<
@@ -194,6 +200,7 @@ const AddUserModal: React.FC<{
     setSelectedSubjects([]);
     setSelectedSemester([]);
     setSelectedEntryType([]);
+    setSelectedFinanceEducationTypes([]);
     setSelectedWellbeingEducationTypes([]);
     setSelectedWellbeingBranches([]);
     setSelectedWellbeingYears([]);
@@ -481,6 +488,7 @@ const AddUserModal: React.FC<{
       setSelectedSections([]);
       setSelectedSemester([]);
       setSelectedEntryType([]);
+      setSelectedFinanceEducationTypes([]);
       setBasicData((p: any) => ({
         ...p,
         wellbeingRegistrationTypes: [],
@@ -774,7 +782,7 @@ const AddUserModal: React.FC<{
     if (isParent && !basicData.studentId)
       return toast.error("Student pin number is required.");
 
-    if (showFinanceFields && !collegeEducationId)
+    if (showFinanceFields && !selectedFinanceEducationTypes.length)
       return toast.error("Select Education Type for Finance.");
 
     if (isPlacement && !collegeEducationId)
@@ -863,7 +871,7 @@ const AddUserModal: React.FC<{
           userId: targetUserId!,
           fullName: basicData.fullName,
           email: basicData.email,
-          collegeEducationId: collegeEducationId,
+          collegeEducationId: null,
           mobile: `${basicData.mobileCode}${basicData.mobileNumber}`,
           gender: basicData.gender,
           collegeId: basicData.collegeId,
@@ -873,6 +881,21 @@ const AddUserModal: React.FC<{
 
         if (!adminRes.success) {
           throw new Error(adminRes.error || "Admin creation failed");
+        }
+
+        if (!adminRes.data?.adminId || !collegeEducationId) {
+          throw new Error("Admin education type creation failed");
+        }
+
+        const adminEducationRes = await upsertAdminEducationTypes({
+          adminId: adminRes.data.adminId,
+          collegeEducationIds: [collegeEducationId],
+        });
+
+        if (!adminEducationRes.success) {
+          throw new Error(
+            adminEducationRes.error || "Admin education type creation failed",
+          );
         }
       } else {
         targetUserId = await persistUser(
@@ -893,15 +916,32 @@ const AddUserModal: React.FC<{
       if (!targetUserId) throw new Error("User creation failed");
 
       if (showFinanceFields && !user) {
-        await createFinanceManager({
+        const financeEducationIds = dbData.educations
+          .filter((education) =>
+            selectedFinanceEducationTypes.includes(
+              education.collegeEducationType,
+            ),
+          )
+          .map((education) => education.collegeEducationId);
+
+        if (!financeEducationIds.length) {
+          throw new Error("Select Education Type for Finance.");
+        }
+
+        const financeManagerId = await createFinanceManager({
           userId: targetUserId,
           collegeId: basicData.collegeIntId,
-          collegeEducationId: collegeEducationId!,
+          collegeEducationId: financeEducationIds[0],
           createdBy: basicData.adminId,
           type: isFinanceManager ? "manager" : "executive",
           isActive: true,
           createdAt: timestamp,
           updatedAt: timestamp,
+        });
+
+        await upsertFinanceManagerEducationTypes({
+          financeManagerId,
+          collegeEducationIds: financeEducationIds,
         });
       }
 
@@ -1297,7 +1337,26 @@ const AddUserModal: React.FC<{
                 />
               )}
 
-              {(isFaculty || showFinanceFields || isAdmin || isPlacement) && (
+              {showFinanceFields && (
+                <CustomMultiSelect
+                  label="Education Type"
+                  placeholder="Select Education Type"
+                  options={degreeOptions}
+                  selectedValues={selectedFinanceEducationTypes}
+                  onChange={(value) =>
+                    toggleMultiSelectValue(value, setSelectedFinanceEducationTypes)
+                  }
+                  onRemove={(value) =>
+                    setSelectedFinanceEducationTypes((prev) =>
+                      prev.filter((education) => education !== value),
+                    )
+                  }
+                  paddingY="py-1"
+                  gap="gap-1"
+                />
+              )}
+
+              {(isFaculty || isAdmin || isPlacement) && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-[#2D3748]">
                     Education Type <span className="text-red-600">*</span>

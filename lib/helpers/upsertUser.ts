@@ -168,32 +168,70 @@ export const upsertAdminEntry = async (payload: {
 
     const createdByUserId = creator.userId;
 
-    const { error } = await supabase.from("admins").upsert(
-      {
-        userId: payload.userId,
-        fullName: payload.fullName,
-        email: payload.email,
-        mobile: payload.mobile,
-        gender: payload.gender ?? null,
-        collegeId: payload.collegeId,
-        collegePublicId: payload.collegePublicId,
-        collegeEducationId: payload.collegeEducationId,
-        collegeCode: payload.collegeCode ?? null,
-        createdBy: createdByUserId,
-        updatedAt: now,
-        createdAt: now,
-      },
-      {
-        onConflict: "userId",
-      },
-    );
+    const { data, error } = await supabase
+      .from("admins")
+      .upsert(
+        {
+          userId: payload.userId,
+          fullName: payload.fullName,
+          email: payload.email,
+          mobile: payload.mobile,
+          gender: payload.gender ?? null,
+          collegeId: payload.collegeId,
+          collegePublicId: payload.collegePublicId,
+          collegeEducationId: null,
+          collegeCode: payload.collegeCode ?? null,
+          createdBy: createdByUserId,
+          updatedAt: now,
+          createdAt: now,
+        },
+        {
+          onConflict: "userId",
+        },
+      )
+      .select("adminId")
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, data };
+  } catch (err: any) {
+    console.error("ADMIN UPSERT ERROR:", err.message);
+    return { success: false, error: err.message || "Admin creation failed" };
+  }
+};
+
+export const upsertAdminEducationTypes = async (payload: {
+  adminId: number;
+  collegeEducationIds: number[];
+}) => {
+  try {
+    const now = new Date().toISOString();
+    const rows = payload.collegeEducationIds.map((collegeEducationId) => ({
+      adminId: payload.adminId,
+      collegeEducationId,
+      isActive: true,
+      is_deleted: false,
+      deletedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    }));
+
+    const { error } = await supabase
+      .from("admin_education_types")
+      .upsert(rows, {
+        onConflict: "adminId,collegeEducationId",
+      });
 
     if (error) throw error;
 
     return { success: true };
   } catch (err: any) {
-    console.error("ADMIN UPSERT ERROR:", err.message);
-    return { success: false, error: err.message || "Admin creation failed" };
+    console.error("ADMIN EDUCATION TYPES UPSERT ERROR:", err.message);
+    return {
+      success: false,
+      error: err.message || "Admin education types creation failed",
+    };
   }
 };
 

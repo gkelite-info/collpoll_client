@@ -42,3 +42,32 @@ export const createFinanceManager = async (
   }
   return data.financeManagerId as number;
 };
+
+export const upsertFinanceManagerEducationTypes = async (payload: {
+  financeManagerId: number;
+  collegeEducationIds: number[];
+}) => {
+  const now = new Date().toISOString();
+  const rows = payload.collegeEducationIds.map((collegeEducationId) => ({
+    financeManagerId: payload.financeManagerId,
+    collegeEducationId,
+    isActive: true,
+    is_deleted: false,
+    deletedAt: null,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const { error } = await supabase
+    .from("finance_manager_education_types")
+    .upsert(rows, {
+      onConflict: "financeManagerId,collegeEducationId",
+    });
+
+  if (error) {
+    throw new Error(
+      error.message || "Finance manager education types creation failed.",
+      { cause: error },
+    );
+  }
+};
