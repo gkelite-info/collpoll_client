@@ -27,7 +27,7 @@ const leaveRequestColumns = [
 ];
 
 const statusLabelMap: Record<string, string> = {
-  approved: "Accepted",
+  approved: "Approved",
   pending: "Pending",
   rejected: "Rejected",
 };
@@ -63,6 +63,7 @@ const mapDbRequestToFinanceRow = (
   const leaveType = titleCase(request.leaveType);
 
   return {
+    employeeLeaveRequestId: request.employeeLeaveRequestId,
     serialNo: String(serialNumber).padStart(2, "0"),
     employeeId: employeeCode,
     name: requesterName,

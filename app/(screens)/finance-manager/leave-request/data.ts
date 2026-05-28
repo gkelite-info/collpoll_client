@@ -42,6 +42,7 @@ export type LeaveChatMessage = {
 };
 
 export type FinanceLeaveRequest = {
+  employeeLeaveRequestId?: number;
   serialNo: string;
   employeeId: string;
   name: string;

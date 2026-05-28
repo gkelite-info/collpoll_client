@@ -59,7 +59,7 @@ export default function TableComponent({
   return (
     <div className="mt-2 w-full">
       <div
-        className="w-full bg-white shadow-md rounded-lg overflow-hidden"
+        className="relative w-full bg-white shadow-md rounded-lg overflow-hidden"
         style={fillHeight && height ? { height } : undefined}
       >
         <div
@@ -76,9 +76,17 @@ export default function TableComponent({
               columns={columns}
               tableData={tableData}
               isLoading={isLoading}
+              showEmptyState={false}
             />
           </table>
         </div>
+        {!isLoading && tableData.length === 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 top-11 flex items-center justify-center px-4 text-center text-gray-400">
+            <span className="text-base font-medium italic">
+              No data available.
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

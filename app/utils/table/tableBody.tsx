@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import TableShimmer from "./tableShimmer";
 
 type Column = {
@@ -9,11 +10,17 @@ type Column = {
 
 type TableBodyProps = {
   columns: Column[];
-  tableData: Record<string, any>[];
+  tableData: Record<string, ReactNode>[];
   isLoading?: boolean;
+  showEmptyState?: boolean;
 };
 
-export default function TableBody({ columns, tableData, isLoading = false }: TableBodyProps) {
+export default function TableBody({
+  columns,
+  tableData,
+  isLoading = false,
+  showEmptyState = true,
+}: TableBodyProps) {
   return (
     <tbody className="bg-white">
       {isLoading ? (
@@ -39,7 +46,7 @@ export default function TableBody({ columns, tableData, isLoading = false }: Tab
             ))}
           </tr>
         ))
-      ) : (
+      ) : showEmptyState ? (
         <tr>
           <td
             colSpan={columns.length}
@@ -47,6 +54,10 @@ export default function TableBody({ columns, tableData, isLoading = false }: Tab
           >
             No data available.
           </td>
+        </tr>
+      ) : (
+        <tr>
+          <td colSpan={columns.length} className="py-20" />
         </tr>
       )}
     </tbody>
