@@ -4,6 +4,7 @@ import {
   BookOpenText,
   BuildingOffice,
   Calendar,
+  CalendarCheck,
   CheckCircle,
   ClipboardText,
   FolderOpen,
@@ -83,6 +84,11 @@ export default function AdminNavbar({ onClose }: AdminNavbarProps) {
       icon: (isActive) => <BookOpenText size={18} weight={isActive ? "fill" : "regular"} />,
       label: t("Academic Setup"),
       path: "/admin/academic-setup",
+    },
+    {
+      icon: (isActive) => <CalendarCheck size={18} weight={isActive ? "fill" : "regular"} />,
+      label: "Leave Request",
+      path: "/admin/leave-request",
     },
     {
       icon: (isActive) => <BuildingOffice size={18} weight={isActive ? "fill" : "regular"} />,

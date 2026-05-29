@@ -454,7 +454,9 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                 ) : (
                   <Avatar alt="" sizes="w-8 h-8 md:w-10 md:h-10" />
                 )}
-                <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
+                {role !== "CollegeAdmin" && (
+                  <p className="text-xs text-[#282828] font-medium">ID - {identifierId}</p>
+                )}
               </button>
             </div>
           </div>
@@ -843,9 +845,11 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   <p className="truncate" title={displayRole || undefined}>
                     {displayRole || "-"}
                   </p>
-                  <p className="whitespace-nowrap shrink-0">
-                    ID - <span>{displayId || "-"}</span>
-                  </p>
+                  {role !== "CollegeAdmin" && (
+                    <p className="whitespace-nowrap shrink-0">
+                      ID - <span>{displayId || "-"}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className={`hidden w-full text-[#E5E5E5] ${role === "PlacementOfficer"
@@ -891,9 +895,6 @@ function HeaderContent({ onMenuClick, onAddTaskClick, onAddUserClick }: Props) {
                   {role === "CollegeAdmin" && (
                     <>
                       <p className="truncate">{role}</p>
-                      <p className="whitespace-nowrap shrink-0">
-                        ID - <span>{identifierId}</span>
-                      </p>
                     </>
                   )}
                   {role === "Parent" && (
