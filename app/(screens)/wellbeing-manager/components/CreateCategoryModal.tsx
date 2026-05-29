@@ -46,14 +46,32 @@ export default function CreateCategoryModal({
   }, [isOpen, categoryData]);
 
   const handleCreateOrSave = async () => {
-    if (!categoryName.trim()) {
+    const trimmedCatName = categoryName.trim();
+    if (!trimmedCatName) {
       toast.error("Category name is required.");
       return;
     }
+
+    // Trim all sub-categories and filter out empty ones
+    const trimmedSubCats = subCategories
+      .map((sub) => sub.trim())
+      .filter((sub) => sub.length > 0);
+
+    // Check for duplicate sub-categories in the list
+    const uniqueSubs = new Set<string>();
+    for (const sub of trimmedSubCats) {
+      const lower = sub.toLowerCase();
+      if (uniqueSubs.has(lower)) {
+        toast.error(`Sub-category "${sub}" is duplicated.`);
+        return;
+      }
+      uniqueSubs.add(lower);
+    }
+
     if (onSave) {
       setIsSaving(true);
       try {
-        await onSave(categoryName.trim(), subCategories, appliesTo);
+        await onSave(trimmedCatName, trimmedSubCats, appliesTo);
       } catch {
         setIsSaving(false);
       }
@@ -65,10 +83,23 @@ export default function CreateCategoryModal({
   if (!isOpen) return null;
 
   const handleAddSubCategory = () => {
-    if (subCategoryInput.trim() && !subCategories.includes(subCategoryInput.trim())) {
-      setSubCategories([...subCategories, subCategoryInput.trim()]);
-      setSubCategoryInput("");
+    const trimmedInput = subCategoryInput.trim();
+    if (!trimmedInput) {
+      toast.error("Sub-category name cannot be empty.");
+      return;
     }
+
+    const isDuplicate = subCategories.some(
+      (sub) => sub.trim().toLowerCase() === trimmedInput.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      toast.error(`Sub-category "${trimmedInput}" already exists.`);
+      return;
+    }
+
+    setSubCategories([...subCategories, trimmedInput]);
+    setSubCategoryInput("");
   };
 
   const handleRemoveSubCategory = (tagToRemove: string) => {

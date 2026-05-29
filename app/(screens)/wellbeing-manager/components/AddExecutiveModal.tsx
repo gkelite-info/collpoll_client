@@ -57,7 +57,7 @@ export default function AddExecutiveModal({ isOpen, onClose }: { isOpen: boolean
           </button>
           <button 
             onClick={onClose} 
-            className="flex-1 cursor-pointer py-2.5 rounded-xl bg-[#43C17A] text-white font-bold hover:bg-[#34A362] transition-colors shadow-[0_2px_8px_rgba(67,193,122,0.2)] text-sm"
+            className="flex-1 cursor-pointer py-2.5 rounded-xl bg-[#43C17A] text-white font-bold hover:bg-[#34A362] transition-colors shadow-[0_2px_8px_rgba(67,193,122,0.25)] text-sm"
           >
             Assign
           </button>

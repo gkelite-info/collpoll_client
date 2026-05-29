@@ -7,6 +7,7 @@ import { useUser } from "@/app/utils/context/UserContext";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
 import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
 import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
+import { fetchWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
 
 const toPascalCase = (str: string) => {
   return str.replace(
@@ -46,6 +47,7 @@ interface CustomSingleSelectProps {
   onChange: (val: string) => void;
   required?: boolean;
   disabled?: boolean;
+  hoverClassName?: string;
 }
 
 const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
@@ -56,6 +58,7 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
   onChange,
   required = false,
   disabled = false,
+  hoverClassName,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -110,7 +113,9 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
                   onChange(opt);
                   setIsOpen(false);
                 }}
-                className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm text-gray-700 transition-colors ${
+                  hoverClassName || "hover:bg-gray-50 text-gray-700"
+                }`}
               >
                 <span>{opt}</span>
                 {selectedValue === opt && (
@@ -174,7 +179,8 @@ export default function CreateExecutiveModal({
   const [selectedSection, setSelectedSection] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  const CATEGORY_OPTIONS = ["Infrastructure", "Sports", "Medical", "Event", "Safety"];
+  const [categoriesList, setCategoriesList] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   useEffect(() => {
     if (isOpen && collegeId) {
@@ -186,7 +192,20 @@ export default function CreateExecutiveModal({
           toast.error("Failed to load college metadata");
         }
       };
+      const loadCategories = async () => {
+        setLoadingCategories(true);
+        try {
+          const { categories: fetched } = await fetchWellbeingCategories(collegeId, 1, 100);
+          const names = fetched.map((cat) => cat.categoryName);
+          setCategoriesList(names);
+        } catch (error) {
+          console.error("Failed to fetch wellbeing categories for executive creation:", error);
+        } finally {
+          setLoadingCategories(false);
+        }
+      };
       init();
+      loadCategories();
     }
   }, [isOpen, collegeId]);
 
@@ -558,10 +577,11 @@ export default function CreateExecutiveModal({
 
               <CustomSingleSelect
                 label="Category"
-                placeholder="Select Category"
-                options={CATEGORY_OPTIONS}
+                placeholder={loadingCategories ? "Loading categories..." : "Select Category"}
+                options={categoriesList}
                 selectedValue={selectedCategory}
                 onChange={setSelectedCategory}
+                hoverClassName="hover:bg-blue-600 hover:text-white"
                 required
               />
             </div>
@@ -767,6 +787,12 @@ export default function CreateExecutiveModal({
 
           <div className="px-6 py-5 border-t border-gray-50 flex gap-4 flex-shrink-0 bg-white">
             <button
+              onClick={onClose}
+              className="flex-1 border focus:outline-none cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-2 rounded-md hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+            <button
               onClick={handleSave}
               disabled={loading || isSuccess}
               className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-2 rounded-md transition-all shadow-sm ${
@@ -776,12 +802,6 @@ export default function CreateExecutiveModal({
               }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={onClose}
-              className="flex-1 border focus:outline-none cursor-pointer border-gray-300 text-[#282828] text-sm font-medium py-2 rounded-md hover:bg-gray-50 transition-all"
-            >
-              Cancel
             </button>
           </div>
         </div>

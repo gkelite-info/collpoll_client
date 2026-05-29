@@ -177,7 +177,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
           }}
           title="Update Status"
           confirmText="Confirm"
-          name={`Issue #${issue.id}`}
+          name={`(Issue #${issue.id})`}
           actionType={pendingStatus === "Rejected" ? "reject" : "accept"}
           customDescription={
             <span className="flex flex-col gap-3 text-sm text-gray-500 mt-2 block">
