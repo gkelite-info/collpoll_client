@@ -10,6 +10,7 @@ import type { CategoryEditData } from "../components/CreateCategoryModal";
 import ConfirmDeleteModal from "@/app/(screens)/admin/calendar/components/ConfirmDeleteModal";
 import toast, { Toaster } from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
+import { supabase } from "@/lib/supabaseClient";
 import {
   fetchWellbeingCategories,
   createWellbeingCategory,
@@ -116,12 +117,42 @@ function CategoriesContent() {
     subCats: string[],
     applies: string,
   ) => {
+    if (!collegeId || !wellBeingId) {
+      toast.error("User context is not ready. Please try again.");
+      throw new Error("Missing context");
+    }
+
+    const trimmedCatName = updatedCatName.trim();
+    const lowercaseCatName = trimmedCatName.toLowerCase();
+
+    // Check database for duplicate category name
+    const { data: existingCategories, error: checkError } = await supabase
+      .from("wellbeing_categories")
+      .select("categoryId, categoryName")
+      .eq("collegeId", collegeId)
+      .eq("isActive", true)
+      .eq("is_deleted", false);
+
+    if (checkError) {
+      console.error("Error checking duplicate category name:", checkError);
+    } else if (existingCategories) {
+      const isDuplicate = existingCategories.some(
+        (cat) =>
+          cat.categoryName.trim().toLowerCase() === lowercaseCatName &&
+          cat.categoryId !== categoryToEdit?.categoryId
+      );
+      if (isDuplicate) {
+        toast.error(`Category "${trimmedCatName}" already exists.`);
+        throw new Error("Category already exists");
+      }
+    }
+
     const appliesToValue = applies.toLowerCase() as AppliesToEnum;
 
     if (categoryToEdit?.categoryId) {
       const result = await updateWellbeingCategory({
         categoryId: categoryToEdit.categoryId,
-        categoryName: updatedCatName,
+        categoryName: trimmedCatName,
         appliesTo: appliesToValue,
         subCategories: subCats,
       });
@@ -133,13 +164,8 @@ function CategoriesContent() {
 
       toast.success("Category updated successfully");
     } else {
-      if (!collegeId || !wellBeingId) {
-        toast.error("User context is not ready. Please try again.");
-        throw new Error("Missing context");
-      }
-
       const result = await createWellbeingCategory({
-        categoryName: updatedCatName,
+        categoryName: trimmedCatName,
         appliesTo: appliesToValue,
         collegeId,
         createdBy: wellBeingId,
