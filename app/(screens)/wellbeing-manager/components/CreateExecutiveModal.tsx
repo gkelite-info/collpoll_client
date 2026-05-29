@@ -1,13 +1,11 @@
 "use client";
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { CaretLeft, Eye, EyeSlash, Lock, X, Check } from "@phosphor-icons/react";
 import toast, { Toaster } from "react-hot-toast";
 import { useUser } from "@/app/utils/context/UserContext";
 import { fetchModalInitialData } from "@/lib/helpers/admin/upsertFaculty";
-import { persistUser } from "@/lib/helpers/admin/registrations/persistUser";
-import { createWellbeing } from "@/lib/helpers/admin/registrations/wellbeing/wellbeingRegistration";
 import { fetchWellbeingCategories } from "@/lib/helpers/wellbeingCategories/wellbeingCategoryAPI";
+import { saveWellbeingExecutive } from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
 
 const toPascalCase = (str: string) => {
   return str.replace(
@@ -95,9 +93,8 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
         <CaretLeft
           size={14}
           weight="bold"
-          className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-90" : "-rotate-90"
-          }`}
+          className={`text-gray-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : "-rotate-90"
+            }`}
         />
       </div>
 
@@ -113,9 +110,8 @@ const CustomSingleSelect: React.FC<CustomSingleSelectProps> = ({
                   onChange(opt);
                   setIsOpen(false);
                 }}
-                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm text-gray-700 transition-colors ${
-                  hoverClassName || "hover:bg-gray-50 text-gray-700"
-                }`}
+                className={`flex items-center justify-between px-3 py-2 cursor-pointer text-sm text-gray-700 transition-colors ${hoverClassName || "hover:bg-gray-50 text-gray-700"
+                  }`}
               >
                 <span>{opt}</span>
                 {selectedValue === opt && (
@@ -180,6 +176,7 @@ export default function CreateExecutiveModal({
   const [selectedCategory, setSelectedCategory] = useState("");
 
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
+  const [categoriesObjList, setCategoriesObjList] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
 
   useEffect(() => {
@@ -196,6 +193,7 @@ export default function CreateExecutiveModal({
         setLoadingCategories(true);
         try {
           const { categories: fetched } = await fetchWellbeingCategories(collegeId, 1, 100);
+          setCategoriesObjList(fetched);
           const names = fetched.map((cat) => cat.categoryName);
           setCategoriesList(names);
         } catch (error) {
@@ -208,6 +206,10 @@ export default function CreateExecutiveModal({
       loadCategories();
     }
   }, [isOpen, collegeId]);
+
+  const selectedCategoryId = useMemo(() => {
+    return categoriesObjList.find((cat) => cat.categoryName === selectedCategory)?.categoryId || null;
+  }, [categoriesObjList, selectedCategory]);
 
   const resetForm = () => {
     setBasicData(initialBasicData);
@@ -269,8 +271,8 @@ export default function CreateExecutiveModal({
     () =>
       selectedEducationId
         ? dbData.branches.filter(
-            (b) => b.collegeEducationId === selectedEducationId,
-          )
+          (b) => b.collegeEducationId === selectedEducationId,
+        )
         : [],
     [dbData.branches, selectedEducationId],
   );
@@ -325,7 +327,7 @@ export default function CreateExecutiveModal({
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email ID is required.");
-    
+
     const hasMobileNumber = Boolean(basicData.mobileNumber?.trim());
     if (!basicData.mobileCode) {
       return toast.error("Country code is required.");
@@ -386,63 +388,31 @@ export default function CreateExecutiveModal({
 
     setLoading(true);
     try {
-      // Simulate success toast since DB operations are commented out for later activation
-      toast.success("Wellbeing Executive Created Successfully (Frontend Demo)");
-      setIsSuccess(true);
-      setTimeout(() => {
-        resetForm();
-        onClose();
-        setLoading(false);
-        setIsSuccess(false);
-      }, 2000);
-
-      /*
-      // DATABASE LOGIC (COMMENTED OUT FOR LATER ACTIVATION)
-      const timestamp = new Date().toISOString();
-      const normalizedDateOfJoining = basicData.dateOfJoining
-        ? new Date(basicData.dateOfJoining).toISOString().split("T")[0]
-        : null;
-
-      const normalizedExperience = Number(basicData.professionalExperienceYears);
-
-      const targetUserId = await persistUser(
-        true,
-        {
-          ...basicData,
-          collegeIntId: collegeId!,
-          collegePublicId: collegePublicId || "",
-          collegeCode: "",
-          dateOfJoining: normalizedDateOfJoining,
-          professionalExperienceYears: normalizedExperience,
-          adminId: userId || 0,
-        },
-        null,
-        timestamp
-      );
-
-      if (!targetUserId) throw new Error("User creation failed");
-
-      const wellbeingCollegeDetails = [
-        {
-          collegeEducationId: selectedEducationId!,
-          collegeBranchId: selectedBranchId!,
-          collegeAcademicYearId: selectedYearId!,
-          collegeSectionsId: selectedSectionId!,
-        }
-      ];
-
-      await createWellbeing({
-        userId: targetUserId,
-        collegeId: collegeId!,
-        roleType: "wellbeingExecutive",
+      const payload = {
+        fullName: basicData.fullName,
+        email: basicData.email,
+        mobileCode: basicData.mobileCode,
+        mobileNumber: basicData.mobileNumber,
         gender: basicData.gender,
+        dateOfJoining: basicData.dateOfJoining,
+        professionalExperienceYears: Number(basicData.professionalExperienceYears),
         employeeId: basicData.identifierValue,
-        dateOfJoining: normalizedDateOfJoining,
-        createdBy: userId || 0,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        collegeDetails: wellbeingCollegeDetails,
-      });
+        password: basicData.password,
+        collegeId: collegeId!,
+        collegePublicId: collegePublicId || "",
+        categoryId: selectedCategoryId!,
+        collegeEducationId: selectedEducationId!,
+        collegeBranchId: selectedBranchId!,
+        collegeAcademicYearId: selectedYearId!,
+        collegeSectionsId: selectedSectionId!,
+        byManager: userId!,
+      };
+
+      const res = await saveWellbeingExecutive(payload);
+
+      if (!res.success) {
+        throw new Error(res.error);
+      }
 
       toast.success("Wellbeing Executive Created Successfully");
       setIsSuccess(true);
@@ -452,9 +422,7 @@ export default function CreateExecutiveModal({
         setLoading(false);
         setIsSuccess(false);
       }, 2000);
-      */
     } catch (e: any) {
-      console.error(e);
       toast.error(e?.message || "Failed to create executive.");
       setLoading(false);
     }
@@ -464,7 +432,7 @@ export default function CreateExecutiveModal({
 
   return (
     <>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 font-sans">
         <div className="bg-white text-black w-full max-w-[550px] max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-clip animate-in fade-in zoom-in duration-200">
           <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
@@ -478,7 +446,6 @@ export default function CreateExecutiveModal({
           </div>
 
           <div className="p-4 sm:p-5 overflow-y-auto custom-scrollbar flex flex-col gap-3.5">
-            {/* Full Name */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#2D3748]">
                 Full Name <span className="text-red-600">*</span>
@@ -493,7 +460,6 @@ export default function CreateExecutiveModal({
               />
             </div>
 
-            {/* Email ID */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-[#2D3748]">
                 Email ID <span className="text-red-600">*</span>
@@ -508,7 +474,6 @@ export default function CreateExecutiveModal({
               />
             </div>
 
-            {/* College ID & Mobile */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -554,7 +519,6 @@ export default function CreateExecutiveModal({
               </div>
             </div>
 
-            {/* Role & Category */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -586,7 +550,6 @@ export default function CreateExecutiveModal({
               />
             </div>
 
-            {/* Education Type & Branch */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <CustomSingleSelect
                 label="Education Type"
@@ -617,7 +580,6 @@ export default function CreateExecutiveModal({
               />
             </div>
 
-            {/* Year & Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <CustomSingleSelect
                 label="Year"
@@ -643,7 +605,6 @@ export default function CreateExecutiveModal({
               />
             </div>
 
-            {/* Date of Joining & Experience */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -678,7 +639,6 @@ export default function CreateExecutiveModal({
               </div>
             </div>
 
-            {/* Employee Id & Gender */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -732,7 +692,6 @@ export default function CreateExecutiveModal({
               </div>
             </div>
 
-            {/* Password & Confirm Password */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <div className="space-y-1">
                 <label className="text-xs font-bold text-[#2D3748]">
@@ -795,11 +754,10 @@ export default function CreateExecutiveModal({
             <button
               onClick={handleSave}
               disabled={loading || isSuccess}
-              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-2 rounded-md transition-all shadow-sm ${
-                isSuccess
+              className={`flex-1 cursor-pointer focus:outline-none text-white text-sm font-medium py-2 rounded-md transition-all shadow-sm ${isSuccess
                   ? "bg-green-600 cursor-default"
                   : "bg-[#43C17A] hover:bg-[#3ea876]"
-              }`}
+                }`}
             >
               {isSuccess ? "Saved" : loading ? "Saving..." : "Save"}
             </button>

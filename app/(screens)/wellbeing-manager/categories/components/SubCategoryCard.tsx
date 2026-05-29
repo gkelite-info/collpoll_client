@@ -12,6 +12,7 @@ type SubCategoryCardProps = {
   subCategories: SubCategory[];
   onEdit?: () => void;
   onDelete?: () => void;
+  isDeleteDisabled?: boolean;
 };
 
 export default function SubCategoryCard({
@@ -20,6 +21,7 @@ export default function SubCategoryCard({
   subCategories,
   onEdit,
   onDelete,
+  isDeleteDisabled = false,
 }: SubCategoryCardProps) {
   return (
     <div className="bg-white rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-gray-100 p-5 flex flex-col hover:shadow-md transition-shadow h-[280px]">
@@ -37,12 +39,25 @@ export default function SubCategoryCard({
           >
             <PencilSimple size={16} weight="fill" />
           </button>
-          <button
-            onClick={onDelete}
-            className="flex cursor-pointer items-center justify-center w-7 h-7 rounded-full bg-[#FF00001A] text-[#FF0000] shadow-sm shrink-0"
-          >
-            <TrashSimpleIcon size={16} weight="fill" className="md:w-4 md:h-4" />
-          </button>
+          <div className="relative group">
+            <button
+              type="button"
+              aria-disabled={isDeleteDisabled}
+              onClick={isDeleteDisabled ? undefined : onDelete}
+              className={`flex items-center justify-center w-7 h-7 rounded-full shadow-sm shrink-0 transition-all ${
+                isDeleteDisabled
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                  : "cursor-pointer bg-[#FF00001A] text-[#FF0000] hover:bg-[#FF00002A] active:scale-95"
+              }`}
+            >
+              <TrashSimpleIcon size={16} weight="fill" className="md:w-4 md:h-4" />
+            </button>
+            {isDeleteDisabled && (
+              <div className="absolute right-0 top-full mt-1.5 hidden group-hover:flex group-focus-within:flex w-44 p-2 bg-[#16284F] text-white text-[11px] font-medium rounded-lg shadow-lg z-50 text-center pointer-events-none transition-all after:content-[''] after:absolute after:bottom-full after:right-[10px] after:border-4 after:border-transparent after:border-b-[#16284F]">
+                Cannot delete category with assigned executives
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

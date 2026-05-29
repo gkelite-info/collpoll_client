@@ -52,12 +52,10 @@ export default function CreateCategoryModal({
       return;
     }
 
-    // Trim all sub-categories and filter out empty ones
     const trimmedSubCats = subCategories
       .map((sub) => sub.trim())
       .filter((sub) => sub.length > 0);
 
-    // Check for duplicate sub-categories in the list
     const uniqueSubs = new Set<string>();
     for (const sub of trimmedSubCats) {
       const lower = sub.toLowerCase();
