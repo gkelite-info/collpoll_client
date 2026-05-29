@@ -23,12 +23,7 @@ import type {
 } from "@/lib/helpers/wellbeingCategories/types";
 import { CategoryShimmer, SubCategoryShimmer } from "./components/cardsShimmer";
 import { Pagination } from "@/app/(screens)/admin/academic-setup/components/pagination";
-
-const dummyExecutives = [
-  { id: 1, name: "Rahul Sharma", staffId: "ID-28939", role: "Executive", image: "https://i.pravatar.cc/150?img=11" },
-  { id: 2, name: "Shreya Patel", staffId: "ID-28939", role: "Executive", image: "https://i.pravatar.cc/150?img=47" },
-  { id: 3, name: "Sameer Rathod", staffId: "ID-28939", role: "Executive", image: "https://i.pravatar.cc/150?img=12" },
-];
+import { fetchWellbeingExecutives } from "@/lib/helpers/wellbeing/wellbeingExecutiveAPI";
 
 const itemsPerpage = 6;
 
@@ -41,6 +36,7 @@ function CategoriesContent() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [categoriesList, setCategoriesList] = useState<WellbeingCategoryWithSubs[]>([]);
+  const [executivesList, setExecutivesList] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterAppliesTo, setFilterAppliesTo] = useState<"all" | AppliesToEnum>("all");
   const [totalItems, setTotalItems] = useState(0);
@@ -70,14 +66,18 @@ function CategoriesContent() {
     if (!collegeId) return;
     try {
       setIsLoading(true);
-      const { categories, totalCount } = await fetchWellbeingCategories(
-        collegeId,
-        currentPage,
-        itemsPerpage,
-        filterAppliesTo
-      );
-      setCategoriesList(categories);
-      setTotalItems(totalCount);
+      const [categoriesRes, execs] = await Promise.all([
+        fetchWellbeingCategories(
+          collegeId,
+          currentPage,
+          itemsPerpage,
+          filterAppliesTo
+        ),
+        fetchWellbeingExecutives(collegeId)
+      ]);
+      setCategoriesList(categoriesRes.categories);
+      setTotalItems(categoriesRes.totalCount);
+      setExecutivesList(execs);
     } catch (err) {
       toast.error("Failed to load categories.");
     } finally {
@@ -125,7 +125,6 @@ function CategoriesContent() {
     const trimmedCatName = updatedCatName.trim();
     const lowercaseCatName = trimmedCatName.toLowerCase();
 
-    // Check database for duplicate category name
     const { data: existingCategories, error: checkError } = await supabase
       .from("wellbeing_categories")
       .select("categoryId, categoryName")
@@ -187,6 +186,15 @@ function CategoriesContent() {
 
   const handleDelete = async () => {
     if (!categoryToDelete) return;
+
+    const hasExecutives = executivesList.some((e) => e.categoryId === categoryToDelete.categoryId);
+    if (hasExecutives) {
+      toast.error("Cannot delete category with assigned executives.");
+      setIsDeleteModalOpen(false);
+      setCategoryToDelete(null);
+      return;
+    }
+
     setIsDeleting(true);
     try {
       const result = await deleteWellbeingCategory(categoryToDelete.categoryId);
@@ -277,6 +285,7 @@ function CategoriesContent() {
           <>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 items-start content-start lg:overflow-y-auto custom-scrollbar pr-1 pb-4">
               {categoriesList.map((cat) => {
+                const hasExecutives = executivesList.some((e) => e.categoryId === cat.categoryId);
                 if (activeTab === "categories") {
                   return (
                     <SubCategoryCard
@@ -292,6 +301,7 @@ function CategoriesContent() {
                         setCategoryToDelete(cat);
                         setIsDeleteModalOpen(true);
                       }}
+                      isDeleteDisabled={hasExecutives}
                     />
                   );
                 } else {
@@ -299,8 +309,8 @@ function CategoriesContent() {
                     <CategoryCard
                       key={cat.categoryId}
                       title={cat.categoryName}
-                      executivesAssigned={dummyExecutives.length}
-                      executives={dummyExecutives}
+                      executivesAssigned={executivesList.filter((e) => e.categoryId === cat.categoryId).length}
+                      executives={executivesList.filter((e) => e.categoryId === cat.categoryId)}
                       onEdit={() => handleEditCategory(cat)}
                       onDelete={() => {
                         setCategoryToDelete(cat);
@@ -354,7 +364,7 @@ function CategoriesContent() {
         confirmText="Yes, Delete"
         actionType="remove"
       />
-      <Toaster position="top-right" />
+      <Toaster position="top-right" containerStyle={{ zIndex: 99999 }} />
     </main>
   );
 }

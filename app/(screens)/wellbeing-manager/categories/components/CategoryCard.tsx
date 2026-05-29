@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import { Avatar } from "@/app/utils/Avatar";
 import { TrashSimpleIcon, PencilSimple } from "@phosphor-icons/react";
 
 type Executive = {
@@ -41,12 +41,25 @@ export default function CategoryCard({
           >
             <PencilSimple size={16} weight="fill" />
           </button>
-          <button
-            onClick={onDelete}
-            className="flex cursor-pointer items-center justify-center w-7 h-7 rounded-full bg-[#FF00001A] text-[#FF0000] shadow-sm shrink-0"
-          >
-            <TrashSimpleIcon  size={16} weight="fill" className="md:w-4 md:h-4"/>
-          </button>
+          <div className="relative group">
+            <button
+              type="button"
+              aria-disabled={executivesAssigned > 0}
+              onClick={executivesAssigned > 0 ? undefined : onDelete}
+              className={`flex items-center justify-center w-7 h-7 rounded-full shadow-sm shrink-0 transition-all ${
+                executivesAssigned > 0
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-60"
+                  : "cursor-pointer bg-[#FF00001A] text-[#FF0000] hover:bg-[#FF00002A] active:scale-95"
+              }`}
+            >
+              <TrashSimpleIcon size={16} weight="fill" className="md:w-4 md:h-4"/>
+            </button>
+            {executivesAssigned > 0 && (
+              <div className="absolute right-0 top-full mt-1.5 hidden group-hover:flex group-focus-within:flex w-44 p-2 bg-[#16284F] text-white text-[11px] font-medium rounded-lg shadow-lg z-50 text-center pointer-events-none transition-all after:content-[''] after:absolute after:bottom-full after:right-[10px] after:border-4 after:border-transparent after:border-b-[#16284F]">
+                Cannot delete category with assigned executives
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -54,15 +67,7 @@ export default function CategoryCard({
         {executives.length > 0 ? (
           executives.map((exec) => (
             <div key={exec.id} className="flex items-center gap-3">
-              <div className="relative w-[42px] h-[42px] rounded-full overflow-hidden flex-shrink-0 bg-gray-200 border border-gray-100 shadow-sm">
-                <Image
-                  src={exec.image}
-                  alt={exec.name}
-                  fill
-                  sizes="42px"
-                  className="object-cover"
-                />
-              </div>
+              <Avatar src={exec.image} alt={exec.name} size={42} />
               
               <div className="flex flex-col min-w-0">
                 <div className="flex items-baseline gap-2">
