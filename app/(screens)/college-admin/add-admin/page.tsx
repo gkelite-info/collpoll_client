@@ -5,12 +5,16 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
     InputField,
-    SelectField,
 } from "../../super-admin/registration/components/reusableComponents";
-import { upsertAdminEntry, upsertUser } from "@/lib/helpers/upsertUser";
+import {
+    upsertAdminEducationTypes,
+    upsertAdminEntry,
+    upsertUser,
+} from "@/lib/helpers/upsertUser";
 import { supabase } from "@/lib/supabaseClient";
 import { Eye, EyeSlash } from "@phosphor-icons/react";
 import { upsertIdentifier } from "@/lib/helpers/identifiers/upsertIdentifier";
+import { CustomMultiSelect } from "@/app/(screens)/admin/(dashboard)/components/modal/userModalComponents";
 
 type AdminForm = {
     fullName: string;
@@ -18,8 +22,7 @@ type AdminForm = {
     countryCode: string;
     phone: string;
     collegeId: string;
-    educationType: string;
-    collegeEducationId: number | null;
+    educationTypes: string[];
     password: string;
     confirmPassword: string;
     gender: "Male" | "Female" | "";
@@ -34,10 +37,9 @@ const initialFormState: AdminForm = {
     countryCode: "+91",
     phone: "",
     collegeId: "",
-    educationType: "",
+    educationTypes: [],
     password: "",
     confirmPassword: "",
-    collegeEducationId: null,
     gender: "",
     dateOfJoining: "",
     experienceYears: "",
@@ -155,7 +157,7 @@ export default function AdminRegistration() {
                     );
                 }
             }
-            if (!form.educationType) return toast.error("Select Education Type.");
+            if (!form.educationTypes.length) return toast.error("Select Education Type.");
 
             if (!form.gender) return toast.error("Select Gender.");
 
@@ -246,12 +248,21 @@ export default function AdminRegistration() {
             }
 
             createdUserId = userRes.data.userId;
+            const selectedEducationIds = educations
+                .filter((education) =>
+                    form.educationTypes.includes(education.collegeEducationType),
+                )
+                .map((education) => education.collegeEducationId);
+
+            if (!selectedEducationIds.length) {
+                throw new Error("Select Education Type.");
+            }
 
             const adminRes = await upsertAdminEntry({
                 userId: createdUserId!,
                 fullName: form.fullName,
                 email: form.email,
-                collegeEducationId: Number(form.educationType),
+                collegeEducationId: null,
                 mobile: `${form.countryCode}${form.phone}`,
                 gender: form.gender,
                 collegeId: Number(form.collegeId),
@@ -261,6 +272,21 @@ export default function AdminRegistration() {
 
             if (!adminRes.success) {
                 throw new Error(adminRes.error || "Admin creation failed");
+            }
+
+            if (!adminRes.data?.adminId) {
+                throw new Error("Admin creation failed");
+            }
+
+            const adminEducationRes = await upsertAdminEducationTypes({
+                adminId: adminRes.data.adminId,
+                collegeEducationIds: selectedEducationIds,
+            });
+
+            if (!adminEducationRes.success) {
+                throw new Error(
+                    adminEducationRes.error || "Admin education type creation failed",
+                );
             }
 
             await upsertIdentifier({
@@ -357,7 +383,7 @@ export default function AdminRegistration() {
                             //     }
                             // }}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                let value = e.target.value.replace(/\D/g, "");
+                                const value = e.target.value.replace(/\D/g, "");
                                 if (form.countryCode === "+91") {
                                     if (
                                         value.length === 1 &&
@@ -400,44 +426,34 @@ export default function AdminRegistration() {
             </div>
             <div className="grid md:grid-cols-2 gap-6 mt-5">
                 <div className="flex flex-col w-full">
-                    <label className="text-[#282828] font-semibold text-[15px] mb-1.5">
-                        Education Type
-                    </label>
-
-                    <select
-                        value={form.educationType}
-                        onChange={(e) => handleChange("educationType", e.target.value)}
-                        className="
-                w-full
-                border border-[#CCCCCC]
-                rounded-lg
-                px-2 py-2.5
-                text-sm
-                text-[#282828]
-                bg-white
-                shadow-sm
-                outline-none
-                focus:border-[#49C77F]
-                focus:ring-1 focus:ring-[#49C77F]
-                transition-all
-                cursor-pointer
-            "
-                    >
-                        <option value="">
-                            {educations.length === 0
+                    <CustomMultiSelect
+                        label="Education Type"
+                        placeholder={
+                            educations.length === 0
                                 ? "No Education Types Available"
-                                : "Select Education Type"}
-                        </option>
-
-                        {educations.map((edu) => (
-                            <option
-                                key={edu.collegeEducationId}
-                                value={String(edu.collegeEducationId)}
-                            >
-                                {edu.collegeEducationType}
-                            </option>
-                        ))}
-                    </select>
+                                : "Select Education Type"
+                        }
+                        options={educations.map((edu) => edu.collegeEducationType)}
+                        selectedValues={form.educationTypes}
+                        disabled={educations.length === 0}
+                        onChange={(value) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                educationTypes: prev.educationTypes.includes(value)
+                                    ? prev.educationTypes.filter((item) => item !== value)
+                                    : [...prev.educationTypes, value],
+                            }))
+                        }
+                        onRemove={(value) =>
+                            setForm((prev) => ({
+                                ...prev,
+                                educationTypes: prev.educationTypes.filter(
+                                    (item) => item !== value,
+                                ),
+                            }))
+                        }
+                        closedBorder="border-[#CCCCCC]"
+                    />
                 </div>
 
                 <InputField

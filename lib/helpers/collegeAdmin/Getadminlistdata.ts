@@ -59,8 +59,7 @@ export async function getAdminListData(
     .from("admins")
     .select(`
       adminId, userId, fullName, email, mobile, gender,
-      collegeEducationId, createdBy, is_deleted,
-      college_education ( collegeEducationType )
+      collegeEducationId, createdBy, is_deleted
     `, { count: "exact" })
     .eq("collegeId", collegeId)
     .eq("is_deleted", false);
@@ -79,7 +78,34 @@ export async function getAdminListData(
 
   if (adminsError) throw adminsError;
 
-  const eduIds       = admins ? [...new Set(admins.map((a: any) => a.collegeEducationId))] as number[] : [];
+  const adminIds = admins ? [...new Set(admins.map((a: any) => a.adminId).filter(Boolean))] as number[] : [];
+  const { data: adminEducationTypes } = await supabase
+    .from("admin_education_types")
+    .select(`
+      adminId,
+      collegeEducationId,
+      college_education:collegeEducationId (
+        collegeEducationType
+      )
+    `)
+    .in("adminId", adminIds.length > 0 ? adminIds : [-1])
+    .eq("isActive", true)
+    .eq("is_deleted", false)
+    .is("deletedAt", null);
+
+  const adminEducationMap = new Map<number, any[]>();
+  (adminEducationTypes ?? []).forEach((row: any) => {
+    const list = adminEducationMap.get(row.adminId) ?? [];
+    list.push(row);
+    adminEducationMap.set(row.adminId, list);
+  });
+
+  const eduIds = [
+    ...new Set([
+      ...(adminEducationTypes ?? []).map((row: any) => row.collegeEducationId),
+      ...(admins ?? []).map((a: any) => a.collegeEducationId).filter(Boolean),
+    ]),
+  ] as number[];
   const createdByIds = admins ? [...new Set(admins.map((a: any) => a.createdBy).filter(Boolean))] as number[] : [];
   const adminUserIds = admins ? [...new Set(admins.map((a: any) => a.userId).filter(Boolean))] as number[] : [];
 
@@ -202,7 +228,15 @@ export async function getAdminListData(
   const hrTotal = (hrData ?? []).length;
 
   const data: AdminListRow[] = (admins ?? []).map((a: any) => {
-    const eduId = a.collegeEducationId;
+    const educationRows = adminEducationMap.get(a.adminId) ?? [];
+    const educationIds =
+      educationRows.length > 0
+        ? educationRows.map((row) => row.collegeEducationId)
+        : [a.collegeEducationId].filter(Boolean);
+    const totalForEduIds = (
+      ids: number[],
+      counter: (eduId: number) => number,
+    ) => ids.reduce((total, eduId) => total + counter(eduId), 0);
     return {
       adminId:       a.adminId,
       identifierId:  employeeIdMap.get(a.userId) ?? null,
@@ -210,17 +244,20 @@ export async function getAdminListData(
       email:         a.email  ?? "—",
       mobile:        a.mobile ?? "—",
       gender:        a.gender ?? "—",
-      educationType: (a.college_education as any)?.collegeEducationType ?? "N/A",
+      educationType: educationRows
+        .map((row) => (row.college_education as any)?.collegeEducationType)
+        .filter(Boolean)
+        .join(", ") || "N/A",
       branches:      (branches ?? [])
-        .filter((b: any) => b.collegeEducationId === eduId)
+        .filter((b: any) => educationIds.includes(b.collegeEducationId))
         .map((b: any) => b.collegeBranchCode)
         .join(", ") || "—",
       createdBy:   creatorMap.get(a.createdBy) ?? "—",
-      faculty:     facultyByEdu(eduId),
-      student:     studentByEdu(eduId),
-      parent:      parentByEdu(eduId),
-      finance:     financeByEdu(eduId),
-      placement:   placementByEdu(eduId),
+      faculty:     totalForEduIds(educationIds, facultyByEdu),
+      student:     totalForEduIds(educationIds, studentByEdu),
+      parent:      totalForEduIds(educationIds, parentByEdu),
+      finance:     totalForEduIds(educationIds, financeByEdu),
+      placement:   totalForEduIds(educationIds, placementByEdu),
       hrExecutive: hrTotal,
     };
   });

@@ -10,8 +10,10 @@ export type FinanceManagerContextType = {
     userId: number | null;
     collegeId: number | null;
     collegeEducationId: number | null;
+    collegeEducationIds: number[];
     collegeName: string | null;
     collegeEducationType: string | null;
+    collegeEducationTypes: string[];
     isActive: boolean | null;
     type: "executive" | "manager" | null;
 };
@@ -32,8 +34,10 @@ export const FinanceManagerProvider = ({
         userId: null,
         collegeId: null,
         collegeEducationId: null,
+        collegeEducationIds: [],
         collegeName: null,
         collegeEducationType: null,
+        collegeEducationTypes: [],
         isActive: null,
         type: null,
     });
@@ -56,8 +60,10 @@ export const FinanceManagerProvider = ({
                     userId: fm.userId,
                     collegeId: fm.collegeId,
                     collegeEducationId: fm.collegeEducationId,
+                    collegeEducationIds: fm.collegeEducationIds,
                     collegeName: fm.collegeName,
                     collegeEducationType: fm.collegeEducationType,
+                    collegeEducationTypes: fm.collegeEducationTypes,
                     isActive: fm.isActive,
                     type: fm.type,
                 });
