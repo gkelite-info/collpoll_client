@@ -24,7 +24,7 @@ type AnnouncementCardItem = {
   date: string;
   createdAt: string;
   type: string;
-  targetRoles?: string[] | null;
+  targetRoles?: string[];
   image: string;
   imgHeight: string;
   cardBg: string;
@@ -83,7 +83,7 @@ export default function AdminLeaveRequestRightPanel() {
         date: item.date,
         createdAt: item.createdAt,
         type: item.type,
-        targetRoles: item.targetRoles,
+        targetRoles: item.targetRoles ?? undefined,
         image: typeIcons[item.type] || "/clip.png",
         imgHeight: "h-10",
         cardBg: "#E8F8EF",
