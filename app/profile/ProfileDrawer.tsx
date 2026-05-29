@@ -217,11 +217,13 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
               >
                 {fullName}
               </p>
-              <div className="flex gap-2 items-center shrink-0">
-                <span className="text-xs text-[#282828] whitespace-nowrap">
-                  ID - {displayId || "-"}
-                </span>
-              </div>
+              {role !== "CollegeAdmin" && (
+                <div className="flex gap-2 items-center shrink-0">
+                  <span className="text-xs text-[#282828] whitespace-nowrap">
+                    ID - {displayId || "-"}
+                  </span>
+                </div>
+              )}
               <div className="hidden gap-2 items-center">
                 {role === "Student" && (
                   <span className="text-xs text-[#282828]">
@@ -244,11 +246,6 @@ export default function ProfileDrawer({ open, onClose, onOpenTerms }: Props) {
                   </span>
                 )}
                 {role === "FinanceManager" && (
-                  <span className="text-xs text-[#282828]">
-                    ID - {identifierId}
-                  </span>
-                )}
-                {role === "CollegeAdmin" && (
                   <span className="text-xs text-[#282828]">
                     ID - {identifierId}
                   </span>

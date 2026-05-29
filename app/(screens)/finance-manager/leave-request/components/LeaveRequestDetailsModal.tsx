@@ -414,28 +414,6 @@ export default function LeaveRequestDetailsModal({
           </div>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-4 border-b border-gray-100 bg-white px-5 py-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-              Employee
-            </p>
-            <p className="mt-1 text-[12px] font-bold text-[#282828]">
-              {request.name}
-            </p>
-            <p className="text-[11px] font-semibold text-[#43C17A]">
-              ID: {request.employeeId}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
-              Reason
-            </p>
-            <p className="mt-1 line-clamp-2 text-[12px] font-medium text-[#525252]">
-              {request.description}
-            </p>
-          </div>
-        </div>
-
         <div className="shrink-0 border-b border-gray-100 bg-gray-50 px-5 py-3 text-[13px] font-bold text-[#282828]">
           Communication History
         </div>
@@ -529,7 +507,7 @@ export default function LeaveRequestDetailsModal({
                             </div>
                           )}
                           {isEditing ? (
-                            <div className="flex min-w-[180px] items-center gap-1">
+                            <div className="flex min-w-45 items-center gap-1">
                               <input
                                 value={editingText}
                                 onChange={(event) =>

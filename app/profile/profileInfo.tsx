@@ -406,7 +406,9 @@ export default function ProfileInfo() {
               </h3>
 
               <div className="flex flex-col space-y-1">
-                <ProfileRow label="Registration ID" value={profileData.registrationId} />
+                {role !== "CollegeAdmin" && (
+                  <ProfileRow label="Registration ID" value={profileData.registrationId} />
+                )}
                 <ProfileRow label="Email" value={profileData.email} />
                 <ProfileRow label="Phone" value={profileData.phone} />
                 {showEducationType &&

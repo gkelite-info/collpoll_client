@@ -686,6 +686,74 @@ const AddUserModal: React.FC<{
     return data.studentId as number;
   };
 
+  const assertParentStudentAvailable = async (studentId: number) => {
+    const { data, error } = await supabase
+      .from("parents")
+      .select("parentId")
+      .eq("studentId", studentId)
+      .eq("collegeId", basicData.collegeIntId)
+      .eq("isActive", true)
+      .eq("is_deleted", false)
+      .is("deletedAt", null)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (data) {
+      throw new Error("Parent already registered for this student.");
+    }
+  };
+
+  const assertIdentifierAvailable = async (
+    role: string,
+    identifierValue: string,
+    currentUserId?: number | null,
+  ) => {
+    const normalizedIdentifier = identifierValue.trim().toUpperCase();
+
+    if (!normalizedIdentifier) return;
+
+    if (role === "Student") {
+      const { data, error } = await supabase
+        .from("student_pins")
+        .select("studentPinId, studentId")
+        .ilike("pinNumber", normalizedIdentifier)
+        .eq("collegeId", basicData.collegeIntId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        throw new Error(
+          `Student with roll no "${normalizedIdentifier}" already exists.`,
+        );
+      }
+
+      return;
+    }
+
+    if (role !== "Parent") {
+      const { data, error } = await supabase
+        .from("employee_ids")
+        .select("employeeIdPk, userId")
+        .ilike("employeeId", normalizedIdentifier)
+        .eq("collegeId", basicData.collegeIntId)
+        .eq("isActive", true)
+        .is("deletedAt", null)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data && data.userId !== currentUserId) {
+        throw new Error(
+          `Employee with employee id "${normalizedIdentifier}" already exists.`,
+        );
+      }
+    }
+  };
+
   const handleSave = async () => {
     if (!basicData.fullName) return toast.error("Full Name is required.");
     if (!basicData.email) return toast.error("Email is required.");
@@ -816,12 +884,25 @@ const AddUserModal: React.FC<{
 
     setLoading(true);
     let createdUserId: number | null = null;
+    let createdStudentId: number | null = null;
 
     try {
       const timestamp = new Date().toISOString();
       const parentStudentId = isParent
         ? await resolveStudentIdFromPin(basicData.studentId)
         : null;
+
+      if (parentStudentId && !user) {
+        await assertParentStudentAvailable(parentStudentId);
+      }
+
+      if (basicData.identifierValue && !user) {
+        await assertIdentifierAvailable(
+          basicData.role,
+          basicData.identifierValue,
+          null,
+        );
+      }
 
       let targetUserId: number | null = null;
 
@@ -1089,6 +1170,7 @@ const AddUserModal: React.FC<{
           },
           timestamp,
         );
+        createdStudentId = studentId;
 
         await createStudentAcademicHistory({
           studentId: studentId,
@@ -1167,12 +1249,38 @@ const AddUserModal: React.FC<{
           message = "This mobile number is already in use.";
         } else if (errMsg.includes("student not found for pin number")) {
           message = e.message;
+        } else if (errMsg.includes("parent already registered for this student")) {
+          message = e.message;
+        } else if (
+          errMsg.includes("student with roll no") ||
+          errMsg.includes("employee with employee id")
+        ) {
+          message = e.message;
         } else if (errMsg.includes("duplicate")) {
           message = "User already exists with provided details.";
         }
       }
 
       toast.error(message);
+
+      if (createdStudentId && !user) {
+        await supabase
+          .from("student_fee_obligation")
+          .delete()
+          .eq("studentId", createdStudentId);
+        await supabase
+          .from("student_academic_history")
+          .delete()
+          .eq("studentId", createdStudentId);
+        await supabase
+          .from("student_pins")
+          .delete()
+          .eq("studentId", createdStudentId);
+        await supabase
+          .from("students")
+          .delete()
+          .eq("studentId", createdStudentId);
+      }
 
       if (createdUserId && !user) {
         await supabase.from("users").delete().eq("userId", createdUserId);
