@@ -60,7 +60,7 @@ export default function PerformancePage() {
   );
 
   return (
-    <main className="flex w-full overflow-x-hidden relative">
+    <main className="flex w-full pb-5 relative">
       <div className="w-full lg:w-[68%] p-4 md:p-6 lg:p-2 flex flex-col gap-6 lg:h-[130vh] pb-6">
         <div className="flex items-center justify-between mt-2 shrink-0">
           <div className="flex flex-col gap-1">

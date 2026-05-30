@@ -607,25 +607,6 @@ export default function HrLeaveDetailsModal({
                           </div>
 
                           <div className="mt-0.5 flex items-center gap-1 px-0.5">
-                            <span className="text-[9px] font-medium text-gray-400">
-                              {formatChatTime(message.createdAt)}
-                            </span>
-                            {showNewBadge && (
-                              <span className="rounded bg-[#D32F2F] px-1 text-[8px] font-bold uppercase text-white">
-                                New
-                              </span>
-                            )}
-                            {isMe && (
-                              <Checks
-                                size={12}
-                                weight="bold"
-                                className={
-                                  message.isRead
-                                    ? "text-[#34B7F1]"
-                                    : "text-gray-300"
-                                }
-                              />
-                            )}
                             {canEdit && !isEditing && (
                               <span className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                                 <button
@@ -647,6 +628,25 @@ export default function HrLeaveDetailsModal({
                                   <Trash size={10} weight="bold" />
                                 </button>
                               </span>
+                            )}
+                            <span className="text-[9px] font-medium text-gray-400">
+                              {formatChatTime(message.createdAt)}
+                            </span>
+                            {showNewBadge && (
+                              <span className="rounded bg-[#D32F2F] px-1 text-[8px] font-bold uppercase text-white">
+                                New
+                              </span>
+                            )}
+                            {isMe && (
+                              <Checks
+                                size={12}
+                                weight="bold"
+                                className={
+                                  message.isRead
+                                    ? "text-[#34B7F1]"
+                                    : "text-gray-300"
+                                }
+                              />
                             )}
                           </div>
                         </div>

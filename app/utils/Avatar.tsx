@@ -92,7 +92,7 @@ export const Avatar = ({
     return (
       <div
         className={clsx(
-          "rounded-full bg-gray-200 flex items-center justify-center text-gray-400",
+          "rounded-full bg-gray-200 flex items-center justify-center text-gray-400 flex-shrink-0",
           sizes
         )}
         style={fallbackStyle}
