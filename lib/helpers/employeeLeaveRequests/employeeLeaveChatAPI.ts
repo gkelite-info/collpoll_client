@@ -285,6 +285,38 @@ export async function deleteEmployeeLeaveChatMessage(payload: {
   return data.employeeLeaveRequestChatId as number;
 }
 
+export async function deleteEmployeeLeaveChatMessages(payload: {
+  chatIds: number[];
+  senderUserId?: number | null;
+  senderCollegeHrId?: number | null;
+  senderRole: EmployeeLeaveChatSenderRole;
+}) {
+  if (!payload.senderUserId && !payload.senderCollegeHrId) {
+    throw new Error("Sender is missing.");
+  }
+  if (payload.chatIds.length === 0) return [];
+
+  let query = supabase
+    .from("employee_leave_request_chats")
+    .update({ is_deleted: true, updatedAt: new Date().toISOString() })
+    .in("employeeLeaveRequestChatId", payload.chatIds)
+    .eq("senderRole", payload.senderRole)
+    .eq("is_deleted", false)
+    .eq("isRead", false);
+
+  query =
+    payload.senderRole === "EMPLOYEE"
+      ? query.eq("senderUserId", payload.senderUserId)
+      : query.eq("senderCollegeHrId", payload.senderCollegeHrId);
+
+  const { data, error } = await query
+    .select("employeeLeaveRequestChatId");
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => row.employeeLeaveRequestChatId as number);
+}
+
 export async function markEmployeeLeaveMessagesAsRead(
   employeeLeaveRequestId: number,
   receiverRole: EmployeeLeaveChatSenderRole,
